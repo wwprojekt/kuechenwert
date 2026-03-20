@@ -1,0 +1,43 @@
+# robots.txt for CaravanWert
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Explicitly allow Google Ads bots (critical for Google Ads compliance)
+User-agent: AdsBot-Google
+Allow: /
+Crawl-delay: 1
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+Crawl-delay: 1
+
+# Major search engine bots
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Social media crawlers
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+# Allow UTM parameters for tracking (critical for Google Ads)
+Allow: /*?*utm_*
+Allow: /*?*fbclid*
+Allow: /*?*gclid*
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
+
+# Sitemap location
+Sitemap: https://caravanwert.de/sitemap.xml

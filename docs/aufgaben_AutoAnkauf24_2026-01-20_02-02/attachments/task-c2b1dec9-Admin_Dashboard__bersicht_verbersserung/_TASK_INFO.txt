@@ -1,0 +1,7 @@
+Task ID: c2b1dec9-b1f6-4ca6-8692-70f6899c45aa
+Task Title: Admin Dashboard Übersicht verbersserung
+Project: AutoAnkauf24
+Status: pending
+Priority: high
+
+This folder contains 1 attachment(s) for this task.

@@ -1,0 +1,570 @@
+/**
+ * Admin Auction Detail Page
+ * Comprehensive view of auction with bids, motorhome info, and actions
+ */
+
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import {
+  Gavel,
+  Car,
+  User,
+  Clock,
+  TrendingUp,
+  Euro,
+  Calendar,
+  Play,
+  X,
+  Edit,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+  Timer,
+  Users,
+  Image as ImageIcon,
+  Mail,
+  Phone,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  AdminDetailLayout,
+  DetailSection,
+  InfoGrid,
+  InfoItem,
+  StatsCard,
+} from "@/components/admin/AdminDetailLayout";
+import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
+import { logger } from "@/lib/logger";
+
+export default function AdminAuctionDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Fetch auction with all related data
+  const { data: auction, isLoading, error } = useQuery({
+    queryKey: ["adminAuctionDetail", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("auctions")
+        .select(`
+          *,
+          motorhome:motorhomes (
+            *,
+            motorhome_photos(id, photo_url, display_order),
+            seller:profiles!left (
+              id,
+              first_name,
+              last_name,
+              email,
+              phone,
+              company_name
+            )
+          ),
+          bids (
+            id,
+            amount,
+            created_at,
+            is_autobid,
+            bidder:profiles!bids_bidder_id_fkey (
+              id,
+              first_name,
+              last_name,
+              email,
+              company_name
+            )
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Activate auction mutation
+  const activateAuctionMutation = useMutation({
+    mutationFn: async () => {
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+
+      const { error } = await supabase
+        .from("auctions")
+        .update({
+          status: "active",
+          start_time: new Date().toISOString(),
+          end_time: endTime.toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+    },
+    onError: (error) => {
+      logger.error("Activate auction error:", error);
+      toast.error("Fehler beim Aktivieren der Auktion");
+    },
+  });
+
+  // Close auction mutation
+  const closeAuctionMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.functions.invoke("close-auction", {
+        body: { auctionId: id },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich geschlossen");
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+    },
+    onError: (error) => {
+      logger.error("Close auction error:", error);
+      toast.error("Fehler beim Schließen der Auktion");
+    },
+  });
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto text-destructive" />
+          <h2 className="mt-4 text-lg font-semibold">Auktion nicht gefunden</h2>
+          <p className="mt-2 text-muted-foreground">
+            Die angeforderte Auktion existiert nicht oder wurde gelöscht.
+          </p>
+          <Button className="mt-4" onClick={() => navigate("/admin/auctions")}>
+            Zurück zur Übersicht
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const formatPrice = (price: number | null) => {
+    if (!price) return "—";
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+    }).format(price);
+  };
+
+  const formatDate = (date: string | null) => {
+    if (!date) return "—";
+    return format(new Date(date), "dd.MM.yyyy HH:mm", { locale: de });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      draft: { label: "Entwurf", variant: "outline" },
+      active: { label: "Aktiv", variant: "default" },
+      ended: { label: "Beendet", variant: "secondary" },
+      sold: { label: "Verkauft", variant: "default" },
+      cancelled: { label: "Abgebrochen", variant: "destructive" },
+      kaufchance: { label: "Kaufchance", variant: "secondary" },
+    };
+    return statusConfig[status] || { label: status, variant: "outline" };
+  };
+
+  const sortedBids = auction?.bids?.sort(
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  ) || [];
+
+  const highestBid = sortedBids[0];
+  const bidCount = sortedBids.length;
+  const uniqueBidders = new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
+
+  // Get main photo
+  const mainPhoto = auction?.motorhome?.motorhome_photos?.sort(
+    (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
+  )[0];
+
+  return (
+    <AdminDetailLayout
+      title={auction ? `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}` : "Auktion"}
+      subtitle={auction?.motorhome ? `${auction.motorhome.year} • ${auction.motorhome.body_type}` : undefined}
+      status={auction ? getStatusBadge(auction.status) : undefined}
+      backUrl="/admin/auctions"
+      backLabel="Alle Auktionen"
+      isLoading={isLoading}
+      icon={<Gavel className="w-6 h-6" />}
+      actions={
+        auction && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Bearbeiten
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/auktion/${id}`, "_blank")}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Öffentliche Ansicht
+            </Button>
+            {auction.status === "draft" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Play className="w-4 h-4 mr-2" />
+                    Aktivieren
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => activateAuctionMutation.mutate()}>
+                      Aktivieren
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {auction.status === "active" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive">
+                    <X className="w-4 h-4 mr-2" />
+                    Beenden
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion beenden?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird sofort beendet. Falls Gebote vorhanden sind, wird der
+                      Höchstbietende benachrichtigt.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => closeAuctionMutation.mutate()}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Beenden
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        )
+      }
+    >
+      {auction && (
+        <div className="space-y-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatsCard
+              label="Aktuelles Gebot"
+              value={formatPrice(auction.current_bid || auction.starting_bid)}
+              icon={<Euro className="w-5 h-5" />}
+            />
+            <StatsCard
+              label="Anzahl Gebote"
+              value={bidCount}
+              icon={<Gavel className="w-5 h-5" />}
+            />
+            <StatsCard
+              label="Bieter"
+              value={uniqueBidders}
+              icon={<Users className="w-5 h-5" />}
+            />
+            <StatsCard
+              label={auction.status === "active" ? "Endet in" : "Status"}
+              value={
+                auction.status === "active" && auction.end_time
+                  ? format(new Date(auction.end_time), "dd.MM. HH:mm")
+                  : getStatusBadge(auction.status).label
+              }
+              icon={<Timer className="w-5 h-5" />}
+            />
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Left Column - Main Info */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Auction Details */}
+              <DetailSection title="Auktionsdetails" icon={<Gavel className="w-5 h-5" />}>
+                <InfoGrid columns={3}>
+                  <InfoItem label="Startgebot" value={formatPrice(auction.starting_bid)} icon={<Euro className="w-3 h-3" />} />
+                  <InfoItem label="Reservepreis" value={formatPrice(auction.reserve_price)} icon={<Euro className="w-3 h-3" />} />
+                  <InfoItem label="Soft-Close" value={`${auction.soft_close_extension_minutes} Min.`} icon={<Timer className="w-3 h-3" />} />
+                  <InfoItem label="Gestartet" value={formatDate(auction.start_time)} icon={<Calendar className="w-3 h-3" />} />
+                  <InfoItem label="Endet" value={formatDate(auction.end_time)} icon={<Calendar className="w-3 h-3" />} />
+                  <InfoItem label="Erstellt" value={formatDate(auction.created_at)} icon={<Calendar className="w-3 h-3" />} />
+                </InfoGrid>
+
+                {auction.reserve_price && auction.current_bid && (
+                  <div className="mt-4 p-3 rounded-lg bg-muted/50">
+                    {auction.current_bid >= auction.reserve_price ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-sm font-medium">Reservepreis erreicht</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Reservepreis noch nicht erreicht (fehlen noch {formatPrice(auction.reserve_price - (auction.current_bid || 0))})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DetailSection>
+
+              {/* Motorhome Info */}
+              <DetailSection
+                title="Fahrzeugdaten"
+                icon={<Car className="w-5 h-5" />}
+                actions={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/admin/motorhomes/${auction.motorhome?.id}`)}
+                  >
+                    Details anzeigen
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                }
+              >
+                <div className="flex gap-6">
+                  {/* Thumbnail */}
+                  <div className="w-32 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    {mainPhoto ? (
+                      <img
+                        src={mainPhoto.photo_url}
+                        alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <InfoGrid columns={3}>
+                    <InfoItem label="Hersteller" value={auction.motorhome?.manufacturer} />
+                    <InfoItem label="Modell" value={auction.motorhome?.model} />
+                    <InfoItem label="Baujahr" value={auction.motorhome?.year} />
+                    <InfoItem label="Kilometerstand" value={auction.motorhome?.mileage ? `${auction.motorhome.mileage.toLocaleString()} km` : "—"} />
+                    <InfoItem label="Zustand" value={auction.motorhome?.condition} />
+                    <InfoItem label="Aufbauart" value={auction.motorhome?.body_type} />
+                  </InfoGrid>
+                </div>
+              </DetailSection>
+
+              {/* Bids Table */}
+              <DetailSection title={`Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
+                {sortedBids.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bieter</TableHead>
+                        <TableHead>Betrag</TableHead>
+                        <TableHead>Typ</TableHead>
+                        <TableHead>Zeitpunkt</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedBids.map((bid: any, index: number) => (
+                        <TableRow key={bid.id} className={index === 0 ? "bg-green-50 dark:bg-green-950/20" : ""}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">
+                                {bid.bidder?.first_name} {bid.bidder?.last_name}
+                                {index === 0 && (
+                                  <Badge className="ml-2" variant="default">
+                                    Höchstgebot
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{bid.bidder?.email}</p>
+                              {bid.bidder?.company_name && (
+                                <p className="text-xs text-muted-foreground">{bid.bidder.company_name}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>
+                          <TableCell>
+                            <Badge variant={bid.is_autobid ? "secondary" : "outline"}>
+                              {bid.is_autobid ? "Auto" : "Manuell"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(bid.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Noch keine Gebote vorhanden</p>
+                  </div>
+                )}
+              </DetailSection>
+            </div>
+
+            {/* Right Column - Sidebar */}
+            <div className="space-y-6">
+              {/* Seller Info */}
+              <DetailSection title="Verkäufer" icon={<User className="w-5 h-5" />}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-semibold text-lg">
+                      {auction.motorhome?.seller?.first_name} {auction.motorhome?.seller?.last_name}
+                    </p>
+                    {auction.motorhome?.seller?.company_name && (
+                      <p className="text-sm text-muted-foreground">{auction.motorhome.seller.company_name}</p>
+                    )}
+                  </div>
+                  <Separator />
+                  <div className="space-y-3">
+                    <a
+                      href={`mailto:${auction.motorhome?.seller?.email}`}
+                      className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                    >
+                      <Mail className="w-4 h-4" />
+                      {auction.motorhome?.seller?.email}
+                    </a>
+                    {auction.motorhome?.seller?.phone && (
+                      <a
+                        href={`tel:${auction.motorhome.seller.phone}`}
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                      >
+                        <Phone className="w-4 h-4" />
+                        {auction.motorhome.seller.phone}
+                      </a>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/admin/users/${auction.motorhome?.seller?.id}`)}
+                  >
+                    Profil anzeigen
+                  </Button>
+                </div>
+              </DetailSection>
+
+              {/* Highest Bidder */}
+              {highestBid && (
+                <DetailSection title="Höchstbietender" icon={<TrendingUp className="w-5 h-5" />}>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-semibold text-lg">
+                        {highestBid.bidder?.first_name} {highestBid.bidder?.last_name}
+                      </p>
+                      {highestBid.bidder?.company_name && (
+                        <p className="text-sm text-muted-foreground">{highestBid.bidder.company_name}</p>
+                      )}
+                    </div>
+                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                      <p className="text-sm text-muted-foreground">Höchstgebot</p>
+                      <p className="text-2xl font-bold text-green-600">{formatPrice(highestBid.amount)}</p>
+                    </div>
+                    <Separator />
+                    <div className="space-y-3">
+                      <a
+                        href={`mailto:${highestBid.bidder?.email}`}
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        {highestBid.bidder?.email}
+                      </a>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate(`/admin/users/${highestBid.bidder?.id}`)}
+                    >
+                      Profil anzeigen
+                    </Button>
+                  </div>
+                </DetailSection>
+              )}
+
+              {/* Photos Preview */}
+              {auction.motorhome?.motorhome_photos && auction.motorhome.motorhome_photos.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      Fotos ({auction.motorhome.motorhome_photos.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-2">
+                      {auction.motorhome.motorhome_photos.slice(0, 6).map((photo: any, index: number) => (
+                        <div key={photo.id} className="aspect-square rounded-md overflow-hidden bg-muted">
+                          <img
+                            src={photo.photo_url}
+                            alt={`Foto ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      {auction && (
+        <AuctionEditDialog
+          auction={auction}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+        />
+      )}
+    </AdminDetailLayout>
+  );
+}

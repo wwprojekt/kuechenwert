@@ -1,0 +1,51 @@
+- WhatsApp button floating
+- Kaufvertrag und Übergabeprotokoll automatisch generieren (Für Händler und Kunde)
+- Eingabemaske auf der Startseite Hero section (Hersteller Modell aufbau etc.)
+- Provision soll auf der Auktion für Händler immer sichtbar sein! Provision soll man im Admin Backend Manuell setzen können.
+Prozentual und ab bestimmten summen. Beispiel Farzeugpreis 0-10k mindestenprovision setzbar 10-15k % individuell setzbar 15k-20k individuell setz bar in % oder als festen betrag usw. 20-30k 30-40k usw.
+- Provisionsrabatt für Händler die viel Kaufen auf der Platform. (Automatisiert) individuell setzbar die rabette im Backend
+- API: Google Anylytics, Meta, Mousflow, etc.
+
+- Nach gebotsrunde, Verhandelt admin zwischen Händler und Kunden. Telefonisch/email. Neue Gebote werden in den Dashboard
+der jeweiligen beteiligten angezeigt.
+
+- Nach der Gebotsrunde, kann höstbietender nachbieten, kunde Soll bie jedem gebot/nachgebot benachrichtigt werden per Mail.
+
+- Händler soll mail bekommen wenn er überboten wird. und ein Rington wenn er in seinem Dashboard ist.
+
+- Die Auktionsseite soll automatisch alle 2 Sekunden aktualisiert werden damit Händler die neuen gebote live sieht-
+
+- Der Händler soll Benachrichtigungen in den einstellungen ändern können, Kunde genau so! Beispiel: Bei gebot email an/aus
+- Die Kunden sollen den Händler bewerten können!
+- Händler soll automatisch Rechnung bekommen per email, und wenn nach 14 Tagen nicht bezahlt ist der Account eingeschränkt werden.
+und automatisch eine 1. Mahnung rausgehen. wenn weitere 14 tage tage nicht bezahlt wurde soll 2. Mahnung raus gehen.
+- Debitoren/Faktura/rechnungsdashboard Admin sieht die Händler was die bezahlt haben bisher und was noch offen ist etc. (alles rund um Rechnung)
+- Gewerberegistrierung/Händler: Bei der Registrierung muss sepalastschriftmandat ausgefüllt werden, HRB Register hochladen, Gewerbenachweiss hochladen. Rechtsform auswählen usw.
+
+- Inseratformular: Tankinhalt entfernen, Letzter tüv entfernen, nächster tüv auch raus, TÜB/HU gültig bis reicht! Kühlschranktyp entfernen, Badezimmer vorhanden entfernen, bei optonal Felder bitte immer optional angeben! pflichtpfelder mit Stern makieren! bei schritt 5 Badezimmer Auswahl entfernen. Bider Max 30. hochladen,
+
+
+
+- Händler kann reklamieren, mit fotoshochladen muss aber von uns genehmigt werden, wenn die Reklamation angenommen wird. Muss Verkäufer/Kunde die Provision bezahlen.
+
+- händlersoll suchaufträge einrichten können,
+- Farzeuge sollen einer Inseratsnummer zugewiesen werden, admin kann im backend nach kunde, inseratnummer suchen.
+- Campingplatzfinder für alle, Wohnmobilwerkstatt finder, Capingbedarf finder, Ratgeber Funktion, Leifäden Funktion, Wo/Wann nächsten Campingmessen, Campingtreffen.
+
+- Rechtsseiten im Admindashboard individuell anpassbar!
+- Benutzerrollen: Mitarbeiter, Händler, Kunde/Verkäufer, Admin, Buchhalter,
+- Für jeden Händler, soll ein Mitarbeiter zugewiesen werden!
+
+- Beim Inserieren: falls schäden vohanden extra bilder für die schäden hochladen!(man sieht erst die normalen bilder im Inserat) unter schäden sieht man was beschrieben wurde und ggf. noch Fotos von den schäden soll man sehen können.
+
+- Newsletter und Rundmail Funktion unterteilen zwischen den benutzerrollen die Rundmail!
+- KI Asisstent für die Beschreibung das wenn man fast alles eingeben hat der automatisch eine Beschreibung generiert (optinal) wie bei mobile.de
+- Händler sollen sich eine Merkliste erstellen können.
+- Trustbadegds soll admin einfügen können
+- Wenn Händlerhöstgebot soll Fahrzeug in Käufe section übertragen werden im backend vom Händler.
+- Kontaktdaten vom Kunden fehlen.
+- Der Händler soll im backend unter Käufe auswählen wann abholtermin ist, 1-2tage später soll Kunde Nachricht bekommen und auswählen ob der Händler das Fahrzeug abgeholt hat und eine Bewertung abgeben können. Das muss erst kommen 1-2tage nach abholtermin!
+- Verkäufer/kunde soll angeben können ab wann das Fahrzeug verfügbar/abholbereit ist!
+
+- Musterverträge für alle Kaufvertrag Generator, Versicherungen für Wohnmobile, Seperate Kaufvertrag für Wohnmobil(nach ADAC musterhalten) mit unserem logo.
+-

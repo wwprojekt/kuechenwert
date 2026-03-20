@@ -1,0 +1,123 @@
+/**
+ * Floating WhatsApp Button Component
+ * Provides quick customer support access via WhatsApp
+ */
+
+import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { MessageCircle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useSettings } from '@/contexts/SettingsContext';
+
+export const WhatsAppButton = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { settings } = useSettings();
+  const location = useLocation();
+
+  // Hide on admin and dashboard routes
+  const hiddenRoutes = ['/admin', '/dashboard'];
+  const shouldHide = hiddenRoutes.some(route => location.pathname.startsWith(route));
+
+  if (shouldHide) {
+    return null;
+  }
+
+  // Don't render if no phone number configured
+  if (!settings?.whatsapp_number && !settings?.support_phone) {
+    return null;
+  }
+
+  // Extract phone number and site name from settings
+  const phoneNumber = (settings?.whatsapp_number || settings?.support_phone)?.replace(/\D/g, '') || '';
+  const siteName = settings?.site_name || 'CaravanWert';
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hallo! Ich habe eine Frage zu ${siteName}.`;
+
+  const handleWhatsAppClick = () => {
+    window.open(whatsappUrl, '_blank');
+    setIsExpanded(false);
+  };
+
+  return (
+    <div className="fixed bottom-8 left-4 sm:left-8 z-50">
+      {isExpanded && (
+        <Card className="mb-4 p-4 w-80 max-w-[calc(100vw-4rem)] sm:max-w-80 shadow-lg animate-fade-in">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="font-semibold text-sm">Benötigen Sie Hilfe?</h3>
+              <p className="text-xs text-muted-foreground">
+                Schreiben Sie uns direkt über WhatsApp
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(false)}
+              className="h-6 w-6 p-0 shrink-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="text-xs text-muted-foreground">
+              • Fragen zum Verkaufsprozess
+            </div>
+            <div className="text-xs text-muted-foreground">
+              • Technischer Support
+            </div>
+            <div className="text-xs text-muted-foreground">
+              • Allgemeine Anfragen
+            </div>
+          </div>
+          
+          <Button
+            onClick={handleWhatsAppClick}
+            className="w-full mt-4 bg-[#25D366] hover:bg-[#20BA5A] text-white"
+            size="sm"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Chat starten
+          </Button>
+        </Card>
+      )}
+      
+      <Button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="h-12 w-12 rounded-lg bg-[#25D366] hover:bg-[#20BA5A] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        size="icon"
+        aria-label="WhatsApp Support"
+      >
+        {isExpanded ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <MessageCircle className="h-5 w-5" />
+        )}
+      </Button>
+    </div>
+  );
+};
+
+/**
+ * WhatsApp Link Generator Hook
+ */
+export const useWhatsAppLink = (customMessage?: string) => {
+  const { settings } = useSettings();
+  const phoneNumber = (settings?.whatsapp_number || settings?.support_phone)?.replace(/\D/g, '') || '';
+  const siteName = settings?.site_name || 'CaravanWert';
+  
+  const generateLink = (message: string = `Hallo! Ich habe eine Frage zu ${siteName}.`) => {
+    const encodedMessage = encodeURIComponent(message);
+    return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+  };
+
+  return {
+    phoneNumber: settings?.support_phone || '',
+    whatsappLink: generateLink(customMessage),
+    openWhatsApp: (message?: string) => {
+      window.open(generateLink(message), '_blank');
+    },
+  };
+};
+
+export default WhatsAppButton;

@@ -1,0 +1,101 @@
+# Docker Compose configuration for CaravanWert
+# Supports both development and production environments
+
+version: '3.8'
+
+services:
+  # Production build
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_GOOGLE_ANALYTICS_ID=${VITE_GOOGLE_ANALYTICS_ID}
+        - VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+        - NODE_ENV=production
+        - BUILD_TIME=${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - caravanwert
+
+  # Development environment
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_ENABLE_DEVELOPMENT_FEATURES=true
+    volumes:
+      - .:/app
+      - /app/node_modules
+    profiles:
+      - development
+    networks:
+      - caravanwert
+
+  # Redis for caching (optional, for future use)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    profiles:
+      - production
+      - redis
+    networks:
+      - caravanwert
+
+  # Nginx proxy (for more complex setups)
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./docker/proxy.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+    profiles:
+      - proxy
+    networks:
+      - caravanwert
+
+networks:
+  caravanwert:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+
+# ============================================================================
+# Environment-specific overrides
+# ============================================================================
+
+# For development: docker-compose -f docker-compose.yml --profile development up app-dev
+# For production: docker-compose up app
+# For production with Redis: docker-compose --profile production up
+# For full proxy setup: docker-compose --profile proxy up

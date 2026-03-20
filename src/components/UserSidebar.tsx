@@ -1,0 +1,192 @@
+import { NavLink } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Car,
+  Gavel,
+  User,
+  LogOut,
+  Plus,
+  Home,
+  Calendar,
+  Heart,
+  MessageSquare,
+  FileText,
+  Zap,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { SiteLogo } from "@/components/SiteLogo";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
+
+// Base menu items - filtered based on role
+const baseMenuItems = [
+  { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard, hideForRoles: [] },
+  { title: "Meine Inserate", url: "/dashboard/listings", icon: Car, hideForRoles: ['dealer'] },
+  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: ['seller'] },
+  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: [] },
+  { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
+  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: [] },
+  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [] },
+  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: ['seller'] },
+  { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
+];
+
+export function UserSidebar() {
+  const { state } = useSidebar();
+  const { signOut } = useAuth();
+  const { primaryRole } = useUserRole();
+  const navigate = useNavigate();
+  const collapsed = state === "collapsed";
+  
+  // Filter menu items based on user role
+  const menuItems = baseMenuItems.filter(
+    item => !item.hideForRoles.includes(primaryRole || '')
+  );
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  return (
+    <Sidebar 
+      className={`${collapsed ? "w-16" : "w-64"} border-r border-border/50 bg-gradient-to-b from-background to-muted/20`} 
+      collapsible="icon"
+    >
+      <SidebarContent>
+        {/* Brand Header */}
+        <div className="p-4 mb-2">
+          {!collapsed ? (
+            <div className="space-y-1 animate-fade-in">
+              <SiteLogo variant="icon-text-compact" className="mb-2" />
+              <p className="text-xs text-muted-foreground">Mein Dashboard</p>
+            </div>
+          ) : (
+            <SiteLogo variant="icon-only" iconSize="h-8 w-8" asLink={false} />
+          )}
+        </div>
+
+        <Separator className="mb-4" />
+
+        {/* Quick Actions */}
+        {!collapsed && (
+          <div className="px-3 mb-6 animate-fade-in">
+            <Button
+              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
+              onClick={() => navigate("/verkaufen/wizard")}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Neues Inserat
+            </Button>
+          </div>
+        )}
+
+        {collapsed && (
+          <div className="px-2 mb-6">
+            <Button
+              size="icon"
+              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+              onClick={() => navigate("/verkaufen/wizard")}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+              Navigation
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1 px-2">
+              {menuItems.map((item, index) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/dashboard"}
+                      className={({ isActive }) =>
+                        `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                          isActive
+                            ? "bg-gradient-to-r from-primary/10 to-primary/5 text-primary font-medium shadow-sm"
+                            : "hover:bg-muted/50 text-foreground/70 hover:text-foreground"
+                        }`
+                      }
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <span className="absolute left-0 w-1 h-8 bg-gradient-to-b from-primary to-primary/50 rounded-r-full" />
+                          )}
+                          <item.icon 
+                            className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                              isActive ? "text-primary" : ""
+                            }`} 
+                          />
+                          {!collapsed && (
+                            <span className="text-sm">
+                              {item.title}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Quick Link to Main Site */}
+        {!collapsed && (
+          <>
+            <Separator className="my-4" />
+            <div className="px-3 mb-4">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-muted-foreground hover:text-foreground"
+                onClick={() => navigate("/")}
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Zurück zur Website
+              </Button>
+            </div>
+          </>
+        )}
+      </SidebarContent>
+
+      {/* Footer */}
+      <SidebarFooter className="border-t border-border/50 p-3">
+        <Button
+          variant="ghost"
+          className={`w-full ${
+            collapsed ? "justify-center" : "justify-start"
+          } text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors`}
+          onClick={handleSignOut}
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span className="ml-2">Abmelden</span>}
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}

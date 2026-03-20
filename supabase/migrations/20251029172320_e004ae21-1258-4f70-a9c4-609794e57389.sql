@@ -1,0 +1,92 @@
+-- Insert demo purchase stations (Ankaufstationen)
+INSERT INTO purchase_stations (
+  name,
+  email,
+  phone,
+  address,
+  postal_code,
+  city,
+  manager_name,
+  accepts_cash_payment,
+  accepts_sepa_instant,
+  is_active,
+  opening_hours
+) VALUES
+(
+  'CamperAnker24 Berlin',
+  'berlin@camperanker24.de',
+  '+49 30 12345678',
+  'Hauptstraße 123',
+  '10115',
+  'Berlin',
+  'Michael Schmidt',
+  true,
+  true,
+  true,
+  '{"monday": "09:00-18:00", "tuesday": "09:00-18:00", "wednesday": "09:00-18:00", "thursday": "09:00-18:00", "friday": "09:00-18:00", "saturday": "10:00-14:00", "sunday": "Geschlossen"}'::jsonb
+),
+(
+  'CamperAnker24 München',
+  'muenchen@camperanker24.de',
+  '+49 89 87654321',
+  'Leopoldstraße 45',
+  '80802',
+  'München',
+  'Anna Müller',
+  true,
+  true,
+  true,
+  '{"monday": "08:00-17:00", "tuesday": "08:00-17:00", "wednesday": "08:00-17:00", "thursday": "08:00-17:00", "friday": "08:00-17:00", "saturday": "09:00-13:00", "sunday": "Geschlossen"}'::jsonb
+),
+(
+  'CamperAnker24 Hamburg',
+  'hamburg@camperanker24.de',
+  '+49 40 23456789',
+  'Reeperbahn 234',
+  '20359',
+  'Hamburg',
+  'Thomas Weber',
+  true,
+  true,
+  true,
+  '{"monday": "09:00-18:00", "tuesday": "09:00-18:00", "wednesday": "09:00-18:00", "thursday": "09:00-18:00", "friday": "09:00-18:00", "saturday": "10:00-15:00", "sunday": "Geschlossen"}'::jsonb
+),
+(
+  'CamperAnker24 Frankfurt',
+  'frankfurt@camperanker24.de',
+  '+49 69 34567890',
+  'Kaiserstraße 67',
+  '60329',
+  'Frankfurt',
+  'Stefan Fischer',
+  true,
+  true,
+  true,
+  '{"monday": "08:30-18:30", "tuesday": "08:30-18:30", "wednesday": "08:30-18:30", "thursday": "08:30-18:30", "friday": "08:30-18:30", "saturday": "09:00-14:00", "sunday": "Geschlossen"}'::jsonb
+),
+(
+  'CamperAnker24 Köln',
+  'koeln@camperanker24.de',
+  '+49 221 45678901',
+  'Zülpicher Straße 89',
+  '50674',
+  'Köln',
+  'Julia Becker',
+  true,
+  true,
+  true,
+  '{"monday": "09:00-17:30", "tuesday": "09:00-17:30", "wednesday": "09:00-17:30", "thursday": "09:00-17:30", "friday": "09:00-17:30", "saturday": "10:00-13:00", "sunday": "Geschlossen"}'::jsonb
+),
+(
+  'CamperAnker24 Stuttgart',
+  'stuttgart@camperanker24.de',
+  '+49 711 56789012',
+  'Königstraße 156',
+  '70173',
+  'Stuttgart',
+  'Martin Hoffmann',
+  true,
+  true,
+  true,
+  '{"monday": "08:00-18:00", "tuesday": "08:00-18:00", "wednesday": "08:00-18:00", "thursday": "08:00-18:00", "friday": "08:00-18:00", "saturday": "09:00-14:00", "sunday": "Geschlossen"}'::jsonb
+);

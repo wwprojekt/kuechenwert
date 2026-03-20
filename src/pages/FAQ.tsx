@@ -1,0 +1,151 @@
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import FAQ from "@/components/FAQ";
+import PageHero from "@/components/PageHero";
+import { Helmet } from "react-helmet";
+import { useSettings } from "@/contexts/SettingsContext";
+
+// FAQ data for structured data
+const faqData = [
+  {
+    question: "Wie lange dauert der Verkaufsprozess?",
+    answer: "Der gesamte Prozess kann in nur 24-48 Stunden abgeschlossen sein. Nach dem Hochladen Ihrer Fahrzeugdaten und Fotos erhalten Sie innerhalb von 24 Stunden erste Angebote. Nach Annahme eines Angebots erfolgt die Abwicklung und Auszahlung meist innerhalb von 1-2 Werktagen.",
+  },
+  {
+    question: "Was kostet der Service?",
+    answer: "Das Einstellen Ihres Wohnmobils zur Auktion ist völlig kostenlos. Erst wenn Sie ein Angebot annehmen und der Verkauf zustande kommt, erheben wir eine transparente Vermittlungsgebühr von 2,9% des Verkaufspreises. Diese wird automatisch vom Kaufpreis abgezogen.",
+  },
+  {
+    question: "Wie werden die Händler geprüft?",
+    answer: "Alle Händler auf unserer Plattform durchlaufen einen strengen KYC/KYB-Prozess. Wir prüfen Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz. Zusätzlich überwachen wir regelmäßig die Zahlungsmoral und Kundenzufriedenheit.",
+  },
+  {
+    question: "Kann ich mein Angebot ablehnen?",
+    answer: "Ja, absolut! Alle Angebote sind unverbindlich. Sie entscheiden, ob und welches Angebot Sie annehmen möchten. Es gibt keine Verpflichtung zum Verkauf, auch nachdem Sie Ihr Wohnmobil zur Auktion eingestellt haben.",
+  },
+  {
+    question: "Welche Zahlungsmethoden gibt es?",
+    answer: "Bei Übergabe an einer Ankaufstation können Sie zwischen Barzahlung oder SEPA Instant Transfer wählen. Bei Online-Verkäufen erfolgt die Zahlung per Banküberweisung. Alle Zahlungen sind versichert und werden erst nach erfolgreicher Fahrzeugübergabe freigegeben.",
+  },
+  {
+    question: "Was passiert mit meinen Daten?",
+    answer: "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Händler sehen erst dann Ihre Kontaktdaten, wenn Sie ein Angebot annehmen. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
+  },
+  {
+    question: "Welche Dokumente benötige ich?",
+    answer: "Für die Bewertung benötigen Sie zunächst nur grundlegende Fahrzeugdaten. Für den tatsächlichen Verkauf werden Fahrzeugbrief, Fahrzeugschein, HU-Bericht und ggf. Serviceheft benötigt. Eine detaillierte Checkliste erhalten Sie nach Angebotsannahme.",
+  },
+  {
+    question: "Gibt es eine Mindest- oder Höchstsumme?",
+    answer: "Nein, wir vermitteln Wohnmobile aller Preisklassen. Von älteren Campern ab 5.000€ bis zu Luxus-Wohnmobilen im sechsstelligen Bereich – unsere Händler sind an allen Fahrzeugen interessiert.",
+  },
+];
+
+const FAQPage = () => {
+  const { settings } = useSettings();
+  const supportPhone = settings?.support_phone || '';
+  const contactEmail = settings?.contact_email || '';
+  const siteName = settings?.site_name || 'CaravanWert';
+  
+  // Generate FAQ structured data
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqData.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Helmet>
+        <title>{`Häufig gestellte Fragen (FAQ) - ${siteName}`}</title>
+        <meta
+          name="description"
+          content={`Antworten auf häufig gestellte Fragen zum Verkauf und Kauf von Wohnmobilen auf ${siteName}. Erfahren Sie mehr über Bewertung, Abwicklung und Auktionen.`}
+        />
+        <link rel="canonical" href="https://caravanwert.de/faq" />
+        <meta property="og:url" content="https://caravanwert.de/faq" />
+        
+        {/* Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(faqSchema)}
+        </script>
+      </Helmet>
+      
+      <Header />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <PageHero size="md">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+              Häufig gestellte Fragen
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Finden Sie schnell Antworten auf die wichtigsten Fragen rund um den Verkauf und Kauf von Wohnmobilen auf unserer Plattform.
+            </p>
+          </div>
+        </PageHero>
+
+        {/* FAQ Component */}
+        <FAQ />
+
+        {/* Additional Support Section */}
+        <section className="py-16 bg-muted/30">
+          <div className="container">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-3xl font-bold mb-4">
+                Weitere Fragen?
+              </h2>
+              <p className="text-muted-foreground mb-8">
+                Unser Support-Team steht Ihnen gerne zur Verfügung und beantwortet alle Ihre Fragen persönlich.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-card p-6 rounded-lg border shadow-sm">
+                  <h3 className="font-bold text-lg mb-2">Telefonische Beratung</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Mo-Fr von 8:00-18:00 Uhr
+                  </p>
+                  {supportPhone ? (
+                    <a 
+                      href={`tel:${supportPhone.replace(/\s/g, '')}`} 
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      {supportPhone}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Siehe Kontaktseite</span>
+                  )}
+                </div>
+                <div className="bg-card p-6 rounded-lg border shadow-sm">
+                  <h3 className="font-bold text-lg mb-2">E-Mail Support</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Antwort innerhalb von 24 Stunden
+                  </p>
+                  {contactEmail ? (
+                    <a 
+                      href={`mailto:${contactEmail}`} 
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      {contactEmail}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Siehe Kontaktseite</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default FAQPage;

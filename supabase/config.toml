@@ -1,0 +1,37 @@
+project_id = "cmvhcudymrtvmbomkenq"
+
+[functions.handle-autobid]
+verify_jwt = false
+
+[functions.place-bid]
+verify_jwt = true
+
+[functions.close-auction]
+verify_jwt = false
+
+[functions.notify-auction-winner]
+verify_jwt = false
+
+[functions.send-appointment-confirmation]
+verify_jwt = false
+
+[functions.send-auction-notification]
+verify_jwt = false
+
+[functions.send-dealer-notification]
+verify_jwt = false
+
+[functions.send-payment-confirmation]
+verify_jwt = false
+
+[functions.generate-appointment-pin]
+verify_jwt = true
+
+[functions.verify-appointment-pin]
+verify_jwt = false
+
+[functions.complete-handover]
+verify_jwt = true
+
+[functions.generate-handover-pdf]
+verify_jwt = false

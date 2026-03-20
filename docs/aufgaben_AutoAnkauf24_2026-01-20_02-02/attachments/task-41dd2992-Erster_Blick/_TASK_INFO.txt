@@ -1,0 +1,7 @@
+Task ID: 41dd2992-3aec-478f-9ba9-5befc9c52939
+Task Title: Erster Blick
+Project: AutoAnkauf24
+Status: pending
+Priority: low
+
+This folder contains 1 attachment(s) for this task.

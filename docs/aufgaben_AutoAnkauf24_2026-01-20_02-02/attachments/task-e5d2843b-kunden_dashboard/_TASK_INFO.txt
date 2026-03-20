@@ -1,0 +1,7 @@
+Task ID: e5d2843b-a024-42ef-98c6-1e7709559910
+Task Title: kunden dashboard
+Project: AutoAnkauf24
+Status: pending
+Priority: medium
+
+This folder contains 1 attachment(s) for this task.

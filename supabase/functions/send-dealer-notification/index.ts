@@ -1,0 +1,162 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildEmailLayout, infoBox, detailRow, paragraph, button, list } from '../_shared/email-builder.ts';
+
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface DealerEmailRequest {
+  email: string;
+  name: string;
+  type: "application_received" | "approved" | "rejected";
+  companyName: string;
+  rejectionReason?: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Auth check: must be service_role (internal) or authenticated admin
+  const authHeader = req.headers.get('authorization') ?? '';
+  const isServiceRole = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!isServiceRole) {
+    const supabaseUser = createClient(
+      SUPABASE_URL,
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { authorization: authHeader } } }
+    );
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: roles } = await supabaseCheck.from('user_roles').select('role').eq('user_id', user.id);
+    const isAdmin = roles?.some(r => r.role === 'admin');
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  try {
+    const { email, name, type, companyName, rejectionReason }: DealerEmailRequest = await req.json();
+
+    console.log(`Sending ${type} notification to dealer:`, email);
+
+    // Fetch site settings
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('*')
+      .single();
+
+    const settingsData = settings || {
+      site_name: 'CaravanWert',
+      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+      contact_email: 'kontakt@caravanwert.de',
+      support_phone: '0800 123 456 78',
+    };
+
+    let subject = "";
+    let emailContent = "";
+
+    switch (type) {
+      case "application_received":
+        subject = "Händler-Bewerbung erhalten";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph(`Vielen Dank für Ihre Bewerbung als Händler bei ${settingsData.site_name}!`)}
+          ${infoBox('Ihre Bewerbung', `
+            ${detailRow('Unternehmen', companyName)}
+            ${paragraph('Ihre Bewerbung wird derzeit von unserem Team geprüft. Sie erhalten in Kürze eine Rückmeldung per E-Mail.')}
+          `, 'info', settingsData)}
+          ${paragraph('Die Prüfung dauert in der Regel 1-2 Werktage.')}
+        `;
+        break;
+
+      case "approved":
+        subject = "Händler-Bewerbung genehmigt";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph(`<strong>Herzlichen Glückwunsch! Ihre Bewerbung als Händler wurde genehmigt.</strong>`)}
+          ${infoBox(`Willkommen bei ${settingsData.site_name}!`, `
+            ${detailRow('Unternehmen', companyName)}
+            ${paragraph('Sie haben jetzt Zugriff auf unser Händler-Portal und können auf Wohnmobile bieten.')}
+          `, 'success', settingsData)}
+          ${infoBox('Nächste Schritte', `
+            ${list([
+              'Loggen Sie sich in Ihr Händler-Portal ein',
+              'Vervollständigen Sie Ihr Unternehmensprofil',
+              'Entdecken Sie aktuelle Auktionen',
+              'Geben Sie Ihr erstes Gebot ab'
+            ])}
+          `, 'default', settingsData)}
+          ${button('Zum Händler-Portal', 'https://caravanwert.de/dealer', settingsData)}
+        `;
+        break;
+
+      case "rejected":
+        subject = "Händler-Bewerbung - Rückmeldung";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph(`Vielen Dank für Ihr Interesse an einer Partnerschaft mit ${settingsData.site_name}.`)}
+          ${infoBox('Ihre Bewerbung', `
+            ${detailRow('Unternehmen', companyName)}
+            ${paragraph('Nach sorgfältiger Prüfung können wir Ihre Bewerbung derzeit leider nicht genehmigen.')}
+            ${rejectionReason ? paragraph(`<strong>Grund:</strong> ${rejectionReason}`) : ''}
+          `, 'warning', settingsData)}
+          ${paragraph('Sie können sich jederzeit erneut bewerben. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
+        `;
+        break;
+    }
+
+    const html = buildEmailLayout(settingsData, subject, emailContent);
+
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: `${settingsData.site_name} <onboarding@resend.dev>`,
+        to: [email],
+        subject,
+        html,
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const error = await emailResponse.text();
+      throw new Error(`Resend API error: ${error}`);
+    }
+
+    const result = await emailResponse.json();
+    console.log("Email sent successfully:", result);
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  } catch (error: any) {
+    console.error("Error sending dealer notification:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+};
+
+serve(handler);

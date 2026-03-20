@@ -1,0 +1,54 @@
+import { Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
+
+interface FavoriteButtonProps {
+  motorhomeId: string;
+  variant?: "icon" | "button";
+  className?: string;
+}
+
+export function FavoriteButton({ motorhomeId, variant = "icon", className }: FavoriteButtonProps) {
+  const { isFavorite, toggleFavorite, isLoading } = useFavorites();
+  const isFav = isFavorite(motorhomeId);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleFavorite(motorhomeId);
+  };
+
+  if (variant === "button") {
+    return (
+      <Button
+        variant={isFav ? "default" : "outline"}
+        size="sm"
+        onClick={handleClick}
+        disabled={isLoading}
+        className={cn("gap-2", className)}
+      >
+        <Heart className={cn("w-4 h-4", isFav && "fill-current")} />
+        {isFav ? "Gespeichert" : "Merken"}
+      </Button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className={cn(
+        "p-2 rounded-full transition-all duration-200",
+        isFav 
+          ? "bg-red-500 text-white hover:bg-red-600" 
+          : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500",
+        "shadow-md hover:shadow-lg",
+        className
+      )}
+      title={isFav ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+    >
+      <Heart className={cn("w-5 h-5", isFav && "fill-current")} />
+    </button>
+  );
+}

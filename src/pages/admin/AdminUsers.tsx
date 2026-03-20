@@ -1,0 +1,463 @@
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Mail,
+  Phone,
+  Building,
+  MoreHorizontal,
+  Edit,
+  Shield,
+  Ban,
+  Trash2,
+  Search,
+  CheckCircle,
+  XCircle,
+  Eye,
+} from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { UserEditDialog } from "@/components/admin/UserEditDialog";
+
+interface UserRole {
+  role: string;
+}
+
+interface UserWithRoles {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  company_name: string | null;
+  is_suspended?: boolean;
+  suspended_at?: string | null;
+  suspended_reason?: string | null;
+  created_at: string;
+  roles: UserRole[];
+}
+
+export default function AdminUsers() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["adminUsers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          *,
+          roles:user_roles (role)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as UserWithRoles[];
+    },
+  });
+
+  const toggleSuspendMutation = useMutation({
+    mutationFn: async ({ userId, suspend }: { userId: string; suspend: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          is_suspended: suspend,
+          suspended_at: suspend ? new Date().toISOString() : null,
+          suspended_reason: suspend ? "Vom Administrator gesperrt" : null,
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { suspend }) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      toast({
+        title: suspend ? "Benutzer gesperrt" : "Benutzer entsperrt",
+        description: suspend
+          ? "Der Benutzer kann sich nicht mehr anmelden."
+          : "Der Benutzer kann sich wieder anmelden.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Status konnte nicht geändert werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete user roles first
+      const { error: rolesError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (rolesError) throw rolesError;
+
+      // Delete profile (auth user will remain but be orphaned)
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      toast({
+        title: "Benutzer gelöscht",
+        description: "Der Benutzer wurde erfolgreich gelöscht.",
+      });
+      setShowDeleteDialog(false);
+      setSelectedUser(null);
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Benutzer konnte nicht gelöscht werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+
+    return users.filter((user) => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        !searchTerm ||
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.first_name?.toLowerCase().includes(searchLower) ||
+        user.last_name?.toLowerCase().includes(searchLower) ||
+        user.company_name?.toLowerCase().includes(searchLower);
+
+      // Role filter
+      const userRoleNames = user.roles?.map((r) => r.role) || [];
+      const matchesRole =
+        roleFilter === "all" || userRoleNames.includes(roleFilter);
+
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && !user.is_suspended) ||
+        (statusFilter === "suspended" && user.is_suspended);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, searchTerm, roleFilter, statusFilter]);
+
+  const getRoleBadges = (roles: UserRole[]) => {
+    if (!roles || roles.length === 0)
+      return <Badge variant="outline">Keine Rolle</Badge>;
+
+    return (
+      <div className="flex gap-1 flex-wrap">
+        {roles.map((r, idx) => {
+          const role = r.role;
+          let variant: "default" | "secondary" | "outline" = "outline";
+
+          if (role === "admin") variant = "default";
+          if (role === "dealer") variant = "secondary";
+
+          return (
+            <Badge key={idx} variant={variant} className="text-xs">
+              {role === "admin"
+                ? "Admin"
+                : role === "dealer"
+                ? "Händler"
+                : "Verkäufer"}
+            </Badge>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const handleEdit = (user: UserWithRoles) => {
+    setSelectedUser(user);
+    setShowEditDialog(true);
+  };
+
+  const handleToggleSuspend = (user: UserWithRoles) => {
+    toggleSuspendMutation.mutate({
+      userId: user.id,
+      suspend: !user.is_suspended,
+    });
+  };
+
+  const handleDelete = (user: UserWithRoles) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedUser) {
+      deleteUserMutation.mutate(selectedUser.id);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Benutzerverwaltung
+          </h1>
+          <p className="text-muted-foreground">
+            Übersicht aller registrierten Benutzer ({filteredUsers.length} von{" "}
+            {users?.length || 0})
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Nach Name, E-Mail oder Firma suchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Rolle filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Rollen</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="dealer">Händler</SelectItem>
+              <SelectItem value="private">Verkäufer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="active">Aktiv</SelectItem>
+              <SelectItem value="suspended">Gesperrt</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Kontakt</TableHead>
+              <TableHead>Firma</TableHead>
+              <TableHead>Rollen</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Registriert am</TableHead>
+              <TableHead className="text-right">Aktionen</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  Lädt...
+                </TableCell>
+              </TableRow>
+            ) : filteredUsers?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  Keine Benutzer gefunden
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers?.map((user) => (
+                <TableRow
+                  key={user.id}
+                  className={user.is_suspended ? "opacity-60" : ""}
+                >
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">
+                        {user.first_name} {user.last_name}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        {user.email}
+                      </div>
+                      {user.phone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="w-4 h-4" />
+                          {user.phone}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {user.company_name ? (
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{user.company_name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{getRoleBadges(user.roles)}</TableCell>
+                  <TableCell>
+                    {user.is_suspended ? (
+                      <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                        <XCircle className="w-3 h-3" />
+                        Gesperrt
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="flex items-center gap-1 w-fit text-green-600 border-green-600">
+                        <CheckCircle className="w-3 h-3" />
+                        Aktiv
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">
+                      {format(new Date(user.created_at), "dd.MM.yyyy", {
+                        locale: de,
+                      })}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/admin/users/${user.id}`)}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Details anzeigen
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(user)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(user)}>
+                          <Shield className="w-4 h-4 mr-2" />
+                          Rollen verwalten
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleToggleSuspend(user)}
+                        >
+                          <Ban className="w-4 h-4 mr-2" />
+                          {user.is_suspended ? "Entsperren" : "Sperren"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(user)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Löschen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Edit Dialog */}
+      <UserEditDialog
+        user={selectedUser}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Benutzer löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie den Benutzer{" "}
+              <strong>
+                {selectedUser?.first_name} {selectedUser?.last_name}
+              </strong>{" "}
+              ({selectedUser?.email}) löschen möchten? Diese Aktion kann nicht
+              rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

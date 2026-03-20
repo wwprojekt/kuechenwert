@@ -4,8 +4,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { SiteLogo } from "@/components/SiteLogo";
 import {
   DropdownMenu,
@@ -31,25 +30,8 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { settings } = useSettings();
 
-  // Check user roles
-  const { data: userRoles } = useQuery({
-    queryKey: ['userRoles', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      if (error) return [];
-      return data.map(r => r.role);
-    },
-    enabled: !!user,
-  });
-
-  const isAdmin = userRoles?.includes('admin');
-  const isDealer = userRoles?.includes('dealer');
+  // Use shared role hook for consistent cache behavior
+  const { isAdmin, isDealer } = useUserRole();
 
   const isActive = (path: string) => location.pathname === path;
 

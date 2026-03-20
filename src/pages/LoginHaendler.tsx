@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,43 +25,24 @@ const LoginHaendler = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingRole, setIsCheckingRole] = useState(false);
+  const { primaryRole, isDealer, isLoading: roleLoading } = useUserRole();
 
   // Check if user is already logged in and redirect based on role
   useEffect(() => {
-    const checkUserRole = async () => {
-      if (user) {
-        setIsCheckingRole(true);
-        try {
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id);
-
-          const userRoles = roles?.map((r) => r.role) || [];
-
-          if (userRoles.includes("admin")) {
-            navigate("/admin", { replace: true });
-          } else if (userRoles.includes("dealer")) {
-            navigate(redirectTo || "/dashboard", { replace: true });
-          } else {
-            toast({
-              title: "Kein Händler-Konto",
-              description: "Sie werden zum Privatkunden-Bereich weitergeleitet.",
-            });
-            navigate(redirectTo || "/dashboard", { replace: true });
-          }
-        } catch (error) {
-          logger.error("Error checking role:", error);
-          navigate("/dashboard", { replace: true });
-        } finally {
-          setIsCheckingRole(false);
-        }
+    if (user && !roleLoading && primaryRole) {
+      if (primaryRole === 'admin') {
+        navigate("/admin", { replace: true });
+      } else if (isDealer) {
+        navigate(redirectTo || "/dashboard", { replace: true });
+      } else {
+        toast({
+          title: "Kein Händler-Konto",
+          description: "Sie werden zum Privatkunden-Bereich weitergeleitet.",
+        });
+        navigate(redirectTo || "/dashboard", { replace: true });
       }
-    };
-
-    checkUserRole();
-  }, [user, navigate, toast, redirectTo]);
+    }
+  }, [user, primaryRole, isDealer, roleLoading, navigate, toast, redirectTo]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -114,7 +96,8 @@ const LoginHaendler = () => {
     }
   };
 
-  if (isCheckingRole) {
+  // Show loading while checking role after login
+  if (user && roleLoading) {
     return (
       <PageLayout
         title="Händler-Login"

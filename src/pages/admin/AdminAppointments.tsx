@@ -64,21 +64,26 @@ const AdminAppointments = () => {
       const { data: appointmentsData, error } = await query;
       if (error) throw error;
 
-      // Fetch seller profiles separately
-      const enrichedAppointments = await Promise.all(
-        (appointmentsData || []).map(async (apt) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, email')
-            .eq('id', apt.seller_id)
-            .single();
+      // Batch-fetch all seller profiles in a single query instead of N+1
+      const sellerIds = [...new Set((appointmentsData || []).map(apt => apt.seller_id).filter(Boolean))];
+      
+      let profilesMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
+      if (sellerIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', sellerIds);
+        
+        profilesMap = (profilesData || []).reduce((acc, p) => {
+          acc[p.id] = { first_name: p.first_name, last_name: p.last_name, email: p.email };
+          return acc;
+        }, {} as typeof profilesMap);
+      }
 
-          return {
-            ...apt,
-            profiles: profile || { first_name: null, last_name: null, email: '' }
-          };
-        })
-      );
+      const enrichedAppointments = (appointmentsData || []).map(apt => ({
+        ...apt,
+        profiles: profilesMap[apt.seller_id] || { first_name: null, last_name: null, email: '' }
+      }));
 
       setAppointments(enrichedAppointments as any);
     } catch (error) {

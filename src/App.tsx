@@ -182,7 +182,6 @@ const App = () => (
 
               {/* Unified Dashboard Routes - Smart routing based on user role */}
               <Route path="/dashboard/*" element={<SmartDashboard />} />
-              <Route path="/dashboard" element={<SmartDashboard />} />
               
               {/* SEO Landing Pages */}
               <Route path="/wohnmobil-verkaufen" element={<WohnmobilVerkaufen />} />

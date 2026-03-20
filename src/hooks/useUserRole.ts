@@ -1,14 +1,24 @@
 /**
  * User Role Management Hook
  * Provides consistent role detection and management across components
+ * 
+ * IMPORTANT: This is the single source of truth for user role data.
+ * All components that need role information MUST use this hook or usePermissions().
+ * The canonical queryKey is ['userRoles', userId] — do NOT create separate role queries.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
 export type UserRole = 'admin' | 'dealer' | 'seller';
+
+/**
+ * Canonical query key factory for user roles.
+ * All role-related queries MUST use this key to ensure cache consistency.
+ */
+export const userRolesQueryKey = (userId: string | undefined) => ['userRoles', userId] as const;
 
 export interface UserRoleData {
   primaryRole: UserRole;
@@ -50,9 +60,10 @@ function getDashboardRoute(primaryRole: UserRole): string {
  */
 export const useUserRole = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: roleData, isLoading: queryLoading, error } = useQuery({
-    queryKey: ['userRoles', user?.id],
+    queryKey: userRolesQueryKey(user?.id),
     queryFn: async (): Promise<UserRoleData> => {
       if (!user) {
         return {
@@ -112,12 +123,12 @@ export const useUserRole = () => {
     isLoading,
     error,
     getDashboardRoute: () => getDashboardRoute(roleData?.primaryRole || 'seller'),
+    /**
+     * Force refetch roles by invalidating the React Query cache.
+     * This ensures all components using useUserRole() get updated data.
+     */
     refetchRoles: () => {
-      // Force refetch roles (useful after role changes)
-      return supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id || '');
+      return queryClient.invalidateQueries({ queryKey: userRolesQueryKey(user?.id) });
     },
   };
 };

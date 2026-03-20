@@ -1,5 +1,4 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -29,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface MenuItem {
   title: string;
@@ -56,18 +56,22 @@ export function DealerSidebar() {
   const { settings } = useSettings();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
-  const [activeAuctionCount, setActiveAuctionCount] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchAuctionCount = async () => {
-      const { count } = await supabase
+  // Bug 2.4 + 2.5 fix: Use React Query instead of useEffect+useState,
+  // and count only active auctions (all auctions visible to dealers)
+  const { data: activeAuctionCount } = useQuery({
+    queryKey: ['dealerActiveAuctionCount'],
+    queryFn: async () => {
+      const { count, error } = await supabase
         .from('auctions')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active');
-      setActiveAuctionCount(count ?? 0);
-    };
-    fetchAuctionCount();
-  }, []);
+      if (error) return 0;
+      return count ?? 0;
+    },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    refetchOnWindowFocus: true,
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -104,7 +108,7 @@ export function DealerSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <NavLink
                     to={item.url}
-                    end={item.url === "/dealer"}
+                    end={item.url === "/dashboard"}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                         isActive
@@ -117,7 +121,7 @@ export function DealerSidebar() {
                     {!collapsed && (
                       <span className="flex items-center gap-2">
                         {item.title}
-                        {item.showBadge && activeAuctionCount !== null && (
+                        {item.showBadge && activeAuctionCount != null && (
                           <Badge variant={activeAuctionCount > 0 ? 'default' : 'secondary'} className="text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center">
                             {activeAuctionCount}
                           </Badge>

@@ -39,6 +39,26 @@ const DealerInventory = () => {
 
       if (error) throw error;
 
+      // Also fetch the auction data to get the actual purchase price (current_bid)
+      const motorhomeIds = data?.map(item => item.id) || [];
+      let auctionPriceMap: Record<string, number> = {};
+      
+      if (motorhomeIds.length > 0) {
+        const { data: auctionsData } = await supabase
+          .from('auctions')
+          .select('motorhome_id, current_bid')
+          .in('motorhome_id', motorhomeIds)
+          .in('status', ['completed', 'closed']);
+        
+        auctionPriceMap = (auctionsData || []).reduce((acc, a) => {
+          // Use the highest bid as purchase price
+          if (!acc[a.motorhome_id] || Number(a.current_bid) > acc[a.motorhome_id]) {
+            acc[a.motorhome_id] = Number(a.current_bid) || 0;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+      }
+
       const formattedData = data?.map(item => ({
         id: item.id,
         manufacturer: item.manufacturer,
@@ -47,7 +67,8 @@ const DealerInventory = () => {
         mileage: item.mileage,
         status: item.status,
         purchased_at: item.sold_at,
-        purchase_price: item.instant_price || 0,
+        // Bug 2.3 fix: Use auction current_bid as purchase price, fallback to instant_price
+        purchase_price: auctionPriceMap[item.id] || item.instant_price || 0,
         photos: item.motorhome_photos || [],
       })) || [];
 
@@ -174,7 +195,7 @@ const DealerInventory = () => {
                     </div>
                   </div>
                   <Button variant="outline" className="w-full" asChild>
-                    <Link to={`/dashboard/listings/${item.id}`}>
+                    <Link to={`/dashboard/inventory/${item.id}`}>
                       <Eye className="h-4 w-4 mr-2" />
                       Details ansehen
                     </Link>

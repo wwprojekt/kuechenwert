@@ -1,33 +1,19 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Loader2 } from "lucide-react";
 
 interface AdminRouteProps {
   children: React.ReactNode;
 }
 
+/**
+ * Route guard that only allows admin users.
+ * Uses the shared useUserRole() hook for consistent cache behavior.
+ */
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-
-  const { data: isAdmin, isLoading: roleLoading } = useQuery({
-    queryKey: ["userRole", user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (error) throw error;
-      return !!data;
-    },
-    enabled: !!user,
-  });
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
 
   if (authLoading || roleLoading) {
     return (

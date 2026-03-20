@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { approveDealerApplication, rejectDealerApplication } from "@/lib/dealerApplications";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -166,31 +167,17 @@ export default function AdminDealerDetail() {
     enabled: !!id,
   });
 
-  // Approve dealer mutation
+  // Approve dealer mutation – uses RPC-based function for transactional safety
   const approveMutation = useMutation({
     mutationFn: async () => {
-      // Update application status
-      const { error: appError } = await supabase
-        .from("dealer_applications")
-        .update({
-          status: "approved",
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (appError) throw appError;
-
-      // Add dealer role to user
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: dealer?.user_id,
-        role: "dealer",
-      });
-
-      if (roleError && !roleError.message.includes("duplicate")) throw roleError;
+      if (!id) throw new Error('Application ID is required');
+      await approveDealerApplication(id);
     },
     onSuccess: () => {
       toast.success("Händler erfolgreich genehmigt");
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
     },
     onError: (error) => {
       logger.error("Approve dealer error:", error);
@@ -198,25 +185,18 @@ export default function AdminDealerDetail() {
     },
   });
 
-  // Reject dealer mutation
+  // Reject dealer mutation – uses shared function with notification
   const rejectMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("dealer_applications")
-        .update({
-          status: "rejected",
-          rejection_reason: rejectReason,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      if (!id) throw new Error('Application ID is required');
+      await rejectDealerApplication(id, rejectReason);
     },
     onSuccess: () => {
       toast.success("Händlerantrag abgelehnt");
       setShowRejectDialog(false);
       setRejectReason("");
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
     },
     onError: (error) => {
       logger.error("Reject dealer error:", error);

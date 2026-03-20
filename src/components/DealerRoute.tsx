@@ -1,33 +1,19 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Loader2 } from "lucide-react";
 
 interface DealerRouteProps {
   children: React.ReactNode;
 }
 
+/**
+ * Route guard that only allows dealer (or admin) users.
+ * Uses the shared useUserRole() hook for consistent cache behavior.
+ */
 export const DealerRoute = ({ children }: DealerRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-
-  const { data: isDealer, isLoading: roleLoading } = useQuery({
-    queryKey: ["dealerRole", user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "dealer")
-        .maybeSingle();
-
-      if (error) throw error;
-      return !!data;
-    },
-    enabled: !!user,
-  });
+  const { isDealer, isAdmin, isLoading: roleLoading } = useUserRole();
 
   if (authLoading || roleLoading) {
     return (
@@ -41,7 +27,8 @@ export const DealerRoute = ({ children }: DealerRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isDealer) {
+  // Allow both dealers and admins
+  if (!isDealer && !isAdmin) {
     return <Navigate to="/dealer-register" replace />;
   }
 

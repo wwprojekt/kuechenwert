@@ -32,11 +32,24 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 
-// Base menu items - filtered based on role
-const baseMenuItems = [
+/**
+ * Menu items with role-based visibility.
+ * - showForRoles: if set, item is ONLY shown for these roles (whitelist)
+ * - hideForRoles: if set, item is hidden for these roles (blacklist)
+ * - If neither is set, item is shown for all roles
+ */
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hideForRoles: string[];
+  showForRoles?: string[];
+}
+
+const baseMenuItems: MenuItem[] = [
   { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard, hideForRoles: [] },
   { title: "Meine Inserate", url: "/dashboard/listings", icon: Car, hideForRoles: ['dealer'] },
-  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: ['seller'] },
+  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: [] },
   { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: [] },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
   { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: [] },
@@ -44,6 +57,12 @@ const baseMenuItems = [
   { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: ['seller'] },
   { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
 ];
+
+/**
+ * Roles that should see the "Neues Inserat" button.
+ * Dealers have their own dashboard with different CTAs.
+ */
+const ROLES_WITH_NEW_LISTING = ['seller'];
 
 export function UserSidebar() {
   const { state } = useSidebar();
@@ -53,9 +72,18 @@ export function UserSidebar() {
   const collapsed = state === "collapsed";
   
   // Filter menu items based on user role
-  const menuItems = baseMenuItems.filter(
-    item => !item.hideForRoles.includes(primaryRole || '')
-  );
+  const menuItems = baseMenuItems.filter(item => {
+    const role = primaryRole || '';
+    // If showForRoles is defined, only show for those roles
+    if (item.showForRoles && item.showForRoles.length > 0) {
+      return item.showForRoles.includes(role);
+    }
+    // Otherwise, hide for specified roles
+    return !item.hideForRoles.includes(role);
+  });
+
+  // Bug 3.2 fix: Only show "Neues Inserat" button for seller role
+  const showNewListingButton = ROLES_WITH_NEW_LISTING.includes(primaryRole || '');
 
   const handleSignOut = async () => {
     await signOut();
@@ -82,8 +110,8 @@ export function UserSidebar() {
 
         <Separator className="mb-4" />
 
-        {/* Quick Actions */}
-        {!collapsed && (
+        {/* Quick Actions – only for sellers */}
+        {showNewListingButton && !collapsed && (
           <div className="px-3 mb-6 animate-fade-in">
             <Button
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
@@ -95,7 +123,7 @@ export function UserSidebar() {
           </div>
         )}
 
-        {collapsed && (
+        {showNewListingButton && collapsed && (
           <div className="px-2 mb-6">
             <Button
               size="icon"

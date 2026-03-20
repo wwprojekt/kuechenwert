@@ -46,7 +46,8 @@ export default function ListingDetail() {
     queryFn: async () => {
       if (!id) return null;
 
-      const { data, error } = await supabase
+      // First try as seller (owner of the listing)
+      const { data: sellerData, error: sellerError } = await supabase
         .from("motorhomes")
         .select(`
           *,
@@ -66,10 +67,37 @@ export default function ListingDetail() {
         `)
         .eq("id", id)
         .eq("seller_id", user?.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (sellerData) return sellerData;
+
+      // If not found as seller, try as buyer (dealer who purchased via auction)
+      const { data: buyerData, error: buyerError } = await supabase
+        .from("motorhomes")
+        .select(`
+          *,
+          photos:motorhome_photos (
+            photo_url,
+            display_order
+          ),
+          auction:auctions (
+            id,
+            status,
+            current_bid,
+            starting_bid,
+            end_time,
+            start_time,
+            created_at
+          )
+        `)
+        .eq("id", id)
+        .eq("sold_to", user?.id)
+        .maybeSingle();
+
+      if (buyerData) return buyerData;
+
+      // Neither seller nor buyer — throw not found
+      throw new Error('Motorhome not found or access denied');
     },
     enabled: !!id && !!user,
   });

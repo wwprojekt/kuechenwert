@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,39 +25,24 @@ const Login = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { primaryRole, isLoading: roleLoading, refetchRoles } = useUserRole();
 
   // Check if user is already logged in and redirect based on role
   useEffect(() => {
-    const checkUserRole = async () => {
-      if (user) {
-        try {
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id);
-
-          const userRoles = roles?.map((r) => r.role) || [];
-
-          if (userRoles.includes("admin")) {
-            navigate("/admin", { replace: true });
-          } else if (userRoles.includes("dealer")) {
-            toast({
-              title: "Händler-Konto erkannt",
-              description: "Sie werden zum Händler-Bereich weitergeleitet.",
-            });
-            navigate(redirectTo || "/dashboard", { replace: true });
-          } else {
-            navigate(redirectTo || "/dashboard", { replace: true });
-          }
-        } catch (error) {
-          logger.error("Error checking role:", error);
-          navigate("/dashboard", { replace: true });
-        }
+    if (user && !roleLoading && primaryRole) {
+      if (primaryRole === 'admin') {
+        navigate("/admin", { replace: true });
+      } else if (primaryRole === 'dealer') {
+        toast({
+          title: "Händler-Konto erkannt",
+          description: "Sie werden zum Händler-Bereich weitergeleitet.",
+        });
+        navigate(redirectTo || "/dashboard", { replace: true });
+      } else {
+        navigate(redirectTo || "/dashboard", { replace: true });
       }
-    };
-
-    checkUserRole();
-  }, [user, navigate, toast, redirectTo]);
+    }
+  }, [user, primaryRole, roleLoading, navigate, toast, redirectTo]);
 
   const [formData, setFormData] = useState({
     email: "",

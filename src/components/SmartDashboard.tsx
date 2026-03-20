@@ -1,10 +1,16 @@
 /**
  * Smart Dashboard Component
- * Automatically routes users to appropriate dashboard based on their role
+ * Automatically routes users to appropriate dashboard based on their role.
+ *
+ * ARCHITECTURE:
+ * - Uses React Router <Routes>/<Route> for sub-routing instead of manual path matching
+ * - Admin users are redirected to /admin on ALL /dashboard/* paths (not just /dashboard)
+ * - Dealer vs. Seller layout is determined by useUserRole() and rendered via wrapper components
+ * - Lazy-loaded page components are defined at module level (required by React.lazy)
  */
 
 import React, { useEffect, Suspense } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link, Routes, Route } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -36,11 +42,21 @@ const MyInvoices = React.lazy(() => import('@/pages/dashboard/MyInvoices'));
 const UserProfile = React.lazy(() => import('@/pages/dashboard/UserProfile'));
 const DealerSettings = React.lazy(() => import('@/pages/dealer/DealerSettings'));
 
+/**
+ * Wrap a lazy component in Suspense with a consistent loading fallback
+ */
+function LazyPage({ Component }: { Component: React.LazyExoticComponent<React.ComponentType<any>> }) {
+  return (
+    <Suspense fallback={<DashboardLoadingState />}>
+      <Component />
+    </Suspense>
+  );
+}
+
 export const SmartDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { primaryRole, isLoading: roleLoading, error } = useUserRole();
   const navigate = useNavigate();
-  const location = useLocation();
 
   // If user is not authenticated, redirect to login
   useEffect(() => {
@@ -49,19 +65,14 @@ export const SmartDashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Handle role-based redirection for /admin access
+  // Bug 1.1 fix: Redirect admin on ALL /dashboard/* paths, not just exact /dashboard
   useEffect(() => {
-    if (!roleLoading && primaryRole && location.pathname === '/dashboard') {
-      // If user is admin and accessing /dashboard, redirect to /admin
-      if (primaryRole === 'admin') {
-        navigate('/admin', { replace: true });
-        return;
-      }
+    if (!roleLoading && primaryRole === 'admin') {
+      navigate('/admin', { replace: true });
     }
-  }, [primaryRole, roleLoading, navigate, location.pathname]);
+  }, [primaryRole, roleLoading, navigate]);
 
   // Not authenticated — useEffect will redirect to /login
-  // Return null to prevent rendering any dashboard with stale/default role data
   if (!authLoading && !user) {
     return null;
   }
@@ -105,9 +116,7 @@ export const SmartDashboard = () => {
     );
   }
 
-  // Safety net: if primaryRole is still null (role data not yet resolved),
-  // show loading spinner. This catches any race condition where isLoading
-  // is false but roleData hasn't arrived yet.
+  // Safety net: if primaryRole is still null after loading completed
   if (!primaryRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -124,7 +133,8 @@ export const SmartDashboard = () => {
   // Render appropriate dashboard based on primary role
   switch (primaryRole) {
     case 'admin':
-      // Admin should have been redirected by the useEffect above
+      // Admin should have been redirected by the useEffect above.
+      // Render user dashboard as fallback while redirect is pending.
       return <UserDashboardWrapper />;
     case 'dealer':
       return <DealerDashboardWrapper />;
@@ -136,214 +146,73 @@ export const SmartDashboard = () => {
 
 /**
  * Dealer Dashboard Wrapper
- * Renders dealer dashboard within unified system
+ * Uses React Router <Routes> for proper sub-routing instead of path.includes()
+ *
+ * Bug 1.2 fix: Each route is explicitly defined, preventing false matches
+ * Bug 1.3 fix: No more fragile string matching that breaks with new paths
  */
 const DealerDashboardWrapper = () => {
-  const location = useLocation();
-  
-  // Handle dealer sub-routes using module-level lazy imports
-  const renderDealerContent = () => {
-    const path = location.pathname;
-    
-    if (path === '/dashboard' || path === '/dashboard/') {
-      return <DealerDashboard />;
-    }
-    
-    // Handle sub-routes using pre-defined lazy components
-    if (path.includes('/auctions')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <DealerAuctions />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/inventory')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <DealerInventory />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/bids')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyBids />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/favorites')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyFavorites />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/kaufchancen')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyKaufchancen />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/appointments')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyAppointments />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/messages')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyMessages />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/invoices')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyInvoices />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/settings')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <DealerSettings />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/profile')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <UserProfile />
-        </Suspense>
-      );
-    }
-    
-    // Default to main dashboard
-    return <DealerDashboard />;
-  };
-
   return (
     <DealerLayoutContent>
-      {renderDealerContent()}
+      <Routes>
+        {/* Exact match for /dashboard */}
+        <Route index element={<DealerDashboard />} />
+        
+        {/* Dealer-specific routes */}
+        <Route path="auctions" element={<LazyPage Component={DealerAuctions} />} />
+        <Route path="inventory" element={<LazyPage Component={DealerInventory} />} />
+        <Route path="inventory/:id" element={<LazyPage Component={ListingDetail} />} />
+        
+        {/* Shared routes (available to both dealer and seller) */}
+        <Route path="bids" element={<LazyPage Component={MyBids} />} />
+        <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
+        <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
+        <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
+        <Route path="messages" element={<LazyPage Component={MyMessages} />} />
+        <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+        <Route path="profile" element={<LazyPage Component={UserProfile} />} />
+        <Route path="settings" element={<LazyPage Component={DealerSettings} />} />
+        
+        {/* Listing routes (dealer may also view listings) */}
+        <Route path="listings" element={<LazyPage Component={MyListings} />} />
+        <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
+        <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
+        
+        {/* Fallback: show main dealer dashboard for unknown sub-routes */}
+        <Route path="*" element={<DealerDashboard />} />
+      </Routes>
     </DealerLayoutContent>
   );
 };
 
 /**
  * User Dashboard Wrapper
- * Renders user dashboard within unified system
+ * Uses React Router <Routes> for proper sub-routing instead of path.includes()
  */
 const UserDashboardWrapper = () => {
-  const location = useLocation();
-  
-  // Handle user sub-routes using module-level lazy imports
-  const renderUserContent = () => {
-    const path = location.pathname;
-    
-    if (path === '/dashboard' || path === '/dashboard/') {
-      return <DashboardOverview />;
-    }
-    
-    // Handle sub-routes using pre-defined lazy components
-    if (path.includes('/listings')) {
-      if (path.includes('/edit')) {
-        return (
-          <Suspense fallback={<DashboardLoadingState />}>
-            <ListingEdit />
-          </Suspense>
-        );
-      }
-      
-      if (path.match(/\/listings\/[^/]+$/)) {
-        return (
-          <Suspense fallback={<DashboardLoadingState />}>
-            <ListingDetail />
-          </Suspense>
-        );
-      }
-      
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyListings />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/bids')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyBids />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/appointments')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyAppointments />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/favorites')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyFavorites />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/kaufchancen')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyKaufchancen />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/messages')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyMessages />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/invoices')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <MyInvoices />
-        </Suspense>
-      );
-    }
-    
-    if (path.includes('/profile')) {
-      return (
-        <Suspense fallback={<DashboardLoadingState />}>
-          <UserProfile />
-        </Suspense>
-      );
-    }
-    
-    // Default to overview
-    return <DashboardOverview />;
-  };
-
   return (
     <UserLayoutContent>
-      {renderUserContent()}
+      <Routes>
+        {/* Exact match for /dashboard */}
+        <Route index element={<DashboardOverview />} />
+        
+        {/* User-specific routes */}
+        <Route path="listings" element={<LazyPage Component={MyListings} />} />
+        <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
+        <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
+        
+        {/* Shared routes */}
+        <Route path="bids" element={<LazyPage Component={MyBids} />} />
+        <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
+        <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
+        <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
+        <Route path="messages" element={<LazyPage Component={MyMessages} />} />
+        <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+        <Route path="profile" element={<LazyPage Component={UserProfile} />} />
+        
+        {/* Fallback: show overview for unknown sub-routes */}
+        <Route path="*" element={<DashboardOverview />} />
+      </Routes>
     </UserLayoutContent>
   );
 };

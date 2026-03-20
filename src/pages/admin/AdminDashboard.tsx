@@ -237,7 +237,7 @@ export default function AdminDashboard() {
               ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.photo_url;
 
             return (
-              <Link key={auction.id} to={`/auktion/${auction.id}`} className="block">
+              <Link key={auction.id} to={`/admin/auctions/${auction.id}`} className="block">
                 <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-smooth cursor-pointer">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">

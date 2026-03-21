@@ -1303,6 +1303,24 @@ export type Database = {
           weight_kg: number | null
           width_m: number | null
           year: number
+          awning_length_m: number | null
+          grey_water_capacity_liters: number | null
+          fuel_tank_capacity_liters: number | null
+          non_smoker: boolean | null
+          service_history_available: boolean | null
+          previous_owners: number | null
+          last_tuev_date: string | null
+          number_of_axles: number | null
+          beds_description: string | null
+          solar_power_watts: number | null
+          battery_capacity_ah: number | null
+          has_inverter: boolean | null
+          has_parking_sensors: boolean | null
+          has_cruise_control: boolean | null
+          has_central_locking: boolean | null
+          additional_equipment: string | null
+          vehicle_identification_number: string | null
+          license_plate: string | null
         }
         Insert: {
           accident_free?: boolean | null
@@ -1368,6 +1386,24 @@ export type Database = {
           weight_kg?: number | null
           width_m?: number | null
           year: number
+          awning_length_m?: number | null
+          grey_water_capacity_liters?: number | null
+          fuel_tank_capacity_liters?: number | null
+          non_smoker?: boolean | null
+          service_history_available?: boolean | null
+          previous_owners?: number | null
+          last_tuev_date?: string | null
+          number_of_axles?: number | null
+          beds_description?: string | null
+          solar_power_watts?: number | null
+          battery_capacity_ah?: number | null
+          has_inverter?: boolean | null
+          has_parking_sensors?: boolean | null
+          has_cruise_control?: boolean | null
+          has_central_locking?: boolean | null
+          additional_equipment?: string | null
+          vehicle_identification_number?: string | null
+          license_plate?: string | null
         }
         Update: {
           accident_free?: boolean | null
@@ -1433,6 +1469,24 @@ export type Database = {
           weight_kg?: number | null
           width_m?: number | null
           year?: number
+          awning_length_m?: number | null
+          grey_water_capacity_liters?: number | null
+          fuel_tank_capacity_liters?: number | null
+          non_smoker?: boolean | null
+          service_history_available?: boolean | null
+          previous_owners?: number | null
+          last_tuev_date?: string | null
+          number_of_axles?: number | null
+          beds_description?: string | null
+          solar_power_watts?: number | null
+          battery_capacity_ah?: number | null
+          has_inverter?: boolean | null
+          has_parking_sensors?: boolean | null
+          has_cruise_control?: boolean | null
+          has_central_locking?: boolean | null
+          additional_equipment?: string | null
+          vehicle_identification_number?: string | null
+          license_plate?: string | null
         }
         Relationships: [
           {

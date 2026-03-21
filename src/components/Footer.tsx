@@ -146,9 +146,9 @@ const Footer = () => {
       {/* Main Footer */}
       <div className="bg-slate-950">
         <div className="container py-16">
-          <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-6 mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-10 mb-12">
             {/* Brand Column */}
-            <div className="space-y-6">
+            <div className="space-y-6 md:col-span-2 lg:col-span-5">
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
                 {settings?.site_description || 'Deutschlands führende Plattform für den An- und Verkauf von Wohnmobilen. Schnell, sicher und fair.'}

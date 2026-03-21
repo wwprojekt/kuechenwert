@@ -37,8 +37,6 @@ interface DealerRegistrationForm {
   company_postal_code: string;
   company_city: string;
   legal_form: string;
-  tax_id: string;
-  trade_license_number: string;
   hrb_number: string;
   
   // Contact person
@@ -47,7 +45,6 @@ interface DealerRegistrationForm {
   
   // Optional
   website: string;
-  business_description: string;
   
   // Legal
   accept_terms: boolean;
@@ -85,13 +82,12 @@ export default function DealerOnboarding() {
     company_postal_code: '',
     company_city: '',
     legal_form: '',
-    tax_id: '',
-    trade_license_number: '',
+
     hrb_number: '',
     contact_person_name: '',
     contact_person_position: '',
     website: '',
-    business_description: '',
+
     accept_terms: false,
     accept_privacy: false,
   });
@@ -118,8 +114,6 @@ export default function DealerOnboarding() {
           formData.company_postal_code &&
           formData.company_city &&
           formData.legal_form &&
-          formData.tax_id &&
-          formData.trade_license_number &&
           formData.contact_person_name
         );
       case 3: // Legal acceptance
@@ -187,14 +181,13 @@ export default function DealerOnboarding() {
           company_postal_code: formData.company_postal_code,
           company_city: formData.company_city,
           legal_form: formData.legal_form,
-          tax_id: formData.tax_id,
-          trade_license_number: formData.trade_license_number,
+
           hrb_number: formData.hrb_number,
           contact_person_name: formData.contact_person_name,
           contact_person_position: formData.contact_person_position,
           phone: formData.phone,
           website: formData.website,
-          business_description: formData.business_description,
+
           status: 'pending',
         })
         .select()
@@ -492,25 +485,6 @@ const CompanyInfoStep = ({ formData, updateFormData }: any) => (
         />
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="tax_id">Steuernummer *</Label>
-        <Input
-          id="tax_id"
-          value={formData.tax_id}
-          onChange={(e) => updateFormData({ tax_id: e.target.value })}
-          placeholder="123/456/78901"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="trade_license_number">Gewerbeschein-Nr. *</Label>
-        <Input
-          id="trade_license_number"
-          value={formData.trade_license_number}
-          onChange={(e) => updateFormData({ trade_license_number: e.target.value })}
-          placeholder="GEW-12345"
-        />
-      </div>
       
       <div className="space-y-2">
         <Label htmlFor="contact_person_name">Ansprechpartner *</Label>

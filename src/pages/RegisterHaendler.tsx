@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -21,7 +20,6 @@ import {
 import {
   Building2,
   MapPin,
-  FileText,
   Phone,
   Globe,
   User,
@@ -60,9 +58,7 @@ const dealerRegistrationSchema = z.object({
   companyAddress: z.string().min(5, "Adresse erforderlich"),
   companyPostalCode: z.string().regex(/^\d{5}$/, "Ungültige PLZ (5 Ziffern)"),
   companyCity: z.string().min(2, "Stadt erforderlich"),
-  taxId: z.string().min(5, "Steuernummer erforderlich"),
-  ustId: z.string().regex(/^DE\d{9}$/, "Ungültige USt-IdNr. (Format: DE123456789)"),
-  tradeLicenseNumber: z.string().min(3, "Gewerbeschein-Nummer erforderlich"),
+
   legalForm: z.string().optional(),
   foundedYear: z.string().regex(/^\d{4}$/, "Ungültiges Jahr (4 Ziffern)").optional().or(z.literal("")),
   // Contact person
@@ -70,7 +66,7 @@ const dealerRegistrationSchema = z.object({
   contactPersonPosition: z.string().optional(),
   phone: z.string().regex(/^[\d\s\-+()]+$/, "Ungültige Telefonnummer"),
   website: z.string().url("Ungültige URL").optional().or(z.literal("")),
-  businessDescription: z.string().optional(),
+
   agbAccepted: z.literal(true, { errorMap: () => ({ message: "Sie müssen die AGB und Datenschutzbestimmungen akzeptieren" }) }),
 }).refine((data) => data.password === data.passwordConfirm, {
   message: "Passwörter stimmen nicht überein",
@@ -110,16 +106,14 @@ const RegisterHaendler = () => {
     companyAddress: "",
     companyPostalCode: "",
     companyCity: "",
-    taxId: "",
-    ustId: "",
-    tradeLicenseNumber: "",
+
     legalForm: "",
     foundedYear: "",
     contactPersonName: "",
     contactPersonPosition: "",
     phone: "",
     website: "",
-    businessDescription: "",
+
     agbAccepted: false as boolean,
   });
 
@@ -209,15 +203,14 @@ const RegisterHaendler = () => {
         company_address: validated.companyAddress,
         company_postal_code: validated.companyPostalCode,
         company_city: validated.companyCity,
-        tax_id: validated.taxId,
-        trade_license_number: validated.tradeLicenseNumber,
+
         legal_form: validated.legalForm || null,
         founded_year: validated.foundedYear ? parseInt(validated.foundedYear) : null,
         contact_person_name: validated.contactPersonName,
         contact_person_position: validated.contactPersonPosition || null,
         phone: validated.phone,
         website: validated.website || null,
-        business_description: validated.businessDescription || null,
+
         trade_license_document_url: documentUrl,
         status: "pending",
       });
@@ -467,69 +460,37 @@ const RegisterHaendler = () => {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="taxId" className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary" />
-                        Steuernummer *
-                      </Label>
-                      <Input
-                        id="taxId"
-                        placeholder="123/456/78910"
-                        value={formData.taxId}
-                        onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ustId">USt-IdNr. *</Label>
-                      <Input
-                        id="ustId"
-                        placeholder="DE123456789"
-                        value={formData.ustId}
-                        onChange={(e) => setFormData({ ...formData, ustId: e.target.value.toUpperCase() })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tradeLicenseNumber">Gewerbeschein-Nr. *</Label>
-                      <Input
-                        id="tradeLicenseNumber"
-                        placeholder="GEW-123456"
-                        value={formData.tradeLicenseNumber}
-                        onChange={(e) => setFormData({ ...formData, tradeLicenseNumber: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="document" className="flex items-center gap-2">
-                        <Upload className="w-4 h-4 text-primary" />
-                        Gewerbeschein hochladen
-                      </Label>
-                      <input
-                        ref={documentInputRef}
-                        id="document"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleDocumentUpload}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => documentInputRef.current?.click()}
-                        className="w-full justify-start gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Datei auswählen
-                      </Button>
-                      {documentFile && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <File className="w-4 h-4" />
-                          {documentFile.name}
-                        </div>
-                      )}
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="document" className="flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-primary" />
+                      Gewerbeschein hochladen (optional)
+                    </Label>
+                    <input
+                      ref={documentInputRef}
+                      id="document"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleDocumentUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => documentInputRef.current?.click()}
+                      className="w-full justify-start gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Datei auswählen
+                    </Button>
+                    {documentFile && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <File className="w-4 h-4" />
+                        {documentFile.name}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      PDF, JPG oder PNG (max. 10 MB)
+                    </p>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -630,16 +591,7 @@ const RegisterHaendler = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="businessDescription">Über Ihr Geschäft (optional)</Label>
-                    <Textarea
-                      id="businessDescription"
-                      placeholder="Beschreiben Sie Ihr Geschäft, Ihre Spezialisierung..."
-                      rows={3}
-                      value={formData.businessDescription}
-                      onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
-                    />
-                  </div>
+
                 </div>
               </div>
 

@@ -5,13 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import {
   Building2,
-  FileText,
   Phone,
   Globe,
   User,
@@ -41,14 +39,12 @@ const dealerApplicationSchema = z.object({
   companyAddress: z.string().min(5, "Adresse erforderlich"),
   companyPostalCode: z.string().regex(/^\d{5}$/, "Ungültige PLZ (5 Ziffern)"),
   companyCity: z.string().min(2, "Stadt erforderlich"),
-  taxId: z.string().min(5, "Steuernummer erforderlich"),
-  ustId: z.string().regex(/^DE\d{9}$/, "Ungültige USt-IdNr. (Format: DE123456789)"),
-  tradeLicenseNumber: z.string().min(3, "Gewerbeschein-Nummer erforderlich"),
+
   contactPersonName: z.string().min(2, "Name erforderlich"),
   contactPersonPosition: z.string().optional(),
   phone: z.string().regex(/^[\d\s\-+()]+$/, "Ungültige Telefonnummer"),
   website: z.string().url("Ungültige URL").optional().or(z.literal("")),
-  businessDescription: z.string().optional(),
+
   // New fields
   legalForm: z.enum(["einzelunternehmen", "gbr", "ug", "gmbh", "ag"], {
     required_error: "Rechtsform erforderlich",
@@ -106,14 +102,12 @@ const DealerRegister = () => {
     companyAddress: "",
     companyPostalCode: "",
     companyCity: "",
-    taxId: "",
-    ustId: "",
-    tradeLicenseNumber: "",
+
     contactPersonName: "",
     contactPersonPosition: "",
     phone: "",
     website: "",
-    businessDescription: "",
+
     // New fields
     legalForm: "" as "einzelunternehmen" | "gbr" | "ug" | "gmbh" | "ag" | "",
     foundedYear: "" as number | "",
@@ -187,13 +181,12 @@ const DealerRegister = () => {
         company_address: validated.companyAddress,
         company_postal_code: validated.companyPostalCode,
         company_city: validated.companyCity,
-        tax_id: validated.taxId,
-        trade_license_number: validated.tradeLicenseNumber,
+
         contact_person_name: validated.contactPersonName,
         contact_person_position: validated.contactPersonPosition || null,
         phone: validated.phone,
         website: validated.website || null,
-        business_description: validated.businessDescription || null,
+
         trade_license_document_url: documentUrl,
         // New fields
         legal_form: validated.legalForm,
@@ -475,90 +468,39 @@ const DealerRegister = () => {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="taxId" className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary" />
-                        Steuernummer *
-                      </Label>
-                      <Input
-                        id="taxId"
-                        placeholder="123/456/78910"
-                        value={formData.taxId}
-                        onChange={(e) =>
-                          setFormData({ ...formData, taxId: e.target.value })
-                        }
+                  <div className="space-y-2">
+                    <Label htmlFor="document" className="flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-primary" />
+                      Gewerbeschein hochladen (optional)
+                    </Label>
+                    <div className="relative">
+                      <input
+                        ref={documentInputRef}
+                        id="document"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleDocumentUpload}
+                        className="hidden"
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => documentInputRef.current?.click()}
+                        className="w-full justify-start gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Datei auswählen
+                      </Button>
+                      {documentFile && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                          <File className="w-4 h-4" />
+                          {documentFile.name}
+                        </div>
+                      )}
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="ustId" className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary" />
-                        USt-IdNr. *
-                      </Label>
-                      <Input
-                        id="ustId"
-                        placeholder="DE123456789"
-                        value={formData.ustId}
-                        onChange={(e) =>
-                          setFormData({ ...formData, ustId: e.target.value.toUpperCase() })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tradeLicenseNumber">
-                        Gewerbeschein-Nr. *
-                      </Label>
-                      <Input
-                        id="tradeLicenseNumber"
-                        placeholder="GEW-123456"
-                        value={formData.tradeLicenseNumber}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            tradeLicenseNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="document" className="flex items-center gap-2">
-                        <Upload className="w-4 h-4 text-primary" />
-                        Gewerbeschein hochladen
-                      </Label>
-                      <div className="relative">
-                        <input
-                          ref={documentInputRef}
-                          id="document"
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={handleDocumentUpload}
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => documentInputRef.current?.click()}
-                          className="w-full justify-start gap-2"
-                        >
-                          <Upload className="w-4 h-4" />
-                          Datei auswählen
-                        </Button>
-                        {documentFile && (
-                          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                            <File className="w-4 h-4" />
-                            {documentFile.name}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        PDF, JPG oder PNG (max. 10 MB)
-                      </p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      PDF, JPG oder PNG (max. 10 MB)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -807,30 +749,6 @@ const DealerRegister = () => {
                 </div>
               </div>
 
-              {/* Business Description */}
-              <div>
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-primary" />
-                  Über Ihr Geschäft
-                </h2>
-                <div className="space-y-2">
-                  <Label htmlFor="businessDescription">
-                    Beschreibung (optional)
-                  </Label>
-                  <Textarea
-                    id="businessDescription"
-                    placeholder="Beschreiben Sie Ihr Geschäft, Ihre Spezialisierung und warum Sie Partner werden möchten..."
-                    rows={4}
-                    value={formData.businessDescription}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        businessDescription: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
 
               {/* Info Box */}
               <Alert>

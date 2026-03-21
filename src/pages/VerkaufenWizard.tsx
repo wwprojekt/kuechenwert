@@ -20,6 +20,7 @@ import { ReviewStep } from "@/components/wizard/ReviewStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { useMemo, useCallback, useRef } from "react";
+import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 
 const baseSteps = [
   { id: 1, name: "Fahrzeugdetails", description: "Grundinformationen" },
@@ -44,7 +45,7 @@ const VerkaufenWizard = () => {
   const { saveProgress, markCompleted, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
 
-  // Prefill form data from URL parameters (from Hero form / QuickAuctionForm)
+  // Prefill form data from URL parameters (including contact data from hero/landing forms)
   useEffect(() => {
     const manufacturer = searchParams.get('manufacturer');
     const model = searchParams.get('model');
@@ -122,6 +123,11 @@ const VerkaufenWizard = () => {
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < steps.length) {
+      // Lead-Fortschritt tracken bei jedem Schritt-Wechsel
+      updateLeadWizardProgress({
+        step: currentStep + 1,
+        formData: formData as unknown as Record<string, unknown>,
+      });
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -138,6 +144,8 @@ const VerkaufenWizard = () => {
   const handleSubmit = async () => {
     await submitForm();
     await markCompleted();
+    // Lead als abgeschlossen markieren
+    markLeadWizardCompleted();
   };
 
   const renderStep = () => {

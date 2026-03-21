@@ -2164,42 +2164,66 @@ export type Database = {
           body_type: string | null
           created_at: string | null
           email: string | null
+          form_data_snapshot: Record<string, unknown> | null
           id: string
+          last_wizard_step: number | null
+          lead_quality: string | null
           manufacturer: string | null
+          max_wizard_step: number | null
           model: string | null
           name: string | null
+          notes: string | null
+          page_url: string | null
           phone: string | null
+          referrer: string | null
           sale_channel: string | null
           source: string | null
           updated_at: string | null
+          user_agent: string | null
           wizard_completed: boolean | null
         }
         Insert: {
           body_type?: string | null
           created_at?: string | null
           email?: string | null
+          form_data_snapshot?: Record<string, unknown> | null
           id?: string
+          last_wizard_step?: number | null
+          lead_quality?: string | null
           manufacturer?: string | null
+          max_wizard_step?: number | null
           model?: string | null
           name?: string | null
+          notes?: string | null
+          page_url?: string | null
           phone?: string | null
+          referrer?: string | null
           sale_channel?: string | null
           source?: string | null
           updated_at?: string | null
+          user_agent?: string | null
           wizard_completed?: boolean | null
         }
         Update: {
           body_type?: string | null
           created_at?: string | null
           email?: string | null
+          form_data_snapshot?: Record<string, unknown> | null
           id?: string
+          last_wizard_step?: number | null
+          lead_quality?: string | null
           manufacturer?: string | null
+          max_wizard_step?: number | null
           model?: string | null
           name?: string | null
+          notes?: string | null
+          page_url?: string | null
           phone?: string | null
+          referrer?: string | null
           sale_channel?: string | null
           source?: string | null
           updated_at?: string | null
+          user_agent?: string | null
           wizard_completed?: boolean | null
         }
         Relationships: []

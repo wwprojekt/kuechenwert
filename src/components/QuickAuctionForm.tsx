@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { captureOrUpdateLead } from '@/lib/leadTrackingService';
 import { manufacturerModels, popularManufacturers } from '@/lib/vehicle-data';
 
 type SaleChannel = 'auction' | 'instant' | 'station' | '';
@@ -74,42 +75,30 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
   // Get available models for selected manufacturer
   const availableModels = manufacturer ? manufacturerModels[manufacturer] || [] : [];
 
-  // Capture lead in database
+  // Capture lead in database via central tracking service
   const captureLead = async () => {
-    try {
-      const { error } = await supabase.from('quick_leads').insert({
-        name: customerName.trim(),
-        email: customerEmail.trim().toLowerCase(),
-        phone: customerPhone.trim(),
-        manufacturer,
-        model,
-        body_type: bodyType,
-        sale_channel: saleChannel || null,
-        source: 'hero_form',
-      });
-      if (error) throw error;
-    } catch (error) {
-      logger.error('Lead capture error:', error);
-      // Don't block user - lead capture is non-critical
-    }
+    await captureOrUpdateLead({
+      name: customerName.trim(),
+      email: customerEmail.trim(),
+      phone: customerPhone.trim(),
+      manufacturer,
+      model,
+      bodyType,
+      saleChannel: saleChannel || undefined,
+      source: 'hero_form',
+      pageUrl: window.location.pathname,
+    });
   };
 
   // Capture partial lead (vehicle info only) for abandoned form recovery
   const capturePartialLead = async () => {
-    try {
-      await supabase.from('quick_leads').insert({
-        name: null,
-        email: null,
-        phone: null,
-        manufacturer,
-        model,
-        body_type: bodyType,
-        sale_channel: null,
-        source: 'hero_form_partial',
-      });
-    } catch (error) {
-      logger.error('Partial lead capture error:', error);
-    }
+    await captureOrUpdateLead({
+      manufacturer,
+      model,
+      bodyType,
+      source: 'hero_form_partial',
+      pageUrl: window.location.pathname,
+    });
   };
 
   const handleNextStep = () => {

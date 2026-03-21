@@ -2,12 +2,21 @@
  * Lead Tracking Service
  * Erfasst Leads sofort bei Kontaktdaten-Eingabe und trackt den Wizard-Fortschritt.
  * Jeder Lead wird unabhängig davon gespeichert, ob der Nutzer den Wizard abschließt.
+ * 
+ * WICHTIG: Verwendet sowohl localStorage als auch eine In-Memory-Variable,
+ * um Race Conditions bei schnellen aufeinanderfolgenden Aufrufen zu vermeiden.
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 
 const LEAD_ID_KEY = "caravanwert_lead_id";
+
+// In-Memory Cache der Lead-ID um Race Conditions zu vermeiden
+let cachedLeadId: string | null = null;
+
+// Mutex um parallele Inserts zu verhindern
+let pendingInsert: Promise<string | null> | null = null;
 
 export interface LeadData {
   name?: string | null;
@@ -27,12 +36,48 @@ export interface WizardStepData {
 }
 
 /**
+ * Gibt die aktuelle Lead-ID zurück (aus Memory oder localStorage).
+ */
+function getLeadId(): string | null {
+  if (cachedLeadId) return cachedLeadId;
+  const stored = localStorage.getItem(LEAD_ID_KEY);
+  if (stored) {
+    cachedLeadId = stored;
+  }
+  return stored;
+}
+
+/**
+ * Speichert die Lead-ID in Memory und localStorage.
+ */
+function setLeadId(id: string): void {
+  cachedLeadId = id;
+  localStorage.setItem(LEAD_ID_KEY, id);
+}
+
+/**
+ * Entfernt die Lead-ID aus Memory und localStorage.
+ */
+function clearLeadId(): void {
+  cachedLeadId = null;
+  localStorage.removeItem(LEAD_ID_KEY);
+}
+
+/**
  * Speichert oder aktualisiert einen Lead in der Datenbank.
- * Gibt die Lead-ID zurück und speichert sie im localStorage.
+ * Verwendet einen Mutex um zu verhindern, dass parallele Aufrufe
+ * mehrere Leads erstellen.
+ * 
+ * Gibt die Lead-ID zurück.
  */
 export async function captureOrUpdateLead(data: LeadData): Promise<string | null> {
+  // Wenn bereits ein Insert läuft, warte darauf und update dann
+  if (pendingInsert) {
+    await pendingInsert;
+  }
+
   try {
-    const existingLeadId = localStorage.getItem(LEAD_ID_KEY);
+    const existingLeadId = getLeadId();
     
     // Bestimme Lead-Qualität
     const hasContact = !!(data.name && data.email);
@@ -64,45 +109,53 @@ export async function captureOrUpdateLead(data: LeadData): Promise<string | null
       if (error) {
         logger.error("Lead update error:", error);
         // Falls der Lead nicht mehr existiert, neuen erstellen
-        localStorage.removeItem(LEAD_ID_KEY);
+        clearLeadId();
         return captureOrUpdateLead(data);
       }
 
       return existingLeadId;
     }
 
-    // Neuen Lead erstellen
-    const { data: newLead, error } = await supabase
-      .from("quick_leads")
-      .insert({
-        name: data.name || null,
-        email: data.email ? data.email.toLowerCase().trim() : null,
-        phone: data.phone || null,
-        manufacturer: data.manufacturer || null,
-        model: data.model || null,
-        body_type: data.bodyType || null,
-        sale_channel: data.saleChannel || null,
-        source: data.source,
-        page_url: data.pageUrl || window.location.pathname,
-        lead_quality: leadQuality,
-        user_agent: navigator.userAgent,
-        referrer: document.referrer || null,
-      })
-      .select("id")
-      .single();
+    // Neuen Lead erstellen - mit Mutex um Duplikate zu verhindern
+    const insertPromise = (async (): Promise<string | null> => {
+      const { data: newLead, error } = await supabase
+        .from("quick_leads")
+        .insert({
+          name: data.name || null,
+          email: data.email ? data.email.toLowerCase().trim() : null,
+          phone: data.phone || null,
+          manufacturer: data.manufacturer || null,
+          model: data.model || null,
+          body_type: data.bodyType || null,
+          sale_channel: data.saleChannel || null,
+          source: data.source,
+          page_url: data.pageUrl || window.location.pathname,
+          lead_quality: leadQuality,
+          user_agent: navigator.userAgent,
+          referrer: document.referrer || null,
+        })
+        .select("id")
+        .single();
 
-    if (error) {
-      logger.error("Lead capture error:", error);
+      if (error) {
+        logger.error("Lead capture error:", error);
+        return null;
+      }
+
+      if (newLead?.id) {
+        setLeadId(newLead.id);
+        return newLead.id;
+      }
+
       return null;
-    }
+    })();
 
-    if (newLead?.id) {
-      localStorage.setItem(LEAD_ID_KEY, newLead.id);
-      return newLead.id;
-    }
-
-    return null;
+    pendingInsert = insertPromise;
+    const result = await insertPromise;
+    pendingInsert = null;
+    return result;
   } catch (error) {
+    pendingInsert = null;
     logger.error("Lead tracking error:", error);
     return null;
   }
@@ -114,7 +167,7 @@ export async function captureOrUpdateLead(data: LeadData): Promise<string | null
  */
 export async function updateLeadWizardProgress(stepData: WizardStepData): Promise<void> {
   try {
-    const leadId = localStorage.getItem(LEAD_ID_KEY);
+    const leadId = getLeadId();
     if (!leadId) return;
 
     // Sensible Daten aus dem Snapshot entfernen
@@ -125,10 +178,10 @@ export async function updateLeadWizardProgress(stepData: WizardStepData): Promis
       .from("quick_leads")
       .update({
         last_wizard_step: stepData.step,
-        max_wizard_step: stepData.step, // Wird nur erhöht, nicht verringert (s. unten)
+        max_wizard_step: stepData.step,
         form_data_snapshot: sanitizedFormData,
         updated_at: new Date().toISOString(),
-        // Lead-Qualität auf "hot" setzen wenn Kontaktdaten vorhanden und Wizard fortgeschritten
+        // Lead-Qualität auf "hot" setzen wenn Wizard fortgeschritten
         ...(stepData.step >= 3 ? { lead_quality: "hot" } : {}),
       })
       .eq("id", leadId);
@@ -154,7 +207,7 @@ export async function updateLeadWizardProgress(stepData: WizardStepData): Promis
  */
 export async function markLeadWizardCompleted(): Promise<void> {
   try {
-    const leadId = localStorage.getItem(LEAD_ID_KEY);
+    const leadId = getLeadId();
     if (!leadId) return;
 
     const { error } = await supabase
@@ -170,7 +223,7 @@ export async function markLeadWizardCompleted(): Promise<void> {
     }
 
     // Lead-ID aus localStorage entfernen nach Abschluss
-    localStorage.removeItem(LEAD_ID_KEY);
+    clearLeadId();
   } catch (error) {
     logger.error("Lead completion error:", error);
   }
@@ -180,12 +233,12 @@ export async function markLeadWizardCompleted(): Promise<void> {
  * Gibt die aktuelle Lead-ID zurück (falls vorhanden).
  */
 export function getCurrentLeadId(): string | null {
-  return localStorage.getItem(LEAD_ID_KEY);
+  return getLeadId();
 }
 
 /**
  * Setzt die Lead-Tracking-Session zurück (z.B. nach Wizard-Abschluss).
  */
 export function resetLeadTracking(): void {
-  localStorage.removeItem(LEAD_ID_KEY);
+  clearLeadId();
 }

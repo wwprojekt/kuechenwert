@@ -101,7 +101,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
     });
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     const errors: string[] = [];
     if (!manufacturer) errors.push("Hersteller");
     if (!model) errors.push("Modell");
@@ -117,7 +117,8 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
     }
 
     // Capture partial lead for follow-up on abandoned forms
-    capturePartialLead();
+    // WICHTIG: await damit die Lead-ID gespeichert wird bevor Schritt 2 angezeigt wird
+    await capturePartialLead();
 
     setStep(2);
   };

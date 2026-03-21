@@ -1,6 +1,6 @@
 // Email template builder – CaravanWert Branding
-// Einheitliches Design: Dunkelblau (#1a365d) Header, Blau (#2563eb) Buttons
-// Identisch mit den Supabase Auth E-Mail-Templates
+// Professionelles Design mit Logo, Website-Farben (Teal/Cyan #1f8aa2)
+// Konsistent mit caravanwert.de
 
 export interface Settings {
   site_name: string;
@@ -12,139 +12,310 @@ export interface Settings {
 }
 
 const BRAND = {
-  headerBg: '#1a365d',
-  headerSubtitle: '#93c5fd',
-  buttonBg: '#2563eb',
+  // Primärfarben – identisch mit der Website (HSL 191, 68%, 38%)
+  primary: '#1f8aa2',
+  primaryLight: '#239cb8',
+  primaryDark: '#1a7489',
+  primaryDarker: '#0f4f5c',
+
+  // Text
+  heading: '#111827',
   text: '#374151',
   textLight: '#6b7280',
   textMuted: '#9ca3af',
-  footerBg: '#f3f4f6',
-  footerBorder: '#e5e7eb',
+
+  // Hintergründe
   white: '#ffffff',
-  font: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+  bgLight: '#f8fafc',
+  bgGray: '#f1f5f9',
+  footerBg: '#0f4f5c',
+  footerText: '#94a3b8',
+  footerLink: '#67e8f9',
+
+  // Rahmen
+  border: '#e2e8f0',
+  borderLight: '#f1f5f9',
+
+  // Varianten
+  successBg: '#ecfdf5',
+  successBorder: '#10b981',
+  successText: '#065f46',
+  warningBg: '#fffbeb',
+  warningBorder: '#f59e0b',
+  warningText: '#92400e',
+  infoBg: '#ecfeff',
+  infoBorder: '#06b6d4',
+  infoText: '#155e75',
+  dangerBg: '#fef2f2',
+  dangerBorder: '#ef4444',
+  dangerText: '#991b1b',
+
+  // Sonstiges
+  font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  logoUrl: 'https://caravanwert.de/logo.png',
 };
 
 export const buildEmailLayout = (settings: Settings, title: string, content: string) => {
+  const siteName = settings.site_name || 'CaravanWert';
+  const siteDesc = settings.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
+  const contactEmail = settings.contact_email || 'kontakt@caravanwert.de';
+  const supportPhone = settings.support_phone || '+49 511 51532476';
+  const year = new Date().getFullYear();
+
   return `
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${title}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; font-family: ${BRAND.font}; background-color: ${BRAND.white};">
-  <div style="max-width: 600px; margin: 0 auto; background-color: ${BRAND.white};">
-    <!-- Header -->
-    <div style="background-color: ${BRAND.headerBg}; padding: 30px; text-align: center;">
-      <h1 style="color: ${BRAND.white}; margin: 0; font-size: 28px; font-weight: 700;">${settings.site_name || 'CaravanWert'}</h1>
-      <p style="color: ${BRAND.headerSubtitle}; margin: 5px 0 0; font-size: 14px;">${settings.site_description || 'Ihr Wohnmobil-Marktplatz'}</p>
-    </div>
+<body style="margin: 0; padding: 0; font-family: ${BRAND.font}; background-color: #eef2f7; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <!-- Outer wrapper for background -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #eef2f7;">
+    <tr>
+      <td align="center" style="padding: 30px 15px;">
+        <!-- Main container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; width: 100%; background-color: ${BRAND.white}; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
 
-    <!-- Content -->
-    <div style="padding: 40px 30px;">
-      <h2 style="color: ${BRAND.headerBg}; font-size: 22px; margin-top: 0;">${title}</h2>
-      ${content}
-    </div>
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${BRAND.primaryDarker} 0%, ${BRAND.primary} 50%, ${BRAND.primaryLight} 100%); padding: 32px 40px; text-align: center;">
+              <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="background-color: ${BRAND.primary}; padding: 32px 40px; text-align: center;"><![endif]-->
+              <a href="https://caravanwert.de" style="text-decoration: none; display: inline-block;">
+                <img src="${BRAND.logoUrl}" alt="${siteName}" width="220" style="display: block; margin: 0 auto; max-width: 220px; height: auto;" />
+              </a>
+              <!--[if mso]></td></tr></table><![endif]-->
+            </td>
+          </tr>
 
-    <!-- Footer -->
-    <div style="background-color: ${BRAND.footerBg}; padding: 20px 30px; text-align: center; border-top: 1px solid ${BRAND.footerBorder};">
-      <p style="color: ${BRAND.textMuted}; font-size: 12px; margin: 0 0 8px;">
-        &copy; ${new Date().getFullYear()} ${settings.site_name || 'CaravanWert'} &ndash; ${settings.site_description || 'Ihr Wohnmobil-Marktplatz'}
-      </p>
-      <p style="color: ${BRAND.textMuted}; font-size: 12px; margin: 0 0 8px;">
-        <a href="mailto:${settings.contact_email || 'kontakt@caravanwert.de'}" style="color: ${BRAND.buttonBg}; text-decoration: none;">${settings.contact_email || 'kontakt@caravanwert.de'}</a>
-        &nbsp;|&nbsp;
-        <a href="tel:${settings.support_phone || ''}" style="color: ${BRAND.buttonBg}; text-decoration: none;">${settings.support_phone || ''}</a>
-      </p>
-      <p style="color: ${BRAND.textMuted}; font-size: 12px; margin: 0;">
-        <a href="https://caravanwert.de" style="color: ${BRAND.buttonBg}; text-decoration: none;">Website</a>
-        &nbsp;|&nbsp;
-        <a href="https://caravanwert.de/datenschutz" style="color: ${BRAND.buttonBg}; text-decoration: none;">Datenschutz</a>
-        &nbsp;|&nbsp;
-        <a href="https://caravanwert.de/impressum" style="color: ${BRAND.buttonBg}; text-decoration: none;">Impressum</a>
-      </p>
-      <p style="color: ${BRAND.textMuted}; font-size: 11px; margin: 8px 0 0;">
-        Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht darauf.
-      </p>
-    </div>
-  </div>
+          <!-- Accent line -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, ${BRAND.primaryLight} 0%, ${BRAND.primary} 50%, ${BRAND.primaryDark} 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+
+          <!-- Content area -->
+          <tr>
+            <td style="padding: 40px 40px 10px;">
+              <h1 style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: ${BRAND.heading}; line-height: 1.3;">${title}</h1>
+              ${content}
+            </td>
+          </tr>
+
+          <!-- Signature -->
+          <tr>
+            <td style="padding: 10px 40px 35px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="border-top: 1px solid ${BRAND.border}; padding-top: 25px;">
+                    <p style="margin: 0 0 4px; font-size: 15px; color: ${BRAND.text}; font-weight: 600;">Mit freundlichen Gr&uuml;&szlig;en</p>
+                    <p style="margin: 0 0 4px; font-size: 15px; color: ${BRAND.primary}; font-weight: 700;">Ihr ${siteName} Team</p>
+                    <p style="margin: 0; font-size: 13px; color: ${BRAND.textLight};">${siteDesc}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${BRAND.footerBg}; padding: 30px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <!-- Contact info -->
+                <tr>
+                  <td align="center" style="padding-bottom: 16px;">
+                    <p style="margin: 0 0 6px; font-size: 13px; color: ${BRAND.footerLink}; font-weight: 600;">${siteName}</p>
+                    <p style="margin: 0; font-size: 12px; color: ${BRAND.footerText};">
+                      <a href="mailto:${contactEmail}" style="color: ${BRAND.footerText}; text-decoration: none;">${contactEmail}</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="tel:${supportPhone.replace(/\s/g, '')}" style="color: ${BRAND.footerText}; text-decoration: none;">${supportPhone}</a>
+                    </p>
+                  </td>
+                </tr>
+                <!-- Divider -->
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <div style="height: 1px; background-color: rgba(255,255,255,0.15);"></div>
+                  </td>
+                </tr>
+                <!-- Links -->
+                <tr>
+                  <td align="center" style="padding-bottom: 16px;">
+                    <p style="margin: 0; font-size: 12px;">
+                      <a href="https://caravanwert.de" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Website</a>
+                      &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                      <a href="https://caravanwert.de/datenschutz" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Datenschutz</a>
+                      &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                      <a href="https://caravanwert.de/impressum" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Impressum</a>
+                      &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                      <a href="https://caravanwert.de/faq" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">FAQ</a>
+                    </p>
+                  </td>
+                </tr>
+                <!-- Copyright -->
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0; font-size: 11px; color: rgba(148,163,184,0.7);">
+                      &copy; ${year} ${siteName}. Alle Rechte vorbehalten.
+                    </p>
+                    <p style="margin: 6px 0 0; font-size: 11px; color: rgba(148,163,184,0.5);">
+                      Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht direkt auf diese Nachricht.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
 };
 
 export const infoBox = (title: string, content: string, variant: 'default' | 'success' | 'warning' | 'info' = 'default', _settings?: Settings) => {
-  const bgColor = variant === 'success' ? '#dcfce7' :
-                  variant === 'warning' ? '#fef3c7' :
-                  variant === 'info' ? '#dbeafe' : '#f1f5f9';
-  const borderColor = variant === 'success' ? '#16a34a' :
-                      variant === 'warning' ? '#d97706' :
-                      variant === 'info' ? '#2563eb' : BRAND.headerBg;
-  const titleColor = variant === 'success' ? '#15803d' :
-                     variant === 'warning' ? '#92400e' :
-                     variant === 'info' ? '#1e40af' : BRAND.headerBg;
+  const styles = {
+    default: { bg: BRAND.bgGray, border: BRAND.primary, title: BRAND.primaryDark, iconBg: '#e0f2fe' },
+    success: { bg: BRAND.successBg, border: BRAND.successBorder, title: BRAND.successText, iconBg: '#d1fae5' },
+    warning: { bg: BRAND.warningBg, border: BRAND.warningBorder, title: BRAND.warningText, iconBg: '#fef3c7' },
+    info:    { bg: BRAND.infoBg, border: BRAND.infoBorder, title: BRAND.infoText, iconBg: '#cffafe' },
+  };
+  const s = styles[variant] || styles.default;
 
   return `
-    <div style="background-color: ${bgColor}; border-left: 4px solid ${borderColor}; border-radius: 8px; padding: 20px; margin: 20px 0;">
-      ${title ? `<h3 style="margin: 0 0 12px; color: ${titleColor}; font-size: 18px;">${title}</h3>` : ''}
-      ${content}
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 20px 0;">
+      <tr>
+        <td style="background-color: ${s.bg}; border-left: 4px solid ${s.border}; border-radius: 0 8px 8px 0; padding: 20px 24px;">
+          ${title ? `<h3 style="margin: 0 0 14px; color: ${s.title}; font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${title}</h3>` : ''}
+          ${content}
+        </td>
+      </tr>
+    </table>
   `;
 };
 
 export const detailRow = (label: string, value: string) => {
-  return `<p style="margin: 8px 0; font-size: 16px; line-height: 24px; color: ${BRAND.text};"><strong>${label}:</strong> ${value}</p>`;
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0;">
+      <tr>
+        <td style="padding: 8px 0; font-size: 14px; line-height: 20px; color: ${BRAND.textLight}; width: 140px; vertical-align: top; font-weight: 500;">${label}</td>
+        <td style="padding: 8px 0; font-size: 14px; line-height: 20px; color: ${BRAND.heading}; font-weight: 600;">${value}</td>
+      </tr>
+    </table>
+  `;
 };
 
 export const button = (text: string, url: string, _settings?: Settings) => {
   return `
-    <div style="text-align: center; margin: 35px 0;">
-      <a href="${url}" style="background-color: ${BRAND.buttonBg}; color: ${BRAND.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; display: inline-block;">
-        ${text}
-      </a>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 30px 0;">
+      <tr>
+        <td align="center">
+          <!--[if mso]>
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="16%" fillcolor="${BRAND.primary}">
+            <w:anchorlock/>
+            <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">${text}</center>
+          </v:roundrect>
+          <![endif]-->
+          <!--[if !mso]><!-->
+          <a href="${url}" style="background-color: ${BRAND.primary}; color: ${BRAND.white}; padding: 15px 36px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 700; display: inline-block; letter-spacing: 0.3px; box-shadow: 0 2px 4px rgba(31,138,162,0.3); transition: background-color 0.2s;">
+            ${text}
+          </a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>
   `;
 };
 
 export const paragraph = (text: string) => {
-  return `<p style="color: ${BRAND.text}; font-size: 16px; line-height: 1.6; margin: 16px 0;">${text}</p>`;
+  return `<p style="color: ${BRAND.text}; font-size: 15px; line-height: 1.7; margin: 16px 0;">${text}</p>`;
 };
 
 export const list = (items: string[]) => {
   return `
-    <ul style="margin: 16px 0; padding-left: 20px;">
-      ${items.map(item => `<li style="margin: 8px 0; font-size: 15px; line-height: 1.5; color: ${BRAND.text};">${item}</li>`).join('')}
-    </ul>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 16px 0;">
+      ${items.map(item => `
+        <tr>
+          <td style="width: 24px; vertical-align: top; padding: 6px 0; font-size: 14px; color: ${BRAND.primary};">&#10003;</td>
+          <td style="padding: 6px 0; font-size: 14px; line-height: 1.6; color: ${BRAND.text};">${item}</td>
+        </tr>
+      `).join('')}
+    </table>
   `;
 };
 
 export const pinDisplay = (pin: string) => {
   return `
-    <div style="text-align: center; margin: 35px 0;">
-      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; display: inline-block;">
-        <p style="margin: 0 0 8px; font-size: 14px; color: ${BRAND.textLight}; font-weight: 600;">IHR FREIGABE-PIN</p>
-        <span style="font-size: 36px; font-weight: 700; color: ${BRAND.headerBg}; letter-spacing: 6px; font-family: 'Courier New', monospace;">
-          ${pin}
-        </span>
-      </div>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 30px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.bgGray}; border: 2px dashed ${BRAND.border}; border-radius: 12px; padding: 24px 40px;">
+            <tr>
+              <td align="center">
+                <p style="margin: 0 0 8px; font-size: 12px; color: ${BRAND.textLight}; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Ihr Freigabe-PIN</p>
+                <p style="margin: 0; font-size: 40px; font-weight: 800; color: ${BRAND.primary}; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                  ${pin}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   `;
 };
 
 export const amountDisplay = (label: string, amount: string) => {
   return `
-    <div style="text-align: center; margin: 25px 0; padding: 20px; background-color: #f1f5f9; border-radius: 8px;">
-      <p style="margin: 0 0 5px; font-size: 14px; color: ${BRAND.textLight};">${label}</p>
-      <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${BRAND.headerBg};">${amount}</p>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 24px 0;">
+      <tr>
+        <td align="center" style="background-color: ${BRAND.bgGray}; border-radius: 12px; padding: 24px;">
+          <p style="margin: 0 0 6px; font-size: 13px; color: ${BRAND.textLight}; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${label}</p>
+          <p style="margin: 0; font-size: 32px; font-weight: 800; color: ${BRAND.primary};">${amount}</p>
+        </td>
+      </tr>
+    </table>
   `;
 };
 
 export const warningBox = (text: string) => {
   return `
-    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 8px; padding: 16px; margin: 20px 0;">
-      <p style="margin: 0; font-size: 14px; color: #991b1b; font-weight: 600;">${text}</p>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 20px 0;">
+      <tr>
+        <td style="background-color: ${BRAND.dangerBg}; border: 1px solid #fecaca; border-left: 4px solid ${BRAND.dangerBorder}; border-radius: 0 8px 8px 0; padding: 16px 20px;">
+          <p style="margin: 0; font-size: 14px; color: ${BRAND.dangerText}; font-weight: 600; line-height: 1.5;">${text}</p>
+        </td>
+      </tr>
+    </table>
   `;
+};
+
+export const divider = () => {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 24px 0;">
+      <tr>
+        <td style="height: 1px; background-color: ${BRAND.border}; font-size: 0; line-height: 0;">&nbsp;</td>
+      </tr>
+    </table>
+  `;
+};
+
+export const greeting = (name?: string) => {
+  if (name) {
+    return `<p style="color: ${BRAND.text}; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">Guten Tag ${name},</p>`;
+  }
+  return `<p style="color: ${BRAND.text}; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">Guten Tag,</p>`;
 };

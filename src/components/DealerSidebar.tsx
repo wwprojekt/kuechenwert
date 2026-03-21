@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { SiteLogo } from "@/components/SiteLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -84,19 +85,11 @@ export function DealerSidebar() {
         <div className="p-4 border-b border-border">
           {!collapsed ? (
             <div className="space-y-1">
-              <img 
-                src="/logo.png" 
-                alt={settings?.site_name || 'CaravanWert'} 
-                className="h-10 w-auto mb-2" 
-              />
+              <SiteLogo variant="icon-text-compact" linkTo="/" className="mb-2" />
               <p className="text-xs text-muted-foreground">Händler Portal</p>
             </div>
           ) : (
-            <img 
-              src="/logo.png" 
-              alt={settings?.site_name || 'CaravanWert'} 
-              className="h-8 w-8 object-contain" 
-            />
+            <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
           )}
         </div>
 

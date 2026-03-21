@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Loader2 } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SiteLogo } from '@/components/SiteLogo';
 import { DealerSidebar } from '@/components/DealerSidebar';
 import { UserSidebar } from '@/components/UserSidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -239,10 +240,14 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
             <div className="h-full px-6 lg:px-8 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-colors" />
+                <SiteLogo variant="icon-text-compact" linkTo="/" className="hidden sm:flex" />
               </div>
 
               {/* User Section */}
               <div className="flex items-center gap-3">
+                <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
+                </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
                     <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold">
@@ -294,10 +299,14 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
             <div className="h-full px-6 lg:px-8 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-colors" />
+                <SiteLogo variant="icon-text-compact" linkTo="/" className="hidden sm:flex" />
               </div>
 
               {/* User Section */}
               <div className="flex items-center gap-3">
+                <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
+                </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
                     <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold">

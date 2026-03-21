@@ -41,7 +41,7 @@ const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
   const { formData, updateFormData, validateStep, submitForm, isSubmitting } = useWizardForm();
-  const { saveProgress, markCompleted } = useWizardSession();
+  const { saveProgress, markCompleted, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
 
   // Prefill form data from URL parameters (from Hero form / QuickAuctionForm)
@@ -88,10 +88,12 @@ const VerkaufenWizard = () => {
     return [...baseSteps, { ...reviewStep, id: 9 }, { ...authStep, id: 10 }];
   }, [formData.saleChannel]);
 
-  // Auto-save progress whenever step or formData changes
+  // Auto-save progress whenever step or formData changes (only when session is ready)
   useEffect(() => {
-    saveProgress(currentStep, formData, steps.length);
-  }, [currentStep, formData, steps.length, saveProgress]);
+    if (isReady) {
+      saveProgress(currentStep, formData, steps.length);
+    }
+  }, [currentStep, formData, steps.length, saveProgress, isReady]);
 
   // Save progress on page unload (browser close/navigate away)
   useEffect(() => {

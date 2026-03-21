@@ -61,8 +61,28 @@ function serializeFormData(formData: WizardFormData): Record<string, unknown> {
   return serialized;
 }
 
+/**
+ * Extracts contact data from URL search params (set by QuickAuctionForm)
+ */
+function getContactFromUrl(): {
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+} {
+  if (typeof window === "undefined") {
+    return { customerName: null, customerEmail: null, customerPhone: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    customerName: params.get("customerName") || null,
+    customerEmail: params.get("customerEmail") || null,
+    customerPhone: params.get("customerPhone") || null,
+  };
+}
+
 interface UseWizardSessionReturn {
   sessionId: string | null;
+  isReady: boolean;
   saveProgress: (currentStep: number, formData: WizardFormData, totalSteps: number) => Promise<void>;
   markCompleted: () => Promise<void>;
   loadSession: () => Promise<{ formData: Record<string, unknown>; currentStep: number } | null>;
@@ -71,16 +91,19 @@ interface UseWizardSessionReturn {
 
 export const useWizardSession = (): UseWizardSessionReturn => {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const maxStepRef = useRef(1);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedDataRef = useRef<string>("");
 
-  // Initialize session on mount
+  // Initialize session on mount - immediately capture contact data from URL
   useEffect(() => {
     const initSession = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const anonymousId = getAnonymousId();
+        const urlContact = getContactFromUrl();
 
         // Check for existing in-progress session
         let existingSession = null;
@@ -88,7 +111,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         if (user) {
           const { data } = await supabase
             .from("wizard_sessions")
-            .select("id, current_step, max_step_reached")
+            .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
             .eq("user_id", user.id)
             .eq("status", "in_progress")
             .order("updated_at", { ascending: false })
@@ -101,7 +124,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           // Also check by anonymous_id
           const { data } = await supabase
             .from("wizard_sessions")
-            .select("id, current_step, max_step_reached")
+            .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
             .eq("anonymous_id", anonymousId)
             .eq("status", "in_progress")
             .order("updated_at", { ascending: false })
@@ -114,15 +137,32 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           setSessionId(existingSession.id);
           maxStepRef.current = existingSession.max_step_reached || 1;
 
-          // If user is now logged in, link the session
-          if (user && existingSession) {
+          // Update session with contact data from URL if not already set
+          const updatePayload: Record<string, unknown> = {};
+          
+          if (user) {
+            updatePayload.user_id = user.id;
+          }
+          
+          // Fill in contact data from URL params if session doesn't have them yet
+          if (!existingSession.customer_name && urlContact.customerName) {
+            updatePayload.customer_name = urlContact.customerName;
+          }
+          if (!existingSession.customer_email && urlContact.customerEmail) {
+            updatePayload.customer_email = urlContact.customerEmail;
+          }
+          if (!existingSession.customer_phone && urlContact.customerPhone) {
+            updatePayload.customer_phone = urlContact.customerPhone;
+          }
+
+          if (Object.keys(updatePayload).length > 0) {
             await supabase
               .from("wizard_sessions")
-              .update({ user_id: user.id })
+              .update(updatePayload)
               .eq("id", existingSession.id);
           }
         } else {
-          // Create new session
+          // Create new session WITH contact data from URL immediately
           const { data: newSession, error } = await supabase
             .from("wizard_sessions")
             .insert({
@@ -131,12 +171,16 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               current_step: 1,
               max_step_reached: 1,
               status: "in_progress",
+              customer_name: urlContact.customerName,
+              customer_email: urlContact.customerEmail,
+              customer_phone: urlContact.customerPhone,
             })
             .select("id")
             .single();
 
           if (error) {
             logger.error("Failed to create wizard session:", error);
+            setIsReady(true);
             return;
           }
 
@@ -146,6 +190,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         }
       } catch (error) {
         logger.error("Failed to initialize wizard session:", error);
+      } finally {
+        setIsReady(true);
       }
     };
 
@@ -159,7 +205,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
   }, []);
 
   /**
-   * Save wizard progress to DB (debounced)
+   * Save wizard progress to DB (debounced).
+   * Skips save if data hasn't changed to avoid unnecessary writes.
    */
   const saveProgress = useCallback(
     async (currentStep: number, formData: WizardFormData, totalSteps: number) => {
@@ -179,6 +226,21 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           const serializedData = serializeFormData(formData);
+
+          // Build a fingerprint to skip duplicate saves
+          const fingerprint = JSON.stringify({
+            step: currentStep,
+            name: formData.customerName,
+            email: formData.customerEmail,
+            phone: formData.customerPhone,
+            manufacturer: formData.manufacturer,
+            model: formData.model,
+            photos_count: (formData.photos || []).length,
+          });
+
+          if (fingerprint === lastSavedDataRef.current) {
+            return; // No meaningful change, skip save
+          }
 
           const updatePayload: Record<string, unknown> = {
             current_step: currentStep,
@@ -208,6 +270,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
           if (error) {
             logger.error("Failed to save wizard progress:", error);
+          } else {
+            lastSavedDataRef.current = fingerprint;
           }
         } catch (error) {
           logger.error("Failed to save wizard progress:", error);
@@ -269,6 +333,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
   return {
     sessionId,
+    isReady,
     saveProgress,
     markCompleted,
     loadSession,

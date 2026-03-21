@@ -403,8 +403,42 @@ export default function AdminLeads() {
 
   // ---- Filtering ----
 
+  // Enrich wizard sessions with contact data from quick_leads as fallback
+  const enrichedSessions = useMemo(() => {
+    return wizardSessions.map((session) => {
+      if (session.customer_name && session.customer_email && session.customer_phone) {
+        return session; // Already has all contact data
+      }
+      // Try to find matching quick_lead
+      const matchingLead = quickLeads.find((lead) => {
+        if (session.customer_email && lead.email) {
+          return lead.email === session.customer_email;
+        }
+        if (lead.manufacturer && session.vehicle_summary) {
+          const leadTime = new Date(lead.created_at).getTime();
+          const sessionTime = new Date(session.created_at).getTime();
+          const timeDiff = Math.abs(leadTime - sessionTime);
+          return (
+            session.vehicle_summary.includes(lead.manufacturer) &&
+            timeDiff < 5 * 60 * 1000
+          );
+        }
+        return false;
+      });
+      if (matchingLead) {
+        return {
+          ...session,
+          customer_name: session.customer_name || matchingLead.name,
+          customer_email: session.customer_email || matchingLead.email,
+          customer_phone: session.customer_phone || matchingLead.phone,
+        };
+      }
+      return session;
+    });
+  }, [wizardSessions, quickLeads]);
+
   const filteredSessions = useMemo(() => {
-    return wizardSessions.filter((session) => {
+    return enrichedSessions.filter((session) => {
       // Status filter
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
 
@@ -420,7 +454,7 @@ export default function AdminLeads() {
       }
       return true;
     });
-  }, [wizardSessions, statusFilter, searchQuery]);
+  }, [enrichedSessions, statusFilter, searchQuery]);
 
   const filteredQuickLeads = useMemo(() => {
     if (!searchQuery) return quickLeads;
@@ -517,7 +551,38 @@ export default function AdminLeads() {
   // ---- Handlers ----
 
   const openDetail = (session: WizardSession) => {
-    setSelectedSession(session);
+    // If session has no contact data, try to find matching quick_lead by vehicle/timing
+    let enrichedSession = { ...session };
+    if (!session.customer_name || !session.customer_email || !session.customer_phone) {
+      // Find matching quick_lead by email, or by vehicle + close timestamp
+      const matchingLead = quickLeads.find((lead) => {
+        // Match by email if available
+        if (session.customer_email && lead.email) {
+          return lead.email === session.customer_email;
+        }
+        // Match by vehicle info and close creation time (within 5 minutes)
+        if (lead.manufacturer && session.vehicle_summary) {
+          const leadTime = new Date(lead.created_at).getTime();
+          const sessionTime = new Date(session.created_at).getTime();
+          const timeDiff = Math.abs(leadTime - sessionTime);
+          return (
+            session.vehicle_summary.includes(lead.manufacturer) &&
+            timeDiff < 5 * 60 * 1000
+          );
+        }
+        return false;
+      });
+
+      if (matchingLead) {
+        enrichedSession = {
+          ...session,
+          customer_name: session.customer_name || matchingLead.name,
+          customer_email: session.customer_email || matchingLead.email,
+          customer_phone: session.customer_phone || matchingLead.phone,
+        };
+      }
+    }
+    setSelectedSession(enrichedSession);
     setAdminNotes(session.admin_notes || "");
     setDetailDialogOpen(true);
   };

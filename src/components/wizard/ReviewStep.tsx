@@ -1,3 +1,4 @@
+import { useMemo, useEffect } from "react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,18 @@ interface ReviewStepProps {
 }
 
 export const ReviewStep = ({ formData }: ReviewStepProps) => {
+  // Stable object URLs for photo previews to prevent memory leaks
+  const photoUrls = useMemo(() => {
+    return formData.photos.slice(0, 6).map((photo) => URL.createObjectURL(photo));
+  }, [formData.photos]);
+
+  // Revoke old object URLs when photos change or component unmounts
+  useEffect(() => {
+    return () => {
+      photoUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [photoUrls]);
+
   const getSaleChannelLabel = (channel: string) => {
     switch (channel) {
       case "instant_price":
@@ -363,10 +376,10 @@ export const ReviewStep = ({ formData }: ReviewStepProps) => {
           </Badge>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-          {formData.photos.slice(0, 6).map((photo, index) => (
+          {photoUrls.map((url, index) => (
             <div key={index} className="aspect-square rounded-lg overflow-hidden border border-border">
               <img
-                src={URL.createObjectURL(photo)}
+                src={url}
                 alt={`Preview ${index + 1}`}
                 className="w-full h-full object-cover"
               />

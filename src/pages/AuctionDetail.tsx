@@ -1306,7 +1306,7 @@ const AuctionDetail = () => {
 
                 {/* Instant Buy Section */}
                 {motorhome.instant_price && 
-                 (motorhome.sale_channel === 'instant_price' || motorhome.sale_channel === 'both') &&
+                 motorhome.sale_channel === 'instant_price' &&
                  motorhome.status !== 'sold' && (
                   <>
                     <div className="space-y-3 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">

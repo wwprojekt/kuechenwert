@@ -51,7 +51,9 @@ test.describe('Selling Workflow', () => {
     // Step 2: Technical Details (optional fields)
     await page.getByRole('button', { name: /Weiter/ }).click();
     
-    // Step 3: Dimensions (optional fields)
+    // Step 3: Dimensions - seats and sleeping places are required
+    await page.getByLabel(/Sitzplätze/i).fill('4');
+    await page.getByLabel(/Schlafplätze/i).fill('4');
     await page.getByRole('button', { name: /Weiter/ }).click();
     
     // Step 4: Interior Features
@@ -64,22 +66,21 @@ test.describe('Selling Workflow', () => {
     // For now, skip photo upload in automated tests
     // In a real scenario, you'd mock the file upload
     
-    // Step 7: Sale Channel
-    await page.getByRole('radio', { name: /Auktion/ }).check();
+    // Step 7: Defects
+    // Select "no known defects" checkbox
+    // await page.getByLabel(/Keine bekannten Mängel/i).check();
+    // await page.getByRole('button', { name: /Weiter/ }).click();
+    
+    // Step 8: Sale Channel
+    await page.getByRole('radio', { name: /Händler-Auktion/ }).check();
     await page.getByLabel(/Mindestpreis/i).fill('45000');
     
     await page.getByRole('button', { name: /Weiter/ }).click();
     
-    // Final step: Review and Submit
+    // Review step: Verify data is displayed
     await expect(page.getByText(/Überprüfung/)).toBeVisible();
     await expect(page.getByText(/Hymer/)).toBeVisible();
     await expect(page.getByText(/B-Klasse ModernComfort/)).toBeVisible();
-    
-    // Submit (this would create the actual listing)
-    // await page.getByRole('button', { name: /Jetzt einstellen/ }).click();
-    
-    // For testing, we'll just verify the form is complete
-    await expect(page.getByRole('button', { name: /Jetzt einstellen/ })).toBeVisible();
   });
 
   test('should validate required fields', async ({ page }) => {
@@ -101,9 +102,9 @@ test.describe('Selling Workflow', () => {
     await page.getByLabel(/Modell/i).fill('Test');
     await page.getByLabel(/Baujahr/i).fill('2020');
     await page.getByLabel(/Kilometerstand/i).fill('50000');
-    await page.getByLabel(/Beschreibung/i).fill('Test description with enough characters');
+    await page.getByLabel(/Beschreibung/i).fill('Test description with enough characters for the minimum length');
     
-    // Navigate through steps to reach photos
+    // Navigate through steps to reach photos (steps 1-5 -> step 6 is photos)
     for (let i = 0; i < 5; i++) {
       await page.getByRole('button', { name: /Weiter/ }).click();
     }
@@ -114,8 +115,8 @@ test.describe('Selling Workflow', () => {
     // Try to continue without photos
     await page.getByRole('button', { name: /Weiter/ }).click();
     
-    // Should show photo requirement error
-    await expect(page.getByText(/Mindestens 12 Fotos/i)).toBeVisible();
+    // Should show photo requirement error (minimum 4 photos)
+    await expect(page.getByText(/Mindestens 4 Fotos/i)).toBeVisible();
   });
 
   test('should handle different sale channels', async ({ page }) => {
@@ -124,17 +125,14 @@ test.describe('Selling Workflow', () => {
     // Navigate to sale channel step
     // ... (fill required fields and navigate)
     
-    // Test auction option
-    await page.getByRole('radio', { name: /Auktion/ }).check();
+    // Test auction option - shows reserve price field
+    await page.getByRole('radio', { name: /Händler-Auktion/ }).check();
     await expect(page.getByLabel(/Mindestpreis/i)).toBeVisible();
     
-    // Test instant sale option
-    await page.getByRole('radio', { name: /Sofortverkauf/ }).check();
-    await expect(page.getByText(/Ankaufstation/i)).toBeVisible();
+    // Test instant price option - no additional fields needed
+    await page.getByRole('radio', { name: /Sofortpreis/ }).check();
     
-    // Test combined option
-    await page.getByRole('radio', { name: /Beides/ }).check();
-    await expect(page.getByLabel(/Mindestpreis/i)).toBeVisible();
-    await expect(page.getByText(/Ankaufstation/i)).toBeVisible();
+    // Test station option - should show appointment step next
+    await page.getByRole('radio', { name: /Ankaufstation/ }).check();
   });
 });

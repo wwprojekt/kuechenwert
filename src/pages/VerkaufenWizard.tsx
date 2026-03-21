@@ -47,11 +47,14 @@ const VerkaufenWizard = () => {
     const model = searchParams.get('model');
     const bodyType = searchParams.get('bodyType');
     
-    if (manufacturer || model || bodyType) {
+    const saleChannel = searchParams.get('saleChannel');
+    
+    if (manufacturer || model || bodyType || saleChannel) {
       updateFormData({
-        manufacturer: manufacturer || '',
-        model: model || '',
-        bodyType: bodyType || '',
+        ...(manufacturer && { manufacturer }),
+        ...(model && { model }),
+        ...(bodyType && { bodyType }),
+        ...(saleChannel && { saleChannel }),
       });
     }
   }, [searchParams, updateFormData]);
@@ -59,7 +62,7 @@ const VerkaufenWizard = () => {
   // Dynamically determine steps based on sale channel
   // New order: Review BEFORE Auth - user sees summary, then authenticates to submit
   const steps = useMemo(() => {
-    const needsAppointment = formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both';
+    const needsAppointment = formData.saleChannel === 'station';
     
     if (needsAppointment) {
       // With appointment: 8 base + appointment (9) + review (10) + auth (11)
@@ -71,7 +74,7 @@ const VerkaufenWizard = () => {
 
   // Handle authentication completion - Auth is now final step, so auto-submit
   const handleAuthenticated = useCallback(async () => {
-    const needsAppointment = formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both';
+    const needsAppointment = formData.saleChannel === 'station';
     // Auth step is now 11 with appointment, 10 without - it's the final step
     const authStepNumber = needsAppointment ? 11 : 10;
     if (currentStep === authStepNumber) {
@@ -102,7 +105,7 @@ const VerkaufenWizard = () => {
   };
 
   const renderStep = () => {
-    const needsAppointment = formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both';
+    const needsAppointment = formData.saleChannel === 'station';
     
     switch (currentStep) {
       case 1:
@@ -188,7 +191,7 @@ const VerkaufenWizard = () => {
 
           {/* Navigation Buttons - Hidden on Auth step since it has its own buttons */}
           {(() => {
-            const needsAppointment = formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both';
+            const needsAppointment = formData.saleChannel === 'station';
             const authStepNumber = needsAppointment ? 11 : 10;
             const isAuthStep = currentStep === authStepNumber;
             

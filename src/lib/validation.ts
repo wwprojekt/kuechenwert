@@ -51,9 +51,9 @@ export const motorhomeTechnicalSchema = z.object({
 
 // Dimensions and capacity validation
 export const motorhomeDimensionsSchema = z.object({
-  length_m: z.coerce.number().min(200).max(2000).optional().or(z.literal("")),
-  width_m: z.coerce.number().min(150).max(300).optional().or(z.literal("")),
-  height_m: z.coerce.number().min(150).max(500).optional().or(z.literal("")),
+  length_cm: z.coerce.number().min(200).max(2000).optional().or(z.literal("")),
+  width_cm: z.coerce.number().min(150).max(300).optional().or(z.literal("")),
+  height_cm: z.coerce.number().min(150).max(500).optional().or(z.literal("")),
   weight_kg: z.coerce.number().min(500).max(20000).optional().or(z.literal("")),
   payload_kg: z.coerce.number().min(0).max(5000).optional().or(z.literal("")),
   number_of_axles: z.coerce.number().min(1).max(4).default(2),
@@ -97,7 +97,7 @@ export const motorhomeEquipmentSchema = z.object({
 export const motorhomeAdditionalSchema = z.object({
   description: z.string().max(5000).optional(),
   additional_equipment: z.string().max(2000).optional(),
-  vehicle_identification_number: z.string().max(7).optional(),
+  vehicle_identification_number: z.string().max(17).optional(),
   license_plate: z.string().max(15).optional(),
   instant_price: z.coerce.number().min(0).max(10000000).optional().or(z.literal("")),
   reserve_price: z.coerce.number().min(0).max(10000000).optional().or(z.literal("")),

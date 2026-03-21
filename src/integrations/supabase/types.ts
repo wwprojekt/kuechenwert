@@ -10,10 +10,260 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
+      analytics_daily_summary: {
+        Row: {
+          date: string | null
+          desktop_sessions: number | null
+          mobile_sessions: number | null
+          page_views: number | null
+          sessions: number | null
+          tablet_sessions: number | null
+          unique_visitors: number | null
+        }
+        Insert: {
+          date?: string | null
+          desktop_sessions?: number | null
+          mobile_sessions?: number | null
+          page_views?: number | null
+          sessions?: number | null
+          tablet_sessions?: number | null
+          unique_visitors?: number | null
+        }
+        Update: {
+          date?: string | null
+          desktop_sessions?: number | null
+          mobile_sessions?: number | null
+          page_views?: number | null
+          sessions?: number | null
+          tablet_sessions?: number | null
+          unique_visitors?: number | null
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          consent_id: string
+          created_at: string
+          event_action: string | null
+          event_category: string | null
+          event_label: string | null
+          event_name: string
+          event_value: number | null
+          id: string
+          page_path: string | null
+          properties: Json | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          consent_id: string
+          created_at?: string
+          event_action?: string | null
+          event_category?: string | null
+          event_label?: string | null
+          event_name: string
+          event_value?: number | null
+          id?: string
+          page_path?: string | null
+          properties?: Json | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          consent_id?: string
+          created_at?: string
+          event_action?: string | null
+          event_category?: string | null
+          event_label?: string | null
+          event_name?: string
+          event_value?: number | null
+          id?: string
+          page_path?: string | null
+          properties?: Json | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      analytics_page_performance: {
+        Row: {
+          avg_scroll_depth: number | null
+          avg_time_on_page: number | null
+          page_path: string | null
+          unique_sessions: number | null
+          views: number | null
+        }
+        Insert: {
+          avg_scroll_depth?: number | null
+          avg_time_on_page?: number | null
+          page_path?: string | null
+          unique_sessions?: number | null
+          views?: number | null
+        }
+        Update: {
+          avg_scroll_depth?: number | null
+          avg_time_on_page?: number | null
+          page_path?: string | null
+          unique_sessions?: number | null
+          views?: number | null
+        }
+        Relationships: []
+      }
+      analytics_page_views: {
+        Row: {
+          consent_id: string
+          country: string | null
+          created_at: string
+          device_type: string | null
+          id: string
+          page_path: string
+          page_title: string | null
+          page_url: string | null
+          referrer_path: string | null
+          scroll_depth_percent: number | null
+          session_id: string
+          time_on_page_seconds: number | null
+          user_id: string | null
+        }
+        Insert: {
+          consent_id: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_path: string
+          page_title?: string | null
+          page_url?: string | null
+          referrer_path?: string | null
+          scroll_depth_percent?: number | null
+          session_id: string
+          time_on_page_seconds?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          consent_id?: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_path?: string
+          page_title?: string | null
+          page_url?: string | null
+          referrer_path?: string | null
+          scroll_depth_percent?: number | null
+          session_id?: string
+          time_on_page_seconds?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_page_views_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      analytics_sessions: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          consent_id: string
+          country: string | null
+          created_at: string
+          device_type: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          events_count: number | null
+          exit_page: string | null
+          id: string
+          landing_page: string | null
+          os: string | null
+          os_version: string | null
+          page_views_count: number | null
+          referrer_domain: string | null
+          referrer_url: string | null
+          region: string | null
+          session_id: string
+          started_at: string
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          consent_id: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          events_count?: number | null
+          exit_page?: string | null
+          id?: string
+          landing_page?: string | null
+          os?: string | null
+          os_version?: string | null
+          page_views_count?: number | null
+          referrer_domain?: string | null
+          referrer_url?: string | null
+          region?: string | null
+          session_id: string
+          started_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          consent_id?: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          events_count?: number | null
+          exit_page?: string | null
+          id?: string
+          landing_page?: string | null
+          os?: string | null
+          os_version?: string | null
+          page_views_count?: number | null
+          referrer_domain?: string | null
+          referrer_url?: string | null
+          region?: string | null
+          session_id?: string
+          started_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -411,51 +661,6 @@ export type Database = {
           },
         ]
       }
-      contact_messages: {
-        Row: {
-          admin_response: string | null
-          created_at: string | null
-          email: string
-          id: string
-          message: string
-          name: string
-          phone: string | null
-          responded_at: string | null
-          responded_by: string | null
-          status: string
-          subject: string
-          updated_at: string | null
-        }
-        Insert: {
-          admin_response?: string | null
-          created_at?: string | null
-          email: string
-          id?: string
-          message: string
-          name: string
-          phone?: string | null
-          responded_at?: string | null
-          responded_by?: string | null
-          status?: string
-          subject: string
-          updated_at?: string | null
-        }
-        Update: {
-          admin_response?: string | null
-          created_at?: string | null
-          email?: string
-          id?: string
-          message?: string
-          name?: string
-          phone?: string | null
-          responded_at?: string | null
-          responded_by?: string | null
-          status?: string
-          subject?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       commission_calculations: {
         Row: {
           auction_id: string
@@ -553,6 +758,96 @@ export type Database = {
           rate_type?: string
           rate_value?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      contact_messages: {
+        Row: {
+          admin_response: string | null
+          created_at: string | null
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          responded_at: string | null
+          responded_by: string | null
+          status: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      cookie_consent: {
+        Row: {
+          analytics: boolean
+          consent_id: string
+          consent_version: string
+          created_at: string
+          essential: boolean
+          functional: boolean
+          id: string
+          ip_hash: string | null
+          marketing: boolean
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          analytics?: boolean
+          consent_id: string
+          consent_version?: string
+          created_at?: string
+          essential?: boolean
+          functional?: boolean
+          id?: string
+          ip_hash?: string | null
+          marketing?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          analytics?: boolean
+          consent_id?: string
+          consent_version?: string
+          created_at?: string
+          essential?: boolean
+          functional?: boolean
+          id?: string
+          ip_hash?: string | null
+          marketing?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -838,63 +1133,54 @@ export type Database = {
       }
       dealer_reviews: {
         Row: {
-          auction_id: string | null
-          comment: string | null
-          communication_rating: number | null
+          auction_id: string
+          communication_rating: number
           created_at: string | null
           dealer_id: string
-          helpful_votes: number | null
           id: string
           moderated_at: string | null
           moderated_by: string | null
-          moderation_notes: string | null
-          professionalism_rating: number | null
+          moderation_reason: string | null
+          professionalism_rating: number
           rating: number
-          reliability_rating: number | null
-          reported_count: number | null
+          reliability_rating: number
+          review_text: string
           reviewer_id: string
           status: string
-          title: string | null
           updated_at: string | null
         }
         Insert: {
-          auction_id?: string | null
-          comment?: string | null
-          communication_rating?: number | null
+          auction_id: string
+          communication_rating: number
           created_at?: string | null
           dealer_id: string
-          helpful_votes?: number | null
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
-          moderation_notes?: string | null
-          professionalism_rating?: number | null
+          moderation_reason?: string | null
+          professionalism_rating: number
           rating: number
-          reliability_rating?: number | null
-          reported_count?: number | null
+          reliability_rating: number
+          review_text: string
           reviewer_id: string
           status?: string
-          title?: string | null
           updated_at?: string | null
         }
         Update: {
-          auction_id?: string | null
-          comment?: string | null
-          communication_rating?: number | null
+          auction_id?: string
+          communication_rating?: number
           created_at?: string | null
           dealer_id?: string
-          helpful_votes?: number | null
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
-          moderation_notes?: string | null
-          professionalism_rating?: number | null
+          moderation_reason?: string | null
+          professionalism_rating?: number
           rating?: number
-          reliability_rating?: number | null
-          reported_count?: number | null
+          reliability_rating?: number
+          review_text?: string
           reviewer_id?: string
           status?: string
-          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -924,33 +1210,33 @@ export type Database = {
       dealer_volume_discounts: {
         Row: {
           active_until: string | null
+          approved_by: string | null
           created_at: string | null
           dealer_id: string
           discount_rate: number
           id: string
           is_active: boolean | null
-          purchase_volume: number
-          updated_at: string | null
+          reason: string | null
         }
         Insert: {
           active_until?: string | null
+          approved_by?: string | null
           created_at?: string | null
           dealer_id: string
-          discount_rate?: number
+          discount_rate: number
           id?: string
           is_active?: boolean | null
-          purchase_volume?: number
-          updated_at?: string | null
+          reason?: string | null
         }
         Update: {
           active_until?: string | null
+          approved_by?: string | null
           created_at?: string | null
           dealer_id?: string
           discount_rate?: number
           id?: string
           is_active?: boolean | null
-          purchase_volume?: number
-          updated_at?: string | null
+          reason?: string | null
         }
         Relationships: [
           {
@@ -962,6 +1248,87 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          admin_notes: string | null
+          browser: string | null
+          component_name: string | null
+          created_at: string
+          device_type: string | null
+          error_category: string
+          error_code: string
+          error_message: string
+          id: string
+          is_resolved: boolean | null
+          metadata: Json | null
+          original_error: string | null
+          page_path: string
+          page_title: string | null
+          page_url: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          stack_trace: string | null
+          updated_at: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          browser?: string | null
+          component_name?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_category?: string
+          error_code: string
+          error_message: string
+          id?: string
+          is_resolved?: boolean | null
+          metadata?: Json | null
+          original_error?: string | null
+          page_path: string
+          page_title?: string | null
+          page_url: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          stack_trace?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          browser?: string | null
+          component_name?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_category?: string
+          error_code?: string
+          error_message?: string
+          id?: string
+          is_resolved?: boolean | null
+          metadata?: Json | null
+          original_error?: string | null
+          page_path?: string
+          page_title?: string | null
+          page_url?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          stack_trace?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string | null
@@ -969,9 +1336,9 @@ export type Database = {
           gross_amount: number
           id: string
           invoice_id: string
-          item_type: string | null
+          item_type: string
           net_amount: number
-          quantity: number | null
+          quantity: number
           reference_id: string | null
           tax_amount: number
           tax_rate: number
@@ -983,12 +1350,12 @@ export type Database = {
           gross_amount: number
           id?: string
           invoice_id: string
-          item_type?: string | null
+          item_type?: string
           net_amount: number
-          quantity?: number | null
+          quantity?: number
           reference_id?: string | null
           tax_amount: number
-          tax_rate: number
+          tax_rate?: number
           unit_price: number
         }
         Update: {
@@ -997,9 +1364,9 @@ export type Database = {
           gross_amount?: number
           id?: string
           invoice_id?: string
-          item_type?: string | null
+          item_type?: string
           net_amount?: number
-          quantity?: number | null
+          quantity?: number
           reference_id?: string | null
           tax_amount?: number
           tax_rate?: number
@@ -1024,23 +1391,18 @@ export type Database = {
           due_date: string
           gross_amount: number
           id: string
-          invoice_date: string
           invoice_number: string
           net_amount: number
           notes: string | null
           paid_at: string | null
-          payment_method: string | null
-          payment_reference: string | null
-          payment_status: string
-          payment_terms_days: number | null
+          payment_status: string | null
           pdf_url: string | null
           sent_at: string | null
+          sepa_mandate_reference: string | null
           status: string
           tax_amount: number
           tax_rate: number
           updated_at: string | null
-          ust_id_buyer: string | null
-          ust_id_seller: string | null
           viewed_at: string | null
         }
         Insert: {
@@ -1051,23 +1413,18 @@ export type Database = {
           due_date: string
           gross_amount: number
           id?: string
-          invoice_date?: string
           invoice_number: string
           net_amount: number
           notes?: string | null
           paid_at?: string | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_status?: string
-          payment_terms_days?: number | null
+          payment_status?: string | null
           pdf_url?: string | null
           sent_at?: string | null
+          sepa_mandate_reference?: string | null
           status?: string
           tax_amount: number
           tax_rate?: number
           updated_at?: string | null
-          ust_id_buyer?: string | null
-          ust_id_seller?: string | null
           viewed_at?: string | null
         }
         Update: {
@@ -1078,23 +1435,18 @@ export type Database = {
           due_date?: string
           gross_amount?: number
           id?: string
-          invoice_date?: string
           invoice_number?: string
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_status?: string
-          payment_terms_days?: number | null
+          payment_status?: string | null
           pdf_url?: string | null
           sent_at?: string | null
+          sepa_mandate_reference?: string | null
           status?: string
           tax_amount?: number
           tax_rate?: number
           updated_at?: string | null
-          ust_id_buyer?: string | null
-          ust_id_seller?: string | null
           viewed_at?: string | null
         }
         Relationships: [
@@ -1117,42 +1469,39 @@ export type Database = {
       legal_documents: {
         Row: {
           dealer_application_id: string
-          document_name: string
           document_type: string
+          document_url: string
           file_size: number | null
-          file_url: string
           id: string
-          mime_type: string | null
+          notes: string | null
+          original_filename: string
           uploaded_at: string | null
-          verification_notes: string | null
           verified: boolean | null
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
           dealer_application_id: string
-          document_name: string
           document_type: string
+          document_url: string
           file_size?: number | null
-          file_url: string
           id?: string
-          mime_type?: string | null
+          notes?: string | null
+          original_filename: string
           uploaded_at?: string | null
-          verification_notes?: string | null
           verified?: boolean | null
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
           dealer_application_id?: string
-          document_name?: string
           document_type?: string
+          document_url?: string
           file_size?: number | null
-          file_url?: string
           id?: string
-          mime_type?: string | null
+          notes?: string | null
+          original_filename?: string
           uploaded_at?: string | null
-          verification_notes?: string | null
           verified?: boolean | null
           verified_at?: string | null
           verified_by?: string | null
@@ -1173,58 +1522,55 @@ export type Database = {
           created_at: string | null
           id: string
           is_published: boolean | null
-          published_at: string | null
+          meta_description: string | null
           slug: string
           title: string
           updated_at: string | null
-          version: number | null
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
           is_published?: boolean | null
-          published_at?: string | null
+          meta_description?: string | null
           slug: string
           title: string
           updated_at?: string | null
-          version?: number | null
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
           is_published?: boolean | null
-          published_at?: string | null
+          meta_description?: string | null
           slug?: string
           title?: string
           updated_at?: string | null
-          version?: number | null
         }
         Relationships: []
       }
       motorhome_photos: {
         Row: {
-          created_at: string
-          display_order: number
+          created_at: string | null
+          display_order: number | null
           id: string
-          is_primary: boolean
+          is_primary: boolean | null
           motorhome_id: string
           url: string
         }
         Insert: {
-          created_at?: string
-          display_order?: number
+          created_at?: string | null
+          display_order?: number | null
           id?: string
-          is_primary?: boolean
+          is_primary?: boolean | null
           motorhome_id: string
           url: string
         }
         Update: {
-          created_at?: string
-          display_order?: number
+          created_at?: string | null
+          display_order?: number | null
           id?: string
-          is_primary?: boolean
+          is_primary?: boolean | null
           motorhome_id?: string
           url?: string
         }
@@ -1242,33 +1588,51 @@ export type Database = {
         Row: {
           accident_free: boolean | null
           account_type: string | null
-          air_conditioning_type: string | null
+          additional_equipment: string | null
+          air_conditioning_type:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
           available_from: string | null
+          awning_length_m: number | null
+          battery_capacity_ah: number | null
+          beds_description: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
           city: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
           country: string | null
-          created_at: string
+          created_at: string | null
           damage_summary: string | null
           description: string | null
           emission_class: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm: number | null
           engine_power_hp: number | null
+          first_registration: string | null
+          fuel_tank_capacity_liters: number | null
           fuel_type: Database["public"]["Enums"]["fuel_type"] | null
           gas_system: string | null
-          has_air_conditioning: boolean
-          has_awning: boolean
-          has_backup_camera: boolean
-          has_bathroom: boolean
+          grey_water_capacity_liters: number | null
+          has_air_conditioning: boolean | null
+          has_airbag: boolean | null
+          has_alarm: boolean | null
+          has_awning: boolean | null
+          has_backup_camera: boolean | null
+          has_bathroom: boolean | null
           has_bike_rack: boolean | null
+          has_central_locking: boolean | null
+          has_cruise_control: boolean | null
           has_damage: boolean | null
+          has_esp: boolean | null
           has_garage: boolean | null
           has_heating: boolean | null
+          has_inverter: boolean | null
           has_kitchen: boolean | null
           has_markise: boolean | null
           has_navigation: boolean | null
+          has_parking_sensors: boolean | null
           has_satellite: boolean | null
           has_shower: boolean | null
-          has_solar: boolean
+          has_solar: boolean | null
+          has_swivel_seats: boolean | null
           has_toilet: boolean | null
           has_tuev: boolean | null
           has_tv: boolean | null
@@ -1276,82 +1640,93 @@ export type Database = {
           height_m: number | null
           id: string
           instant_price: number | null
+          last_tuev_date: string | null
           length_m: number | null
+          license_plate: string | null
           listing_number: string | null
           location: string | null
+          main_tires: string | null
           manufacturer: string
           mileage: number
           model: string
+          non_smoker: boolean | null
+          number_of_axles: number | null
+          payload_kg: number | null
           postal_code: string | null
+          previous_owners: number | null
           price: number | null
           refrigerator_type:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price: number | null
-          sale_channel: Database["public"]["Enums"]["sale_channel"]
+          sale_channel: Database["public"]["Enums"]["sale_channel"] | null
           sale_type: string | null
           seats: number | null
+          second_tires: string | null
           seller_id: string
-          sleeping_places: number
+          service_history_available: boolean | null
+          sleeping_places: number | null
+          solar_power_watts: number | null
           sold_at: string | null
           sold_to: string | null
           status: string
           transmission: Database["public"]["Enums"]["transmission_type"] | null
           tuev_valid_until: string | null
-          updated_at: string
+          updated_at: string | null
+          vehicle_identification_number: string | null
           water_tank_liters: number | null
           weight_kg: number | null
           width_m: number | null
           year: number
-          awning_length_m: number | null
-          grey_water_capacity_liters: number | null
-          fuel_tank_capacity_liters: number | null
-          non_smoker: boolean | null
-          service_history_available: boolean | null
-          previous_owners: number | null
-          last_tuev_date: string | null
-          number_of_axles: number | null
-          beds_description: string | null
-          solar_power_watts: number | null
-          battery_capacity_ah: number | null
-          has_inverter: boolean | null
-          has_parking_sensors: boolean | null
-          has_cruise_control: boolean | null
-          has_central_locking: boolean | null
-          additional_equipment: string | null
-          vehicle_identification_number: string | null
-          license_plate: string | null
         }
         Insert: {
           accident_free?: boolean | null
           account_type?: string | null
-          air_conditioning_type?: string | null
+          additional_equipment?: string | null
+          air_conditioning_type?:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
           available_from?: string | null
+          awning_length_m?: number | null
+          battery_capacity_ah?: number | null
+          beds_description?: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
           city?: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
           country?: string | null
-          created_at?: string
+          created_at?: string | null
           damage_summary?: string | null
           description?: string | null
           emission_class?: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm?: number | null
           engine_power_hp?: number | null
+          first_registration?: string | null
+          fuel_tank_capacity_liters?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
           gas_system?: string | null
-          has_air_conditioning?: boolean
-          has_awning?: boolean
-          has_backup_camera?: boolean
-          has_bathroom?: boolean
+          grey_water_capacity_liters?: number | null
+          has_air_conditioning?: boolean | null
+          has_airbag?: boolean | null
+          has_alarm?: boolean | null
+          has_awning?: boolean | null
+          has_backup_camera?: boolean | null
+          has_bathroom?: boolean | null
           has_bike_rack?: boolean | null
+          has_central_locking?: boolean | null
+          has_cruise_control?: boolean | null
           has_damage?: boolean | null
+          has_esp?: boolean | null
           has_garage?: boolean | null
           has_heating?: boolean | null
+          has_inverter?: boolean | null
           has_kitchen?: boolean | null
           has_markise?: boolean | null
           has_navigation?: boolean | null
+          has_parking_sensors?: boolean | null
           has_satellite?: boolean | null
           has_shower?: boolean | null
-          has_solar?: boolean
+          has_solar?: boolean | null
+          has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
           has_tuev?: boolean | null
           has_tv?: boolean | null
@@ -1359,82 +1734,93 @@ export type Database = {
           height_m?: number | null
           id?: string
           instant_price?: number | null
+          last_tuev_date?: string | null
           length_m?: number | null
+          license_plate?: string | null
           listing_number?: string | null
           location?: string | null
+          main_tires?: string | null
           manufacturer: string
           mileage: number
           model: string
+          non_smoker?: boolean | null
+          number_of_axles?: number | null
+          payload_kg?: number | null
           postal_code?: string | null
+          previous_owners?: number | null
           price?: number | null
           refrigerator_type?:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price?: number | null
-          sale_channel: Database["public"]["Enums"]["sale_channel"]
+          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
           sale_type?: string | null
           seats?: number | null
+          second_tires?: string | null
           seller_id: string
-          sleeping_places: number
+          service_history_available?: boolean | null
+          sleeping_places?: number | null
+          solar_power_watts?: number | null
           sold_at?: string | null
           sold_to?: string | null
           status?: string
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
           tuev_valid_until?: string | null
-          updated_at?: string
+          updated_at?: string | null
+          vehicle_identification_number?: string | null
           water_tank_liters?: number | null
           weight_kg?: number | null
           width_m?: number | null
           year: number
-          awning_length_m?: number | null
-          grey_water_capacity_liters?: number | null
-          fuel_tank_capacity_liters?: number | null
-          non_smoker?: boolean | null
-          service_history_available?: boolean | null
-          previous_owners?: number | null
-          last_tuev_date?: string | null
-          number_of_axles?: number | null
-          beds_description?: string | null
-          solar_power_watts?: number | null
-          battery_capacity_ah?: number | null
-          has_inverter?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_cruise_control?: boolean | null
-          has_central_locking?: boolean | null
-          additional_equipment?: string | null
-          vehicle_identification_number?: string | null
-          license_plate?: string | null
         }
         Update: {
           accident_free?: boolean | null
           account_type?: string | null
-          air_conditioning_type?: string | null
+          additional_equipment?: string | null
+          air_conditioning_type?:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
           available_from?: string | null
+          awning_length_m?: number | null
+          battery_capacity_ah?: number | null
+          beds_description?: string | null
           body_type?: Database["public"]["Enums"]["motorhome_body_type"]
           city?: string | null
           condition?: Database["public"]["Enums"]["motorhome_condition"]
           country?: string | null
-          created_at?: string
+          created_at?: string | null
           damage_summary?: string | null
           description?: string | null
           emission_class?: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm?: number | null
           engine_power_hp?: number | null
+          first_registration?: string | null
+          fuel_tank_capacity_liters?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
           gas_system?: string | null
-          has_air_conditioning?: boolean
-          has_awning?: boolean
-          has_backup_camera?: boolean
-          has_bathroom?: boolean
+          grey_water_capacity_liters?: number | null
+          has_air_conditioning?: boolean | null
+          has_airbag?: boolean | null
+          has_alarm?: boolean | null
+          has_awning?: boolean | null
+          has_backup_camera?: boolean | null
+          has_bathroom?: boolean | null
           has_bike_rack?: boolean | null
+          has_central_locking?: boolean | null
+          has_cruise_control?: boolean | null
           has_damage?: boolean | null
+          has_esp?: boolean | null
           has_garage?: boolean | null
           has_heating?: boolean | null
+          has_inverter?: boolean | null
           has_kitchen?: boolean | null
           has_markise?: boolean | null
           has_navigation?: boolean | null
+          has_parking_sensors?: boolean | null
           has_satellite?: boolean | null
           has_shower?: boolean | null
-          has_solar?: boolean
+          has_solar?: boolean | null
+          has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
           has_tuev?: boolean | null
           has_tv?: boolean | null
@@ -1442,51 +1828,44 @@ export type Database = {
           height_m?: number | null
           id?: string
           instant_price?: number | null
+          last_tuev_date?: string | null
           length_m?: number | null
+          license_plate?: string | null
           listing_number?: string | null
           location?: string | null
+          main_tires?: string | null
           manufacturer?: string
           mileage?: number
           model?: string
+          non_smoker?: boolean | null
+          number_of_axles?: number | null
+          payload_kg?: number | null
           postal_code?: string | null
+          previous_owners?: number | null
           price?: number | null
           refrigerator_type?:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price?: number | null
-          sale_channel?: Database["public"]["Enums"]["sale_channel"]
+          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
           sale_type?: string | null
           seats?: number | null
+          second_tires?: string | null
           seller_id?: string
-          sleeping_places?: number
+          service_history_available?: boolean | null
+          sleeping_places?: number | null
+          solar_power_watts?: number | null
           sold_at?: string | null
           sold_to?: string | null
           status?: string
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
           tuev_valid_until?: string | null
-          updated_at?: string
+          updated_at?: string | null
+          vehicle_identification_number?: string | null
           water_tank_liters?: number | null
           weight_kg?: number | null
           width_m?: number | null
           year?: number
-          awning_length_m?: number | null
-          grey_water_capacity_liters?: number | null
-          fuel_tank_capacity_liters?: number | null
-          non_smoker?: boolean | null
-          service_history_available?: boolean | null
-          previous_owners?: number | null
-          last_tuev_date?: string | null
-          number_of_axles?: number | null
-          beds_description?: string | null
-          solar_power_watts?: number | null
-          battery_capacity_ah?: number | null
-          has_inverter?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_cruise_control?: boolean | null
-          has_central_locking?: boolean | null
-          additional_equipment?: string | null
-          vehicle_identification_number?: string | null
-          license_plate?: string | null
         }
         Relationships: [
           {
@@ -1500,55 +1879,37 @@ export type Database = {
       }
       payment_reminders: {
         Row: {
+          amount_due: number
           created_at: string | null
           due_date: string
           id: string
           invoice_id: string
-          message_body: string
-          original_amount: number
-          pdf_url: string | null
-          reminder_date: string
-          reminder_fee: number | null
+          notes: string | null
           reminder_level: number
-          sent_at: string | null
+          sent_at: string
           status: string
-          subject: string
-          total_amount: number
-          viewed_at: string | null
         }
         Insert: {
+          amount_due: number
           created_at?: string | null
           due_date: string
           id?: string
           invoice_id: string
-          message_body: string
-          original_amount: number
-          pdf_url?: string | null
-          reminder_date?: string
-          reminder_fee?: number | null
+          notes?: string | null
           reminder_level: number
-          sent_at?: string | null
+          sent_at?: string
           status?: string
-          subject: string
-          total_amount: number
-          viewed_at?: string | null
         }
         Update: {
+          amount_due?: number
           created_at?: string | null
           due_date?: string
           id?: string
           invoice_id?: string
-          message_body?: string
-          original_amount?: number
-          pdf_url?: string | null
-          reminder_date?: string
-          reminder_fee?: number | null
+          notes?: string | null
           reminder_level?: number
-          sent_at?: string | null
+          sent_at?: string
           status?: string
-          subject?: string
-          total_amount?: number
-          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -1563,27 +1924,27 @@ export type Database = {
       pin_attempts: {
         Row: {
           appointment_id: string
-          attempt_count: number
-          created_at: string
+          attempted_pin: string
+          created_at: string | null
           id: string
-          last_attempt_at: string
-          locked_until: string | null
+          ip_address: string | null
+          success: boolean
         }
         Insert: {
           appointment_id: string
-          attempt_count?: number
-          created_at?: string
+          attempted_pin: string
+          created_at?: string | null
           id?: string
-          last_attempt_at?: string
-          locked_until?: string | null
+          ip_address?: string | null
+          success?: boolean
         }
         Update: {
           appointment_id?: string
-          attempt_count?: number
-          created_at?: string
+          attempted_pin?: string
+          created_at?: string | null
           id?: string
-          last_attempt_at?: string
-          locked_until?: string | null
+          ip_address?: string | null
+          success?: boolean
         }
         Relationships: [
           {
@@ -1597,43 +1958,37 @@ export type Database = {
       }
       post_auction_offers: {
         Row: {
-          auction_id: string | null
-          buyer_id: string | null
-          counter_offer_amount: number | null
+          auction_id: string
+          buyer_id: string
           created_at: string | null
-          expires_at: string | null
           id: string
           message: string | null
           offer_amount: number
+          responded_at: string | null
           seller_response: string | null
-          status: string | null
-          updated_at: string | null
+          status: string
         }
         Insert: {
-          auction_id?: string | null
-          buyer_id?: string | null
-          counter_offer_amount?: number | null
+          auction_id: string
+          buyer_id: string
           created_at?: string | null
-          expires_at?: string | null
           id?: string
           message?: string | null
           offer_amount: number
+          responded_at?: string | null
           seller_response?: string | null
-          status?: string | null
-          updated_at?: string | null
+          status?: string
         }
         Update: {
-          auction_id?: string | null
-          buyer_id?: string | null
-          counter_offer_amount?: number | null
+          auction_id?: string
+          buyer_id?: string
           created_at?: string | null
-          expires_at?: string | null
           id?: string
           message?: string | null
           offer_amount?: number
+          responded_at?: string | null
           seller_response?: string | null
-          status?: string | null
-          updated_at?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -1649,77 +2004,107 @@ export type Database = {
         Row: {
           account_restricted: boolean | null
           account_type: string | null
-          city: string | null
+          address_city: string | null
+          address_country: string | null
+          address_street: string | null
+          address_zip: string | null
+          avatar_url: string | null
+          company_city: string | null
+          company_country: string | null
           company_name: string | null
-          country: string | null
+          company_street: string | null
+          company_zip: string | null
           created_at: string
+          description: string | null
           email: string
           first_name: string | null
-          house_number: string | null
           id: string
           is_suspended: boolean | null
+          is_verified: boolean | null
           last_name: string | null
-          latitude: number | null
-          longitude: number | null
           phone: string | null
-          postal_code: string | null
           restricted_at: string | null
           restriction_reason: string | null
           salutation: string | null
-          street: string | null
           suspended_at: string | null
+          suspended_by: string | null
           suspended_reason: string | null
+          tax_id: string | null
+          trade_license: string | null
           updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          website: string | null
         }
         Insert: {
           account_restricted?: boolean | null
           account_type?: string | null
-          city?: string | null
+          address_city?: string | null
+          address_country?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          avatar_url?: string | null
+          company_city?: string | null
+          company_country?: string | null
           company_name?: string | null
-          country?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
+          description?: string | null
           email: string
           first_name?: string | null
-          house_number?: string | null
           id: string
           is_suspended?: boolean | null
+          is_verified?: boolean | null
           last_name?: string | null
-          latitude?: number | null
-          longitude?: number | null
           phone?: string | null
-          postal_code?: string | null
           restricted_at?: string | null
           restriction_reason?: string | null
           salutation?: string | null
-          street?: string | null
           suspended_at?: string | null
+          suspended_by?: string | null
           suspended_reason?: string | null
+          tax_id?: string | null
+          trade_license?: string | null
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          website?: string | null
         }
         Update: {
           account_restricted?: boolean | null
           account_type?: string | null
-          city?: string | null
+          address_city?: string | null
+          address_country?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          avatar_url?: string | null
+          company_city?: string | null
+          company_country?: string | null
           company_name?: string | null
-          country?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
+          description?: string | null
           email?: string
           first_name?: string | null
-          house_number?: string | null
           id?: string
           is_suspended?: boolean | null
+          is_verified?: boolean | null
           last_name?: string | null
-          latitude?: number | null
-          longitude?: number | null
           phone?: string | null
-          postal_code?: string | null
           restricted_at?: string | null
           restriction_reason?: string | null
           salutation?: string | null
-          street?: string | null
           suspended_at?: string | null
+          suspended_by?: string | null
           suspended_reason?: string | null
+          tax_id?: string | null
+          trade_license?: string | null
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -2097,11 +2482,11 @@ export type Database = {
         Row: {
           autobid_enabled: boolean
           buy_now_enabled: boolean
+          commission_rate_percent: number
           company_address: string | null
           company_city: string | null
           company_country: string | null
           company_postal_code: string | null
-          commission_rate_percent: number
           contact_email: string
           created_at: string
           dark_mode_enabled: boolean
@@ -2140,11 +2525,11 @@ export type Database = {
         Insert: {
           autobid_enabled?: boolean
           buy_now_enabled?: boolean
+          commission_rate_percent?: number
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
-          commission_rate_percent?: number
           contact_email?: string
           created_at?: string
           dark_mode_enabled?: boolean
@@ -2183,11 +2568,11 @@ export type Database = {
         Update: {
           autobid_enabled?: boolean
           buy_now_enabled?: boolean
+          commission_rate_percent?: number
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
-          commission_rate_percent?: number
           contact_email?: string
           created_at?: string
           dark_mode_enabled?: boolean
@@ -2599,7 +2984,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      error_logs_stats: {
+        Row: {
+          error_category: string | null
+          error_count: number | null
+          first_occurrence: string | null
+          last_occurrence: string | null
+          page_path: string | null
+          severity: string | null
+          unresolved_count: number | null
+          user_role: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_search_listings: {
@@ -2634,7 +3031,12 @@ export type Database = {
         Args: { criteria: Json; motorhome_record: Record<string, unknown> }
         Returns: boolean
       }
+      clean_old_analytics_data: {
+        Args: { retention_days?: number }
+        Returns: number
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: number }
+      cleanup_old_error_logs: { Args: never; Returns: undefined }
       create_auction_invoice: {
         Args: { auction_id_param: string; dealer_id_param: string }
         Returns: string
@@ -2646,6 +3048,15 @@ export type Database = {
       get_primary_role: {
         Args: { user_id_param: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      handle_autobid_atomic: {
+        Args: {
+          p_auction_id: string
+          p_min_increment?: number
+          p_new_bid_amount: number
+          p_new_bidder_id: string
+        }
+        Returns: Json
       }
       has_role: {
         Args: {

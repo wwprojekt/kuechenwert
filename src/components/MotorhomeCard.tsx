@@ -87,7 +87,7 @@ const MotorhomeCard = ({
 
   const isSold = status === 'sold';
   const isEnded = timeRemaining === 'Beendet';
-  const hasInstantSale = instantPrice && (saleChannel === 'instant_sale' || saleChannel === 'both');
+  const hasInstantSale = instantPrice && saleChannel === 'instant_price';
 
   useEffect(() => {
     if (!isAuction || !endTime) return;

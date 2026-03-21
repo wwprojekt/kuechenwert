@@ -50,6 +50,7 @@ export interface WizardFormData {
   has_kitchen: boolean;
   heating_type?: string;
   air_conditioning: string;
+  has_bathroom: boolean;
   has_toilet: boolean;
   has_shower: boolean;
   fresh_water_capacity_liters?: number | null;
@@ -90,7 +91,7 @@ export interface WizardFormData {
   known_defects?: string;
   no_known_defects: boolean;
   
-  // Step 8: Appointment (for instant_sale or both)
+  // Step 8: Appointment (for station)
   stationId?: string;
   appointmentDate?: string;
   appointmentTime?: string;
@@ -137,6 +138,7 @@ const initialFormData: WizardFormData = {
   has_kitchen: true,
   heating_type: undefined,
   air_conditioning: "Keine",
+  has_bathroom: false,
   has_toilet: false,
   has_shower: false,
   fresh_water_capacity_liters: null,
@@ -322,7 +324,8 @@ export const useWizardForm = () => {
           });
           break;
         case 9:
-          if (formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both') {
+          // Only validate appointment if station (Ankaufstation)
+          if (formData.saleChannel === 'station') {
             if (!formData.stationId) {
               throw new z.ZodError([{
                 code: 'custom',
@@ -413,35 +416,65 @@ export const useWizardForm = () => {
         transmission: formData.transmission || null,
         emission_class: formData.emission_class || null,
         tuev_valid_until: formData.tuv_valid_until || null,
+        first_registration: formData.first_registration || null,
+        previous_owners: formData.previous_owners ?? null,
+        accident_free: formData.accident_free,
+        non_smoker: formData.non_smoker,
+        service_history_available: formData.service_history_available,
+        engine_displacement_ccm: formData.engine_displacement_ccm || null,
+        main_tires: formData.main_tires || null,
+        second_tires: formData.second_tires || null,
         
         length_m: formData.length_cm ? formData.length_cm / 100 : null,
         width_m: formData.width_cm ? formData.width_cm / 100 : null,
         height_m: formData.height_cm ? formData.height_cm / 100 : null,
         weight_kg: formData.total_weight_kg || null,
+        payload_kg: formData.payload_kg || null,
         seats: formData.seats_with_seatbelts || null,
         sleeping_places: formData.sleeping_places || null,
+        number_of_axles: formData.number_of_axles || null,
+        beds_description: formData.beds_description || null,
         
         has_kitchen: formData.has_kitchen,
         heating_type: formData.heating_type || null,
         air_conditioning_type: formData.air_conditioning || null,
+        has_bathroom: formData.has_toilet || formData.has_shower,
         has_toilet: formData.has_toilet,
         has_shower: formData.has_shower,
         water_tank_liters: formData.fresh_water_capacity_liters || null,
+        grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
         
+        // Equipment - Basisfahrzeug
+        has_airbag: formData.has_airbag,
+        has_alarm: formData.has_alarm,
+        has_swivel_seats: formData.has_swivel_seats,
+        has_esp: formData.has_esp,
+        has_cruise_control: formData.has_cruise_control,
+        has_parking_sensors: formData.has_parking_sensors,
+        has_backup_camera: formData.has_reversing_camera,
+        has_central_locking: formData.has_central_locking,
+        // Equipment - Wohnbereich
         has_solar: formData.has_solar,
+        solar_power_watts: formData.solar_power_watts || null,
+        battery_capacity_ah: formData.battery_capacity_ah || null,
+        has_inverter: formData.has_inverter,
         has_awning: formData.has_awning,
+        awning_length_m: formData.awning_length_cm ? formData.awning_length_cm / 100 : null,
         has_bike_rack: formData.has_bike_rack,
         has_garage: formData.has_garage,
         has_tv: formData.has_tv_sat,
         has_satellite: formData.has_tv_sat,
-        has_backup_camera: formData.has_reversing_camera,
         
         has_damage: !formData.no_known_defects,
         damage_summary: formData.known_defects || null,
         
+        // Sale & Additional
         sale_channel: formData.saleChannel,
         instant_price: formData.instantPrice,
         reserve_price: formData.reservePrice,
+        additional_equipment: formData.additional_equipment || null,
+        vehicle_identification_number: formData.vehicle_identification_number || null,
+        license_plate: formData.license_plate || null,
         country: formData.country || 'DE',
       };
 
@@ -465,7 +498,8 @@ export const useWizardForm = () => {
 
       if (photosError) throw photosError;
 
-      if (formData.saleChannel === 'auction' || formData.saleChannel === 'both') {
+      // If auction, create auction entry
+      if (formData.saleChannel === 'auction') {
         const { error: auctionError } = await supabase
           .from('auctions')
           .insert({
@@ -478,7 +512,8 @@ export const useWizardForm = () => {
         if (auctionError) throw auctionError;
       }
 
-      if ((formData.saleChannel === 'instant_sale' || formData.saleChannel === 'both') && formData.stationId) {
+      // If instant sale with appointment, create appointment
+      if (formData.saleChannel === 'station' && formData.stationId) {
         const appointmentDateTime = new Date(formData.appointmentDate!);
         const [hours, minutes] = formData.appointmentTime!.split(':');
         appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));

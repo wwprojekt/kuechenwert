@@ -2982,6 +2982,75 @@ export type Database = {
           },
         ]
       }
+      wizard_sessions: {
+        Row: {
+          admin_called_at: string | null
+          admin_notes: string | null
+          anonymous_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          current_step: number
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          form_data: Json
+          id: string
+          last_activity_at: string | null
+          max_step_reached: number
+          resume_email_sent_at: string | null
+          status: string
+          step_name: string | null
+          total_steps: number
+          updated_at: string | null
+          user_id: string | null
+          vehicle_summary: string | null
+        }
+        Insert: {
+          admin_called_at?: string | null
+          admin_notes?: string | null
+          anonymous_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          form_data?: Json
+          id?: string
+          last_activity_at?: string | null
+          max_step_reached?: number
+          resume_email_sent_at?: string | null
+          status?: string
+          step_name?: string | null
+          total_steps?: number
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_summary?: string | null
+        }
+        Update: {
+          admin_called_at?: string | null
+          admin_notes?: string | null
+          anonymous_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          form_data?: Json
+          id?: string
+          last_activity_at?: string | null
+          max_step_reached?: number
+          resume_email_sent_at?: string | null
+          status?: string
+          step_name?: string | null
+          total_steps?: number
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_summary?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       error_logs_stats: {

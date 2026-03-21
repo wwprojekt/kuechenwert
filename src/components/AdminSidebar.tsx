@@ -18,6 +18,7 @@ import {
   MessageCircle,
   MessageSquare,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ import { useNavigate } from "react-router-dom";
 const menuItems = [
   { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
   { title: "Analytics", url: "/admin/analytics", icon: TrendingUp },
+  { title: "Leads", url: "/admin/leads", icon: UserPlus },
   { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
   { title: "Wohnmobile", url: "/admin/motorhomes", icon: Car },
   { title: "Fahrzeugfragen", url: "/admin/questions", icon: MessageCircle },

@@ -71,6 +71,7 @@ const AdminLegal = lazy(() => import("./pages/admin/AdminLegal"));
 const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
 const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
 const AdminErrorLogs = lazy(() => import("./pages/admin/AdminErrorLogs"));
+const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminAuctionDetail = lazy(() => import("./pages/admin/AdminAuctionDetail"));
 const AdminMotorhomeDetail = lazy(() => import("./pages/admin/AdminMotorhomeDetail"));
 const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
@@ -196,6 +197,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="leads" element={<AdminLeads />} />
                 <Route path="auctions" element={<AdminAuctions />} />
                 <Route path="auctions/:id" element={<AdminAuctionDetail />} />
                 <Route path="motorhomes" element={<AdminMotorhomes />} />

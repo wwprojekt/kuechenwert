@@ -18,7 +18,8 @@ import { AppointmentStep } from "@/components/wizard/AppointmentStep";
 import { AuthenticationStep } from "@/components/wizard/AuthenticationStep";
 import { ReviewStep } from "@/components/wizard/ReviewStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
-import { useMemo, useCallback } from "react";
+import { useWizardSession } from "@/hooks/useWizardSession";
+import { useMemo, useCallback, useRef } from "react";
 
 const baseSteps = [
   { id: 1, name: "Fahrzeugdetails", description: "Grundinformationen" },
@@ -40,6 +41,8 @@ const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
   const { formData, updateFormData, validateStep, submitForm, isSubmitting } = useWizardForm();
+  const { saveProgress, markCompleted } = useWizardSession();
+  const hasRestoredRef = useRef(false);
 
   // Prefill form data from URL parameters
   useEffect(() => {
@@ -48,6 +51,16 @@ const VerkaufenWizard = () => {
     const bodyType = searchParams.get('bodyType');
     
     const saleChannel = searchParams.get('saleChannel');
+    
+    // Check if resuming from a specific step (from resume email link)
+    const resumeStep = searchParams.get('step');
+    if (resumeStep && !hasRestoredRef.current) {
+      const stepNum = parseInt(resumeStep, 10);
+      if (stepNum >= 1 && stepNum <= 11) {
+        setCurrentStep(stepNum);
+        hasRestoredRef.current = true;
+      }
+    }
     
     if (manufacturer || model || bodyType || saleChannel) {
       updateFormData({
@@ -60,35 +73,49 @@ const VerkaufenWizard = () => {
   }, [searchParams, updateFormData]);
 
   // Dynamically determine steps based on sale channel
-  // New order: Review BEFORE Auth - user sees summary, then authenticates to submit
   const steps = useMemo(() => {
     const needsAppointment = formData.saleChannel === 'station';
     
     if (needsAppointment) {
-      // With appointment: 8 base + appointment (9) + review (10) + auth (11)
       return [...baseSteps, appointmentStep, reviewStep, authStep];
     }
-    // Without appointment: 8 base + review (9) + auth (10)
     return [...baseSteps, { ...reviewStep, id: 9 }, { ...authStep, id: 10 }];
   }, [formData.saleChannel]);
+
+  // Auto-save progress whenever step or formData changes
+  useEffect(() => {
+    saveProgress(currentStep, formData, steps.length);
+  }, [currentStep, formData, steps.length, saveProgress]);
+
+  // Save progress on page unload (browser close/navigate away)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Use synchronous approach for beforeunload
+      saveProgress(currentStep, formData, steps.length);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [currentStep, formData, steps.length, saveProgress]);
 
   // Handle authentication completion - Auth is now final step, so auto-submit
   const handleAuthenticated = useCallback(async () => {
     const needsAppointment = formData.saleChannel === 'station';
-    // Auth step is now 11 with appointment, 10 without - it's the final step
     const authStepNumber = needsAppointment ? 11 : 10;
     if (currentStep === authStepNumber) {
-      // Auth is complete, now automatically submit the form
       await submitForm();
+      // Mark the wizard session as completed
+      await markCompleted();
     }
-  }, [formData.saleChannel, currentStep, submitForm]);
+  }, [formData.saleChannel, currentStep, submitForm, markCompleted]);
 
   const progress = (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -102,6 +129,7 @@ const VerkaufenWizard = () => {
 
   const handleSubmit = async () => {
     await submitForm();
+    await markCompleted();
   };
 
   const renderStep = () => {
@@ -128,17 +156,13 @@ const VerkaufenWizard = () => {
         if (needsAppointment) {
           return <AppointmentStep formData={formData} updateFormData={updateFormData} />;
         }
-        // Without appointment, step 9 is review (user reviews data before auth)
         return <ReviewStep formData={formData} />;
       case 10:
         if (needsAppointment) {
-          // With appointment, step 10 is review
           return <ReviewStep formData={formData} />;
         }
-        // Without appointment, step 10 is auth (final step)
         return <AuthenticationStep onAuthenticated={handleAuthenticated} />;
       case 11:
-        // With appointment, step 11 is auth (final step)
         return <AuthenticationStep onAuthenticated={handleAuthenticated} />;
       default:
         return null;
@@ -166,7 +190,7 @@ const VerkaufenWizard = () => {
 
       <div className="min-h-screen py-8 md:py-16 bg-muted/20">
         <div className="container mx-auto px-4 max-w-4xl">
-          {/* Progress Bar - Simplified without step numbers */}
+          {/* Progress Bar */}
           <div className="mb-8 animate-slide-up">
             <div className="flex justify-between items-center mb-2">
               <div>
@@ -189,13 +213,12 @@ const VerkaufenWizard = () => {
             <div className="min-h-[400px]">{renderStep()}</div>
           </Card>
 
-          {/* Navigation Buttons - Hidden on Auth step since it has its own buttons */}
+          {/* Navigation Buttons */}
           {(() => {
             const needsAppointment = formData.saleChannel === 'station';
             const authStepNumber = needsAppointment ? 11 : 10;
             const isAuthStep = currentStep === authStepNumber;
             
-            // Auth step handles its own submission, so hide "Next/Submit" button
             return (
               <div className="flex flex-col sm:flex-row gap-4 justify-between animate-slide-up">
                 <Button

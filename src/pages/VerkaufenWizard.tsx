@@ -21,6 +21,7 @@ import { useWizardForm } from "@/hooks/useWizardForm";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { useMemo, useCallback, useRef } from "react";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
+import { ContactDataModal } from "@/components/ContactDataModal";
 
 const baseSteps = [
   { id: 1, name: "Fahrzeugdetails", description: "Grundinformationen" },
@@ -44,6 +45,10 @@ const VerkaufenWizard = () => {
   const { formData, updateFormData, validateStep, submitForm, isSubmitting } = useWizardForm();
   const { saveProgress, markCompleted, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
+
+  // Kontaktdaten-Gate: Modal anzeigen wenn keine Kontaktdaten vorhanden
+  const hasContactData = !!(searchParams.get('customerName') || searchParams.get('customerEmail') || formData.customerName || formData.customerEmail);
+  const [showContactModal, setShowContactModal] = useState(!hasContactData);
 
   // Prefill form data from URL parameters (including contact data from hero/landing forms)
   useEffect(() => {
@@ -177,10 +182,10 @@ const VerkaufenWizard = () => {
         if (needsAppointment) {
           return <ReviewStep formData={formData} />;
         }
-        return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} />;
+        return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} prefillPhone={formData.customerPhone} />;
       case 11:
         if (needsAppointment) {
-          return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} />;
+          return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} prefillPhone={formData.customerPhone} />;
         }
         return null;
       default:
@@ -195,6 +200,13 @@ const VerkaufenWizard = () => {
       keywords="wohnmobil verkaufen, wohnmobil verkaufsassistent, online verkaufen"
       canonicalPath="/verkaufen/wizard"
     >
+      {/* Kontaktdaten-Modal als Gate - wird angezeigt wenn Nutzer direkt zum Wizard kommt */}
+      <ContactDataModal
+        open={showContactModal}
+        onOpenChange={setShowContactModal}
+        source="wizard_direct"
+        additionalParams={Object.fromEntries(searchParams.entries())}
+      />
           {/* Header */}
       <PageHero size="sm">
         <div className="text-center animate-fade-in max-w-4xl mx-auto">

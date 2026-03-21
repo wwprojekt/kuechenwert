@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import MotorhomeShowcase from "@/components/MotorhomeShowcase";
@@ -11,10 +12,14 @@ import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Helmet } from "react-helmet";
 import { useSettings } from "@/contexts/SettingsContext";
+import { ContactDataModal } from "@/components/ContactDataModal";
 
 const Index = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || 'CaravanWert';
+  const [showContactModal, setShowContactModal] = useState(false);
+
+  const handleStartWizard = () => setShowContactModal(true);
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -29,16 +34,24 @@ const Index = () => {
         <meta name="twitter:title" content={`${siteName} - Wohnmobil verkaufen leicht gemacht`} />
         <meta name="twitter:description" content="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis." />
       </Helmet>
+
+      {/* Kontaktdaten-Modal */}
+      <ContactDataModal
+        open={showContactModal}
+        onOpenChange={setShowContactModal}
+        source="startseite"
+      />
+
       <Header />
       <main className="flex-1">
-        <Hero />
+        <Hero onStartWizard={handleStartWizard} />
         <MotorhomeShowcase />
         <HowItWorks />
         <Listings />
         <Benefits />
-        <Process />
+        <Process onStartWizard={handleStartWizard} />
         <FAQ />
-        <CTA />
+        <CTA onStartWizard={handleStartWizard} />
       </main>
       <Footer />
       <ScrollToTop />

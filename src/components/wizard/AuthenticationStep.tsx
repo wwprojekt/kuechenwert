@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, LogIn, UserPlus, Mail, Lock, User as UserIcon, Loader2 } from "lucide-react";
+import { CheckCircle2, LogIn, UserPlus, Mail, Lock, User as UserIcon, Loader2, Phone } from "lucide-react";
 import { logger } from "@/lib/logger";
 import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -26,6 +26,7 @@ const registerSchema = z.object({
   firstName: z.string().trim().min(1, "Vorname erforderlich"),
   lastName: z.string().trim().min(1, "Nachname erforderlich"),
   email: emailSchema,
+  phone: z.string().optional(),
   password: passwordSchema,
   confirmPassword: z.string().min(1, "Passwort-Bestätigung erforderlich"),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -37,9 +38,10 @@ interface AuthenticationStepProps {
   onAuthenticated: () => void;
   prefillEmail?: string;
   prefillName?: string;
+  prefillPhone?: string;
 }
 
-export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName }: AuthenticationStepProps) => {
+export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName, prefillPhone }: AuthenticationStepProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,12 +51,13 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName 
   const [loginEmail, setLoginEmail] = useState(prefillEmail || "");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // Register form state - prefill from wizard data
+  // Register form state - prefill from wizard/modal data
   const [registerEmail, setRegisterEmail] = useState(prefillEmail || "");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [registerFirstName, setRegisterFirstName] = useState(prefillName?.split(' ')[0] || "");
   const [registerLastName, setRegisterLastName] = useState(prefillName?.split(' ').slice(1).join(' ') || "");
+  const [registerPhone, setRegisterPhone] = useState(prefillPhone || "");
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -123,6 +126,7 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName 
         firstName: registerFirstName,
         lastName: registerLastName,
         email: registerEmail,
+        phone: registerPhone,
         password: registerPassword,
         confirmPassword: registerConfirmPassword,
       });
@@ -134,6 +138,7 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName 
           data: {
             first_name: validated.firstName,
             last_name: validated.lastName,
+            phone: validated.phone || undefined,
             role: "private",
           },
         },
@@ -231,7 +236,7 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName 
       </div>
 
       <Card className="p-6">
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs defaultValue={prefillEmail ? "register" : "login"} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login" className="gap-2">
               <LogIn className="w-4 h-4" />
@@ -334,6 +339,21 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName 
                     className="pl-10"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="register-phone">Telefon <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="register-phone"
+                    type="tel"
+                    placeholder="z.B. 0151 12345678"
+                    className="pl-10"
+                    value={registerPhone}
+                    onChange={(e) => setRegisterPhone(e.target.value)}
                   />
                 </div>
               </div>

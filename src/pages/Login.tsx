@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { logger } from "@/lib/logger";
+import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Mail, Lock, ArrowRight, User } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
 const signInSchema = z.object({
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
-  password: z.string().min(1, "Passwort erforderlich"),
+  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+  password: z.string().min(1, "Bitte geben Sie Ihr Passwort ein"),
 });
 
 const Login = () => {
@@ -27,7 +27,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { primaryRole, isLoading: roleLoading, refetchRoles } = useUserRole();
 
-  // Check if user is already logged in and redirect based on role
   useEffect(() => {
     if (user && !roleLoading && primaryRole) {
       if (primaryRole === 'admin') {
@@ -63,31 +62,24 @@ const Login = () => {
 
       if (error) throw error;
 
-      // Authentication succeeded — onAuthStateChange will set user in AuthContext,
-      // which triggers the useEffect above to check roles and navigate.
-      // We do NOT navigate here to avoid a race condition where SmartDashboard
-      // mounts before the user state has propagated through React's rendering cycle.
       toast({
         title: "Anmeldung erfolgreich!",
         description: "Sie werden weitergeleitet...",
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'Login');
         toast({
-          title: "Validierungsfehler",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      } else if (error.message?.includes("Invalid login credentials")) {
-        toast({
-          title: "Anmeldung fehlgeschlagen",
-          description: "Ungültige E-Mail oder Passwort",
+          title: "Bitte überprüfen Sie Ihre Eingaben",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {
+        // Auth-Fehler zentral übersetzen und loggen
+        const germanMessage = handleAuthError(error, 'Login');
         toast({
           title: "Anmeldung fehlgeschlagen",
-          description: error.message || "Ein Fehler ist aufgetreten",
+          description: germanMessage,
           variant: "destructive",
         });
       }
@@ -105,14 +97,12 @@ const Login = () => {
       noIndex={true}
     >
       <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">
-        {/* Consistent gradient background */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         
         <div className="w-full max-w-md relative z-10">
-          {/* Logo header */}
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
               <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
@@ -129,7 +119,6 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Login card */}
           <Card className="p-8 shadow-elegant glass animate-slide-up">
             <form onSubmit={handleSignIn} className="space-y-6">
               <div className="space-y-2">
@@ -198,7 +187,6 @@ const Login = () => {
             </div>
           </Card>
 
-          {/* Additional help */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>
               Probleme beim Anmelden?{" "}

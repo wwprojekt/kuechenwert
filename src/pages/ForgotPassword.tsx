@@ -12,11 +12,12 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { handleValidationError } from "@/lib/errorLogService";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
 const emailSchema = z.object({
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
+  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
 });
 
 const ForgotPassword = () => {
@@ -53,9 +54,10 @@ const ForgotPassword = () => {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'ForgotPassword');
         toast({
-          title: "Ungültige E-Mail",
-          description: error.errors[0].message,
+          title: "Bitte überprüfen Sie Ihre Eingabe",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {

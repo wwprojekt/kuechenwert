@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { passwordSchema, emailSchema } from "@/lib/validation";
@@ -82,21 +83,17 @@ const Register = () => {
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'Register');
         toast({
-          title: "Validierungsfehler",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      } else if (error.message?.includes("already registered")) {
-        toast({
-          title: "Konto existiert bereits",
-          description: "Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.",
+          title: "Bitte überprüfen Sie Ihre Eingaben",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {
+        const germanMessage = handleAuthError(error, 'Register');
         toast({
           title: "Registrierung fehlgeschlagen",
-          description: error.message || "Ein Fehler ist aufgetreten",
+          description: germanMessage,
           variant: "destructive",
         });
       }

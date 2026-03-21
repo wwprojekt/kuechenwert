@@ -10,10 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
+  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   phone: z.string().optional(),
   subject: z.string().trim().min(2, "Bitte geben Sie einen Betreff ein"),
   message: z.string().trim().min(10, "Die Nachricht muss mindestens 10 Zeichen lang sein"),
@@ -42,9 +43,10 @@ const Kontakt = () => {
       kontaktSchema.parse(formData);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'Kontakt');
         toast({
-          title: "Bitte pr\u00fcfen Sie Ihre Eingaben",
-          description: error.errors[0].message,
+          title: "Bitte prüfen Sie Ihre Eingaben",
+          description: germanMessage,
           variant: "destructive",
         });
       }
@@ -70,10 +72,10 @@ const Kontakt = () => {
       });
       setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
     } catch (error) {
-      console.error("Contact form error:", error);
+      const germanMessage = handleApiError(error, 'Kontakt');
       toast({
         title: "Fehler beim Senden",
-        description: "Bitte versuchen Sie es sp\u00e4ter erneut oder kontaktieren Sie uns telefonisch.",
+        description: germanMessage,
         variant: "destructive",
       });
     } finally {

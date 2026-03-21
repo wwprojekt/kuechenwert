@@ -17,6 +17,7 @@ import {
   Scale,
   MessageCircle,
   MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,7 @@ const menuItems = [
   { title: "Übergabe", url: "/admin/handover", icon: HandshakeIcon },
   { title: "Blog", url: "/admin/blog", icon: FileText },
   { title: "Rechtliches", url: "/admin/legal", icon: Scale },
+  { title: "Fehlerprotokoll", url: "/admin/error-logs", icon: AlertTriangle },
   { title: "Einstellungen", url: "/admin/settings", icon: Settings },
 ];
 

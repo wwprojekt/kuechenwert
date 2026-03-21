@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { logger } from "@/lib/logger";
+import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,21 +238,17 @@ const RegisterHaendler = () => {
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'RegisterHaendler');
         toast({
-          title: "Validierungsfehler",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      } else if (error.message?.includes("already registered")) {
-        toast({
-          title: "E-Mail bereits registriert",
-          description: "Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.",
+          title: "Bitte überprüfen Sie Ihre Eingaben",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {
+        const germanMessage = handleAuthError(error, 'RegisterHaendler');
         toast({
           title: "Registrierung fehlgeschlagen",
-          description: error.message || "Ein Fehler ist aufgetreten",
+          description: germanMessage,
           variant: "destructive",
         });
       }

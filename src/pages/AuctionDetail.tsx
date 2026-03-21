@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
@@ -139,9 +140,10 @@ const AuctionDetail = () => {
           code: error.code,
           details: error.details
         });
+        const germanMessage = handleApiError(error, 'AuctionDetail', { auctionId: id });
         toast({
-          title: "Fehler",
-          description: `Auktion konnte nicht geladen werden: ${error.message}`,
+          title: "Fehler beim Laden",
+          description: germanMessage,
           variant: "destructive",
         });
         return;
@@ -333,9 +335,10 @@ const AuctionDetail = () => {
         navigate('/kaufen', { replace: true });
       }, 2000);
     } catch (error: unknown) {
+      const germanMessage = handleBusinessError(error, 'AuctionDetail.InstantBuy');
       toast({
-        title: "Fehler",
-        description: error instanceof Error ? error.message : "Kauf konnte nicht abgeschlossen werden",
+        title: "Kauf fehlgeschlagen",
+        description: germanMessage,
         variant: "destructive",
       });
     } finally {
@@ -447,9 +450,10 @@ const AuctionDetail = () => {
       setMaxAutobidAmount("");
       setEnableAutobid(false);
     } catch (error: unknown) {
+      const germanMessage = handleBusinessError(error, 'AuctionDetail.PlaceBid');
       toast({
-        title: "Fehler",
-        description: error instanceof Error ? error.message : "Gebot konnte nicht abgegeben werden",
+        title: "Gebot fehlgeschlagen",
+        description: germanMessage,
         variant: "destructive",
       });
     } finally {

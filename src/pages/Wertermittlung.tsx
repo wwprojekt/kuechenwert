@@ -31,10 +31,11 @@ import {
 import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { z } from "zod";
+import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
+  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   phone: z.string().optional(),
 });
 
@@ -103,10 +104,11 @@ const Wertermittlung = () => {
         description: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
       });
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      const germanMessage = handleApiError(error, 'Wertermittlung');
       toast({
-        title: "Fehler",
-        description: "Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+        title: "Fehler beim Senden",
+        description: germanMessage,
         variant: "destructive",
       });
     },
@@ -119,9 +121,10 @@ const Wertermittlung = () => {
       submitMutation.mutate(formData);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'Wertermittlung');
         toast({
           title: "Bitte prüfen Sie Ihre Eingaben",
-          description: error.errors[0].message,
+          description: germanMessage,
           variant: "destructive",
         });
       }

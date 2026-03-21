@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
-import { logger } from "@/lib/logger";
+import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +14,8 @@ import { Mail, Lock, ArrowRight, Building2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
 const signInSchema = z.object({
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
-  password: z.string().min(1, "Passwort erforderlich"),
+  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+  password: z.string().min(1, "Bitte geben Sie Ihr Passwort ein"),
 });
 
 const LoginHaendler = () => {
@@ -73,21 +73,17 @@ const LoginHaendler = () => {
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'LoginHaendler');
         toast({
-          title: "Validierungsfehler",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      } else if (error.message?.includes("Invalid login credentials")) {
-        toast({
-          title: "Anmeldung fehlgeschlagen",
-          description: "Ungültige E-Mail oder Passwort",
+          title: "Bitte überprüfen Sie Ihre Eingaben",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {
+        const germanMessage = handleAuthError(error, 'LoginHaendler');
         toast({
           title: "Anmeldung fehlgeschlagen",
-          description: error.message || "Ein Fehler ist aufgetreten",
+          description: germanMessage,
           variant: "destructive",
         });
       }

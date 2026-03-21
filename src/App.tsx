@@ -70,6 +70,7 @@ const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials"));
 const AdminLegal = lazy(() => import("./pages/admin/AdminLegal"));
 const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
 const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
+const AdminErrorLogs = lazy(() => import("./pages/admin/AdminErrorLogs"));
 const AdminAuctionDetail = lazy(() => import("./pages/admin/AdminAuctionDetail"));
 const AdminMotorhomeDetail = lazy(() => import("./pages/admin/AdminMotorhomeDetail"));
 const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
@@ -213,6 +214,7 @@ const App = () => (
                 <Route path="handover" element={<AdminStationHandover />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="legal" element={<AdminLegal />} />
+                <Route path="error-logs" element={<AdminErrorLogs />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 

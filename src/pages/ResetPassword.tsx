@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Lock, Loader2, CheckCircle2, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
@@ -88,16 +89,18 @@ const ResetPassword = () => {
       }, 3000);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const germanMessage = handleValidationError(error, 'ResetPassword');
         toast({
-          title: "Ungültiges Passwort",
-          description: error.errors[0].message,
+          title: "Bitte überprüfen Sie Ihre Eingabe",
+          description: germanMessage,
           variant: "destructive",
         });
       } else {
         logger.error("Password update error:", error);
+        const germanMessage = handleAuthError(error, 'ResetPassword');
         toast({
-          title: "Fehler",
-          description: "Das Passwort konnte nicht geändert werden. Bitte versuchen Sie es erneut.",
+          title: "Passwortänderung fehlgeschlagen",
+          description: germanMessage,
           variant: "destructive",
         });
       }

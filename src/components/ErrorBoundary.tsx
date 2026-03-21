@@ -1,6 +1,7 @@
 /**
  * Global Error Boundary Component
  * Catches and handles React component errors
+ * Logs all errors to Supabase error_logs table for admin dashboard
  */
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
@@ -8,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { errorLogger } from '@/lib/errorLogger';
+import { logErrorToSupabase } from '@/lib/errorLogService';
+import { getPageTitle } from '@/lib/germanErrors';
 
 interface Props {
   children: ReactNode;
@@ -35,7 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Update state so the next render will show the fallback UI
     return {
       hasError: true,
       error,
@@ -44,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log the error
+    // Bestehendes Logging beibehalten
     errorLogger.logError({
       message: `React Error Boundary: ${error.message}`,
       stack: error.stack,
@@ -58,12 +60,24 @@ export class ErrorBoundary extends Component<Props, State> {
       },
     });
 
-    // Update state with error info
-    this.setState({
-      errorInfo,
+    // NEU: In Supabase error_logs loggen für Admin-Dashboard
+    logErrorToSupabase({
+      errorCode: 'UI_REACT_ERROR_BOUNDARY',
+      errorMessage: 'Ein unerwarteter Fehler ist aufgetreten. Unser Team wurde automatisch benachrichtigt.',
+      errorCategory: 'ui',
+      severity: 'critical',
+      pagePath: window.location.pathname,
+      pageTitle: getPageTitle(window.location.pathname),
+      componentName: 'ErrorBoundary',
+      originalError: error.message,
+      stackTrace: error.stack,
+      metadata: {
+        componentStack: errorInfo.componentStack,
+        errorBoundary: 'GlobalErrorBoundary',
+      },
     });
 
-    // Call optional error handler
+    this.setState({ errorInfo });
     this.props.onError?.(error, errorInfo);
   }
 
@@ -86,12 +100,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // Default error UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
           <Card className="max-w-md w-full p-6 text-center space-y-4">
@@ -221,6 +233,22 @@ export class FormErrorBoundary extends Component<Props, State> {
       },
     });
 
+    // In Supabase loggen
+    logErrorToSupabase({
+      errorCode: 'UI_FORM_ERROR',
+      errorMessage: 'Beim Laden des Formulars ist ein Fehler aufgetreten.',
+      errorCategory: 'ui',
+      severity: 'high',
+      pagePath: window.location.pathname,
+      pageTitle: getPageTitle(window.location.pathname),
+      componentName: 'FormErrorBoundary',
+      originalError: error.message,
+      stackTrace: error.stack,
+      metadata: {
+        componentStack: errorInfo.componentStack,
+      },
+    });
+
     this.setState({ errorInfo });
     this.props.onError?.(error, errorInfo);
   }
@@ -298,6 +326,22 @@ export class AuctionErrorBoundary extends Component<Props, State> {
       metadata: {
         componentStack: errorInfo.componentStack,
         errorBoundary: 'AuctionErrorBoundary',
+      },
+    });
+
+    // In Supabase loggen
+    logErrorToSupabase({
+      errorCode: 'BIZ_AUCTION_ERROR',
+      errorMessage: 'Die Auktionsdaten konnten nicht geladen werden.',
+      errorCategory: 'business',
+      severity: 'high',
+      pagePath: window.location.pathname,
+      pageTitle: getPageTitle(window.location.pathname),
+      componentName: 'AuctionErrorBoundary',
+      originalError: error.message,
+      stackTrace: error.stack,
+      metadata: {
+        componentStack: errorInfo.componentStack,
       },
     });
 

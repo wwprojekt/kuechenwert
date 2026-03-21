@@ -124,10 +124,6 @@ export default function AdminMotorhomes() {
         return <Badge className="bg-purple-500">Auktion</Badge>;
       case "instant_price":
         return <Badge className="bg-blue-500">Sofortpreis</Badge>;
-      case "instant_sale":
-        return <Badge className="bg-blue-500">Sofortverkauf</Badge>;
-      case "both":
-        return <Badge className="bg-green-500">Beides</Badge>;
       case "station":
         return <Badge className="bg-orange-500">Station</Badge>;
       default:

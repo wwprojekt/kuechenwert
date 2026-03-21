@@ -91,9 +91,8 @@ const BODY_TYPES = [
 ];
 
 const SALE_CHANNELS = [
-  { value: "auction", label: "Auktion" },
-  { value: "instant_sale", label: "Sofortverkauf" },
-  { value: "both", label: "Beides" },
+  { value: "auction", label: "Händler-Auktion" },
+  { value: "instant_price", label: "Sofortpreis" },
   { value: "station", label: "Ankaufstation" },
 ];
 

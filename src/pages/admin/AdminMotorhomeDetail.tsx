@@ -85,8 +85,8 @@ export default function AdminMotorhomeDetail() {
         .from("motorhomes")
         .select(`
           *,
-          motorhome_photos(id, photo_url, display_order),
-          damage_photos(id, photo_url, damage_location, damage_severity, description),
+          motorhome_photos(id, url, display_order),
+          damage_photos(id, url, damage_location, damage_severity, description),
           seller:profiles!left (
             id,
             first_name,
@@ -283,7 +283,7 @@ export default function AdminMotorhomeDetail() {
                       {/* Main Photo */}
                       <div className="aspect-video rounded-lg overflow-hidden bg-muted">
                         <img
-                          src={sortedPhotos[selectedPhotoIndex]?.photo_url}
+                          src={sortedPhotos[selectedPhotoIndex]?.url}
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
                           className="w-full h-full object-cover"
                         />
@@ -302,7 +302,7 @@ export default function AdminMotorhomeDetail() {
                               }`}
                             >
                               <img
-                                src={photo.photo_url}
+                                src={photo.url}
                                 alt={`Foto ${index + 1}`}
                                 className="w-full h-full object-cover"
                               />
@@ -357,11 +357,11 @@ export default function AdminMotorhomeDetail() {
                   <DetailSection title="Technische Daten" icon={<Settings className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
                       <InfoItem label="Kraftstoff" value={motorhome.fuel_type} icon={<Fuel className="w-3 h-3" />} />
-                      <InfoItem label="Leistung" value={motorhome.power_ps ? `${motorhome.power_ps} PS` : "—"} />
+                      <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
                       <InfoItem label="Getriebe" value={motorhome.transmission} />
                       <InfoItem label="Abgasnorm" value={motorhome.emission_class} />
                       <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
-                      <InfoItem label="TÜV bis" value={formatDate(motorhome.next_tuev_date)} icon={<Calendar className="w-3 h-3" />} />
+                      <InfoItem label="TÜV bis" value={formatDate(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString()} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">
@@ -392,13 +392,13 @@ export default function AdminMotorhomeDetail() {
                       Abmessungen & Gewicht
                     </h4>
                     <InfoGrid columns={4}>
-                      <InfoItem label="Länge" value={motorhome.length_cm ? `${motorhome.length_cm} cm` : "—"} />
-                      <InfoItem label="Breite" value={motorhome.width_cm ? `${motorhome.width_cm} cm` : "—"} />
-                      <InfoItem label="Höhe" value={motorhome.height_cm ? `${motorhome.height_cm} cm` : "—"} />
+                      <InfoItem label="Länge" value={motorhome.length_m ? `${motorhome.length_m} cm` : "—"} />
+                      <InfoItem label="Breite" value={motorhome.width_m ? `${motorhome.width_m} cm` : "—"} />
+                      <InfoItem label="Höhe" value={motorhome.height_m ? `${motorhome.height_m} cm` : "—"} />
                       <InfoItem label="Achsen" value={motorhome.number_of_axles?.toString()} />
-                      <InfoItem label="Gesamtgewicht" value={motorhome.total_weight_kg ? `${motorhome.total_weight_kg} kg` : "—"} icon={<Weight className="w-3 h-3" />} />
+                      <InfoItem label="Gesamtgewicht" value={motorhome.weight_kg ? `${motorhome.weight_kg} kg` : "—"} icon={<Weight className="w-3 h-3" />} />
                       <InfoItem label="Zuladung" value={motorhome.payload_kg ? `${motorhome.payload_kg} kg` : "—"} />
-                      <InfoItem label="Sitzplätze" value={motorhome.seats_with_seatbelts?.toString()} icon={<Users className="w-3 h-3" />} />
+                      <InfoItem label="Sitzplätze" value={motorhome.seats?.toString()} icon={<Users className="w-3 h-3" />} />
                       <InfoItem label="Schlafplätze" value={motorhome.sleeping_places?.toString()} icon={<Bed className="w-3 h-3" />} />
                     </InfoGrid>
                     {motorhome.beds_description && (
@@ -413,8 +413,8 @@ export default function AdminMotorhomeDetail() {
                   <DetailSection title="Innenausstattung" icon={<Bed className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
                       <InfoItem label="Heizung" value={motorhome.heating_type} />
-                      <InfoItem label="Klimaanlage" value={motorhome.air_conditioning} icon={<Wind className="w-3 h-3" />} />
-                      <InfoItem label="Frischwasser" value={motorhome.fresh_water_capacity_liters ? `${motorhome.fresh_water_capacity_liters} L` : "—"} icon={<Droplets className="w-3 h-3" />} />
+                      <InfoItem label="Klimaanlage" value={motorhome.air_conditioning_type} icon={<Wind className="w-3 h-3" />} />
+                      <InfoItem label="Frischwasser" value={motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : "—"} icon={<Droplets className="w-3 h-3" />} />
                       <InfoItem label="Grauwasser" value={motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : "—"} />
                       <InfoItem label="Kühlschrank" value={motorhome.refrigerator_type} />
                     </InfoGrid>
@@ -438,16 +438,16 @@ export default function AdminMotorhomeDetail() {
                       )}
                       {motorhome.has_awning && (
                         <Badge variant="outline">
-                          Markise {motorhome.awning_length_cm ? `(${motorhome.awning_length_cm}cm)` : ''}
+                          Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
                         </Badge>
                       )}
                       {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
-                      {motorhome.has_tv_sat && (
+                      {motorhome.has_tv && (
                         <Badge variant="outline" className="gap-1">
                           <Tv className="w-3 h-3" /> TV/SAT
                         </Badge>
                       )}
-                      {motorhome.has_reversing_camera && (
+                      {motorhome.has_backup_camera && (
                         <Badge variant="outline" className="gap-1">
                           <Camera className="w-3 h-3" /> Rückfahrkamera
                         </Badge>
@@ -496,7 +496,7 @@ export default function AdminMotorhomeDetail() {
                     {motorhome.damage_photos.map((damage: any) => (
                       <div key={damage.id} className="rounded-lg border overflow-hidden">
                         <img
-                          src={damage.photo_url}
+                          src={damage.url}
                           alt={damage.damage_location}
                           className="w-full h-32 object-cover"
                         />

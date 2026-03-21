@@ -85,7 +85,7 @@ describe('Motorhome Validation Schemas', () => {
       const validData = {
         fuel_type: 'Diesel',
         power_kw: 130,
-        power_ps: 177,
+        engine_power_hp: 177,
         transmission: 'Automatik',
         emission_class: 'Euro 6',
         accident_free: true,
@@ -121,13 +121,13 @@ describe('Motorhome Validation Schemas', () => {
   describe('motorhomeDimensionsSchema', () => {
     it('should validate correct dimensions', () => {
       const validData = {
-        length_cm: 700,
-        width_cm: 235,
-        height_cm: 280,
-        total_weight_kg: 3500,
+        length_m: 700,
+        width_m: 235,
+        height_m: 280,
+        weight_kg: 3500,
         payload_kg: 500,
         number_of_axles: 2,
-        seats_with_seatbelts: 4,
+        seats: 4,
         sleeping_places: 4,
       };
 
@@ -136,7 +136,7 @@ describe('Motorhome Validation Schemas', () => {
 
     it('should reject invalid dimensions', () => {
       const invalidData = {
-        length_cm: 100, // Too short
+        length_m: 100, // Too short
         sleeping_places: 4,
       };
 
@@ -145,7 +145,7 @@ describe('Motorhome Validation Schemas', () => {
 
     it('should require sleeping places', () => {
       const invalidData = {
-        length_cm: 700,
+        length_m: 700,
         // missing sleeping_places
       };
 
@@ -159,11 +159,11 @@ describe('Motorhome Validation Schemas', () => {
         has_kitchen: true,
         refrigerator_type: 'Kompressor',
         heating_type: 'Gas',
-        air_conditioning: 'Wohnraum',
+        air_conditioning_type: 'Wohnraum',
         has_bathroom: true,
         has_toilet: true,
         has_shower: true,
-        fresh_water_capacity_liters: 100,
+        water_tank_liters: 100,
         grey_water_capacity_liters: 90,
       };
 
@@ -173,7 +173,7 @@ describe('Motorhome Validation Schemas', () => {
     it('should accept minimal interior configuration', () => {
       const validData = {
         has_kitchen: false,
-        air_conditioning: 'Keine',
+        air_conditioning_type: 'Keine',
         has_bathroom: false,
         has_toilet: false,
         has_shower: false,
@@ -191,11 +191,11 @@ describe('Motorhome Validation Schemas', () => {
         battery_capacity_ah: 100,
         has_inverter: true,
         has_awning: true,
-        awning_length_cm: 450,
+        awning_length_m: 450,
         has_bike_rack: true,
         has_garage: false,
-        has_tv_sat: true,
-        has_reversing_camera: true,
+        has_tv: true,
+        has_backup_camera: true,
         has_parking_sensors: true,
         has_cruise_control: true,
         has_central_locking: true,
@@ -211,8 +211,8 @@ describe('Motorhome Validation Schemas', () => {
         has_awning: false,
         has_bike_rack: false,
         has_garage: false,
-        has_tv_sat: false,
-        has_reversing_camera: false,
+        has_tv: false,
+        has_backup_camera: false,
         has_parking_sensors: false,
         has_cruise_control: false,
         has_central_locking: false,
@@ -228,8 +228,8 @@ describe('Motorhome Validation Schemas', () => {
         has_awning: false,
         has_bike_rack: false,
         has_garage: false,
-        has_tv_sat: false,
-        has_reversing_camera: false,
+        has_tv: false,
+        has_backup_camera: false,
         has_parking_sensors: false,
         has_cruise_control: false,
         has_central_locking: false,

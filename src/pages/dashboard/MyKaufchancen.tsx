@@ -24,7 +24,7 @@ interface KaufchanceAuction {
     model: string;
     year: number;
     listing_number: string | null;
-    photos: Array<{ photo_url: string; display_order: number }>;
+    photos: Array<{ url: string; display_order: number }>;
   };
   offers: Array<{
     id: string;
@@ -53,7 +53,7 @@ interface MyOffer {
     motorhome: {
       manufacturer: string;
       model: string;
-      photos: Array<{ photo_url: string; display_order: number }>;
+      photos: Array<{ url: string; display_order: number }>;
     };
   };
 }
@@ -84,7 +84,7 @@ export default function MyKaufchancen() {
             model,
             year,
             listing_number,
-            photos:motorhome_photos (photo_url, display_order)
+            photos:motorhome_photos (url, display_order)
           ),
           offers:post_auction_offers (
             id,
@@ -122,7 +122,7 @@ export default function MyKaufchancen() {
             motorhome:motorhomes (
               manufacturer,
               model,
-              photos:motorhome_photos (photo_url, display_order)
+              photos:motorhome_photos (url, display_order)
             )
           )
         `)
@@ -210,7 +210,7 @@ export default function MyKaufchancen() {
                       <div className="relative w-full md:w-48 h-40 md:h-auto flex-shrink-0">
                         {firstPhoto ? (
                           <img
-                            src={firstPhoto.photo_url}
+                            src={firstPhoto.url}
                             alt={`${motorhome.manufacturer} ${motorhome.model}`}
                             className="w-full h-full object-cover"
                           />
@@ -306,7 +306,7 @@ export default function MyKaufchancen() {
                       <div className="relative w-full md:w-40 h-32 md:h-auto flex-shrink-0">
                         {firstPhoto ? (
                           <img
-                            src={firstPhoto.photo_url}
+                            src={firstPhoto.url}
                             alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
                             className="w-full h-full object-cover"
                           />

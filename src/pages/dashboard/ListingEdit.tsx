@@ -64,12 +64,12 @@ export default function ListingEdit() {
     // Technical
     fuel_type: "",
     power_kw: "",
-    power_ps: "",
+    engine_power_hp: "",
     transmission: "",
     emission_class: "",
     first_registration: "",
     last_tuev_date: "",
-    next_tuev_date: "",
+    tuev_valid_until: "",
     previous_owners: "",
     accident_free: true,
     non_smoker: true,
@@ -77,13 +77,13 @@ export default function ListingEdit() {
     fuel_tank_capacity_liters: "",
     
     // Dimensions
-    length_cm: "",
-    width_cm: "",
-    height_cm: "",
-    total_weight_kg: "",
+    length_m: "",
+    width_m: "",
+    height_m: "",
+    weight_kg: "",
     payload_kg: "",
     number_of_axles: 2,
-    seats_with_seatbelts: "",
+    seats: "",
     sleeping_places: "",
     beds_description: "",
     
@@ -91,11 +91,11 @@ export default function ListingEdit() {
     has_kitchen: true,
     refrigerator_type: "",
     heating_type: "",
-    air_conditioning: "Keine",
+    air_conditioning_type: "Keine",
     has_bathroom: false,
     has_toilet: false,
     has_shower: false,
-    fresh_water_capacity_liters: "",
+    water_tank_liters: "",
     grey_water_capacity_liters: "",
     
     // Equipment
@@ -104,11 +104,11 @@ export default function ListingEdit() {
     battery_capacity_ah: "",
     has_inverter: false,
     has_awning: false,
-    awning_length_cm: "",
+    awning_length_m: "",
     has_bike_rack: false,
     has_garage: false,
-    has_tv_sat: false,
-    has_reversing_camera: false,
+    has_tv: false,
+    has_backup_camera: false,
     has_parking_sensors: false,
     has_cruise_control: false,
     has_central_locking: false,
@@ -129,12 +129,12 @@ export default function ListingEdit() {
         // Technical
         fuel_type: motorhome.fuel_type || "",
         power_kw: motorhome.power_kw?.toString() || "",
-        power_ps: motorhome.power_ps?.toString() || "",
+        engine_power_hp: motorhome.engine_power_hp?.toString() || "",
         transmission: motorhome.transmission || "",
         emission_class: motorhome.emission_class || "",
         first_registration: motorhome.first_registration || "",
         last_tuev_date: motorhome.last_tuev_date || "",
-        next_tuev_date: motorhome.next_tuev_date || "",
+        tuev_valid_until: motorhome.tuev_valid_until || "",
         previous_owners: motorhome.previous_owners?.toString() || "",
         accident_free: motorhome.accident_free ?? true,
         non_smoker: motorhome.non_smoker ?? true,
@@ -142,13 +142,13 @@ export default function ListingEdit() {
         fuel_tank_capacity_liters: motorhome.fuel_tank_capacity_liters?.toString() || "",
         
         // Dimensions
-        length_cm: motorhome.length_cm?.toString() || "",
-        width_cm: motorhome.width_cm?.toString() || "",
-        height_cm: motorhome.height_cm?.toString() || "",
-        total_weight_kg: motorhome.total_weight_kg?.toString() || "",
+        length_m: motorhome.length_m?.toString() || "",
+        width_m: motorhome.width_m?.toString() || "",
+        height_m: motorhome.height_m?.toString() || "",
+        weight_kg: motorhome.weight_kg?.toString() || "",
         payload_kg: motorhome.payload_kg?.toString() || "",
         number_of_axles: motorhome.number_of_axles ?? 2,
-        seats_with_seatbelts: motorhome.seats_with_seatbelts?.toString() || "",
+        seats: motorhome.seats?.toString() || "",
         sleeping_places: motorhome.sleeping_places?.toString() || "",
         beds_description: motorhome.beds_description || "",
         
@@ -156,11 +156,11 @@ export default function ListingEdit() {
         has_kitchen: motorhome.has_kitchen ?? true,
         refrigerator_type: motorhome.refrigerator_type || "",
         heating_type: motorhome.heating_type || "",
-        air_conditioning: motorhome.air_conditioning || "Keine",
+        air_conditioning_type: motorhome.air_conditioning_type || "Keine",
         has_bathroom: motorhome.has_bathroom ?? false,
         has_toilet: motorhome.has_toilet ?? false,
         has_shower: motorhome.has_shower ?? false,
-        fresh_water_capacity_liters: motorhome.fresh_water_capacity_liters?.toString() || "",
+        water_tank_liters: motorhome.water_tank_liters?.toString() || "",
         grey_water_capacity_liters: motorhome.grey_water_capacity_liters?.toString() || "",
         
         // Equipment
@@ -169,11 +169,11 @@ export default function ListingEdit() {
         battery_capacity_ah: motorhome.battery_capacity_ah?.toString() || "",
         has_inverter: motorhome.has_inverter ?? false,
         has_awning: motorhome.has_awning ?? false,
-        awning_length_cm: motorhome.awning_length_cm?.toString() || "",
+        awning_length_m: motorhome.awning_length_m?.toString() || "",
         has_bike_rack: motorhome.has_bike_rack ?? false,
         has_garage: motorhome.has_garage ?? false,
-        has_tv_sat: motorhome.has_tv_sat ?? false,
-        has_reversing_camera: motorhome.has_reversing_camera ?? false,
+        has_tv: motorhome.has_tv ?? false,
+        has_backup_camera: motorhome.has_backup_camera ?? false,
         has_parking_sensors: motorhome.has_parking_sensors ?? false,
         has_cruise_control: motorhome.has_cruise_control ?? false,
         has_central_locking: motorhome.has_central_locking ?? false,
@@ -196,12 +196,12 @@ export default function ListingEdit() {
         // Technical
         fuel_type: data.fuel_type || null,
         power_kw: data.power_kw ? Number(data.power_kw) : null,
-        power_ps: data.power_ps ? Number(data.power_ps) : null,
+        engine_power_hp: data.engine_power_hp ? Number(data.engine_power_hp) : null,
         transmission: data.transmission || null,
         emission_class: data.emission_class || null,
         first_registration: data.first_registration || null,
         last_tuev_date: data.last_tuev_date || null,
-        next_tuev_date: data.next_tuev_date || null,
+        tuev_valid_until: data.tuev_valid_until || null,
         previous_owners: data.previous_owners ? Number(data.previous_owners) : null,
         accident_free: data.accident_free,
         non_smoker: data.non_smoker,
@@ -209,13 +209,13 @@ export default function ListingEdit() {
         fuel_tank_capacity_liters: data.fuel_tank_capacity_liters ? Number(data.fuel_tank_capacity_liters) : null,
         
         // Dimensions
-        length_cm: data.length_cm ? Number(data.length_cm) : null,
-        width_cm: data.width_cm ? Number(data.width_cm) : null,
-        height_cm: data.height_cm ? Number(data.height_cm) : null,
-        total_weight_kg: data.total_weight_kg ? Number(data.total_weight_kg) : null,
+        length_m: data.length_m ? Number(data.length_m) : null,
+        width_m: data.width_m ? Number(data.width_m) : null,
+        height_m: data.height_m ? Number(data.height_m) : null,
+        weight_kg: data.weight_kg ? Number(data.weight_kg) : null,
         payload_kg: data.payload_kg ? Number(data.payload_kg) : null,
         number_of_axles: data.number_of_axles,
-        seats_with_seatbelts: data.seats_with_seatbelts ? Number(data.seats_with_seatbelts) : null,
+        seats: data.seats ? Number(data.seats) : null,
         sleeping_places: data.sleeping_places ? Number(data.sleeping_places) : null,
         beds_description: data.beds_description || null,
         
@@ -223,11 +223,11 @@ export default function ListingEdit() {
         has_kitchen: data.has_kitchen,
         refrigerator_type: data.refrigerator_type || null,
         heating_type: data.heating_type || null,
-        air_conditioning: data.air_conditioning,
+        air_conditioning_type: data.air_conditioning_type,
         has_bathroom: data.has_bathroom,
         has_toilet: data.has_toilet,
         has_shower: data.has_shower,
-        fresh_water_capacity_liters: data.fresh_water_capacity_liters ? Number(data.fresh_water_capacity_liters) : null,
+        water_tank_liters: data.water_tank_liters ? Number(data.water_tank_liters) : null,
         grey_water_capacity_liters: data.grey_water_capacity_liters ? Number(data.grey_water_capacity_liters) : null,
         
         // Equipment
@@ -236,11 +236,11 @@ export default function ListingEdit() {
         battery_capacity_ah: data.battery_capacity_ah ? Number(data.battery_capacity_ah) : null,
         has_inverter: data.has_inverter,
         has_awning: data.has_awning,
-        awning_length_cm: data.awning_length_cm ? Number(data.awning_length_cm) : null,
+        awning_length_m: data.awning_length_m ? Number(data.awning_length_m) : null,
         has_bike_rack: data.has_bike_rack,
         has_garage: data.has_garage,
-        has_tv_sat: data.has_tv_sat,
-        has_reversing_camera: data.has_reversing_camera,
+        has_tv: data.has_tv,
+        has_backup_camera: data.has_backup_camera,
         has_parking_sensors: data.has_parking_sensors,
         has_cruise_control: data.has_cruise_control,
         has_central_locking: data.has_central_locking,
@@ -298,13 +298,13 @@ export default function ListingEdit() {
       // Get photo URL before deleting
       const { data: photo } = await supabase
         .from("motorhome_photos")
-        .select("photo_url")
+        .select("url")
         .eq("id", photoId)
         .single();
 
-      if (photo?.photo_url) {
+      if (photo?.url) {
         // Extract file path from URL
-        const urlParts = photo.photo_url.split("/");
+        const urlParts = photo.url.split("/");
         const filePath = urlParts.slice(-2).join("/"); // user_id/filename
 
         // Delete from storage
@@ -372,7 +372,7 @@ export default function ListingEdit() {
       // Insert photo records
       const photoRecords = photoUrls.map((url, index) => ({
         motorhome_id: id,
-        photo_url: url,
+        url: url,
         display_order: startOrder + index + 1,
       }));
 
@@ -540,8 +540,8 @@ export default function ListingEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="power_ps">Leistung (PS)</Label>
-                    <Input id="power_ps" type="number" value={formData.power_ps} onChange={(e) => setFormData({ ...formData, power_ps: e.target.value })} placeholder="z.B. 130" />
+                    <Label htmlFor="engine_power_hp">Leistung (PS)</Label>
+                    <Input id="engine_power_hp" type="number" value={formData.engine_power_hp} onChange={(e) => setFormData({ ...formData, engine_power_hp: e.target.value })} placeholder="z.B. 130" />
                   </div>
 
                   <div className="space-y-2">
@@ -575,8 +575,8 @@ export default function ListingEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="next_tuev_date">Nächste TÜV/HU</Label>
-                    <Input id="next_tuev_date" type="date" value={formData.next_tuev_date} onChange={(e) => setFormData({ ...formData, next_tuev_date: e.target.value })} />
+                    <Label htmlFor="tuev_valid_until">Nächste TÜV/HU</Label>
+                    <Input id="tuev_valid_until" type="date" value={formData.tuev_valid_until} onChange={(e) => setFormData({ ...formData, tuev_valid_until: e.target.value })} />
                   </div>
 
                   <div className="space-y-2">
@@ -605,20 +605,20 @@ export default function ListingEdit() {
               <TabsContent value="dimensions" className="space-y-6 mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="length_cm">Länge (cm)</Label>
-                    <Input id="length_cm" type="number" value={formData.length_cm} onChange={(e) => setFormData({ ...formData, length_cm: e.target.value })} placeholder="z.B. 650" />
+                    <Label htmlFor="length_m">Länge (cm)</Label>
+                    <Input id="length_m" type="number" value={formData.length_m} onChange={(e) => setFormData({ ...formData, length_m: e.target.value })} placeholder="z.B. 650" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="width_cm">Breite (cm)</Label>
-                    <Input id="width_cm" type="number" value={formData.width_cm} onChange={(e) => setFormData({ ...formData, width_cm: e.target.value })} placeholder="z.B. 230" />
+                    <Label htmlFor="width_m">Breite (cm)</Label>
+                    <Input id="width_m" type="number" value={formData.width_m} onChange={(e) => setFormData({ ...formData, width_m: e.target.value })} placeholder="z.B. 230" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="height_cm">Höhe (cm)</Label>
-                    <Input id="height_cm" type="number" value={formData.height_cm} onChange={(e) => setFormData({ ...formData, height_cm: e.target.value })} placeholder="z.B. 280" />
+                    <Label htmlFor="height_m">Höhe (cm)</Label>
+                    <Input id="height_m" type="number" value={formData.height_m} onChange={(e) => setFormData({ ...formData, height_m: e.target.value })} placeholder="z.B. 280" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="total_weight_kg">Gesamtgewicht (kg)</Label>
-                    <Input id="total_weight_kg" type="number" value={formData.total_weight_kg} onChange={(e) => setFormData({ ...formData, total_weight_kg: e.target.value })} placeholder="z.B. 3500" />
+                    <Label htmlFor="weight_kg">Gesamtgewicht (kg)</Label>
+                    <Input id="weight_kg" type="number" value={formData.weight_kg} onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })} placeholder="z.B. 3500" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="payload_kg">Nutzlast (kg)</Label>
@@ -629,8 +629,8 @@ export default function ListingEdit() {
                     <Input id="number_of_axles" type="number" value={formData.number_of_axles} onChange={(e) => setFormData({ ...formData, number_of_axles: Number(e.target.value) })} placeholder="z.B. 2" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="seats_with_seatbelts">Sitzplätze mit Gurten</Label>
-                    <Input id="seats_with_seatbelts" type="number" value={formData.seats_with_seatbelts} onChange={(e) => setFormData({ ...formData, seats_with_seatbelts: e.target.value })} placeholder="z.B. 4" />
+                    <Label htmlFor="seats">Sitzplätze mit Gurten</Label>
+                    <Input id="seats" type="number" value={formData.seats} onChange={(e) => setFormData({ ...formData, seats: e.target.value })} placeholder="z.B. 4" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="sleeping_places">Schlafplätze</Label>
@@ -691,8 +691,8 @@ export default function ListingEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="air_conditioning">Klimaanlage</Label>
-                    <Select value={formData.air_conditioning} onValueChange={(value) => setFormData({ ...formData, air_conditioning: value })}>
+                    <Label htmlFor="air_conditioning_type">Klimaanlage</Label>
+                    <Select value={formData.air_conditioning_type} onValueChange={(value) => setFormData({ ...formData, air_conditioning_type: value })}>
                       <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Fahrerhaus">Fahrerhaus</SelectItem>
@@ -704,8 +704,8 @@ export default function ListingEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="fresh_water_capacity_liters">Frischwasser (Liter)</Label>
-                    <Input id="fresh_water_capacity_liters" type="number" value={formData.fresh_water_capacity_liters} onChange={(e) => setFormData({ ...formData, fresh_water_capacity_liters: e.target.value })} placeholder="z.B. 120" />
+                    <Label htmlFor="water_tank_liters">Frischwasser (Liter)</Label>
+                    <Input id="water_tank_liters" type="number" value={formData.water_tank_liters} onChange={(e) => setFormData({ ...formData, water_tank_liters: e.target.value })} placeholder="z.B. 120" />
                   </div>
 
                   <div className="space-y-2">
@@ -739,12 +739,12 @@ export default function ListingEdit() {
                     <label htmlFor="has_garage" className="text-sm font-medium">Garage</label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="has_tv_sat" checked={formData.has_tv_sat} onCheckedChange={(checked) => setFormData({ ...formData, has_tv_sat: checked as boolean })} />
-                    <label htmlFor="has_tv_sat" className="text-sm font-medium">TV/SAT-Anlage</label>
+                    <Checkbox id="has_tv" checked={formData.has_tv} onCheckedChange={(checked) => setFormData({ ...formData, has_tv: checked as boolean })} />
+                    <label htmlFor="has_tv" className="text-sm font-medium">TV/SAT-Anlage</label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="has_reversing_camera" checked={formData.has_reversing_camera} onCheckedChange={(checked) => setFormData({ ...formData, has_reversing_camera: checked as boolean })} />
-                    <label htmlFor="has_reversing_camera" className="text-sm font-medium">Rückfahrkamera</label>
+                    <Checkbox id="has_backup_camera" checked={formData.has_backup_camera} onCheckedChange={(checked) => setFormData({ ...formData, has_backup_camera: checked as boolean })} />
+                    <label htmlFor="has_backup_camera" className="text-sm font-medium">Rückfahrkamera</label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="has_parking_sensors" checked={formData.has_parking_sensors} onCheckedChange={(checked) => setFormData({ ...formData, has_parking_sensors: checked as boolean })} />
@@ -770,8 +770,8 @@ export default function ListingEdit() {
                     <Input id="battery_capacity_ah" type="number" value={formData.battery_capacity_ah} onChange={(e) => setFormData({ ...formData, battery_capacity_ah: e.target.value })} placeholder="z.B. 150" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="awning_length_cm">Markisenlänge (cm)</Label>
-                    <Input id="awning_length_cm" type="number" value={formData.awning_length_cm} onChange={(e) => setFormData({ ...formData, awning_length_cm: e.target.value })} placeholder="z.B. 400" />
+                    <Label htmlFor="awning_length_m">Markisenlänge (cm)</Label>
+                    <Input id="awning_length_m" type="number" value={formData.awning_length_m} onChange={(e) => setFormData({ ...formData, awning_length_m: e.target.value })} placeholder="z.B. 400" />
                   </div>
                 </div>
               </TabsContent>
@@ -844,7 +844,7 @@ export default function ListingEdit() {
                           className="relative group aspect-square rounded-lg overflow-hidden border-2 bg-muted"
                         >
                           <img
-                            src={photo.photo_url}
+                            src={photo.url}
                             alt="Motorhome"
                             className="w-full h-full object-cover"
                           />

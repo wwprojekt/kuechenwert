@@ -49,7 +49,7 @@ export default function AdminAuctions() {
             manufacturer,
             model,
             year,
-            motorhome_photos(photo_url, display_order),
+            motorhome_photos(url, display_order),
             seller:profiles!left (
               first_name,
               last_name,
@@ -194,7 +194,7 @@ export default function AdminAuctions() {
             ) : (
               auctions?.map((auction) => {
                 const firstPhoto = auction.motorhome?.motorhome_photos
-                  ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.photo_url;
+                  ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
 
                 return (
                   <TableRow 

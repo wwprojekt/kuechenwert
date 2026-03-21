@@ -97,7 +97,7 @@ const DealerDashboard = () => {
             model,
             year,
             listing_number,
-            photos:motorhome_photos(photo_url, display_order)
+            photos:motorhome_photos(url, display_order)
           )
         `)
         .eq("status", "active")
@@ -290,8 +290,8 @@ const DealerDashboard = () => {
                 const isExpired = timeLeft <= 0;
                 const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
                 const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
-                const mainPhoto = auction.motorhome?.photos?.find((p: any) => p.display_order === 0)?.photo_url || 
-                                  auction.motorhome?.photos?.[0]?.photo_url;
+                const mainPhoto = auction.motorhome?.photos?.find((p: any) => p.display_order === 0)?.url || 
+                                  auction.motorhome?.photos?.[0]?.url;
                 
                 return (
                   <Link key={auction.id} to={`/auktion/${auction.id}`}>

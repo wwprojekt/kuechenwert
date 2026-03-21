@@ -52,7 +52,7 @@ export default function ListingDetail() {
         .select(`
           *,
           photos:motorhome_photos (
-            photo_url,
+            url,
             display_order
           ),
           auction:auctions (
@@ -77,7 +77,7 @@ export default function ListingDetail() {
         .select(`
           *,
           photos:motorhome_photos (
-            photo_url,
+            url,
             display_order
           ),
           auction:auctions (
@@ -212,9 +212,9 @@ export default function ListingDetail() {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedPhotos.map((photo, index) => (
-                <div key={photo.photo_url} className="relative aspect-video overflow-hidden rounded-lg">
+                <div key={photo.url} className="relative aspect-video overflow-hidden rounded-lg">
                   <img
-                    src={photo.photo_url}
+                    src={photo.url}
                     alt={`${motorhome.manufacturer} ${motorhome.model} - Foto ${index + 1}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
@@ -375,7 +375,7 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {(motorhome.power_kw || motorhome.power_ps) && (
+                  {(motorhome.power_kw || motorhome.engine_power_hp) && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -384,8 +384,8 @@ export default function ListingDetail() {
                         </div>
                         <span className="font-semibold">
                           {motorhome.power_kw && `${motorhome.power_kw} kW`}
-                          {motorhome.power_kw && motorhome.power_ps && " / "}
-                          {motorhome.power_ps && `${motorhome.power_ps} PS`}
+                          {motorhome.power_kw && motorhome.engine_power_hp && " / "}
+                          {motorhome.engine_power_hp && `${motorhome.engine_power_hp} PS`}
                         </span>
                       </div>
                       <Separator />
@@ -430,12 +430,12 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {motorhome.next_tuev_date && (
+                  {motorhome.tuev_valid_until && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Nächste TÜV/HU</span>
                         <span className="font-semibold">
-                          {format(new Date(motorhome.next_tuev_date), "MM/yyyy")}
+                          {format(new Date(motorhome.tuev_valid_until), "MM/yyyy")}
                         </span>
                       </div>
                       <Separator />
@@ -472,7 +472,7 @@ export default function ListingDetail() {
             <TabsContent value="dimensions" className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  {(motorhome.length_cm || motorhome.width_cm || motorhome.height_cm) && (
+                  {(motorhome.length_m || motorhome.width_m || motorhome.height_m) && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -480,22 +480,22 @@ export default function ListingDetail() {
                           <span className="text-sm text-muted-foreground">Maße (L×B×H)</span>
                         </div>
                         <span className="font-semibold text-sm">
-                          {motorhome.length_cm && `${(motorhome.length_cm / 100).toFixed(2)}m`}
-                          {motorhome.width_cm && ` × ${(motorhome.width_cm / 100).toFixed(2)}m`}
-                          {motorhome.height_cm && ` × ${(motorhome.height_cm / 100).toFixed(2)}m`}
+                          {motorhome.length_m && `${(motorhome.length_m / 100).toFixed(2)}m`}
+                          {motorhome.width_m && ` × ${(motorhome.width_m / 100).toFixed(2)}m`}
+                          {motorhome.height_m && ` × ${(motorhome.height_m / 100).toFixed(2)}m`}
                         </span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.total_weight_kg && (
+                  {motorhome.weight_kg && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Weight className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Gesamtgewicht</span>
                         </div>
-                        <span className="font-semibold">{motorhome.total_weight_kg.toLocaleString()} kg</span>
+                        <span className="font-semibold">{motorhome.weight_kg.toLocaleString()} kg</span>
                       </div>
                       <Separator />
                     </>
@@ -508,14 +508,14 @@ export default function ListingDetail() {
                   )}
                 </div>
                 <div className="space-y-4">
-                  {motorhome.seats_with_seatbelts && (
+                  {motorhome.seats && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Sitzplätze</span>
                         </div>
-                        <span className="font-semibold">{motorhome.seats_with_seatbelts}</span>
+                        <span className="font-semibold">{motorhome.seats}</span>
                       </div>
                       <Separator />
                     </>
@@ -585,19 +585,19 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {motorhome.air_conditioning && motorhome.air_conditioning !== "Keine" && (
+                  {motorhome.air_conditioning_type && motorhome.air_conditioning_type !== "Keine" && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Klimaanlage</span>
-                      <span className="font-semibold">{motorhome.air_conditioning}</span>
+                      <span className="font-semibold">{motorhome.air_conditioning_type}</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-4">
-                  {motorhome.fresh_water_capacity_liters && (
+                  {motorhome.water_tank_liters && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Frischwasser</span>
-                        <span className="font-semibold">{motorhome.fresh_water_capacity_liters}L</span>
+                        <span className="font-semibold">{motorhome.water_tank_liters}L</span>
                       </div>
                       <Separator />
                     </>
@@ -646,7 +646,7 @@ export default function ListingDetail() {
                     {motorhome.has_awning && (
                       <Badge variant="secondary" className="gap-1">
                         <Wind className="w-3 h-3" />
-                        Markise {motorhome.awning_length_cm && `(${motorhome.awning_length_cm}cm)`}
+                        Markise {motorhome.awning_length_m && `(${motorhome.awning_length_m}cm)`}
                       </Badge>
                     )}
                     {motorhome.has_bike_rack && (
@@ -662,17 +662,17 @@ export default function ListingDetail() {
                 </div>
               )}
 
-              {(motorhome.has_tv_sat || motorhome.has_reversing_camera || motorhome.has_parking_sensors || motorhome.has_cruise_control || motorhome.has_central_locking) && (
+              {(motorhome.has_tv || motorhome.has_backup_camera || motorhome.has_parking_sensors || motorhome.has_cruise_control || motorhome.has_central_locking) && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-3">Komfort & Sicherheit</p>
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.has_tv_sat && (
+                    {motorhome.has_tv && (
                       <Badge variant="secondary" className="gap-1">
                         <Tv className="w-3 h-3" />
                         TV/SAT
                       </Badge>
                     )}
-                    {motorhome.has_reversing_camera && (
+                    {motorhome.has_backup_camera && (
                       <Badge variant="secondary" className="gap-1">
                         <Camera className="w-3 h-3" />
                         Rückfahrkamera

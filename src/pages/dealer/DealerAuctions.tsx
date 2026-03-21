@@ -24,7 +24,7 @@ interface Auction {
     model: string;
     year: number;
     mileage: number;
-    motorhome_photos: Array<{ photo_url: string; display_order: number }>;
+    motorhome_photos: Array<{ url: string; display_order: number }>;
   };
   bids: Array<{
     bidder_id: string;
@@ -54,7 +54,7 @@ const DealerAuctions = () => {
             model,
             year,
             mileage,
-            motorhome_photos(photo_url, display_order)
+            motorhome_photos(url, display_order)
           ),
           bids(bidder_id, amount)
         `)
@@ -172,7 +172,7 @@ const DealerAuctions = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAuctions.map((auction) => {
             const firstPhoto = auction.motorhome.motorhome_photos
-              ?.sort((a, b) => a.display_order - b.display_order)[0]?.photo_url;
+              ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
 

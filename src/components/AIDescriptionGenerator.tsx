@@ -79,7 +79,7 @@ export const AIDescriptionGenerator = ({
             has_solar: formData.has_solar,
             has_awning: formData.has_awning,
             heating_type: formData.heating_type,
-            air_conditioning: formData.air_conditioning,
+            air_conditioning_type: formData.air_conditioning_type,
             has_inverter: formData.has_inverter,
             has_bike_rack: formData.has_bike_rack,
             has_garage: formData.has_garage,

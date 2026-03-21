@@ -108,7 +108,7 @@ export default function AdminDashboard() {
             manufacturer,
             model,
             year,
-            motorhome_photos(photo_url, display_order)
+            motorhome_photos(url, display_order)
           )
         `)
         .order("created_at", { ascending: false })
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           {recentAuctions?.map((auction) => {
             const firstPhoto = auction.motorhome?.motorhome_photos
-              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.photo_url;
+              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
 
             return (
               <Link key={auction.id} to={`/admin/auctions/${auction.id}`} className="block">

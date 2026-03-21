@@ -88,7 +88,7 @@ export default function AdminAppointmentDetail() {
             condition,
             instant_price,
             reserve_price,
-            motorhome_photos(photo_url, display_order)
+            motorhome_photos(url, display_order)
           ),
           station:purchase_stations (
             id,
@@ -460,7 +460,7 @@ export default function AdminAppointmentDetail() {
                   <div className="w-40 h-28 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     {mainPhoto ? (
                       <img
-                        src={mainPhoto.photo_url}
+                        src={mainPhoto.url}
                         alt={`${appointment.motorhome?.manufacturer} ${appointment.motorhome?.model}`}
                         className="w-full h-full object-cover"
                       />

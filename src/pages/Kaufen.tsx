@@ -289,7 +289,7 @@ const Kaufen = () => {
                   {filteredAuctions.map((auction) => {
                     const firstPhoto = auction.motorhome?.photos?.sort((a: any, b: any) => 
                       a.display_order - b.display_order
-                    )[0]?.photo_url;
+                    )[0]?.url;
                     
                     return (
                       <MotorhomeCard

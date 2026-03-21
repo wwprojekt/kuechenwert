@@ -486,7 +486,7 @@ const AuctionDetail = () => {
     },
     model: motorhome.model,
     productionDate: motorhome.year?.toString(),
-    image: photos[0]?.photo_url || 'https://caravanwert.de/favicon.png',
+    image: photos[0]?.url || 'https://caravanwert.de/favicon.png',
     offers: {
       '@type': 'Offer',
       price: currentBid,
@@ -507,7 +507,7 @@ const AuctionDetail = () => {
       description={`Auktion für ${motorhome.manufacturer} ${motorhome.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
       keywords={`auktion, ${motorhome.manufacturer}, ${motorhome.model}, wohnmobil`}
       canonicalPath={`/auktion/${id}`}
-      ogImage={photos[0]?.photo_url}
+      ogImage={photos[0]?.url}
       structuredData={productSchema}
     >
       <div className="min-h-screen relative overflow-hidden">
@@ -561,7 +561,7 @@ const AuctionDetail = () => {
                     {photos.length > 0 ? (
                       <>
                         <img
-                          src={photos[currentPhotoIndex]?.photo_url}
+                          src={photos[currentPhotoIndex]?.url}
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
                           className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
                         />
@@ -599,7 +599,7 @@ const AuctionDetail = () => {
                           <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95">
                             <div className="relative w-full h-full flex items-center justify-center">
                               <img
-                                src={photos[currentPhotoIndex]?.photo_url}
+                                src={photos[currentPhotoIndex]?.url}
                                 alt={`${motorhome.manufacturer} ${motorhome.model}`}
                                 className="max-w-full max-h-full object-contain"
                               />
@@ -654,7 +654,7 @@ const AuctionDetail = () => {
                             }`}
                           >
                             <img
-                              src={photo.photo_url}
+                              src={photo.url}
                               alt={`Thumbnail ${index + 1}`}
                               className="w-full h-full object-cover"
                             />
@@ -707,7 +707,7 @@ const AuctionDetail = () => {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Gesamtgewicht</span>
-                          <span className="font-semibold">{motorhome.total_weight_kg ? `${motorhome.total_weight_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{motorhome.weight_kg ? `${motorhome.weight_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Nutzlast</span>
@@ -719,7 +719,7 @@ const AuctionDetail = () => {
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Sitzplätze mit Gurt</span>
-                          <span className="font-semibold">{motorhome.seats_with_seatbelts || 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{motorhome.seats || 'Nicht angegeben'}</span>
                         </div>
                       </div>
                     </div>
@@ -732,15 +732,15 @@ const AuctionDetail = () => {
                     )}
 
                     {/* Known Defects Section - Prominent Display */}
-                    {(motorhome as any).known_defects ? (
+                    {(motorhome as any).damage_summary ? (
                       <div className="mt-6 p-4 border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2 text-orange-700 dark:text-orange-300">
                           <AlertTriangle className="w-5 h-5" />
                           Bekannte Mängel
                         </h3>
-                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(motorhome as any).known_defects}</p>
+                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(motorhome as any).damage_summary}</p>
                       </div>
-                    ) : (motorhome as any).no_known_defects && (
+                    ) : (motorhome as any).has_damage && (
                       <div className="mt-6 p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950/20 rounded-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2 text-green-700 dark:text-green-300">
                           <CheckCircle2 className="w-5 h-5" />
@@ -793,7 +793,7 @@ const AuctionDetail = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Leistung</p>
                           <p className="font-semibold">
-                            {motorhome.power_ps ? `${motorhome.power_ps} PS` : 'Nicht angegeben'}
+                            {motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : 'Nicht angegeben'}
                             {motorhome.power_kw && ` (${motorhome.power_kw} kW)`}
                           </p>
                         </div>
@@ -850,15 +850,15 @@ const AuctionDetail = () => {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Länge:</span>
-                            <span>{motorhome.length_cm ? `${(motorhome.length_cm / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{motorhome.length_m ? `${(motorhome.length_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Breite:</span>
-                            <span>{motorhome.width_cm ? `${(motorhome.width_cm / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{motorhome.width_m ? `${(motorhome.width_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Höhe:</span>
-                            <span>{motorhome.height_cm ? `${(motorhome.height_cm / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{motorhome.height_m ? `${(motorhome.height_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -871,7 +871,7 @@ const AuctionDetail = () => {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Frischwasser:</span>
-                            <span>{motorhome.fresh_water_capacity_liters ? `${motorhome.fresh_water_capacity_liters} L` : '—'}</span>
+                            <span>{motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Grauwasser:</span>
@@ -941,7 +941,7 @@ const AuctionDetail = () => {
                               <Home className="w-4 h-4 text-muted-foreground" />
                               <span className="text-sm">Klimaanlage</span>
                             </div>
-                            <Badge variant="secondary">{motorhome.air_conditioning}</Badge>
+                            <Badge variant="secondary">{motorhome.air_conditioning_type}</Badge>
                           </div>
                         </div>
                       </div>
@@ -957,7 +957,7 @@ const AuctionDetail = () => {
                             { key: 'has_awning', label: 'Markise', icon: Umbrella },
                             { key: 'has_bike_rack', label: 'Fahrradträger', icon: Car },
                             { key: 'has_garage', label: 'Garage', icon: Home },
-                            { key: 'has_reversing_camera', label: 'Rückfahrkamera', icon: Eye },
+                            { key: 'has_backup_camera', label: 'Rückfahrkamera', icon: Eye },
                             { key: 'has_parking_sensors', label: 'Parksensoren', icon: Shield },
                           ].map(({ key, label, icon: Icon }) => (
                             <div key={key} className="flex items-center justify-between p-2 bg-muted/30 rounded">
@@ -1023,8 +1023,8 @@ const AuctionDetail = () => {
                             <span className="font-semibold">TÜV/HU</span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {motorhome.next_tuev_date 
-                              ? `Gültig bis: ${new Date(motorhome.next_tuev_date).toLocaleDateString('de-DE')}`
+                            {motorhome.tuev_valid_until 
+                              ? `Gültig bis: ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE')}`
                               : 'Nicht angegeben'
                             }
                           </p>

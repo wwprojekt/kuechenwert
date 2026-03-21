@@ -79,7 +79,7 @@ export default function AdminAuctionDetail() {
           *,
           motorhome:motorhomes (
             *,
-            motorhome_photos(id, photo_url, display_order),
+            motorhome_photos(id, url, display_order),
             seller:profiles!left (
               id,
               first_name,
@@ -375,7 +375,7 @@ export default function AdminAuctionDetail() {
                   <div className="w-32 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     {mainPhoto ? (
                       <img
-                        src={mainPhoto.photo_url}
+                        src={mainPhoto.url}
                         alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
                         className="w-full h-full object-cover"
                       />
@@ -542,7 +542,7 @@ export default function AdminAuctionDetail() {
                       {auction.motorhome.motorhome_photos.slice(0, 6).map((photo: any, index: number) => (
                         <div key={photo.id} className="aspect-square rounded-md overflow-hidden bg-muted">
                           <img
-                            src={photo.photo_url}
+                            src={photo.url}
                             alt={`Foto ${index + 1}`}
                             className="w-full h-full object-cover"
                           />

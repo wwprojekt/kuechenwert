@@ -47,33 +47,33 @@ interface MotorhomeWithSeller {
   // Technical
   fuel_type: string | null;
   power_kw: number | null;
-  power_ps: number | null;
+  engine_power_hp: number | null;
   transmission: string | null;
   emission_class: string | null;
   first_registration: string | null;
-  next_tuev_date: string | null;
+  tuev_valid_until: string | null;
   previous_owners: number | null;
   accident_free: boolean | null;
   non_smoker: boolean | null;
   service_history_available: boolean | null;
   // Dimensions
-  length_cm: number | null;
-  width_cm: number | null;
-  height_cm: number | null;
-  total_weight_kg: number | null;
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  weight_kg: number | null;
   payload_kg: number | null;
   number_of_axles: number | null;
-  seats_with_seatbelts: number | null;
+  seats: number | null;
   sleeping_places: number | null;
   beds_description: string | null;
   // Interior
   has_kitchen: boolean | null;
   heating_type: string | null;
-  air_conditioning: string | null;
+  air_conditioning_type: string | null;
   has_toilet: boolean | null;
   has_shower: boolean | null;
   has_bathroom: boolean;
-  fresh_water_capacity_liters: number | null;
+  water_tank_liters: number | null;
   grey_water_capacity_liters: number | null;
   // Equipment
   has_solar: boolean;
@@ -81,11 +81,11 @@ interface MotorhomeWithSeller {
   battery_capacity_ah: number | null;
   has_inverter: boolean | null;
   has_awning: boolean;
-  awning_length_cm: number | null;
+  awning_length_m: number | null;
   has_bike_rack: boolean | null;
   has_garage: boolean | null;
-  has_tv_sat: boolean | null;
-  has_reversing_camera: boolean | null;
+  has_tv: boolean | null;
+  has_backup_camera: boolean | null;
   has_parking_sensors: boolean | null;
   has_cruise_control: boolean | null;
   has_central_locking: boolean | null;
@@ -184,11 +184,11 @@ export function MotorhomeDetailDialog({
               <h3 className="text-lg font-semibold mb-3">Technische Daten</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <InfoItem icon={Fuel} label="Kraftstoff" value={motorhome.fuel_type || "—"} />
-                <InfoItem label="Leistung" value={motorhome.power_ps ? `${motorhome.power_ps} PS` : "—"} />
+                <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
                 <InfoItem label="Getriebe" value={motorhome.transmission || "—"} />
                 <InfoItem label="Abgasnorm" value={motorhome.emission_class || "—"} />
                 <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} />
-                <InfoItem label="TÜV bis" value={formatDate(motorhome.next_tuev_date)} />
+                <InfoItem label="TÜV bis" value={formatDate(motorhome.tuev_valid_until)} />
                 <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString() || "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
@@ -207,13 +207,13 @@ export function MotorhomeDetailDialog({
                 Abmessungen & Kapazität
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem label="Länge" value={motorhome.length_cm ? `${motorhome.length_cm} cm` : "—"} />
-                <InfoItem label="Breite" value={motorhome.width_cm ? `${motorhome.width_cm} cm` : "—"} />
-                <InfoItem label="Höhe" value={motorhome.height_cm ? `${motorhome.height_cm} cm` : "—"} />
-                <InfoItem icon={Weight} label="Gesamtgewicht" value={motorhome.total_weight_kg ? `${motorhome.total_weight_kg} kg` : "—"} />
+                <InfoItem label="Länge" value={motorhome.length_m ? `${motorhome.length_m} cm` : "—"} />
+                <InfoItem label="Breite" value={motorhome.width_m ? `${motorhome.width_m} cm` : "—"} />
+                <InfoItem label="Höhe" value={motorhome.height_m ? `${motorhome.height_m} cm` : "—"} />
+                <InfoItem icon={Weight} label="Gesamtgewicht" value={motorhome.weight_kg ? `${motorhome.weight_kg} kg` : "—"} />
                 <InfoItem label="Zuladung" value={motorhome.payload_kg ? `${motorhome.payload_kg} kg` : "—"} />
                 <InfoItem label="Achsen" value={motorhome.number_of_axles?.toString() || "—"} />
-                <InfoItem icon={Users} label="Sitzplätze" value={motorhome.seats_with_seatbelts?.toString() || "—"} />
+                <InfoItem icon={Users} label="Sitzplätze" value={motorhome.seats?.toString() || "—"} />
                 <InfoItem icon={Bed} label="Schlafplätze" value={motorhome.sleeping_places?.toString() || "—"} />
               </div>
               {motorhome.beds_description && (
@@ -228,8 +228,8 @@ export function MotorhomeDetailDialog({
               <h3 className="text-lg font-semibold mb-3">Innenausstattung</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <InfoItem label="Heizung" value={motorhome.heating_type || "—"} />
-                <InfoItem icon={Wind} label="Klimaanlage" value={motorhome.air_conditioning || "—"} />
-                <InfoItem icon={Droplets} label="Frischwasser" value={motorhome.fresh_water_capacity_liters ? `${motorhome.fresh_water_capacity_liters} L` : "—"} />
+                <InfoItem icon={Wind} label="Klimaanlage" value={motorhome.air_conditioning_type || "—"} />
+                <InfoItem icon={Droplets} label="Frischwasser" value={motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : "—"} />
                 <InfoItem label="Grauwasser" value={motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
@@ -254,16 +254,16 @@ export function MotorhomeDetailDialog({
                 )}
                 {motorhome.has_awning && (
                   <Badge variant="outline">
-                    Markise {motorhome.awning_length_cm ? `(${motorhome.awning_length_cm}cm)` : ''}
+                    Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
                   </Badge>
                 )}
                 {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
-                {motorhome.has_tv_sat && (
+                {motorhome.has_tv && (
                   <Badge variant="outline" className="gap-1">
                     <Tv className="w-3 h-3" /> TV/SAT
                   </Badge>
                 )}
-                {motorhome.has_reversing_camera && (
+                {motorhome.has_backup_camera && (
                   <Badge variant="outline" className="gap-1">
                     <Camera className="w-3 h-3" /> Rückfahrkamera
                   </Badge>

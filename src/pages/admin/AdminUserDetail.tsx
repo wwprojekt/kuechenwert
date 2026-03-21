@@ -94,7 +94,7 @@ export default function AdminUserDetail() {
           status,
           sale_channel,
           created_at,
-          motorhome_photos(photo_url, display_order)
+          motorhome_photos(url, display_order)
         `)
         .eq("seller_id", id)
         .order("created_at", { ascending: false })
@@ -402,7 +402,7 @@ export default function AdminUserDetail() {
                                     <div className="w-12 h-9 rounded bg-muted overflow-hidden">
                                       {mainPhoto ? (
                                         <img
-                                          src={mainPhoto.photo_url}
+                                          src={mainPhoto.url}
                                           alt=""
                                           className="w-full h-full object-cover"
                                         />

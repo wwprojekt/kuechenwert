@@ -25,7 +25,7 @@ interface FavoriteVehicle {
     country: string | null;
     listing_number: string | null;
     photos: Array<{
-      photo_url: string;
+      url: string;
       display_order: number;
     }>;
     auctions: Array<{
@@ -64,7 +64,7 @@ export default function MyFavorites() {
               status,
               country,
               listing_number,
-              photos:motorhome_photos (photo_url, display_order),
+              photos:motorhome_photos (url, display_order),
               auctions (id, status, current_bid, end_time)
             )
           `)
@@ -138,7 +138,7 @@ export default function MyFavorites() {
                   <div className="relative w-full md:w-48 h-40 md:h-auto flex-shrink-0">
                     {firstPhoto ? (
                       <img
-                        src={firstPhoto.photo_url}
+                        src={firstPhoto.url}
                         alt={`${motorhome.manufacturer} ${motorhome.model}`}
                         className="w-full h-full object-cover"
                       />

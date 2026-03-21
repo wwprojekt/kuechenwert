@@ -22,7 +22,7 @@ export default function MyListings() {
         .select(`
           *,
           photos:motorhome_photos (
-            photo_url,
+            url,
             display_order
           ),
           auction:auctions (
@@ -96,7 +96,7 @@ export default function MyListings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {motorhomes.map((motorhome) => {
             const firstPhoto = motorhome.photos
-              ?.sort((a, b) => a.display_order - b.display_order)[0]?.photo_url;
+              ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const auction = motorhome.auction?.[0];
 
             return (

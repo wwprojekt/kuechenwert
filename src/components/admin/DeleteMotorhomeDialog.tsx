@@ -43,7 +43,7 @@ export function DeleteMotorhomeDialog({
       // 1. Get all photos for this motorhome
       const { data: photos } = await supabase
         .from("motorhome_photos")
-        .select("photo_url")
+        .select("url")
         .eq("motorhome_id", motorhomeId);
 
       // 2. Delete photos from storage
@@ -51,7 +51,7 @@ export function DeleteMotorhomeDialog({
         const filePaths = photos
           .map((p) => {
             // Extract file path from URL
-            const url = p.photo_url;
+            const url = p.url;
             const match = url.match(/motorhome-photos\/(.+)$/);
             return match ? match[1] : null;
           })

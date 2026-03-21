@@ -52,7 +52,7 @@ const Listings = () => {
               const motorhome = auction.motorhome;
               if (!motorhome) return null;
 
-              const primaryPhoto = motorhome.photos?.[0]?.photo_url || '';
+              const primaryPhoto = motorhome.photos?.[0]?.url || '';
               
               return (
                 <MotorhomeCard
@@ -65,7 +65,7 @@ const Listings = () => {
                   mileage={motorhome.mileage}
                   image={primaryPhoto}
                   beds={motorhome.sleeping_places}
-                  passengers={motorhome.seats_with_seatbelts}
+                  passengers={motorhome.seats}
                   bodyType={motorhome.body_type}
                   isAuction={true}
                   currentBid={auction.current_bid}

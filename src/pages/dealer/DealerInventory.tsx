@@ -19,7 +19,7 @@ interface InventoryItem {
   status: string;
   purchased_at: string;
   purchase_price: number;
-  photos: Array<{ photo_url: string }>;
+  photos: Array<{ url: string }>;
 }
 
 const DealerInventory = () => {
@@ -153,7 +153,7 @@ const DealerInventory = () => {
           {filteredInventory.map((item) => {
             const firstPhoto = item.photos?.sort((a: any, b: any) => 
               a.display_order - b.display_order
-            )[0]?.photo_url;
+            )[0]?.url;
 
             return (
               <Card key={item.id} className="overflow-hidden hover-lift">

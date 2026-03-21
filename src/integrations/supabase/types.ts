@@ -1208,22 +1208,25 @@ export type Database = {
           created_at: string
           display_order: number
           id: string
+          is_primary: boolean
           motorhome_id: string
-          photo_url: string
+          url: string
         }
         Insert: {
           created_at?: string
           display_order?: number
           id?: string
+          is_primary?: boolean
           motorhome_id: string
-          photo_url: string
+          url: string
         }
         Update: {
           created_at?: string
           display_order?: number
           id?: string
+          is_primary?: boolean
           motorhome_id?: string
-          photo_url?: string
+          url?: string
         }
         Relationships: [
           {
@@ -1237,264 +1240,192 @@ export type Database = {
       }
       motorhomes: {
         Row: {
-          accident_free: boolean | null
-          additional_equipment: string | null
-          air_conditioning:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
+          account_type: string | null
+          air_conditioning_type: string | null
           available_from: string | null
-          awning_length_cm: number | null
-          battery_capacity_ah: number | null
-          beds_description: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
+          city: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
           country: string | null
           created_at: string
           damage_summary: string | null
           description: string | null
           emission_class: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm: number | null
-          first_registration: string | null
-          fresh_water_capacity_liters: number | null
-          fuel_tank_capacity_liters: number | null
+          engine_power_hp: number | null
           fuel_type: Database["public"]["Enums"]["fuel_type"] | null
-          grey_water_capacity_liters: number | null
-          has_airbag: boolean | null
-          has_alarm: boolean | null
+          gas_system: string | null
+          has_air_conditioning: boolean
           has_awning: boolean
-          has_bathroom: boolean
+          has_backup_camera: boolean
           has_bike_rack: boolean | null
-          has_central_locking: boolean | null
-          has_cruise_control: boolean | null
           has_damage: boolean | null
-          has_esp: boolean | null
           has_garage: boolean | null
-          has_inverter: boolean | null
+          has_heating: boolean | null
           has_kitchen: boolean | null
-          has_parking_sensors: boolean | null
-          has_reversing_camera: boolean | null
+          has_markise: boolean | null
+          has_navigation: boolean | null
+          has_satellite: boolean | null
           has_shower: boolean | null
           has_solar: boolean
-          has_swivel_seats: boolean | null
           has_toilet: boolean | null
-          has_tv_sat: boolean | null
+          has_tuev: boolean | null
+          has_tv: boolean | null
           heating_type: Database["public"]["Enums"]["heating_type"] | null
-          height_cm: number | null
+          height_m: number | null
           id: string
           instant_price: number | null
-          known_defects: string | null
-          last_tuev_date: string | null
-          latitude: number | null
-          length_cm: number | null
-          license_plate: string | null
+          length_m: number | null
           listing_number: string | null
-          longitude: number | null
-          main_tires: string | null
+          location: string | null
           manufacturer: string
           mileage: number
           model: string
-          next_tuev_date: string | null
-          no_known_defects: boolean | null
-          non_smoker: boolean | null
-          number_of_axles: number | null
-          payload_kg: number | null
-          power_kw: number | null
-          power_ps: number | null
-          previous_owners: number | null
+          postal_code: string | null
+          price: number | null
           refrigerator_type:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price: number | null
           sale_channel: Database["public"]["Enums"]["sale_channel"]
           sale_type: string | null
-          seats_with_seatbelts: number | null
-          second_tires: string | null
+          seats: number | null
           seller_id: string
-          service_history_available: boolean | null
           sleeping_places: number
-          solar_power_watts: number | null
           sold_at: string | null
           sold_to: string | null
           status: string
-          total_weight_kg: number | null
           transmission: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until: string | null
           updated_at: string
-          vehicle_identification_number: string | null
-          width_cm: number | null
+          water_tank_liters: number | null
+          weight_kg: number | null
+          width_m: number | null
           year: number
         }
         Insert: {
-          accident_free?: boolean | null
-          additional_equipment?: string | null
-          air_conditioning?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
+          account_type?: string | null
+          air_conditioning_type?: string | null
           available_from?: string | null
-          awning_length_cm?: number | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
+          city?: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
           country?: string | null
           created_at?: string
           damage_summary?: string | null
           description?: string | null
           emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          first_registration?: string | null
-          fresh_water_capacity_liters?: number | null
-          fuel_tank_capacity_liters?: number | null
+          engine_power_hp?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          grey_water_capacity_liters?: number | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
+          gas_system?: string | null
+          has_air_conditioning?: boolean
           has_awning?: boolean
-          has_bathroom?: boolean
+          has_backup_camera?: boolean
           has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
           has_damage?: boolean | null
-          has_esp?: boolean | null
           has_garage?: boolean | null
-          has_inverter?: boolean | null
+          has_heating?: boolean | null
           has_kitchen?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_reversing_camera?: boolean | null
+          has_markise?: boolean | null
+          has_navigation?: boolean | null
+          has_satellite?: boolean | null
           has_shower?: boolean | null
           has_solar?: boolean
-          has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
-          has_tv_sat?: boolean | null
+          has_tuev?: boolean | null
+          has_tv?: boolean | null
           heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_cm?: number | null
+          height_m?: number | null
           id?: string
           instant_price?: number | null
-          known_defects?: string | null
-          last_tuev_date?: string | null
-          latitude?: number | null
-          length_cm?: number | null
-          license_plate?: string | null
+          length_m?: number | null
           listing_number?: string | null
-          longitude?: number | null
-          main_tires?: string | null
+          location?: string | null
           manufacturer: string
           mileage: number
           model: string
-          next_tuev_date?: string | null
-          no_known_defects?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          power_kw?: number | null
-          power_ps?: number | null
-          previous_owners?: number | null
+          postal_code?: string | null
+          price?: number | null
           refrigerator_type?:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price?: number | null
           sale_channel: Database["public"]["Enums"]["sale_channel"]
           sale_type?: string | null
-          seats_with_seatbelts?: number | null
-          second_tires?: string | null
+          seats?: number | null
           seller_id: string
-          service_history_available?: boolean | null
           sleeping_places: number
-          solar_power_watts?: number | null
           sold_at?: string | null
           sold_to?: string | null
           status?: string
-          total_weight_kg?: number | null
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until?: string | null
           updated_at?: string
-          vehicle_identification_number?: string | null
-          width_cm?: number | null
+          water_tank_liters?: number | null
+          weight_kg?: number | null
+          width_m?: number | null
           year: number
         }
         Update: {
-          accident_free?: boolean | null
-          additional_equipment?: string | null
-          air_conditioning?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
+          account_type?: string | null
+          air_conditioning_type?: string | null
           available_from?: string | null
-          awning_length_cm?: number | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
           body_type?: Database["public"]["Enums"]["motorhome_body_type"]
+          city?: string | null
           condition?: Database["public"]["Enums"]["motorhome_condition"]
           country?: string | null
           created_at?: string
           damage_summary?: string | null
           description?: string | null
           emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          first_registration?: string | null
-          fresh_water_capacity_liters?: number | null
-          fuel_tank_capacity_liters?: number | null
+          engine_power_hp?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          grey_water_capacity_liters?: number | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
+          gas_system?: string | null
+          has_air_conditioning?: boolean
           has_awning?: boolean
-          has_bathroom?: boolean
+          has_backup_camera?: boolean
           has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
           has_damage?: boolean | null
-          has_esp?: boolean | null
           has_garage?: boolean | null
-          has_inverter?: boolean | null
+          has_heating?: boolean | null
           has_kitchen?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_reversing_camera?: boolean | null
+          has_markise?: boolean | null
+          has_navigation?: boolean | null
+          has_satellite?: boolean | null
           has_shower?: boolean | null
           has_solar?: boolean
-          has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
-          has_tv_sat?: boolean | null
+          has_tuev?: boolean | null
+          has_tv?: boolean | null
           heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_cm?: number | null
+          height_m?: number | null
           id?: string
           instant_price?: number | null
-          known_defects?: string | null
-          last_tuev_date?: string | null
-          latitude?: number | null
-          length_cm?: number | null
-          license_plate?: string | null
+          length_m?: number | null
           listing_number?: string | null
-          longitude?: number | null
-          main_tires?: string | null
+          location?: string | null
           manufacturer?: string
           mileage?: number
           model?: string
-          next_tuev_date?: string | null
-          no_known_defects?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          power_kw?: number | null
-          power_ps?: number | null
-          previous_owners?: number | null
+          postal_code?: string | null
+          price?: number | null
           refrigerator_type?:
             | Database["public"]["Enums"]["refrigerator_type"]
             | null
           reserve_price?: number | null
           sale_channel?: Database["public"]["Enums"]["sale_channel"]
           sale_type?: string | null
-          seats_with_seatbelts?: number | null
-          second_tires?: string | null
+          seats?: number | null
           seller_id?: string
-          service_history_available?: boolean | null
           sleeping_places?: number
-          solar_power_watts?: number | null
           sold_at?: string | null
           sold_to?: string | null
           status?: string
-          total_weight_kg?: number | null
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until?: string | null
           updated_at?: string
-          vehicle_identification_number?: string | null
-          width_cm?: number | null
+          water_tank_liters?: number | null
+          weight_kg?: number | null
+          width_m?: number | null
           year?: number
         }
         Relationships: [

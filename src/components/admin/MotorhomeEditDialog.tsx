@@ -44,25 +44,25 @@ interface MotorhomeData {
   reserve_price: number | null;
   fuel_type: string | null;
   power_kw: number | null;
-  power_ps: number | null;
+  engine_power_hp: number | null;
   transmission: string | null;
   accident_free: boolean | null;
   non_smoker: boolean | null;
   service_history_available: boolean | null;
-  length_cm: number | null;
-  width_cm: number | null;
-  height_cm: number | null;
-  total_weight_kg: number | null;
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  weight_kg: number | null;
   sleeping_places: number | null;
-  seats_with_seatbelts: number | null;
+  seats: number | null;
   has_kitchen: boolean | null;
   has_bathroom: boolean;
   has_toilet: boolean | null;
   has_shower: boolean | null;
   has_solar: boolean;
   has_awning: boolean;
-  has_tv_sat: boolean | null;
-  has_reversing_camera: boolean | null;
+  has_tv: boolean | null;
+  has_backup_camera: boolean | null;
   additional_equipment: string | null;
 }
 
@@ -139,25 +139,25 @@ export function MotorhomeEditDialog({
           reserve_price: data.reserve_price,
           fuel_type: data.fuel_type,
           power_kw: data.power_kw,
-          power_ps: data.power_ps,
+          engine_power_hp: data.engine_power_hp,
           transmission: data.transmission,
           accident_free: data.accident_free,
           non_smoker: data.non_smoker,
           service_history_available: data.service_history_available,
-          length_cm: data.length_cm,
-          width_cm: data.width_cm,
-          height_cm: data.height_cm,
-          total_weight_kg: data.total_weight_kg,
+          length_m: data.length_m,
+          width_m: data.width_m,
+          height_m: data.height_m,
+          weight_kg: data.weight_kg,
           sleeping_places: data.sleeping_places,
-          seats_with_seatbelts: data.seats_with_seatbelts,
+          seats: data.seats,
           has_kitchen: data.has_kitchen,
           has_bathroom: data.has_bathroom,
           has_toilet: data.has_toilet,
           has_shower: data.has_shower,
           has_solar: data.has_solar,
           has_awning: data.has_awning,
-          has_tv_sat: data.has_tv_sat,
-          has_reversing_camera: data.has_reversing_camera,
+          has_tv: data.has_tv,
+          has_backup_camera: data.has_backup_camera,
           additional_equipment: data.additional_equipment,
         })
         .eq("id", motorhome.id);
@@ -365,12 +365,12 @@ export function MotorhomeEditDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="power_ps">Leistung (PS)</Label>
+                  <Label htmlFor="engine_power_hp">Leistung (PS)</Label>
                   <Input
-                    id="power_ps"
+                    id="engine_power_hp"
                     type="number"
-                    value={formData.power_ps || ""}
-                    onChange={(e) => updateField("power_ps", parseInt(e.target.value) || null)}
+                    value={formData.engine_power_hp || ""}
+                    onChange={(e) => updateField("engine_power_hp", parseInt(e.target.value) || null)}
                   />
                 </div>
               </div>
@@ -407,42 +407,42 @@ export function MotorhomeEditDialog({
             <TabsContent value="dimensions" className="space-y-4 mt-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="length_cm">Länge (cm)</Label>
+                  <Label htmlFor="length_m">Länge (cm)</Label>
                   <Input
-                    id="length_cm"
+                    id="length_m"
                     type="number"
-                    value={formData.length_cm || ""}
-                    onChange={(e) => updateField("length_cm", parseInt(e.target.value) || null)}
+                    value={formData.length_m || ""}
+                    onChange={(e) => updateField("length_m", parseInt(e.target.value) || null)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="width_cm">Breite (cm)</Label>
+                  <Label htmlFor="width_m">Breite (cm)</Label>
                   <Input
-                    id="width_cm"
+                    id="width_m"
                     type="number"
-                    value={formData.width_cm || ""}
-                    onChange={(e) => updateField("width_cm", parseInt(e.target.value) || null)}
+                    value={formData.width_m || ""}
+                    onChange={(e) => updateField("width_m", parseInt(e.target.value) || null)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="height_cm">Höhe (cm)</Label>
+                  <Label htmlFor="height_m">Höhe (cm)</Label>
                   <Input
-                    id="height_cm"
+                    id="height_m"
                     type="number"
-                    value={formData.height_cm || ""}
-                    onChange={(e) => updateField("height_cm", parseInt(e.target.value) || null)}
+                    value={formData.height_m || ""}
+                    onChange={(e) => updateField("height_m", parseInt(e.target.value) || null)}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="total_weight_kg">Gesamtgewicht (kg)</Label>
+                  <Label htmlFor="weight_kg">Gesamtgewicht (kg)</Label>
                   <Input
-                    id="total_weight_kg"
+                    id="weight_kg"
                     type="number"
-                    value={formData.total_weight_kg || ""}
-                    onChange={(e) => updateField("total_weight_kg", parseInt(e.target.value) || null)}
+                    value={formData.weight_kg || ""}
+                    onChange={(e) => updateField("weight_kg", parseInt(e.target.value) || null)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -457,12 +457,12 @@ export function MotorhomeEditDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="seats_with_seatbelts">Sitzplätze mit Gurt</Label>
+                <Label htmlFor="seats">Sitzplätze mit Gurt</Label>
                 <Input
-                  id="seats_with_seatbelts"
+                  id="seats"
                   type="number"
-                  value={formData.seats_with_seatbelts || ""}
-                  onChange={(e) => updateField("seats_with_seatbelts", parseInt(e.target.value) || null)}
+                  value={formData.seats || ""}
+                  onChange={(e) => updateField("seats", parseInt(e.target.value) || null)}
                 />
               </div>
             </TabsContent>
@@ -519,19 +519,19 @@ export function MotorhomeEditDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="has_tv_sat">TV/SAT</Label>
+                  <Label htmlFor="has_tv">TV/SAT</Label>
                   <Switch
-                    id="has_tv_sat"
-                    checked={formData.has_tv_sat || false}
-                    onCheckedChange={(checked) => updateField("has_tv_sat", checked)}
+                    id="has_tv"
+                    checked={formData.has_tv || false}
+                    onCheckedChange={(checked) => updateField("has_tv", checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="has_reversing_camera">Rückfahrkamera</Label>
+                  <Label htmlFor="has_backup_camera">Rückfahrkamera</Label>
                   <Switch
-                    id="has_reversing_camera"
-                    checked={formData.has_reversing_camera || false}
-                    onCheckedChange={(checked) => updateField("has_reversing_camera", checked)}
+                    id="has_backup_camera"
+                    checked={formData.has_backup_camera || false}
+                    onCheckedChange={(checked) => updateField("has_backup_camera", checked)}
                   />
                 </div>
               </div>

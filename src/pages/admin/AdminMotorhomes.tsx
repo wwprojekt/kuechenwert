@@ -39,42 +39,42 @@ interface MotorhomeWithRelations {
   reserve_price: number | null;
   fuel_type: string | null;
   power_kw: number | null;
-  power_ps: number | null;
+  engine_power_hp: number | null;
   transmission: string | null;
   emission_class: string | null;
   first_registration: string | null;
-  next_tuev_date: string | null;
+  tuev_valid_until: string | null;
   previous_owners: number | null;
   accident_free: boolean | null;
   non_smoker: boolean | null;
   service_history_available: boolean | null;
-  length_cm: number | null;
-  width_cm: number | null;
-  height_cm: number | null;
-  total_weight_kg: number | null;
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  weight_kg: number | null;
   payload_kg: number | null;
   number_of_axles: number | null;
-  seats_with_seatbelts: number | null;
+  seats: number | null;
   sleeping_places: number | null;
   beds_description: string | null;
   has_kitchen: boolean | null;
   heating_type: string | null;
-  air_conditioning: string | null;
+  air_conditioning_type: string | null;
   has_toilet: boolean | null;
   has_shower: boolean | null;
   has_bathroom: boolean;
-  fresh_water_capacity_liters: number | null;
+  water_tank_liters: number | null;
   grey_water_capacity_liters: number | null;
   has_solar: boolean;
   solar_power_watts: number | null;
   battery_capacity_ah: number | null;
   has_inverter: boolean | null;
   has_awning: boolean;
-  awning_length_cm: number | null;
+  awning_length_m: number | null;
   has_bike_rack: boolean | null;
   has_garage: boolean | null;
-  has_tv_sat: boolean | null;
-  has_reversing_camera: boolean | null;
+  has_tv: boolean | null;
+  has_backup_camera: boolean | null;
   has_parking_sensors: boolean | null;
   has_cruise_control: boolean | null;
   has_central_locking: boolean | null;
@@ -87,7 +87,7 @@ interface MotorhomeWithRelations {
     last_name: string | null;
     email: string;
   } | null;
-  motorhome_photos?: Array<{ photo_url: string; display_order: number }>;
+  motorhome_photos?: Array<{ url: string; display_order: number }>;
 }
 
 export default function AdminMotorhomes() {
@@ -109,7 +109,7 @@ export default function AdminMotorhomes() {
             last_name,
             email
           ),
-          motorhome_photos(photo_url, display_order)
+          motorhome_photos(url, display_order)
         `)
         .order("created_at", { ascending: false });
 
@@ -197,7 +197,7 @@ export default function AdminMotorhomes() {
             ) : (
               motorhomes?.map((motorhome) => {
                 const firstPhoto = motorhome.motorhome_photos
-                  ?.sort((a, b) => a.display_order - b.display_order)[0]?.photo_url;
+                  ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
                 
                 return (
                 <TableRow key={motorhome.id}>

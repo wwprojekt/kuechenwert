@@ -36,7 +36,7 @@ export default function MyBids() {
               model,
               year,
               photos:motorhome_photos (
-                photo_url,
+                url,
                 display_order
               )
             )
@@ -161,7 +161,7 @@ export default function MyBids() {
           {filteredBids.map((group: any) => {
             const motorhome = group.auction?.motorhome;
             const firstPhoto = motorhome?.photos
-              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.photo_url;
+              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
             const bidCount = group.bids.length;
             const isActive = group.auction.status === "active";
             const timeLeft = new Date(group.auction.end_time).getTime() - Date.now();

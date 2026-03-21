@@ -135,7 +135,7 @@ export default function DashboardOverview() {
               model,
               year,
               photos:motorhome_photos (
-                photo_url,
+                url,
                 display_order
               )
             )
@@ -156,7 +156,7 @@ export default function DashboardOverview() {
               model,
               year,
               photos:motorhome_photos (
-                photo_url,
+                url,
                 display_order
               )
             )
@@ -431,7 +431,7 @@ export default function DashboardOverview() {
             <div className="space-y-3">
               {recentActivity.map((auction: any, index: number) => {
                 const firstPhoto = auction.motorhome?.photos
-                  ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.photo_url;
+                  ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
                 
                 return (
                   <div

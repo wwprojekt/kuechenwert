@@ -636,9 +636,9 @@ export type Database = {
           sepa_mandate_signed: boolean | null
           status: string
           submitted_at: string
-          tax_id: string
+          tax_id: string | null
           trade_license_document_url: string | null
-          trade_license_number: string
+          trade_license_number: string | null
           updated_at: string
           user_id: string
           ust_id_verified: boolean | null
@@ -676,9 +676,9 @@ export type Database = {
           sepa_mandate_signed?: boolean | null
           status?: string
           submitted_at?: string
-          tax_id: string
+          tax_id?: string | null
           trade_license_document_url?: string | null
-          trade_license_number: string
+          trade_license_number?: string | null
           updated_at?: string
           user_id: string
           ust_id_verified?: boolean | null
@@ -716,9 +716,9 @@ export type Database = {
           sepa_mandate_signed?: boolean | null
           status?: string
           submitted_at?: string
-          tax_id?: string
+          tax_id?: string | null
           trade_license_document_url?: string | null
-          trade_license_number?: string
+          trade_license_number?: string | null
           updated_at?: string
           user_id?: string
           ust_id_verified?: boolean | null

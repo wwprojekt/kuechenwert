@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import MotorhomeShowcase from "@/components/MotorhomeShowcase";
@@ -13,23 +11,10 @@ import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Helmet } from "react-helmet";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserRole } from "@/hooks/useUserRole";
 
 const Index = () => {
   const { settings } = useSettings();
-  const { user } = useAuth();
-  const { primaryRole } = useUserRole();
-  const navigate = useNavigate();
   const siteName = settings?.site_name || 'CaravanWert';
-
-  // Auto-redirect logged-in users to their dashboard
-  useEffect(() => {
-    if (user && primaryRole) {
-      const dashboardRoute = primaryRole === 'admin' ? "/admin" : "/dashboard";
-      navigate(dashboardRoute, { replace: true });
-    }
-  }, [user, primaryRole, navigate]);
   
   return (
     <div className="flex flex-col min-h-screen">

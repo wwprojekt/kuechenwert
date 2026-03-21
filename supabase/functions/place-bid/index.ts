@@ -42,23 +42,21 @@ Deno.serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    const supabase = createClient(
+    // Use service role client to validate user token
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { authorization: authHeader },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get authenticated user
+    // Get authenticated user by passing the JWT token directly
+    const token = authHeader.replace('Bearer ', '');
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser();
+    } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !user) {
+      console.error('Auth error:', userError?.message);
       throw new Error('Unauthorized');
     }
 
@@ -76,12 +74,6 @@ Deno.serve(async (req) => {
     const { auctionId, amount, isAutobid, maxAutobidAmount }: PlaceBidRequest = validationResult.data;
 
     console.log('Place bid request:', { auctionId, amount, userId: user.id, isAutobid });
-
-    // Get auction details with service role key for full access
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     const { data: auction, error: auctionError } = await supabaseAdmin
       .from('auctions')

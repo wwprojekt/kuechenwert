@@ -1,11 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, RATE_LIMITS } from '../_shared/rate-limiter.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 /**
  * Zod schema for bid request validation
@@ -30,13 +26,13 @@ type PlaceBidRequest = z.infer<typeof BidRequestSchema>;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   // Check rate limit first
   const rateLimitResult = await checkRateLimit(req, RATE_LIMITS.BIDDING);
   if (!rateLimitResult.allowed) {
-    return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
+    return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
   }
 
   try {
@@ -199,7 +195,7 @@ Deno.serve(async (req) => {
       }),
       { 
         headers: { 
-          ...corsHeaders, 
+          ...getCorsHeaders(req), 
           ...createRateLimitHeaders(rateLimitResult),
           'Content-Type': 'application/json' 
         } 
@@ -212,7 +208,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: errorMessage }),
       {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );
   }

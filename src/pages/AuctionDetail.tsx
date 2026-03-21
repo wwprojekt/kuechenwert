@@ -306,26 +306,22 @@ const AuctionDetail = () => {
     setIsSubmitting(true);
 
     try {
-      // Update motorhome status to sold
-      const { error: motorhomeError } = await supabase
-        .from("motorhomes")
-        .update({
-          status: 'sold',
-          sold_to: user.id,
-          sold_at: new Date().toISOString(),
-          sale_type: 'instant',
-        })
-        .eq("id", motorhome.id);
+      // Call server-side Edge Function for secure instant buy
+      const { data, error } = await supabase.functions.invoke('instant-buy', {
+        body: { auctionId: id },
+      });
 
-      if (motorhomeError) throw motorhomeError;
+      if (error) {
+        // Edge Function returned an error
+        const errorBody = typeof error === 'object' && 'message' in error
+          ? error.message
+          : 'Kauf konnte nicht abgeschlossen werden';
+        throw new Error(errorBody);
+      }
 
-      // Close the auction if it exists
-      const { error: auctionError } = await supabase
-        .from("auctions")
-        .update({ status: 'sold' })
-        .eq("id", id);
-
-      if (auctionError) throw auctionError;
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         title: "Kauf erfolgreich!",

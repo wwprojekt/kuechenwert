@@ -1,9 +1,5 @@
 import { checkRateLimit, createRateLimitErrorResponse, RATE_LIMITS } from '../_shared/rate-limiter.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface AIDescriptionRequest {
   manufacturer: string;
@@ -28,13 +24,13 @@ interface AIDescriptionRequest {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   // Check rate limit
   const rateLimitResult = await checkRateLimit(req, RATE_LIMITS.API_GENERAL);
   if (!rateLimitResult.allowed) {
-    return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
+    return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
   }
 
   try {
@@ -149,7 +145,7 @@ Verwende einen professionellen, aber warmen Ton. Maximal 500 Wörter.
       }),
       { 
         headers: { 
-          ...corsHeaders, 
+          ...getCorsHeaders(req), 
           'Content-Type': 'application/json' 
         } 
       }
@@ -177,7 +173,7 @@ Weitere Details und Besichtigungstermin gerne auf Anfrage.
       }),
       {
         status: 200, // Don't fail the request, provide fallback
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );
   }

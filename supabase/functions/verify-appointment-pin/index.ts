@@ -1,17 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 60;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   try {
@@ -51,7 +47,7 @@ serve(async (req) => {
             locked_until: lockedUntil.toISOString()
           }),
           {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
             status: 429,
           }
         );
@@ -73,7 +69,7 @@ serve(async (req) => {
           message: `Zu viele fehlgeschlagene Versuche. PIN gesperrt für ${LOCKOUT_DURATION_MINUTES} Minuten.`
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
           status: 429,
         }
       );
@@ -118,7 +114,7 @@ serve(async (req) => {
           remaining_attempts: remainingAttempts
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
           status: 400,
         }
       );
@@ -135,7 +131,7 @@ serve(async (req) => {
           message: 'PIN ist abgelaufen' 
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
           status: 400,
         }
       );
@@ -163,7 +159,7 @@ serve(async (req) => {
         message: 'PIN erfolgreich verifiziert',
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -172,7 +168,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
         status: 400,
       }
     );

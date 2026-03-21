@@ -1,13 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   // Auth check: must be service_role (cron/internal) or authenticated admin
@@ -24,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
     const supabaseCheck = createClient(
@@ -35,7 +31,7 @@ Deno.serve(async (req) => {
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
   }
@@ -69,7 +65,7 @@ Deno.serve(async (req) => {
     if (auction.status === 'ended' || auction.status === 'sold' || auction.status === 'cancelled') {
       return new Response(
         JSON.stringify({ message: 'Auction already closed' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -187,7 +183,7 @@ Deno.serve(async (req) => {
         soldTo,
         amount: highestBid?.amount || null,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
     console.error('Error in close-auction:', error);
@@ -195,7 +191,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: error.message }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );
   }

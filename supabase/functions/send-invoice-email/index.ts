@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface InvoiceEmailRequest {
   invoiceId: string;
@@ -11,7 +7,7 @@ interface InvoiceEmailRequest {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -30,7 +26,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
     const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -38,7 +34,7 @@ Deno.serve(async (req) => {
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
   }
@@ -193,7 +189,7 @@ Deno.serve(async (req) => {
       }),
       { 
         headers: { 
-          ...corsHeaders, 
+          ...getCorsHeaders(req), 
           'Content-Type': 'application/json' 
         } 
       }
@@ -205,7 +201,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: error.message }),
       {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );
   }

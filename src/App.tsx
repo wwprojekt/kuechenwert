@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,66 +9,100 @@ import PageTransition from "./components/PageTransition";
 import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import CookieBanner from "./components/CookieBanner";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import LoginHaendler from "./pages/LoginHaendler";
-import Register from "./pages/Register";
-import RegisterHaendler from "./pages/RegisterHaendler";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Verkaufen from "./pages/Verkaufen";
-import VerkaufenWizard from "./pages/VerkaufenWizard";
-import Kaufen from "./pages/Kaufen";
-import AuctionDetail from "./pages/AuctionDetail";
-import Ratgeber from "./pages/Ratgeber";
-import UeberUns from "./pages/UeberUns";
-import Kontakt from "./pages/Kontakt";
-import Haendler from "./pages/Haendler";
-import DealerRegister from "./pages/DealerRegister";
-import DealerOnboarding from "./pages/DealerOnboarding";
-import Ankaufstationen from "./pages/Ankaufstationen";
-import Impressum from "./pages/Impressum";
-import Datenschutz from "./pages/Datenschutz";
-import AGB from "./pages/AGB";
-import FAQ from "./pages/FAQ";
-import Preise from "./pages/Preise";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import NotFound from "./pages/NotFound";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminAuctions from "./pages/admin/AdminAuctions";
-import AdminMotorhomes from "./pages/admin/AdminMotorhomes";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminDealers from "./pages/admin/AdminDealers";
-import AdminStations from "./pages/admin/AdminStations";
-import AdminAppointments from "./pages/admin/AdminAppointments";
-import AdminStationHandover from "./pages/admin/AdminStationHandover";
-import AdminBlog from "./pages/admin/AdminBlog";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import AdminCommissions from "./pages/admin/AdminCommissions";
-import AdminFinancials from "./pages/admin/AdminFinancials";
-import AdminLegal from "./pages/admin/AdminLegal";
-import AdminQuestions from "./pages/admin/AdminQuestions";
-import AdminMessages from "./pages/admin/AdminMessages";
-import AdminAuctionDetail from "./pages/admin/AdminAuctionDetail";
-import AdminMotorhomeDetail from "./pages/admin/AdminMotorhomeDetail";
-import AdminUserDetail from "./pages/admin/AdminUserDetail";
-import AdminDealerDetail from "./pages/admin/AdminDealerDetail";
-import AdminAppointmentDetail from "./pages/admin/AdminAppointmentDetail";
-import Wertermittlung from "./pages/Wertermittlung";
-import Wertrechner from "./pages/Wertrechner";
-import WohnmobilVerkaufen from "./pages/landing/WohnmobilVerkaufen";
-import WohnwagenVerkaufen from "./pages/landing/WohnwagenVerkaufen";
-import WohnmobilWert from "./pages/landing/WohnmobilWert";
-import WohnmobilWertermittlungKostenlos from "./pages/landing/WohnmobilWertermittlungKostenlos";
-import WirKaufenDeinWohnmobil from "./pages/landing/WirKaufenDeinWohnmobil";
-import WievielWohnmobilWert from "./pages/landing/WievielWohnmobilWert";
-import RatgeberPage from "./pages/ratgeber/RatgeberPage";
-import { SmartDashboard } from "./components/SmartDashboard";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { usePageTracking } from "./hooks/useAnalytics";
+
+// ---------------------------------------------------------------------------
+// Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
+// Only the Index page is eagerly loaded for fast initial render.
+// ---------------------------------------------------------------------------
+import Index from "./pages/Index";
+
+// Auth pages
+const Login = lazy(() => import("./pages/Login"));
+const LoginHaendler = lazy(() => import("./pages/LoginHaendler"));
+const Register = lazy(() => import("./pages/Register"));
+const RegisterHaendler = lazy(() => import("./pages/RegisterHaendler"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// Core pages
+const Verkaufen = lazy(() => import("./pages/Verkaufen"));
+const VerkaufenWizard = lazy(() => import("./pages/VerkaufenWizard"));
+const Kaufen = lazy(() => import("./pages/Kaufen"));
+const AuctionDetail = lazy(() => import("./pages/AuctionDetail"));
+const Ratgeber = lazy(() => import("./pages/Ratgeber"));
+const UeberUns = lazy(() => import("./pages/UeberUns"));
+const Kontakt = lazy(() => import("./pages/Kontakt"));
+const Haendler = lazy(() => import("./pages/Haendler"));
+const DealerRegister = lazy(() => import("./pages/DealerRegister"));
+const DealerOnboarding = lazy(() => import("./pages/DealerOnboarding"));
+const Ankaufstationen = lazy(() => import("./pages/Ankaufstationen"));
+const Wertermittlung = lazy(() => import("./pages/Wertermittlung"));
+const Wertrechner = lazy(() => import("./pages/Wertrechner"));
+
+// Legal pages
+const Impressum = lazy(() => import("./pages/Impressum"));
+const Datenschutz = lazy(() => import("./pages/Datenschutz"));
+const AGB = lazy(() => import("./pages/AGB"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const Preise = lazy(() => import("./pages/Preise"));
+
+// Blog
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+
+// Admin pages
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminAuctions = lazy(() => import("./pages/admin/AdminAuctions"));
+const AdminMotorhomes = lazy(() => import("./pages/admin/AdminMotorhomes"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminDealers = lazy(() => import("./pages/admin/AdminDealers"));
+const AdminStations = lazy(() => import("./pages/admin/AdminStations"));
+const AdminAppointments = lazy(() => import("./pages/admin/AdminAppointments"));
+const AdminStationHandover = lazy(() => import("./pages/admin/AdminStationHandover"));
+const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
+const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials"));
+const AdminLegal = lazy(() => import("./pages/admin/AdminLegal"));
+const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
+const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
+const AdminAuctionDetail = lazy(() => import("./pages/admin/AdminAuctionDetail"));
+const AdminMotorhomeDetail = lazy(() => import("./pages/admin/AdminMotorhomeDetail"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
+const AdminDealerDetail = lazy(() => import("./pages/admin/AdminDealerDetail"));
+const AdminAppointmentDetail = lazy(() => import("./pages/admin/AdminAppointmentDetail"));
+
+// SEO Landing Pages
+const WohnmobilVerkaufen = lazy(() => import("./pages/landing/WohnmobilVerkaufen"));
+const WohnwagenVerkaufen = lazy(() => import("./pages/landing/WohnwagenVerkaufen"));
+const WohnmobilWert = lazy(() => import("./pages/landing/WohnmobilWert"));
+const WohnmobilWertermittlungKostenlos = lazy(() => import("./pages/landing/WohnmobilWertermittlungKostenlos"));
+const WirKaufenDeinWohnmobil = lazy(() => import("./pages/landing/WirKaufenDeinWohnmobil"));
+const WievielWohnmobilWert = lazy(() => import("./pages/landing/WievielWohnmobilWert"));
+
+// Ratgeber detail
+const RatgeberPage = lazy(() => import("./pages/ratgeber/RatgeberPage"));
+
+// Dashboard
+const SmartDashboard = lazy(() => import("./components/SmartDashboard").then(m => ({ default: m.SmartDashboard })));
+
+// Not Found
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// ---------------------------------------------------------------------------
+// Loading fallback for lazy-loaded pages
+// ---------------------------------------------------------------------------
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 // Wrapper that resets error boundary when auction ID changes
 function AuctionRoute() {
@@ -120,6 +155,7 @@ const App = () => (
             <ScrollRestoration />
             <PageTracker />
             <PageTransition>
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -194,6 +230,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </PageTransition>
           <WhatsAppButton />
           <CookieBanner />

@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph, button, list } from '../_shared/email-builder.ts';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface DealerEmailRequest {
   email: string;
@@ -21,7 +17,7 @@ interface DealerEmailRequest {
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   // Auth check: must be service_role (internal) or authenticated admin
@@ -37,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
     const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -45,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
   }
@@ -148,13 +144,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   } catch (error: any) {
     console.error("Error sending dealer notification:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 };

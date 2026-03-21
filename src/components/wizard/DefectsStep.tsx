@@ -68,7 +68,7 @@ export const DefectsStep = ({ formData, updateFormData, onAutoNext }: DefectsSte
         onValueChange={handleDefectsToggle}
         className="space-y-4"
       >
-        <Card className={`p-4 cursor-pointer transition-all ${formData.no_known_defects ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'hover:border-muted-foreground/50'}`}>
+        <Card className={`p-4 cursor-pointer transition-all ${formData.no_known_defects ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'hover:border-muted-foreground/50'}`} onClick={() => handleDefectsToggle("no")}>
           <div className="flex items-start gap-3">
             <RadioGroupItem value="no" id="no-defects" className="mt-1" />
             <div className="flex-1">
@@ -84,7 +84,7 @@ export const DefectsStep = ({ formData, updateFormData, onAutoNext }: DefectsSte
           </div>
         </Card>
 
-        <Card className={`p-4 cursor-pointer transition-all ${!formData.no_known_defects && formData.known_defects !== undefined ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' : 'hover:border-muted-foreground/50'}`}>
+        <Card className={`p-4 cursor-pointer transition-all ${!formData.no_known_defects && formData.known_defects !== undefined ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' : 'hover:border-muted-foreground/50'}`} onClick={() => handleDefectsToggle("yes")}>
           <div className="flex items-start gap-3">
             <RadioGroupItem value="yes" id="has-defects" className="mt-1" />
             <div className="flex-1">

@@ -421,99 +421,73 @@ export const useWizardForm = () => {
         photoUrls.push(publicUrl);
       }
 
-      // Create motorhome entry with all comprehensive fields
+      // Create motorhome entry – mapped to actual DB column names
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const motorhomeInsert: Record<string, any> = {
+        seller_id: user.id,
+        manufacturer: formData.manufacturer,
+        model: formData.model,
+        year: formData.year!,
+        mileage: formData.mileage!,
+        condition: formData.condition,
+        body_type: formData.bodyType,
+        description: formData.description,
+        
+        // Technical
+        fuel_type: formData.fuel_type || null,
+        engine_power_hp: formData.power_ps || null,
+        transmission: formData.transmission || null,
+        emission_class: formData.emission_class || null,
+        tuev_valid_until: formData.tuv_valid_until || null,
+        
+        // Dimensions (convert cm to m for DB)
+        length_m: formData.length_cm ? formData.length_cm / 100 : null,
+        width_m: formData.width_cm ? formData.width_cm / 100 : null,
+        height_m: formData.height_cm ? formData.height_cm / 100 : null,
+        weight_kg: formData.total_weight_kg || null,
+        seats: formData.seats_with_seatbelts || null,
+        sleeping_places: formData.sleeping_places || null,
+        
+        // Interior
+        has_kitchen: formData.has_kitchen,
+        heating_type: formData.heating_type || null,
+        air_conditioning_type: formData.air_conditioning || null,
+        has_toilet: formData.has_toilet,
+        has_shower: formData.has_shower,
+        water_tank_liters: formData.fresh_water_capacity_liters || null,
+        
+        // Equipment
+        has_solar: formData.has_solar,
+        has_awning: formData.has_awning,
+        has_bike_rack: formData.has_bike_rack,
+        has_garage: formData.has_garage,
+        has_tv: formData.has_tv_sat,
+        has_satellite: formData.has_tv_sat,
+        has_backup_camera: formData.has_reversing_camera,
+        
+        // Known Defects
+        has_damage: !formData.no_known_defects,
+        damage_summary: formData.known_defects || null,
+        
+        // Sale
+        sale_channel: formData.saleChannel,
+        instant_price: formData.instantPrice,
+        reserve_price: formData.reservePrice,
+        country: formData.country || 'DE',
+      };
+
       const { data: motorhome, error: motorhomeError } = await supabase
         .from('motorhomes')
-        .insert([{
-          seller_id: user.id,
-          manufacturer: formData.manufacturer,
-          model: formData.model,
-          year: formData.year!,
-          mileage: formData.mileage!,
-          condition: formData.condition as Database['public']['Enums']['motorhome_condition'],
-          body_type: formData.bodyType as Database['public']['Enums']['motorhome_body_type'],
-          description: formData.description,
-          
-          // Technical
-          fuel_type: (formData.fuel_type || null) as Database['public']['Enums']['fuel_type'] | null,
-          power_kw: formData.power_kw || null,
-          power_ps: formData.power_ps || null,
-          transmission: (formData.transmission || null) as Database['public']['Enums']['transmission_type'] | null,
-          emission_class: (formData.emission_class || null) as Database['public']['Enums']['emission_class'] | null,
-          first_registration: formData.first_registration || null,
-          next_tuev_date: formData.tuv_valid_until || null, // Using new TÜV field
-          previous_owners: formData.previous_owners || null,
-          accident_free: formData.accident_free,
-          non_smoker: formData.non_smoker,
-          service_history_available: formData.service_history_available,
-          engine_displacement_ccm: formData.engine_displacement_ccm || null,
-          main_tires: formData.main_tires || null,
-          second_tires: formData.second_tires || null,
-          
-          // Dimensions
-          length_cm: formData.length_cm || null,
-          width_cm: formData.width_cm || null,
-          height_cm: formData.height_cm || null,
-          total_weight_kg: formData.total_weight_kg || null,
-          payload_kg: formData.payload_kg || null,
-          number_of_axles: formData.number_of_axles,
-          seats_with_seatbelts: formData.seats_with_seatbelts || null,
-          sleeping_places: formData.sleeping_places || null,
-          beds_description: formData.beds_description || null,
-          
-          // Interior
-          has_kitchen: formData.has_kitchen,
-          heating_type: (formData.heating_type || null) as Database['public']['Enums']['heating_type'] | null,
-          air_conditioning: formData.air_conditioning as Database['public']['Enums']['air_conditioning_type'],
-          has_toilet: formData.has_toilet,
-          has_shower: formData.has_shower,
-          fresh_water_capacity_liters: formData.fresh_water_capacity_liters || null,
-          grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
-          
-          // Equipment - Base Vehicle
-          has_airbag: formData.has_airbag,
-          has_alarm: formData.has_alarm,
-          has_swivel_seats: formData.has_swivel_seats,
-          has_esp: formData.has_esp,
-          has_cruise_control: formData.has_cruise_control,
-          has_parking_sensors: formData.has_parking_sensors,
-          has_reversing_camera: formData.has_reversing_camera,
-          has_central_locking: formData.has_central_locking,
-          // Equipment - Living Area
-          has_solar: formData.has_solar,
-          solar_power_watts: formData.solar_power_watts || null,
-          battery_capacity_ah: formData.battery_capacity_ah || null,
-          has_inverter: formData.has_inverter,
-          has_awning: formData.has_awning,
-          awning_length_cm: formData.awning_length_cm || null,
-          has_bike_rack: formData.has_bike_rack,
-          has_garage: formData.has_garage,
-          has_tv_sat: formData.has_tv_sat,
-          
-          // Additional
-          additional_equipment: formData.additional_equipment || null,
-          vehicle_identification_number: formData.vehicle_identification_number || null,
-          license_plate: formData.license_plate || null,
-          
-          // Sale
-          sale_channel: formData.saleChannel as Database['public']['Enums']['sale_channel'],
-          instant_price: formData.instantPrice,
-          reserve_price: formData.reservePrice,
-          country: formData.country || 'DE',
-          
-          // Known Defects
-          known_defects: formData.known_defects || null,
-          no_known_defects: formData.no_known_defects,
-        }])
+        .insert([motorhomeInsert])
         .select()
         .single();
 
       if (motorhomeError) throw motorhomeError;
 
-      // Insert photo records
+      // Insert photo records (DB column is 'url', not 'photo_url')
       const photoRecords = photoUrls.map((url, index) => ({
         motorhome_id: motorhome.id,
-        photo_url: url,
+        url: url,
         display_order: index,
       }));
 
@@ -566,11 +540,14 @@ export const useWizardForm = () => {
       });
 
       navigate("/dashboard/listings");
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Submission error:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error as { message?: string })?.message || "Unbekannter Fehler";
       toast({
         title: "Fehler",
-        description: "Beim Absenden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+        description: `Beim Absenden ist ein Fehler aufgetreten: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {

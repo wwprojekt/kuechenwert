@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-          from: settings?.from_email || 'noreply@caravanwert.de',
+          from: `${settings?.site_name || 'CaravanWert'} <info@caravanwert.de>`,
           to: [winnerProfile.email],
           subject: emailSubject,
           html: emailHtml,

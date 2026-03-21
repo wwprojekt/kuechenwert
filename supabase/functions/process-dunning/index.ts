@@ -237,7 +237,7 @@ Gesamtbetrag: €${(invoice.gross_amount + fee).toLocaleString('de-DE', { minimu
     return messages[level as keyof typeof messages] + `
     
 Mit freundlichen Grüßen
-Ihr CamperAnker24 Team`;
+Ihr CaravanWert Team`;
   }
 
   async function sendReminderEmail(invoice: any, reminder: any, level: number) {
@@ -295,7 +295,7 @@ Ihr CamperAnker24 Team`;
           Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-          from: 'CamperAnker24 Buchhaltung <billing@camperanker24.de>',
+          from: 'CaravanWert Buchhaltung <info@caravanwert.de>',
           to: [invoice.dealer.email],
           subject: reminder.subject,
           html: emailHtml,

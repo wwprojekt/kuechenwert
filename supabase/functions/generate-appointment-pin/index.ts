@@ -92,7 +92,7 @@ serve(async (req) => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: 'CaravanWert <noreply@caravanwert.de>',
+            from: 'CaravanWert <info@caravanwert.de>',
             to: [fullAppointment.profiles.email],
             subject: 'Ihr Freigabe-PIN für die Fahrzeugübergabe',
             html: `

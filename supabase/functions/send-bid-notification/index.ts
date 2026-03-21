@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <onboarding@resend.dev>`,
+        from: `${settingsData.site_name} <info@caravanwert.de>`,
         to: [profile.email],
         subject: isOutbid ? `Sie wurden überboten - ${motorhomeName}` : `Gebot bestätigt - ${motorhomeName}`,
         html,

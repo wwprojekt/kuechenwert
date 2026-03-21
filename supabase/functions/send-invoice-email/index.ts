@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${settings?.site_name || 'CaravanWert'} <invoices@caravanwert.de>`,
+        from: `${settings?.site_name || 'CaravanWert'} <info@caravanwert.de>`,
         to: [invoice.dealer.email],
         subject: emailSubject,
         html: emailHtml,

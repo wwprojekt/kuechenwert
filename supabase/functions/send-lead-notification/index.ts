@@ -116,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <onboarding@resend.dev>`,
+        from: `${settingsData.site_name} <info@caravanwert.de>`,
         to: [ADMIN_EMAIL],
         subject: adminSubject,
         html: adminHtml,
@@ -175,7 +175,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <onboarding@resend.dev>`,
+        from: `${settingsData.site_name} <info@caravanwert.de>`,
         to: [email],
         subject: userSubject,
         html: userHtml,

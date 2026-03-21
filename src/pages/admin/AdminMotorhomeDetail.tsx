@@ -86,7 +86,7 @@ export default function AdminMotorhomeDetail() {
         .select(`
           *,
           motorhome_photos(id, url, display_order),
-          damage_photos(id, url, damage_location, damage_severity, description),
+          damage_photos(id, photo_url, damage_location, damage_severity, damage_description),
           seller:profiles!left (
             id,
             first_name,
@@ -496,7 +496,7 @@ export default function AdminMotorhomeDetail() {
                     {motorhome.damage_photos.map((damage: any) => (
                       <div key={damage.id} className="rounded-lg border overflow-hidden">
                         <img
-                          src={damage.url}
+                          src={damage.photo_url}
                           alt={damage.damage_location}
                           className="w-full h-32 object-cover"
                         />
@@ -507,8 +507,8 @@ export default function AdminMotorhomeDetail() {
                             </Badge>
                           </div>
                           <p className="text-sm font-medium">{damage.damage_location}</p>
-                          {damage.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{damage.description}</p>
+                          {damage.damage_description && (
+                            <p className="text-xs text-muted-foreground mt-1">{damage.damage_description}</p>
                           )}
                         </div>
                       </div>

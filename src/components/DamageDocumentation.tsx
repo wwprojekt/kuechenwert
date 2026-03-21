@@ -34,7 +34,7 @@ interface DamageDocumentationProps {
 
 interface DamagePhoto {
   id: string;
-  url: string;
+  photo_url: string;
   damage_description: string;
   damage_severity: 'minor' | 'moderate' | 'major';
   damage_location: string;
@@ -247,10 +247,10 @@ export const DamageDocumentation = ({
               <div key={damage.id} className="bg-white p-4 rounded-lg border">
                 <div className="aspect-video mb-3 overflow-hidden rounded-lg bg-muted">
                   <img
-                    src={damage.url}
+                    src={damage.photo_url}
                     alt={`Schaden: ${damage.damage_description}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => window.open(damage.url, '_blank')}
+                    onClick={() => window.open(damage.photo_url, '_blank')}
                   />
                 </div>
                 
@@ -393,7 +393,7 @@ export const DamageDocumentation = ({
                 <div key={damage.id} className="border rounded-lg p-4 space-y-3">
                   <div className="aspect-video overflow-hidden rounded-lg bg-muted">
                     <img
-                      src={damage.url}
+                      src={damage.photo_url}
                       alt={`Schaden: ${damage.damage_description}`}
                       className="w-full h-full object-cover"
                     />
@@ -413,7 +413,7 @@ export const DamageDocumentation = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(damage.url, '_blank')}
+                        onClick={() => window.open(damage.photo_url, '_blank')}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Vergrößern

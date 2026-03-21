@@ -81,6 +81,8 @@ const AUTH_ERROR_MAP: Record<string, string> = {
   'JWT expired': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'invalid claim: missing sub claim': 'Sitzungsfehler. Bitte melden Sie sich erneut an.',
   'Auth session missing': 'Sie sind nicht angemeldet. Bitte melden Sie sich an.',
+  'Unauthorized': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+  'No authorization header': 'Sie sind nicht angemeldet. Bitte melden Sie sich an.',
   'New password should be different from the old password': 'Das neue Passwort muss sich vom alten Passwort unterscheiden.',
   'For security purposes, you can only request this once every 60 seconds': 'Aus Sicherheitsgründen können Sie diese Anfrage nur einmal pro Minute stellen. Bitte warten Sie einen Moment.',
   'Email rate limit exceeded': 'Zu viele E-Mail-Anfragen. Bitte versuchen Sie es in einigen Minuten erneut.',
@@ -118,7 +120,8 @@ const API_ERROR_MAP: Record<string, string> = {
   
   // Edge Function Fehler
   'FunctionsFetchError': 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.',
-  'FunctionsHttpError': 'Ein Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
+  'FunctionsHttpError': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
+  'Edge Function returned a non-2xx status code': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
   'FunctionsRelayError': 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.',
 };
 

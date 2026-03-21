@@ -305,9 +305,21 @@ const AuctionDetail = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
+     setIsSubmitting(true);
     try {
+      // Refresh session token before instant buy to prevent JWT expiry errors
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/auktion/${id}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Call server-side Edge Function for secure instant buy
       const { data, error } = await supabase.functions.invoke('instant-buy', {
         body: { auctionId: id },
@@ -390,6 +402,19 @@ const AuctionDetail = () => {
     setIsSubmitting(true);
 
     try {
+      // Refresh session token before placing bid to prevent JWT expiry errors
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/auktion/${id}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Validate autobid settings
       if (enableAutobid) {
         const maxAmount = parseFloat(maxAutobidAmount);
@@ -422,6 +447,17 @@ const AuctionDetail = () => {
             const body = await (error as any).context.body.json?.() || JSON.parse(await (error as any).context.body.text?.());
             if (body?.error) errorMsg = body.error;
           } catch { /* use default error message */ }
+        }
+        // Handle expired session specifically
+        if (errorMsg === 'Unauthorized' || errorMsg.includes('Unauthorized') || errorMsg.includes('JWT')) {
+          toast({
+            title: "Sitzung abgelaufen",
+            description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
+            variant: "destructive",
+          });
+          navigate(`/login?redirect=/auktion/${id}`);
+          setIsSubmitting(false);
+          return;
         }
         throw new Error(errorMsg);
       }

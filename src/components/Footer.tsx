@@ -189,7 +189,7 @@ const Footer = () => {
 
             {/* Services Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-xs uppercase tracking-wide">Services</h3>
+              <h3 className="font-semibold text-white mb-5 text-sm">Services</h3>
               <ul className="space-y-3">
                 <li>
                   <Link to="/wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -226,7 +226,7 @@ const Footer = () => {
 
             {/* Bewertung Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-xs uppercase tracking-wide">Bewertung</h3>
+              <h3 className="font-semibold text-white mb-5 text-sm">Bewertung</h3>
               <ul className="space-y-3">
                 <li>
                   <Link to="/was-ist-mein-wohnmobil-wert" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -263,7 +263,7 @@ const Footer = () => {
 
             {/* Ratgeber Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-xs uppercase tracking-wide">Ratgeber</h3>
+              <h3 className="font-semibold text-white mb-5 text-sm">Ratgeber</h3>
               <ul className="space-y-3">
                 <li>
                   <Link to="/ratgeber/hymer-wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -300,7 +300,7 @@ const Footer = () => {
 
             {/* Company Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-xs uppercase tracking-wide">Unternehmen</h3>
+              <h3 className="font-semibold text-white mb-5 text-sm">Unternehmen</h3>
               <ul className="space-y-3">
                 <li>
                   <Link to="/ueber-uns" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -337,7 +337,7 @@ const Footer = () => {
 
             {/* Contact Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-xs uppercase tracking-wide">Kontakt</h3>
+              <h3 className="font-semibold text-white mb-5 text-sm">Kontakt</h3>
               <ul className="space-y-4">
                 {settings?.support_phone && (
                   <li>

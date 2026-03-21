@@ -86,7 +86,11 @@ const Kontakt = () => {
   const companyAddress = settings?.company_address || '';
   const companyCity = settings?.company_city || '';
   const companyPostalCode = settings?.company_postal_code || '';
-  const fullAddress = companyAddress && companyCity ? `${companyAddress}, ${companyPostalCode} ${companyCity}` : '';
+  // Filter out placeholder values ("Bitte eintragen", "00000", etc.)
+  const isPlaceholder = (val: string) => !val || val.toLowerCase().includes('bitte') || val === '00000';
+  const fullAddress = !isPlaceholder(companyAddress) && !isPlaceholder(companyCity)
+    ? `${companyAddress}, ${companyPostalCode} ${companyCity}` 
+    : '';
 
   const contactMethods = [
     {

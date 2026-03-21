@@ -146,44 +146,60 @@ const Footer = () => {
       {/* Main Footer */}
       <div className="bg-slate-950">
         <div className="container py-16">
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-10 mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-x-6 gap-y-10 mb-12">
             {/* Brand Column */}
-            <div className="space-y-6 md:col-span-2 lg:col-span-5">
+            <div className="space-y-6 md:col-span-2 lg:col-span-6">
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
                 {settings?.site_description || 'Deutschlands führende Plattform für den An- und Verkauf von Wohnmobilen. Schnell, sicher und fair.'}
               </p>
               
-              {/* Social Links */}
+              {/* Social Links - only show if URLs are configured in settings */}
               <div className="flex items-center gap-3">
-                <a 
-                  href="#" 
-                  className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
-                  aria-label="Facebook"
-                >
-                  <Facebook className="h-4 w-4 text-slate-300" />
-                </a>
-                <a 
-                  href="#" 
-                  className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
-                  aria-label="Instagram"
-                >
-                  <Instagram className="h-4 w-4 text-slate-300" />
-                </a>
-                <a 
-                  href="#" 
-                  className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
-                  aria-label="Youtube"
-                >
-                  <Youtube className="h-4 w-4 text-slate-300" />
-                </a>
-                <a 
-                  href="#" 
-                  className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin className="h-4 w-4 text-slate-300" />
-                </a>
+                {settings?.facebook_url && (
+                  <a 
+                    href={settings.facebook_url} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
+                    aria-label="Facebook"
+                  >
+                    <Facebook className="h-4 w-4 text-slate-300" />
+                  </a>
+                )}
+                {settings?.instagram_url && (
+                  <a 
+                    href={settings.instagram_url} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="h-4 w-4 text-slate-300" />
+                  </a>
+                )}
+                {settings?.youtube_url && (
+                  <a 
+                    href={settings.youtube_url} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
+                    aria-label="Youtube"
+                  >
+                    <Youtube className="h-4 w-4 text-slate-300" />
+                  </a>
+                )}
+                {settings?.linkedin_url && (
+                  <a 
+                    href={settings.linkedin_url} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="h-4 w-4 text-slate-300" />
+                  </a>
+                )}
               </div>
             </div>
 
@@ -336,7 +352,7 @@ const Footer = () => {
             </div>
 
             {/* Contact Column */}
-            <div>
+            <div className="lg:col-span-2">
               <h3 className="font-semibold text-white mb-5 text-sm">Kontakt</h3>
               <ul className="space-y-4">
                 {settings?.support_phone && (
@@ -383,7 +399,9 @@ const Footer = () => {
                     <div className="text-sm">
                       <div className="font-medium">{settings?.site_name || 'CaravanWert'} GmbH</div>
                       <div className="text-xs text-slate-500">
-                        {settings?.company_city ? `${settings.company_city}, ${settings.company_country || 'Deutschland'}` : 'Deutschland'}
+                        {settings?.company_city && !settings.company_city.toLowerCase().includes('bitte') 
+                          ? `${settings.company_city}, ${settings.company_country || 'Deutschland'}` 
+                          : 'Deutschland'}
                       </div>
                     </div>
                   </div>

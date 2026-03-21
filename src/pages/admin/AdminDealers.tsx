@@ -118,28 +118,35 @@ export default function AdminDealers() {
   });
 
   // Fetch active dealers (approved applications with profiles)
+  // NOTE: Cannot use Supabase JOIN syntax profiles:user_id(...) because
+  // there is no foreign key between dealer_applications.user_id and profiles.id.
+  // Instead, fetch separately and join in code (same approach as fetchDealerApplications).
   const { data: activeDealers, isLoading: isLoadingDealers } = useQuery({
     queryKey: ["activeDealers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Fetch approved dealer applications
+      const { data: applicationsData, error: applicationsError } = await supabase
         .from("dealer_applications")
-        .select(
-          `
-          *,
-          profiles:user_id (
-            id,
-            email,
-            first_name,
-            last_name,
-            phone,
-            is_suspended
-          )
-        `
-        )
+        .select("*")
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false });
 
-      if (error) throw error;
+      if (applicationsError) throw applicationsError;
+      if (!applicationsData || applicationsData.length === 0) return [];
+
+      // 2. Fetch corresponding profiles
+      const userIds = applicationsData.map((app) => app.user_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, email, first_name, last_name, phone, is_suspended")
+        .in("id", userIds);
+
+      // 3. Join manually
+      const data = applicationsData.map((application) => ({
+        ...application,
+        profiles: profilesData?.find((profile) => profile.id === application.user_id) || null,
+      }));
+
       return data as DealerApplication[];
     },
     retry: 1,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { buildEmailLayout, paragraph, infoBox, detailRow, pinDisplay, list } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 serve(async (req) => {
@@ -81,10 +82,48 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    // Get site settings
+    const { data: settings } = await supabaseClient
+      .from('site_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    const settingsData = settings || {
+      site_name: 'CaravanWert',
+      site_description: 'Ihr Wohnmobil-Marktplatz',
+      contact_email: 'kontakt@caravanwert.de',
+      support_phone: '',
+    };
+
     // Send PIN via email using Resend
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
     if (RESEND_API_KEY && fullAppointment.profiles?.email) {
       try {
+        // Build email content with email-builder
+        const content = `
+          ${paragraph('Guten Tag,')}
+          ${paragraph('Ihr Freigabe-PIN f&uuml;r die &Uuml;bergabe Ihres Fahrzeugs wurde generiert:')}
+
+          ${pinDisplay(pin)}
+
+          ${infoBox('Details zur &Uuml;bergabe', `
+            ${detailRow('Fahrzeug', `${fullAppointment.motorhomes.manufacturer} ${fullAppointment.motorhomes.model}`)}
+            ${detailRow('Station', fullAppointment.purchase_stations.name)}
+            ${detailRow('Adresse', `${fullAppointment.purchase_stations.address}, ${fullAppointment.purchase_stations.city}`)}
+            ${detailRow('Termin', new Date(fullAppointment.appointment_date).toLocaleString('de-DE'))}
+          `, 'info')}
+
+          ${infoBox('', `
+            <p style="margin: 0; font-size: 14px; color: #374151;">
+              <strong>Wichtig:</strong> Dieser PIN ist 24 Stunden g&uuml;ltig und wird bei der &Uuml;bergabe ben&ouml;tigt.
+              Geben Sie diesen PIN niemals an Dritte weiter.
+            </p>
+          `, 'warning')}
+        `;
+
+        const emailHtml = buildEmailLayout(settingsData, 'Ihr Freigabe-PIN', content);
+
         const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -92,33 +131,10 @@ serve(async (req) => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: 'CaravanWert <info@caravanwert.de>',
+            from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
             to: [fullAppointment.profiles.email],
-            subject: 'Ihr Freigabe-PIN für die Fahrzeugübergabe',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #19753e;">Ihr Freigabe-PIN</h1>
-                <p>Guten Tag,</p>
-                <p>Ihr Freigabe-PIN für die Übergabe Ihres Fahrzeugs wurde generiert:</p>
-                <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                  <h2 style="font-size: 36px; letter-spacing: 8px; margin: 0; color: #19753e;">${pin}</h2>
-                </div>
-                <p><strong>Details zur Übergabe:</strong></p>
-                <ul>
-                  <li>Fahrzeug: ${fullAppointment.motorhomes.manufacturer} ${fullAppointment.motorhomes.model}</li>
-                  <li>Station: ${fullAppointment.purchase_stations.name}</li>
-                  <li>Adresse: ${fullAppointment.purchase_stations.address}, ${fullAppointment.purchase_stations.city}</li>
-                  <li>Termin: ${new Date(fullAppointment.appointment_date).toLocaleString('de-DE')}</li>
-                </ul>
-                <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                  <strong>Wichtig:</strong> Dieser PIN ist 24 Stunden gültig und wird bei der Übergabe benötigt.
-                </p>
-                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
-                <p style="color: #999; font-size: 12px;">
-                  Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.
-                </p>
-              </div>
-            `,
+            subject: 'Ihr Freigabe-PIN f\u00fcr die Fahrzeug\u00fcbergabe',
+            html: emailHtml,
           }),
         });
 

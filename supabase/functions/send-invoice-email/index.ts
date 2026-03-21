@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface InvoiceEmailRequest {
@@ -17,21 +18,17 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('authorization') ?? '';
   const isServiceRole = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
 
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   if (!isServiceRole) {
-    // Use service role client to validate user token
     const token = authHeader.replace('Bearer ', '');
-    const supabaseCheck = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    const { data: { user }, error: userError } = await supabaseCheck.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
-    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: roles } = await supabaseCheck.from('user_roles').select('role').eq('user_id', user.id);
+    const { data: roles } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', user.id);
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
@@ -47,13 +44,8 @@ Deno.serve(async (req) => {
       throw new Error('Invoice ID is required');
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     // Fetch invoice with dealer info
-    const { data: invoice, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .select(`
         *,
@@ -70,10 +62,17 @@ Deno.serve(async (req) => {
     }
 
     // Get site settings
-    const { data: settings } = await supabase
+    const { data: settings } = await supabaseAdmin
       .from('site_settings')
       .select('*')
       .single();
+
+    const settingsData = settings || {
+      site_name: 'CaravanWert',
+      site_description: 'Ihr Wohnmobil-Marktplatz',
+      contact_email: 'kontakt@caravanwert.de',
+      support_phone: '',
+    };
 
     const dealerName = invoice.dealer.company_name || 
       `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
@@ -82,73 +81,34 @@ Deno.serve(async (req) => {
       `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 
       'Provision';
 
-    // Prepare email content
+    // Build email content with email-builder
+    const content = `
+      ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${paragraph('Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.')}
+      
+      ${infoBox('Rechnungsdetails', `
+        ${detailRow('Rechnungsnummer', invoice.invoice_number)}
+        ${detailRow('Fahrzeug', motorhomeName)}
+        ${detailRow('Rechnungsdatum', new Date(invoice.invoice_date).toLocaleDateString('de-DE'))}
+        ${detailRow('F&auml;lligkeitsdatum', new Date(invoice.due_date).toLocaleDateString('de-DE'))}
+      `, 'info')}
+
+      ${amountDisplay('Rechnungsbetrag', `&euro;${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
+
+      ${infoBox('Zahlungsinformationen', `
+        ${detailRow('IBAN', 'DE89 3704 0044 0532 0130 00')}
+        ${detailRow('BIC', 'COBADEFFXXX')}
+        ${detailRow('Verwendungszweck', invoice.invoice_number)}
+      `)}
+
+      ${invoice.pdf_url ? button('Rechnung als PDF herunterladen', invoice.pdf_url) : ''}
+
+      ${paragraph('Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verf&uuml;gung.')}
+      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr CaravanWert Team')}
+    `;
+
     const emailSubject = `Rechnung ${invoice.invoice_number} - CaravanWert`;
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-    .invoice-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb; }
-    .amount { font-size: 24px; font-weight: bold; color: #2563eb; margin: 20px 0; }
-    .button { display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-    .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📄 Neue Rechnung</h1>
-    </div>
-    <div class="content">
-      <p>Sehr geehrte/r ${dealerName},</p>
-      <p>Ihre Rechnung für den erfolgreichen Kauf bei CaravanWert ist bereit.</p>
-      
-      <div class="invoice-info">
-        <h3>Rechnungsdetails</h3>
-        <p><strong>Rechnungsnummer:</strong> ${invoice.invoice_number}</p>
-        <p><strong>Fahrzeug:</strong> ${motorhomeName}</p>
-        <p><strong>Rechnungsdatum:</strong> ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')}</p>
-        <p><strong>Fälligkeitsdatum:</strong> ${new Date(invoice.due_date).toLocaleDateString('de-DE')}</p>
-      </div>
-      
-      <div class="amount">
-        Rechnungsbetrag: €${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-      </div>
-      
-      <p><strong>Zahlungsinformationen:</strong></p>
-      <p>
-        IBAN: DE89 3704 0044 0532 0130 00<br>
-        BIC: COBADEFFXXX<br>
-        Verwendungszweck: ${invoice.invoice_number}
-      </p>
-      
-      ${invoice.pdf_url ? `
-        <a href="${invoice.pdf_url}" class="button">
-          📄 Rechnung als PDF herunterladen
-        </a>
-      ` : ''}
-      
-      <p>Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.</p>
-      
-      <div class="footer">
-        <p>Mit freundlichen Grüßen<br>
-        Ihr CaravanWert Team</p>
-        <p style="font-size: 12px; margin-top: 20px;">
-          ${settings?.site_name || 'CaravanWert'}<br>
-          ${settings?.contact_email || 'kontakt@caravanwert.de'}<br>
-          ${settings?.support_phone || '+49 123 456789'}
-        </p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
+    const emailHtml = buildEmailLayout(settingsData, 'Neue Rechnung', content);
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -163,7 +123,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${settings?.site_name || 'CaravanWert'} <info@caravanwert.de>`,
+        from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
         to: [invoice.dealer.email],
         subject: emailSubject,
         html: emailHtml,
@@ -188,12 +148,7 @@ Deno.serve(async (req) => {
         message: 'Invoice email sent successfully',
         invoiceNumber: invoice.invoice_number 
       }),
-      { 
-        headers: { 
-          ...getCorsHeaders(req), 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {

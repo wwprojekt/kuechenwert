@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
@@ -11,24 +12,20 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const isServiceRole = authHeader.includes(serviceRoleKey);
 
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
   if (!isServiceRole) {
-    // Use service role client to validate user token
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
-    const supabaseCheck = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    const { data: roles } = await supabaseCheck.from('user_roles').select('role').eq('user_id', user.id);
+    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
@@ -38,12 +35,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     console.log('Processing payment reminders (Mahnwesen)...');
+
+    // Get site settings
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    const settingsData = settings || {
+      site_name: 'CaravanWert',
+      site_description: 'Ihr Wohnmobil-Marktplatz',
+      contact_email: 'kontakt@caravanwert.de',
+      support_phone: '',
+    };
 
     // Get overdue invoices
     const { data: overdueInvoices, error: fetchError } = await supabase
@@ -78,17 +84,16 @@ Deno.serve(async (req) => {
         let reminderLevel = 1;
         let reminderFee = 0;
         
-        if (daysPastDue >= 42) { // 6 weeks
+        if (daysPastDue >= 42) {
           reminderLevel = 3;
-          reminderFee = 15.00; // €15 for 3rd reminder
-        } else if (daysPastDue >= 28) { // 4 weeks
+          reminderFee = 15.00;
+        } else if (daysPastDue >= 28) {
           reminderLevel = 2;
-          reminderFee = 10.00; // €10 for 2nd reminder
-        } else if (daysPastDue >= 14) { // 2 weeks
+          reminderFee = 10.00;
+        } else if (daysPastDue >= 14) {
           reminderLevel = 1;
-          reminderFee = 5.00; // €5 for 1st reminder
+          reminderFee = 5.00;
         } else {
-          // Not yet time for reminder
           continue;
         }
 
@@ -98,7 +103,6 @@ Deno.serve(async (req) => {
         );
 
         if (existingReminder) {
-          // Check if account should be restricted (after 28 days)
           if (daysPastDue >= 28 && reminderLevel >= 2) {
             await restrictDealerAccount(supabase, invoice.dealer_id);
           }
@@ -106,17 +110,20 @@ Deno.serve(async (req) => {
         }
 
         // Create payment reminder
+        const subject = getReminderSubject(reminderLevel, invoice.invoice_number);
+        const messageBody = getReminderMessage(reminderLevel, invoice, reminderFee);
+
         const { data: reminder, error: reminderError } = await supabase
           .from('payment_reminders')
           .insert({
             invoice_id: invoice.id,
             reminder_level: reminderLevel,
-            due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+            due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             original_amount: invoice.gross_amount,
             reminder_fee: reminderFee,
             total_amount: invoice.gross_amount + reminderFee,
-            subject: getReminderSubject(reminderLevel, invoice.invoice_number),
-            message_body: getReminderMessage(reminderLevel, invoice, reminderFee),
+            subject: subject,
+            message_body: messageBody,
           })
           .select()
           .single();
@@ -127,9 +134,9 @@ Deno.serve(async (req) => {
         }
 
         // Send reminder email
-        await sendReminderEmail(invoice, reminder, reminderLevel);
+        await sendReminderEmail(invoice, reminder, reminderLevel, settingsData);
 
-        // Restrict account if 2nd reminder (28 days overdue)
+        // Restrict account if 2nd reminder
         if (reminderLevel >= 2) {
           await restrictDealerAccount(supabase, invoice.dealer_id);
         }
@@ -182,7 +189,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .update({
           account_restricted: true,
-          restriction_reason: 'Überfällige Zahlung',
+          restriction_reason: '\u00dcberf\u00e4llige Zahlung',
           restricted_at: new Date().toISOString(),
         })
         .eq('id', dealerId);
@@ -193,124 +200,94 @@ Deno.serve(async (req) => {
   }
 
   function getReminderSubject(level: number, invoiceNumber: string): string {
-    const subjects = {
+    const subjects: Record<number, string> = {
       1: `Zahlungserinnerung - Rechnung ${invoiceNumber}`,
       2: `1. Mahnung - Rechnung ${invoiceNumber}`,
       3: `2. Mahnung - Rechnung ${invoiceNumber}`,
     };
-    return subjects[level as keyof typeof subjects] || `Mahnung - Rechnung ${invoiceNumber}`;
+    return subjects[level] || `Mahnung - Rechnung ${invoiceNumber}`;
   }
 
   function getReminderMessage(level: number, invoice: any, fee: number): string {
     const dealerName = invoice.dealer.company_name || 
       `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
 
-    const baseMessage = `
-Sehr geehrte/r ${dealerName},
+    const baseInfo = `Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} \u00fcber \u20ac${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Zahlungsziel war der ${new Date(invoice.due_date).toLocaleDateString('de-DE')}.`;
 
-unsere Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} 
-über €${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} ist noch nicht beglichen.
-
-Zahlungsziel war der ${new Date(invoice.due_date).toLocaleDateString('de-DE')}.
-`;
-
-    const messages = {
-      1: baseMessage + `
-Bitte überweisen Sie den Betrag zeitnah auf unser Konto.
-
-Falls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.
-`,
-      2: baseMessage + `
-Da die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngebühr von €${fee.toFixed(2)}.
-
-Gesamtbetrag: €${(invoice.gross_amount + fee).toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-
-Ihr Account wurde eingeschränkt, bis die Zahlung eingegangen ist.
-`,
-      3: baseMessage + `
-Dies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.
-
-Zusätzliche Mahngebühr: €${fee.toFixed(2)}
-Gesamtbetrag: €${(invoice.gross_amount + fee).toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-`,
+    const messages: Record<number, string> = {
+      1: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nBitte \u00fcberweisen Sie den Betrag zeitnah auf unser Konto.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
+      2: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.\n\nIhr Account wurde eingeschr\u00e4nkt, bis die Zahlung eingegangen ist.`,
+      3: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}`,
     };
 
-    return messages[level as keyof typeof messages] + `
-    
-Mit freundlichen Grüßen
-Ihr CaravanWert Team`;
+    return messages[level] || messages[1];
   }
 
-  async function sendReminderEmail(invoice: any, reminder: any, level: number) {
-    try {
-      const resendApiKey = Deno.env.get('RESEND_API_KEY');
-      if (!resendApiKey) {
-        throw new Error('RESEND_API_KEY not configured');
-      }
-
-      // Dealer name for email - used in reminder.message_body which is included in the template
-      const dealerName = invoice.dealer.company_name || 
-        `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
-
-      const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: ${level === 1 ? '#fbbf24' : level === 2 ? '#f97316' : '#dc2626'}; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-    .amount { font-size: 24px; font-weight: bold; color: #dc2626; margin: 20px 0; }
-    .warning { background: #fef3c7; border: 1px solid #fbbf24; padding: 15px; border-radius: 6px; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>${level === 1 ? '⚠️' : level === 2 ? '🚨' : '⛔'} ${reminder.subject}</h1>
-    </div>
-    <div class="content">
-      <div style="white-space: pre-line;">${reminder.message_body}</div>
-      
-      <div class="amount">
-        Zu zahlen: €${reminder.total_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-      </div>
-      
-      ${level >= 2 ? '<div class="warning"><strong>Ihr Account wurde eingeschränkt</strong> bis zur Zahlung.</div>' : ''}
-      
-      <p><strong>Bankverbindung:</strong><br>
-      IBAN: DE89 3704 0044 0532 0130 00<br>
-      BIC: COBADEFFXXX<br>
-      Verwendungszweck: ${invoice.invoice_number}</p>
-    </div>
-  </div>
-</body>
-</html>`;
-
-      const resendResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: JSON.stringify({
-          from: 'CaravanWert Buchhaltung <info@caravanwert.de>',
-          to: [invoice.dealer.email],
-          subject: reminder.subject,
-          html: emailHtml,
-        }),
-      });
-
-      if (!resendResponse.ok) {
-        throw new Error('Failed to send reminder email');
-      }
-
-      console.log(`${level}. Mahnung sent to ${invoice.dealer.email}`);
-    } catch (error) {
-      console.error('Error sending reminder email:', error);
-      throw error;
+  async function sendReminderEmail(invoice: any, reminder: any, level: number, settingsData: any) {
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY not configured');
     }
+
+    const dealerName = invoice.dealer.company_name || 
+      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
+
+    const levelTitles: Record<number, string> = {
+      1: 'Zahlungserinnerung',
+      2: '1. Mahnung',
+      3: '2. Mahnung (Letzte Mahnung)',
+    };
+
+    const levelVariant = level === 1 ? 'info' as const : 'warning' as const;
+
+    // Build email content with email-builder
+    const content = `
+      ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${paragraph(`unsere Rechnung <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist noch nicht beglichen.`)}
+
+      ${infoBox('Rechnungsdetails', `
+        ${detailRow('Rechnungsnummer', invoice.invoice_number)}
+        ${detailRow('Rechnungsdatum', new Date(invoice.invoice_date).toLocaleDateString('de-DE'))}
+        ${detailRow('F&auml;lligkeitsdatum', new Date(invoice.due_date).toLocaleDateString('de-DE'))}
+        ${detailRow('Rechnungsbetrag', `&euro;${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
+        ${reminder.reminder_fee > 0 ? detailRow('Mahngeb&uuml;hr', `&euro;${reminder.reminder_fee.toFixed(2)}`) : ''}
+      `, levelVariant)}
+
+      ${amountDisplay('Zu zahlender Gesamtbetrag', `&euro;${reminder.total_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
+
+      ${level >= 2 ? warningBox('Ihr Account wurde eingeschr&auml;nkt, bis die Zahlung eingegangen ist.') : ''}
+      ${level >= 3 ? warningBox('Dies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.') : ''}
+
+      ${infoBox('Bankverbindung', `
+        ${detailRow('IBAN', 'DE89 3704 0044 0532 0130 00')}
+        ${detailRow('BIC', 'COBADEFFXXX')}
+        ${detailRow('Verwendungszweck', invoice.invoice_number)}
+      `)}
+
+      ${level === 1 ? paragraph('Falls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.') : ''}
+      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr CaravanWert Team')}
+    `;
+
+    const emailHtml = buildEmailLayout(settingsData, levelTitles[level] || 'Zahlungserinnerung', content);
+
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
+        to: [invoice.dealer.email],
+        subject: reminder.subject,
+        html: emailHtml,
+      }),
+    });
+
+    if (!resendResponse.ok) {
+      throw new Error('Failed to send reminder email');
+    }
+
+    console.log(`${level}. Mahnung sent to ${invoice.dealer.email}`);
   }
 });

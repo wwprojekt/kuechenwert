@@ -93,7 +93,7 @@ const FAQPage = () => {
         </PageHero>
 
         {/* FAQ Component */}
-        <FAQ />
+        <FAQ hideHeader />
 
         {/* Additional Support Section */}
         <section className="py-16 bg-muted/30">

@@ -146,7 +146,7 @@ const Footer = () => {
       {/* Main Footer */}
       <div className="bg-slate-950">
         <div className="container py-16">
-          <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-12 mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-8 mb-12">
             {/* Brand Column */}
             <div className="space-y-6 lg:col-span-2">
               <SiteLogo variant="footer" />

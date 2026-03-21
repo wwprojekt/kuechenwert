@@ -25,7 +25,7 @@ const channels = [
   },
   {
     iconComponent: MapPin,
-    title: "Kaufen",
+    title: "Ankaufstation",
     description: "Übergeben Sie Ihr Wohnmobil persönlich an einer unserer Partnerstationen und erhalten Sie Barzahlung.",
     benefits: [
       "Persönliche Übergabe",
@@ -90,7 +90,7 @@ const HowItWorks = () => {
                     ))}
                   </div>
 
-                  <a href={index === 0 ? "/verkaufen" : index === 1 ? "/kaufen" : "/ankaufstationen"} className="w-full">
+                  <a href={index === 0 ? "/verkaufen" : index === 1 ? "/verkaufen" : "/ankaufstationen"} className="w-full">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 group/btn hover:border-primary hover:text-primary"

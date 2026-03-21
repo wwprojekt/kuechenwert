@@ -80,7 +80,7 @@ export function DealerSidebar() {
   };
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent>
         <div className="p-4 border-b border-border">
           {!collapsed ? (

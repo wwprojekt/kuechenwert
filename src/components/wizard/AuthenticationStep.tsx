@@ -35,24 +35,26 @@ const registerSchema = z.object({
 
 interface AuthenticationStepProps {
   onAuthenticated: () => void;
+  prefillEmail?: string;
+  prefillName?: string;
 }
 
-export const AuthenticationStep = ({ onAuthenticated }: AuthenticationStepProps) => {
+export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName }: AuthenticationStepProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState("");
+  // Login form state - prefill email if available from wizard
+  const [loginEmail, setLoginEmail] = useState(prefillEmail || "");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // Register form state
-  const [registerEmail, setRegisterEmail] = useState("");
+  // Register form state - prefill from wizard data
+  const [registerEmail, setRegisterEmail] = useState(prefillEmail || "");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
-  const [registerFirstName, setRegisterFirstName] = useState("");
-  const [registerLastName, setRegisterLastName] = useState("");
+  const [registerFirstName, setRegisterFirstName] = useState(prefillName?.split(' ')[0] || "");
+  const [registerLastName, setRegisterLastName] = useState(prefillName?.split(' ').slice(1).join(' ') || "");
 
   useEffect(() => {
     // Check if user is already authenticated

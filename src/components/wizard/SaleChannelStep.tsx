@@ -15,6 +15,8 @@ interface SaleChannelStepProps {
 
 export const SaleChannelStep = ({ formData, updateFormData, onAutoNext }: SaleChannelStepProps) => {
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Track the initial value so we only auto-next on NEW user selections
+  const initialValueRef = useRef<string | undefined>(formData.saleChannel);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -33,9 +35,12 @@ export const SaleChannelStep = ({ formData, updateFormData, onAutoNext }: SaleCh
     
     updateFormData({ saleChannel: value });
     
-    // Only auto-proceed for options that don't need additional input
-    // "auction" option has a reserve price field, so we might not want to auto-proceed
-    if (onAutoNext && value !== "auction") {
+    // Only auto-proceed when:
+    // 1. The user actively changed the selection (not just clicking the already-selected option)
+    // 2. The option doesn't need additional input (auction needs reserve price)
+    // 3. The value is different from what was pre-filled
+    const isNewSelection = value !== initialValueRef.current;
+    if (onAutoNext && value !== "auction" && isNewSelection) {
       autoNextTimerRef.current = setTimeout(() => {
         onAutoNext();
       }, 500);
@@ -209,12 +214,6 @@ export const SaleChannelStep = ({ formData, updateFormData, onAutoNext }: SaleCh
           während der Sofortpreis die schnellste Abwicklung garantiert.
         </p>
       </div>
-
-      {formData.saleChannel && formData.saleChannel !== "auction" && (
-        <p className="text-sm text-muted-foreground text-center animate-fade-in">
-          Sie werden automatisch zum nächsten Schritt weitergeleitet...
-        </p>
-      )}
     </div>
   );
 };

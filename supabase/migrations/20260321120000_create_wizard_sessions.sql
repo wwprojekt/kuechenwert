@@ -31,12 +31,14 @@ CREATE INDEX IF NOT EXISTS idx_wizard_sessions_last_activity ON public.wizard_se
 
 ALTER TABLE public.wizard_sessions ENABLE ROW LEVEL SECURITY;
 
+-- Anonyme und eingeloggte Nutzer können Sessions erstellen, lesen und aktualisieren
+-- (Wizard startet anonym, Session wird nach Login mit user_id verknüpft)
 CREATE POLICY wizard_sessions_user_select ON public.wizard_sessions
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING (true);
 CREATE POLICY wizard_sessions_user_insert ON public.wizard_sessions
   FOR INSERT WITH CHECK (true);
 CREATE POLICY wizard_sessions_user_update ON public.wizard_sessions
-  FOR UPDATE USING (auth.uid() = user_id OR user_id IS NULL);
+  FOR UPDATE USING (true);
 CREATE POLICY wizard_sessions_service ON public.wizard_sessions
   FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
 

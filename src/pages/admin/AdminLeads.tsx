@@ -116,6 +116,145 @@ const STEP_NAMES: Record<number, string> = {
 };
 
 // ============================================================================
+// Human-readable field labels for form_data display
+// ============================================================================
+
+const FIELD_LABELS: Record<string, string> = {
+  // Fahrzeugdetails
+  manufacturer: "Hersteller",
+  model: "Modell",
+  year: "Baujahr",
+  bodyType: "Aufbauart",
+  mileage: "Kilometerstand",
+  vehicleType: "Fahrzeugtyp",
+  // Technik
+  fuelType: "Kraftstoff",
+  transmission: "Getriebe",
+  enginePower: "Motorleistung (PS)",
+  engine_displacement_ccm: "Hubraum (ccm)",
+  driveTrain: "Antrieb",
+  emissionClass: "Schadstoffklasse",
+  // Abmessungen
+  length_m: "Länge (cm)",
+  width_m: "Breite (cm)",
+  height_m: "Höhe (cm)",
+  weight_kg: "Gewicht (kg)",
+  payload_kg: "Zuladung (kg)",
+  number_of_axles: "Anzahl Achsen",
+  number_of_seats: "Sitzplätze",
+  number_of_sleeping_places: "Schlafplätze",
+  // Innenraum
+  has_bathroom: "Badezimmer",
+  has_kitchen: "Küche",
+  has_shower: "Dusche",
+  has_toilet: "Toilette",
+  has_heating: "Heizung",
+  has_air_conditioning: "Klimaanlage",
+  has_solar_panel: "Solaranlage",
+  refrigerator_type: "Kühlschranktyp",
+  water_tank_liters: "Wassertank (L)",
+  waste_water_tank_liters: "Abwassertank (L)",
+  gas_system: "Gassystem",
+  // Ausstattung
+  has_awning: "Markise",
+  has_bike_rack: "Fahrradträger",
+  has_satellite_system: "Sat-Anlage",
+  has_navigation: "Navigation",
+  has_backup_camera: "Rückfahrkamera",
+  has_cruise_control: "Tempomat",
+  has_leveling_system: "Nivellierungssystem",
+  has_alarm_system: "Alarmanlage",
+  has_tow_bar: "Anhängerkupplung",
+  has_garage: "Heckgarage",
+  has_airbag: "Airbag",
+  has_alarm: "Alarm",
+  has_swivel_seats: "Drehsitze",
+  has_esp: "ESP",
+  main_tires: "Hauptreifen",
+  second_tires: "Zweitreifen",
+  // Zustand
+  condition: "Zustand",
+  no_known_defects: "Keine bekannten Mängel",
+  known_defects: "Bekannte Mängel",
+  previous_owners: "Vorbesitzer",
+  accident_free: "Unfallfrei",
+  first_registration: "Erstzulassung",
+  tuev_valid_until: "TÜV gültig bis",
+  vehicle_identification_number: "Fahrgestellnummer (VIN)",
+  // Verkauf
+  saleChannel: "Verkaufsweg",
+  reservePrice: "Mindestpreis",
+  desiredPrice: "Wunschpreis",
+  description: "Beschreibung",
+  // Kontakt
+  customerName: "Name",
+  customerEmail: "E-Mail",
+  customerPhone: "Telefon",
+  // Meta
+  photos_count: "Fotos hochgeladen",
+};
+
+const SALE_CHANNEL_LABELS: Record<string, string> = {
+  instant_price: "Sofortpreis",
+  auction: "Händler-Auktion",
+  station: "Ankaufstation",
+};
+
+const FIELD_GROUPS: { title: string; fields: string[] }[] = [
+  {
+    title: "Fahrzeug",
+    fields: ["manufacturer", "model", "year", "bodyType", "vehicleType", "mileage"],
+  },
+  {
+    title: "Technik",
+    fields: ["fuelType", "transmission", "enginePower", "engine_displacement_ccm", "driveTrain", "emissionClass"],
+  },
+  {
+    title: "Abmessungen",
+    fields: ["length_m", "width_m", "height_m", "weight_kg", "payload_kg", "number_of_axles", "number_of_seats", "number_of_sleeping_places"],
+  },
+  {
+    title: "Innenraum & Ausstattung",
+    fields: [
+      "has_bathroom", "has_kitchen", "has_shower", "has_toilet", "has_heating",
+      "has_air_conditioning", "has_solar_panel", "refrigerator_type",
+      "water_tank_liters", "waste_water_tank_liters", "gas_system",
+      "has_awning", "has_bike_rack", "has_satellite_system", "has_navigation",
+      "has_backup_camera", "has_cruise_control", "has_leveling_system",
+      "has_alarm_system", "has_tow_bar", "has_garage", "has_airbag",
+      "has_alarm", "has_swivel_seats", "has_esp", "main_tires", "second_tires",
+    ],
+  },
+  {
+    title: "Zustand",
+    fields: ["condition", "no_known_defects", "known_defects", "previous_owners", "accident_free", "first_registration", "tuev_valid_until", "vehicle_identification_number"],
+  },
+  {
+    title: "Verkauf",
+    fields: ["saleChannel", "reservePrice", "desiredPrice", "description"],
+  },
+];
+
+function formatFieldValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "boolean") return value ? "Ja" : "Nein";
+  if (key === "saleChannel" && typeof value === "string") {
+    return SALE_CHANNEL_LABELS[value] || value;
+  }
+  if (key === "mileage" && typeof value === "number") {
+    return `${value.toLocaleString("de-DE")} km`;
+  }
+  if ((key === "reservePrice" || key === "desiredPrice") && typeof value === "number") {
+    return `${value.toLocaleString("de-DE")} EUR`;
+  }
+  if ((key.endsWith("_liters") || key === "weight_kg" || key === "payload_kg") && typeof value === "number") {
+    return value.toLocaleString("de-DE");
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+// ============================================================================
 // Helper Components
 // ============================================================================
 
@@ -877,46 +1016,91 @@ export default function AdminLeads() {
                   </div>
                 </Card>
 
-                {/* Form Data Preview */}
+                {/* Form Data Preview - Grouped with readable labels */}
                 <Card className="p-4">
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <Eye className="w-4 h-4" /> Eingegebene Daten
                   </h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {Object.entries(selectedSession.form_data || {}).map(([key, value]) => {
-                      if (
-                        value === null ||
-                        value === undefined ||
-                        value === "" ||
-                        value === false ||
-                        key === "photos" ||
-                        key === "photos_count"
-                      )
-                        return null;
-                      const displayValue =
-                        typeof value === "boolean"
-                          ? "Ja"
-                          : typeof value === "object"
-                          ? JSON.stringify(value)
-                          : String(value);
-                      return (
-                        <div key={key} className="flex justify-between border-b border-muted py-1">
-                          <span className="text-muted-foreground">{key}</span>
-                          <span className="font-medium text-right max-w-[200px] truncate">
-                            {displayValue}
-                          </span>
+                  {selectedSession.form_data && Object.keys(selectedSession.form_data).length > 0 ? (
+                    <div className="space-y-4">
+                      {FIELD_GROUPS.map((group) => {
+                        const groupEntries = group.fields.filter((field) => {
+                          const val = (selectedSession.form_data as Record<string, unknown>)?.[field];
+                          return val !== null && val !== undefined && val !== "" && field !== "photos";
+                        });
+                        if (groupEntries.length === 0) return null;
+                        return (
+                          <div key={group.title}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
+                              {group.title}
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              {groupEntries.map((field) => {
+                                const val = (selectedSession.form_data as Record<string, unknown>)[field];
+                                return (
+                                  <div key={field} className="flex justify-between py-0.5">
+                                    <span className="text-muted-foreground">
+                                      {FIELD_LABELS[field] || field}
+                                    </span>
+                                    <span className="font-medium text-right max-w-[180px] truncate">
+                                      {formatFieldValue(field, val)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Show any remaining fields not in groups */}
+                      {(() => {
+                        const allGroupedFields = FIELD_GROUPS.flatMap((g) => g.fields);
+                        const ungrouped = Object.entries(selectedSession.form_data || {}).filter(
+                          ([key, val]) =>
+                            !allGroupedFields.includes(key) &&
+                            val !== null &&
+                            val !== undefined &&
+                            val !== "" &&
+                            key !== "photos" &&
+                            key !== "photos_count" &&
+                            key !== "customerName" &&
+                            key !== "customerEmail" &&
+                            key !== "customerPhone"
+                        );
+                        if (ungrouped.length === 0) return null;
+                        return (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
+                              Sonstige
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              {ungrouped.map(([key, val]) => (
+                                <div key={key} className="flex justify-between py-0.5">
+                                  <span className="text-muted-foreground">
+                                    {FIELD_LABELS[key] || key}
+                                  </span>
+                                  <span className="font-medium text-right max-w-[180px] truncate">
+                                    {formatFieldValue(key, val)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {/* Photo count */}
+                      {selectedSession.form_data?.photos_count != null && (
+                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                          <span className="text-muted-foreground">Fotos hochgeladen:</span>
+                          <Badge variant="outline">
+                            {String(selectedSession.form_data.photos_count)} Fotos
+                          </Badge>
                         </div>
-                      );
-                    })}
-                    {selectedSession.form_data?.photos_count != null && (
-                      <div className="flex justify-between border-b border-muted py-1">
-                        <span className="text-muted-foreground">Fotos hochgeladen</span>
-                        <span className="font-medium">
-                          {String(selectedSession.form_data.photos_count)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Noch keine Daten eingegeben</p>
+                  )}
                 </Card>
 
                 {/* Timeline */}

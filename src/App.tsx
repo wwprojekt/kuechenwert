@@ -11,89 +11,90 @@ import { WhatsAppButton } from "./components/WhatsAppButton";
 import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { usePageTracking } from "./hooks/useAnalytics";
+import { lazyRetry, clearChunkReloadFlag } from "./lib/lazyRetry";
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
-// Only the Index page is eagerly loaded for fast initial render.
+// Uses lazyRetry() to auto-reload on stale chunk errors after deployments.
 // ---------------------------------------------------------------------------
 import Index from "./pages/Index";
 
 // Auth pages
-const Login = lazy(() => import("./pages/Login"));
-const LoginHaendler = lazy(() => import("./pages/LoginHaendler"));
-const Register = lazy(() => import("./pages/Register"));
-const RegisterHaendler = lazy(() => import("./pages/RegisterHaendler"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Login = lazyRetry(() => import("./pages/Login"));
+const LoginHaendler = lazyRetry(() => import("./pages/LoginHaendler"));
+const Register = lazyRetry(() => import("./pages/Register"));
+const RegisterHaendler = lazyRetry(() => import("./pages/RegisterHaendler"));
+const ForgotPassword = lazyRetry(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
 
 // Core pages
-const Verkaufen = lazy(() => import("./pages/Verkaufen"));
-const VerkaufenWizard = lazy(() => import("./pages/VerkaufenWizard"));
-const Kaufen = lazy(() => import("./pages/Kaufen"));
-const AuctionDetail = lazy(() => import("./pages/AuctionDetail"));
-const Ratgeber = lazy(() => import("./pages/Ratgeber"));
-const UeberUns = lazy(() => import("./pages/UeberUns"));
-const Kontakt = lazy(() => import("./pages/Kontakt"));
-const Haendler = lazy(() => import("./pages/Haendler"));
-const DealerRegister = lazy(() => import("./pages/DealerRegister"));
-const DealerOnboarding = lazy(() => import("./pages/DealerOnboarding"));
-const Ankaufstationen = lazy(() => import("./pages/Ankaufstationen"));
-const Wertermittlung = lazy(() => import("./pages/Wertermittlung"));
-const Wertrechner = lazy(() => import("./pages/Wertrechner"));
+const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
+const VerkaufenWizard = lazyRetry(() => import("./pages/VerkaufenWizard"));
+const Kaufen = lazyRetry(() => import("./pages/Kaufen"));
+const AuctionDetail = lazyRetry(() => import("./pages/AuctionDetail"));
+const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
+const UeberUns = lazyRetry(() => import("./pages/UeberUns"));
+const Kontakt = lazyRetry(() => import("./pages/Kontakt"));
+const Haendler = lazyRetry(() => import("./pages/Haendler"));
+const DealerRegister = lazyRetry(() => import("./pages/DealerRegister"));
+const DealerOnboarding = lazyRetry(() => import("./pages/DealerOnboarding"));
+const Ankaufstationen = lazyRetry(() => import("./pages/Ankaufstationen"));
+const Wertermittlung = lazyRetry(() => import("./pages/Wertermittlung"));
+const Wertrechner = lazyRetry(() => import("./pages/Wertrechner"));
 
 // Legal pages
-const Impressum = lazy(() => import("./pages/Impressum"));
-const Datenschutz = lazy(() => import("./pages/Datenschutz"));
-const AGB = lazy(() => import("./pages/AGB"));
-const FAQ = lazy(() => import("./pages/FAQ"));
-const Preise = lazy(() => import("./pages/Preise"));
+const Impressum = lazyRetry(() => import("./pages/Impressum"));
+const Datenschutz = lazyRetry(() => import("./pages/Datenschutz"));
+const AGB = lazyRetry(() => import("./pages/AGB"));
+const FAQ = lazyRetry(() => import("./pages/FAQ"));
+const Preise = lazyRetry(() => import("./pages/Preise"));
 
 // Blog
-const Blog = lazy(() => import("./pages/Blog"));
-const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Blog = lazyRetry(() => import("./pages/Blog"));
+const BlogPost = lazyRetry(() => import("./pages/BlogPost"));
 
 // Admin pages
-const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminAuctions = lazy(() => import("./pages/admin/AdminAuctions"));
-const AdminMotorhomes = lazy(() => import("./pages/admin/AdminMotorhomes"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminDealers = lazy(() => import("./pages/admin/AdminDealers"));
-const AdminStations = lazy(() => import("./pages/admin/AdminStations"));
-const AdminAppointments = lazy(() => import("./pages/admin/AdminAppointments"));
-const AdminStationHandover = lazy(() => import("./pages/admin/AdminStationHandover"));
-const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
-const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
-const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
-const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials"));
-const AdminLegal = lazy(() => import("./pages/admin/AdminLegal"));
-const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
-const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
-const AdminErrorLogs = lazy(() => import("./pages/admin/AdminErrorLogs"));
-const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
-const AdminAuctionDetail = lazy(() => import("./pages/admin/AdminAuctionDetail"));
-const AdminMotorhomeDetail = lazy(() => import("./pages/admin/AdminMotorhomeDetail"));
-const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
-const AdminDealerDetail = lazy(() => import("./pages/admin/AdminDealerDetail"));
-const AdminAppointmentDetail = lazy(() => import("./pages/admin/AdminAppointmentDetail"));
+const AdminLayout = lazyRetry(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazyRetry(() => import("./pages/admin/AdminDashboard"));
+const AdminAuctions = lazyRetry(() => import("./pages/admin/AdminAuctions"));
+const AdminMotorhomes = lazyRetry(() => import("./pages/admin/AdminMotorhomes"));
+const AdminUsers = lazyRetry(() => import("./pages/admin/AdminUsers"));
+const AdminSettings = lazyRetry(() => import("./pages/admin/AdminSettings"));
+const AdminDealers = lazyRetry(() => import("./pages/admin/AdminDealers"));
+const AdminStations = lazyRetry(() => import("./pages/admin/AdminStations"));
+const AdminAppointments = lazyRetry(() => import("./pages/admin/AdminAppointments"));
+const AdminStationHandover = lazyRetry(() => import("./pages/admin/AdminStationHandover"));
+const AdminBlog = lazyRetry(() => import("./pages/admin/AdminBlog"));
+const AdminAnalytics = lazyRetry(() => import("./pages/admin/AdminAnalytics"));
+const AdminCommissions = lazyRetry(() => import("./pages/admin/AdminCommissions"));
+const AdminFinancials = lazyRetry(() => import("./pages/admin/AdminFinancials"));
+const AdminLegal = lazyRetry(() => import("./pages/admin/AdminLegal"));
+const AdminQuestions = lazyRetry(() => import("./pages/admin/AdminQuestions"));
+const AdminMessages = lazyRetry(() => import("./pages/admin/AdminMessages"));
+const AdminErrorLogs = lazyRetry(() => import("./pages/admin/AdminErrorLogs"));
+const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
+const AdminAuctionDetail = lazyRetry(() => import("./pages/admin/AdminAuctionDetail"));
+const AdminMotorhomeDetail = lazyRetry(() => import("./pages/admin/AdminMotorhomeDetail"));
+const AdminUserDetail = lazyRetry(() => import("./pages/admin/AdminUserDetail"));
+const AdminDealerDetail = lazyRetry(() => import("./pages/admin/AdminDealerDetail"));
+const AdminAppointmentDetail = lazyRetry(() => import("./pages/admin/AdminAppointmentDetail"));
 
 // SEO Landing Pages
-const WohnmobilVerkaufen = lazy(() => import("./pages/landing/WohnmobilVerkaufen"));
-const WohnwagenVerkaufen = lazy(() => import("./pages/landing/WohnwagenVerkaufen"));
-const WohnmobilWert = lazy(() => import("./pages/landing/WohnmobilWert"));
-const WohnmobilWertermittlungKostenlos = lazy(() => import("./pages/landing/WohnmobilWertermittlungKostenlos"));
-const WirKaufenDeinWohnmobil = lazy(() => import("./pages/landing/WirKaufenDeinWohnmobil"));
-const WievielWohnmobilWert = lazy(() => import("./pages/landing/WievielWohnmobilWert"));
+const WohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/WohnmobilVerkaufen"));
+const WohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/WohnwagenVerkaufen"));
+const WohnmobilWert = lazyRetry(() => import("./pages/landing/WohnmobilWert"));
+const WohnmobilWertermittlungKostenlos = lazyRetry(() => import("./pages/landing/WohnmobilWertermittlungKostenlos"));
+const WirKaufenDeinWohnmobil = lazyRetry(() => import("./pages/landing/WirKaufenDeinWohnmobil"));
+const WievielWohnmobilWert = lazyRetry(() => import("./pages/landing/WievielWohnmobilWert"));
 
 // Ratgeber detail
-const RatgeberPage = lazy(() => import("./pages/ratgeber/RatgeberPage"));
+const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
 
 // Dashboard
-const SmartDashboard = lazy(() => import("./components/SmartDashboard").then(m => ({ default: m.SmartDashboard })));
+const SmartDashboard = lazyRetry(() => import("./components/SmartDashboard").then(m => ({ default: m.SmartDashboard })));
 
 // Not Found
-const NotFound = lazy(() => import("./pages/NotFound"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 // ---------------------------------------------------------------------------
 // Loading fallback for lazy-loaded pages
@@ -116,9 +117,10 @@ function AuctionRoute() {
   );
 }
 
-// Component to track page views
+// Component to track page views & clear chunk reload flag on successful load
 function PageTracker() {
   usePageTracking();
+  clearChunkReloadFlag();
   return null;
 }
 

@@ -44,13 +44,15 @@ const VerkaufenWizard = () => {
   const { saveProgress, markCompleted } = useWizardSession();
   const hasRestoredRef = useRef(false);
 
-  // Prefill form data from URL parameters
+  // Prefill form data from URL parameters (from Hero form / QuickAuctionForm)
   useEffect(() => {
     const manufacturer = searchParams.get('manufacturer');
     const model = searchParams.get('model');
     const bodyType = searchParams.get('bodyType');
-    
     const saleChannel = searchParams.get('saleChannel');
+    const customerName = searchParams.get('customerName');
+    const customerEmail = searchParams.get('customerEmail');
+    const customerPhone = searchParams.get('customerPhone');
     
     // Check if resuming from a specific step (from resume email link)
     const resumeStep = searchParams.get('step');
@@ -62,13 +64,17 @@ const VerkaufenWizard = () => {
       }
     }
     
-    if (manufacturer || model || bodyType || saleChannel) {
-      updateFormData({
-        ...(manufacturer && { manufacturer }),
-        ...(model && { model }),
-        ...(bodyType && { bodyType }),
-        ...(saleChannel && { saleChannel }),
-      });
+    const updates: Partial<typeof formData> = {};
+    if (manufacturer) updates.manufacturer = manufacturer;
+    if (model) updates.model = model;
+    if (bodyType) updates.bodyType = bodyType;
+    if (saleChannel) updates.saleChannel = saleChannel;
+    if (customerName) updates.customerName = customerName;
+    if (customerEmail) updates.customerEmail = customerEmail;
+    if (customerPhone) updates.customerPhone = customerPhone;
+    
+    if (Object.keys(updates).length > 0) {
+      updateFormData(updates);
     }
   }, [searchParams, updateFormData]);
 
@@ -161,9 +167,12 @@ const VerkaufenWizard = () => {
         if (needsAppointment) {
           return <ReviewStep formData={formData} />;
         }
-        return <AuthenticationStep onAuthenticated={handleAuthenticated} />;
+        return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} />;
       case 11:
-        return <AuthenticationStep onAuthenticated={handleAuthenticated} />;
+        if (needsAppointment) {
+          return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} />;
+        }
+        return null;
       default:
         return null;
     }

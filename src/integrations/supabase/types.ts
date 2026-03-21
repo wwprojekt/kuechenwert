@@ -1240,6 +1240,7 @@ export type Database = {
       }
       motorhomes: {
         Row: {
+          accident_free: boolean | null
           account_type: string | null
           air_conditioning_type: string | null
           available_from: string | null
@@ -1257,6 +1258,7 @@ export type Database = {
           has_air_conditioning: boolean
           has_awning: boolean
           has_backup_camera: boolean
+          has_bathroom: boolean
           has_bike_rack: boolean | null
           has_damage: boolean | null
           has_garage: boolean | null
@@ -1303,6 +1305,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          accident_free?: boolean | null
           account_type?: string | null
           air_conditioning_type?: string | null
           available_from?: string | null
@@ -1320,6 +1323,7 @@ export type Database = {
           has_air_conditioning?: boolean
           has_awning?: boolean
           has_backup_camera?: boolean
+          has_bathroom?: boolean
           has_bike_rack?: boolean | null
           has_damage?: boolean | null
           has_garage?: boolean | null
@@ -1366,6 +1370,7 @@ export type Database = {
           year: number
         }
         Update: {
+          accident_free?: boolean | null
           account_type?: string | null
           air_conditioning_type?: string | null
           available_from?: string | null
@@ -1383,6 +1388,7 @@ export type Database = {
           has_air_conditioning?: boolean
           has_awning?: boolean
           has_backup_camera?: boolean
+          has_bathroom?: boolean
           has_bike_rack?: boolean | null
           has_damage?: boolean | null
           has_garage?: boolean | null

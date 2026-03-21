@@ -84,31 +84,45 @@ export default function AdminDealerDetail() {
   const [rejectReason, setRejectReason] = useState("");
 
   // Fetch dealer application with all related data
+  // NOTE: Cannot use Supabase JOIN syntax profile:user_id(...) because
+  // there is no foreign key between dealer_applications.user_id and profiles.id.
+  // Fetch all related data separately and join in code.
   const { data: dealer, isLoading, error } = useQuery({
     queryKey: ["adminDealerDetail", id],
     queryFn: async () => {
+      // 1. Fetch the dealer application
       const { data, error } = await supabase
         .from("dealer_applications")
-        .select(`
-          *,
-          profile:user_id (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            is_suspended,
-            created_at
-          ),
-          legal_documents(id, document_type, file_url, uploaded_at),
-          sepa_mandates(id, status, mandate_reference, created_at)
-        `)
+        .select("*")
         .eq("id", id)
         .single();
 
       if (error) throw error;
 
-      // Fetch dealer's bids if approved
+      // 2. Fetch profile separately
+      let profile = null;
+      if (data.user_id) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email, phone, is_suspended, created_at")
+          .eq("id", data.user_id)
+          .single();
+        profile = profileData;
+      }
+
+      // 3. Fetch legal documents
+      const { data: legalDocs } = await supabase
+        .from("legal_documents")
+        .select("id, document_type, file_url, uploaded_at")
+        .eq("dealer_application_id", data.id);
+
+      // 4. Fetch SEPA mandates
+      const { data: sepaMandates } = await supabase
+        .from("sepa_mandates")
+        .select("id, status, mandate_reference, created_at")
+        .eq("dealer_application_id", data.id);
+
+      // 5. Fetch dealer's bids if approved
       let bids: any[] = [];
       let wonAuctions: any[] = [];
       
@@ -149,7 +163,7 @@ export default function AdminDealerDetail() {
         wonAuctions = wonData || [];
       }
 
-      // Fetch invoices
+      // 6. Fetch invoices
       const { data: invoices } = await supabase
         .from("invoices")
         .select("*")
@@ -159,6 +173,9 @@ export default function AdminDealerDetail() {
 
       return {
         ...data,
+        profile,
+        legal_documents: legalDocs || [],
+        sepa_mandates: sepaMandates || [],
         bids,
         wonAuctions,
         invoices: invoices || [],

@@ -34,8 +34,14 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export interface AuthData {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 interface AuthenticationStepProps {
-  onAuthenticated: () => void;
+  onAuthenticated: (authData?: AuthData) => void;
   prefillEmail?: string;
   prefillName?: string;
   prefillPhone?: string;
@@ -96,7 +102,7 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName,
         description: "Ihr Inserat wird jetzt abgesendet...",
       });
 
-      onAuthenticated();
+      onAuthenticated({ email: validated.email });
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -151,7 +157,11 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName,
         description: "Ihr Inserat wird jetzt abgesendet...",
       });
 
-      onAuthenticated();
+      onAuthenticated({
+        email: validated.email,
+        firstName: validated.firstName,
+        lastName: validated.lastName,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -173,7 +183,7 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName,
   };
 
   const handleContinueAsUser = () => {
-    onAuthenticated();
+    onAuthenticated({ email: user?.email || undefined });
   };
 
   if (isLoading) {

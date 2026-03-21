@@ -15,7 +15,7 @@ import { PhotoUploadStep } from "@/components/wizard/PhotoUploadStep";
 import { DefectsStep } from "@/components/wizard/DefectsStep";
 import { SaleChannelStep } from "@/components/wizard/SaleChannelStep";
 import { AppointmentStep } from "@/components/wizard/AppointmentStep";
-import { AuthenticationStep } from "@/components/wizard/AuthenticationStep";
+import { AuthenticationStep, type AuthData } from "@/components/wizard/AuthenticationStep";
 import { ReviewStep } from "@/components/wizard/ReviewStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
 import { useWizardSession } from "@/hooks/useWizardSession";
@@ -43,7 +43,7 @@ const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
   const { formData, updateFormData, validateStep, submitForm, isSubmitting } = useWizardForm();
-  const { saveProgress, markCompleted, isReady } = useWizardSession();
+  const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
 
   // Kontaktdaten-Gate: Modal anzeigen wenn keine Kontaktdaten vorhanden
@@ -113,15 +113,23 @@ const VerkaufenWizard = () => {
   }, [currentStep, formData, steps.length, saveProgress]);
 
   // Handle authentication completion - Auth is now final step, so auto-submit
-  const handleAuthenticated = useCallback(async () => {
+  const handleAuthenticated = useCallback(async (authData?: AuthData) => {
     const needsAppointment = formData.saleChannel === 'station';
     const authStepNumber = needsAppointment ? 11 : 10;
     if (currentStep === authStepNumber) {
-      await submitForm();
-      // Mark the wizard session as completed
-      await markCompleted();
+      // Persist contact data from auth into wizard_session BEFORE submitting
+      if (authData) {
+        await updateContactFromAuth(authData);
+      }
+      const success = await submitForm();
+      if (success) {
+        // Only mark as completed if submission was successful
+        await markCompleted();
+        // Lead als abgeschlossen markieren
+        markLeadWizardCompleted();
+      }
     }
-  }, [formData.saleChannel, currentStep, submitForm, markCompleted]);
+  }, [formData.saleChannel, currentStep, submitForm, markCompleted, updateContactFromAuth]);
 
   const progress = (currentStep / steps.length) * 100;
 
@@ -147,10 +155,12 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
-    await submitForm();
-    await markCompleted();
-    // Lead als abgeschlossen markieren
-    markLeadWizardCompleted();
+    const success = await submitForm();
+    if (success) {
+      await markCompleted();
+      // Lead als abgeschlossen markieren
+      markLeadWizardCompleted();
+    }
   };
 
   const renderStep = () => {

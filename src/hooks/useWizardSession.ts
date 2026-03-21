@@ -85,6 +85,7 @@ interface UseWizardSessionReturn {
   isReady: boolean;
   saveProgress: (currentStep: number, formData: WizardFormData, totalSteps: number) => Promise<void>;
   markCompleted: () => Promise<void>;
+  updateContactFromAuth: (authData: { email?: string; firstName?: string; lastName?: string; phone?: string }) => Promise<void>;
   loadSession: () => Promise<{ formData: Record<string, unknown>; currentStep: number } | null>;
   isLoading: boolean;
 }
@@ -282,6 +283,57 @@ export const useWizardSession = (): UseWizardSessionReturn => {
   );
 
   /**
+   * Update wizard session with contact data from authenticated user.
+   * Called after login/register in AuthenticationStep to ensure
+   * contact data is persisted even when URL params were missing.
+   */
+  const updateContactFromAuth = useCallback(
+    async (authData: { email?: string; firstName?: string; lastName?: string; phone?: string }) => {
+      if (!sessionId) return;
+
+      try {
+        const updatePayload: Record<string, unknown> = {};
+
+        // Build full name from first + last
+        const fullName = [authData.firstName, authData.lastName].filter(Boolean).join(' ');
+        if (fullName) {
+          updatePayload.customer_name = fullName;
+        }
+        if (authData.email) {
+          updatePayload.customer_email = authData.email;
+        }
+        if (authData.phone) {
+          updatePayload.customer_phone = authData.phone;
+        }
+
+        // Also link user_id if now logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          updatePayload.user_id = user.id;
+          // Fallback: use auth email if not provided
+          if (!updatePayload.customer_email && user.email) {
+            updatePayload.customer_email = user.email;
+          }
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          const { error } = await supabase
+            .from("wizard_sessions")
+            .update(updatePayload)
+            .eq("id", sessionId);
+
+          if (error) {
+            logger.error("Failed to update wizard session contact from auth:", error);
+          }
+        }
+      } catch (error) {
+        logger.error("Failed to update wizard session contact from auth:", error);
+      }
+    },
+    [sessionId]
+  );
+
+  /**
    * Mark session as completed (called after successful submission)
    */
   const markCompleted = useCallback(async () => {
@@ -336,6 +388,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     isReady,
     saveProgress,
     markCompleted,
+    updateContactFromAuth,
     loadSession,
     isLoading,
   };

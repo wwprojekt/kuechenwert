@@ -365,7 +365,7 @@ export const useWizardForm = () => {
     }
   };
 
-  const submitForm = async () => {
+  const submitForm = async (): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -377,7 +377,7 @@ export const useWizardForm = () => {
           variant: "destructive",
         });
         navigate("/login?redirect=/verkaufen/wizard");
-        return;
+        return false;
       }
 
       // Upload photos first
@@ -540,6 +540,7 @@ export const useWizardForm = () => {
       });
 
       navigate("/dashboard/listings");
+      return true;
     } catch (error: unknown) {
       logger.error("Submission error:", error);
       // Zentrales Error-Handling mit deutscher Übersetzung und Logging
@@ -553,6 +554,7 @@ export const useWizardForm = () => {
         description: germanMessage,
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }

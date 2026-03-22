@@ -27,7 +27,7 @@ const Hero = ({ onStartWizard }: HeroProps) => {
       <div 
         className="absolute inset-0 bg-cover bg-center lg:bg-right"
         style={{
-          backgroundImage: `url('/hero-homepage.png')`,
+          backgroundImage: `url('/hero-homepage.webp'), url('/hero-homepage.png')`,
         }}
       />
       
@@ -37,10 +37,10 @@ const Hero = ({ onStartWizard }: HeroProps) => {
         style={{
           background: `linear-gradient(to right, 
             rgba(255,255,255,1) 0%, 
-            rgba(255,255,255,0.98) 35%, 
-            rgba(255,255,255,0.85) 50%, 
-            rgba(255,255,255,0.4) 65%, 
-            rgba(255,255,255,0) 80%
+            rgba(255,255,255,0.97) 30%, 
+            rgba(255,255,255,0.80) 45%, 
+            rgba(255,255,255,0.3) 60%, 
+            rgba(255,255,255,0) 75%
           )`,
         }}
       />

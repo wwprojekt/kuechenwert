@@ -19,6 +19,7 @@ import {
   MessageSquare,
   AlertTriangle,
   UserPlus,
+  Mail,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +44,7 @@ const menuItems = [
   { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
   { title: "Wohnmobile", url: "/admin/motorhomes", icon: Car },
   { title: "Fahrzeugfragen", url: "/admin/questions", icon: MessageCircle },
+  { title: "E-Mail-Center", url: "/admin/email", icon: Mail },
   { title: "Support-Nachrichten", url: "/admin/messages", icon: MessageSquare },
   { title: "Benutzer", url: "/admin/users", icon: Users },
   { title: "Händler", url: "/admin/dealers", icon: Building2 },

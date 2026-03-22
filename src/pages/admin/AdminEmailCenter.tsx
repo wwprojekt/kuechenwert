@@ -803,6 +803,21 @@ function ComposeTab() {
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
+  const [signature, setSignature] = useState(() => {
+    return localStorage.getItem('admin_email_signature') || '';
+  });
+  const [appendSignature, setAppendSignature] = useState(() => {
+    return localStorage.getItem('admin_email_append_signature') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('admin_email_signature', signature);
+  }, [signature]);
+
+  useEffect(() => {
+    localStorage.setItem('admin_email_append_signature', String(appendSignature));
+  }, [appendSignature]);
 
   useEffect(() => {
     supabase.from('email_templates').select('*').eq('is_active', true).order('name')
@@ -844,7 +859,7 @@ function ComposeTab() {
         body: {
           to,
           subject,
-          body_html: bodyHtml,
+          body_html: appendSignature && signature ? `${bodyHtml}<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;color:#64748b;font-size:13px;">${signature.replace(/\n/g, '<br/>')}</div>` : bodyHtml,
           recipient_name: recipientName || undefined,
           cc: cc || undefined,
           bcc: bcc || undefined,
@@ -976,6 +991,24 @@ function ComposeTab() {
             <RichTextEditor content={bodyHtml} onChange={setBodyHtml} />
           </div>
 
+          {/* Signature */}
+          <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg border">
+            <Switch
+              checked={appendSignature}
+              onCheckedChange={setAppendSignature}
+              id="signature-toggle"
+            />
+            <Label htmlFor="signature-toggle" className="cursor-pointer flex-1">
+              <span className="font-medium">E-Mail-Signatur anh\u00e4ngen</span>
+              <p className="text-xs text-muted-foreground">
+                {signature ? 'Signatur wird automatisch an jede E-Mail angeh\u00e4ngt' : 'Noch keine Signatur konfiguriert'}
+              </p>
+            </Label>
+            <Button variant="outline" size="sm" onClick={() => setShowSignature(true)}>
+              {signature ? 'Bearbeiten' : 'Einrichten'}
+            </Button>
+          </div>
+
           {/* Scheduled send */}
           {!showSchedule ? (
             <div className="flex items-center gap-4">
@@ -1026,6 +1059,39 @@ function ComposeTab() {
         </CardContent>
       </Card>
 
+      {/* Signature dialog */}
+      <Dialog open={showSignature} onOpenChange={setShowSignature}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>E-Mail-Signatur konfigurieren</DialogTitle>
+            <DialogDescription>
+              Diese Signatur wird automatisch an alle E-Mails angehängt, die Sie über das E-Mail-Center senden.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              placeholder={"Max Mustermann\nGeschäftsführer\nCaravanWert GmbH\nTel: +49 123 456789\ninfo@caravanwert.de"}
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              rows={6}
+              className="font-mono text-sm"
+            />
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <p className="text-xs font-medium mb-1">Vorschau:</p>
+              <div style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px'}}>
+                {signature ? signature.split('\n').map((line: string, i: number) => (
+                  <span key={i}>{line}<br/></span>
+                )) : <span className="text-muted-foreground italic">Keine Signatur</span>}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSignature(''); setAppendSignature(false); setShowSignature(false); }}>Entfernen</Button>
+            <Button onClick={() => { setAppendSignature(true); setShowSignature(false); toast.success('Signatur gespeichert'); }}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Preview dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -1047,6 +1113,13 @@ function ComposeTab() {
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
               <div dangerouslySetInnerHTML={{ __html: bodyHtml }} className="prose prose-sm max-w-none" />
+              {appendSignature && signature && (
+                <div style={{marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px'}}>
+                  {signature.split('\n').map((line: string, i: number) => (
+                    <span key={i}>{line}<br/></span>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
               <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
@@ -1074,6 +1147,7 @@ function BroadcastTab() {
   const [loadingCount, setLoadingCount] = useState(false);
   const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const fetchRecipientCount = async (selectedGroup: string) => {
     if (!selectedGroup) { setRecipientCount(null); return; }
@@ -1123,6 +1197,34 @@ function BroadcastTab() {
       setIsTesting(false);
     }
   };
+
+  const checkDuplicate = async () => {
+    if (!group || !subject) return;
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from('admin_emails')
+        .select('id, created_at')
+        .eq('email_type', 'broadcast')
+        .eq('broadcast_group', group)
+        .eq('subject', subject)
+        .gte('created_at', twoHoursAgo)
+        .limit(1);
+      if (data && data.length > 0) {
+        const sentAt = format(new Date(data[0].created_at), "dd.MM.yy HH:mm", { locale: de });
+        setDuplicateWarning(`Eine Rundmail mit dem gleichen Betreff wurde bereits am ${sentAt} an diese Gruppe gesendet.`);
+      } else {
+        setDuplicateWarning(null);
+      }
+    } catch (e) {
+      console.error('Duplicate check error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (group && subject) checkDuplicate();
+    else setDuplicateWarning(null);
+  }, [group, subject]);
 
   const handleBroadcast = async () => {
     setShowConfirm(false);
@@ -1214,6 +1316,17 @@ function BroadcastTab() {
               </p>
             </Label>
           </div>
+
+          {/* Duplicate warning */}
+          {duplicateWarning && (
+            <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Möglicher Doppelversand</p>
+                <p className="text-xs text-yellow-700">{duplicateWarning}</p>
+              </div>
+            </div>
+          )}
 
           {/* Test send */}
           <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">

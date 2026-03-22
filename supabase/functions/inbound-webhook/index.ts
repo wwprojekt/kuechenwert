@@ -3,13 +3,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") || '';
 
 /**
- * Resend Webhook Handler
+ * Resend Webhook Handler (v2)
  * 
- * Handles both:
- * 1. Inbound emails (email.received) - stores in admin_emails
- * 2. Delivery status events (email.delivered, email.opened, email.bounced, etc.) - updates admin_emails status
+ * Features:
+ * - Webhook-Signatur-Verifizierung (svix)
+ * - Inbound E-Mails speichern
+ * - Delivery-Status-Events verarbeiten
+ * - Bounce-Management (E-Mail-Adressen markieren)
+ * - Auto-Responder für eingehende E-Mails auslösen
+ * - Kontaktformular-Nachrichten integrieren
  */
 
 interface ResendWebhookPayload {
@@ -17,6 +22,76 @@ interface ResendWebhookPayload {
   type: string;
   created_at?: string;
 }
+
+// ── Webhook-Signatur-Verifizierung ──────────────────────────────────
+
+async function verifyWebhookSignature(req: Request, body: string): Promise<boolean> {
+  if (!RESEND_WEBHOOK_SECRET) {
+    console.warn("RESEND_WEBHOOK_SECRET not set – skipping signature verification");
+    return true; // Allow if secret not configured yet
+  }
+
+  const svixId = req.headers.get('svix-id');
+  const svixTimestamp = req.headers.get('svix-timestamp');
+  const svixSignature = req.headers.get('svix-signature');
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    console.warn("Missing svix headers");
+    return false;
+  }
+
+  // Check timestamp is within 5 minutes
+  const timestamp = parseInt(svixTimestamp, 10);
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - timestamp) > 300) {
+    console.warn("Webhook timestamp too old");
+    return false;
+  }
+
+  // Compute expected signature
+  const signedContent = `${svixId}.${svixTimestamp}.${body}`;
+  
+  // The secret starts with "whsec_" prefix which needs to be removed
+  const secretBytes = Uint8Array.from(
+    atob(RESEND_WEBHOOK_SECRET.replace('whsec_', '')),
+    c => c.charCodeAt(0)
+  );
+
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      secretBytes,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const signatureBytes = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(signedContent)
+    );
+
+    const computedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+
+    // Svix sends multiple signatures separated by space, each prefixed with "v1,"
+    const signatures = svixSignature.split(' ');
+    for (const sig of signatures) {
+      const sigValue = sig.replace('v1,', '');
+      if (sigValue === computedSignature) {
+        return true;
+      }
+    }
+
+    console.warn("Webhook signature mismatch");
+    return false;
+  } catch (err) {
+    console.error("Signature verification error:", err);
+    return false;
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function extractEmailAddress(from: string): string {
   const match = from.match(/<([^>]+)>/);
@@ -28,7 +103,6 @@ function extractName(from: string): string | null {
   return match ? match[1].trim() : null;
 }
 
-// Map Resend event types to our status values
 const STATUS_MAP: Record<string, string> = {
   'email.sent': 'sent',
   'email.delivered': 'delivered',
@@ -39,21 +113,34 @@ const STATUS_MAP: Record<string, string> = {
   'email.clicked': 'clicked',
 };
 
+// ── Main Handler ────────────────────────────────────────────────────
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
+      status: 405, headers: { "Content-Type": "application/json" },
     });
   }
 
   try {
-    const payload: ResendWebhookPayload = await req.json();
+    // Read body as text for signature verification
+    const bodyText = await req.text();
+
+    // Verify webhook signature
+    const isValid = await verifyWebhookSignature(req, bodyText);
+    if (!isValid) {
+      console.error("Invalid webhook signature – rejecting request");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401, headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const payload: ResendWebhookPayload = JSON.parse(bodyText);
     console.log("Webhook received:", payload.type, JSON.stringify(payload.data).substring(0, 300));
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ── Handle delivery status events ──────────────────────────────────
+    // ── Handle delivery status events ──────────────────────────────
     if (payload.type && payload.type !== 'email.received') {
       const newStatus = STATUS_MAP[payload.type];
       
@@ -75,30 +162,59 @@ const handler = async (req: Request): Promise<Response> => {
           console.error(`Error updating status for ${resendId}:`, error);
         } else if (updated) {
           console.log(`Updated email ${updated.id} status to ${newStatus}`);
-        } else {
-          console.log(`No email found with resend_id ${resendId} - might be a system email`);
         }
 
-        // Track bounces for future reference
+        // ── Bounce Management ──────────────────────────────────────
         if (newStatus === 'bounced' && payload.data?.to) {
-          const bouncedEmail = Array.isArray(payload.data.to) ? payload.data.to[0] : payload.data.to;
-          console.log(`BOUNCE detected for: ${bouncedEmail}`);
-          // Could add to a bounced_emails table in the future
+          const bouncedEmails = Array.isArray(payload.data.to) ? payload.data.to : [payload.data.to];
+          
+          for (const bouncedEmail of bouncedEmails) {
+            console.log(`BOUNCE detected for: ${bouncedEmail}`);
+            
+            // Mark profile as bounced
+            const { error: bounceError } = await supabase
+              .from('profiles')
+              .update({ 
+                email_bounced: true,
+                email_bounced_at: new Date().toISOString(),
+              })
+              .eq('email', bouncedEmail);
+
+            if (bounceError) {
+              console.error(`Error marking bounce for ${bouncedEmail}:`, bounceError);
+            } else {
+              console.log(`Marked ${bouncedEmail} as bounced in profiles`);
+            }
+          }
+        }
+
+        // ── Un-bounce on successful delivery ───────────────────────
+        if (newStatus === 'delivered' && payload.data?.to) {
+          const deliveredEmails = Array.isArray(payload.data.to) ? payload.data.to : [payload.data.to];
+          
+          for (const deliveredEmail of deliveredEmails) {
+            await supabase
+              .from('profiles')
+              .update({ 
+                email_bounced: false,
+                email_bounced_at: null,
+              })
+              .eq('email', deliveredEmail)
+              .eq('email_bounced', true);
+          }
         }
       }
 
       return new Response(JSON.stringify({ received: true, type: payload.type }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+        status: 200, headers: { "Content-Type": "application/json" },
       });
     }
 
-    // ── Handle inbound emails ──────────────────────────────────────────
+    // ── Handle inbound emails ──────────────────────────────────────
     const emailData = payload.data;
     if (!emailData || !emailData.from) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
+        status: 400, headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -112,7 +228,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('email', senderEmail)
       .maybeSingle();
 
-    // Try to find existing conversation thread with this sender
+    // Find existing conversation thread
     let threadId: string | null = null;
     let inReplyTo: string | null = null;
 
@@ -167,7 +283,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    // If no thread_id was set, use the new email's own id
+    // Set thread_id to own id if new thread
     if (!threadId && emailRecord) {
       await supabase
         .from('admin_emails')
@@ -177,19 +293,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Inbound email stored:", emailRecord?.id);
 
+    // ── Trigger Auto-Responder ──────────────────────────────────────
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-auto-response`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          sender_email: senderEmail,
+          sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null),
+        }),
+      });
+      console.log("Auto-response triggered for:", senderEmail);
+    } catch (autoErr) {
+      console.error("Auto-response trigger failed:", autoErr);
+      // Don't fail the webhook because of auto-response
+    }
+
     return new Response(JSON.stringify({
       received: true,
       email_id: emailRecord?.id,
     }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+      status: 200, headers: { "Content-Type": "application/json" },
     });
 
   } catch (error: any) {
     console.error("Error processing webhook:", error);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+      status: 500, headers: { "Content-Type": "application/json" },
     });
   }
 };

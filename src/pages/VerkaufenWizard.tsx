@@ -22,6 +22,7 @@ import { useWizardSession } from "@/hooks/useWizardSession";
 import { useMemo, useCallback, useRef } from "react";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { ContactDataModal } from "@/components/ContactDataModal";
+import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
 
 const baseSteps = [
   { id: 1, name: "Fahrzeugdetails", description: "Grundinformationen" },
@@ -94,6 +95,12 @@ const VerkaufenWizard = () => {
     return [...baseSteps, { ...reviewStep, id: 9 }, { ...authStep, id: 10 }];
   }, [formData.saleChannel]);
 
+  // Google Ads: Wizard-Start tracken
+  useEffect(() => {
+    const source = searchParams.get('source') || 'direct';
+    trackWizardStarted(source);
+  }, []); // Nur einmal beim Mount
+
   // Auto-save progress whenever step or formData changes (only when session is ready)
   useEffect(() => {
     if (isReady) {
@@ -106,6 +113,11 @@ const VerkaufenWizard = () => {
     const handleBeforeUnload = () => {
       // Use synchronous approach for beforeunload
       saveProgress(currentStep, formData, steps.length);
+      // Google Ads: Abbruch tracken wenn Wizard nicht abgeschlossen
+      if (currentStep < steps.length) {
+        const currentStepInfo = steps[currentStep - 1];
+        trackWizardAbandoned(currentStep, currentStepInfo?.name || `Schritt ${currentStep}`);
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -127,6 +139,9 @@ const VerkaufenWizard = () => {
         await markCompleted();
         // Lead als abgeschlossen markieren
         markLeadWizardCompleted();
+        // Google Ads: Wizard abgeschlossen tracken
+        const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
+        trackWizardCompleted(vehicleInfo);
       }
     }
   }, [formData.saleChannel, currentStep, submitForm, markCompleted, updateContactFromAuth]);
@@ -141,7 +156,10 @@ const VerkaufenWizard = () => {
         step: currentStep + 1,
         formData: formData as unknown as Record<string, unknown>,
       });
+      // Google Ads: Schritt-Wechsel tracken
       const nextStep = currentStep + 1;
+      const nextStepInfo = steps[nextStep - 1];
+      trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
       setCurrentStep(nextStep);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }

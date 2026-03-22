@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { emailSchema, passwordSchema } from "@/lib/validation";
+import { trackUserRegistered, trackUserLoggedIn } from "@/lib/gadsConversionService";
 
 const loginSchema = z.object({
   email: emailSchema,
@@ -102,6 +103,9 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName,
         description: "Ihr Inserat wird jetzt abgesendet...",
       });
 
+      // Google Ads: Login im Wizard auch als Conversion tracken
+      trackUserLoggedIn('wizard_login');
+
       onAuthenticated({ email: validated.email });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -156,6 +160,9 @@ export const AuthenticationStep = ({ onAuthenticated, prefillEmail, prefillName,
         title: "Registrierung erfolgreich",
         description: "Ihr Inserat wird jetzt abgesendet...",
       });
+
+      // Google Ads: Registrierung als primäre Conversion tracken
+      trackUserRegistered('wizard_registration');
 
       onAuthenticated({
         email: validated.email,

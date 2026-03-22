@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Mail, Phone, ArrowRight, Shield } from "lucide-react";
 import { captureOrUpdateLead } from "@/lib/leadTrackingService";
+import { trackLeadContactData } from "@/lib/gadsConversionService";
 
 interface ContactDataModalProps {
   open: boolean;
@@ -86,6 +87,9 @@ export const ContactDataModal = ({
       // Fehler beim Speichern soll den Nutzer nicht blockieren
       console.error("Lead-Speicherung fehlgeschlagen:", err);
     }
+
+    // Google Ads Conversion tracken
+    trackLeadContactData(`${source}_contact_modal`);
 
     // URL-Parameter für den Wizard zusammenbauen
     const params = new URLSearchParams();

@@ -1323,6 +1323,14 @@ const AuctionDetail = () => {
                   </div>
                 </div>
 
+                {/* Commission Display - always visible for dealers */}
+                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && (
+                  <CommissionDisplay 
+                    bidAmount={currentBid} 
+                    variant="detailed"
+                  />
+                )}
+
                 {/* Reserve price indicator - only visible to seller and admin */}
                 {canSeeReservePrice && auction.reserve_price && (
                   <div>

@@ -36,11 +36,11 @@ const Hero = ({ onStartWizard }: HeroProps) => {
         className="absolute inset-0"
         style={{
           background: `linear-gradient(to right, 
-            rgba(255,255,255,1) 0%, 
-            rgba(255,255,255,0.97) 30%, 
-            rgba(255,255,255,0.80) 45%, 
-            rgba(255,255,255,0.3) 60%, 
-            rgba(255,255,255,0) 75%
+            rgba(255,255,255,0.85) 0%, 
+            rgba(255,255,255,0.75) 25%, 
+            rgba(255,255,255,0.50) 40%, 
+            rgba(255,255,255,0.2) 55%, 
+            rgba(255,255,255,0) 70%
           )`,
         }}
       />

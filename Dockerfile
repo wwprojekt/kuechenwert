@@ -16,12 +16,14 @@ RUN apk add --no-cache \
     g++ \
     libc6-compat
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files
-COPY package*.json ./
-COPY bun.lockb* ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci --no-audit --no-fund
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -46,7 +48,7 @@ ENV VITE_APP_VERSION=$npm_package_version
 ENV VITE_BUILD_TIME=$BUILD_TIME
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # ============================================================================
 # Development Stage (for local development with Docker)
@@ -58,11 +60,14 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci
+RUN pnpm install
 
 # Copy source code
 COPY . .
@@ -71,7 +76,7 @@ COPY . .
 EXPOSE 8080
 
 # Start development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # ============================================================================
 # Production Stage (DEFAULT - used when no target specified)

@@ -37,7 +37,7 @@ function safeGtag(...args: unknown[]): void {
 export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSION (für Kampagnen-Optimierung) ***
   // Registrierung nach Schritt 10 im Wizard = Hauptziel der Kampagne
-  USER_REGISTERED: '',         // Nutzer hat sich registriert (Wizard Schritt 10)
+  USER_REGISTERED: 'PrcJCNunko0cEI2-o41C',  // Nutzer hat sich registriert (Wizard Schritt 10)
   
   // Sekundäre Conversions (für Beobachtung, nicht für Optimierung)
   LEAD_CONTACT_DATA: '',       // Lead: Kontaktdaten erfasst (Modal/Formular)

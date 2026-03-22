@@ -122,32 +122,6 @@ export default function AdminDealers() {
     refetchOnWindowFocus: true,
   });
 
-  // Fetch auth status (email_confirmed_at) for all dealers
-  useEffect(() => {
-    const fetchAuthStatus = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        const allUserIds = [
-          ...(applications?.map(a => a.user_id) || []),
-          ...(activeDealers?.map(d => d.user_id) || []),
-        ].filter((id, i, arr) => arr.indexOf(id) === i);
-        if (allUserIds.length === 0) return;
-        const res = await supabase.functions.invoke('get-dealer-auth-status', {
-          body: { user_ids: allUserIds },
-        });
-        if (res.data?.data) {
-          const map: Record<string, any> = {};
-          res.data.data.forEach((u: any) => { map[u.id] = u; });
-          setAuthStatusMap(map);
-        }
-      } catch (err) {
-        logger.error('Failed to fetch auth status:', err);
-      }
-    };
-    if (applications || activeDealers) fetchAuthStatus();
-  }, [applications, activeDealers]);
-
   // Fetch active dealers (approved applications with profiles)
   // NOTE: Cannot use Supabase JOIN syntax profiles:user_id(...) because
   // there is no foreign key between dealer_applications.user_id and profiles.id.
@@ -183,6 +157,32 @@ export default function AdminDealers() {
     retry: 1,
     staleTime: 0,
   });
+
+  // Fetch auth status (email_confirmed_at) for all dealers
+  useEffect(() => {
+    const fetchAuthStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const allUserIds = [
+          ...(applications?.map(a => a.user_id) || []),
+          ...(activeDealers?.map(d => d.user_id) || []),
+        ].filter((id, i, arr) => arr.indexOf(id) === i);
+        if (allUserIds.length === 0) return;
+        const res = await supabase.functions.invoke('get-dealer-auth-status', {
+          body: { user_ids: allUserIds },
+        });
+        if (res.data?.data) {
+          const map: Record<string, any> = {};
+          res.data.data.forEach((u: any) => { map[u.id] = u; });
+          setAuthStatusMap(map);
+        }
+      } catch (err) {
+        logger.error('Failed to fetch auth status:', err);
+      }
+    };
+    if (applications || activeDealers) fetchAuthStatus();
+  }, [applications, activeDealers]);
 
   // Filter active dealers by search
   const filteredDealers = useMemo(() => {

@@ -1323,6 +1323,25 @@ const AuctionDetail = () => {
                   </div>
                 </div>
 
+                {/* Provision - visible for dealers and admins */}
+                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && settings?.commission_rate_percent > 0 && (
+                  <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg">
+                    <p className="text-sm font-semibold text-orange-900 mb-2">Provision</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700">Gebotssumme:</span>
+                      <span className="font-medium">€{currentBid.toLocaleString('de-DE')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700">Provision:</span>
+                      <span className="font-medium">€{(currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold border-t border-orange-200 pt-1 mt-1">
+                      <span className="text-orange-900">Gesamtkosten:</span>
+                      <span className="text-orange-900">€{(currentBid + currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Reserve price indicator - only visible to seller and admin */}
                 {canSeeReservePrice && auction.reserve_price && (
                   <div>

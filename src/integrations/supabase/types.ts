@@ -1078,6 +1078,53 @@ export type Database = {
           },
         ]
       }
+      dealer_levels: {
+        Row: {
+          id: string
+          dealer_id: string
+          level: string
+          total_bids: number
+          won_auctions: number
+          total_volume: number
+          points: number
+          level_updated_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          dealer_id: string
+          level?: string
+          total_bids?: number
+          won_auctions?: number
+          total_volume?: number
+          points?: number
+          level_updated_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          dealer_id?: string
+          level?: string
+          total_bids?: number
+          won_auctions?: number
+          total_volume?: number
+          points?: number
+          level_updated_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_levels_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_rating_summary: {
         Row: {
           average_rating: number | null
@@ -3021,6 +3068,7 @@ export type Database = {
           id: string
           last_activity_at: string | null
           max_step_reached: number
+          followup_email_sent_at: string | null
           resume_email_sent_at: string | null
           status: string
           step_name: string | null
@@ -3043,6 +3091,7 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           max_step_reached?: number
+          followup_email_sent_at?: string | null
           resume_email_sent_at?: string | null
           status?: string
           step_name?: string | null
@@ -3065,6 +3114,7 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           max_step_reached?: number
+          followup_email_sent_at?: string | null
           resume_email_sent_at?: string | null
           status?: string
           step_name?: string | null

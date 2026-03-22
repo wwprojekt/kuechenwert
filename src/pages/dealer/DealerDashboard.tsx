@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,11 @@ import {
   CheckCircle,
   Plus,
   Search,
-  Filter
+  Filter,
+  Award,
+  Star,
+  Zap,
+  Crown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +42,25 @@ const DealerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "mybids" | "leading" | "outbid" | "nobid">("all");
 
+  // Fetch dealer level
+  const { data: dealerLevel } = useQuery({
+    queryKey: ["dealerLevel", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("dealer_levels")
+        .select("*")
+        .eq("dealer_id", user.id)
+        .maybeSingle();
+      if (error) {
+        console.error("Error fetching dealer level:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!user,
+  });
+
   // Fetch dealer statistics
   const { data: stats } = useQuery({
     queryKey: ["dealerStats", user?.id],
@@ -47,7 +70,7 @@ const DealerDashboard = () => {
       const [bidsRes, soldMotorhomesRes, commissionsRes] = await Promise.all([
         supabase
           .from("bids")
-          .select("*, auctions(status, current_bid, end_time, motorhome:motorhomes(manufacturer, model, listing_number))")
+          .select("*, auctions(status, current_bid, end_time, motorhome:motorhomes(manufacturer, model, listing_number, body_type, year))")
           .eq("bidder_id", user.id),
         supabase
           .from("motorhomes")
@@ -74,6 +97,7 @@ const DealerDashboard = () => {
         totalSpent,
         totalCommissions,
         recentBids: bidsRes.data?.slice(0, 5) || [],
+        allBids: bidsRes.data || [],
         inventory: wonMothorhomes,
         leadingBids: activeBids.filter(bid => bid.amount === bid.auctions?.current_bid).length,
       };
@@ -96,6 +120,7 @@ const DealerDashboard = () => {
             manufacturer,
             model,
             year,
+            body_type,
             listing_number,
             photos:motorhome_photos(url, display_order)
           )
@@ -131,6 +156,61 @@ const DealerDashboard = () => {
     enabled: !!user,
   });
 
+  // Recommendation logic: analyze past bids to find preferred manufacturers and price ranges
+  const dealerPreferences = useMemo(() => {
+    if (!stats?.allBids || stats.allBids.length === 0) return null;
+
+    const manufacturerCount: Record<string, number> = {};
+    const bodyTypeCount: Record<string, number> = {};
+    const bidAmounts: number[] = [];
+
+    for (const bid of stats.allBids) {
+      const motorhome = (bid as any).auctions?.motorhome;
+      if (motorhome?.manufacturer) {
+        manufacturerCount[motorhome.manufacturer] = (manufacturerCount[motorhome.manufacturer] || 0) + 1;
+      }
+      if (motorhome?.body_type) {
+        bodyTypeCount[motorhome.body_type] = (bodyTypeCount[motorhome.body_type] || 0) + 1;
+      }
+      bidAmounts.push(bid.amount);
+    }
+
+    // Top manufacturers (those with at least 1 bid)
+    const topManufacturers = Object.entries(manufacturerCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+
+    // Top body types
+    const topBodyTypes = Object.entries(bodyTypeCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name]) => name);
+
+    // Price range preference (average bid ± 50%)
+    const avgBid = bidAmounts.reduce((a, b) => a + b, 0) / bidAmounts.length;
+    const minPrice = avgBid * 0.5;
+    const maxPrice = avgBid * 1.5;
+
+    return { topManufacturers, topBodyTypes, minPrice, maxPrice };
+  }, [stats?.allBids]);
+
+  // Check if an auction matches dealer preferences
+  const isRecommended = (auction: any): boolean => {
+    if (!dealerPreferences) return false;
+    const motorhome = auction.motorhome;
+    if (!motorhome) return false;
+
+    const matchesManufacturer = dealerPreferences.topManufacturers.includes(motorhome.manufacturer);
+    const matchesBodyType = motorhome.body_type && dealerPreferences.topBodyTypes.includes(motorhome.body_type);
+    const currentBid = auction.current_bid || auction.starting_bid || 0;
+    const matchesPrice = currentBid >= dealerPreferences.minPrice && currentBid <= dealerPreferences.maxPrice;
+
+    // Recommended if at least 2 of 3 criteria match, or manufacturer matches
+    const matchCount = [matchesManufacturer, matchesBodyType, matchesPrice].filter(Boolean).length;
+    return matchCount >= 2 || matchesManufacturer;
+  };
+
   // Filter auctions by search query and status filter
   const filteredAuctions = useMemo(() => {
     if (!recentAuctions) return [];
@@ -160,6 +240,16 @@ const DealerDashboard = () => {
       return true;
     });
   }, [recentAuctions, searchQuery, filterStatus]);
+
+  // Sort: recommended auctions first, then by end_time
+  const sortedAuctions = useMemo(() => {
+    if (!filteredAuctions || !dealerPreferences) return filteredAuctions;
+    return [...filteredAuctions].sort((a, b) => {
+      const aRec = isRecommended(a) ? 0 : 1;
+      const bRec = isRecommended(b) ? 0 : 1;
+      return aRec - bRec;
+    });
+  }, [filteredAuctions, dealerPreferences]);
 
   // Enhanced stat cards with gradients and animations
   const statCards = [
@@ -249,6 +339,67 @@ const DealerDashboard = () => {
         </div>
       </div>
 
+      {/* Dealer Level Status Card */}
+      {dealerLevel && (
+        <Card className={`border-2 overflow-hidden ${
+          dealerLevel.level === 'platin' ? 'border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50' :
+          dealerLevel.level === 'gold' ? 'border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50' :
+          dealerLevel.level === 'silber' ? 'border-slate-300 bg-gradient-to-r from-slate-50 to-gray-50' :
+          'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50'
+        }`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-lg ${
+                  dealerLevel.level === 'platin' ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
+                  dealerLevel.level === 'gold' ? 'bg-gradient-to-br from-amber-400 to-yellow-500' :
+                  dealerLevel.level === 'silber' ? 'bg-gradient-to-br from-slate-400 to-gray-500' :
+                  'bg-gradient-to-br from-orange-400 to-amber-500'
+                }`}>
+                  {dealerLevel.level === 'platin' ? <Crown className="h-7 w-7 text-white" /> :
+                   dealerLevel.level === 'gold' ? <Star className="h-7 w-7 text-white" /> :
+                   dealerLevel.level === 'silber' ? <Award className="h-7 w-7 text-white" /> :
+                   <Zap className="h-7 w-7 text-white" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg capitalize">{dealerLevel.level}-Händler</h3>
+                    <Badge variant="outline" className="text-xs">{dealerLevel.points} Punkte</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {dealerLevel.total_bids} Gebote &middot; {dealerLevel.won_auctions} gewonnen &middot; €{Number(dealerLevel.total_volume).toLocaleString('de-DE')} Volumen
+                  </p>
+                </div>
+              </div>
+              {/* Progress to next level */}
+              {dealerLevel.level !== 'platin' && (
+                <div className="text-right hidden md:block">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Nächstes Level: {dealerLevel.level === 'bronze' ? 'Silber (30 Pkt.)' : dealerLevel.level === 'silber' ? 'Gold (100 Pkt.)' : 'Platin (200 Pkt.)'}
+                  </p>
+                  <div className="w-40 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        dealerLevel.level === 'gold' ? 'bg-gradient-to-r from-amber-400 to-yellow-500' :
+                        dealerLevel.level === 'silber' ? 'bg-gradient-to-r from-slate-400 to-gray-500' :
+                        'bg-gradient-to-r from-orange-400 to-amber-500'
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (
+                          dealerLevel.level === 'bronze' ? (dealerLevel.points / 30) * 100 :
+                          dealerLevel.level === 'silber' ? ((dealerLevel.points - 30) / 70) * 100 :
+                          ((dealerLevel.points - 100) / 100) * 100
+                        ))}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search & Filter Bar */}
       {recentAuctions && recentAuctions.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-3">
@@ -279,9 +430,10 @@ const DealerDashboard = () => {
 
       {/* Active Auctions - Primary Focus Section */}
       <div>
-        {filteredAuctions && filteredAuctions.length > 0 ? (
+        {sortedAuctions && sortedAuctions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredAuctions.map((auction: any) => {
+              {sortedAuctions.map((auction: any) => {
+                const recommended = isRecommended(auction);
                 // Get user's highest bid for this auction (bids are sorted by amount desc)
                 const userBid = auction.bids?.[0];
                 const hasBid = !!userBid;
@@ -312,6 +464,16 @@ const DealerDashboard = () => {
                           </div>
                         )}
                         
+                        {/* Recommended Badge */}
+                        {recommended && (
+                          <div className="absolute top-2 left-2 z-10">
+                            <Badge className="bg-primary text-white shadow-lg text-xs">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Empfohlen
+                            </Badge>
+                          </div>
+                        )}
+
                         {/* Status Badge */}
                         <div className="absolute top-2 right-2">
                           {isExpired ? (

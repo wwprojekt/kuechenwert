@@ -4,11 +4,8 @@
  * Zentraler Service für alle Google Ads Conversion-Events.
  * Trackt Wizard-Schritte, Lead-Erfassungen, Registrierungen und Auktionen.
  * 
- * DEAKTIVIERT: Altes Google Ads Konto (AW-17744584461) wurde entfernt.
- * Neues separates CaravanWert-Konto wird erstellt.
- * Sobald das neue Konto bereit ist, hier die neue AW-ID eintragen.
- * 
- * Google Tag ID: NEUES_KONTO_HIER_EINTRAGEN
+ * Google Ads Konto: Caravanwert (522-100-4970)
+ * Google Tag ID: AW-18033517246
  */
 
 // TypeScript-Deklaration für gtag
@@ -19,19 +16,18 @@ declare global {
   }
 }
 
+// Google Ads Tag ID für das CaravanWert-Konto
+const GOOGLE_ADS_ID = 'AW-18033517246';
+
 // Hilfsfunktion: gtag sicher aufrufen
-// DEAKTIVIERT bis neues Google Ads Konto eingerichtet ist
-function safeGtag(..._args: unknown[]): void {
-  // No-Op: Google Ads Tracking ist deaktiviert
-  // Sobald das neue Konto erstellt ist, diese Funktion wieder aktivieren:
-  // try {
-  //   if (typeof window !== 'undefined' && window.gtag) {
-  //     window.gtag(..._args);
-  //   }
-  // } catch (error) {
-  //   console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
-  // }
-  return;
+function safeGtag(...args: unknown[]): void {
+  try {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag(...args);
+    }
+  } catch (error) {
+    console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
+  }
 }
 
 // ============================================================
@@ -43,10 +39,11 @@ function safeGtag(..._args: unknown[]): void {
 
 export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSION (für Kampagnen-Optimierung) ***
-  // Registrierung nach Schritt 10 im Wizard = Hauptziel der Kampagne
-  USER_REGISTERED: '',  // DEAKTIVIERT - Altes Label: 'PrcJCNunko0cEI2-o41C' (altes Konto)
+  // "Bewertung abgeschlossen" – Hauptziel der Kampagne
+  BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpgD',
   
   // Sekundäre Conversions (für Beobachtung, nicht für Optimierung)
+  // Diese Labels müssen noch in Google Ads erstellt werden:
   LEAD_CONTACT_DATA: '',       // Lead: Kontaktdaten erfasst (Modal/Formular)
   WIZARD_STARTED: '',          // Wizard gestartet (Schritt 1)
   WIZARD_STEP_3: '',           // Wizard Schritt 3 erreicht (50% Fortschritt)
@@ -68,7 +65,7 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
   safeGtag('event', 'page_view', {
     page_path: pagePath,
     page_title: pageTitle,
-    send_to: 'AW-17744584461',
+    send_to: GOOGLE_ADS_ID,
   });
 }
 
@@ -87,7 +84,7 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
 export function trackLeadContactData(source: string, vehicleInfo?: string): void {
   // Google Ads Conversion Event
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.LEAD_CONTACT_DATA ? '/' + CONVERSION_LABELS.LEAD_CONTACT_DATA : ''}`,
+    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.LEAD_CONTACT_DATA ? '/' + CONVERSION_LABELS.LEAD_CONTACT_DATA : ''}`,
     value: 25.0,
     currency: 'EUR',
   });
@@ -108,7 +105,7 @@ export function trackLeadContactData(source: string, vehicleInfo?: string): void
  */
 export function trackBeratungRequested(pagePath: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.BERATUNG_REQUESTED ? '/' + CONVERSION_LABELS.BERATUNG_REQUESTED : ''}`,
+    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.BERATUNG_REQUESTED ? '/' + CONVERSION_LABELS.BERATUNG_REQUESTED : ''}`,
     value: 15.0,
     currency: 'EUR',
   });
@@ -129,7 +126,7 @@ export function trackBeratungRequested(pagePath: string): void {
  */
 export function trackWizardStarted(source: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.WIZARD_STARTED ? '/' + CONVERSION_LABELS.WIZARD_STARTED : ''}`,
+    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.WIZARD_STARTED ? '/' + CONVERSION_LABELS.WIZARD_STARTED : ''}`,
     value: 5.0,
     currency: 'EUR',
   });
@@ -148,7 +145,7 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
   // Spezielle Conversion-Events für wichtige Meilensteine
   if (stepNumber === 3 && CONVERSION_LABELS.WIZARD_STEP_3) {
     safeGtag('event', 'conversion', {
-      send_to: `AW-17744584461/${CONVERSION_LABELS.WIZARD_STEP_3}`,
+      send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_STEP_3}`,
       value: 10.0,
       currency: 'EUR',
     });
@@ -156,7 +153,7 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
 
   if (stepNumber === 6 && CONVERSION_LABELS.WIZARD_STEP_6) {
     safeGtag('event', 'conversion', {
-      send_to: `AW-17744584461/${CONVERSION_LABELS.WIZARD_STEP_6}`,
+      send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_STEP_6}`,
       value: 15.0,
       currency: 'EUR',
     });
@@ -172,11 +169,12 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
 }
 
 /**
- * Wizard vollständig abgeschlossen
+ * Wizard vollständig abgeschlossen – PRIMÄRE CONVERSION
+ * Sendet die "Bewertung abgeschlossen" Conversion an Google Ads
  */
 export function trackWizardCompleted(vehicleInfo: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.WIZARD_COMPLETED ? '/' + CONVERSION_LABELS.WIZARD_COMPLETED : ''}`,
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
     value: 50.0,
     currency: 'EUR',
   });
@@ -208,10 +206,12 @@ export function trackWizardAbandoned(stepNumber: number, stepName: string): void
 
 /**
  * Nutzer hat sich registriert
+ * Sendet ebenfalls die "Bewertung abgeschlossen" Conversion,
+ * da die Registrierung Teil des Wizard-Abschlusses ist
  */
 export function trackUserRegistered(method: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.USER_REGISTERED ? '/' + CONVERSION_LABELS.USER_REGISTERED : ''}`,
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
     value: 30.0,
     currency: 'EUR',
   });
@@ -243,7 +243,7 @@ export function trackUserLoggedIn(method: string): void {
  */
 export function trackAuctionCreated(vehicleInfo: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `AW-17744584461${CONVERSION_LABELS.AUCTION_CREATED ? '/' + CONVERSION_LABELS.AUCTION_CREATED : ''}`,
+    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.AUCTION_CREATED ? '/' + CONVERSION_LABELS.AUCTION_CREATED : ''}`,
     value: 75.0,
     currency: 'EUR',
   });
@@ -287,15 +287,10 @@ export function trackContactFormSubmitted(): void {
 
 // ============================================================
 // UTILITY: Conversion-Labels aktualisieren
-// Wird aufgerufen sobald die Labels in Google Ads erstellt wurden
 // ============================================================
 
 /**
- * Aktualisiert die Conversion-Labels nachdem sie in Google Ads erstellt wurden.
- * Die Labels werden als Konstanten oben im File gespeichert.
- * 
- * Beispiel: Nach Erstellung in Google Ads:
- * LEAD_CONTACT_DATA: 'AbCdEfGhIjKlMn'
+ * Gibt die aktuellen Conversion-Labels zurück.
  */
 export function getConversionLabels(): typeof CONVERSION_LABELS {
   return CONVERSION_LABELS;

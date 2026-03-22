@@ -382,8 +382,8 @@ export const germanZodErrorMap: z.ZodErrorMap = (issue, ctx) => {
 export function getPageTitle(path: string): string {
   const pageMap: Record<string, string> = {
     '/': 'Startseite',
-    '/login': 'Anmeldung (Privatkunde)',
-    '/login/haendler': 'Anmeldung (Händler)',
+    '/login': 'Anmeldung',
+    '/login/haendler': 'Anmeldung (Weiterleitung)',
     '/register': 'Registrierung (Privatkunde)',
     '/register/haendler': 'Registrierung (Händler)',
     '/forgot-password': 'Passwort vergessen',

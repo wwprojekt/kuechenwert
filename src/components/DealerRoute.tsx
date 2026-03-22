@@ -29,7 +29,7 @@ export const DealerRoute = ({ children }: DealerRouteProps) => {
 
   // Allow both dealers and admins
   if (!isDealer && !isAdmin) {
-    return <Navigate to="/dealer-register" replace />;
+    return <Navigate to="/haendler" replace />;
   }
 
   return <>{children}</>;

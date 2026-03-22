@@ -150,7 +150,7 @@ const RegisterHaendler = () => {
 
     try {
       const validated = dealerRegistrationSchema.parse(formData);
-      const redirectUrl = `${window.location.origin}/login/haendler`;
+      const redirectUrl = `${window.location.origin}/login`;
 
       // Step 1: Create user account with email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -164,6 +164,7 @@ const RegisterHaendler = () => {
             phone: validated.phone,
             company_name: validated.companyName,
             is_dealer: true,
+            user_type: 'dealer',
           },
         },
       });
@@ -221,11 +222,12 @@ const RegisterHaendler = () => {
         // Don't throw - user is created, application can be submitted later
       }
 
-      // Step 4: Add dealer role to user
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
+      // Step 4: Update role from default 'seller' to 'dealer'
+      // The handle_new_user trigger now assigns 'dealer' directly when user_type='dealer',
+      // but as a safety net we also update here in case the trigger assigned 'seller'
+      const { error: roleError } = await supabase.from("user_roles").update({
         role: "dealer",
-      });
+      }).eq('user_id', authData.user.id);
 
       if (roleError) {
         logger.error("Role assignment error:", roleError);
@@ -288,7 +290,7 @@ const RegisterHaendler = () => {
             </Alert>
             <div className="space-y-3">
               <Button
-                onClick={() => navigate("/login/haendler")}
+                onClick={() => navigate("/login")}
                 className="w-full gradient-hero hover:gradient-hero-hover"
               >
                 Zum Händler-Login
@@ -646,7 +648,7 @@ const RegisterHaendler = () => {
             <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 Bereits registriert?{" "}
-                <Link to="/login/haendler" className="text-primary hover:underline font-medium">
+                <Link to="/login" className="text-primary hover:underline font-medium">
                   Zum Händler-Login
                 </Link>
               </p>

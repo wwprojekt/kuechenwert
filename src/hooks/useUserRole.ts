@@ -5,6 +5,8 @@
  * IMPORTANT: This is the single source of truth for user role data.
  * All components that need role information MUST use this hook or usePermissions().
  * The canonical queryKey is ['userRoles', userId] — do NOT create separate role queries.
+ * 
+ * Each user has exactly ONE role: admin, dealer, or seller.
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,35 +23,23 @@ export type UserRole = 'admin' | 'dealer' | 'seller';
 export const userRolesQueryKey = (userId: string | undefined) => ['userRoles', userId] as const;
 
 export interface UserRoleData {
-  primaryRole: UserRole;
-  allRoles: UserRole[];
+  role: UserRole;
   isAdmin: boolean;
   isDealer: boolean;
   isSeller: boolean;
-  hasMultipleRoles: boolean;
 }
 
 /**
- * Determine primary role based on hierarchy
- * Admin > Dealer > Seller
+ * Get dashboard route based on role
  */
-function getPrimaryRole(roles: UserRole[]): UserRole {
-  if (roles.includes('admin')) return 'admin';
-  if (roles.includes('dealer')) return 'dealer';
-  return 'seller';
-}
-
-/**
- * Get dashboard route based on primary role
- */
-function getDashboardRoute(primaryRole: UserRole): string {
-  switch (primaryRole) {
+function getDashboardRoute(role: UserRole): string {
+  switch (role) {
     case 'admin':
       return '/admin';
     case 'dealer':
-      return '/dashboard'; // Will render dealer dashboard
+      return '/dashboard';
     case 'seller':
-      return '/dashboard'; // Will render user dashboard
+      return '/dashboard';
     default:
       return '/dashboard';
   }
@@ -67,36 +57,33 @@ export const useUserRole = () => {
     queryFn: async (): Promise<UserRoleData> => {
       if (!user) {
         return {
-          primaryRole: 'seller',
-          allRoles: [],
+          role: 'seller',
           isAdmin: false,
           isDealer: false,
           isSeller: false,
-          hasMultipleRoles: false,
         };
       }
 
-      // Fetch all roles for the user
+      // Fetch the single role for the user
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
 
       if (rolesError) {
-        logger.error('Error fetching user roles:', rolesError);
+        logger.error('Error fetching user role:', rolesError);
         throw rolesError;
       }
 
-      const roles = rolesData?.map(r => r.role as UserRole) || ['seller'];
-      const primaryRole = getPrimaryRole(roles);
+      const role = (rolesData?.role as UserRole) || 'seller';
 
       return {
-        primaryRole,
-        allRoles: roles,
-        isAdmin: roles.includes('admin'),
-        isDealer: roles.includes('dealer'),
-        isSeller: roles.includes('seller'),
-        hasMultipleRoles: roles.length > 1,
+        role,
+        isAdmin: role === 'admin',
+        isDealer: role === 'dealer',
+        isSeller: role === 'seller',
       };
     },
     enabled: !!user,
@@ -114,15 +101,15 @@ export const useUserRole = () => {
   const isLoading = queryLoading || (!!user && !roleData && !error);
 
   return {
-    primaryRole: roleData?.primaryRole ?? null,
-    allRoles: roleData?.allRoles ?? [],
+    // Keep primaryRole as alias for backward compatibility
+    primaryRole: roleData?.role ?? null,
+    role: roleData?.role ?? null,
     isAdmin: roleData?.isAdmin ?? false,
     isDealer: roleData?.isDealer ?? false,
     isSeller: roleData?.isSeller ?? false,
-    hasMultipleRoles: roleData?.hasMultipleRoles ?? false,
     isLoading,
     error,
-    getDashboardRoute: () => getDashboardRoute(roleData?.primaryRole || 'seller'),
+    getDashboardRoute: () => getDashboardRoute(roleData?.role || 'seller'),
     /**
      * Force refetch roles by invalidating the React Query cache.
      * This ensures all components using useUserRole() get updated data.
@@ -137,7 +124,7 @@ export const useUserRole = () => {
  * Hook for checking specific permissions
  */
 export const usePermissions = () => {
-  const { primaryRole, allRoles, isAdmin, isDealer, isSeller } = useUserRole();
+  const { role, isAdmin, isDealer, isSeller } = useUserRole();
 
   const canAccessAdmin = isAdmin;
   const canAccessDealer = isDealer || isAdmin;
@@ -151,8 +138,8 @@ export const usePermissions = () => {
 
   return {
     // Role checks
-    primaryRole,
-    allRoles,
+    primaryRole: role,
+    role,
     isAdmin,
     isDealer,
     isSeller,
@@ -179,10 +166,6 @@ export const usePermissions = () => {
         default:
           return false;
       }
-    },
-    
-    hasAnyRole: (requiredRoles: UserRole[]) => {
-      return requiredRoles.some(role => allRoles?.includes(role));
     },
   };
 };

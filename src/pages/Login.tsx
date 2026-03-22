@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
-import { Mail, Lock, ArrowRight, User } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
 const signInSchema = z.object({
@@ -31,22 +31,35 @@ const Login = () => {
     if (user && !roleLoading && primaryRole) {
       if (primaryRole === 'admin') {
         navigate("/admin", { replace: true });
-      } else if (primaryRole === 'dealer') {
-        toast({
-          title: "Händler-Konto erkannt",
-          description: "Sie werden zum Händler-Bereich weitergeleitet.",
-        });
-        navigate(redirectTo || "/dashboard", { replace: true });
       } else {
         navigate(redirectTo || "/dashboard", { replace: true });
       }
     }
-  }, [user, primaryRole, roleLoading, navigate, toast, redirectTo]);
+  }, [user, primaryRole, roleLoading, navigate, redirectTo]);
 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  // Show loading while checking role after login
+  if (user && roleLoading) {
+    return (
+      <PageLayout
+        title="Anmelden"
+        description="Melden Sie sich bei CaravanWert an"
+        canonicalPath="/login"
+        noIndex={true}
+      >
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Wird weitergeleitet...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +88,6 @@ const Login = () => {
           variant: "destructive",
         });
       } else {
-        // Auth-Fehler zentral übersetzen und loggen
         const germanMessage = handleAuthError(error, 'Login');
         toast({
           title: "Anmeldung fehlgeschlagen",
@@ -107,15 +119,11 @@ const Login = () => {
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
               <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
             </Link>
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
-              <User className="w-4 h-4" />
-              <span className="text-sm font-medium">Privatkunden-Bereich</span>
-            </div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               Willkommen zurück
             </h1>
             <p className="text-muted-foreground text-lg">
-              Melden Sie sich mit Ihrem Privatkunden-Konto an
+              Melden Sie sich bei Ihrem Konto an
             </p>
           </div>
 
@@ -180,8 +188,8 @@ const Login = () => {
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
                 Händler?{" "}
-                <Link to="/login/haendler" className="text-primary hover:underline font-medium">
-                  Zum Händler-Login
+                <Link to="/register/haendler" className="text-primary hover:underline font-medium">
+                  Zur Händler-Registrierung
                 </Link>
               </p>
             </div>

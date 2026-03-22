@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, ChevronDown } from "lucide-react";
+import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2 } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -75,6 +75,11 @@ const Header = () => {
               <Link to="/ueber-uns" className="hover:text-white transition-colors">Über uns</Link>
               <span className="text-slate-600">•</span>
               <Link to="/faq" className="hover:text-white transition-colors">FAQ</Link>
+              <span className="text-slate-600">•</span>
+              <Link to="/haendler" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5" />
+                Für Händler
+              </Link>
             </div>
             <span className="text-slate-700">|</span>
             {/* Language Switcher */}
@@ -241,42 +246,18 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="h-10 px-6 text-sm font-semibold bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all">
-                      Anmelden
-                    </Button>
-                  </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Anmelden als</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/login" className="cursor-pointer">
-                      <User className="h-4 w-4 mr-2" />
-                      Privatkunde
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/login/haendler" className="cursor-pointer">
-                      <User className="h-4 w-4 mr-2" />
-                      Händler
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Registrieren als</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/register" className="cursor-pointer">
-                      Privatkunde
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/register/haendler" className="cursor-pointer">
-                      Händler
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-                </DropdownMenu>
+              <>
+                <Link to="/login">
+                  <Button variant="outline" className="h-10 px-5 text-sm font-medium">
+                    Anmelden
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="h-10 px-5 text-sm font-semibold bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all">
+                    Registrieren
+                  </Button>
+                </Link>
+              </>
               )}
             </div>
           </div>
@@ -407,8 +388,7 @@ const Header = () => {
                 </>
               ) : (
                 <>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Privatkunden</div>
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2">
                     <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
                       <Button size="sm" variant="outline" className="w-full">
                         Anmelden
@@ -420,19 +400,14 @@ const Header = () => {
                       </Button>
                     </Link>
                   </div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Händler</div>
-                  <div className="flex gap-2">
-                    <Link to="/login/haendler" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                      <Button size="sm" variant="outline" className="w-full">
-                        Anmelden
-                      </Button>
-                    </Link>
-                    <Link to="/register/haendler" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                      <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
-                        Registrieren
-                      </Button>
-                    </Link>
-                  </div>
+                  <Link 
+                    to="/haendler" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm text-center text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    Für Händler
+                  </Link>
                 </>
               )}
             </div>

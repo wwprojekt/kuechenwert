@@ -1,4 +1,3 @@
-import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import RelatedContent, { verkaufenRelatedLinks } from "@/components/RelatedContent";
@@ -9,12 +8,10 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-motorhome.jpg";
 import { generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
-import { ContactDataModal } from "@/components/ContactDataModal";
 
 const Verkaufen = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || 'CaravanWert';
-  const [showContactModal, setShowContactModal] = useState(false);
 
   const benefits = [
     {
@@ -83,13 +80,6 @@ const Verkaufen = () => {
       canonicalPath="/verkaufen"
       structuredData={serviceSchema}
     >
-      {/* Kontaktdaten-Modal */}
-      <ContactDataModal
-        open={showContactModal}
-        onOpenChange={setShowContactModal}
-        source="verkaufen"
-      />
-
       {/* Hero Section */}
       <PageHero size="lg">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -101,13 +91,14 @@ const Verkaufen = () => {
               Schnell, sicher und unkompliziert - starten Sie Ihre kostenlose Auktion und erhalten Sie Gebote in nur 24 Stunden. Profitieren Sie von unserer Bestpreis-Garantie.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto gradient-hero hover:gradient-hero-hover shadow-lg hover:shadow-glow"
-                onClick={() => setShowContactModal(true)}
-              >
-                Jetzt Auktion starten
-              </Button>
+              <Link to="/verkaufen/wizard">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto gradient-hero hover:gradient-hero-hover shadow-lg hover:shadow-glow"
+                >
+                  Jetzt Auktion starten
+                </Button>
+              </Link>
               <Link to="/kontakt">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto">
                   Beratung vereinbaren
@@ -270,14 +261,15 @@ const Verkaufen = () => {
               Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie innerhalb von 24 Stunden ein unverbindliches Angebot.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="w-full sm:w-auto"
-                onClick={() => setShowContactModal(true)}
-              >
-                Kostenlose Bewertung starten
-              </Button>
+              <Link to="/verkaufen/wizard">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
+                  Kostenlose Bewertung starten
+                </Button>
+              </Link>
               {settings?.support_phone && (
                 <a href={`tel:${settings.support_phone.replace(/\s/g, '')}`}>
                   <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white">

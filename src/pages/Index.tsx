@@ -1,4 +1,3 @@
-import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
 import MotorhomeShowcase from "@/components/MotorhomeShowcase";
@@ -8,13 +7,8 @@ import Benefits from "@/components/Benefits";
 import Process from "@/components/Process";
 import FAQ from "@/components/FAQ";
 import CTA from "@/components/CTA";
-import { ContactDataModal } from "@/components/ContactDataModal";
 
 const Index = () => {
-  const [showContactModal, setShowContactModal] = useState(false);
-
-  const handleStartWizard = () => setShowContactModal(true);
-  
   return (
     <PageLayout
       title="Deutschlands modernste Wohnmobil-Ankaufsplattform"
@@ -22,21 +16,14 @@ const Index = () => {
       keywords="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation"
       canonicalPath="/"
     >
-      {/* Kontaktdaten-Modal */}
-      <ContactDataModal
-        open={showContactModal}
-        onOpenChange={setShowContactModal}
-        source="startseite"
-      />
-
-      <Hero onStartWizard={handleStartWizard} />
+      <Hero />
       <MotorhomeShowcase />
       <HowItWorks />
       <Listings />
       <Benefits />
-      <Process onStartWizard={handleStartWizard} />
+      <Process />
       <FAQ />
-      <CTA onStartWizard={handleStartWizard} />
+      <CTA />
     </PageLayout>
   );
 };

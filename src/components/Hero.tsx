@@ -2,24 +2,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Shield, Star, TrendingUp, Calculator } from "lucide-react";
 import { QuickAuctionForm } from "./QuickAuctionForm";
 
-interface HeroProps {
-  /** Callback wenn der Nutzer den Wizard starten möchte - öffnet das Kontaktdaten-Modal */
-  onStartWizard?: () => void;
-}
-
-const Hero = ({ onStartWizard }: HeroProps) => {
+const Hero = () => {
   const benefits = [
     { icon: Clock, text: "In unter 48 Stunden verkauft" },
     { icon: Shield, text: "100% sicher & seriös" },
     { icon: TrendingUp, text: "Bestpreis garantiert" },
   ];
-
-  const handleStartClick = (e: React.MouseEvent) => {
-    if (onStartWizard) {
-      e.preventDefault();
-      onStartWizard();
-    }
-  };
 
   return (
     <section className="relative min-h-[90vh] lg:min-h-[85vh] overflow-hidden">
@@ -93,7 +81,7 @@ const Hero = ({ onStartWizard }: HeroProps) => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4 animate-fade-in animate-delay-400">
-              <a href="/verkaufen/wizard" className="w-full sm:w-auto" onClick={handleStartClick}>
+              <a href="/verkaufen/wizard" className="w-full sm:w-auto">
                 <Button size="lg" className="gradient-hero hover:shadow-glow h-14 px-8 text-base font-semibold group w-full">
                   Jetzt kostenlos verkaufen
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />

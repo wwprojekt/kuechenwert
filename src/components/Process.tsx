@@ -31,21 +31,9 @@ const steps = [
   },
 ];
 
-interface ProcessProps {
-  /** Callback wenn der Nutzer den Wizard starten möchte - öffnet das Kontaktdaten-Modal */
-  onStartWizard?: () => void;
-}
-
-const Process = ({ onStartWizard }: ProcessProps) => {
+const Process = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || 'CaravanWert';
-
-  const handleStartClick = (e: React.MouseEvent) => {
-    if (onStartWizard) {
-      e.preventDefault();
-      onStartWizard();
-    }
-  };
   
   return (
     <section className="py-20 md:py-28 bg-background">
@@ -168,7 +156,7 @@ const Process = ({ onStartWizard }: ProcessProps) => {
         </div>
 
         <div className="text-center">
-          <a href="/verkaufen/wizard" onClick={handleStartClick}>
+          <a href="/verkaufen/wizard">
             <Button size="lg" className="gradient-hero hover:shadow-glow text-lg h-14 px-10 font-semibold">
               Jetzt kostenlos starten
             </Button>

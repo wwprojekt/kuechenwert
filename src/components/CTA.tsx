@@ -2,18 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, CheckCircle, Calculator } from "lucide-react";
 import { Link } from "react-router-dom";
 
-interface CTAProps {
-  /** Callback wenn der Nutzer den Wizard starten möchte - öffnet das Kontaktdaten-Modal */
-  onStartWizard?: () => void;
-}
-
-const CTA = ({ onStartWizard }: CTAProps) => {
-  const handleStartClick = (e: React.MouseEvent) => {
-    if (onStartWizard) {
-      e.preventDefault();
-      onStartWizard();
-    }
-  };
+const CTA = () => {
 
   return (
     <section className="py-12 sm:py-16 md:py-20 lg:py-32 bg-background relative overflow-hidden">
@@ -94,7 +83,7 @@ const CTA = ({ onStartWizard }: CTAProps) => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center pt-4 sm:pt-6 animate-fade-in animate-delay-300">
-                <a href="/verkaufen/wizard" className="w-full sm:w-auto" onClick={handleStartClick}>
+                <a href="/verkaufen/wizard" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     className="bg-white text-primary hover:bg-white/90 shadow-glow h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift font-bold group w-full"

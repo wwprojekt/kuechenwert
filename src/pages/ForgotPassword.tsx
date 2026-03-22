@@ -80,6 +80,7 @@ const ForgotPassword = () => {
       description="Setzen Sie Ihr Passwort zurück"
       keywords="passwort vergessen, passwort zurücksetzen, caravanwert"
       canonicalPath="/forgot-password"
+      noIndex={true}
     >
       <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-background via-primary/5 to-background">
         <div className="w-full max-w-md space-y-8 animate-fade-in">

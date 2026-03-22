@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PageLayout from "@/components/PageLayout";
+import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ const BlogPage = () => {
       description="Aktuelle Artikel, Tipps und Ratgeber rund um den Kauf und Verkauf von Wohnmobilen. Markttrends, Bewertungstipps und mehr."
       keywords="Wohnmobil Blog, Wohnmobil Ratgeber, Wohnmobil Tipps, Camper Kaufberatung, Wohnmobil Verkaufstipps"
       canonicalPath="/blog"
+      structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/blog"))}
     >
       {/* Hero Section */}
       <PageHero size="md">

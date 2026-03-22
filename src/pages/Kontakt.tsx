@@ -1,4 +1,5 @@
 import PageLayout from "@/components/PageLayout";
+import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,7 @@ const Kontakt = () => {
       description={`Kontaktieren Sie ${siteName} - Wir sind für Sie da! Telefon, E-Mail oder Kontaktformular. Schnelle Antwort garantiert.`}
       keywords="kontakt, caravanwert kontakt, wohnmobil ankauf kontakt, beratung wohnmobil"
       canonicalPath="/kontakt"
+      structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/kontakt"))}
     >
       {/* Hero Section */}
       <PageHero size="lg">

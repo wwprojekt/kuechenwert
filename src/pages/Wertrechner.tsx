@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import PageLayout from "@/components/PageLayout";
+import { generateServiceSchema, generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -304,6 +305,7 @@ const Wertrechner = () => {
       description="Ermitteln Sie sofort den geschätzten Wert Ihres Wohnmobils mit unserem kostenlosen Wertrechner. Einfach, schnell und unverbindlich."
       keywords="wohnmobil wertrechner, wohnmobil wert berechnen, camper wert kalkulieren"
       canonicalPath="/wertrechner"
+      structuredData={[generateServiceSchema("Wohnmobil Wertrechner", "Kostenloser Online-Wertrechner für Wohnmobile. Sofort-Schätzung in 2 Minuten basierend auf aktuellen Marktdaten."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertrechner"))]}
     >
       <PageHero size="sm">
         <div className="max-w-4xl mx-auto text-center">

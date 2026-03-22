@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
+import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,7 @@ const VerkaufenWizard = () => {
       description="Verkaufen Sie Ihr Wohnmobil schnell und einfach – kostenloses Angebot in 2 Minuten"
       keywords="wohnmobil verkaufen, wohnmobil bewertung, caravan verkaufen"
       canonicalPath="/verkaufen/wizard"
+      structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/verkaufen/wizard"))}
     >
       {/* Hero */}
       <PageHero size="sm">

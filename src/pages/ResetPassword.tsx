@@ -130,6 +130,7 @@ const ResetPassword = () => {
       description="Setzen Sie ein neues Passwort für Ihr Konto"
       keywords="passwort zurücksetzen, neues passwort, caravanwert"
       canonicalPath="/reset-password"
+      noIndex={true}
     >
       <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-background via-primary/5 to-background">
         <div className="w-full max-w-md space-y-8 animate-fade-in">

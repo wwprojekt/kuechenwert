@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import PageLayout from "@/components/PageLayout";
+import { generateServiceSchema, generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,6 +143,7 @@ const Wertermittlung = () => {
       description="Lassen Sie Ihr Wohnmobil kostenlos und unverbindlich von unseren Experten bewerten. Erhalten Sie eine professionelle Einschätzung des Marktwerts."
       keywords="wohnmobil wertermittlung, wohnmobil bewertung, camper wert, reisemobil wert"
       canonicalPath="/wertermittlung"
+      structuredData={[generateServiceSchema("Kostenlose Wohnmobil-Wertermittlung", "Professionelle Bewertung Ihres Wohnmobils durch Experten. Kostenlos und unverbindlich."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertermittlung"))]}
     >
       <PageHero>
         <div className="max-w-4xl mx-auto text-center">

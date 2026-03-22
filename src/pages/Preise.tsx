@@ -1,4 +1,5 @@
 import PageLayout from "@/components/PageLayout";
+import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, ArrowRight } from "lucide-react";
@@ -37,6 +38,7 @@ const Preise = () => {
       description="Transparente Preise für den Wohnmobil-Verkauf bei CaravanWert. Kostenlose Bewertung, faire Provisionen und keine versteckten Gebühren für Verkäufer und Käufer."
       keywords="Preise, Kosten, Gebühren, Wohnmobil verkaufen, Provision"
       canonicalPath="/preise"
+      structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/preise"))}
     >
       <PageHero>
         <div className="text-center">

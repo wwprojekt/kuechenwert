@@ -1,4 +1,5 @@
 import PageLayout from "@/components/PageLayout";
+import { generateOrganizationSchema, generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Users, TrendingUp, Shield, Heart, Target, Zap, CheckCircle2 } from "lucide-react";
@@ -90,6 +91,7 @@ const UeberUns = () => {
       description={`Erfahren Sie mehr über ${siteName} - Ihr zuverlässiger Partner für Wohnmobil-Ankauf seit 2015. Bundesweit, schnell und fair.`}
       keywords="über uns, caravanwert, wohnmobil ankauf unternehmen, wohnmobil experten"
       canonicalPath="/ueber-uns"
+      structuredData={[generateOrganizationSchema(settings), generateBreadcrumbSchema(getBreadcrumbsFromPath("/ueber-uns"))]}
     >
       {/* Hero Section */}
       <PageHero size="lg">

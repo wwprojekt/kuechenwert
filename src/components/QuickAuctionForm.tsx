@@ -258,7 +258,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
   ];
 
   return (
-    <Card className={`p-6 lg:p-8 bg-white dark:bg-card shadow-2xl border-0 rounded-2xl ${className}`}>
+    <Card className={`p-6 lg:p-8 bg-white/85 dark:bg-card/90 backdrop-blur-md shadow-2xl border-0 rounded-2xl ${className}`}>
       <div className="space-y-5">
         {/* Header - Left aligned, compact */}
         <div className="pb-1">

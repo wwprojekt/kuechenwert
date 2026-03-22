@@ -24,10 +24,10 @@ function getAnonymousId(): string {
  */
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeug",
-  2: "Details",
+  2: "Details & Technik",
   3: "Ausstattung",
   4: "Fotos",
-  5: "Kontakt",
+  5: "Kontakt & Abschluss",
 };
 
 /**

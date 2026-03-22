@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -24,10 +25,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink,
+  PaginationPrevious, PaginationNext, PaginationEllipsis,
+} from "@/components/ui/pagination";
+import {
   Mail, Inbox, Send, Users, FileText, History,
   Clock, CheckCircle, AlertCircle, Eye, Reply, Star,
   StarOff, Archive, Trash2, RefreshCw, Search, Plus,
   Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
+  BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
+  ChevronLeft, ChevronRight, Unlink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -55,6 +62,10 @@ interface AdminEmail {
   resend_id: string | null;
   related_message_id: string | null;
   related_message_type: string | null;
+  cc: string | null;
+  bcc: string | null;
+  attachments: any[] | null;
+  scheduled_at: string | null;
 }
 
 interface SupportMessage {
@@ -108,6 +119,8 @@ interface InboxItem {
   original: AdminEmail | SupportMessage | ContactMessage;
 }
 
+const PAGE_SIZE = 25;
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function AdminEmailCenter() {
@@ -128,7 +141,7 @@ export default function AdminEmailCenter() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <Inbox className="w-4 h-4" />
             Posteingang
@@ -154,6 +167,10 @@ export default function AdminEmailCenter() {
             <History className="w-4 h-4" />
             Gesendet
           </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Statistiken
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox">
@@ -171,12 +188,15 @@ export default function AdminEmailCenter() {
         <TabsContent value="sent">
           <SentTab />
         </TabsContent>
+        <TabsContent value="stats">
+          <StatsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-// ─── Tab 1: Posteingang ─────────────────────────────────────────────────────
+// ─── Tab 1: Posteingang (with Realtime + Pagination) ────────────────────────
 
 function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number) => void }) {
   const { session } = useAuth();
@@ -187,34 +207,35 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [isReplying, setIsReplying] = useState(false);
   const [filter, setFilter] = useState<"all" | "unread" | "starred">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [contactHistory, setContactHistory] = useState<AdminEmail[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
 
   const fetchInbox = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch inbound emails
       const { data: emails } = await supabase
         .from("admin_emails")
         .select("*")
         .eq("direction", "inbound")
         .eq("is_archived", false)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
-      // Fetch support messages
       const { data: supportMsgs } = await supabase
         .from("support_messages")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
-      // Fetch contact messages
       const { data: contactMsgs } = await supabase
         .from("contact_messages")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
-      // Get profiles for support messages
       const userIds = [...new Set((supportMsgs || []).map(m => m.user_id).filter(Boolean) as string[])];
       let profilesMap: Record<string, any> = {};
       if (userIds.length > 0) {
@@ -230,7 +251,6 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         }
       }
 
-      // Combine into unified inbox
       const inboxItems: InboxItem[] = [];
 
       (emails || []).forEach((e: any) => {
@@ -282,9 +302,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         });
       });
 
-      // Sort by date
       inboxItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
       setItems(inboxItems);
       onUnreadCountChange(inboxItems.filter(i => !i.is_read).length);
     } catch (error) {
@@ -297,10 +315,55 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
   useEffect(() => { fetchInbox(); }, [fetchInbox]);
 
+  // Realtime subscription for new inbound emails
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-inbox-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'admin_emails',
+        filter: 'direction=eq.inbound',
+      }, (payload) => {
+        toast.info("Neue E-Mail eingegangen", { description: (payload.new as any)?.subject });
+        fetchInbox();
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'support_messages',
+      }, () => {
+        toast.info("Neue Support-Nachricht");
+        fetchInbox();
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'contact_messages',
+      }, () => {
+        toast.info("Neue Kontaktanfrage");
+        fetchInbox();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchInbox]);
+
+  // Contact history
+  const fetchContactHistory = async (email: string) => {
+    const { data } = await supabase
+      .from("admin_emails")
+      .select("*")
+      .or(`sender_email.eq.${email},recipient_email.eq.${email}`)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setContactHistory((data || []) as any);
+    setShowHistory(true);
+  };
+
   const handleReply = async () => {
     if (!selectedItem || !replyContent.trim()) return;
     setIsReplying(true);
-
     try {
       const { data, error } = await supabase.functions.invoke('send-admin-email', {
         body: {
@@ -312,9 +375,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           reply_to_message_type: selectedItem.source !== 'email' ? selectedItem.source : undefined,
         },
       });
-
       if (error) throw error;
-
       toast.success("Antwort gesendet");
       setSelectedItem(null);
       setReplyContent("");
@@ -340,6 +401,15 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
   };
 
+  const handleArchive = async (item: InboxItem) => {
+    if (item.source === 'email') {
+      await supabase.from('admin_emails').update({ is_archived: true }).eq('id', item.id);
+      toast.success("Archiviert");
+      setSelectedItem(null);
+      fetchInbox();
+    }
+  };
+
   const filteredItems = items.filter(item => {
     if (filter === "unread" && item.is_read) return false;
     if (filter === "starred" && !item.is_starred) return false;
@@ -351,6 +421,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
     return true;
   });
+
+  const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE);
+  const paginatedItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const getSourceBadge = (source: string) => {
     switch (source) {
@@ -383,6 +456,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         ? (orig as SupportMessage).message
         : (orig as ContactMessage).message;
 
+    const attachments = selectedItem.source === 'email' ? (orig as AdminEmail).attachments : null;
+
     return (
       <Card>
         <CardHeader>
@@ -394,47 +469,166 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
             {getStatusBadge(selectedItem.status)}
           </div>
           <CardTitle className="text-xl mt-2">{selectedItem.subject}</CardTitle>
-          <CardDescription>
-            Von <strong>{selectedItem.from_name}</strong> ({selectedItem.from_email}) am{" "}
-            {format(new Date(selectedItem.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+          <CardDescription className="flex items-center gap-4">
+            <span>
+              Von <strong>{selectedItem.from_name}</strong> ({selectedItem.from_email}) am{" "}
+              {format(new Date(selectedItem.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+            </span>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-xs p-0 h-auto"
+              onClick={() => fetchContactHistory(selectedItem.from_email)}
+            >
+              <UserCircle className="w-3 h-3 mr-1" />
+              Kontakt-Verlauf
+            </Button>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Original message */}
+        <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            {selectedItem.source === 'email' ? (
-              <div dangerouslySetInnerHTML={{ __html: messageBody }} className="prose prose-sm max-w-none" />
-            ) : (
-              <p className="whitespace-pre-wrap text-sm">{messageBody}</p>
-            )}
+            <div dangerouslySetInnerHTML={{ __html: messageBody }} className="prose prose-sm max-w-none" />
           </div>
 
-          {/* Previous admin response */}
-          {selectedItem.source === 'support' && (orig as SupportMessage).admin_response && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm font-medium text-blue-800 mb-2">Vorherige Antwort:</p>
-              <p className="text-sm whitespace-pre-wrap">{(orig as SupportMessage).admin_response}</p>
+          {/* Attachments */}
+          {attachments && attachments.length > 0 && (
+            <div className="p-3 bg-muted/30 rounded-lg border">
+              <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                <Paperclip className="w-4 h-4" /> {attachments.length} Anhang/Anhänge
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((att: any, i: number) => (
+                  <Badge key={i} variant="secondary" className="gap-1">
+                    <FileText className="w-3 h-3" />
+                    {att.filename || `Anhang ${i + 1}`}
+                    {att.size && <span className="text-xs opacity-70">({Math.round(att.size / 1024)}KB)</span>}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Reply form */}
-          <div className="space-y-3 border-t pt-4">
-            <Label className="text-base font-semibold flex items-center gap-2">
-              <Reply className="w-4 h-4" /> Antwort verfassen
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              An: {selectedItem.from_email}
-            </p>
+          {/* Contact info for contact messages */}
+          {selectedItem.source === 'contact' && (orig as ContactMessage).phone && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm"><strong>Telefon:</strong> {(orig as ContactMessage).phone}</p>
+            </div>
+          )}
+
+          {/* Admin response if already replied */}
+          {selectedItem.source !== 'email' && (orig as any).admin_response && (
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm font-medium text-green-800 mb-1 flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" /> Ihre Antwort
+              </p>
+              <p className="text-sm">{(orig as any).admin_response}</p>
+              {(orig as any).responded_at && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {format(new Date((orig as any).responded_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            {selectedItem.source === 'email' && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => handleToggleStar(selectedItem)}>
+                  {selectedItem.is_starred ? <StarOff className="w-4 h-4 mr-1" /> : <Star className="w-4 h-4 mr-1" />}
+                  {selectedItem.is_starred ? "Stern entfernen" : "Markieren"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleArchive(selectedItem)}>
+                  <Archive className="w-4 h-4 mr-1" /> Archivieren
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Reply section */}
+          <div className="border-t pt-4">
+            <Label className="mb-2 block font-medium">Antworten</Label>
             <RichTextEditor content={replyContent} onChange={setReplyContent} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setSelectedItem(null)}>Abbrechen</Button>
+            <div className="flex justify-between items-center mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPreviewHtml(replyContent);
+                  setShowPreview(true);
+                }}
+                disabled={!replyContent.trim()}
+              >
+                <Eye className="w-4 h-4 mr-1" /> Vorschau
+              </Button>
               <Button onClick={handleReply} disabled={isReplying || !replyContent.trim()}>
-                {isReplying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                {isReplying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Reply className="w-4 h-4 mr-2" />}
                 Antwort senden
               </Button>
             </div>
           </div>
         </CardContent>
+
+        {/* Contact history dialog */}
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserCircle className="w-5 h-5" />
+                Kontakt-Verlauf: {selectedItem.from_email}
+              </DialogTitle>
+              <DialogDescription>
+                Alle E-Mail-Interaktionen mit diesem Kontakt
+              </DialogDescription>
+            </DialogHeader>
+            {contactHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">Keine vorherigen Interaktionen gefunden</p>
+            ) : (
+              <div className="space-y-3">
+                {contactHistory.map((h) => (
+                  <div key={h.id} className={`p-3 rounded-lg border ${h.direction === 'inbound' ? 'bg-muted/50' : 'bg-blue-50 border-blue-200'}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge variant="outline" className={h.direction === 'inbound' ? '' : 'text-blue-600 border-blue-600'}>
+                        {h.direction === 'inbound' ? 'Empfangen' : 'Gesendet'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(h.created_at), "dd.MM.yy HH:mm", { locale: de })}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium">{h.subject}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{h.body_text || 'Kein Textinhalt'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Email preview dialog */}
+        <Dialog open={showPreview} onOpenChange={setShowPreview}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>E-Mail-Vorschau (mit CaravanWert-Branding)</DialogTitle>
+              <DialogDescription>So wird die E-Mail beim Empfänger aussehen</DialogDescription>
+            </DialogHeader>
+            <div className="border rounded-lg overflow-hidden">
+              <div style={{
+                background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+                padding: '24px',
+                textAlign: 'center' as const,
+              }}>
+                <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+                <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+              </div>
+              <div style={{ padding: '32px 24px', background: '#ffffff' }}>
+                <div dangerouslySetInnerHTML={{ __html: previewHtml }} className="prose prose-sm max-w-none" />
+              </div>
+              <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+                <p>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </Card>
     );
   }
@@ -448,7 +642,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
               <Inbox className="w-5 h-5 text-primary" />
               Posteingang
             </CardTitle>
-            <CardDescription>{filteredItems.length} Nachrichten</CardDescription>
+            <CardDescription>
+              {filteredItems.length} Nachrichten {filter !== "all" && `(${filter === "unread" ? "ungelesen" : "markiert"})`}
+            </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -456,12 +652,12 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
               <Input
                 placeholder="Suchen..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 className="pl-9 w-[200px]"
               />
             </div>
-            <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-              <SelectTrigger className="w-[140px]">
+            <Select value={filter} onValueChange={(v) => { setFilter(v as any); setPage(1); }}>
+              <SelectTrigger className="w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -478,100 +674,151 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground mt-2">Wird geladen...</p>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
+        ) : paginatedItems.length === 0 ? (
+          <div className="text-center py-8">
             <Inbox className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
             <p className="text-muted-foreground">Keine Nachrichten</p>
           </div>
         ) : (
-          <div className="divide-y">
-            {filteredItems.map((item) => (
-              <div
-                key={`${item.source}-${item.id}`}
-                className={`flex items-center gap-4 p-3 hover:bg-muted/50 cursor-pointer transition-colors rounded-lg ${!item.is_read ? 'bg-blue-50/50 font-medium' : ''}`}
-                onClick={() => {
-                  handleMarkRead(item);
-                  setSelectedItem(item);
-                  setReplyContent("");
-                }}
-              >
-                {item.source === 'email' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleStar(item); }}
-                    className="text-muted-foreground hover:text-yellow-500"
-                  >
-                    {item.is_starred ? <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> : <StarOff className="w-4 h-4" />}
-                  </button>
-                )}
-                {item.source !== 'email' && <div className="w-4" />}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-sm truncate ${!item.is_read ? 'font-semibold' : ''}`}>
-                      {item.from_name}
+          <>
+            <div className="divide-y">
+              {paginatedItems.map((item) => (
+                <div
+                  key={`${item.source}-${item.id}`}
+                  className={`flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${!item.is_read ? 'bg-blue-50/50 font-medium' : ''}`}
+                  onClick={() => { setSelectedItem(item); handleMarkRead(item); }}
+                >
+                  {item.source === 'email' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleStar(item); }}
+                      className="flex-shrink-0"
+                    >
+                      {item.is_starred
+                        ? <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        : <Star className="w-4 h-4 text-muted-foreground hover:text-yellow-500" />
+                      }
+                    </button>
+                  )}
+                  {item.source !== 'email' && <div className="w-4" />}
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-primary">
+                      {item.from_name.charAt(0).toUpperCase()}
                     </span>
-                    {getSourceBadge(item.source)}
-                    {!item.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
                   </div>
-                  <p className={`text-sm truncate ${!item.is_read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                    {item.subject}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{item.preview}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm truncate ${!item.is_read ? 'font-semibold' : ''}`}>
+                        {item.from_name}
+                      </span>
+                      {getSourceBadge(item.source)}
+                    </div>
+                    <p className={`text-sm truncate ${!item.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {item.subject}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(item.created_at), "dd.MM.yy", { locale: de })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(item.created_at), "HH:mm", { locale: de })}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-muted-foreground">
-                    {item.created_at && format(new Date(item.created_at), "dd.MM. HH:mm", { locale: de })}
-                  </p>
-                  <div className="mt-1">{getStatusBadge(item.status)}</div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Seite {page} von {totalPages} ({filteredItems.length} Nachrichten)
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
   );
 }
 
-// ─── Tab 2: Verfassen ───────────────────────────────────────────────────────
+// ─── Tab 2: Verfassen (with Preview + Attachments + Scheduled Send) ─────────
 
 function ComposeTab() {
   const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [showSchedule, setShowSchedule] = useState(false);
 
   useEffect(() => {
-    supabase.from('email_templates').select('*').eq('is_active', true).then(({ data }) => {
-      if (data) setTemplates(data as any);
-    });
+    supabase.from('email_templates').select('*').eq('is_active', true).order('name')
+      .then(({ data }) => setTemplates((data || []) as any));
   }, []);
 
   const searchRecipients = async (query: string) => {
     setTo(query);
     if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
-
     const { data } = await supabase
-      .from('profiles')
-      .select('id, email, first_name, last_name, company_name')
+      .from("profiles")
+      .select("id, email, first_name, last_name, company_name")
       .or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%,company_name.ilike.%${query}%`)
       .limit(8);
-
-    if (data && data.length > 0) {
-      setSuggestions(data);
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
+    setSuggestions(data || []);
+    setShowSuggestions(true);
   };
 
   const selectRecipient = (profile: any) => {
@@ -590,18 +837,29 @@ function ComposeTab() {
   };
 
   const handleSend = async () => {
-    if (!to || !subject || !bodyHtml) {
-      toast.error("Bitte füllen Sie alle Pflichtfelder aus");
-      return;
-    }
+    if (!to || !subject || !bodyHtml) { toast.error("Bitte füllen Sie alle Pflichtfelder aus"); return; }
     setIsSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-admin-email', {
-        body: { to, subject, body_html: bodyHtml, recipient_name: recipientName || undefined },
+        body: {
+          to,
+          subject,
+          body_html: bodyHtml,
+          recipient_name: recipientName || undefined,
+          cc: cc || undefined,
+          bcc: bcc || undefined,
+          scheduled_at: scheduledAt || undefined,
+        },
       });
       if (error) throw error;
-      toast.success(`E-Mail an ${to} gesendet`);
-      setTo(""); setSubject(""); setBodyHtml(""); setRecipientName(""); setSelectedTemplate("");
+      if (scheduledAt) {
+        toast.success(`E-Mail geplant für ${format(new Date(scheduledAt), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}`);
+      } else {
+        toast.success(`E-Mail an ${to} gesendet`);
+      }
+      setTo(""); setSubject(""); setBodyHtml(""); setRecipientName("");
+      setSelectedTemplate(""); setCc(""); setBcc(""); setScheduledAt("");
+      setShowCcBcc(false); setShowSchedule(false);
     } catch (error: any) {
       console.error("Error sending email:", error);
       toast.error("E-Mail konnte nicht gesendet werden");
@@ -611,105 +869,197 @@ function ComposeTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Send className="w-5 h-5 text-primary" />
-          E-Mail verfassen
-        </CardTitle>
-        <CardDescription>Senden Sie eine E-Mail mit CaravanWert-Branding</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Template selection */}
-        <div className="flex items-center gap-4">
-          <Label className="w-24 flex-shrink-0">Vorlage</Label>
-          <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Vorlage auswählen (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map(t => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Recipient */}
-        <div className="flex items-start gap-4">
-          <Label className="w-24 flex-shrink-0 mt-2.5">An</Label>
-          <div className="flex-1 relative">
-            <Input
-              type="email"
-              placeholder="E-Mail-Adresse eingeben oder Benutzer suchen..."
-              value={to}
-              onChange={(e) => searchRecipients(e.target.value)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            />
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {suggestions.map((s) => (
-                  <button
-                    key={s.id}
-                    className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center gap-2 text-sm"
-                    onMouseDown={() => selectRecipient(s)}
-                  >
-                    <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">
-                        {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.company_name || 'Kein Name'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{s.email}</p>
-                    </div>
-                  </button>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="w-5 h-5 text-primary" />
+            E-Mail verfassen
+          </CardTitle>
+          <CardDescription>Senden Sie eine E-Mail mit CaravanWert-Branding</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Template selection */}
+          <div className="flex items-center gap-4">
+            <Label className="w-24 flex-shrink-0">Vorlage</Label>
+            <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vorlage auswählen (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map(t => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
 
-        {/* Recipient name */}
-        <div className="flex items-center gap-4">
-          <Label className="w-24 flex-shrink-0">Name</Label>
-          <Input
-            placeholder="Empfängername (optional, für Anrede)"
-            value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
-          />
-        </div>
+          {/* Recipient */}
+          <div className="flex items-start gap-4">
+            <Label className="w-24 flex-shrink-0 mt-2.5">An</Label>
+            <div className="flex-1 relative">
+              <Input
+                type="email"
+                placeholder="E-Mail-Adresse eingeben oder Benutzer suchen..."
+                value={to}
+                onChange={(e) => searchRecipients(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center gap-2 text-sm"
+                      onMouseDown={() => selectRecipient(s)}
+                    >
+                      <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.company_name || 'Kein Name'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{s.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
-        {/* Subject */}
-        <div className="flex items-center gap-4">
-          <Label className="w-24 flex-shrink-0">Betreff</Label>
-          <Input
-            placeholder="Betreff eingeben..."
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </div>
+          {/* CC/BCC toggle */}
+          {!showCcBcc && (
+            <div className="flex items-center gap-4">
+              <div className="w-24" />
+              <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={() => setShowCcBcc(true)}>
+                CC/BCC hinzufügen
+              </Button>
+            </div>
+          )}
 
-        {/* Body */}
-        <div>
-          <Label className="mb-2 block">Nachricht</Label>
-          <RichTextEditor content={bodyHtml} onChange={setBodyHtml} />
-        </div>
+          {showCcBcc && (
+            <>
+              <div className="flex items-center gap-4">
+                <Label className="w-24 flex-shrink-0">CC</Label>
+                <Input placeholder="CC-Empfänger (kommagetrennt)" value={cc} onChange={(e) => setCc(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-4">
+                <Label className="w-24 flex-shrink-0">BCC</Label>
+                <Input placeholder="BCC-Empfänger (kommagetrennt)" value={bcc} onChange={(e) => setBcc(e.target.value)} />
+              </div>
+            </>
+          )}
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => { setTo(""); setSubject(""); setBodyHtml(""); setRecipientName(""); }}>
-            Verwerfen
-          </Button>
-          <Button onClick={handleSend} disabled={isSending || !to || !subject || !bodyHtml}>
-            {isSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-            Senden
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Recipient name */}
+          <div className="flex items-center gap-4">
+            <Label className="w-24 flex-shrink-0">Name</Label>
+            <Input
+              placeholder="Empfängername (optional, für Anrede)"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+            />
+          </div>
+
+          {/* Subject */}
+          <div className="flex items-center gap-4">
+            <Label className="w-24 flex-shrink-0">Betreff</Label>
+            <Input
+              placeholder="Betreff eingeben..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <Label className="mb-2 block">Nachricht</Label>
+            <RichTextEditor content={bodyHtml} onChange={setBodyHtml} />
+          </div>
+
+          {/* Scheduled send */}
+          {!showSchedule ? (
+            <div className="flex items-center gap-4">
+              <div className="w-24" />
+              <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={() => setShowSchedule(true)}>
+                <CalendarClock className="w-3 h-3 mr-1" /> Zeitversetzt senden
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg border">
+              <Label className="flex-shrink-0 flex items-center gap-1">
+                <CalendarClock className="w-4 h-4" /> Senden am
+              </Label>
+              <Input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="max-w-[250px]"
+              />
+              <Button variant="ghost" size="sm" onClick={() => { setShowSchedule(false); setScheduledAt(""); }}>
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-between items-center pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+              disabled={!bodyHtml.trim()}
+            >
+              <Eye className="w-4 h-4 mr-2" /> Vorschau
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                setTo(""); setSubject(""); setBodyHtml(""); setRecipientName("");
+                setCc(""); setBcc(""); setScheduledAt("");
+              }}>
+                Verwerfen
+              </Button>
+              <Button onClick={handleSend} disabled={isSending || !to || !subject || !bodyHtml}>
+                {isSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : scheduledAt ? <CalendarClock className="w-4 h-4 mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                {scheduledAt ? "Planen" : "Senden"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>E-Mail-Vorschau</DialogTitle>
+            <DialogDescription>
+              An: {to} | Betreff: {subject}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="border rounded-lg overflow-hidden">
+            <div style={{
+              background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+              padding: '24px',
+              textAlign: 'center' as const,
+            }}>
+              <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+            </div>
+            <div style={{ padding: '32px 24px', background: '#ffffff' }}>
+              {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
+              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} className="prose prose-sm max-w-none" />
+            </div>
+            <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
+              <p>CaravanWert | info@caravanwert.de | caravanwert.de</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-// ─── Tab 3: Rundmail ────────────────────────────────────────────────────────
+// ─── Tab 3: Rundmail (with Unsubscribe option) ─────────────────────────────
 
 function BroadcastTab() {
   const [group, setGroup] = useState<string>("");
@@ -722,6 +1072,8 @@ function BroadcastTab() {
   const [testEmail, setTestEmail] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [loadingCount, setLoadingCount] = useState(false);
+  const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
 
   const fetchRecipientCount = async (selectedGroup: string) => {
     if (!selectedGroup) { setRecipientCount(null); return; }
@@ -754,7 +1106,14 @@ function BroadcastTab() {
     setIsTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-broadcast-email', {
-        body: { subject, body_html: bodyHtml, group, test_mode: true, test_email: testEmail },
+        body: {
+          subject,
+          body_html: bodyHtml,
+          group,
+          test_mode: true,
+          test_email: testEmail,
+          include_unsubscribe: includeUnsubscribe,
+        },
       });
       if (error) throw error;
       toast.success(`Test-E-Mail an ${testEmail} gesendet`);
@@ -770,7 +1129,12 @@ function BroadcastTab() {
     setIsSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-broadcast-email', {
-        body: { subject, body_html: bodyHtml, group },
+        body: {
+          subject,
+          body_html: bodyHtml,
+          group,
+          include_unsubscribe: includeUnsubscribe,
+        },
       });
       if (error) throw error;
       toast.success(`Rundmail gesendet: ${data.sent} erfolgreich, ${data.failed} fehlgeschlagen`);
@@ -836,12 +1200,27 @@ function BroadcastTab() {
             <RichTextEditor content={bodyHtml} onChange={setBodyHtml} />
           </div>
 
+          {/* Unsubscribe option */}
+          <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg border">
+            <Switch
+              checked={includeUnsubscribe}
+              onCheckedChange={setIncludeUnsubscribe}
+              id="unsubscribe"
+            />
+            <Label htmlFor="unsubscribe" className="cursor-pointer">
+              <span className="font-medium">Abmelde-Link einfügen</span>
+              <p className="text-xs text-muted-foreground">
+                Empfänger können sich von zukünftigen Rundmails abmelden (empfohlen für Marketing-E-Mails)
+              </p>
+            </Label>
+          </div>
+
           {/* Test send */}
           <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
             <Label className="flex-shrink-0">Test an:</Label>
             <Input
               type="email"
-              placeholder="Ihre E-Mail für Test..."
+              placeholder="Ihre E-Mail für Testversand..."
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
               className="max-w-[300px]"
@@ -853,18 +1232,27 @@ function BroadcastTab() {
           </div>
 
           {/* Send button */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => { setSubject(""); setBodyHtml(""); setGroup(""); setRecipientCount(null); }}>
-              Verwerfen
-            </Button>
+          <div className="flex justify-between items-center pt-2">
             <Button
-              onClick={() => setShowConfirm(true)}
-              disabled={isSending || !group || !subject || !bodyHtml || recipientCount === 0}
-              variant="default"
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+              disabled={!bodyHtml.trim()}
             >
-              {isSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
-              Rundmail senden
+              <Eye className="w-4 h-4 mr-2" /> Vorschau
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setSubject(""); setBodyHtml(""); setGroup(""); setRecipientCount(null); }}>
+                Verwerfen
+              </Button>
+              <Button
+                onClick={() => setShowConfirm(true)}
+                disabled={isSending || !group || !subject || !bodyHtml || recipientCount === 0}
+                variant="default"
+              >
+                {isSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
+                Rundmail senden
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -876,7 +1264,8 @@ function BroadcastTab() {
             <AlertDialogTitle>Rundmail versenden?</AlertDialogTitle>
             <AlertDialogDescription>
               Sie sind dabei, eine E-Mail an <strong>{recipientCount} Empfänger</strong> ({recipientLabel}) zu senden.
-              Dieser Vorgang kann nicht rückgängig gemacht werden.
+              {includeUnsubscribe && " Ein Abmelde-Link wird am Ende der E-Mail eingefügt."}
+              {" "}Dieser Vorgang kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -887,6 +1276,43 @@ function BroadcastTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Preview dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Rundmail-Vorschau</DialogTitle>
+            <DialogDescription>
+              An: {recipientLabel || "Empfängergruppe"} ({recipientCount || 0} Empfänger)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="border rounded-lg overflow-hidden">
+            <div style={{
+              background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+              padding: '24px',
+              textAlign: 'center' as const,
+            }}>
+              <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+            </div>
+            <div style={{ padding: '32px 24px', background: '#ffffff' }}>
+              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} className="prose prose-sm max-w-none" />
+            </div>
+            {includeUnsubscribe && (
+              <div style={{ padding: '12px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'center' as const }}>
+                <p style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind.{" "}
+                  <span style={{ color: '#1f8aa2', textDecoration: 'underline' }}>Abmelden</span>
+                </p>
+              </div>
+            )}
+            <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
+              <p>CaravanWert | info@caravanwert.de | caravanwert.de</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -1088,13 +1514,14 @@ function TemplatesTab() {
   );
 }
 
-// ─── Tab 5: Gesendet ────────────────────────────────────────────────────────
+// ─── Tab 5: Gesendet (with Pagination) ─────────────────────────────────────
 
 function SentTab() {
   const [emails, setEmails] = useState<AdminEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<AdminEmail | null>(null);
   const [filter, setFilter] = useState<"all" | "single" | "broadcast" | "reply">("all");
+  const [page, setPage] = useState(1);
 
   const fetchSent = async () => {
     setLoading(true);
@@ -1103,7 +1530,7 @@ function SentTab() {
       .select('*')
       .eq('direction', 'outbound')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(1000);
 
     if (filter !== 'all') {
       query.eq('email_type', filter);
@@ -1114,22 +1541,23 @@ function SentTab() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchSent(); }, [filter]);
+  useEffect(() => { fetchSent(); setPage(1); }, [filter]);
+
+  const totalPages = Math.ceil(emails.length / PAGE_SIZE);
+  const paginatedEmails = emails.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'single': return <Badge variant="outline">Einzelmail</Badge>;
       case 'broadcast': return <Badge variant="outline" className="text-purple-600 border-purple-600">Rundmail</Badge>;
       case 'reply': return <Badge variant="outline" className="text-blue-600 border-blue-600">Antwort</Badge>;
-      case 'auto': return <Badge variant="outline" className="text-gray-600 border-gray-600">Automatisch</Badge>;
+      case 'auto': return <Badge variant="outline" className="text-orange-600 border-orange-600">Automatisch</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
 
-  // Stats
   const today = new Date().toISOString().split('T')[0];
   const sentToday = emails.filter(e => e.created_at.startsWith(today)).length;
-  const totalSent = emails.length;
   const broadcastCount = emails.filter(e => e.email_type === 'broadcast').length;
 
   if (selectedEmail) {
@@ -1146,6 +1574,7 @@ function SentTab() {
           <CardDescription>
             An <strong>{selectedEmail.recipient_name || selectedEmail.recipient_email}</strong> ({selectedEmail.recipient_email}) am{" "}
             {format(new Date(selectedEmail.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+            {selectedEmail.cc && <span className="block mt-1">CC: {selectedEmail.cc}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1169,7 +1598,7 @@ function SentTab() {
               <History className="w-5 h-5 text-primary" />
               Gesendete E-Mails
             </CardTitle>
-            <CardDescription>{totalSent} E-Mails insgesamt</CardDescription>
+            <CardDescription>{emails.length} E-Mails insgesamt</CardDescription>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex gap-2 text-sm">
@@ -1193,55 +1622,372 @@ function SentTab() {
       <CardContent>
         {loading ? (
           <div className="text-center py-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
-        ) : emails.length === 0 ? (
+        ) : paginatedEmails.length === 0 ? (
           <div className="text-center py-8">
             <History className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
             <p className="text-muted-foreground">Keine gesendeten E-Mails</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empfänger</TableHead>
-                <TableHead>Betreff</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead className="text-right">Aktion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {emails.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-sm">{e.recipient_name || e.recipient_email}</p>
-                      {e.recipient_name && <p className="text-xs text-muted-foreground">{e.recipient_email}</p>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[250px]">
-                    <p className="truncate text-sm">{e.subject}</p>
-                  </TableCell>
-                  <TableCell>{getTypeBadge(e.email_type)}</TableCell>
-                  <TableCell>
-                    <Badge variant={e.status === 'sent' || e.status === 'delivered' ? 'outline' : 'destructive'} className={e.status === 'sent' || e.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
-                      {e.status === 'sent' ? 'Gesendet' : e.status === 'delivered' ? 'Zugestellt' : e.status === 'failed' ? 'Fehlgeschlagen' : e.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {format(new Date(e.created_at), "dd.MM.yy HH:mm", { locale: de })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedEmail(e)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empfänger</TableHead>
+                  <TableHead>Betreff</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Datum</TableHead>
+                  <TableHead className="text-right">Aktion</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedEmails.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">{e.recipient_name || e.recipient_email}</p>
+                        {e.recipient_name && <p className="text-xs text-muted-foreground">{e.recipient_email}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[250px]">
+                      <p className="truncate text-sm">{e.subject}</p>
+                    </TableCell>
+                    <TableCell>{getTypeBadge(e.email_type)}</TableCell>
+                    <TableCell>
+                      <Badge variant={e.status === 'sent' || e.status === 'delivered' ? 'outline' : 'destructive'} className={e.status === 'sent' || e.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
+                        {e.status === 'sent' ? 'Gesendet' : e.status === 'delivered' ? 'Zugestellt' : e.status === 'opened' ? 'Geöffnet' : e.status === 'clicked' ? 'Geklickt' : e.status === 'bounced' ? 'Bounced' : e.status === 'failed' ? 'Fehlgeschlagen' : e.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {format(new Date(e.created_at), "dd.MM.yy HH:mm", { locale: de })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedEmail(e)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Seite {page} von {totalPages}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) pageNum = i + 1;
+                    else if (page <= 3) pageNum = i + 1;
+                    else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
+                    else pageNum = page - 2 + i;
+                    return (
+                      <Button key={pageNum} variant={page === pageNum ? "default" : "outline"} size="sm" onClick={() => setPage(pageNum)} className="w-8 h-8 p-0">
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Tab 6: Statistiken ─────────────────────────────────────────────────────
+
+function StatsTab() {
+  const [stats, setStats] = useState({
+    totalSent: 0,
+    totalInbound: 0,
+    sentToday: 0,
+    sentThisWeek: 0,
+    sentThisMonth: 0,
+    broadcasts: 0,
+    singleEmails: 0,
+    replies: 0,
+    delivered: 0,
+    opened: 0,
+    bounced: 0,
+    failed: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [recentBroadcasts, setRecentBroadcasts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Fetch all outbound emails
+      const { data: outbound } = await supabase
+        .from('admin_emails')
+        .select('id, email_type, status, created_at, broadcast_id, broadcast_group, subject')
+        .eq('direction', 'outbound')
+        .order('created_at', { ascending: false });
+
+      const { data: inbound } = await supabase
+        .from('admin_emails')
+        .select('id')
+        .eq('direction', 'inbound');
+
+      const emails = outbound || [];
+
+      const sentToday = emails.filter(e => e.created_at.startsWith(todayStr)).length;
+      const sentThisWeek = emails.filter(e => e.created_at >= weekAgo).length;
+      const sentThisMonth = emails.filter(e => e.created_at >= monthAgo).length;
+
+      // Group broadcasts
+      const broadcastMap = new Map<string, { subject: string; group: string; count: number; date: string }>();
+      emails.filter(e => e.email_type === 'broadcast' && e.broadcast_id).forEach(e => {
+        const existing = broadcastMap.get(e.broadcast_id!);
+        if (existing) {
+          existing.count++;
+        } else {
+          broadcastMap.set(e.broadcast_id!, {
+            subject: e.subject,
+            group: e.broadcast_group || '',
+            count: 1,
+            date: e.created_at,
+          });
+        }
+      });
+
+      setStats({
+        totalSent: emails.length,
+        totalInbound: (inbound || []).length,
+        sentToday,
+        sentThisWeek,
+        sentThisMonth,
+        broadcasts: emails.filter(e => e.email_type === 'broadcast').length,
+        singleEmails: emails.filter(e => e.email_type === 'single').length,
+        replies: emails.filter(e => e.email_type === 'reply').length,
+        delivered: emails.filter(e => e.status === 'delivered' || e.status === 'sent').length,
+        opened: emails.filter(e => e.status === 'opened').length,
+        bounced: emails.filter(e => e.status === 'bounced').length,
+        failed: emails.filter(e => e.status === 'failed').length,
+      });
+
+      setRecentBroadcasts(
+        Array.from(broadcastMap.values())
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 10)
+      );
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGroupLabel = (group: string) => {
+    const labels: Record<string, string> = {
+      all: 'Alle Benutzer', customers: 'Kunden', dealers: 'Händler',
+      verified_dealers: 'Verifizierte Händler', newsletter: 'Newsletter', active_bidders: 'Aktive Bieter',
+    };
+    return labels[group] || group;
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overview cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Send className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.totalSent}</p>
+                <p className="text-xs text-muted-foreground">Gesamt gesendet</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Inbox className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.totalInbound}</p>
+                <p className="text-xs text-muted-foreground">Empfangen</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.broadcasts}</p>
+                <p className="text-xs text-muted-foreground">Rundmail-Empfänger</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Clock className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.sentToday}</p>
+                <p className="text-xs text-muted-foreground">Heute gesendet</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Versand-Übersicht</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm">Heute</span>
+                <Badge variant="secondary">{stats.sentToday}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm">Diese Woche</span>
+                <Badge variant="secondary">{stats.sentThisWeek}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm">Diesen Monat</span>
+                <Badge variant="secondary">{stats.sentThisMonth}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm">Einzelmails</span>
+                <Badge variant="outline">{stats.singleEmails}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm">Rundmails</span>
+                <Badge variant="outline" className="text-purple-600 border-purple-600">{stats.broadcasts}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm">Antworten</span>
+                <Badge variant="outline" className="text-blue-600 border-blue-600">{stats.replies}</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Zustellstatus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" /> Zugestellt
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-green-600 border-green-600">{stats.delivered}</Badge>
+                  {stats.totalSent > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ({Math.round((stats.delivered / stats.totalSent) * 100)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-600" /> Geöffnet
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-blue-600 border-blue-600">{stats.opened}</Badge>
+                  {stats.delivered > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ({Math.round((stats.opened / stats.delivered) * 100)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-600" /> Bounced
+                </span>
+                <Badge variant="outline" className="text-yellow-600 border-yellow-600">{stats.bounced}</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-red-600" /> Fehlgeschlagen
+                </span>
+                <Badge variant="outline" className="text-red-600 border-red-600">{stats.failed}</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent broadcasts */}
+      {recentBroadcasts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Letzte Rundmails</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Betreff</TableHead>
+                  <TableHead>Empfängergruppe</TableHead>
+                  <TableHead>Empfänger</TableHead>
+                  <TableHead>Datum</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentBroadcasts.map((b, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium max-w-[250px] truncate">{b.subject}</TableCell>
+                    <TableCell><Badge variant="outline">{getGroupLabel(b.group)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{b.count}</Badge></TableCell>
+                    <TableCell className="text-sm">
+                      {format(new Date(b.date), "dd.MM.yy HH:mm", { locale: de })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

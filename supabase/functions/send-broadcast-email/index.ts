@@ -16,20 +16,31 @@ interface BroadcastRequest {
   custom_emails?: string[];
   test_mode?: boolean;
   test_email?: string;
+  include_unsubscribe?: boolean;
 }
 
 async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?: string[]): Promise<{ email: string; name: string | null; id: string | null }[]> {
+  // First, get users who have unsubscribed from broadcasts
+  const { data: unsubscribed } = await supabase
+    .from('user_notification_preferences')
+    .select('user_id')
+    .eq('broadcast_emails_enabled', false);
+  const unsubscribedIds = new Set((unsubscribed || []).map((u: any) => u.user_id));
+
+  let recipients: { email: string; name: string | null; id: string | null }[] = [];
+
   switch (group) {
     case 'all': {
       const { data } = await supabase
         .from('profiles')
         .select('id, email, first_name, last_name')
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'customers': {
       const { data } = await supabase
@@ -37,11 +48,12 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
         .select('id, email, first_name, last_name')
         .eq('account_type', 'private')
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'dealers': {
       const { data } = await supabase
@@ -49,11 +61,12 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
         .select('id, email, first_name, last_name, company_name')
         .eq('account_type', 'dealer')
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'verified_dealers': {
       const { data } = await supabase
@@ -62,11 +75,12 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
         .eq('account_type', 'dealer')
         .eq('is_verified', true)
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'newsletter': {
       const { data: prefs } = await supabase
@@ -80,14 +94,14 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
         .select('id, email, first_name, last_name')
         .in('id', userIds)
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'active_bidders': {
-      // Users who have placed bids in the last 30 days
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data: bids } = await supabase
         .from('bids')
@@ -100,11 +114,12 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
         .select('id, email, first_name, last_name')
         .in('id', uniqueIds)
         .not('email', 'is', null);
-      return (data || []).map((p: any) => ({
+      recipients = (data || []).map((p: any) => ({
         email: p.email,
         name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
         id: p.id,
       }));
+      break;
     }
     case 'custom': {
       return (customEmails || []).map(email => ({ email, name: null, id: null }));
@@ -112,6 +127,13 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
     default:
       return [];
   }
+
+  // Filter out unsubscribed users (except for custom lists)
+  if (group !== 'custom') {
+    recipients = recipients.filter(r => !r.id || !unsubscribedIds.has(r.id));
+  }
+
+  return recipients;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -139,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: BroadcastRequest = await req.json();
-    const { subject, body_html, group, custom_emails, test_mode, test_email } = body;
+    const { subject, body_html, group, custom_emails, test_mode, test_email, include_unsubscribe = true } = body;
 
     if (!subject || !body_html || !group) {
       return new Response(JSON.stringify({ error: 'Missing required fields: subject, body_html, group' }), { status: 400, headers });
@@ -156,8 +178,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Test mode: send only to test_email
     if (test_mode && test_email) {
-      const unsubscribeNote = paragraph(`<span style="font-size: 12px; color: #9ca3af;">Dies ist eine Test-E-Mail. Im echten Versand wird hier ein Abmelde-Link angezeigt.</span>`);
-      const emailContent = `${body_html}${unsubscribeNote}`;
+      let emailContent = body_html;
+      if (include_unsubscribe) {
+        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/einstellungen" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/abmelden" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+      }
       const html = buildEmailLayout(settingsData, subject, emailContent);
 
       const emailResponse = await fetch("https://api.resend.com/emails", {
@@ -172,6 +196,10 @@ const handler = async (req: Request): Promise<Response> => {
           subject: `[TEST] ${subject}`,
           html,
           reply_to: 'info@caravanwert.de',
+          headers: {
+            'List-Unsubscribe': '<https://caravanwert.de/abmelden>',
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
         }),
       });
 
@@ -187,7 +215,7 @@ const handler = async (req: Request): Promise<Response> => {
       }), { status: 200, headers });
     }
 
-    // Get recipients
+    // Get recipients (already filtered for unsubscribed)
     const recipients = await getRecipients(supabase, group, custom_emails);
 
     if (recipients.length === 0) {
@@ -197,12 +225,14 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate broadcast_id for grouping
     const broadcastId = crypto.randomUUID();
 
-    // Build email HTML with unsubscribe link
-    const unsubscribeNote = paragraph(`<span style="font-size: 12px; color: #9ca3af;">Wenn Sie diese E-Mails nicht mehr erhalten m&ouml;chten, k&ouml;nnen Sie sich in Ihrem <a href="https://caravanwert.de/dashboard" style="color: #1f8aa2;">Profil</a> abmelden.</span>`);
-    const emailContent = `${body_html}${unsubscribeNote}`;
+    // Build email HTML with optional unsubscribe link
+    let emailContent = body_html;
+    if (include_unsubscribe) {
+      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/einstellungen" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/abmelden" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+    }
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
-    // Send in batches of 10 (Resend rate limit: 10/sec on free plan)
+    // Send in batches of 10 (Resend rate limit)
     const BATCH_SIZE = 10;
     let sent = 0;
     let failed = 0;
@@ -213,19 +243,28 @@ const handler = async (req: Request): Promise<Response> => {
 
       const promises = batch.map(async (recipient) => {
         try {
+          const resendPayload: any = {
+            from: `${settingsData.site_name} <info@caravanwert.de>`,
+            to: [recipient.email],
+            subject,
+            html,
+            reply_to: 'info@caravanwert.de',
+          };
+
+          if (include_unsubscribe) {
+            resendPayload.headers = {
+              'List-Unsubscribe': '<https://caravanwert.de/abmelden>',
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            };
+          }
+
           const emailResponse = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${RESEND_API_KEY}`,
             },
-            body: JSON.stringify({
-              from: `${settingsData.site_name} <info@caravanwert.de>`,
-              to: [recipient.email],
-              subject,
-              html,
-              reply_to: 'info@caravanwert.de',
-            }),
+            body: JSON.stringify(resendPayload),
           });
 
           if (!emailResponse.ok) {

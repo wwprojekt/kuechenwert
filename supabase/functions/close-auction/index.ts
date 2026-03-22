@@ -177,6 +177,72 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── Notify losing bidders ───────────────────────────────────
+    if (highestBid && auction.bids && auction.bids.length > 0) {
+      const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+      const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
+
+      // Get unique bidders who did NOT win
+      const losingBidderIds = [...new Set(
+        auction.bids
+          .map((b: any) => b.bidder_id)
+          .filter((id: string) => id !== soldTo)
+      )];
+
+      for (const loserId of losingBidderIds) {
+        // Get the loser's highest bid
+        const loserHighestBid = Math.max(
+          ...auction.bids
+            .filter((b: any) => b.bidder_id === loserId)
+            .map((b: any) => Number(b.amount))
+        );
+
+        const { data: loserProfile } = await supabase
+          .from('profiles')
+          .select('email, first_name')
+          .eq('id', loserId)
+          .single();
+
+        if (loserProfile?.email) {
+          supabase.functions.invoke('send-auction-notification', {
+            body: {
+              email: loserProfile.email,
+              name: loserProfile.first_name || loserProfile.email.split('@')[0],
+              type: 'lost',
+              motorhomeModel: motorhomeName,
+              auctionUrl,
+              yourBid: `€${loserHighestBid.toLocaleString()}`,
+              currentBid: `€${Number(highestBid.amount).toLocaleString()}`,
+            },
+          }).catch((e) => console.error('Error sending loser notification:', e));
+        }
+      }
+    }
+
+    // ─── Notify seller about auction end ──────────────────────────
+    if (auction.motorhome?.seller_id) {
+      const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+      const { data: sellerProfile } = await supabase
+        .from('profiles')
+        .select('email, first_name')
+        .eq('id', auction.motorhome.seller_id)
+        .single();
+
+      if (sellerProfile?.email) {
+        const sellerType = newStatus === 'sold' ? 'won' : 'lost';
+        supabase.functions.invoke('send-auction-notification', {
+          body: {
+            email: sellerProfile.email,
+            name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+            type: sellerType,
+            motorhomeModel: motorhomeName,
+            auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
+            currentBid: highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : 'Keine Gebote',
+          },
+        }).catch((e) => console.error('Error sending seller end notification:', e));
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

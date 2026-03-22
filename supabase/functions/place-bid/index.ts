@@ -173,6 +173,61 @@ Deno.serve(async (req) => {
       console.error('Error triggering autobid:', error);
     });
 
+    // ─── Notifications (fire and forget) ───────────────────────────
+
+    // 1. Notify the current bidder that their bid was placed
+    supabaseAdmin.functions.invoke('send-bid-notification', {
+      body: {
+        bidderId: user.id,
+        auctionId,
+        bidAmount: amount,
+        isOutbid: false,
+      },
+    }).catch((e) => console.error('Error sending bid confirmation:', e));
+
+    // 2. Notify the previous highest bidder that they were outbid
+    const { data: previousBids } = await supabaseAdmin
+      .from('bids')
+      .select('bidder_id')
+      .eq('auction_id', auctionId)
+      .neq('bidder_id', user.id)
+      .order('amount', { ascending: false })
+      .limit(1);
+
+    if (previousBids && previousBids.length > 0) {
+      supabaseAdmin.functions.invoke('send-bid-notification', {
+        body: {
+          bidderId: previousBids[0].bidder_id,
+          auctionId,
+          bidAmount: amount,
+          isOutbid: true,
+        },
+      }).catch((e) => console.error('Error sending outbid notification:', e));
+    }
+
+    // 3. Notify the seller about the new bid
+    if (auction.motorhome?.seller_id) {
+      const motorhomeName = `${auction.motorhome.manufacturer || ''} ${auction.motorhome.model || ''}`.trim();
+      const { data: sellerProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email, first_name')
+        .eq('id', auction.motorhome.seller_id)
+        .single();
+
+      if (sellerProfile?.email) {
+        supabaseAdmin.functions.invoke('send-auction-notification', {
+          body: {
+            email: sellerProfile.email,
+            name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+            type: 'new_bid',
+            motorhomeModel: motorhomeName,
+            auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
+            currentBid: `€${amount.toLocaleString()}`,
+          },
+        }).catch((e) => console.error('Error sending seller notification:', e));
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

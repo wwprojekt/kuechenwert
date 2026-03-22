@@ -11,11 +11,13 @@ interface SendEmailRequest {
   to: string;
   subject: string;
   body_html: string;
-  cc?: string[];
-  bcc?: string[];
+  cc?: string;
+  bcc?: string;
   reply_to_message_id?: string;
   reply_to_message_type?: 'support' | 'contact';
   recipient_name?: string;
+  attachments?: Array<{ filename: string; content: string; type?: string }>;
+  scheduled_at?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -43,11 +45,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendEmailRequest = await req.json();
-    const { to, subject, body_html, cc, bcc, reply_to_message_id, reply_to_message_type, recipient_name } = body;
+    const { to, subject, body_html, cc, bcc, reply_to_message_id, reply_to_message_type, recipient_name, attachments, scheduled_at } = body;
 
     if (!to || !subject || !body_html) {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, body_html' }), { status: 400, headers });
     }
+
+    // Parse CC/BCC from comma-separated strings
+    const ccList = cc ? cc.split(',').map(e => e.trim()).filter(Boolean) : [];
+    const bccList = bcc ? bcc.split(',').map(e => e.trim()).filter(Boolean) : [];
 
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
@@ -65,6 +71,68 @@ const handler = async (req: Request): Promise<Response> => {
     `;
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
+    // If scheduled, save to DB and return
+    if (scheduled_at) {
+      const scheduledDate = new Date(scheduled_at);
+      if (scheduledDate <= new Date()) {
+        return new Response(JSON.stringify({ error: 'Geplanter Zeitpunkt muss in der Zukunft liegen' }), { status: 400, headers });
+      }
+
+      const { data: emailRecord, error: insertError } = await supabase
+        .from('admin_emails')
+        .insert({
+          sender_email: 'info@caravanwert.de',
+          sender_name: settingsData.site_name,
+          recipient_email: to,
+          recipient_name: recipient_name || null,
+          cc: ccList,
+          bcc: bccList,
+          subject,
+          body_html,
+          body_text: body_html.replace(/<[^>]*>/g, ''),
+          email_type: 'single',
+          direction: 'outbound',
+          status: 'scheduled',
+          sent_by: user.id,
+          is_read: true,
+          scheduled_at: scheduledDate.toISOString(),
+          attachments: attachments || [],
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw new Error(`Error saving scheduled email: ${insertError.message}`);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Email scheduled successfully',
+        scheduled_at: scheduledDate.toISOString(),
+        email_id: emailRecord?.id,
+      }), { status: 200, headers });
+    }
+
+    // Build Resend payload
+    const resendPayload: any = {
+      from: `${settingsData.site_name} <info@caravanwert.de>`,
+      to: [to],
+      cc: ccList,
+      bcc: bccList,
+      subject,
+      html,
+      reply_to: 'info@caravanwert.de',
+    };
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      resendPayload.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content, // base64 encoded
+        type: att.type || 'application/octet-stream',
+      }));
+    }
+
     // Send via Resend
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -72,15 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
-        to: [to],
-        cc: cc || [],
-        bcc: bcc || [],
-        subject,
-        html,
-        reply_to: 'info@caravanwert.de',
-      }),
+      body: JSON.stringify(resendPayload),
     });
 
     if (!emailResponse.ok) {
@@ -109,8 +169,8 @@ const handler = async (req: Request): Promise<Response> => {
         recipient_email: to,
         recipient_name: recipient_name || null,
         recipient_id: recipientProfile?.id || null,
-        cc: cc || [],
-        bcc: bcc || [],
+        cc: ccList,
+        bcc: bccList,
         subject,
         body_html,
         body_text: body_html.replace(/<[^>]*>/g, ''),
@@ -122,6 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
         related_message_type: reply_to_message_type || null,
         sent_by: user.id,
         is_read: true,
+        attachments: attachments ? attachments.map(a => ({ filename: a.filename, type: a.type, size: a.content?.length || 0 })) : [],
       })
       .select()
       .single();

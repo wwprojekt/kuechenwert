@@ -5,54 +5,41 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
- * Resend Inbound Webhook
+ * Resend Webhook Handler
  * 
- * Receives incoming emails sent to info@caravanwert.de via Resend's
- * inbound email feature. Stores them in the admin_emails table.
- * 
- * Resend sends a POST with JSON body containing:
- * - from: sender email address
- * - to: recipient email address(es)
- * - subject: email subject
- * - html: HTML body
- * - text: plain text body
- * - headers: raw email headers
- * - attachments: array of attachment objects
+ * Handles both:
+ * 1. Inbound emails (email.received) - stores in admin_emails
+ * 2. Delivery status events (email.delivered, email.opened, email.bounced, etc.) - updates admin_emails status
  */
 
-interface ResendInboundPayload {
-  data: {
-    from: string;
-    to: string[];
-    subject: string;
-    html?: string;
-    text?: string;
-    headers?: Record<string, string>[];
-    attachments?: Array<{
-      filename: string;
-      content_type: string;
-      content: string;
-    }>;
-    created_at?: string;
-    email_id?: string;
-  };
+interface ResendWebhookPayload {
+  data: any;
   type: string;
+  created_at?: string;
 }
 
 function extractEmailAddress(from: string): string {
-  // Extract email from "Name <email@example.com>" format
   const match = from.match(/<([^>]+)>/);
   return match ? match[1] : from;
 }
 
 function extractName(from: string): string | null {
-  // Extract name from "Name <email@example.com>" format
   const match = from.match(/^"?([^"<]+)"?\s*</);
   return match ? match[1].trim() : null;
 }
 
+// Map Resend event types to our status values
+const STATUS_MAP: Record<string, string> = {
+  'email.sent': 'sent',
+  'email.delivered': 'delivered',
+  'email.delivery_delayed': 'delayed',
+  'email.complained': 'complained',
+  'email.bounced': 'bounced',
+  'email.opened': 'opened',
+  'email.clicked': 'clicked',
+};
+
 const handler = async (req: Request): Promise<Response> => {
-  // Only accept POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -61,19 +48,52 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const payload: ResendInboundPayload = await req.json();
-    console.log("Inbound webhook received:", JSON.stringify(payload).substring(0, 500));
+    const payload: ResendWebhookPayload = await req.json();
+    console.log("Webhook received:", payload.type, JSON.stringify(payload.data).substring(0, 300));
 
-    // Handle different webhook event types
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // ── Handle delivery status events ──────────────────────────────────
     if (payload.type && payload.type !== 'email.received') {
-      // Could be email.delivered, email.opened, etc. - just acknowledge
-      console.log(`Webhook event type: ${payload.type}`);
-      return new Response(JSON.stringify({ received: true }), {
+      const newStatus = STATUS_MAP[payload.type];
+      
+      if (newStatus && payload.data?.email_id) {
+        const resendId = payload.data.email_id;
+        
+        // Update the email status in admin_emails
+        const { data: updated, error } = await supabase
+          .from('admin_emails')
+          .update({ 
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('resend_id', resendId)
+          .select('id')
+          .maybeSingle();
+
+        if (error) {
+          console.error(`Error updating status for ${resendId}:`, error);
+        } else if (updated) {
+          console.log(`Updated email ${updated.id} status to ${newStatus}`);
+        } else {
+          console.log(`No email found with resend_id ${resendId} - might be a system email`);
+        }
+
+        // Track bounces for future reference
+        if (newStatus === 'bounced' && payload.data?.to) {
+          const bouncedEmail = Array.isArray(payload.data.to) ? payload.data.to[0] : payload.data.to;
+          console.log(`BOUNCE detected for: ${bouncedEmail}`);
+          // Could add to a bounced_emails table in the future
+        }
+      }
+
+      return new Response(JSON.stringify({ received: true, type: payload.type }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
 
+    // ── Handle inbound emails ──────────────────────────────────────────
     const emailData = payload.data;
     if (!emailData || !emailData.from) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
@@ -85,8 +105,6 @@ const handler = async (req: Request): Promise<Response> => {
     const senderEmail = extractEmailAddress(emailData.from);
     const senderName = extractName(emailData.from);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     // Check if sender is a known user
     const { data: senderProfile } = await supabase
       .from('profiles')
@@ -94,11 +112,10 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('email', senderEmail)
       .maybeSingle();
 
-    // Check if this is a reply to an existing thread
+    // Try to find existing conversation thread with this sender
     let threadId: string | null = null;
     let inReplyTo: string | null = null;
 
-    // Try to find existing conversation with this sender
     const { data: existingThread } = await supabase
       .from('admin_emails')
       .select('id, thread_id')
@@ -112,11 +129,11 @@ const handler = async (req: Request): Promise<Response> => {
       inReplyTo = existingThread.id;
     }
 
-    // Process attachments metadata (store info, not content)
-    const attachmentsMeta = (emailData.attachments || []).map(att => ({
+    // Process attachments metadata
+    const attachmentsMeta = (emailData.attachments || []).map((att: any) => ({
       filename: att.filename,
       content_type: att.content_type,
-      size: att.content ? Math.round(att.content.length * 0.75) : 0, // base64 to bytes estimate
+      size: att.content ? Math.round(att.content.length * 0.75) : 0,
     }));
 
     // Store the inbound email
@@ -150,7 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    // If no thread_id was set, use the new email's own id as thread_id
+    // If no thread_id was set, use the new email's own id
     if (!threadId && emailRecord) {
       await supabase
         .from('admin_emails')
@@ -169,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
   } catch (error: any) {
-    console.error("Error processing inbound webhook:", error);
+    console.error("Error processing webhook:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

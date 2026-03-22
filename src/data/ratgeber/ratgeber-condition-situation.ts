@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const ohneTuev: RatgeberConfig = {
   slug: "wohnmobil-ohne-tuev-verkaufen",
   path: "/ratgeber/wohnmobil-ohne-tuev-verkaufen",
-  title: "Wohnmobil ohne TÜV verkaufen – Auch abgelaufen noch Geld wert | CaravanWert",
+  title: "Wohnmobil ohne TÜV verkaufen",
   metaDescription: "Wohnmobil ohne TÜV verkaufen? Erfahren Sie, wie viel Ihr Wohnmobil trotz abgelaufener HU noch wert ist und wie der Verkauf legal funktioniert.",
   keywords: "wohnmobil ohne tüv verkaufen, wohnmobil abgelaufene hu verkaufen, wohnmobil ohne hauptuntersuchung, reisemobil ohne tüv",
   h1: "Wohnmobil ohne TÜV verkaufen",
@@ -85,7 +85,7 @@ export const ohneTuev: RatgeberConfig = {
 export const hoheLaufleistung: RatgeberConfig = {
   slug: "wohnmobil-mit-hoher-laufleistung-verkaufen",
   path: "/ratgeber/wohnmobil-mit-hoher-laufleistung-verkaufen",
-  title: "Wohnmobil mit hoher Laufleistung verkaufen – Faire Preise bei vielen Kilometern | CaravanWert",
+  title: "Wohnmobil mit hoher Laufleistung verkaufen",
   metaDescription: "Wohnmobil mit hoher Laufleistung verkaufen? Erfahren Sie, ab wann Kilometer kritisch werden und wie Sie trotzdem einen guten Preis erzielen.",
   keywords: "wohnmobil hohe laufleistung verkaufen, wohnmobil viele kilometer, wohnmobil 100000 km verkaufen, reisemobil hohe laufleistung",
   h1: "Wohnmobil mit hoher Laufleistung verkaufen",
@@ -168,7 +168,7 @@ export const hoheLaufleistung: RatgeberConfig = {
 export const reparaturstau: RatgeberConfig = {
   slug: "wohnmobil-mit-reparaturstau-verkaufen",
   path: "/ratgeber/wohnmobil-mit-reparaturstau-verkaufen",
-  title: "Wohnmobil mit Reparaturstau verkaufen – Fair bewertet trotz Mängeln | CaravanWert",
+  title: "Wohnmobil mit Reparaturstau verkaufen",
   metaDescription: "Wohnmobil mit Reparaturstau verkaufen? Erfahren Sie, wie viel Ihr Wohnmobil trotz aufgestauter Reparaturen noch wert ist und wie der Verkauf funktioniert.",
   keywords: "wohnmobil reparaturstau verkaufen, wohnmobil mängel verkaufen, wohnmobil reparaturbedürftig, reisemobil reparaturstau",
   h1: "Wohnmobil mit Reparaturstau verkaufen",
@@ -178,7 +178,7 @@ export const reparaturstau: RatgeberConfig = {
   secondaryCta: { text: "So funktioniert's", href: "/faq" },
   sections: [
     {
-      title: "Reparaturstau — was ist Ihr Wohnmobil noch wert?",
+      title: "Reparaturstau — was ist Ihr Wohnmobil noch",
       content: "Reparaturstau entsteht, wenn mehrere kleinere und mittlere Mängel über die Zeit aufgelaufen sind. Der Restwert hängt von der Summe der Reparaturkosten ab.",
       items: [
         { title: "Leichter Reparaturstau (bis 3.000€)", description: "Kleinigkeiten: Dichtungen, Beleuchtung, Polster. Restwert: 85–90% des Marktwerts." },
@@ -251,7 +251,7 @@ export const reparaturstau: RatgeberConfig = {
 export const leasingvertrag: RatgeberConfig = {
   slug: "wohnmobil-mit-leasingvertrag-verkaufen",
   path: "/ratgeber/wohnmobil-mit-leasingvertrag-verkaufen",
-  title: "Wohnmobil mit Leasingvertrag verkaufen – Vorzeitige Rückgabe & Alternativen | CaravanWert",
+  title: "Wohnmobil mit Leasingvertrag verkaufen",
   metaDescription: "Wohnmobil mit Leasingvertrag verkaufen? Erfahren Sie Ihre Optionen bei vorzeitiger Beendigung, Übernahme und Ablösung des Leasingvertrags.",
   keywords: "wohnmobil leasing verkaufen, wohnmobil leasingvertrag vorzeitig, leasing wohnmobil ablösen, wohnmobil leasing rückgabe",
   h1: "Wohnmobil mit Leasingvertrag verkaufen",
@@ -333,7 +333,7 @@ export const leasingvertrag: RatgeberConfig = {
 export const trotzFinanzierung: RatgeberConfig = {
   slug: "wohnmobil-trotz-finanzierung-verkaufen",
   path: "/ratgeber/wohnmobil-trotz-finanzierung-verkaufen",
-  title: "Wohnmobil trotz Finanzierung verkaufen – Restschuld ablösen & verkaufen | CaravanWert",
+  title: "Wohnmobil trotz Finanzierung verkaufen",
   metaDescription: "Wohnmobil trotz laufender Finanzierung verkaufen? Erfahren Sie, wie die Restschuldablösung funktioniert und was Sie beachten müssen.",
   keywords: "wohnmobil finanzierung verkaufen, wohnmobil kredit verkaufen, wohnmobil restschuld ablösen, reisemobil finanziert verkaufen",
   h1: "Wohnmobil trotz Finanzierung verkaufen",
@@ -355,7 +355,7 @@ export const trotzFinanzierung: RatgeberConfig = {
       ctaHref: "/verkaufen"
     },
     {
-      title: "Was ist, wenn der Marktwert unter der Restschuld liegt?",
+      title: "Was ist, wenn der Marktwert unter der",
       content: "Manchmal übersteigt die Restschuld den aktuellen Marktwert — das muss aber kein Problem sein.",
       items: [
         { title: "Differenz selbst zahlen", description: "Die Differenz zwischen Restschuld und Kaufpreis müssen Sie selbst ausgleichen." },
@@ -413,7 +413,7 @@ export const trotzFinanzierung: RatgeberConfig = {
 export const erbfall: RatgeberConfig = {
   slug: "wohnmobil-im-erbfall-verkaufen",
   path: "/ratgeber/wohnmobil-im-erbfall-verkaufen",
-  title: "Wohnmobil im Erbfall verkaufen – Geerbtes Wohnmobil schnell & fair verwerten | CaravanWert",
+  title: "Wohnmobil im Erbfall verkaufen",
   metaDescription: "Wohnmobil geerbt und möchten verkaufen? Erfahren Sie, welche Schritte nötig sind, welche Unterlagen Sie brauchen und wie Sie den besten Preis erzielen.",
   keywords: "wohnmobil erbfall verkaufen, geerbtes wohnmobil verkaufen, wohnmobil erbe, nachlass wohnmobil verkauf",
   h1: "Wohnmobil im Erbfall verkaufen",
@@ -495,7 +495,7 @@ export const erbfall: RatgeberConfig = {
 export const scheidung: RatgeberConfig = {
   slug: "wohnmobil-bei-scheidung-verkaufen",
   path: "/ratgeber/wohnmobil-bei-scheidung-verkaufen",
-  title: "Wohnmobil bei Scheidung verkaufen – Faire Lösung für beide Seiten | CaravanWert",
+  title: "Wohnmobil bei Scheidung verkaufen",
   metaDescription: "Wohnmobil bei Scheidung verkaufen? Erfahren Sie, wie die Vermögensaufteilung funktioniert und wie Sie das Fahrzeug schnell und fair verwerten.",
   keywords: "wohnmobil scheidung verkaufen, wohnmobil trennung verkaufen, zugewinnausgleich wohnmobil, scheidung wohnmobil wert",
   h1: "Wohnmobil bei Scheidung verkaufen",

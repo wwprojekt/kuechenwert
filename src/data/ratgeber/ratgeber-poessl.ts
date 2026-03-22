@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const poesslVerkaufen: RatgeberConfig = {
   slug: "poessl-wohnmobil-verkaufen",
   path: "/ratgeber/poessl-wohnmobil-verkaufen",
-  title: "Pössl Wohnmobil verkaufen – Bestpreis für Ihren Pössl | CaravanWert",
+  title: "Pössl Wohnmobil verkaufen – Bestpreis",
   metaDescription: "Pössl Wohnmobil verkaufen zum Top-Preis. Ob Summit, Roadcamp oder Campster — erfahren Sie, wie Sie den maximalen Erlös für Ihren Pössl erzielen.",
   keywords: "pössl wohnmobil verkaufen, pössl verkaufen, pössl summit verkaufen, pössl campster verkaufen",
   h1: "Pössl Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const poesslVerkaufen: RatgeberConfig = {
 export const poesslKosten: RatgeberConfig = {
   slug: "was-kostet-mein-poessl-wohnmobil",
   path: "/ratgeber/was-kostet-mein-poessl-wohnmobil",
-  title: "Was kostet mein Pössl Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Pössl Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Gebrauchtpreise für Pössl Kastenwagen. Preisübersicht für Summit, Roadcamp, Campster und Vanster.",
   keywords: "was kostet pössl wohnmobil, pössl preis, pössl summit preis, pössl wert 2026",
   h1: "Was kostet mein Pössl Wohnmobil?",
@@ -170,7 +170,7 @@ export const poesslKosten: RatgeberConfig = {
 export const poesslWertErmitteln: RatgeberConfig = {
   slug: "poessl-wohnmobil-wert-ermitteln",
   path: "/ratgeber/poessl-wohnmobil-wert-ermitteln",
-  title: "Pössl Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Pössl Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Pössl Kastenwagens. Bewertung für Summit, Roadcamp, Campster und Vanster — kostenlos in 24 Stunden.",
   keywords: "pössl wert ermitteln, pössl bewertung, pössl kastenwagen wert, pössl wertermittlung",
   h1: "Wert Ihres Pössl Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const poesslWertErmitteln: RatgeberConfig = {
 export const poesslWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-poessl-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-poessl-wohnmobil",
-  title: "Wie verkaufe ich mein Pössl Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Pössl Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Pössl-Verkauf. Kastenwagen-spezifische Tipps für Vorbereitung, Preisfindung und Übergabe.",
   keywords: "wie verkaufe ich pössl wohnmobil, pössl verkaufen anleitung, pössl kastenwagen verkauf tipps",
   h1: "Wie verkaufe ich mein Pössl Wohnmobil?",
@@ -331,7 +331,7 @@ export const poesslWieVerkaufe: RatgeberConfig = {
 export const poesslVersteigern: RatgeberConfig = {
   slug: "poessl-wohnmobil-versteigern",
   path: "/ratgeber/poessl-wohnmobil-versteigern",
-  title: "Pössl Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Pössl Wohnmobil versteigern",
   metaDescription: "Pössl Kastenwagen versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "pössl wohnmobil versteigern, pössl auktion, pössl kastenwagen versteigerung",
   h1: "Pössl Wohnmobil versteigern",

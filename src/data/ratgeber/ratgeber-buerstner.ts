@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const buerstnerVerkaufen: RatgeberConfig = {
   slug: "buerstner-wohnmobil-verkaufen",
   path: "/ratgeber/buerstner-wohnmobil-verkaufen",
-  title: "Bürstner Wohnmobil verkaufen – Bestpreis sichern | CaravanWert",
+  title: "Bürstner Wohnmobil verkaufen",
   metaDescription: "Bürstner Wohnmobil verkaufen zum Top-Preis. Ob Lyseo, Ixeo oder Elegance — wir zeigen Ihnen, wie Sie den maximalen Erlös für Ihren Bürstner erzielen.",
   keywords: "bürstner wohnmobil verkaufen, bürstner verkaufen, bürstner lyseo verkaufen, bürstner ixeo verkaufen",
   h1: "Bürstner Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const buerstnerVerkaufen: RatgeberConfig = {
 export const buerstnerKosten: RatgeberConfig = {
   slug: "was-kostet-mein-buerstner-wohnmobil",
   path: "/ratgeber/was-kostet-mein-buerstner-wohnmobil",
-  title: "Was kostet mein Bürstner Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Bürstner Wohnmobil? Preise",
   metaDescription: "Aktuelle Marktpreise für Bürstner Wohnmobile. Preisübersicht für Lyseo, Ixeo, Elegance und Campeo. Kostenlose Wertermittlung.",
   keywords: "was kostet bürstner wohnmobil, bürstner preis, bürstner lyseo preis, bürstner wert 2026",
   h1: "Was kostet mein Bürstner Wohnmobil?",
@@ -170,7 +170,7 @@ export const buerstnerKosten: RatgeberConfig = {
 export const buerstnerWertErmitteln: RatgeberConfig = {
   slug: "buerstner-wohnmobil-wert-ermitteln",
   path: "/ratgeber/buerstner-wohnmobil-wert-ermitteln",
-  title: "Bürstner Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Bürstner Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Bürstner Wohnmobils. Professionelle Bewertung für Lyseo, Ixeo, Elegance und Campeo — kostenlos.",
   keywords: "bürstner wert ermitteln, bürstner bewertung, bürstner wohnmobil wert, bürstner wertermittlung",
   h1: "Wert Ihres Bürstner Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const buerstnerWertErmitteln: RatgeberConfig = {
 export const buerstnerWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-buerstner-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-buerstner-wohnmobil",
-  title: "Wie verkaufe ich mein Bürstner Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Bürstner Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Bürstner-Verkauf. Vorbereitung, Preisfindung, Verkaufsweg und sichere Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich bürstner wohnmobil, bürstner verkaufen anleitung, bürstner verkauf tipps",
   h1: "Wie verkaufe ich mein Bürstner Wohnmobil?",
@@ -331,7 +331,7 @@ export const buerstnerWieVerkaufe: RatgeberConfig = {
 export const buerstnerVersteigern: RatgeberConfig = {
   slug: "buerstner-wohnmobil-versteigern",
   path: "/ratgeber/buerstner-wohnmobil-versteigern",
-  title: "Bürstner Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Bürstner Wohnmobil versteigern",
   metaDescription: "Bürstner Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "bürstner wohnmobil versteigern, bürstner auktion, bürstner versteigerung",
   h1: "Bürstner Wohnmobil versteigern",

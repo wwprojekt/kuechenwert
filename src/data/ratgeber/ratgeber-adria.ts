@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const adriaVerkaufen: RatgeberConfig = {
   slug: "adria-wohnmobil-verkaufen",
   path: "/ratgeber/adria-wohnmobil-verkaufen",
-  title: "Adria Wohnmobil verkaufen – Top-Preis für Ihren Adria | CaravanWert",
+  title: "Adria Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Adria Wohnmobil verkaufen zum Bestpreis. Ob Coral, Matrix oder Twin — erfahren Sie, wie Sie den maximalen Erlös für Ihren Adria erzielen.",
   keywords: "adria wohnmobil verkaufen, adria verkaufen, adria coral verkaufen, adria matrix verkaufen",
   h1: "Adria Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const adriaVerkaufen: RatgeberConfig = {
 export const adriaKosten: RatgeberConfig = {
   slug: "was-kostet-mein-adria-wohnmobil",
   path: "/ratgeber/was-kostet-mein-adria-wohnmobil",
-  title: "Was kostet mein Adria Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Adria Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Marktpreise für Adria Wohnmobile. Preisübersicht für Coral, Matrix, Twin und Sonic. Kostenlose Wertermittlung.",
   keywords: "was kostet adria wohnmobil, adria preis, adria coral preis, adria wert 2026",
   h1: "Was kostet mein Adria Wohnmobil?",
@@ -170,7 +170,7 @@ export const adriaKosten: RatgeberConfig = {
 export const adriaWertErmitteln: RatgeberConfig = {
   slug: "adria-wohnmobil-wert-ermitteln",
   path: "/ratgeber/adria-wohnmobil-wert-ermitteln",
-  title: "Adria Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Adria Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Adria Wohnmobils. Professionelle Bewertung für Coral, Matrix, Twin und Sonic — kostenlos in 24 Stunden.",
   keywords: "adria wert ermitteln, adria bewertung, adria wohnmobil wert, adria wertermittlung",
   h1: "Wert Ihres Adria Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const adriaWertErmitteln: RatgeberConfig = {
 export const adriaWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-adria-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-adria-wohnmobil",
-  title: "Wie verkaufe ich mein Adria Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Adria Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Adria-Verkauf. Vorbereitung, Preisfindung, Verkaufskanal und Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich adria wohnmobil, adria verkaufen anleitung, adria verkauf tipps",
   h1: "Wie verkaufe ich mein Adria Wohnmobil?",
@@ -331,7 +331,7 @@ export const adriaWieVerkaufe: RatgeberConfig = {
 export const adriaVersteigern: RatgeberConfig = {
   slug: "adria-wohnmobil-versteigern",
   path: "/ratgeber/adria-wohnmobil-versteigern",
-  title: "Adria Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Adria Wohnmobil versteigern",
   metaDescription: "Adria Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "adria wohnmobil versteigern, adria auktion, adria versteigerung",
   h1: "Adria Wohnmobil versteigern",

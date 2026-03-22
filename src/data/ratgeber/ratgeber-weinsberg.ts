@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const weinsbergVerkaufen: RatgeberConfig = {
   slug: "weinsberg-wohnmobil-verkaufen",
   path: "/ratgeber/weinsberg-wohnmobil-verkaufen",
-  title: "Weinsberg Wohnmobil verkaufen – Bestpreis erzielen | CaravanWert",
+  title: "Weinsberg Wohnmobil verkaufen – Bestpreis",
   metaDescription: "Weinsberg Wohnmobil verkaufen zum Top-Preis. Ob CaraCompact, CaraSuite oder CaraBus — erfahren Sie, wie Sie den maximalen Erlös erzielen.",
   keywords: "weinsberg wohnmobil verkaufen, weinsberg verkaufen, weinsberg caracompact verkaufen, weinsberg carabus verkaufen",
   h1: "Weinsberg Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const weinsbergVerkaufen: RatgeberConfig = {
 export const weinsbergKosten: RatgeberConfig = {
   slug: "was-kostet-mein-weinsberg-wohnmobil",
   path: "/ratgeber/was-kostet-mein-weinsberg-wohnmobil",
-  title: "Was kostet mein Weinsberg Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Weinsberg Wohnmobil? Preise",
   metaDescription: "Aktuelle Gebrauchtpreise für Weinsberg Wohnmobile. Preisübersicht für CaraCompact, CaraBus, CaraSuite und CaraHome.",
   keywords: "was kostet weinsberg wohnmobil, weinsberg preis, weinsberg caracompact preis, weinsberg wert 2026",
   h1: "Was kostet mein Weinsberg Wohnmobil?",
@@ -170,7 +170,7 @@ export const weinsbergKosten: RatgeberConfig = {
 export const weinsbergWertErmitteln: RatgeberConfig = {
   slug: "weinsberg-wohnmobil-wert-ermitteln",
   path: "/ratgeber/weinsberg-wohnmobil-wert-ermitteln",
-  title: "Weinsberg Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Weinsberg Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Weinsberg Wohnmobils. Bewertung für CaraCompact, CaraBus, CaraSuite und CaraHome — kostenlos.",
   keywords: "weinsberg wert ermitteln, weinsberg bewertung, weinsberg wohnmobil wert, weinsberg wertermittlung",
   h1: "Wert Ihres Weinsberg Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const weinsbergWertErmitteln: RatgeberConfig = {
 export const weinsbergWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-weinsberg-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-weinsberg-wohnmobil",
-  title: "Wie verkaufe ich mein Weinsberg Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Weinsberg Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Weinsberg-Verkauf. Vorbereitung, Preisfindung, Verkaufskanal und Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich weinsberg wohnmobil, weinsberg verkaufen anleitung, weinsberg verkauf tipps",
   h1: "Wie verkaufe ich mein Weinsberg Wohnmobil?",
@@ -331,7 +331,7 @@ export const weinsbergWieVerkaufe: RatgeberConfig = {
 export const weinsbergVersteigern: RatgeberConfig = {
   slug: "weinsberg-wohnmobil-versteigern",
   path: "/ratgeber/weinsberg-wohnmobil-versteigern",
-  title: "Weinsberg Wohnmobil versteigern – Auktion mit Sicherheit | CaravanWert",
+  title: "Weinsberg Wohnmobil versteigern",
   metaDescription: "Weinsberg Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "weinsberg wohnmobil versteigern, weinsberg auktion, weinsberg versteigerung",
   h1: "Weinsberg Wohnmobil versteigern",

@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilWert: LandingPageConfig = {
   slug: "was-ist-mein-wohnmobil-wert",
   path: "/was-ist-mein-wohnmobil-wert",
-  title: "Was ist mein Wohnmobil wert? — Faktoren & Bewertung",
+  title: "Was ist mein Wohnmobil wert? Bewertung",
   metaDescription:
     "Erfahren Sie, was Ihr Wohnmobil wert ist: Die wichtigsten Wertfaktoren, Marktdaten und eine kostenlose Bewertung. Jetzt Wohnmobil-Wert ermitteln!",
   keywords:
     "was ist mein wohnmobil wert, wohnmobil wert ermitteln, wohnmobil bewertung kostenlos, was ist mein camper wert, reisemobil wert, wohnmobil restwert",
-  h1: "Was ist mein Wohnmobil wert? — Faktoren & Bewertung",
+  h1: "Was ist mein Wohnmobil wert? Bewertung",
   heroSubtitle:
     "Der Wert Ihres Wohnmobils hängt von vielen Faktoren ab. Erfahren Sie, welche Kriterien den Preis bestimmen und lassen Sie Ihr Fahrzeug kostenlos bewerten.",
   primaryCta: { text: "Wert jetzt ermitteln", href: "/wertrechner" },

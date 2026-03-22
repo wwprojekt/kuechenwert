@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const concordeVerkaufen: RatgeberConfig = {
   slug: "concorde-wohnmobil-verkaufen",
   path: "/ratgeber/concorde-wohnmobil-verkaufen",
-  title: "Concorde Wohnmobil verkaufen – Bestpreis für Ihr Luxus-Reisemobil | CaravanWert",
+  title: "Concorde Wohnmobil verkaufen",
   metaDescription: "Concorde Wohnmobil verkaufen zum Top-Preis. Ob Liner, Carver oder Charisma — erfahren Sie, wie Sie den maximalen Erlös für Ihr Luxus-Reisemobil erzielen.",
   keywords: "concorde wohnmobil verkaufen, concorde verkaufen, concorde liner verkaufen, concorde carver verkaufen",
   h1: "Concorde Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const concordeVerkaufen: RatgeberConfig = {
 export const concordeKosten: RatgeberConfig = {
   slug: "was-kostet-mein-concorde-wohnmobil",
   path: "/ratgeber/was-kostet-mein-concorde-wohnmobil",
-  title: "Was kostet mein Concorde Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Concorde Wohnmobil? Preise",
   metaDescription: "Aktuelle Gebrauchtpreise für Concorde Wohnmobile. Preisübersicht für Liner, Carver, Charisma und Credo — Deutschlands exklusivste Reisemobile.",
   keywords: "was kostet concorde wohnmobil, concorde preis, concorde liner preis, concorde wert 2026",
   h1: "Was kostet mein Concorde Wohnmobil?",
@@ -170,7 +170,7 @@ export const concordeKosten: RatgeberConfig = {
 export const concordeWertErmitteln: RatgeberConfig = {
   slug: "concorde-wohnmobil-wert-ermitteln",
   path: "/ratgeber/concorde-wohnmobil-wert-ermitteln",
-  title: "Concorde Wohnmobil Wert ermitteln – Kostenlose Luxus-Bewertung | CaravanWert",
+  title: "Concorde Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Concorde Wohnmobils. Individuelle Luxus-Bewertung für Liner, Carver, Charisma und Credo — kostenlos.",
   keywords: "concorde wert ermitteln, concorde bewertung, concorde wohnmobil wert, concorde wertermittlung",
   h1: "Wert Ihres Concorde Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const concordeWertErmitteln: RatgeberConfig = {
 export const concordeWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-concorde-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-concorde-wohnmobil",
-  title: "Wie verkaufe ich mein Concorde Wohnmobil? Luxus-Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Concorde Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Concorde-Verkauf. Luxus-spezifische Strategien für diskrete Abwicklung und maximalen Erlös.",
   keywords: "wie verkaufe ich concorde wohnmobil, concorde verkaufen anleitung, concorde luxus verkauf",
   h1: "Wie verkaufe ich mein Concorde Wohnmobil?",
@@ -331,7 +331,7 @@ export const concordeWieVerkaufe: RatgeberConfig = {
 export const concordeVersteigern: RatgeberConfig = {
   slug: "concorde-wohnmobil-versteigern",
   path: "/ratgeber/concorde-wohnmobil-versteigern",
-  title: "Concorde Wohnmobil versteigern – Luxus-Auktion mit Mindestgebot | CaravanWert",
+  title: "Concorde Wohnmobil versteigern – Auktion",
   metaDescription: "Concorde Wohnmobil versteigern und durch Bieterwettbewerb unter zahlungskräftigen Käufern den Luxus-Preis erzielen.",
   keywords: "concorde wohnmobil versteigern, concorde auktion, concorde luxus versteigerung",
   h1: "Concorde Wohnmobil versteigern",

@@ -3,8 +3,8 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const hymerVerkaufen: RatgeberConfig = {
   slug: "hymer-wohnmobil-verkaufen",
   path: "/ratgeber/hymer-wohnmobil-verkaufen",
-  title: "Hymer Wohnmobil verkaufen – Bestpreis für Ihr Fahrzeug | CaravanWert",
-  metaDescription: "Hymer Wohnmobil verkaufen zum Bestpreis. Ob B-Klasse, Exsis oder ML-T — erfahren Sie, wie Sie den maximalen Erlös für Ihren Hymer erzielen. Kostenlose Bewertung in 24h.",
+  title: "Hymer Wohnmobil verkaufen – Bestpreis",
+  metaDescription: "Hymer Wohnmobil verkaufen zum Bestpreis. Ob B-Klasse, Exsis oder ML-T — erzielen Sie den maximalen Erlös. Kostenlose Bewertung in 24h.",
   keywords: "hymer wohnmobil verkaufen, hymer verkaufen, hymer b-klasse verkaufen, hymer exsis verkaufen, wohnmobil ankauf hymer",
   h1: "Hymer Wohnmobil verkaufen",
   heroSubtitle: "Hymer zählt zu den begehrtesten Wohnmobilmarken Deutschlands. Nutzen Sie die starke Nachfrage und verkaufen Sie Ihr Hymer Wohnmobil zum Bestpreis — schnell, sicher und ohne versteckte Kosten.",
@@ -26,7 +26,7 @@ export const hymerVerkaufen: RatgeberConfig = {
       ctaHref: "/verkaufen"
     },
     {
-      title: "So erzielen Sie den besten Preis für Ihren Hymer",
+      title: "So erzielen Sie den besten Preis für Ihren",
       content: "Der Verkaufspreis hängt von verschiedenen Faktoren ab. Mit der richtigen Vorbereitung können Sie den Erlös spürbar steigern.",
       items: [
         { title: "Servicehistorie vorlegen", description: "Ein lückenloses Scheckheft ist beim Hymer-Verkauf Gold wert. Dokumentieren Sie alle Wartungen und Reparaturen sorgfältig." },
@@ -87,7 +87,7 @@ export const hymerVerkaufen: RatgeberConfig = {
 export const hymerKosten: RatgeberConfig = {
   slug: "was-kostet-mein-hymer-wohnmobil",
   path: "/ratgeber/was-kostet-mein-hymer-wohnmobil",
-  title: "Was kostet mein Hymer Wohnmobil? Aktuelle Preise 2026 | CaravanWert",
+  title: "Was kostet mein Hymer Wohnmobil? Preise 2026",
   metaDescription: "Was ist Ihr Hymer Wohnmobil wert? Aktuelle Marktpreise für B-Klasse, Exsis, ML-T und Grand Canyon. Kostenlose Bewertung mit Echtzeit-Marktdaten.",
   keywords: "was kostet hymer wohnmobil, hymer preis, hymer b-klasse preis, hymer wert, hymer gebrauchtpreise 2026",
   h1: "Was kostet mein Hymer Wohnmobil?",
@@ -170,8 +170,8 @@ export const hymerKosten: RatgeberConfig = {
 export const hymerWertErmitteln: RatgeberConfig = {
   slug: "hymer-wohnmobil-wert-ermitteln",
   path: "/ratgeber/hymer-wohnmobil-wert-ermitteln",
-  title: "Hymer Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
-  metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Hymer Wohnmobils. Professionelle Bewertung basierend auf Echtzeit-Marktdaten für B-Klasse, Exsis, ML-T und Grand Canyon.",
+  title: "Hymer Wohnmobil Wert ermitteln",
+  metaDescription: "Aktuellen Marktwert Ihres Hymer Wohnmobils ermitteln. Professionelle Bewertung mit Echtzeit-Marktdaten für B-Klasse, Exsis und ML-T.",
   keywords: "hymer wert ermitteln, hymer wohnmobil bewertung, hymer wertermittlung, hymer b-klasse wert, hymer bewertung kostenlos",
   h1: "Wert Ihres Hymer Wohnmobils ermitteln",
   heroSubtitle: "Wie viel ist Ihr Hymer wirklich wert? Unsere professionelle Wertermittlung kombiniert aktuelle Marktdaten mit individueller Fahrzeuganalyse — kostenlos und unverbindlich.",
@@ -251,7 +251,7 @@ export const hymerWertErmitteln: RatgeberConfig = {
 export const hymerWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-hymer-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-hymer-wohnmobil",
-  title: "Wie verkaufe ich mein Hymer Wohnmobil? Schritt-für-Schritt | CaravanWert",
+  title: "Wie verkaufe ich mein Hymer Wohnmobil?",
   metaDescription: "Schritt-für-Schritt-Anleitung zum Verkauf Ihres Hymer Wohnmobils. Von der Vorbereitung bis zur Übergabe — so erzielen Sie den besten Preis.",
   keywords: "wie verkaufe ich hymer wohnmobil, hymer verkaufen anleitung, hymer verkauf tipps, hymer verkaufen schritt für schritt",
   h1: "Wie verkaufe ich mein Hymer Wohnmobil?",
@@ -272,7 +272,7 @@ export const hymerWieVerkaufe: RatgeberConfig = {
       ]
     },
     {
-      title: "Schritt 2: Den richtigen Verkaufspreis festlegen",
+      title: "Schritt 2: Den richtigen Verkaufspreis",
       content: "Ein realistischer Preis ist der Schlüssel zum schnellen Verkauf. So finden Sie den goldenen Mittelweg für Ihren Hymer.",
       items: [
         { title: "Professionelle Bewertung einholen", description: "Unsere kostenlose Bewertung basiert auf aktuellen Marktdaten und gibt Ihnen eine fundierte Preisgrundlage." },
@@ -331,7 +331,7 @@ export const hymerWieVerkaufe: RatgeberConfig = {
 export const hymerVersteigern: RatgeberConfig = {
   slug: "hymer-wohnmobil-versteigern",
   path: "/ratgeber/hymer-wohnmobil-versteigern",
-  title: "Hymer Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Hymer Wohnmobil versteigern",
   metaDescription: "Hymer Wohnmobil versteigern mit Mindestgebot. Erzielen Sie durch die Auktion einen Top-Preis für Ihre B-Klasse, Exsis oder ML-T. Transparent und sicher.",
   keywords: "hymer wohnmobil versteigern, hymer auktion, hymer wohnmobil auktion, hymer versteigerung, hymer mindestgebot",
   h1: "Hymer Wohnmobil versteigern",
@@ -376,7 +376,7 @@ export const hymerVersteigern: RatgeberConfig = {
       ctaHref: "/verkaufen"
     },
     {
-      title: "Auktion vs. Direktverkauf: Was ist besser für Ihren Hymer?",
+      title: "Auktion vs. Direktverkauf: Was ist besser für",
       content: "Beide Wege haben ihre Berechtigung. Die richtige Wahl hängt von Ihrer Situation und Ihrem Hymer-Modell ab.",
       items: [
         { title: "Auktion wählen, wenn...", description: "Sie ein gefragtes Modell (B-Klasse, Grand Canyon) haben, Zeit mitbringen und den maximalen Preis erzielen möchten. Guter Zustand und vollständige Dokumentation sind von Vorteil." },

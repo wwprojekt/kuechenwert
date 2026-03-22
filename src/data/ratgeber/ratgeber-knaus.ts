@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const knausVerkaufen: RatgeberConfig = {
   slug: "knaus-wohnmobil-verkaufen",
   path: "/ratgeber/knaus-wohnmobil-verkaufen",
-  title: "Knaus Wohnmobil verkaufen – Bestpreis erzielen | CaravanWert",
+  title: "Knaus Wohnmobil verkaufen – Bestpreis",
   metaDescription: "Knaus Wohnmobil verkaufen zum Top-Preis. Ob Sun TI, Sky Wave oder Van TI — erfahren Sie, wie Sie den maximalen Erlös für Ihren Knaus erzielen.",
   keywords: "knaus wohnmobil verkaufen, knaus verkaufen, knaus sun ti verkaufen, knaus sky wave verkaufen, knaus van ti verkaufen",
   h1: "Knaus Wohnmobil verkaufen",
@@ -38,7 +38,7 @@ export const knausVerkaufen: RatgeberConfig = {
       ctaHref: "/verkaufen"
     },
     {
-      title: "Die beliebtesten Knaus Modelle auf dem Gebrauchtmarkt",
+      title: "Die beliebtesten Knaus Modelle auf dem",
       content: "Verschiedene Knaus-Baureihen bedienen unterschiedliche Bedürfnisse. Hier die aktuell gefragtesten Modelle und ihre Marktposition.",
       items: [
         { title: "Knaus Sun TI", description: "Der meistverkaufte Knaus-Teilintegrierte. Bietet großzügigen Raum und komfortable Grundrisse. Modelle mit Einzelbetten sind am gefragtesten." },
@@ -87,7 +87,7 @@ export const knausVerkaufen: RatgeberConfig = {
 export const knausKosten: RatgeberConfig = {
   slug: "was-kostet-mein-knaus-wohnmobil",
   path: "/ratgeber/was-kostet-mein-knaus-wohnmobil",
-  title: "Was kostet mein Knaus Wohnmobil? Aktuelle Preise 2026 | CaravanWert",
+  title: "Was kostet mein Knaus Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Marktpreise für Knaus Wohnmobile. Preisübersicht für Sun TI, Sky Wave, Van TI und BoxStar. Kostenlose Wertermittlung.",
   keywords: "was kostet knaus wohnmobil, knaus preis, knaus sun ti preis, knaus sky wave wert, knaus gebrauchtpreise",
   h1: "Was kostet mein Knaus Wohnmobil?",
@@ -170,7 +170,7 @@ export const knausKosten: RatgeberConfig = {
 export const knausWertErmitteln: RatgeberConfig = {
   slug: "knaus-wohnmobil-wert-ermitteln",
   path: "/ratgeber/knaus-wohnmobil-wert-ermitteln",
-  title: "Knaus Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Knaus Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Knaus Wohnmobils. Professionelle Bewertung für Sun TI, Sky Wave, Van TI und BoxStar — kostenlos.",
   keywords: "knaus wert ermitteln, knaus bewertung, knaus wohnmobil wert, knaus wertermittlung kostenlos",
   h1: "Wert Ihres Knaus Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const knausWertErmitteln: RatgeberConfig = {
 export const knausWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-knaus-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-knaus-wohnmobil",
-  title: "Wie verkaufe ich mein Knaus Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Knaus Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Knaus-Verkauf. Von der Vorbereitung bis zur sicheren Übergabe — so erzielen Sie den besten Preis für Ihren Knaus.",
   keywords: "wie verkaufe ich knaus wohnmobil, knaus verkaufen anleitung, knaus verkauf tipps",
   h1: "Wie verkaufe ich mein Knaus Wohnmobil?",
@@ -331,7 +331,7 @@ export const knausWieVerkaufe: RatgeberConfig = {
 export const knausVersteigern: RatgeberConfig = {
   slug: "knaus-wohnmobil-versteigern",
   path: "/ratgeber/knaus-wohnmobil-versteigern",
-  title: "Knaus Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Knaus Wohnmobil versteigern",
   metaDescription: "Knaus Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "knaus wohnmobil versteigern, knaus auktion, knaus versteigerung, knaus wohnmobil auktion",
   h1: "Knaus Wohnmobil versteigern",

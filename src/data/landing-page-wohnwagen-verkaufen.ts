@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnwagenVerkaufen: LandingPageConfig = {
   slug: "wohnwagen-verkaufen",
   path: "/wohnwagen-verkaufen",
-  title: "Wohnwagen Verkaufen — Kostenlose Bewertung & Sofortankauf",
+  title: "Wohnwagen verkaufen – Bewertung & Ankauf",
   metaDescription:
     "Wohnwagen verkaufen zum Bestpreis: Kostenlose Bewertung, faire Händler-Gebote und schnelle Abwicklung. Für alle Marken und Modelle. Jetzt Wohnwagen bewerten!",
   keywords:
     "wohnwagen verkaufen, wohnwagen verkaufen privat, gebrauchten wohnwagen verkaufen, wohnwagen ankauf, caravan verkaufen, wohnanhänger verkaufen",
-  h1: "Wohnwagen Verkaufen — Kostenlose Bewertung & Sofortankauf",
+  h1: "Wohnwagen verkaufen – Bewertung & Ankauf",
   heroSubtitle:
     "Verkaufen Sie Ihren Wohnwagen schnell und unkompliziert. Egal ob Wohnwagen, Caravan oder Wohnanhänger — wir finden den besten Käufer für Ihr Fahrzeug.",
   primaryCta: { text: "Wohnwagen kostenlos bewerten", href: "/verkaufen/wizard" },

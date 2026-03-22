@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const laikaVerkaufen: RatgeberConfig = {
   slug: "laika-wohnmobil-verkaufen",
   path: "/ratgeber/laika-wohnmobil-verkaufen",
-  title: "Laika Wohnmobil verkaufen – Top-Preis für Ihren Laika | CaravanWert",
+  title: "Laika Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Laika Wohnmobil verkaufen zum Bestpreis. Ob Ecovip, Kreos oder Kosmo — erfahren Sie, wie Sie den maximalen Erlös für Ihr italienisches Reisemobil erzielen.",
   keywords: "laika wohnmobil verkaufen, laika verkaufen, laika ecovip verkaufen, laika kreos verkaufen",
   h1: "Laika Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const laikaVerkaufen: RatgeberConfig = {
 export const laikaKosten: RatgeberConfig = {
   slug: "was-kostet-mein-laika-wohnmobil",
   path: "/ratgeber/was-kostet-mein-laika-wohnmobil",
-  title: "Was kostet mein Laika Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Laika Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Gebrauchtpreise für Laika Wohnmobile. Preisübersicht für Ecovip, Kreos, Kosmo und Ecovip H — datenbasiert und kostenlos.",
   keywords: "was kostet laika wohnmobil, laika preis, laika ecovip preis, laika wert 2026",
   h1: "Was kostet mein Laika Wohnmobil?",
@@ -170,7 +170,7 @@ export const laikaKosten: RatgeberConfig = {
 export const laikaWertErmitteln: RatgeberConfig = {
   slug: "laika-wohnmobil-wert-ermitteln",
   path: "/ratgeber/laika-wohnmobil-wert-ermitteln",
-  title: "Laika Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Laika Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Laika Wohnmobils. Bewertung für Ecovip, Kreos, Kosmo und Ecovip H — kostenlos in 24 Stunden.",
   keywords: "laika wert ermitteln, laika bewertung, laika wohnmobil wert, laika wertermittlung",
   h1: "Wert Ihres Laika Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const laikaWertErmitteln: RatgeberConfig = {
 export const laikaWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-laika-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-laika-wohnmobil",
-  title: "Wie verkaufe ich mein Laika Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Laika Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Laika-Verkauf. Vorbereitung, Preisfindung und Übergabe — mit Tipps für italienische Reisemobile.",
   keywords: "wie verkaufe ich laika wohnmobil, laika verkaufen anleitung, laika verkauf tipps",
   h1: "Wie verkaufe ich mein Laika Wohnmobil?",
@@ -331,7 +331,7 @@ export const laikaWieVerkaufe: RatgeberConfig = {
 export const laikaVersteigern: RatgeberConfig = {
   slug: "laika-wohnmobil-versteigern",
   path: "/ratgeber/laika-wohnmobil-versteigern",
-  title: "Laika Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Laika Wohnmobil versteigern",
   metaDescription: "Laika Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Ecovip und Kreos besonders gefragt.",
   keywords: "laika wohnmobil versteigern, laika auktion, laika versteigerung",
   h1: "Laika Wohnmobil versteigern",

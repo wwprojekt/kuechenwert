@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const chaussonVerkaufen: RatgeberConfig = {
   slug: "chausson-wohnmobil-verkaufen",
   path: "/ratgeber/chausson-wohnmobil-verkaufen",
-  title: "Chausson Wohnmobil verkaufen – Top-Preis für Ihren Chausson | CaravanWert",
+  title: "Chausson Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Chausson Wohnmobil verkaufen zum Bestpreis. Ob Titanium, Welcome oder Flash — erfahren Sie, wie Sie den maximalen Erlös erzielen.",
   keywords: "chausson wohnmobil verkaufen, chausson verkaufen, chausson titanium verkaufen, chausson flash verkaufen",
   h1: "Chausson Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const chaussonVerkaufen: RatgeberConfig = {
 export const chaussonKosten: RatgeberConfig = {
   slug: "was-kostet-mein-chausson-wohnmobil",
   path: "/ratgeber/was-kostet-mein-chausson-wohnmobil",
-  title: "Was kostet mein Chausson Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Chausson Wohnmobil? Preise",
   metaDescription: "Aktuelle Gebrauchtpreise für Chausson Wohnmobile. Preisübersicht für Titanium, Welcome, Flash und X-Campingbus.",
   keywords: "was kostet chausson wohnmobil, chausson preis, chausson titanium preis, chausson wert 2026",
   h1: "Was kostet mein Chausson Wohnmobil?",
@@ -170,7 +170,7 @@ export const chaussonKosten: RatgeberConfig = {
 export const chaussonWertErmitteln: RatgeberConfig = {
   slug: "chausson-wohnmobil-wert-ermitteln",
   path: "/ratgeber/chausson-wohnmobil-wert-ermitteln",
-  title: "Chausson Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Chausson Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Chausson Wohnmobils. Bewertung für Titanium, Welcome, Flash und X — kostenlos in 24 Stunden.",
   keywords: "chausson wert ermitteln, chausson bewertung, chausson wohnmobil wert, chausson wertermittlung",
   h1: "Wert Ihres Chausson Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const chaussonWertErmitteln: RatgeberConfig = {
 export const chaussonWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-chausson-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-chausson-wohnmobil",
-  title: "Wie verkaufe ich mein Chausson Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Chausson Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Chausson-Verkauf. Vorbereitung, Preisfindung und Übergabe — mit Ford-Basis-Tipps.",
   keywords: "wie verkaufe ich chausson wohnmobil, chausson verkaufen anleitung, chausson verkauf tipps",
   h1: "Wie verkaufe ich mein Chausson Wohnmobil?",
@@ -331,7 +331,7 @@ export const chaussonWieVerkaufe: RatgeberConfig = {
 export const chaussonVersteigern: RatgeberConfig = {
   slug: "chausson-wohnmobil-versteigern",
   path: "/ratgeber/chausson-wohnmobil-versteigern",
-  title: "Chausson Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Chausson Wohnmobil versteigern",
   metaDescription: "Chausson Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Ford-Basis-Modelle besonders gefragt.",
   keywords: "chausson wohnmobil versteigern, chausson auktion, chausson versteigerung",
   h1: "Chausson Wohnmobil versteigern",

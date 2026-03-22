@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const caradoVerkaufen: RatgeberConfig = {
   slug: "carado-wohnmobil-verkaufen",
   path: "/ratgeber/carado-wohnmobil-verkaufen",
-  title: "Carado Wohnmobil verkaufen – Top-Preis für Ihren Carado | CaravanWert",
+  title: "Carado Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Carado Wohnmobil verkaufen zum Bestpreis. Ob T-Modell, I-Modell oder Vlow — erfahren Sie, wie Sie den maximalen Erlös für Ihren Carado erzielen.",
   keywords: "carado wohnmobil verkaufen, carado verkaufen, carado t-modell verkaufen, carado vlow verkaufen",
   h1: "Carado Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const caradoVerkaufen: RatgeberConfig = {
 export const caradoKosten: RatgeberConfig = {
   slug: "was-kostet-mein-carado-wohnmobil",
   path: "/ratgeber/was-kostet-mein-carado-wohnmobil",
-  title: "Was kostet mein Carado Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Carado Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Gebrauchtpreise für Carado Wohnmobile. Preisübersicht für T-Modelle, I-Modelle, Vlow und A-Modelle.",
   keywords: "was kostet carado wohnmobil, carado preis, carado t-modell preis, carado wert 2026",
   h1: "Was kostet mein Carado Wohnmobil?",
@@ -170,7 +170,7 @@ export const caradoKosten: RatgeberConfig = {
 export const caradoWertErmitteln: RatgeberConfig = {
   slug: "carado-wohnmobil-wert-ermitteln",
   path: "/ratgeber/carado-wohnmobil-wert-ermitteln",
-  title: "Carado Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Carado Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Carado Wohnmobils. Professionelle Bewertung für T-, I-, A-Modelle und Vlow — kostenlos.",
   keywords: "carado wert ermitteln, carado bewertung, carado wohnmobil wert, carado wertermittlung",
   h1: "Wert Ihres Carado Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const caradoWertErmitteln: RatgeberConfig = {
 export const caradoWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-carado-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-carado-wohnmobil",
-  title: "Wie verkaufe ich mein Carado Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Carado Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Carado-Verkauf. Vorbereitung, Preisfindung, Verkaufskanal und Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich carado wohnmobil, carado verkaufen anleitung, carado verkauf tipps",
   h1: "Wie verkaufe ich mein Carado Wohnmobil?",
@@ -331,7 +331,7 @@ export const caradoWieVerkaufe: RatgeberConfig = {
 export const caradoVersteigern: RatgeberConfig = {
   slug: "carado-wohnmobil-versteigern",
   path: "/ratgeber/carado-wohnmobil-versteigern",
-  title: "Carado Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Carado Wohnmobil versteigern",
   metaDescription: "Carado Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "carado wohnmobil versteigern, carado auktion, carado versteigerung",
   h1: "Carado Wohnmobil versteigern",

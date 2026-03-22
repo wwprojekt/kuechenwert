@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wievielWohnmobilWert: LandingPageConfig = {
   slug: "wieviel-ist-mein-wohnmobil-wert",
   path: "/wieviel-ist-mein-wohnmobil-wert",
-  title: "Wie viel ist mein Wohnmobil wert? — Sofort-Rechner & Tipps",
+  title: "Wieviel ist mein Wohnmobil wert? Rechner",
   metaDescription:
     "Wie viel ist Ihr Wohnmobil wert? Nutzen Sie unseren kostenlosen Sofort-Rechner für eine Werteinschätzung in 2 Minuten. Mit Tipps zur Wertsteigerung!",
   keywords:
     "wie viel ist mein wohnmobil wert, wohnmobil wert berechnen, wohnmobil wert rechner, camper wert ermitteln online, wohnmobil bewertung online, reisemobil wertrechner",
-  h1: "Wie viel ist mein Wohnmobil wert? — Sofort-Rechner & Tipps",
+  h1: "Wieviel ist mein Wohnmobil wert? Rechner",
   heroSubtitle:
     "Berechnen Sie den Wert Ihres Wohnmobils in nur 2 Minuten mit unserem kostenlosen Online-Rechner. Erhalten Sie eine sofortige Schätzung und wertvolle Tipps zur Wertsteigerung.",
   primaryCta: { text: "Wert online berechnen", href: "/wertrechner" },

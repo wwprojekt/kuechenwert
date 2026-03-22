@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const hobbyVerkaufen: RatgeberConfig = {
   slug: "hobby-wohnmobil-verkaufen",
   path: "/ratgeber/hobby-wohnmobil-verkaufen",
-  title: "Hobby Wohnmobil verkaufen – Bestpreis für Ihren Hobby | CaravanWert",
+  title: "Hobby Wohnmobil verkaufen – Bestpreis",
   metaDescription: "Hobby Wohnmobil verkaufen zum Top-Preis. Ob Optima, Siesta oder De Luxe — erfahren Sie, wie Sie den maximalen Erlös für Ihren Hobby erzielen.",
   keywords: "hobby wohnmobil verkaufen, hobby verkaufen, hobby optima verkaufen, hobby siesta verkaufen",
   h1: "Hobby Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const hobbyVerkaufen: RatgeberConfig = {
 export const hobbyKosten: RatgeberConfig = {
   slug: "was-kostet-mein-hobby-wohnmobil",
   path: "/ratgeber/was-kostet-mein-hobby-wohnmobil",
-  title: "Was kostet mein Hobby Wohnmobil? Aktuelle Preise 2026 | CaravanWert",
+  title: "Was kostet mein Hobby Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Gebrauchtpreise für Hobby Wohnmobile. Preisübersicht für Optima, Siesta, Vantana und De Luxe. Kostenlose Wertermittlung.",
   keywords: "was kostet hobby wohnmobil, hobby preis, hobby optima preis, hobby wert 2026",
   h1: "Was kostet mein Hobby Wohnmobil?",
@@ -170,7 +170,7 @@ export const hobbyKosten: RatgeberConfig = {
 export const hobbyWertErmitteln: RatgeberConfig = {
   slug: "hobby-wohnmobil-wert-ermitteln",
   path: "/ratgeber/hobby-wohnmobil-wert-ermitteln",
-  title: "Hobby Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Hobby Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Hobby Wohnmobils. Professionelle Bewertung für Optima, Siesta, Vantana und De Luxe — kostenlos.",
   keywords: "hobby wert ermitteln, hobby bewertung, hobby wohnmobil wert, hobby wertermittlung",
   h1: "Wert Ihres Hobby Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const hobbyWertErmitteln: RatgeberConfig = {
 export const hobbyWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-hobby-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-hobby-wohnmobil",
-  title: "Wie verkaufe ich mein Hobby Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Hobby Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Hobby-Verkauf. Vorbereitung, Preisfindung, Verkaufskanal und Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich hobby wohnmobil, hobby verkaufen anleitung, hobby verkauf tipps",
   h1: "Wie verkaufe ich mein Hobby Wohnmobil?",
@@ -331,7 +331,7 @@ export const hobbyWieVerkaufe: RatgeberConfig = {
 export const hobbyVersteigern: RatgeberConfig = {
   slug: "hobby-wohnmobil-versteigern",
   path: "/ratgeber/hobby-wohnmobil-versteigern",
-  title: "Hobby Wohnmobil versteigern – Auktion mit Sicherheit | CaravanWert",
+  title: "Hobby Wohnmobil versteigern",
   metaDescription: "Hobby Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "hobby wohnmobil versteigern, hobby auktion, hobby versteigerung",
   h1: "Hobby Wohnmobil versteigern",

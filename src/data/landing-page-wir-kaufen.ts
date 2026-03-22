@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wirKaufenDeinWohnmobil: LandingPageConfig = {
   slug: "wir-kaufen-dein-wohnmobil",
   path: "/wir-kaufen-dein-wohnmobil",
-  title: "Wir kaufen Dein Wohnmobil — Sofortangebot & Barzahlung",
+  title: "Wir kaufen Dein Wohnmobil – Sofortangebot",
   metaDescription:
     "Wir kaufen Ihr Wohnmobil sofort! Faire Bewertung, verbindliches Angebot in 24h und Barzahlung bei Übergabe. Alle Marken, alle Modelle. Jetzt Angebot erhalten!",
   keywords:
     "wir kaufen dein wohnmobil, wohnmobil ankauf sofort, wohnmobil verkaufen sofort geld, camper ankauf deutschland, wohnmobil sofort verkaufen, reisemobil ankauf",
-  h1: "Wir kaufen Dein Wohnmobil — Sofortangebot & Barzahlung",
+  h1: "Wir kaufen Dein Wohnmobil – Sofortangebot",
   heroSubtitle:
     "Verkaufen Sie Ihr Wohnmobil direkt an uns. Verbindliches Angebot innerhalb von 24 Stunden, Barzahlung bei Übergabe und keine Wartezeit. Alle Marken und Modelle.",
   primaryCta: { text: "Sofort-Angebot erhalten", href: "/verkaufen/wizard" },

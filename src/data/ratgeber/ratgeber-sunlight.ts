@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const sunlightVerkaufen: RatgeberConfig = {
   slug: "sunlight-wohnmobil-verkaufen",
   path: "/ratgeber/sunlight-wohnmobil-verkaufen",
-  title: "Sunlight Wohnmobil verkaufen – Top-Preis für Ihren Sunlight | CaravanWert",
+  title: "Sunlight Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Sunlight Wohnmobil verkaufen zum Bestpreis. Ob T-Serie, I-Serie oder Cliff — erfahren Sie, wie Sie den maximalen Erlös erzielen.",
   keywords: "sunlight wohnmobil verkaufen, sunlight verkaufen, sunlight t-serie verkaufen, sunlight cliff verkaufen",
   h1: "Sunlight Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const sunlightVerkaufen: RatgeberConfig = {
 export const sunlightKosten: RatgeberConfig = {
   slug: "was-kostet-mein-sunlight-wohnmobil",
   path: "/ratgeber/was-kostet-mein-sunlight-wohnmobil",
-  title: "Was kostet mein Sunlight Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Sunlight Wohnmobil? Preise",
   metaDescription: "Aktuelle Gebrauchtpreise für Sunlight Wohnmobile. Preisübersicht für T-Serie, I-Serie, Cliff und A-Serie.",
   keywords: "was kostet sunlight wohnmobil, sunlight preis, sunlight t-serie preis, sunlight wert 2026",
   h1: "Was kostet mein Sunlight Wohnmobil?",
@@ -170,7 +170,7 @@ export const sunlightKosten: RatgeberConfig = {
 export const sunlightWertErmitteln: RatgeberConfig = {
   slug: "sunlight-wohnmobil-wert-ermitteln",
   path: "/ratgeber/sunlight-wohnmobil-wert-ermitteln",
-  title: "Sunlight Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Sunlight Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Sunlight Wohnmobils. Bewertung für T-Serie, I-Serie, Cliff und A-Serie — kostenlos in 24 Stunden.",
   keywords: "sunlight wert ermitteln, sunlight bewertung, sunlight wohnmobil wert, sunlight wertermittlung",
   h1: "Wert Ihres Sunlight Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const sunlightWertErmitteln: RatgeberConfig = {
 export const sunlightWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-sunlight-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-sunlight-wohnmobil",
-  title: "Wie verkaufe ich mein Sunlight Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Sunlight Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Sunlight-Verkauf. Vorbereitung, Preisfindung, Verkaufskanal und Übergabe — komplett erklärt.",
   keywords: "wie verkaufe ich sunlight wohnmobil, sunlight verkaufen anleitung, sunlight verkauf tipps",
   h1: "Wie verkaufe ich mein Sunlight Wohnmobil?",
@@ -331,7 +331,7 @@ export const sunlightWieVerkaufe: RatgeberConfig = {
 export const sunlightVersteigern: RatgeberConfig = {
   slug: "sunlight-wohnmobil-versteigern",
   path: "/ratgeber/sunlight-wohnmobil-versteigern",
-  title: "Sunlight Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Sunlight Wohnmobil versteigern",
   metaDescription: "Sunlight Wohnmobil versteigern und durch Bieterwettbewerb den besten Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "sunlight wohnmobil versteigern, sunlight auktion, sunlight versteigerung",
   h1: "Sunlight Wohnmobil versteigern",

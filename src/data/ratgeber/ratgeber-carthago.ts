@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const carthagoVerkaufen: RatgeberConfig = {
   slug: "carthago-wohnmobil-verkaufen",
   path: "/ratgeber/carthago-wohnmobil-verkaufen",
-  title: "Carthago Wohnmobil verkaufen – Premium-Preis erzielen | CaravanWert",
+  title: "Carthago Wohnmobil verkaufen",
   metaDescription: "Carthago Wohnmobil verkaufen zum Premiumpreis. Ob Chic C-Line, Liner oder C-Tourer — erfahren Sie, wie Sie den maximalen Erlös für Ihren Carthago erzielen.",
   keywords: "carthago wohnmobil verkaufen, carthago verkaufen, carthago chic c-line verkaufen, carthago liner verkaufen",
   h1: "Carthago Wohnmobil verkaufen",
@@ -14,7 +14,7 @@ export const carthagoVerkaufen: RatgeberConfig = {
   secondaryCta: { text: "So funktioniert's", href: "/faq" },
   sections: [
     {
-      title: "Warum Carthago Wohnmobile Spitzenpreise erzielen",
+      title: "Warum Carthago Wohnmobile Spitzenpreise",
       content: "Carthago ist eine der renommiertesten Premiummarken im Wohnmobilbau. Das Unternehmen aus Aulendorf setzt auf kompromisslose Qualität, den patentierten Doppelboden und erstklassige Verarbeitung — Eigenschaften, die auf dem Gebrauchtmarkt zu Spitzenpreisen führen.",
       items: [
         { title: "Premiumqualität Made in Germany", description: "Jeder Carthago wird in Deutschland mit höchsten Qualitätsstandards gefertigt. Der Ruf als Premiumhersteller stützt die Gebrauchtpreise nachhaltig." },
@@ -87,7 +87,7 @@ export const carthagoVerkaufen: RatgeberConfig = {
 export const carthagoKosten: RatgeberConfig = {
   slug: "was-kostet-mein-carthago-wohnmobil",
   path: "/ratgeber/was-kostet-mein-carthago-wohnmobil",
-  title: "Was kostet mein Carthago Wohnmobil? Premiumpreise 2026 | CaravanWert",
+  title: "Was kostet mein Carthago Wohnmobil?",
   metaDescription: "Aktuelle Marktpreise für Carthago Wohnmobile. Preisübersicht für Chic C-Line, E-Line, C-Tourer und Liner. Kostenlose Wertermittlung.",
   keywords: "was kostet carthago wohnmobil, carthago preis, carthago chic c-line preis, carthago liner wert",
   h1: "Was kostet mein Carthago Wohnmobil?",
@@ -170,7 +170,7 @@ export const carthagoKosten: RatgeberConfig = {
 export const carthagoWertErmitteln: RatgeberConfig = {
   slug: "carthago-wohnmobil-wert-ermitteln",
   path: "/ratgeber/carthago-wohnmobil-wert-ermitteln",
-  title: "Carthago Wohnmobil Wert ermitteln – Premium-Bewertung | CaravanWert",
+  title: "Carthago Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den Premiumwert Ihres Carthago Wohnmobils. Spezialisierte Bewertung für Chic C-Line, E-Line, C-Tourer und Liner — kostenlos.",
   keywords: "carthago wert ermitteln, carthago bewertung, carthago wohnmobil wert, carthago wertermittlung",
   h1: "Wert Ihres Carthago Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const carthagoWertErmitteln: RatgeberConfig = {
 export const carthagoWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-carthago-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-carthago-wohnmobil",
-  title: "Wie verkaufe ich mein Carthago Wohnmobil? Premium-Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Carthago Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Carthago-Verkauf. Premium-Vorbereitung, Preisfindung und sichere Abwicklung für Ihre Premiumklasse.",
   keywords: "wie verkaufe ich carthago wohnmobil, carthago verkaufen anleitung, carthago verkauf tipps",
   h1: "Wie verkaufe ich mein Carthago Wohnmobil?",
@@ -331,7 +331,7 @@ export const carthagoWieVerkaufe: RatgeberConfig = {
 export const carthagoVersteigern: RatgeberConfig = {
   slug: "carthago-wohnmobil-versteigern",
   path: "/ratgeber/carthago-wohnmobil-versteigern",
-  title: "Carthago Wohnmobil versteigern – Premium-Auktion | CaravanWert",
+  title: "Carthago Wohnmobil versteigern",
   metaDescription: "Carthago Wohnmobil versteigern und Premiumpreise durch Bieterwettbewerb erzielen. Sicher mit Mindestgebot. Qualifizierte Bieter bei CaravanWert.",
   keywords: "carthago wohnmobil versteigern, carthago auktion, carthago versteigerung, carthago premium auktion",
   h1: "Carthago Wohnmobil versteigern",

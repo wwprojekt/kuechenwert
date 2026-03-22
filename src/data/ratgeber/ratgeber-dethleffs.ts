@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const dethleffsVerkaufen: RatgeberConfig = {
   slug: "dethleffs-wohnmobil-verkaufen",
   path: "/ratgeber/dethleffs-wohnmobil-verkaufen",
-  title: "Dethleffs Wohnmobil verkaufen – Top-Preis erzielen | CaravanWert",
+  title: "Dethleffs Wohnmobil verkaufen – Top-Preis",
   metaDescription: "Dethleffs Wohnmobil verkaufen zum Bestpreis. Ob Globebus, Esprit oder Pulse — wir zeigen Ihnen, wie Sie den maximalen Erlös erzielen. Kostenlose Bewertung.",
   keywords: "dethleffs wohnmobil verkaufen, dethleffs verkaufen, dethleffs globebus verkaufen, dethleffs esprit verkaufen",
   h1: "Dethleffs Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const dethleffsVerkaufen: RatgeberConfig = {
 export const dethleffsKosten: RatgeberConfig = {
   slug: "was-kostet-mein-dethleffs-wohnmobil",
   path: "/ratgeber/was-kostet-mein-dethleffs-wohnmobil",
-  title: "Was kostet mein Dethleffs Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Dethleffs Wohnmobil? Preise",
   metaDescription: "Aktuelle Marktpreise für Dethleffs Wohnmobile. Preisübersicht für Globebus, Esprit, Pulse und Alpa. Kostenlose Wertermittlung mit Echtzeitdaten.",
   keywords: "was kostet dethleffs wohnmobil, dethleffs preis, dethleffs globebus preis, dethleffs wert 2026",
   h1: "Was kostet mein Dethleffs Wohnmobil?",
@@ -170,7 +170,7 @@ export const dethleffsKosten: RatgeberConfig = {
 export const dethleffsWertErmitteln: RatgeberConfig = {
   slug: "dethleffs-wohnmobil-wert-ermitteln",
   path: "/ratgeber/dethleffs-wohnmobil-wert-ermitteln",
-  title: "Dethleffs Wohnmobil Wert ermitteln – Kostenlose Bewertung | CaravanWert",
+  title: "Dethleffs Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Dethleffs Wohnmobils. Professionelle Bewertung für Globebus, Esprit, Pulse und Alpa — kostenlos und unverbindlich.",
   keywords: "dethleffs wert ermitteln, dethleffs bewertung, dethleffs wohnmobil wert, dethleffs wertermittlung kostenlos",
   h1: "Wert Ihres Dethleffs Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const dethleffsWertErmitteln: RatgeberConfig = {
 export const dethleffsWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-dethleffs-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-dethleffs-wohnmobil",
-  title: "Wie verkaufe ich mein Dethleffs Wohnmobil? Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Dethleffs Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Dethleffs-Verkauf. Vorbereitung, Preisfindung, Verkaufsweg und sichere Übergabe — alles was Sie wissen müssen.",
   keywords: "wie verkaufe ich dethleffs wohnmobil, dethleffs verkaufen anleitung, dethleffs verkauf tipps",
   h1: "Wie verkaufe ich mein Dethleffs Wohnmobil?",
@@ -262,7 +262,7 @@ export const dethleffsWieVerkaufe: RatgeberConfig = {
   secondaryCta: { text: "Berater kontaktieren", href: "/kontakt" },
   sections: [
     {
-      title: "Vorbereitung: Ihr Dethleffs verkaufsfertig machen",
+      title: "Vorbereitung: Ihr Dethleffs verkaufsfertig",
       content: "Eine sorgfältige Vorbereitung kann den Verkaufspreis um 5–10% steigern. Diese Schritte sind bei Dethleffs besonders wichtig.",
       items: [
         { title: "Dichtigkeitsgarantie klären", description: "Prüfen Sie, ob die Dethleffs-Dichtigkeitsgarantie noch aktiv ist. Ein aktiver Garantiestatus ist ein starkes Verkaufsargument." },
@@ -272,7 +272,7 @@ export const dethleffsWieVerkaufe: RatgeberConfig = {
       ]
     },
     {
-      title: "Den richtigen Preis für Ihren Dethleffs finden",
+      title: "Den richtigen Preis für Ihren Dethleffs",
       content: "Ein marktgerechter Preis ist entscheidend für einen schnellen und erfolgreichen Verkauf.",
       items: [
         { title: "Kostenlose Bewertung nutzen", description: "Unsere Bewertung basiert auf aktuellen Dethleffs-Verkaufsdaten und gibt Ihnen eine solide Preisbasis." },
@@ -283,7 +283,7 @@ export const dethleffsWieVerkaufe: RatgeberConfig = {
       ctaHref: "/verkaufen"
     },
     {
-      title: "Den besten Verkaufsweg für Ihren Dethleffs wählen",
+      title: "Den besten Verkaufsweg für Ihren Dethleffs",
       content: "Je nach Modell, Zustand und Ihrer persönlichen Situation eignen sich unterschiedliche Verkaufswege.",
       items: [
         { title: "Direktankauf durch CaravanWert", description: "Schnell, sicher, unkompliziert. Faires Angebot, kostenlose Abholung, Bezahlung in 2–3 Werktagen. Ideal wenn Sie schnell und sicher verkaufen möchten." },
@@ -331,7 +331,7 @@ export const dethleffsWieVerkaufe: RatgeberConfig = {
 export const dethleffsVersteigern: RatgeberConfig = {
   slug: "dethleffs-wohnmobil-versteigern",
   path: "/ratgeber/dethleffs-wohnmobil-versteigern",
-  title: "Dethleffs Wohnmobil versteigern – Auktion mit Mindestgebot | CaravanWert",
+  title: "Dethleffs Wohnmobil versteigern",
   metaDescription: "Dethleffs Wohnmobil versteigern und den Marktpreis durch Wettbewerb maximieren. Sicher mit Mindestgebot. Transparent und professionell bei CaravanWert.",
   keywords: "dethleffs wohnmobil versteigern, dethleffs auktion, dethleffs versteigerung, dethleffs wohnmobil auktion",
   h1: "Dethleffs Wohnmobil versteigern",

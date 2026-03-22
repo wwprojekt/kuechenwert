@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const motorschaden: RatgeberConfig = {
   slug: "wohnmobil-mit-motorschaden-verkaufen",
   path: "/ratgeber/wohnmobil-mit-motorschaden-verkaufen",
-  title: "Wohnmobil mit Motorschaden verkaufen – Faire Preise trotz Defekt | CaravanWert",
+  title: "Wohnmobil mit Motorschaden verkaufen",
   metaDescription: "Wohnmobil mit Motorschaden verkaufen? Erfahren Sie, welchen Preis Sie trotz Motordefekt erzielen und wie der Verkauf unkompliziert gelingt.",
   keywords: "wohnmobil motorschaden verkaufen, wohnmobil defekt verkaufen, motorschaden wohnmobil wert, reisemobil motorschaden",
   h1: "Wohnmobil mit Motorschaden verkaufen",
@@ -13,7 +13,7 @@ export const motorschaden: RatgeberConfig = {
   secondaryCta: { text: "So funktioniert's", href: "/faq" },
   sections: [
     {
-      title: "Motorschaden — wie viel ist Ihr Wohnmobil noch wert?",
+      title: "Motorschaden — wie viel ist Ihr Wohnmobil",
       content: "Ein Motorschaden reduziert den Wert, aber nicht auf null. Der Restwert hängt von vielen Faktoren ab — und kann Sie positiv überraschen.",
       items: [
         { title: "Aufbau oft wertvoller als Fahrgestell", description: "Bei Wohnmobilen steckt 50–70% des Gesamtwerts im Aufbau, nicht im Motor. Ein Motorschaden betrifft nur den kleineren Teil." },
@@ -86,7 +86,7 @@ export const motorschaden: RatgeberConfig = {
 export const wasserschaden: RatgeberConfig = {
   slug: "wohnmobil-mit-wasserschaden-verkaufen",
   path: "/ratgeber/wohnmobil-mit-wasserschaden-verkaufen",
-  title: "Wohnmobil mit Wasserschaden verkaufen – Trotz Feuchtigkeit faire Preise | CaravanWert",
+  title: "Wohnmobil mit Wasserschaden verkaufen",
   metaDescription: "Wohnmobil mit Wasserschaden verkaufen? Erfahren Sie, wie viel Ihr Wohnmobil trotz Feuchtigkeit noch wert ist und wie Sie es stressfrei verkaufen.",
   keywords: "wohnmobil wasserschaden verkaufen, wohnmobil feuchtigkeit verkaufen, wasserschaden wohnmobil wert, undichtes wohnmobil verkaufen",
   h1: "Wohnmobil mit Wasserschaden verkaufen",
@@ -169,7 +169,7 @@ export const wasserschaden: RatgeberConfig = {
 export const getriebeschaden: RatgeberConfig = {
   slug: "wohnmobil-mit-getriebeschaden-verkaufen",
   path: "/ratgeber/wohnmobil-mit-getriebeschaden-verkaufen",
-  title: "Wohnmobil mit Getriebeschaden verkaufen – Fairer Preis trotz Defekt | CaravanWert",
+  title: "Wohnmobil mit Getriebeschaden verkaufen",
   metaDescription: "Wohnmobil mit Getriebeschaden verkaufen? Erfahren Sie, welchen Restwert Ihr Wohnmobil trotz Getriebedefekt noch hat und wie der Verkauf funktioniert.",
   keywords: "wohnmobil getriebeschaden verkaufen, getriebeschaden wohnmobil wert, wohnmobil getriebe defekt, reisemobil getriebeschaden",
   h1: "Wohnmobil mit Getriebeschaden verkaufen",
@@ -179,7 +179,7 @@ export const getriebeschaden: RatgeberConfig = {
   secondaryCta: { text: "So funktioniert's", href: "/faq" },
   sections: [
     {
-      title: "Getriebeschaden — was ist Ihr Wohnmobil noch wert?",
+      title: "Getriebeschaden — was ist Ihr Wohnmobil noch",
       content: "Ein Getriebeschaden ist teuer, aber der Gesamtwert Ihres Wohnmobils besteht aus weit mehr als dem Getriebe.",
       items: [
         { title: "Reparaturkosten kalkulieren", description: "Schaltgetriebe: 2.500–5.000€. Automatikgetriebe: 4.000–8.000€. Austauschgetriebe oft günstiger als Reparatur." },
@@ -201,7 +201,7 @@ export const getriebeschaden: RatgeberConfig = {
       ]
     },
     {
-      title: "Verkauf mit Getriebeschaden — der richtige Weg",
+      title: "Verkauf mit Getriebeschaden — der richtige",
       content: "So erzielen Sie den bestmöglichen Preis trotz Getriebedefekt.",
       items: [
         { title: "Diagnose erstellen lassen", description: "Werkstattdiagnose mit genauer Fehlerbeschreibung und Kostenvoranschlag." },
@@ -252,7 +252,7 @@ export const getriebeschaden: RatgeberConfig = {
 export const unfallschaden: RatgeberConfig = {
   slug: "wohnmobil-mit-unfallschaden-verkaufen",
   path: "/ratgeber/wohnmobil-mit-unfallschaden-verkaufen",
-  title: "Wohnmobil mit Unfallschaden verkaufen – Faire Bewertung trotz Unfall | CaravanWert",
+  title: "Wohnmobil mit Unfallschaden verkaufen",
   metaDescription: "Wohnmobil mit Unfallschaden verkaufen? Erfahren Sie, wie viel Ihr Unfallwohnmobil noch wert ist und wie Sie es schnell und fair verkaufen.",
   keywords: "wohnmobil unfallschaden verkaufen, unfallwohnmobil verkaufen, wohnmobil unfall wert, reisemobil unfallschaden",
   h1: "Wohnmobil mit Unfallschaden verkaufen",
@@ -335,7 +335,7 @@ export const unfallschaden: RatgeberConfig = {
 export const hagelschaden: RatgeberConfig = {
   slug: "wohnmobil-mit-hagelschaden-verkaufen",
   path: "/ratgeber/wohnmobil-mit-hagelschaden-verkaufen",
-  title: "Wohnmobil mit Hagelschaden verkaufen – Faire Preise bei Hageldellen | CaravanWert",
+  title: "Wohnmobil mit Hagelschaden verkaufen",
   metaDescription: "Wohnmobil mit Hagelschaden verkaufen? Erfahren Sie, wie viel Ihr Wohnmobil trotz Hageldellen wert ist und wann sich die Reparatur lohnt.",
   keywords: "wohnmobil hagelschaden verkaufen, hagelschaden wohnmobil wert, wohnmobil hageldellen, reisemobil hagel",
   h1: "Wohnmobil mit Hagelschaden verkaufen",
@@ -345,7 +345,7 @@ export const hagelschaden: RatgeberConfig = {
   secondaryCta: { text: "So funktioniert's", href: "/faq" },
   sections: [
     {
-      title: "Hagelschaden am Wohnmobil — wie schlimm ist es?",
+      title: "Hagelschaden am Wohnmobil — wie schlimm ist",
       content: "Hagelschäden bei Wohnmobilen unterscheiden sich grundlegend von PKW. Die Bauweise entscheidet über den Schaden.",
       items: [
         { title: "GFK-Dach und Wände", description: "GFK (Glasfaserverstärkter Kunststoff) ist hagelresistenter als Blech. Oft nur optische Schäden. Restwert: 80–90%." },
@@ -418,7 +418,7 @@ export const hagelschaden: RatgeberConfig = {
 export const schimmel: RatgeberConfig = {
   slug: "wohnmobil-mit-schimmel-verkaufen",
   path: "/ratgeber/wohnmobil-mit-schimmel-verkaufen",
-  title: "Wohnmobil mit Schimmel verkaufen – Trotz Schimmelbefall faire Preise | CaravanWert",
+  title: "Wohnmobil mit Schimmel verkaufen",
   metaDescription: "Wohnmobil mit Schimmel verkaufen? Erfahren Sie, wie viel Ihr Wohnmobil trotz Schimmelbefall wert ist und welche Optionen Sie haben.",
   keywords: "wohnmobil schimmel verkaufen, schimmel wohnmobil wert, wohnmobil schimmelbefall, reisemobil schimmel",
   h1: "Wohnmobil mit Schimmel verkaufen",

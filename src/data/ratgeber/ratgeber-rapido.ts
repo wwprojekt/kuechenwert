@@ -3,7 +3,7 @@ import type { RatgeberConfig } from "./ratgeber-types";
 export const rapidoVerkaufen: RatgeberConfig = {
   slug: "rapido-wohnmobil-verkaufen",
   path: "/ratgeber/rapido-wohnmobil-verkaufen",
-  title: "Rapido Wohnmobil verkaufen – Bestpreis für Ihren Rapido | CaravanWert",
+  title: "Rapido Wohnmobil verkaufen – Bestpreis",
   metaDescription: "Rapido Wohnmobil verkaufen zum Top-Preis. Ob Distinction, Serie 8 oder Serie 6 — erfahren Sie, wie Sie den maximalen Erlös für Ihr Premium-Reisemobil erzielen.",
   keywords: "rapido wohnmobil verkaufen, rapido verkaufen, rapido distinction verkaufen, rapido serie 8 verkaufen",
   h1: "Rapido Wohnmobil verkaufen",
@@ -87,7 +87,7 @@ export const rapidoVerkaufen: RatgeberConfig = {
 export const rapidoKosten: RatgeberConfig = {
   slug: "was-kostet-mein-rapido-wohnmobil",
   path: "/ratgeber/was-kostet-mein-rapido-wohnmobil",
-  title: "Was kostet mein Rapido Wohnmobil? Preise 2026 | CaravanWert",
+  title: "Was kostet mein Rapido Wohnmobil? Preise 2026",
   metaDescription: "Aktuelle Gebrauchtpreise für Rapido Wohnmobile. Preisübersicht für Distinction, Serie 8, Serie 6 und V-Serie.",
   keywords: "was kostet rapido wohnmobil, rapido preis, rapido distinction preis, rapido wert 2026",
   h1: "Was kostet mein Rapido Wohnmobil?",
@@ -170,7 +170,7 @@ export const rapidoKosten: RatgeberConfig = {
 export const rapidoWertErmitteln: RatgeberConfig = {
   slug: "rapido-wohnmobil-wert-ermitteln",
   path: "/ratgeber/rapido-wohnmobil-wert-ermitteln",
-  title: "Rapido Wohnmobil Wert ermitteln – Kostenlose Premium-Bewertung | CaravanWert",
+  title: "Rapido Wohnmobil Wert ermitteln",
   metaDescription: "Ermitteln Sie den aktuellen Marktwert Ihres Rapido Wohnmobils. Premium-Bewertung für Distinction, Serie 8, Serie 6 und V-Serie — kostenlos in 24 Stunden.",
   keywords: "rapido wert ermitteln, rapido bewertung, rapido wohnmobil wert, rapido wertermittlung",
   h1: "Wert Ihres Rapido Wohnmobils ermitteln",
@@ -251,7 +251,7 @@ export const rapidoWertErmitteln: RatgeberConfig = {
 export const rapidoWieVerkaufe: RatgeberConfig = {
   slug: "wie-verkaufe-ich-mein-rapido-wohnmobil",
   path: "/ratgeber/wie-verkaufe-ich-mein-rapido-wohnmobil",
-  title: "Wie verkaufe ich mein Rapido Wohnmobil? Premium-Anleitung | CaravanWert",
+  title: "Wie verkaufe ich mein Rapido Wohnmobil?",
   metaDescription: "Schritt-für-Schritt zum Rapido-Verkauf. Premium-spezifische Tipps für Vorbereitung, Preisfindung und diskrete Abwicklung.",
   keywords: "wie verkaufe ich rapido wohnmobil, rapido verkaufen anleitung, rapido premium verkauf tipps",
   h1: "Wie verkaufe ich mein Rapido Wohnmobil?",
@@ -331,7 +331,7 @@ export const rapidoWieVerkaufe: RatgeberConfig = {
 export const rapidoVersteigern: RatgeberConfig = {
   slug: "rapido-wohnmobil-versteigern",
   path: "/ratgeber/rapido-wohnmobil-versteigern",
-  title: "Rapido Wohnmobil versteigern – Premium-Auktion mit Mindestgebot | CaravanWert",
+  title: "Rapido Wohnmobil versteigern – Auktion",
   metaDescription: "Rapido Wohnmobil versteigern und durch Bieterwettbewerb den Premium-Preis erzielen. Sicher mit Mindestgebot bei CaravanWert.",
   keywords: "rapido wohnmobil versteigern, rapido auktion, rapido premium versteigerung",
   h1: "Rapido Wohnmobil versteigern",

@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilWertermittlungKostenlos: LandingPageConfig = {
   slug: "wohnmobil-wertermittlung-kostenlos",
   path: "/wohnmobil-wertermittlung-kostenlos",
-  title: "Kostenlose Wohnmobil-Wertermittlung — Experteneinschätzung in 24h",
+  title: "Kostenlose Wohnmobil-Wertermittlung",
   metaDescription:
     "Professionelle Wohnmobil-Wertermittlung kostenlos und unverbindlich. Unsere Experten bewerten Ihr Reisemobil innerhalb von 24 Stunden. Jetzt starten!",
   keywords:
     "wohnmobil wertermittlung kostenlos, wohnmobil wertermittlung online, wohnmobil schätzen lassen kostenlos, reisemobil bewertung, wohnmobil gutachten kostenlos",
-  h1: "Kostenlose Wohnmobil-Wertermittlung — Experteneinschätzung in 24h",
+  h1: "Kostenlose Wohnmobil-Wertermittlung",
   heroSubtitle:
     "Lassen Sie den Wert Ihres Wohnmobils von erfahrenen Experten ermitteln. Kostenlos, unverbindlich und innerhalb von 24 Stunden — mit professioneller Marktanalyse.",
   primaryCta: { text: "Kostenlose Wertermittlung starten", href: "/wertermittlung" },

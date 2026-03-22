@@ -4,7 +4,6 @@
  * Note: Only the euro amount is shown, not the percentage rate
  */
 
-import { useSettings } from "@/contexts/SettingsContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info, Euro } from "lucide-react";
@@ -119,31 +118,6 @@ export const CommissionDisplay = ({
       </Card>
     </TooltipProvider>
   );
-};
-
-/**
- * Hook for commission calculations
- */
-export const useCommissionCalculation = (bidAmount: number = 0) => {
-  const { settings } = useSettings();
-  
-  const commissionRate = settings?.commission_rate_percent || 0;
-  const commissionAmount = bidAmount * (commissionRate / 100);
-  const totalCost = bidAmount + commissionAmount;
-
-  return {
-    commissionRate,
-    commissionAmount,
-    totalCost,
-    formattedCommissionAmount: commissionAmount.toLocaleString('de-DE', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }),
-    formattedTotalCost: totalCost.toLocaleString('de-DE', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }),
-  };
 };
 
 export default CommissionDisplay;

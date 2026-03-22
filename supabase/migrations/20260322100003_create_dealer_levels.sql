@@ -35,13 +35,8 @@ CREATE POLICY "Dealer can view own level"
 CREATE POLICY "Admins can view all levels"
   ON dealer_levels FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM dealer_applications
-      WHERE dealer_applications.user_id = auth.uid()
-      AND dealer_applications.status = 'approved'
-    )
-    OR auth.uid() IN (
-      SELECT id FROM profiles WHERE primary_role = 'admin'
+    auth.uid() IN (
+      SELECT user_id FROM user_roles WHERE role = 'admin'
     )
   );
 

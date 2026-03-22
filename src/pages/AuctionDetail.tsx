@@ -1331,7 +1331,7 @@ const AuctionDetail = () => {
                       <p className="text-sm font-medium text-muted-foreground">Kostenübersicht</p>
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Ihr Gebot</span>
+                          <span className="text-muted-foreground">Aktuelles Gebot</span>
                           <span className="font-medium">€{currentBid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">

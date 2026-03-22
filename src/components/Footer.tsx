@@ -208,6 +208,11 @@ const Footer = () => {
               <h3 className="font-semibold text-white mb-5 text-sm">Services</h3>
               <ul className="space-y-3">
                 <li>
+                  <Link to="/verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
+                    Jetzt verkaufen
+                  </Link>
+                </li>
+                <li>
                   <Link to="/wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Wohnmobil verkaufen
                   </Link>
@@ -262,6 +267,11 @@ const Footer = () => {
                 <li>
                   <Link to="/wertrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Wertrechner
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wertermittlung" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Experten-Bewertung
                   </Link>
                 </li>
                 <li>
@@ -339,14 +349,14 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <a href="/impressum" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:text-white transition-colors">
+                  <Link to="/impressum" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Impressum
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:text-white transition-colors">
+                  <Link to="/datenschutz" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Datenschutz
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -420,15 +430,15 @@ const Footer = () => {
               © {currentYear} {settings?.site_name || 'CaravanWert'} GmbH. Alle Rechte vorbehalten.
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <a href="/impressum" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-white transition-colors">
+              <Link to="/impressum" className="text-slate-500 hover:text-white transition-colors">
                 Impressum
-              </a>
-              <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-white transition-colors">
+              </Link>
+              <Link to="/datenschutz" className="text-slate-500 hover:text-white transition-colors">
                 Datenschutz
-              </a>
-              <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-white transition-colors">
+              </Link>
+              <Link to="/agb" className="text-slate-500 hover:text-white transition-colors">
                 AGB
-              </a>
+              </Link>
               <button 
                 onClick={() => setShowCookieSettings(true)}
                 className="text-slate-500 hover:text-white transition-colors flex items-center gap-1.5"

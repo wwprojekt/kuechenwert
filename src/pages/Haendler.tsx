@@ -124,7 +124,7 @@ const Haendler = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Für Händler"
+      title="Händler-Partnerprogramm – Wohnmobil-Ankauf"
       description="Partnerprogramm für Wohnmobil-Händler. Schneller Bestandsverkauf, Marketing-Support und Zugang zu kaufbereiten Kunden. Jetzt Partner werden!"
       keywords="händler programm, wohnmobil händler, b2b wohnmobil, händler partnerschaft"
       canonicalPath="/haendler"

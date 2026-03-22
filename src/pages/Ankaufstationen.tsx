@@ -53,8 +53,8 @@ const Ankaufstationen = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`Ankaufstationen - ${siteName}`}
-      description="Finden Sie eine Ankaufstation in Ihrer Nähe für die Übergabe Ihres Wohnmobils"
+      title="Ankaufstationen – Wohnmobil vor Ort abgeben"
+      description="Finden Sie eine CaravanWert-Ankaufstation in Ihrer Nähe. Persönliche Übergabe, sofortige Barzahlung und professionelle Abwicklung an über 6 Standorten deutschlandweit."
       keywords="ankaufstation, wohnmobil übergabe, abgabestelle, wohnmobil verkaufen vor ort"
       canonicalPath="/ankaufstationen"
     >

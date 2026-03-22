@@ -11,7 +11,7 @@ import CTA from "@/components/CTA";
 const Index = () => {
   return (
     <PageLayout
-      title="Deutschlands modernste Wohnmobil-Ankaufsplattform"
+      title="Wohnmobil verkaufen – Ankauf in 48h"
       description="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!"
       keywords="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation"
       canonicalPath="/"

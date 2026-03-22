@@ -138,7 +138,7 @@ const Wertermittlung = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`Kostenlose Wohnmobil-Wertermittlung - ${siteName}`}
+      title="Kostenlose Wohnmobil-Wertermittlung"
       description="Lassen Sie Ihr Wohnmobil kostenlos und unverbindlich von unseren Experten bewerten. Erhalten Sie eine professionelle Einschätzung des Marktwerts."
       keywords="wohnmobil wertermittlung, wohnmobil bewertung, camper wert, reisemobil wert"
       canonicalPath="/wertermittlung"

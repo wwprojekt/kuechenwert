@@ -253,6 +253,11 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
     '/wohnmobil-wertermittlung-kostenlos': 'Wertermittlung Kostenlos',
     '/wir-kaufen-dein-wohnmobil': 'Wohnmobil Ankauf',
     '/wieviel-ist-mein-wohnmobil-wert': 'Wohnmobil Wertrechner',
+    '/preise': 'Preise & Leistungen',
+    '/wertermittlung': 'Wertermittlung',
+    '/wertrechner': 'Wertrechner',
+    '/verkaufen/wizard': 'Inserat erstellen',
+    '/verkaufen/danke': 'Vielen Dank',
   };
 
   // Handle simple paths

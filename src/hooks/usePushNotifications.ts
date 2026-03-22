@@ -22,16 +22,6 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    setIsSupported(supported);
-
-    if (supported) {
-      setPermission(Notification.permission);
-      checkSubscription();
-    }
-  }, [user]);
-
   const checkSubscription = useCallback(async () => {
     if (!user) {
       setIsSubscribed(false);
@@ -46,6 +36,16 @@ export function usePushNotifications() {
       setIsSubscribed(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    setIsSupported(supported);
+
+    if (supported) {
+      setPermission(Notification.permission);
+      checkSubscription();
+    }
+  }, [user, checkSubscription]);
 
   const subscribe = useCallback(async () => {
     if (!user || !isSupported) return false;

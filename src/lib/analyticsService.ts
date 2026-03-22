@@ -76,10 +76,8 @@ class AnalyticsService {
     // Flush on page unload
     window.addEventListener('beforeunload', () => this.flushQueues());
     
-    // Track initial page view
-    if (typeof window !== 'undefined') {
-      this.trackPageView(window.location.pathname, document.title);
-    }
+    // Initial page view wird durch usePageTracking() in App.tsx getrackt
+    // Kein doppeltes Tracking hier im Konstruktor
 
     logger.log('Analytics service initialized');
   }

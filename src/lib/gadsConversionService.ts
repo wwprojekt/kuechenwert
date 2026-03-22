@@ -4,8 +4,11 @@
  * Zentraler Service für alle Google Ads Conversion-Events.
  * Trackt Wizard-Schritte, Lead-Erfassungen, Registrierungen und Auktionen.
  * 
- * Google Tag ID: AW-17744584461
- * Kampagne: Search | CaravanWert | Wohnmobil verkaufen | DE
+ * DEAKTIVIERT: Altes Google Ads Konto (AW-17744584461) wurde entfernt.
+ * Neues separates CaravanWert-Konto wird erstellt.
+ * Sobald das neue Konto bereit ist, hier die neue AW-ID eintragen.
+ * 
+ * Google Tag ID: NEUES_KONTO_HIER_EINTRAGEN
  */
 
 // TypeScript-Deklaration für gtag
@@ -17,14 +20,18 @@ declare global {
 }
 
 // Hilfsfunktion: gtag sicher aufrufen
-function safeGtag(...args: unknown[]): void {
-  try {
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag(...args);
-    }
-  } catch (error) {
-    console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
-  }
+// DEAKTIVIERT bis neues Google Ads Konto eingerichtet ist
+function safeGtag(..._args: unknown[]): void {
+  // No-Op: Google Ads Tracking ist deaktiviert
+  // Sobald das neue Konto erstellt ist, diese Funktion wieder aktivieren:
+  // try {
+  //   if (typeof window !== 'undefined' && window.gtag) {
+  //     window.gtag(..._args);
+  //   }
+  // } catch (error) {
+  //   console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
+  // }
+  return;
 }
 
 // ============================================================
@@ -37,7 +44,7 @@ function safeGtag(...args: unknown[]): void {
 export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSION (für Kampagnen-Optimierung) ***
   // Registrierung nach Schritt 10 im Wizard = Hauptziel der Kampagne
-  USER_REGISTERED: 'PrcJCNunko0cEI2-o41C',  // Nutzer hat sich registriert (Wizard Schritt 10)
+  USER_REGISTERED: '',  // DEAKTIVIERT - Altes Label: 'PrcJCNunko0cEI2-o41C' (altes Konto)
   
   // Sekundäre Conversions (für Beobachtung, nicht für Optimierung)
   LEAD_CONTACT_DATA: '',       // Lead: Kontaktdaten erfasst (Modal/Formular)

@@ -1325,32 +1325,27 @@ const AuctionDetail = () => {
 
                 {/* Provision - visible for dealers and admins */}
                 {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && settings?.commission_rate_percent > 0 && (
-                  <div className="relative overflow-hidden rounded-xl border border-amber-200/60 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 p-4 shadow-sm">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-amber-100/40 rounded-full -translate-y-8 translate-x-8" />
-                    <div className="relative">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Kostenübersicht</p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Ihr Gebot</span>
+                          <span className="font-medium">€{currentBid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <span className="text-sm font-semibold text-amber-900 tracking-wide">Kostenübersicht</span>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Provision</span>
+                          <span className="font-medium">€{(currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-amber-700/80">Ihr Gebot</span>
-                          <span className="text-sm font-medium text-amber-900">€{currentBid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-amber-700/80">Provision</span>
-                          <span className="text-sm font-medium text-amber-900">€{(currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent my-1" />
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-amber-900">Gesamtkosten</span>
-                          <span className="text-base font-bold text-amber-900">€{(currentBid + currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                        </div>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">Gesamtkosten</span>
+                        <span className="text-lg font-bold text-primary">€{(currentBid + currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* Reserve price indicator - only visible to seller and admin */}

@@ -1,57 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { VehicleDetailsStep } from "@/components/wizard/VehicleDetailsStep";
-import { TechnicalDetailsStep } from "@/components/wizard/TechnicalDetailsStep";
-import { DimensionsStep } from "@/components/wizard/DimensionsStep";
-import { InteriorFeaturesStep } from "@/components/wizard/InteriorFeaturesStep";
-import { VehicleFeaturesStep } from "@/components/wizard/VehicleFeaturesStep";
-import { PhotoUploadStep } from "@/components/wizard/PhotoUploadStep";
-import { DefectsStep } from "@/components/wizard/DefectsStep";
-import { SaleChannelStep } from "@/components/wizard/SaleChannelStep";
-import { AppointmentStep } from "@/components/wizard/AppointmentStep";
-import { AuthenticationStep, type AuthData } from "@/components/wizard/AuthenticationStep";
-import { ReviewStep } from "@/components/wizard/ReviewStep";
+import { ChevronLeft, ChevronRight, Check, Shield, Clock, Users } from "lucide-react";
+import { VehicleStep } from "@/components/wizard/VehicleStep";
+import { DetailsStep } from "@/components/wizard/DetailsStep";
+import { EquipmentStep } from "@/components/wizard/EquipmentStep";
+import { PhotosStep } from "@/components/wizard/PhotosStep";
+import { ContactStep } from "@/components/wizard/ContactStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
 import { useWizardSession } from "@/hooks/useWizardSession";
-import { useMemo, useCallback, useRef } from "react";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
-import { ContactDataModal } from "@/components/ContactDataModal";
 import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
 
-const baseSteps = [
-  { id: 1, name: "Fahrzeugdetails", description: "Grundinformationen" },
-  { id: 2, name: "Technik", description: "Technische Daten" },
-  { id: 3, name: "Abmessungen", description: "Maße & Kapazität" },
-  { id: 4, name: "Innenraum", description: "Innenausstattung" },
-  { id: 5, name: "Ausstattung", description: "Zusatzausstattung" },
-  { id: 6, name: "Fotos", description: "Mindestens 4 Bilder" },
-  { id: 7, name: "Mängel", description: "Bekannte Mängel angeben" },
-  { id: 8, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
+const steps = [
+  { id: 1, name: "Fahrzeug", description: "Was möchten Sie verkaufen?" },
+  { id: 2, name: "Details", description: "Technische Angaben" },
+  { id: 3, name: "Ausstattung", description: "Optional" },
+  { id: 4, name: "Fotos", description: "Optional" },
+  { id: 5, name: "Kontakt", description: "Angebot erhalten" },
 ];
-
-const appointmentStep = { id: 9, name: "Termin", description: "Übergabetermin vereinbaren" };
-// Review comes BEFORE Auth - user sees summary first, then authenticates to submit
-const reviewStep = { id: 10, name: "Überprüfung", description: "Letzte Kontrolle" };
-const authStep = { id: 11, name: "Anmeldung", description: "Konto erstellen & absenden" };
 
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, validateStep, submitForm, isSubmitting } = useWizardForm();
+  const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
 
-  // Kontaktdaten-Gate: Modal anzeigen wenn keine Kontaktdaten vorhanden
-  const hasContactData = !!(searchParams.get('customerName') || searchParams.get('customerEmail') || formData.customerName || formData.customerEmail);
-  const [showContactModal, setShowContactModal] = useState(!hasContactData);
-
-  // Prefill form data from URL parameters (including contact data from hero/landing forms)
+  // Prefill form data from URL parameters
   useEffect(() => {
     const manufacturer = searchParams.get('manufacturer');
     const model = searchParams.get('model');
@@ -61,11 +41,10 @@ const VerkaufenWizard = () => {
     const customerEmail = searchParams.get('customerEmail');
     const customerPhone = searchParams.get('customerPhone');
     
-    // Check if resuming from a specific step (from resume email link)
     const resumeStep = searchParams.get('step');
     if (resumeStep && !hasRestoredRef.current) {
       const stepNum = parseInt(resumeStep, 10);
-      if (stepNum >= 1 && stepNum <= 11) {
+      if (stepNum >= 1 && stepNum <= 5) {
         setCurrentStep(stepNum);
         hasRestoredRef.current = true;
       }
@@ -85,35 +64,23 @@ const VerkaufenWizard = () => {
     }
   }, [searchParams, updateFormData]);
 
-  // Dynamically determine steps based on sale channel
-  const steps = useMemo(() => {
-    const needsAppointment = formData.saleChannel === 'station';
-    
-    if (needsAppointment) {
-      return [...baseSteps, appointmentStep, reviewStep, authStep];
-    }
-    return [...baseSteps, { ...reviewStep, id: 9 }, { ...authStep, id: 10 }];
-  }, [formData.saleChannel]);
-
   // Google Ads: Wizard-Start tracken
   useEffect(() => {
     const source = searchParams.get('source') || 'direct';
     trackWizardStarted(source);
-  }, []); // Nur einmal beim Mount
+  }, []);
 
-  // Auto-save progress whenever step or formData changes (only when session is ready)
+  // Auto-save progress
   useEffect(() => {
     if (isReady) {
       saveProgress(currentStep, formData, steps.length);
     }
   }, [currentStep, formData, steps.length, saveProgress, isReady]);
 
-  // Save progress on page unload (browser close/navigate away)
+  // Save progress on page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Use synchronous approach for beforeunload
       saveProgress(currentStep, formData, steps.length);
-      // Google Ads: Abbruch tracken wenn Wizard nicht abgeschlossen
       if (currentStep < steps.length) {
         const currentStepInfo = steps[currentStep - 1];
         trackWizardAbandoned(currentStep, currentStepInfo?.name || `Schritt ${currentStep}`);
@@ -124,39 +91,15 @@ const VerkaufenWizard = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentStep, formData, steps.length, saveProgress]);
 
-  // Handle authentication completion - Auth is now final step, so auto-submit
-  const handleAuthenticated = useCallback(async (authData?: AuthData) => {
-    const needsAppointment = formData.saleChannel === 'station';
-    const authStepNumber = needsAppointment ? 11 : 10;
-    if (currentStep === authStepNumber) {
-      // Persist contact data from auth into wizard_session BEFORE submitting
-      if (authData) {
-        await updateContactFromAuth(authData);
-      }
-      const success = await submitForm();
-      if (success) {
-        // Only mark as completed if submission was successful
-        await markCompleted();
-        // Lead als abgeschlossen markieren
-        markLeadWizardCompleted();
-        // Google Ads: Wizard abgeschlossen tracken
-        const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
-        trackWizardCompleted(vehicleInfo);
-      }
-    }
-  }, [formData.saleChannel, currentStep, submitForm, markCompleted, updateContactFromAuth]);
-
   const progress = (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < steps.length) {
-      // Lead-Fortschritt tracken bei jedem Schritt-Wechsel
       updateLeadWizardProgress({
         step: currentStep + 1,
         formData: formData as unknown as Record<string, unknown>,
       });
-      // Google Ads: Schritt-Wechsel tracken
       const nextStep = currentStep + 1;
       const nextStepInfo = steps[nextStep - 1];
       trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
@@ -173,158 +116,249 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
+    const isValid = await validateStep(5);
+    if (!isValid) return;
+
+    // Update contact data in session before submit
+    await updateContactFromAuth({
+      email: formData.customerEmail,
+      firstName: formData.customerName?.split(' ')[0],
+      lastName: formData.customerName?.split(' ').slice(1).join(' '),
+      phone: formData.customerPhone,
+    });
+
     const success = await submitForm();
     if (success) {
       await markCompleted();
-      // Lead als abgeschlossen markieren
       markLeadWizardCompleted();
+      const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
+      trackWizardCompleted(vehicleInfo);
     }
   };
 
   const renderStep = () => {
-    const needsAppointment = formData.saleChannel === 'station';
-    
     switch (currentStep) {
       case 1:
-        return <VehicleDetailsStep formData={formData} updateFormData={updateFormData} />;
+        return <VehicleStep formData={formData} updateFormData={updateFormData} />;
       case 2:
-        return <TechnicalDetailsStep formData={formData} updateFormData={updateFormData} />;
+        return <DetailsStep formData={formData} updateFormData={updateFormData} />;
       case 3:
-        return <DimensionsStep formData={formData} updateFormData={updateFormData} />;
+        return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
       case 4:
-        return <InteriorFeaturesStep formData={formData} updateFormData={updateFormData} />;
+        return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 5:
-        return <VehicleFeaturesStep formData={formData} updateFormData={updateFormData} />;
-      case 6:
-        return <PhotoUploadStep formData={formData} updateFormData={updateFormData} />;
-      case 7:
-        return <DefectsStep formData={formData} updateFormData={updateFormData} onAutoNext={handleNext} />;
-      case 8:
-        return <SaleChannelStep formData={formData} updateFormData={updateFormData} onAutoNext={handleNext} />;
-      case 9:
-        if (needsAppointment) {
-          return <AppointmentStep formData={formData} updateFormData={updateFormData} />;
-        }
-        return <ReviewStep formData={formData} />;
-      case 10:
-        if (needsAppointment) {
-          return <ReviewStep formData={formData} />;
-        }
-        return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} prefillPhone={formData.customerPhone} />;
-      case 11:
-        if (needsAppointment) {
-          return <AuthenticationStep onAuthenticated={handleAuthenticated} prefillEmail={formData.customerEmail} prefillName={formData.customerName} prefillPhone={formData.customerPhone} />;
-        }
-        return null;
+        return <ContactStep formData={formData} updateFormData={updateFormData} />;
       default:
         return null;
     }
   };
 
+  // Step indicator labels for compact progress bar
+  const isLastStep = currentStep === steps.length;
+
   return (
     <PageLayout
       title="Wohnmobil verkaufen"
-      description="Verkaufen Sie Ihr Wohnmobil schnell und einfach mit unserem Schritt-für-Schritt-Assistenten"
-      keywords="wohnmobil verkaufen, wohnmobil verkaufsassistent, online verkaufen"
+      description="Verkaufen Sie Ihr Wohnmobil schnell und einfach – kostenloses Angebot in 2 Minuten"
+      keywords="wohnmobil verkaufen, wohnmobil bewertung, caravan verkaufen"
       canonicalPath="/verkaufen/wizard"
     >
-      {/* Kontaktdaten-Modal als Gate - wird angezeigt wenn Nutzer direkt zum Wizard kommt */}
-      <ContactDataModal
-        open={showContactModal}
-        onOpenChange={setShowContactModal}
-        source="wizard_direct"
-        additionalParams={Object.fromEntries(searchParams.entries())}
-      />
-          {/* Header */}
+      {/* Hero */}
       <PageHero size="sm">
         <div className="text-center animate-fade-in max-w-4xl mx-auto">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Verkaufen Sie Ihr Wohnmobil
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-              Folgen Sie unserem einfachen Assistenten und verkaufen Sie Ihr Wohnmobil in wenigen Minuten
-            </p>
-          </div>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            Verkaufen Sie Ihr Wohnmobil
+          </h1>
+          <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
+            Kostenloses Angebot in nur 2 Minuten – unverbindlich und ohne Registrierungspflicht
+          </p>
+        </div>
       </PageHero>
 
       <div className="min-h-screen py-8 md:py-16 bg-muted/20">
-        <div className="container mx-auto px-4 max-w-4xl">
-          {/* Progress Bar */}
-          <div className="mb-8 animate-slide-up">
-            <div className="flex justify-between items-center mb-2">
-              <div>
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Step Indicator */}
+            <div className="mb-8 animate-slide-up">
+              {/* Step dots */}
+              <div className="flex items-center justify-between mb-4">
+                {steps.map((step, index) => (
+                  <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                          step.id < currentStep
+                            ? "bg-primary text-primary-foreground"
+                            : step.id === currentStep
+                            ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {step.id < currentStep ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          step.id
+                        )}
+                      </div>
+                      <span
+                        className={`text-xs mt-1 hidden sm:block ${
+                          step.id === currentStep
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {step.name}
+                      </span>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-2 ${
+                          step.id < currentStep ? "bg-primary" : "bg-muted"
+                        }`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress bar */}
+              <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-foreground">
-                  {steps[currentStep - 1].name}
+                  Schritt {currentStep} von {steps.length}: {steps[currentStep - 1].name}
                 </span>
-                <span className="text-xs text-muted-foreground ml-2">
-                  {steps[currentStep - 1].description}
+                <span className="text-sm font-semibold text-primary">
+                  {Math.round(progress)}%
                 </span>
               </div>
-              <span className="text-sm font-semibold text-primary">
-                {Math.round(progress)}%
-              </span>
+              <Progress value={progress} className="h-2" />
             </div>
-            <Progress value={progress} className="h-2" />
-          </div>
 
-          {/* Form Card */}
-          <Card className="p-4 md:p-8 shadow-elegant mb-8 transition-all">
-            <div className="min-h-[400px]">{renderStep()}</div>
-          </Card>
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Form Card - 2/3 width on desktop */}
+              <div className="lg:col-span-2">
+                <Card className="p-4 md:p-8 shadow-elegant mb-6 transition-all">
+                  <div className="min-h-[400px]">{renderStep()}</div>
+                </Card>
 
-          {/* Navigation Buttons */}
-          {(() => {
-            const needsAppointment = formData.saleChannel === 'station';
-            const authStepNumber = needsAppointment ? 11 : 10;
-            const isAuthStep = currentStep === authStepNumber;
-            
-            return (
-              <div className="flex flex-col sm:flex-row gap-4 justify-between animate-slide-up">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 1}
-                  className="w-full sm:w-auto order-2 sm:order-1"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Zurück
-                </Button>
+                {/* Navigation Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handlePrevious}
+                    disabled={currentStep === 1}
+                    className="w-full sm:w-auto order-2 sm:order-1"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Zurück
+                  </Button>
 
-                {!isAuthStep && (
-                  currentStep < steps.length ? (
-                    <Button
-                      size="lg"
-                      onClick={handleNext}
-                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
-                    >
-                      Weiter
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  ) : (
+                  {isLastStep ? (
                     <Button
                       size="lg"
                       onClick={handleSubmit}
                       disabled={isSubmitting}
                       className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
                     >
-                      {isSubmitting ? "Wird gesendet..." : "Angebot einreichen"}
+                      {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
                       <Check className="w-4 h-4 ml-2" />
                     </Button>
-                  )
-                )}
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={handleNext}
+                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
+                    >
+                      {currentStep === 3 || currentStep === 4 ? "Weiter (optional)" : "Weiter"}
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            );
-          })()}
 
-          {/* Help Text */}
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            <p>
-              Benötigen Sie Hilfe?{" "}
-              <a href="/kontakt" className="text-primary hover:underline">
-                Kontaktieren Sie uns
-              </a>
-            </p>
+              {/* Sidebar - 1/3 width on desktop, hidden on mobile for steps 1-2 */}
+              <div className={`space-y-4 ${currentStep <= 2 ? "hidden lg:block" : ""}`}>
+                {/* Vehicle Summary (shown from step 2 onwards) */}
+                {currentStep >= 2 && formData.manufacturer && (
+                  <Card className="p-4 bg-primary/5 border-primary/20">
+                    <h3 className="text-sm font-semibold mb-2">Ihr Fahrzeug</h3>
+                    <p className="text-sm text-foreground">
+                      {formData.manufacturer} {formData.model}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.year && `${formData.year} · `}
+                      {formData.bodyType && `${formData.bodyType} · `}
+                      {formData.mileage && `${formData.mileage.toLocaleString('de-DE')} km`}
+                    </p>
+                  </Card>
+                )}
+
+                {/* Trust Signals */}
+                <Card className="p-4">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-primary" />
+                    Ihre Vorteile
+                  </h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>100% kostenlos & unverbindlich</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Angebot innerhalb von 24 Stunden</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Über 500 geprüfte Händler</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Keine Registrierung nötig</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Datenschutz nach DSGVO</span>
+                    </li>
+                  </ul>
+                </Card>
+
+                {/* Social Proof */}
+                <Card className="p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-green-600" />
+                    <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">
+                      Aktuelle Nachfrage
+                    </h3>
+                  </div>
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    <strong>127 Händler</strong> suchen aktuell nach Wohnmobilen.
+                    Durchschnittlich <strong>3 Angebote</strong> pro Fahrzeug innerhalb von 48h.
+                  </p>
+                </Card>
+
+                {/* Time Estimate */}
+                <Card className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Geschätzte Restzeit: {Math.max(1, (steps.length - currentStep))} Min.
+                    </span>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            {/* Help Text */}
+            <div className="mt-8 text-center text-sm text-muted-foreground">
+              <p>
+                Benötigen Sie Hilfe?{" "}
+                <a href="/kontakt" className="text-primary hover:underline">
+                  Kontaktieren Sie uns
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </div>

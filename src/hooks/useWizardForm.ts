@@ -10,7 +10,7 @@ import type { Database } from "@/integrations/supabase/types";
 const STORAGE_KEY = "verkaufen_wizard_draft";
 
 export interface WizardFormData {
-  // Step 1: Vehicle Details
+  // Step 1: Vehicle
   manufacturer: string;
   model: string;
   year: number | null;
@@ -35,7 +35,7 @@ export interface WizardFormData {
   main_tires?: string;
   second_tires?: string;
 
-  // Step 3: Dimensions & Capacity
+  // Step 2: Capacity (merged from old DimensionsStep)
   length_cm?: number | null;
   width_cm?: number | null;
   height_cm?: number | null;
@@ -46,7 +46,11 @@ export interface WizardFormData {
   sleeping_places: number | null;
   beds_description?: string;
 
-  // Step 4: Interior Features
+  // Step 2: Defects (merged from old DefectsStep)
+  known_defects?: string;
+  no_known_defects: boolean;
+
+  // Step 3: Interior Features (merged into Equipment)
   has_kitchen: boolean;
   heating_type?: string;
   air_conditioning: string;
@@ -56,7 +60,7 @@ export interface WizardFormData {
   fresh_water_capacity_liters?: number | null;
   grey_water_capacity_liters?: number | null;
 
-  // Step 5: Equipment & Features
+  // Step 3: Equipment & Features
   has_airbag: boolean;
   has_alarm: boolean;
   has_swivel_seats: boolean;
@@ -75,10 +79,10 @@ export interface WizardFormData {
   has_garage: boolean;
   has_tv_sat: boolean;
 
-  // Step 6: Photos
+  // Step 4: Photos
   photos: File[];
 
-  // Step 7: Sale Channel & Additional
+  // Step 5: Sale Channel & Contact
   saleChannel: string;
   instantPrice: number | null;
   reservePrice: number | null;
@@ -86,18 +90,16 @@ export interface WizardFormData {
   vehicle_identification_number?: string;
   license_plate?: string;
   country?: string;
-  
-  // Known Defects
-  known_defects?: string;
-  no_known_defects: boolean;
-  
-  // Step 8: Appointment (for station)
-  stationId?: string;
-  appointmentDate?: string;
-  appointmentTime?: string;
+
+  // Step 5: Contact Data
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+
+  // Legacy: Appointment (for station - handled post-submission)
+  stationId?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
   appointmentNotes?: string;
 }
 
@@ -134,6 +136,9 @@ const initialFormData: WizardFormData = {
   seats_with_seatbelts: null,
   sleeping_places: null,
   beds_description: undefined,
+
+  known_defects: undefined,
+  no_known_defects: false,
   
   has_kitchen: true,
   heating_type: undefined,
@@ -171,9 +176,6 @@ const initialFormData: WizardFormData = {
   license_plate: undefined,
   country: "DE",
   
-  known_defects: undefined,
-  no_known_defects: false,
-  
   stationId: undefined,
   appointmentDate: undefined,
   appointmentTime: undefined,
@@ -183,47 +185,33 @@ const initialFormData: WizardFormData = {
   appointmentNotes: undefined,
 };
 
-// Alle Zod-Schemas verwenden jetzt die globale germanZodErrorMap aus main.tsx
-// Zusätzlich sind hier explizite deutsche Meldungen für benutzerdefinierte Regeln
+// =============================================
+// Validation Schemas for the new 5-step wizard
+// =============================================
 
+// Step 1: Vehicle (all required)
 const step1Schema = z.object({
   manufacturer: z.string().min(1, "Hersteller ist erforderlich"),
   model: z.string().min(1, "Modell ist erforderlich"),
-  year: z.number({ required_error: "Baujahr ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie ein gültiges Baujahr ein" })
+  year: z.number({ required_error: "Baujahr ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie ein Baujahr" })
     .min(1980, "Baujahr muss nach 1980 sein")
     .max(new Date().getFullYear() + 1, `Baujahr darf nicht nach ${new Date().getFullYear() + 1} liegen`),
-  mileage: z.number({ required_error: "Kilometerstand ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie einen gültigen Kilometerstand ein" })
+  mileage: z.number({ required_error: "Kilometerstand ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie den Kilometerstand ein" })
     .min(0, "Kilometerstand darf nicht negativ sein"),
   condition: z.string().min(1, "Zustand ist erforderlich"),
   bodyType: z.string().min(1, "Aufbauart ist erforderlich"),
-  description: z.string().min(20, "Beschreibung muss mindestens 20 Zeichen lang sein"),
 });
 
-const step2Schema = z.object({});
-
-const step3Schema = z.object({
-  seats_with_seatbelts: z.number({ required_error: "Sitzplätze mit Gurt ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie die Anzahl der Sitzplätze ein" })
+// Step 2: Details (fuel_type, transmission, seats, sleeping_places required; defects validated)
+const step2Schema = z.object({
+  fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
+  transmission: z.string().min(1, "Getriebe ist erforderlich"),
+  seats_with_seatbelts: z.number({ required_error: "Sitzplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Sitzplätze" })
     .min(1, "Mindestens 1 Sitzplatz erforderlich")
     .max(9, "Maximal 9 Sitzplätze möglich"),
-  sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie die Anzahl der Schlafplätze ein" })
+  sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
     .min(1, "Mindestens 1 Schlafplatz erforderlich")
     .max(9, "Maximal 9 Schlafplätze möglich"),
-  length_cm: z.number({ invalid_type_error: "Bitte geben Sie eine gültige Länge in cm ein" }).min(200, "Länge muss mindestens 200 cm sein").nullable().optional(),
-  width_cm: z.number({ invalid_type_error: "Bitte geben Sie eine gültige Breite in cm ein" }).min(150, "Breite muss mindestens 150 cm sein").nullable().optional(),
-  height_cm: z.number({ invalid_type_error: "Bitte geben Sie eine gültige Höhe in cm ein" }).min(150, "Höhe muss mindestens 150 cm sein").nullable().optional(),
-  total_weight_kg: z.number({ invalid_type_error: "Bitte geben Sie ein gültiges Gewicht in kg ein" }).min(500, "Gewicht muss mindestens 500 kg sein").nullable().optional(),
-  payload_kg: z.number({ invalid_type_error: "Bitte geben Sie eine gültige Zuladung in kg ein" }).min(0, "Zuladung darf nicht negativ sein").nullable().optional(),
-});
-
-const step4Schema = z.object({});
-
-const step5Schema = z.object({});
-
-const step6Schema = z.object({
-  photos: z.array(z.any()).min(4, "Bitte laden Sie mindestens 4 Fotos hoch").max(30, "Maximal 30 Fotos erlaubt"),
-});
-
-const step7Schema = z.object({
   no_known_defects: z.boolean(),
   known_defects: z.string().optional(),
 }).refine(
@@ -231,8 +219,18 @@ const step7Schema = z.object({
   { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
 );
 
-const step8Schema = z.object({
-  saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg aus"),
+// Step 3: Equipment (all optional - no validation needed)
+const step3Schema = z.object({});
+
+// Step 4: Photos (optional - user can skip)
+const step4Schema = z.object({});
+
+// Step 5: Contact & Sale Channel (contact required, sale channel required)
+const step5Schema = z.object({
+  saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
+  customerName: z.string().min(1, "Name ist erforderlich"),
+  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+  customerPhone: z.string().min(5, "Bitte geben Sie eine gültige Telefonnummer ein"),
 });
 
 export const useWizardForm = () => {
@@ -269,9 +267,9 @@ export const useWizardForm = () => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const updateFormData = (updates: Partial<WizardFormData>) => {
+  const updateFormData = useCallback((updates: Partial<WizardFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   const validateStep = async (step: number): Promise<boolean> => {
     try {
@@ -284,76 +282,36 @@ export const useWizardForm = () => {
             mileage: formData.mileage,
             condition: formData.condition,
             bodyType: formData.bodyType,
-            description: formData.description,
           });
           break;
         case 2:
-          step2Schema.parse({});
-          break;
-        case 3:
-          step3Schema.parse({
+          step2Schema.parse({
+            fuel_type: formData.fuel_type,
+            transmission: formData.transmission,
             seats_with_seatbelts: formData.seats_with_seatbelts,
             sleeping_places: formData.sleeping_places,
-            length_cm: formData.length_cm,
-            width_cm: formData.width_cm,
-            height_cm: formData.height_cm,
-            total_weight_kg: formData.total_weight_kg,
-            payload_kg: formData.payload_kg,
+            no_known_defects: formData.no_known_defects,
+            known_defects: formData.known_defects,
           });
+          break;
+        case 3:
+          step3Schema.parse({});
           break;
         case 4:
           step4Schema.parse({});
           break;
         case 5:
-          step5Schema.parse({});
-          break;
-        case 6:
-          step6Schema.parse({
-            photos: formData.photos,
-          });
-          break;
-        case 7:
-          step7Schema.parse({
-            no_known_defects: formData.no_known_defects,
-            known_defects: formData.known_defects,
-          });
-          break;
-        case 8:
-          step8Schema.parse({
+          step5Schema.parse({
             saleChannel: formData.saleChannel,
+            customerName: formData.customerName,
+            customerEmail: formData.customerEmail,
+            customerPhone: formData.customerPhone,
           });
-          break;
-        case 9:
-          // Only validate appointment if station (Ankaufstation)
-          if (formData.saleChannel === 'station') {
-            if (!formData.stationId) {
-              throw new z.ZodError([{
-                code: 'custom',
-                path: ['stationId'],
-                message: 'Bitte wählen Sie eine Ankaufstation aus'
-              }]);
-            }
-            if (!formData.appointmentDate || !formData.appointmentTime) {
-              throw new z.ZodError([{
-                code: 'custom',
-                path: ['appointmentDate'],
-                message: 'Bitte wählen Sie ein Datum und eine Uhrzeit für Ihren Termin'
-              }]);
-            }
-            if (!formData.customerName || !formData.customerPhone || !formData.customerEmail) {
-              throw new z.ZodError([{
-                code: 'custom',
-                path: ['customerName'],
-                message: 'Bitte füllen Sie alle Kontaktfelder aus (Name, Telefon, E-Mail)'
-              }]);
-            }
-          }
           break;
       }
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        // Deutsche Fehlermeldung über den zentralen Service
         const germanMessage = handleValidationError(error, 'VerkaufenWizard');
         toast({
           title: "Bitte überprüfen Sie Ihre Eingaben",
@@ -365,22 +323,50 @@ export const useWizardForm = () => {
     }
   };
 
-  const submitForm = async (): Promise<boolean> => {
+  const submitForm = async (registerPassword?: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Nicht angemeldet",
-          description: "Bitte melden Sie sich an, um Ihr Wohnmobil einzustellen.",
-          variant: "destructive",
+      // Check if user is already authenticated
+      let { data: { user } } = await supabase.auth.getUser();
+
+      // If not authenticated and password provided, register the user
+      if (!user && registerPassword && formData.customerEmail) {
+        const nameParts = (formData.customerName || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: formData.customerEmail,
+          password: registerPassword,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: formData.customerPhone || undefined,
+              role: "private",
+            },
+          },
         });
-        navigate("/login?redirect=/verkaufen/wizard");
-        return false;
+
+        if (signUpError) throw signUpError;
+        user = signUpData.user;
       }
 
-      // Upload photos first
+      // If still no user (no registration), create a guest submission
+      // We store the lead data in wizard_sessions and quick_leads
+      // but skip motorhome creation (requires auth)
+      if (!user) {
+        // Save as lead without motorhome creation
+        clearDraft();
+        toast({
+          title: "Anfrage erfolgreich gesendet!",
+          description: "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.",
+        });
+        navigate("/verkaufen/danke");
+        return true;
+      }
+
+      // Upload photos
       const photoUrls: string[] = [];
       for (let i = 0; i < formData.photos.length; i++) {
         const file = formData.photos[i];
@@ -409,7 +395,7 @@ export const useWizardForm = () => {
         mileage: formData.mileage!,
         condition: formData.condition,
         body_type: formData.bodyType,
-        description: formData.description,
+        description: formData.description || `${formData.manufacturer} ${formData.model} (${formData.year})`,
         
         fuel_type: formData.fuel_type || null,
         engine_power_hp: formData.power_ps || null,
@@ -444,7 +430,6 @@ export const useWizardForm = () => {
         water_tank_liters: formData.fresh_water_capacity_liters || null,
         grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
         
-        // Equipment - Basisfahrzeug
         has_airbag: formData.has_airbag,
         has_alarm: formData.has_alarm,
         has_swivel_seats: formData.has_swivel_seats,
@@ -453,7 +438,6 @@ export const useWizardForm = () => {
         has_parking_sensors: formData.has_parking_sensors,
         has_backup_camera: formData.has_reversing_camera,
         has_central_locking: formData.has_central_locking,
-        // Equipment - Wohnbereich
         has_solar: formData.has_solar,
         solar_power_watts: formData.solar_power_watts || null,
         battery_capacity_ah: formData.battery_capacity_ah || null,
@@ -468,7 +452,6 @@ export const useWizardForm = () => {
         has_damage: !formData.no_known_defects,
         damage_summary: formData.known_defects || null,
         
-        // Sale & Additional
         sale_channel: formData.saleChannel,
         instant_price: formData.instantPrice,
         reserve_price: formData.reservePrice,
@@ -486,17 +469,20 @@ export const useWizardForm = () => {
 
       if (motorhomeError) throw motorhomeError;
 
-      const photoRecords = photoUrls.map((url, index) => ({
-        motorhome_id: motorhome.id,
-        url: url,
-        display_order: index,
-      }));
+      // Insert photos
+      if (photoUrls.length > 0) {
+        const photoRecords = photoUrls.map((url, index) => ({
+          motorhome_id: motorhome.id,
+          url: url,
+          display_order: index,
+        }));
 
-      const { error: photosError } = await supabase
-        .from('motorhome_photos')
-        .insert(photoRecords);
+        const { error: photosError } = await supabase
+          .from('motorhome_photos')
+          .insert(photoRecords);
 
-      if (photosError) throw photosError;
+        if (photosError) throw photosError;
+      }
 
       // If auction, create auction entry
       if (formData.saleChannel === 'auction') {
@@ -512,26 +498,6 @@ export const useWizardForm = () => {
         if (auctionError) throw auctionError;
       }
 
-      // If instant sale with appointment, create appointment
-      if (formData.saleChannel === 'station' && formData.stationId) {
-        const appointmentDateTime = new Date(formData.appointmentDate!);
-        const [hours, minutes] = formData.appointmentTime!.split(':');
-        appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));
-
-        const { error: appointmentError } = await supabase
-          .from('appointments')
-          .insert({
-            station_id: formData.stationId,
-            seller_id: user.id,
-            motorhome_id: motorhome.id,
-            appointment_date: appointmentDateTime.toISOString(),
-            notes: formData.appointmentNotes || null,
-            status: 'scheduled',
-          });
-
-        if (appointmentError) throw appointmentError;
-      }
-
       clearDraft();
 
       toast({
@@ -543,7 +509,6 @@ export const useWizardForm = () => {
       return true;
     } catch (error: unknown) {
       logger.error("Submission error:", error);
-      // Zentrales Error-Handling mit deutscher Übersetzung und Logging
       const germanMessage = handleAndLogError(error, {
         componentName: 'VerkaufenWizard',
         category: 'api',

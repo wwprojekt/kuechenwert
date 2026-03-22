@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { Card } from "@/components/ui/card";
@@ -153,6 +155,46 @@ export default function AdminDealers() {
     staleTime: 0,
   });
 
+  // Filter active dealers by search
+  const filteredDealers = useMemo(() => {
+    if (!activeDealers) return [];
+    if (!searchTerm) return activeDealers;
+
+    const searchLower = searchTerm.toLowerCase();
+    return activeDealers.filter(
+      (dealer) =>
+        dealer.company_name?.toLowerCase().includes(searchLower) ||
+        dealer.company_city?.toLowerCase().includes(searchLower) ||
+        dealer.contact_person_name?.toLowerCase().includes(searchLower) ||
+        dealer.profiles?.email?.toLowerCase().includes(searchLower)
+    );
+  }, [activeDealers, searchTerm]);
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "haendler",
+    columns: [
+      { key: "company_name", label: "Firma" },
+      { key: "contact_person_name", label: "Ansprechpartner" },
+      {
+        key: "profiles",
+        label: "E-Mail",
+        format: (value: any) => value?.email || "N/A",
+      },
+      { key: "phone", label: "Telefon" },
+      { key: "company_city", label: "Stadt" },
+      {
+        key: "profiles",
+        label: "Status",
+        format: (value: any) => value?.is_suspended ? "Gesperrt" : "Aktiv",
+      },
+      {
+        key: "submitted_at",
+        label: "Registriert am",
+        format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "",
+      },
+    ],
+  });
+
   const approveMutation = useMutation({
     mutationFn: approveDealerApplication,
     onSuccess: () => {
@@ -233,21 +275,6 @@ export default function AdminDealers() {
     },
   });
 
-  // Filter active dealers by search
-  const filteredDealers = useMemo(() => {
-    if (!activeDealers) return [];
-    if (!searchTerm) return activeDealers;
-
-    const searchLower = searchTerm.toLowerCase();
-    return activeDealers.filter(
-      (dealer) =>
-        dealer.company_name?.toLowerCase().includes(searchLower) ||
-        dealer.company_city?.toLowerCase().includes(searchLower) ||
-        dealer.contact_person_name?.toLowerCase().includes(searchLower) ||
-        dealer.profiles?.email?.toLowerCase().includes(searchLower)
-    );
-  }, [activeDealers, searchTerm]);
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -323,18 +350,12 @@ export default function AdminDealers() {
             color: "text-yellow-500",
           },
           {
-            label: "Aktive Händler",
-            count: activeDealers?.length || 0,
-            icon: Users,
-            color: "text-green-500",
-          },
-          {
-            label: "Genehmigt (Gesamt)",
+            label: "Genehmigt",
             count:
               applications?.filter((a: DealerApplication) => a.status === "approved")
                 .length || 0,
             icon: CheckCircle2,
-            color: "text-blue-500",
+            color: "text-green-500",
           },
           {
             label: "Abgelehnt",
@@ -344,107 +365,59 @@ export default function AdminDealers() {
             icon: XCircle,
             color: "text-red-500",
           },
-        ].map((stat, idx) => (
-          <Card key={idx} className="p-6">
-            <div className="flex items-center gap-4">
-              <div
-                className={`h-12 w-12 rounded-lg bg-muted flex items-center justify-center ${stat.color}`}
-              >
-                <stat.icon className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stat.count}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
+          {
+            label: "Aktive Händler",
+            count: activeDealers?.length || 0,
+            icon: Users,
+            color: "text-blue-500",
+          },
+        ].map((stat, index) => (
+          <Card key={index} className="p-4 flex items-center gap-4">
+            <stat.icon className={`w-8 h-8 ${stat.color}`} />
+            <div>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="text-2xl font-bold">{stat.count}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="applications" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Anträge
-            {pendingApplications.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {pendingApplications.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="dealers" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Aktive Händler
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="applications">Händleranträge</TabsTrigger>
+          <TabsTrigger value="dealers">Aktive Händler</TabsTrigger>
         </TabsList>
 
         {/* Applications Tab */}
-        <TabsContent value="applications" className="mt-6">
+        <TabsContent value="applications" className="space-y-4">
           <Card>
-            {isLoading ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">
-                  Lade Händler-Anträge...
-                </p>
-              </div>
-            ) : !applications || applications.length === 0 ? (
-              <div className="p-12 text-center">
-                <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <h3 className="text-xl font-semibold mb-2">
-                  Keine Anträge gefunden
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  {applications === null
-                    ? "Fehler beim Laden der Anträge"
-                    : "Aktuell liegen keine Händler-Bewerbungen vor"}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Firma</TableHead>
+                  <TableHead>Ansprechpartner</TableHead>
+                  <TableHead>Eingereicht am</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
                   <TableRow>
-                    <TableHead>Firma</TableHead>
-                    <TableHead>Kontakt</TableHead>
-                    <TableHead>Eingereicht</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aktionen</TableHead>
+                    <TableCell colSpan={5} className="text-center">
+                      Lade Anträge...
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {applications.map((application: DealerApplication) => (
+                ) : pendingApplications.length > 0 ? (
+                  pendingApplications.map((application: DealerApplication) => (
                     <TableRow key={application.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {application.company_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {application.company_city}
-                          </p>
-                        </div>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        {application.company_name}
                       </TableCell>
+                      <TableCell>{application.contact_person_name}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {application.contact_person_name ||
-                              `${application.profiles?.first_name || ""} ${
-                                application.profiles?.last_name || ""
-                              }`.trim() ||
-                              "Unbekannt"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {application.profiles?.email || "Keine E-Mail"}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(
-                          new Date(application.submitted_at),
-                          "dd.MM.yyyy",
-                          { locale: de }
-                        )}
+                        {format(new Date(application.submitted_at), "dd.MM.yyyy HH:mm", { locale: de })}
                       </TableCell>
                       <TableCell>{getStatusBadge(application.status)}</TableCell>
                       <TableCell className="text-right">
@@ -458,414 +431,179 @@ export default function AdminDealers() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Keine ausstehenden Anträge gefunden.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </Card>
         </TabsContent>
 
-        {/* Active Dealers Tab */}
-        <TabsContent value="dealers" className="mt-6 space-y-4">
-          {/* Search */}
-          <Card className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Nach Firma, Stadt, Name oder E-Mail suchen..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+        {/* Dealers Tab */}
+        <TabsContent value="dealers" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              {filteredDealers.length} aktive Händler
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="relative w-full max-w-sm items-center">
+                <Input
+                  placeholder="Suche nach Firma, Stadt, Ansprechpartner..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Search className="h-5 w-5 text-muted-foreground" />
+                </span>
+              </div>
+              <ExportButton
+                onExportCSV={() => exportCSV(filteredDealers || [])}
+                onExportExcel={() => exportExcel(filteredDealers || [])}
+                isExporting={isExporting}
               />
             </div>
-          </Card>
-
+          </div>
           <Card>
-            {isLoadingDealers ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Lade Händler...</p>
-              </div>
-            ) : !filteredDealers || filteredDealers.length === 0 ? (
-              <div className="p-12 text-center">
-                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <h3 className="text-xl font-semibold mb-2">
-                  Keine Händler gefunden
-                </h3>
-                <p className="text-muted-foreground">
-                  {searchTerm
-                    ? "Keine Ergebnisse für Ihre Suche"
-                    : "Keine aktiven Händler vorhanden"}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Firma</TableHead>
+                  <TableHead>Ansprechpartner</TableHead>
+                  <TableHead>E-Mail</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingDealers ? (
                   <TableRow>
-                    <TableHead>Firma</TableHead>
-                    <TableHead>Kontakt</TableHead>
-                    <TableHead>E-Mail</TableHead>
-                    <TableHead>Mitglied seit</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aktionen</TableHead>
+                    <TableCell colSpan={5} className="text-center">
+                      Lade Händler...
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDealers.map((dealer) => (
-                    <TableRow
-                      key={dealer.id}
-                      className={
-                        dealer.profiles?.is_suspended ? "opacity-60" : ""
-                      }
-                    >
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{dealer.company_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {dealer.company_city}
-                          </p>
-                        </div>
+                ) : filteredDealers.length > 0 ? (
+                  filteredDealers.map((dealer: DealerApplication) => (
+                    <TableRow key={dealer.id}>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        {dealer.company_name}
                       </TableCell>
-                      <TableCell>
-                        <p className="font-medium">
-                          {dealer.contact_person_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {dealer.phone}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-sm">{dealer.profiles?.email}</p>
-                      </TableCell>
-                      <TableCell>
-                        {dealer.reviewed_at &&
-                          format(new Date(dealer.reviewed_at), "dd.MM.yyyy", {
-                            locale: de,
-                          })}
-                      </TableCell>
+                      <TableCell>{dealer.contact_person_name}</TableCell>
+                      <TableCell>{dealer.profiles?.email}</TableCell>
                       <TableCell>
                         {dealer.profiles?.is_suspended ? (
-                          <Badge
-                            variant="destructive"
-                            className="flex items-center gap-1 w-fit"
-                          >
-                            <Ban className="w-3 h-3" />
-                            Gesperrt
+                          <Badge variant="destructive" className="gap-1">
+                            <Ban className="w-3 h-3" /> Gesperrt
                           </Badge>
                         ) : (
-                          <Badge
-                            variant="outline"
-                            className="flex items-center gap-1 w-fit text-green-600 border-green-600"
-                          >
-                            <CheckCircle2 className="w-3 h-3" />
-                            Aktiv
+                          <Badge className="gap-1 bg-green-500">
+                            <CheckCircle2 className="w-3 h-3" /> Aktiv
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Menü öffnen</span>
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleViewDetails(dealer)}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Details anzeigen
+                            <DropdownMenuItem onClick={() => handleViewDetails(dealer)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              <span>Details anzeigen</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleEditDealer(dealer)}
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Bearbeiten
+                            <DropdownMenuItem onClick={() => handleEditDealer(dealer)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>Stammdaten bearbeiten</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {dealer.profiles?.is_suspended ? (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  suspendMutation.mutate({
-                                    dealerId: dealer.profiles!.id,
-                                    suspend: false,
-                                  })
-                                }
-                                disabled={suspendMutation.isPending}
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
-                                Entsperren
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  suspendMutation.mutate({
-                                    dealerId: dealer.profiles!.id,
-                                    suspend: true,
-                                  })
-                                }
-                                disabled={suspendMutation.isPending}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Ban className="w-4 h-4 mr-2" />
-                                Sperren
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => {
-                                // Navigate to user management with this user
-                                window.location.href = `/admin/users?search=${encodeURIComponent(
-                                  dealer.profiles?.email || ""
-                                )}`;
-                              }}
+                              onClick={() =>
+                                suspendMutation.mutate({
+                                  dealerId: dealer.user_id,
+                                  suspend: !dealer.profiles?.is_suspended,
+                                })
+                              }
+                              className={dealer.profiles?.is_suspended ? "" : "text-red-500"}
                             >
-                              <Users className="w-4 h-4 mr-2" />
-                              Benutzer verwalten
+                              <Ban className="mr-2 h-4 w-4" />
+                              <span>
+                                {dealer.profiles?.is_suspended ? "Sperrung aufheben" : "Händler sperren"}
+                              </span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Keine aktiven Händler gefunden.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Händler-Antrag Details</DialogTitle>
-            <DialogDescription>
-              Prüfen Sie die Unterlagen und entscheiden Sie über die Bewerbung
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedApplication && (
-            <div className="space-y-6">
-              {/* Status */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <span className="font-medium">Status:</span>
-                {getStatusBadge(selectedApplication.status)}
-              </div>
-
-              {/* Company Info */}
-              <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Unternehmen
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <Label className="text-muted-foreground">Firma</Label>
-                    <p className="font-medium">
-                      {selectedApplication.company_name}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Adresse</Label>
-                    <p className="font-medium">
-                      {selectedApplication.company_address}
-                      <br />
-                      {selectedApplication.company_postal_code}{" "}
-                      {selectedApplication.company_city}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Steuernummer
-                    </Label>
-                    <p className="font-medium">{selectedApplication.tax_id}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Gewerbeschein
-                    </Label>
-                    <p className="font-medium">
-                      {selectedApplication.trade_license_number}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Info */}
-              <div>
-                <h3 className="font-semibold mb-3">Ansprechpartner</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <Label className="text-muted-foreground">Name</Label>
-                    <p className="font-medium">
-                      {selectedApplication.contact_person_name}
-                    </p>
-                  </div>
-                  {selectedApplication.contact_person_position && (
-                    <div>
-                      <Label className="text-muted-foreground">Position</Label>
-                      <p className="font-medium">
-                        {selectedApplication.contact_person_position}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <Label className="text-muted-foreground">Telefon</Label>
-                    <p className="font-medium">{selectedApplication.phone}</p>
-                  </div>
-                  {selectedApplication.website && (
-                    <div>
-                      <Label className="text-muted-foreground">Website</Label>
-                      <a
-                        href={selectedApplication.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {selectedApplication.website}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Business Description */}
-              {selectedApplication.business_description && (
-                <div>
-                  <Label className="text-muted-foreground">
-                    Geschäftsbeschreibung
-                  </Label>
-                  <p className="mt-2 text-sm bg-muted p-3 rounded-lg">
-                    {selectedApplication.business_description}
-                  </p>
-                </div>
-              )}
-
-              {/* Document */}
-              {selectedApplication.trade_license_document_url && (
-                <div>
-                  <Label className="text-muted-foreground">Gewerbeschein</Label>
-                  <a
-                    href={selectedApplication.trade_license_document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex items-center gap-2 text-sm text-primary hover:underline"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Dokument anzeigen
-                  </a>
-                </div>
-              )}
-
-              {/* Rejection Reason if rejected */}
-              {selectedApplication.status === "rejected" &&
-                selectedApplication.rejection_reason && (
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Ablehnungsgrund
-                    </Label>
-                    <p className="mt-2 text-sm bg-destructive/10 text-destructive p-3 rounded-lg">
-                      {selectedApplication.rejection_reason}
-                    </p>
-                  </div>
-                )}
-            </div>
-          )}
-
-          {selectedApplication?.status === "pending" && (
-            <DialogFooter className="gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => setShowRejectDialog(true)}
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Ablehnen
-              </Button>
-              <Button
-                onClick={() => approveMutation.mutate(selectedApplication.id)}
-                disabled={approveMutation.isPending}
-                className="gradient-hero hover:gradient-hero-hover"
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Genehmigen
-              </Button>
-            </DialogFooter>
-          )}
-
-          {selectedApplication?.status === "approved" && (
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDetailDialog(false);
-                  handleEditDealer(selectedApplication);
-                }}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Bearbeiten
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Dialog */}
+      {/* Dialog for Rejecting Application */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Antrag ablehnen</DialogTitle>
             <DialogDescription>
-              Bitte geben Sie einen Grund für die Ablehnung an. Der
-              Antragsteller wird per E-Mail benachrichtigt.
+              Geben Sie einen Grund für die Ablehnung an. Der Bewerber wird per E-Mail benachrichtigt.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="rejectionReason">Ablehnungsgrund *</Label>
-              <Textarea
-                id="rejectionReason"
-                placeholder="z.B. Fehlende Nachweise, Unvollständige Angaben..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                rows={4}
-              />
-            </div>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="rejectionReason">Grund der Ablehnung</Label>
+            <Textarea
+              id="rejectionReason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="z.B. Unvollständige Unterlagen, ..."
+            />
           </div>
-
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowRejectDialog(false);
-                setRejectionReason("");
-              }}
-            >
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
               Abbrechen
             </Button>
             <Button
               variant="destructive"
               onClick={() =>
+                selectedApplication &&
                 rejectMutation.mutate({
-                  applicationId: selectedApplication!.id,
+                  applicationId: selectedApplication.id,
                   reason: rejectionReason,
                 })
               }
-              disabled={!rejectionReason || rejectMutation.isPending}
+              disabled={rejectMutation.isPending || !rejectionReason}
             >
-              Ablehnen
+              {rejectMutation.isPending ? "Ablehnen..." : "Ablehnung bestätigen"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <DealerEditDialog
-        dealer={selectedApplication}
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-      />
+      {/* Dialog for Editing Dealer */}
+      {selectedApplication && (
+        <DealerEditDialog
+          isOpen={showEditDialog}
+          onClose={() => setShowEditDialog(false)}
+          dealer={selectedApplication}
+        />
+      )}
     </div>
   );
 }

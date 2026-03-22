@@ -30,6 +30,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 
 export default function AdminAuctions() {
   const queryClient = useQueryClient();
@@ -63,6 +65,54 @@ export default function AdminAuctions() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "auktionen",
+    columns: [
+      { key: "id", label: "ID" },
+      {
+        key: "motorhome",
+        label: "Fahrzeug",
+        format: (value: any) => value ? `${value.manufacturer} ${value.model} (${value.year})` : "",
+      },
+      {
+        key: "motorhome",
+        label: "Verkäufer",
+        format: (value: any) => value?.seller ? `${value.seller.first_name} ${value.seller.last_name}` : "",
+      },
+      {
+        key: "motorhome",
+        label: "Verkäufer E-Mail",
+        format: (value: any) => value?.seller?.email || "",
+      },
+      { key: "status", label: "Status" },
+      {
+        key: "starting_bid",
+        label: "Startgebot",
+        format: (value: any) => value ? `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` : "",
+      },
+      {
+        key: "current_bid",
+        label: "Aktuelles Gebot",
+        format: (value: any) => value ? `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` : "",
+      },
+      {
+        key: "bids",
+        label: "Gebote",
+        format: (value: any) => String(value?.[0]?.count || 0),
+      },
+      {
+        key: "start_time",
+        label: "Startdatum",
+        format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "-",
+      },
+      {
+        key: "end_time",
+        label: "Enddatum",
+        format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "-",
+      },
+    ],
   });
 
   const checkExpiredAuctionsMutation = useMutation({
@@ -154,14 +204,21 @@ export default function AdminAuctions() {
             Verwalten Sie alle Auktionen auf der Plattform
           </p>
         </div>
-        <Button
-          onClick={() => checkExpiredAuctionsMutation.mutate()}
-          disabled={checkExpiredAuctionsMutation.isPending}
-          className="gap-2"
-        >
-          <RotateCw className={`w-4 h-4 ${checkExpiredAuctionsMutation.isPending ? 'animate-spin' : ''}`} />
-          Abgelaufene Auktionen prüfen
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton
+            onExportCSV={() => exportCSV(auctions || [])}
+            onExportExcel={() => exportExcel(auctions || [])}
+            isExporting={isExporting}
+          />
+          <Button
+            onClick={() => checkExpiredAuctionsMutation.mutate()}
+            disabled={checkExpiredAuctionsMutation.isPending}
+            className="gap-2"
+          >
+            <RotateCw className={`w-4 h-4 ${checkExpiredAuctionsMutation.isPending ? 'animate-spin' : ''}`} />
+            Abgelaufene Auktionen prüfen
+          </Button>
+        </div>
       </div>
 
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
@@ -293,40 +350,40 @@ export default function AdminAuctions() {
                                 <AlertDialogCancel>Abbrechen</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => activateAuctionMutation.mutate(auction.id)}
-                                  className="bg-green-600 hover:bg-green-700"
+                                  disabled={activateAuctionMutation.isPending}
                                 >
-                                  Auktion aktivieren
+                                  Aktivieren
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
-                        {auction.status === "active" && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Auktion jetzt schließen?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Diese Aktion wird die Auktion sofort beenden und den Gewinner bestimmen, falls vorhanden.
-                                  Dies kann nicht rückgängig gemacht werden.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => closeAuctionMutation.mutate(auction.id)}
-                                  className="bg-destructive hover:bg-destructive/90"
-                                >
-                                  Auktion schließen
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                        {(auction.status === "active" || auction.status === "ended") && (
+                           <AlertDialog>
+                           <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                               <X className="w-4 h-4" />
+                             </Button>
+                           </AlertDialogTrigger>
+                           <AlertDialogContent>
+                             <AlertDialogHeader>
+                               <AlertDialogTitle>Auktion manuell schließen?</AlertDialogTitle>
+                               <AlertDialogDescription>
+                                 Die Auktion wird manuell geschlossen und der Höchstbietende (falls vorhanden) gewinnt.
+                                 Dieser Vorgang kann nicht rückgängig gemacht werden.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter>
+                               <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                               <AlertDialogAction
+                                 onClick={() => closeAuctionMutation.mutate(auction.id)}
+                                 disabled={closeAuctionMutation.isPending}
+                               >
+                                 Schließen
+                               </AlertDialogAction>
+                             </AlertDialogFooter>
+                           </AlertDialogContent>
+                         </AlertDialog>
                         )}
                       </div>
                     </TableCell>
@@ -337,13 +394,16 @@ export default function AdminAuctions() {
           </TableBody>
         </Table>
       </Card>
-
-      {/* Edit Dialog */}
-      <AuctionEditDialog
-        auction={selectedAuction}
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-      />
+      {selectedAuction && (
+        <AuctionEditDialog
+          auction={selectedAuction}
+          isOpen={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false);
+            setSelectedAuction(null);
+          }}
+        />
+      )}
     </div>
   );
 }

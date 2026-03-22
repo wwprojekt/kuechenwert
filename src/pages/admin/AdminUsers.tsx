@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +87,21 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "benutzer",
+    columns: [
+      { key: "id", label: "ID" },
+      { key: "first_name", label: "Vorname" },
+      { key: "last_name", label: "Nachname" },
+      { key: "email", label: "E-Mail" },
+      { key: "phone", label: "Telefon" },
+      { key: "company_name", label: "Firma" },
+      { key: "roles", label: "Rollen", format: (v: any) => v?.map((r: any) => r.role).join(", ") || "" },
+      { key: "is_suspended", label: "Status", format: (v: boolean) => v ? "Gesperrt" : "Aktiv" },
+      { key: "created_at", label: "Registriert am", format: (v: string) => v ? new Date(v).toLocaleDateString("de-DE") : "" },
+    ],
+  });
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["adminUsers"],
@@ -294,6 +311,11 @@ export default function AdminUsers() {
               <SelectItem value="suspended">Gesperrt</SelectItem>
             </SelectContent>
           </Select>
+          <ExportButton
+            onExportCSV={() => exportCSV(filteredUsers || [])}
+            onExportExcel={() => exportExcel(filteredUsers || [])}
+            isExporting={isExporting}
+          />
         </div>
       </Card>
 

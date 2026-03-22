@@ -151,7 +151,7 @@ const Kontakt = () => {
             {supportPhone && (
               <a 
                 href={`tel:${supportPhone.replace(/\s/g, '')}`} 
-                className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-border/50"
+                className="flex items-center gap-3 bg-white/80 dark:bg-card/80 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-border/50"
               >
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Phone className="h-6 w-6 text-primary" />

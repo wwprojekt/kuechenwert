@@ -203,6 +203,18 @@ Deno.serve(async (req) => {
           isOutbid: true,
         },
       }).catch((e) => console.error('Error sending outbid notification:', e));
+
+      // Push notification to outbid user
+      const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+      supabaseAdmin.functions.invoke('send-push-notification', {
+        body: {
+          userId: previousBids[0].bidder_id,
+          title: 'Sie wurden überboten!',
+          body: `Ihr Gebot auf ${motorhomeName || 'eine Auktion'} wurde überboten. Neuer Preis: €${amount.toLocaleString('de-DE')}`,
+          url: `https://caravanwert.de/auktion/${auctionId}`,
+          tag: 'outbid',
+        },
+      }).catch((e) => console.error('Error sending outbid push:', e));
     }
 
     // 3. Notify the seller about the new bid
@@ -227,6 +239,17 @@ Deno.serve(async (req) => {
         }).catch((e) => console.error('Error sending seller notification:', e));
       }
     }
+
+    // Notify users who have this motorhome as favorite
+    supabaseAdmin.functions.invoke('send-favorite-notification', {
+      body: {
+        motorhome_id: auction.motorhome_id,
+        auction_id: auctionId,
+        event_type: 'price_change',
+        new_price: amount,
+        auction_title: motorhomeName,
+      },
+    }).catch((e) => console.error('Error sending favorite notifications:', e));
 
     return new Response(
       JSON.stringify({

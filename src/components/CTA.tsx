@@ -27,7 +27,7 @@ const CTA = ({ onStartWizard }: CTAProps) => {
               </div>
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">
+              <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
                 Was ist Ihr Wohnmobil wert?
               </h3>
               <p className="text-muted-foreground">

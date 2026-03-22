@@ -441,7 +441,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
       case 'in_progress':
         return <Badge variant="outline" className="text-blue-600 border-blue-600 gap-1"><AlertCircle className="w-3 h-3" />In Bearbeitung</Badge>;
       case 'read':
-        return <Badge variant="outline" className="text-gray-600 border-gray-600 gap-1"><Eye className="w-3 h-3" />Gelesen</Badge>;
+        return <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-600 dark:border-gray-400 gap-1"><Eye className="w-3 h-3" />Gelesen</Badge>;
       default:
         return <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1"><Clock className="w-3 h-3" />Offen</Badge>;
     }
@@ -921,7 +921,7 @@ function ComposeTab() {
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((s) => (
                     <button
                       key={s.id}

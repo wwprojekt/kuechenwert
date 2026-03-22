@@ -320,9 +320,9 @@ const AdminErrorLogs = () => {
       auth: { color: 'bg-indigo-100 text-indigo-800', label: 'Auth', icon: <User className="w-3 h-3" /> },
       api: { color: 'bg-cyan-100 text-cyan-800', label: 'API', icon: <Globe className="w-3 h-3" /> },
       business: { color: 'bg-emerald-100 text-emerald-800', label: 'Geschäftslogik', icon: <AlertCircle className="w-3 h-3" /> },
-      system: { color: 'bg-gray-100 text-gray-800', label: 'System', icon: <Bug className="w-3 h-3" /> },
+      system: { color: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200', label: 'System', icon: <Bug className="w-3 h-3" /> },
       ui: { color: 'bg-pink-100 text-pink-800', label: 'UI', icon: <Monitor className="w-3 h-3" /> },
-      unknown: { color: 'bg-gray-100 text-gray-600', label: 'Unbekannt', icon: <AlertTriangle className="w-3 h-3" /> },
+      unknown: { color: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300', label: 'Unbekannt', icon: <AlertTriangle className="w-3 h-3" /> },
     };
     const v = variants[category] || variants.unknown;
     return <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${v.color}`}>{v.icon}{v.label}</span>;
@@ -334,7 +334,7 @@ const AdminErrorLogs = () => {
       customer: 'bg-green-100 text-green-800',
       dealer: 'bg-blue-100 text-blue-800',
       admin: 'bg-red-100 text-red-800',
-      anonymous: 'bg-gray-100 text-gray-600',
+      anonymous: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
     };
     const labels: Record<string, string> = {
       customer: 'Kunde',

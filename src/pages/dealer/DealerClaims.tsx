@@ -176,12 +176,12 @@ export default function DealerClaims() {
       under_review: { color: 'bg-yellow-100 text-yellow-800', icon: Eye, label: 'In Prüfung' },
       approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Genehmigt' },
       rejected: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Abgelehnt' },
-      resolved: { color: 'bg-gray-100 text-gray-800', icon: CheckCircle, label: 'Abgeschlossen' },
+      resolved: { color: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200', icon: CheckCircle, label: 'Abgeschlossen' },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig];
     return (
-      <Badge className={config?.color || 'bg-gray-100 text-gray-800'}>
+      <Badge className={config?.color || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'}>
         <config.icon className="h-3 w-3 mr-1" />
         {config?.label || status}
       </Badge>
@@ -190,7 +190,7 @@ export default function DealerClaims() {
 
   const getPriorityBadge = (priority: string) => {
     const colors = {
-      low: 'bg-gray-100 text-gray-800',
+      low: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
       medium: 'bg-blue-100 text-blue-800',
       high: 'bg-orange-100 text-orange-800',
       urgent: 'bg-red-100 text-red-800',

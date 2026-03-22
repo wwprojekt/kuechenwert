@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -73,6 +74,7 @@ const AdminQuestions = lazyRetry(() => import("./pages/admin/AdminQuestions"));
 const AdminMessages = lazyRetry(() => import("./pages/admin/AdminMessages"));
 const AdminEmailCenter = lazyRetry(() => import("./pages/admin/AdminEmailCenter"));
 const AdminErrorLogs = lazyRetry(() => import("./pages/admin/AdminErrorLogs"));
+const AdminAuditLog = lazyRetry(() => import("./pages/admin/AdminAuditLog"));
 const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
 const AdminAuctionDetail = lazyRetry(() => import("./pages/admin/AdminAuctionDetail"));
 const AdminMotorhomeDetail = lazyRetry(() => import("./pages/admin/AdminMotorhomeDetail"));
@@ -153,6 +155,7 @@ const queryClient = new QueryClient({
 const App = () => (
   <ErrorBoundary showDetails={!import.meta.env.PROD}>
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -221,6 +224,7 @@ const App = () => (
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="error-logs" element={<AdminErrorLogs />} />
+                <Route path="audit-log" element={<AdminAuditLog />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
@@ -244,6 +248,7 @@ const App = () => (
           <CookieBanner />
         </BrowserRouter>
       </TooltipProvider>
+      </ThemeProvider>
   </QueryClientProvider>
 </ErrorBoundary>
 );

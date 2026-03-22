@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -326,6 +328,49 @@ export default function AdminLeads() {
   const [customMessage, setCustomMessage] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const { toast } = useToast();
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "leads",
+    columns: [
+      { key: "id", label: "ID" },
+      { key: "customer_name", label: "Name" },
+      { key: "customer_email", label: "E-Mail" },
+      { key: "customer_phone", label: "Telefon" },
+      { key: "vehicle_summary", label: "Fahrzeug" },
+      {
+        key: "status",
+        label: "Status",
+        format: (value: any) => {
+          if (value === "in_progress") return "Aktiv";
+          if (value === "completed") return "Abgeschlossen";
+          if (value === "abandoned") return "Abgebrochen";
+          return String(value || "");
+        },
+      },
+      {
+        key: "max_step_reached",
+        label: "Fortschritt",
+        format: (value: any, row: any) => {
+          const max_step_reached = Number(row?.max_step_reached || 0);
+          const total_steps = Number(row?.total_steps || 0);
+          if (total_steps > 0) {
+            return `${Math.round((max_step_reached / total_steps) * 100)}%`;
+          }
+          return "0%";
+        },
+      },
+      {
+        key: "last_activity_at",
+        label: "Letzte Aktivität",
+        format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "",
+      },
+      {
+        key: "created_at",
+        label: "Erstellt am",
+        format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "",
+      },
+    ],
+  });
   const queryClient = useQueryClient();
 
   // ---- Data Fetching ----
@@ -702,6 +747,11 @@ export default function AdminLeads() {
           </TabsList>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
+            <ExportButton
+              onExportCSV={() => exportCSV(filteredSessions || [])}
+              onExportExcel={() => exportExcel(filteredSessions || [])}
+              isExporting={isExporting}
+            />
             <div className="relative flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input

@@ -108,7 +108,7 @@ export function SiteLogo({
               <span className="text-3xl font-bold text-white leading-tight tracking-tight">
                 {siteName}
               </span>
-              <span className="text-[10px] text-slate-400 leading-tight font-medium whitespace-nowrap">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight font-medium whitespace-nowrap">
                 {siteTagline}
               </span>
             </div>

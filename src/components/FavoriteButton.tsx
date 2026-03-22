@@ -42,7 +42,7 @@ export function FavoriteButton({ motorhomeId, variant = "icon", className }: Fav
         "p-2 rounded-full transition-all duration-200",
         isFav 
           ? "bg-red-500 text-white hover:bg-red-600" 
-          : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500",
+          : "bg-white/80 dark:bg-card/80 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-card hover:text-red-500",
         "shadow-md hover:shadow-lg",
         className
       )}

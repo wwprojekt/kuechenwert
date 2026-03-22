@@ -44,7 +44,7 @@ const Footer = () => {
   return (
     <footer className="relative overflow-hidden">
       {/* Trust Section */}
-      <div className="bg-gradient-to-b from-slate-50 to-slate-100 border-t border-slate-200">
+      <div className="bg-gradient-to-b from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 border-t border-slate-200 dark:border-slate-700">
         <div className="container py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8 items-center">
             {/* Trust Badges */}
@@ -53,14 +53,14 @@ const Footer = () => {
                 <Shield className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">SSL-Verschlüsselt</p>
-                <p className="text-xs text-slate-500">Sichere Datenübertragung</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">SSL-Verschlüsselt</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Sichere Datenübertragung</p>
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-2 text-center">
               {settings?.tuv_badge_url ? (
-                <div className="h-14 w-14 rounded-full overflow-hidden flex items-center justify-center bg-white">
+                <div className="h-14 w-14 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-slate-800">
                   <img 
                     src={settings.tuv_badge_url} 
                     alt="TÜV-Zertifikat" 
@@ -73,8 +73,8 @@ const Footer = () => {
                 </div>
               )}
               <div>
-                <p className="text-sm font-semibold text-slate-900">TÜV-Geprüft</p>
-                <p className="text-xs text-slate-500">Zertifizierter Service</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">TÜV-Geprüft</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Zertifizierter Service</p>
               </div>
             </div>
 
@@ -83,8 +83,8 @@ const Footer = () => {
                 <Clock className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">24h Bewertung</p>
-                <p className="text-xs text-slate-500">Schnelle Bearbeitung</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">24h Bewertung</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Schnelle Bearbeitung</p>
               </div>
             </div>
 
@@ -93,8 +93,8 @@ const Footer = () => {
                 <CheckCircle2 className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">100% Kostenlos</p>
-                <p className="text-xs text-slate-500">Keine versteckten Gebühren</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">100% Kostenlos</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Keine versteckten Gebühren</p>
               </div>
             </div>
           </div>

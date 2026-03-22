@@ -314,4 +314,107 @@ async function getCacheSize() {
   return totalSize;
 }
 
+// Push notification handler
+self.addEventListener('push', (event) => {
+  console.log('Service Worker: Push received');
+  
+  let data = {
+    title: 'CaravanWert',
+    body: 'Neue Benachrichtigung',
+    icon: '/logo.png',
+    badge: '/favicon.png',
+    url: 'https://caravanwert.de',
+    tag: 'default',
+  };
+
+  try {
+    if (event.data) {
+      const payload = event.data.json();
+      data = { ...data, ...payload };
+    }
+  } catch (e) {
+    console.error('Service Worker: Push data parse error', e);
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    renotify: true,
+    requireInteraction: data.tag === 'outbid' || data.tag === 'auction-ending',
+    data: {
+      url: data.url,
+      ...data.data,
+    },
+    actions: [],
+    vibrate: [200, 100, 200],
+  };
+
+  // Add actions based on notification type
+  if (data.tag === 'outbid') {
+    options.actions = [
+      { action: 'bid', title: 'Jetzt bieten' },
+      { action: 'dismiss', title: 'Schließen' },
+    ];
+  } else if (data.tag === 'auction-ending') {
+    options.actions = [
+      { action: 'view', title: 'Auktion ansehen' },
+      { action: 'dismiss', title: 'Schließen' },
+    ];
+  } else if (data.tag === 'auction-won') {
+    options.actions = [
+      { action: 'view', title: 'Details ansehen' },
+    ];
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('Service Worker: Notification clicked', event.action);
+  event.notification.close();
+
+  const url = event.notification.data?.url || 'https://caravanwert.de';
+
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Focus existing window if available
+        for (const client of clientList) {
+          if (client.url.includes('caravanwert.de') && 'focus' in client) {
+            client.navigate(url);
+            return client.focus();
+          }
+        }
+        // Open new window
+        return clients.openWindow(url);
+      })
+  );
+});
+
+// Push subscription change handler
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.log('Service Worker: Push subscription changed');
+  // The subscription has changed, we need to re-subscribe
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options)
+      .then((subscription) => {
+        // Send new subscription to server
+        return fetch('https://zcrwqxsyptjwkuxfacvq.supabase.co/functions/v1/save-push-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription),
+        });
+      })
+  );
+});
+
 console.log('Service Worker: Loaded');

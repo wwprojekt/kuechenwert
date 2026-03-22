@@ -115,11 +115,11 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
           </div>
           <div className={cn(
             "flex-1 h-1 rounded-full transition-colors",
-            step === 2 ? "bg-primary" : "bg-slate-200"
+            step === 2 ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
           )} />
           <div className={cn(
             "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors",
-            step === 2 ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
+            step === 2 ? "bg-primary text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
           )}>
             2
           </div>
@@ -181,12 +181,12 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
           <>
             {/* Step 2: Contact Details */}
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
                 Kontaktdaten
               </label>
               <div className="space-y-2.5">
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                   <Input
                     type="text"
                     placeholder="Ihr Name*"
@@ -231,7 +231,7 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="w-full text-center text-sm text-slate-500 hover:text-primary transition-colors"
+              className="w-full text-center text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
             >
               ← Zurück zur Fahrzeugauswahl
             </button>
@@ -239,7 +239,7 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
         )}
 
         {/* Trust indicators */}
-        <div className="flex items-center justify-center gap-4 text-xs text-slate-500 pt-1">
+        <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
           <span className="flex items-center gap-1">
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
             Kostenlos

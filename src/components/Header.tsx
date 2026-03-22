@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, LogOut, User, ChevronDown } from "lucide-react";
+import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -186,6 +187,7 @@ const Header = () => {
               Kontakt
             </Link>
             <div className="h-6 w-px bg-border/50" />
+            <DarkModeToggle />
             <div className="flex items-center gap-2">
               {user ? (
                 <DropdownMenu>
@@ -369,6 +371,11 @@ const Header = () => {
               >
                 Kontakt
               </Link>
+              <div className="h-px bg-border/50" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground/80">Dark Mode</span>
+                <DarkModeSimpleToggle />
+              </div>
               <div className="h-px bg-border/50" />
               {user ? (
                 <>

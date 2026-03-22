@@ -29,6 +29,8 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { getInvoiceStatistics } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 
 export default function AdminFinancials() {
   const { toast } = useToast();
@@ -65,6 +67,21 @@ export default function AdminFinancials() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "finanzen",
+    columns: [
+      { key: "invoice_number", label: "Rechnungsnummer" },
+      { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || "" },
+      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
+      { key: "gross_amount", label: "Betrag", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "amount_paid", label: "Bezahlt", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "gross_amount", label: "Restbetrag", format: (value: any, row: any) => `€${(Number(row.gross_amount) - Number(row.amount_paid)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "payment_status", label: "Status" },
+      { key: "created_at", label: "Erstellt am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
+      { key: "due_date", label: "Fällig am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
+    ],
   });
 
   // Fetch overdue invoices (includes pending and partial)
@@ -240,12 +257,17 @@ export default function AdminFinancials() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
-            <div className="flex-1">
+            <div className="flex-1 flex gap-4">
               <Input
                 placeholder="Suchen nach Rechnungsnummer, E-Mail oder Firma..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="max-w-sm"
+              />
+              <ExportButton
+                onExportCSV={() => exportCSV(invoices || [])}
+                onExportExcel={() => exportExcel(invoices || [])}
+                isExporting={isExporting}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -282,169 +304,76 @@ export default function AdminFinancials() {
                     <div className="flex-1">
                       <div className="flex items-center gap-6">
                         <div className="min-w-[140px]">
-                          <div className="font-medium">{invoice.invoice_number}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {invoice.dealer.company_name || 
-                             `${invoice.dealer.first_name} ${invoice.dealer.last_name}`}
+                          <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}>
+                            {invoice.invoice_number}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Fällig: {format(new Date(invoice.due_date), 'dd.MM.yyyy', { locale: de })}
+                            {invoice.dealer.company_name || `${invoice.dealer.first_name} ${invoice.dealer.last_name}`}
                           </div>
                         </div>
-                        
-                        {/* Payment Progress Section */}
-                        <div className="flex-1 max-w-xs">
+                        <div className="hidden md:block min-w-[150px]">
+                          <div className="font-medium">
+                            {invoice.auction.motorhome.manufacturer} {invoice.auction.motorhome.model}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Auktion #{invoice.auction_id}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-[150px]">
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="text-muted-foreground">Bezahlt</span>
-                            <span className="font-medium">
-                              €{amountPaid.toLocaleString('de-DE', { minimumFractionDigits: 2 })} / €{invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-                            </span>
+                            <span>{getStatusBadge(invoice)}</span>
+                            <span className="font-semibold">{amountPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {invoice.gross_amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                           </div>
                           <Progress value={paymentProgress} className="h-2" />
-                          {remaining > 0.01 && (
-                            <div className="text-xs text-orange-600 mt-1">
-                              Offen: €{remaining.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-                            </div>
-                          )}
                         </div>
-                        
-                        <div className="text-right min-w-[100px]">
-                          <div className="text-sm text-muted-foreground">
-                            {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
-                          </div>
-                        </div>
-                        
-                        {getStatusBadge(invoice)}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 ml-4">
-                      {invoice.pdf_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(invoice.pdf_url, '_blank')}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      )}
-                      
-                      {invoice.payment_status !== 'paid' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => sendReminderMutation.mutate(invoice.id)}
-                            disabled={sendReminderMutation.isPending}
-                            title="Zahlungserinnerung senden"
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedInvoice(invoice);
-                              setPaymentDialogOpen(true);
-                            }}
-                          >
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            Zahlung erfassen
-                          </Button>
-                        </>
-                      )}
+                    <div className="flex items-center gap-2 ml-6">
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ansehen
+                      </Button>
+                      <Button 
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedInvoice(invoice);
+                          setPaymentDialogOpen(true);
+                        }}
+                        disabled={invoice.payment_status === 'paid'}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Zahlung
+                      </Button>
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => sendReminderMutation.mutate(invoice.id)}
+                        disabled={sendReminderMutation.isPending || invoice.payment_status === 'paid'}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Mahnung
+                      </Button>
                     </div>
                   </div>
                 );
               })
             )}
-            
-            {filteredInvoices?.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Keine Rechnungen gefunden
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Overdue Invoices Alert */}
-      {overdueInvoices && overdueInvoices.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-800 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Überfällige Rechnungen ({overdueInvoices.length})
-            </CardTitle>
-            <CardDescription className="text-red-700">
-              Diese Rechnungen sind überfällig und benötigen Aufmerksamkeit
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {overdueInvoices.slice(0, 5).map((invoice: any) => {
-                const daysPastDue = Math.floor(
-                  (Date.now() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)
-                );
-                
-                return (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                    <div>
-                      <div className="font-medium">{invoice.invoice_number}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {invoice.dealer.company_name || 
-                         `${invoice.dealer.first_name} ${invoice.dealer.last_name}`} • 
-                        {daysPastDue} Tage überfällig
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-red-600">
-                        €{invoice.gross_amount.toLocaleString('de-DE')}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => sendReminderMutation.mutate(invoice.id)}
-                      >
-                        Mahnung senden
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      {selectedInvoice && (
+        <RecordPaymentDialog
+          isOpen={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          invoice={selectedInvoice}
+        />
       )}
-
-      {/* Revenue Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Umsatzentwicklung</CardTitle>
-          <CardDescription>
-            Monatliche Umsätze der letzten 12 Monate
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            {/* Placeholder for revenue chart - would need historical data */}
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4" />
-                <p>Umsatzdiagramm</p>
-                <p className="text-sm">Wird mit historischen Daten gefüllt</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Record Payment Dialog */}
-      <RecordPaymentDialog
-        invoice={selectedInvoice}
-        open={paymentDialogOpen}
-        onOpenChange={setPaymentDialogOpen}
-      />
     </div>
   );
 }

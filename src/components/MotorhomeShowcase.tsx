@@ -58,7 +58,7 @@ const MotorhomeShowcase = () => {
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="flex flex-col items-center text-center p-4 rounded-xl bg-white shadow-sm border border-slate-100"
+              className="flex flex-col items-center text-center p-4 rounded-xl bg-white dark:bg-card shadow-sm border border-slate-100 dark:border-border"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                 <stat.icon className="w-5 h-5 text-primary" />

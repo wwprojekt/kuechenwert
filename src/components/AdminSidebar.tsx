@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   UserPlus,
   Mail,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,7 @@ const menuItems = [
   { title: "Blog", url: "/admin/blog", icon: FileText },
   { title: "Rechtliches", url: "/admin/legal", icon: Scale },
   { title: "Fehlerprotokoll", url: "/admin/error-logs", icon: AlertTriangle },
+  { title: "Audit-Log", url: "/admin/audit-log", icon: Shield },
   { title: "Einstellungen", url: "/admin/settings", icon: Settings },
 ];
 

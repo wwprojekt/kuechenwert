@@ -31,9 +31,9 @@ interface QuickAuctionFormProps {
 const GrayInput = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
   <Input
     className={cn(
-      "bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white",
+      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-white dark:focus:bg-card",
       "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md",
-      "placeholder:text-slate-400 h-11",
+      "placeholder:text-slate-400 dark:placeholder:text-muted-foreground h-11",
       className
     )}
     {...props}
@@ -44,9 +44,9 @@ const GrayInput = ({ className, ...props }: React.ComponentProps<typeof Input>) 
 const GraySelectTrigger = ({ className, children, ...props }: React.ComponentProps<typeof SelectTrigger>) => (
   <SelectTrigger
     className={cn(
-      "bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white",
+      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-white dark:focus:bg-card",
       "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md h-11",
-      "[&>span]:text-slate-600 [&[data-state=open]]:bg-white [&[data-state=open]]:border-primary",
+      "[&>span]:text-slate-600 dark:[&>span]:text-slate-300 [&[data-state=open]]:bg-white dark:[&[data-state=open]]:bg-card [&[data-state=open]]:border-primary",
       className
     )}
     {...props}
@@ -258,7 +258,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
   ];
 
   return (
-    <Card className={`p-6 lg:p-8 bg-white shadow-2xl border-0 rounded-2xl ${className}`}>
+    <Card className={`p-6 lg:p-8 bg-white dark:bg-card shadow-2xl border-0 rounded-2xl ${className}`}>
       <div className="space-y-5">
         {/* Header - Left aligned, compact */}
         <div className="pb-1">
@@ -278,11 +278,11 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
           </div>
           <div className={cn(
             "flex-1 h-1 rounded-full transition-colors",
-            step === 2 ? "bg-primary" : "bg-slate-200"
+            step === 2 ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
           )} />
           <div className={cn(
             "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors",
-            step === 2 ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
+            step === 2 ? "bg-primary text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
           )}>
             2
           </div>
@@ -293,7 +293,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
             {/* Step 1: Vehicle Selection */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
                   Hersteller*
                 </label>
                 <Select value={manufacturer} onValueChange={setManufacturer}>

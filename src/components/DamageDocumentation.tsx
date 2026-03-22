@@ -208,7 +208,7 @@ export const DamageDocumentation = ({
   const getSeverityBadge = (severity: string) => {
     const option = severityOptions.find(opt => opt.value === severity);
     return (
-      <Badge className={option?.color || 'bg-gray-100 text-gray-800'}>
+      <Badge className={option?.color || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'}>
         {option?.label || severity}
       </Badge>
     );
@@ -244,7 +244,7 @@ export const DamageDocumentation = ({
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             {damagePhotos.map((damage) => (
-              <div key={damage.id} className="bg-white p-4 rounded-lg border">
+              <div key={damage.id} className="bg-white dark:bg-card p-4 rounded-lg border">
                 <div className="aspect-video mb-3 overflow-hidden rounded-lg bg-muted">
                   <img
                     src={damage.photo_url}

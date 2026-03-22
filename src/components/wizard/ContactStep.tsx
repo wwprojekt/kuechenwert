@@ -82,64 +82,102 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
           onValueChange={(value) => updateFormData({ saleChannel: value })}
           className="grid grid-cols-1 gap-3"
         >
+          {/* Sofortpreis */}
           <Card
-            className={`p-4 cursor-pointer transition-all ${
-              formData.saleChannel === "instant_price" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/50"
+            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+              formData.saleChannel === "instant_price"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
+                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "instant_price" })}
           >
-            <div className="flex items-start gap-3">
-              <RadioGroupItem value="instant_price" id="instant_price" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="instant_price" className="cursor-pointer flex items-center gap-2 text-base font-medium">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Sofortpreis
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Empfohlen</span>
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
+            <div className="flex items-center gap-4">
+              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                formData.saleChannel === "instant_price"
+                  ? "bg-yellow-500 text-white shadow-md shadow-yellow-500/30"
+                  : "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-500 group-hover:bg-yellow-100 dark:group-hover:bg-yellow-950/50"
+              }`}>
+                <Zap className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="instant_price" className="cursor-pointer text-base font-semibold text-foreground">
+                    Sofortpreis
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
                   Erhalten Sie sofort ein verbindliches Kaufangebot von geprüften Händlern
                 </p>
               </div>
+              <RadioGroupItem value="instant_price" id="instant_price" className="flex-shrink-0" />
             </div>
           </Card>
 
+          {/* Händler-Auktion - Empfohlen */}
           <Card
-            className={`p-4 cursor-pointer transition-all ${
-              formData.saleChannel === "auction" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/50"
+            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+              formData.saleChannel === "auction"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
+                : "border-2 border-primary/20 bg-card hover:border-primary/40 hover:shadow-md hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "auction" })}
           >
-            <div className="flex items-start gap-3">
-              <RadioGroupItem value="auction" id="auction" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="auction" className="cursor-pointer flex items-center gap-2 text-base font-medium">
-                  <Gavel className="w-5 h-5 text-blue-500" />
-                  Händler-Auktion
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
+            <div className="absolute -top-3 right-4">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full shadow-sm">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Empfohlen
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                formData.saleChannel === "auction"
+                  ? "bg-blue-500 text-white shadow-md shadow-blue-500/30"
+                  : "bg-blue-50 dark:bg-blue-950/30 text-blue-500 group-hover:bg-blue-100 dark:group-hover:bg-blue-950/50"
+              }`}>
+                <Gavel className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="auction" className="cursor-pointer text-base font-semibold text-foreground">
+                    Händler-Auktion
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
                   Mehrere Händler bieten auf Ihr Fahrzeug – oft der höchste Preis
                 </p>
               </div>
+              <RadioGroupItem value="auction" id="auction" className="flex-shrink-0" />
             </div>
           </Card>
 
+          {/* Ankaufstation */}
           <Card
-            className={`p-4 cursor-pointer transition-all ${
-              formData.saleChannel === "station" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/50"
+            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+              formData.saleChannel === "station"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
+                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "station" })}
           >
-            <div className="flex items-start gap-3">
-              <RadioGroupItem value="station" id="station" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="station" className="cursor-pointer flex items-center gap-2 text-base font-medium">
-                  <MapPin className="w-5 h-5 text-green-500" />
-                  Ankaufstation
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
+            <div className="flex items-center gap-4">
+              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                formData.saleChannel === "station"
+                  ? "bg-green-500 text-white shadow-md shadow-green-500/30"
+                  : "bg-green-50 dark:bg-green-950/30 text-green-500 group-hover:bg-green-100 dark:group-hover:bg-green-950/50"
+              }`}>
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="station" className="cursor-pointer text-base font-semibold text-foreground">
+                    Ankaufstation
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
                   Persönliche Bewertung vor Ort – Bargeld am selben Tag
                 </p>
               </div>
+              <RadioGroupItem value="station" id="station" className="flex-shrink-0" />
             </div>
           </Card>
         </RadioGroup>

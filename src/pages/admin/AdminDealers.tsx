@@ -39,7 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -52,6 +52,8 @@ import {
   Users,
   Search,
   Ban,
+  MailCheck,
+  MailX,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -108,6 +110,7 @@ export default function AdminDealers() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
   const [searchTerm, setSearchTerm] = useState("");
+  const [authStatusMap, setAuthStatusMap] = useState<Record<string, { email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null }>>({});
 
   // Fetch all applications
   const { data: applications, isLoading } = useQuery({
@@ -118,6 +121,32 @@ export default function AdminDealers() {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+
+  // Fetch auth status (email_confirmed_at) for all dealers
+  useEffect(() => {
+    const fetchAuthStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const allUserIds = [
+          ...(applications?.map(a => a.user_id) || []),
+          ...(activeDealers?.map(d => d.user_id) || []),
+        ].filter((id, i, arr) => arr.indexOf(id) === i);
+        if (allUserIds.length === 0) return;
+        const res = await supabase.functions.invoke('get-dealer-auth-status', {
+          body: { user_ids: allUserIds },
+        });
+        if (res.data?.data) {
+          const map: Record<string, any> = {};
+          res.data.data.forEach((u: any) => { map[u.id] = u; });
+          setAuthStatusMap(map);
+        }
+      } catch (err) {
+        logger.error('Failed to fetch auth status:', err);
+      }
+    };
+    if (applications || activeDealers) fetchAuthStatus();
+  }, [applications, activeDealers]);
 
   // Fetch active dealers (approved applications with profiles)
   // NOTE: Cannot use Supabase JOIN syntax profiles:user_id(...) because
@@ -397,6 +426,7 @@ export default function AdminDealers() {
                   <TableHead>Firma</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>Eingereicht am</TableHead>
+                  <TableHead>E-Mail</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -404,7 +434,7 @@ export default function AdminDealers() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Lade Anträge...
                     </TableCell>
                   </TableRow>
@@ -418,6 +448,17 @@ export default function AdminDealers() {
                       <TableCell>{application.contact_person_name}</TableCell>
                       <TableCell>
                         {format(new Date(application.submitted_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                      </TableCell>
+                      <TableCell>
+                        {authStatusMap[application.user_id]?.email_confirmed_at ? (
+                          <Badge className="gap-1 bg-green-500">
+                            <MailCheck className="w-3 h-3" /> Bestätigt
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
+                            <MailX className="w-3 h-3" /> Unbestätigt
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(application.status)}</TableCell>
                       <TableCell className="text-right">
@@ -434,7 +475,7 @@ export default function AdminDealers() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Keine ausstehenden Anträge gefunden.
                     </TableCell>
                   </TableRow>
@@ -476,6 +517,7 @@ export default function AdminDealers() {
                   <TableHead>Firma</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>E-Mail bestätigt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -483,7 +525,7 @@ export default function AdminDealers() {
               <TableBody>
                 {isLoadingDealers ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Lade Händler...
                     </TableCell>
                   </TableRow>
@@ -496,6 +538,17 @@ export default function AdminDealers() {
                       </TableCell>
                       <TableCell>{dealer.contact_person_name}</TableCell>
                       <TableCell>{dealer.profiles?.email}</TableCell>
+                      <TableCell>
+                        {authStatusMap[dealer.user_id]?.email_confirmed_at ? (
+                          <Badge className="gap-1 bg-green-500">
+                            <MailCheck className="w-3 h-3" /> Bestätigt
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
+                            <MailX className="w-3 h-3" /> Unbestätigt
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {dealer.profiles?.is_suspended ? (
                           <Badge variant="destructive" className="gap-1">
@@ -546,7 +599,7 @@ export default function AdminDealers() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Keine aktiven Händler gefunden.
                     </TableCell>
                   </TableRow>

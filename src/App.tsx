@@ -27,10 +27,12 @@ const Register = lazyRetry(() => import("./pages/Register"));
 const RegisterHaendler = lazyRetry(() => import("./pages/RegisterHaendler"));
 const ForgotPassword = lazyRetry(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
+const AuthConfirm = lazyRetry(() => import("./pages/AuthConfirm"));
 
 // Core pages
 const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
 const VerkaufenWizard = lazyRetry(() => import("./pages/VerkaufenWizard"));
+const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
 const Kaufen = lazyRetry(() => import("./pages/Kaufen"));
 const AuctionDetail = lazyRetry(() => import("./pages/AuctionDetail"));
 const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
@@ -172,12 +174,14 @@ const App = () => (
               <Route path="/register/haendler" element={<RegisterHaendler />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/confirm" element={<AuthConfirm />} />
               <Route path="/verkaufen" element={<Verkaufen />} />
               <Route path="/verkaufen/wizard" element={
                 <FormErrorBoundary>
                   <VerkaufenWizard />
                 </FormErrorBoundary>
               } />
+              <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
               <Route path="/ankaufstationen" element={<Ankaufstationen />} />
               <Route path="/wertermittlung" element={<Wertermittlung />} />
               <Route path="/wertrechner" element={<Wertrechner />} />

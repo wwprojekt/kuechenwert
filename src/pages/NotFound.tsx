@@ -1,11 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 import { logger } from "@/lib/logger";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import PageLayout from "@/components/PageLayout";
 
 const NotFound = () => {
   const location = useLocation();
@@ -15,14 +14,17 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <PageLayout
+      title="Seite nicht gefunden (404)"
+      description="Die angeforderte Seite konnte nicht gefunden werden."
+      noIndex={true}
+    >
+      {/* Additional 404-specific meta */}
       <Helmet>
-        <title>Seite nicht gefunden (404) | CaravanWert</title>
-        <meta name="robots" content="noindex, nofollow" />
         <meta name="prerender-status-code" content="404" />
       </Helmet>
-      <Header />
-      <main className="flex-1 flex items-center justify-center relative overflow-hidden">
+      
+      <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[60vh]">
         {/* Consistent gradient background */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
@@ -40,9 +42,8 @@ const NotFound = () => {
             </Button>
           </Link>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PageLayout>
   );
 };
 

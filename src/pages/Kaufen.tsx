@@ -241,6 +241,7 @@ const Kaufen = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title="Wohnmobil Kaufen"
       description="Große Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise, 12 Monate Garantie und persönliche Beratung an 6 Standorten in Deutschland."
       keywords="wohnmobil kaufen, wohnwagen kaufen, camper kaufen, gebrauchte wohnmobile, wohnmobil ankaufstationen"

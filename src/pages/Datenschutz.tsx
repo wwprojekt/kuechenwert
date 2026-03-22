@@ -35,6 +35,7 @@ const Datenschutz = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title={`Datenschutzerklärung - ${siteName}`}
       description={`Datenschutzerklärung von ${siteName}`}
       canonicalPath="/datenschutz"

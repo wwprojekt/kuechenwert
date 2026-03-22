@@ -32,6 +32,7 @@ const Preise = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title="Preise & Leistungen"
       description="Transparent und fair – unsere Konditionen für Verkäufer und Käufer bei CaravanWert"
       keywords="Preise, Kosten, Gebühren, Wohnmobil verkaufen, Provision"

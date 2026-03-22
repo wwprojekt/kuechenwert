@@ -499,7 +499,7 @@ const AuctionDetail = () => {
 
   if (!auction || !auction.motorhome) {
     return (
-      <PageLayout title="Lädt..." description="Auktion wird geladen">
+      <PageLayout breadcrumbs={true} title="Lädt..." description="Auktion wird geladen">
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
@@ -543,6 +543,7 @@ const AuctionDetail = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title={`${motorhome.manufacturer} ${motorhome.model}`}
       description={`Auktion für ${motorhome.manufacturer} ${motorhome.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
       keywords={`auktion, ${motorhome.manufacturer}, ${motorhome.model}, wohnmobil`}

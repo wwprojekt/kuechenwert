@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { generateFAQSchema } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 

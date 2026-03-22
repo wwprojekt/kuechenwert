@@ -40,9 +40,19 @@ serve(async (req) => {
       { loc: `${baseUrl}/ueber-uns`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
       { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
       { loc: `${baseUrl}/blog`, lastmod: today, changefreq: 'daily', priority: '0.7' },
+      { loc: `${baseUrl}/wertermittlung`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wertrechner`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/preise`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
       { loc: `${baseUrl}/impressum`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
       { loc: `${baseUrl}/datenschutz`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
       { loc: `${baseUrl}/agb`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
+      // SEO Landing Pages
+      { loc: `${baseUrl}/wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+      { loc: `${baseUrl}/wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+      { loc: `${baseUrl}/was-ist-mein-wohnmobil-wert`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wohnmobil-wertermittlung-kostenlos`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wir-kaufen-dein-wohnmobil`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wieviel-ist-mein-wohnmobil-wert`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
     ]
 
     // Ratgeber pages (88 guides)

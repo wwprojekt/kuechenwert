@@ -34,6 +34,7 @@ const AGB = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title={`AGB - ${siteName}`}
       description={`Allgemeine Geschäftsbedingungen von ${siteName}`}
       canonicalPath="/agb"

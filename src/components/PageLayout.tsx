@@ -2,10 +2,12 @@ import type { ReactNode } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
-import { Helmet } from "react-helmet";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { Helmet } from "react-helmet-async";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLocation } from "react-router-dom";
 import { getCanonicalUrl, injectStructuredData } from "@/lib/seo";
+import type { BreadcrumbItem } from "@/lib/seo";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -16,6 +18,7 @@ interface PageLayoutProps {
   ogImage?: string;
   noIndex?: boolean;
   structuredData?: object | object[];
+  breadcrumbs?: BreadcrumbItem[] | boolean;
 }
 
 const PageLayout = ({ 
@@ -26,7 +29,8 @@ const PageLayout = ({
   canonicalPath,
   ogImage,
   noIndex = false,
-  structuredData
+  structuredData,
+  breadcrumbs
 }: PageLayoutProps) => {
   const { settings } = useSettings();
   const location = useLocation();
@@ -34,8 +38,12 @@ const PageLayout = ({
   
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  const defaultOgImage = 'https://caravanwert.de/favicon.png';
+  const defaultOgImage = 'https://caravanwert.de/og-image.png';
   const ogImageUrl = ogImage || defaultOgImage;
+
+  // Determine if breadcrumbs should be shown
+  const showBreadcrumbs = breadcrumbs !== undefined && breadcrumbs !== false;
+  const breadcrumbItems = Array.isArray(breadcrumbs) ? breadcrumbs : undefined;
   
   return (
     <>
@@ -80,6 +88,11 @@ const PageLayout = ({
       <div className="flex flex-col min-h-screen">
         <Header />
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+          {showBreadcrumbs && (
+            <div className="container mx-auto px-4 pt-4">
+              <Breadcrumbs items={breadcrumbItems} />
+            </div>
+          )}
           {children}
         </main>
         <Footer />

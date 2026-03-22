@@ -1,8 +1,6 @@
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import PageLayout from "@/components/PageLayout";
 import FAQ from "@/components/FAQ";
 import PageHero from "@/components/PageHero";
-import { Helmet } from "react-helmet";
 import { useSettings } from "@/contexts/SettingsContext";
 
 // FAQ data for structured data
@@ -45,7 +43,6 @@ const FAQPage = () => {
   const { settings } = useSettings();
   const supportPhone = settings?.support_phone || '';
   const contactEmail = settings?.contact_email || '';
-  const siteName = settings?.site_name || 'CaravanWert';
   
   // Generate FAQ structured data
   const faqSchema = {
@@ -62,89 +59,77 @@ const FAQPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Helmet>
-        <title>{`Häufig gestellte Fragen (FAQ) - ${siteName}`}</title>
-        <meta
-          name="description"
-          content={`Antworten auf häufig gestellte Fragen zum Verkauf und Kauf von Wohnmobilen auf ${siteName}. Erfahren Sie mehr über Bewertung, Abwicklung und Auktionen.`}
-        />
-        <link rel="canonical" href="https://caravanwert.de/faq" />
-        <meta property="og:url" content="https://caravanwert.de/faq" />
-        
-        {/* Structured Data */}
-        <script type="application/ld+json">
-          {JSON.stringify(faqSchema)}
-        </script>
-      </Helmet>
-      
-      <Header />
-      <main className="flex-1">
-        {/* Hero Section */}
-        <PageHero size="md">
+    <PageLayout
+      breadcrumbs={true}
+      title="Häufig gestellte Fragen (FAQ)"
+      description="Antworten auf häufig gestellte Fragen zum Verkauf und Kauf von Wohnmobilen auf CaravanWert. Erfahren Sie mehr über Bewertung, Abwicklung und Auktionen."
+      keywords="Wohnmobil FAQ, Wohnmobil verkaufen Fragen, Wohnmobil Ankauf Ablauf, CaravanWert Hilfe"
+      canonicalPath="/faq"
+      structuredData={faqSchema}
+    >
+      {/* Hero Section */}
+      <PageHero size="md">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Häufig gestellte Fragen
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Finden Sie schnell Antworten auf die wichtigsten Fragen rund um den Verkauf und Kauf von Wohnmobilen auf unserer Plattform.
+          </p>
+        </div>
+      </PageHero>
+
+      {/* FAQ Component */}
+      <FAQ hideHeader />
+
+      {/* Additional Support Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Häufig gestellte Fragen
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Finden Sie schnell Antworten auf die wichtigsten Fragen rund um den Verkauf und Kauf von Wohnmobilen auf unserer Plattform.
+            <h2 className="text-3xl font-bold mb-4">
+              Weitere Fragen?
+            </h2>
+            <p className="text-muted-foreground mb-8">
+              Unser Support-Team steht Ihnen gerne zur Verfügung und beantwortet alle Ihre Fragen persönlich.
             </p>
-          </div>
-        </PageHero>
-
-        {/* FAQ Component */}
-        <FAQ hideHeader />
-
-        {/* Additional Support Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="container">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl font-bold mb-4">
-                Weitere Fragen?
-              </h2>
-              <p className="text-muted-foreground mb-8">
-                Unser Support-Team steht Ihnen gerne zur Verfügung und beantwortet alle Ihre Fragen persönlich.
-              </p>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-card p-6 rounded-lg border shadow-sm">
-                  <h3 className="font-bold text-lg mb-2">Telefonische Beratung</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Mo-Fr von 8:00-18:00 Uhr
-                  </p>
-                  {supportPhone ? (
-                    <a 
-                      href={`tel:${supportPhone.replace(/\s/g, '')}`} 
-                      className="text-primary hover:underline font-semibold"
-                    >
-                      {supportPhone}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">Siehe Kontaktseite</span>
-                  )}
-                </div>
-                <div className="bg-card p-6 rounded-lg border shadow-sm">
-                  <h3 className="font-bold text-lg mb-2">E-Mail Support</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Antwort innerhalb von 24 Stunden
-                  </p>
-                  {contactEmail ? (
-                    <a 
-                      href={`mailto:${contactEmail}`} 
-                      className="text-primary hover:underline font-semibold"
-                    >
-                      {contactEmail}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">Siehe Kontaktseite</span>
-                  )}
-                </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-card p-6 rounded-lg border shadow-sm">
+                <h3 className="font-bold text-lg mb-2">Telefonische Beratung</h3>
+                <p className="text-muted-foreground mb-4">
+                  Mo-Fr von 8:00-18:00 Uhr
+                </p>
+                {supportPhone ? (
+                  <a 
+                    href={`tel:${supportPhone.replace(/\s/g, '')}`} 
+                    className="text-primary hover:underline font-semibold"
+                  >
+                    {supportPhone}
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">Siehe Kontaktseite</span>
+                )}
+              </div>
+              <div className="bg-card p-6 rounded-lg border shadow-sm">
+                <h3 className="font-bold text-lg mb-2">E-Mail Support</h3>
+                <p className="text-muted-foreground mb-4">
+                  Antwort innerhalb von 24 Stunden
+                </p>
+                {contactEmail ? (
+                  <a 
+                    href={`mailto:${contactEmail}`} 
+                    className="text-primary hover:underline font-semibold"
+                  >
+                    {contactEmail}
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">Siehe Kontaktseite</span>
+                )}
               </div>
             </div>
           </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+        </div>
+      </section>
+    </PageLayout>
   );
 };
 

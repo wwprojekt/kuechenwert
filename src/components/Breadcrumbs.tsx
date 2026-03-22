@@ -1,6 +1,6 @@
 import { ChevronRight, Home } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath, type BreadcrumbItem } from "@/lib/seo";
 
 interface BreadcrumbsProps {

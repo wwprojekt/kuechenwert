@@ -41,6 +41,7 @@ const Impressum = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title={`Impressum - ${siteName}`}
       description={`Impressum und Anbieterkennzeichnung von ${siteName}`}
       canonicalPath="/impressum"

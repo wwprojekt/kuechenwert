@@ -52,6 +52,7 @@ const Ankaufstationen = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title={`Ankaufstationen - ${siteName}`}
       description="Finden Sie eine Ankaufstation in Ihrer Nähe für die Übergabe Ihres Wohnmobils"
       keywords="ankaufstation, wohnmobil übergabe, abgabestelle, wohnmobil verkaufen vor ort"

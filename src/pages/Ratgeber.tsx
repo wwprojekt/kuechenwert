@@ -58,6 +58,7 @@ const itemListSchema = {
 const Ratgeber = () => {
   return (
     <PageLayout
+      breadcrumbs={true}
       title="Wohnmobil Ratgeber – 88 Experten-Guides | CaravanWert"
       description="Umfassender Wohnmobil-Ratgeber: Marken-Guides für Hymer, Dethleffs, Knaus & 12 weitere, plus Ratgeber zu Schäden, Finanzierung, Erbfall und mehr."
       keywords="wohnmobil ratgeber, wohnmobil verkaufen ratgeber, wohnmobil bewertung, wohnmobil marken guide"

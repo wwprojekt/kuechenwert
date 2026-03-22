@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import { z } from "zod";
 import { germanZodErrorMap } from "./lib/germanErrors";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -12,10 +13,12 @@ z.setErrorMap(germanZodErrorMap);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <SettingsProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </SettingsProvider>
+    <HelmetProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </SettingsProvider>
+    </HelmetProvider>
   </StrictMode>
 );

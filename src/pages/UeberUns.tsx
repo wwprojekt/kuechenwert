@@ -85,6 +85,7 @@ const UeberUns = () => {
 
   return (
     <PageLayout
+      breadcrumbs={true}
       title="Über Uns"
       description={`Erfahren Sie mehr über ${siteName} - Ihr zuverlässiger Partner für Wohnmobil-Ankauf seit 2015. Bundesweit, schnell und fair.`}
       keywords="über uns, caravanwert, wohnmobil ankauf unternehmen, wohnmobil experten"

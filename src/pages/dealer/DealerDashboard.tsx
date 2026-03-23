@@ -25,14 +25,14 @@ import {
   Award,
   Star,
   Zap,
-  Crown
+  Crown,
+  Lock
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
 import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
-import { Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";

@@ -179,33 +179,44 @@ export const SmartDashboard = () => {
  * Bug 1.3 fix: No more fragile string matching that breaks with new paths
  */
 const DealerDashboardWrapper = () => {
+  const { isPendingDealer, isRejectedDealer } = useDealerPending();
+  const isLocked = isPendingDealer || isRejectedDealer;
+
   return (
     <DealerLayoutContent>
       <Routes>
         {/* Exact match for /dashboard */}
         <Route index element={<DealerDashboard />} />
         
-        {/* Dealer-specific routes */}
-        <Route path="auctions" element={<LazyPage Component={DealerAuctions} />} />
-        <Route path="inventory" element={<LazyPage Component={DealerInventory} />} />
-        <Route path="inventory/:id" element={<LazyPage Component={ListingDetail} />} />
-        
-        {/* Shared routes (available to both dealer and seller) */}
-        <Route path="bids" element={<LazyPage Component={MyBids} />} />
-        <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
-        <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
-        <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
-        <Route path="messages" element={<LazyPage Component={MyMessages} />} />
-        <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+        {/* Routes that remain accessible even when locked */}
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
         <Route path="settings" element={<LazyPage Component={DealerSettings} />} />
+
+        {/* All other routes: only accessible when NOT locked */}
+        {!isLocked && (
+          <>
+            {/* Dealer-specific routes */}
+            <Route path="auctions" element={<LazyPage Component={DealerAuctions} />} />
+            <Route path="inventory" element={<LazyPage Component={DealerInventory} />} />
+            <Route path="inventory/:id" element={<LazyPage Component={ListingDetail} />} />
+            
+            {/* Shared routes */}
+            <Route path="bids" element={<LazyPage Component={MyBids} />} />
+            <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
+            <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
+            <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
+            <Route path="messages" element={<LazyPage Component={MyMessages} />} />
+            <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+            
+            {/* Listing routes */}
+            <Route path="listings" element={<LazyPage Component={MyListings} />} />
+            <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
+            <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
+          </>
+        )}
         
-        {/* Listing routes (dealer may also view listings) */}
-        <Route path="listings" element={<LazyPage Component={MyListings} />} />
-        <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
-        <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
-        
-        {/* Fallback: show main dealer dashboard for unknown sub-routes */}
+        {/* Fallback: show main dealer dashboard for unknown sub-routes
+            When locked, ALL locked routes also fall through here */}
         <Route path="*" element={<DealerDashboard />} />
       </Routes>
     </DealerLayoutContent>

@@ -37,8 +37,8 @@ const handler = async (req: Request): Promise<Response> => {
         status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
-    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: roles } = await supabaseCheck.from('user_roles').select('role').eq('user_id', user.id);
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: roles } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', user.id);
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {

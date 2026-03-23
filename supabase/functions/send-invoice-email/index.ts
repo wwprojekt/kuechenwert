@@ -16,6 +16,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface InvoiceEmailRequest {
   invoiceId: string;
+  pdfBase64?: string; // Optional: PDF as base64 from generate-invoice-pdf
 }
 
 Deno.serve(async (req) => {
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { invoiceId }: InvoiceEmailRequest = await req.json();
+    const { invoiceId, pdfBase64: providedPdfBase64 }: InvoiceEmailRequest = await req.json();
 
     if (!invoiceId) {
       throw new Error('Invoice ID is required');
@@ -147,7 +148,17 @@ Deno.serve(async (req) => {
     // ─── Download PDF for attachment (if available) ────────────────
     let attachments: any[] | undefined = undefined;
 
-    if (invoice.pdf_url) {
+    // Priority 1: Use provided pdfBase64 from generate-invoice-pdf
+    if (providedPdfBase64) {
+      console.log('Using provided pdfBase64 for attachment');
+      attachments = [{
+        filename: `Rechnung_${invoice.invoice_number}.pdf`,
+        content: providedPdfBase64,
+        type: 'application/pdf',
+      }];
+    }
+    // Priority 2: Download PDF from storage URL
+    else if (invoice.pdf_url) {
       try {
         const pdfResponse = await fetch(invoice.pdf_url);
         if (pdfResponse.ok) {

@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
       console.log('Invoice created:', invoiceId);
 
       // Step 2: Generate PDF
+      let pdfBase64: string | undefined;
       try {
         const { data: pdfResult, error: pdfError } = await supabaseAdmin.functions.invoke('generate-invoice-pdf', {
           body: { invoiceId }
@@ -175,6 +176,7 @@ Deno.serve(async (req) => {
           console.error('PDF generation error:', pdfError);
         } else {
           console.log('Invoice PDF generated:', pdfResult?.invoiceNumber);
+          pdfBase64 = pdfResult?.pdfBase64;
         }
       } catch (pdfError) {
         console.error('Error generating invoice PDF:', pdfError);
@@ -183,7 +185,7 @@ Deno.serve(async (req) => {
       // Step 3: Send invoice email (with PDF attachment if available)
       try {
         const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-invoice-email', {
-          body: { invoiceId }
+          body: { invoiceId, pdfBase64 }
         });
         if (emailError) {
           console.error('Invoice email error:', emailError);

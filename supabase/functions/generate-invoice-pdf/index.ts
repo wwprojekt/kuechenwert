@@ -1,11 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+// @deno-types="https://esm.sh/jspdf@2.5.2"
+import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
 
 /**
  * Edge Function: generate-invoice-pdf
  * 
- * Generates a professional, German tax-compliant invoice PDF in the CaravanWert
- * brand layout. Uses HTML-to-PDF conversion via a headless browser service.
+ * Generates a professional, German tax-compliant invoice PDF using jsPDF.
+ * Single-page A4 layout in CaravanWert brand design.
  * 
  * The PDF is uploaded to Supabase Storage (invoices bucket) and the invoice
  * record is updated with the signed URL.
@@ -16,6 +18,27 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface InvoicePdfRequest {
   invoiceId: string;
+}
+
+// ─── Color constants ────────────────────────────────────────────────────────
+const BRAND = { r: 15, g: 79, b: 92 };       // #0f4f5c - dark teal
+const ACCENT = { r: 31, g: 138, b: 162 };     // #1f8aa2 - medium teal
+const TEXT_DARK = { r: 31, g: 41, b: 55 };     // #1f2937
+const TEXT_MED = { r: 75, g: 85, b: 99 };      // #4b5563
+const TEXT_LIGHT = { r: 107, g: 114, b: 128 }; // #6b7280
+const GREEN_BG = { r: 240, g: 253, b: 250 };   // #f0fdfa
+const GREEN_BORDER = { r: 153, g: 246, b: 228 };// #99f6e4
+const GREEN_TEXT = { r: 15, g: 118, b: 110 };   // #0f766e
+const AMBER_BG = { r: 255, g: 251, b: 235 };    // #fffbeb
+const AMBER_BORDER = { r: 245, g: 158, b: 11 }; // #f59e0b
+const AMBER_TEXT = { r: 146, g: 64, b: 14 };     // #92400e
+
+function formatCurrency(amount: number | string): string {
+  return Number(amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 Deno.serve(async (req) => {
@@ -57,17 +80,13 @@ Deno.serve(async (req) => {
     }
 
     // ─── Fetch all required data ───────────────────────────────────
-    
-    // 1. Invoice with dealer, auction, motorhome, and line items
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email, phone, company_street, company_zip, company_city, company_country, company_address, company_postal_code, tax_id, ust_id_verified),
+        dealer:profiles(first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country),
         auction:auctions(
-          id,
-          current_bid,
-          motorhome:motorhomes(manufacturer, model, year, vin)
+          motorhome:motorhomes(manufacturer, model)
         ),
         items:invoice_items(*)
       `)
@@ -75,356 +94,358 @@ Deno.serve(async (req) => {
       .single();
 
     if (invoiceError || !invoice) {
-      throw new Error(`Invoice not found: ${invoiceError?.message || 'Unknown error'}`);
+      throw new Error(`Invoice not found: ${invoiceError?.message || 'Unknown'}`);
     }
 
-    // 2. Site settings for company info
     const { data: settings } = await supabase
       .from('site_settings')
       .select('*')
       .limit(1)
       .maybeSingle();
 
-    // ─── Build professional invoice HTML ───────────────────────────
-
+    // ─── Prepare data ──────────────────────────────────────────────
     const siteName = settings?.site_name || 'CaravanWert';
-    const companyAddress = settings?.company_address || '';
-    const companyCity = settings?.company_city || '';
-    const companyPostalCode = settings?.company_postal_code || '';
-    const companyCountry = settings?.company_country || 'Deutschland';
+    const siteDesc = settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
+    const address = settings?.address || 'Hannoversche Straße 106';
+    const city = settings?.city || 'Hannover';
+    const zip = settings?.zip_code || '30627';
+    const country = settings?.country || 'Deutschland';
     const contactEmail = settings?.contact_email || 'kontakt@caravanwert.de';
-    const supportPhone = settings?.support_phone || '';
+    const phone = settings?.support_phone || '';
+    const website = 'www.caravanwert.de';
     const bankIban = settings?.bank_iban || '';
     const bankBic = settings?.bank_bic || '';
     const bankName = settings?.bank_name || '';
     const ustId = settings?.ust_id || '';
     const taxNumber = settings?.tax_number || '';
     const managingDirector = settings?.managing_director || '';
-    const logoUrl = settings?.logo_url || 'https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png';
+    const hrbNumber = settings?.hrb_number || '';
 
-    // Dealer info
-    const dealerName = invoice.dealer?.company_name || 
-      `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim();
-    const dealerStreet = invoice.dealer?.company_street || invoice.dealer?.company_address || '';
-    const dealerZip = invoice.dealer?.company_zip || invoice.dealer?.company_postal_code || '';
-    const dealerCity = invoice.dealer?.company_city || '';
-    const dealerCountry = invoice.dealer?.company_country || '';
-    const dealerTaxId = invoice.dealer?.tax_id || '';
+    const dealerName = invoice.dealer?.company_name ||
+      `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim() || 'Händler';
+    const dealerEmail = invoice.dealer?.email || '';
 
-    // Motorhome info
-    const motorhomeName = invoice.auction?.motorhome 
-      ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` 
-      : '';
-    const motorhomeYear = invoice.auction?.motorhome?.year || '';
-    const motorhomeVin = invoice.auction?.motorhome?.vin || '';
+    const motorhomeName = invoice.auction?.motorhome
+      ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}`
+      : 'Vermittlungsprovision';
 
-    // Date formatting
-    const formatDate = (dateStr: string) => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
+    const invoiceDate = formatDate(invoice.invoice_date || invoice.created_at);
+    const dueDate = formatDate(invoice.due_date);
+    const paymentDays = invoice.payment_terms_days || 14;
+    const netAmount = Number(invoice.net_amount);
+    const taxRate = Number(invoice.tax_rate || 19);
+    const taxAmount = Number(invoice.tax_amount);
+    const grossAmount = Number(invoice.gross_amount);
 
-    // Currency formatting
-    const formatCurrency = (amount: number) => {
-      return amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
+    // ─── Generate PDF with jsPDF ───────────────────────────────────
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = 210; // page width
+    const ml = 20;  // margin left
+    const mr = 20;  // margin right
+    const cw = pw - ml - mr; // content width
+    let y = 0;
 
-    // Build items rows
-    const itemRows = (invoice.items || []).map((item: any, index: number) => `
-      <tr>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151;">${index + 1}</td>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151;">${escapeHtml(item.description)}</td>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151; text-align: right;">${formatCurrency(item.unit_price)} &euro;</td>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151; text-align: right;">${formatCurrency(item.net_amount)} &euro;</td>
-      </tr>
-    `).join('');
+    // ── Header ─────────────────────────────────────────────────────
+    doc.setFillColor(BRAND.r, BRAND.g, BRAND.b);
+    doc.rect(0, 0, pw, 22, 'F');
+    // Gradient line
+    doc.setFillColor(ACCENT.r, ACCENT.g, ACCENT.b);
+    doc.rect(0, 22, pw, 1.5, 'F');
 
-    const invoiceHtml = `
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    @page {
-      size: A4;
-      margin: 0;
-    }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      color: #1f2937;
-      line-height: 1.5;
-      background: #ffffff;
-    }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 0;
-      position: relative;
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    <!-- ═══ Header with brand gradient ═══ -->
-    <div style="background: linear-gradient(135deg, #0f4f5c 0%, #1f8aa2 50%, #239cb8 100%); padding: 32px 48px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <img src="${logoUrl}" alt="${escapeHtml(siteName)}" style="height: 48px; max-width: 240px;" />
-      </div>
-      <div style="text-align: right; color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.6;">
-        <div style="font-size: 11px; opacity: 0.8;">${escapeHtml(companyAddress)}</div>
-        <div style="font-size: 11px; opacity: 0.8;">${escapeHtml(companyPostalCode)} ${escapeHtml(companyCity)}</div>
-        <div style="font-size: 11px; opacity: 0.8;">${escapeHtml(companyCountry)}</div>
-      </div>
-    </div>
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(siteName, ml, 12);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(siteDesc, ml, 18);
 
-    <!-- ═══ Accent line ═══ -->
-    <div style="height: 4px; background: linear-gradient(90deg, #239cb8 0%, #1f8aa2 50%, #1a7489 100%);"></div>
+    // Right side header
+    doc.setFontSize(8);
+    doc.text(address, pw - mr, 9, { align: 'right' });
+    doc.text(`${zip} ${city}`, pw - mr, 13.5, { align: 'right' });
+    doc.text(country, pw - mr, 18, { align: 'right' });
 
-    <!-- ═══ Content area ═══ -->
-    <div style="padding: 40px 48px 24px;">
+    y = 30;
 
-      <!-- Sender line (small, above address window) -->
-      <div style="font-size: 8px; color: #9ca3af; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; width: 280px;">
-        ${escapeHtml(siteName)} &bull; ${escapeHtml(companyAddress)} &bull; ${escapeHtml(companyPostalCode)} ${escapeHtml(companyCity)}
-      </div>
+    // ── Sender line ────────────────────────────────────────────────
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.setFontSize(6);
+    doc.text(`${siteName} • ${address} • ${zip} ${city}`, ml, y);
+    doc.setDrawColor(229, 231, 235);
+    doc.line(ml, y + 1, ml + 90, y + 1);
+    y += 5;
 
-      <!-- Two-column: Recipient + Invoice meta -->
-      <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
-        <!-- Recipient -->
-        <div style="width: 280px;">
-          <div style="font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 4px;">${escapeHtml(dealerName)}</div>
-          ${dealerStreet ? `<div style="font-size: 13px; color: #4b5563;">${escapeHtml(dealerStreet)}</div>` : ''}
-          ${dealerZip || dealerCity ? `<div style="font-size: 13px; color: #4b5563;">${escapeHtml(dealerZip)} ${escapeHtml(dealerCity)}</div>` : ''}
-          ${dealerCountry ? `<div style="font-size: 13px; color: #4b5563;">${escapeHtml(dealerCountry)}</div>` : ''}
-          ${dealerTaxId ? `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Steuer-Nr.: ${escapeHtml(dealerTaxId)}</div>` : ''}
-        </div>
+    // ── Recipient + Invoice meta ───────────────────────────────────
+    // Left: Recipient
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(dealerName, ml, y + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
+    doc.text(dealerEmail, ml, y + 9);
 
-        <!-- Invoice metadata -->
-        <div style="text-align: right;">
-          <div style="font-size: 28px; font-weight: 800; color: #1f8aa2; letter-spacing: -0.5px; margin-bottom: 12px;">RECHNUNG</div>
-          <table style="margin-left: auto; border-collapse: collapse;">
-            <tr>
-              <td style="font-size: 12px; color: #6b7280; padding: 3px 16px 3px 0; text-align: right;">Rechnungsnr.:</td>
-              <td style="font-size: 13px; font-weight: 700; color: #1f2937; padding: 3px 0; font-family: 'Courier New', monospace;">${escapeHtml(invoice.invoice_number)}</td>
-            </tr>
-            <tr>
-              <td style="font-size: 12px; color: #6b7280; padding: 3px 16px 3px 0; text-align: right;">Rechnungsdatum:</td>
-              <td style="font-size: 13px; font-weight: 600; color: #1f2937; padding: 3px 0;">${formatDate(invoice.invoice_date || invoice.created_at)}</td>
-            </tr>
-            <tr>
-              <td style="font-size: 12px; color: #6b7280; padding: 3px 16px 3px 0; text-align: right;">F&auml;lligkeitsdatum:</td>
-              <td style="font-size: 13px; font-weight: 600; color: #1f2937; padding: 3px 0;">${formatDate(invoice.due_date)}</td>
-            </tr>
-            <tr>
-              <td style="font-size: 12px; color: #6b7280; padding: 3px 16px 3px 0; text-align: right;">Zahlungsziel:</td>
-              <td style="font-size: 13px; font-weight: 600; color: #1f2937; padding: 3px 0;">14 Tage</td>
-            </tr>
-          </table>
-        </div>
-      </div>
+    // Right: RECHNUNG title + meta
+    doc.setTextColor(ACCENT.r, ACCENT.g, ACCENT.b);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECHNUNG', pw - mr, y + 3, { align: 'right' });
 
-      ${motorhomeName ? `
-      <!-- Vehicle reference -->
-      <div style="background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 14px 20px; margin-bottom: 28px;">
-        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #0f766e; font-weight: 700; margin-bottom: 6px;">Fahrzeugreferenz</div>
-        <div style="font-size: 14px; font-weight: 600; color: #1f2937;">${escapeHtml(motorhomeName)}${motorhomeYear ? ` (${motorhomeYear})` : ''}</div>
-        ${motorhomeVin ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">FIN: ${escapeHtml(motorhomeVin)}</div>` : ''}
-      </div>
-      ` : ''}
+    const metaX = pw - mr - 40;
+    const metaVX = pw - mr;
+    let metaY = y + 10;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.text('Rechnungsnr.:', metaX, metaY, { align: 'right' });
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(invoice.invoice_number, metaVX, metaY, { align: 'right' });
 
-      <!-- Intro text -->
-      <p style="font-size: 13px; color: #4b5563; margin-bottom: 24px;">
-        Sehr geehrte Damen und Herren,<br>
-        hiermit stellen wir Ihnen folgende Leistungen in Rechnung:
-      </p>
+    metaY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.text('Rechnungsdatum:', metaX, metaY, { align: 'right' });
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(invoiceDate, metaVX, metaY, { align: 'right' });
 
-      <!-- ═══ Invoice items table ═══ -->
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
-        <thead>
-          <tr style="background: #f8fafc;">
-            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; border-bottom: 2px solid #1f8aa2; width: 40px;">Pos.</th>
-            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; border-bottom: 2px solid #1f8aa2;">Beschreibung</th>
-            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; border-bottom: 2px solid #1f8aa2; width: 60px;">Menge</th>
-            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; border-bottom: 2px solid #1f8aa2; width: 120px;">Einzelpreis</th>
-            <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; border-bottom: 2px solid #1f8aa2; width: 120px;">Netto</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemRows}
-        </tbody>
-      </table>
+    metaY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.text('Fälligkeitsdatum:', metaX, metaY, { align: 'right' });
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(dueDate, metaVX, metaY, { align: 'right' });
 
-      <!-- ═══ Totals ═══ -->
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
-        <table style="border-collapse: collapse; min-width: 300px;">
-          <tr>
-            <td style="padding: 8px 24px 8px 16px; font-size: 13px; color: #4b5563;">Nettobetrag</td>
-            <td style="padding: 8px 16px; font-size: 13px; color: #1f2937; text-align: right; font-weight: 600;">${formatCurrency(invoice.net_amount)} &euro;</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 24px 8px 16px; font-size: 13px; color: #4b5563;">zzgl. ${invoice.tax_rate}% MwSt.</td>
-            <td style="padding: 8px 16px; font-size: 13px; color: #1f2937; text-align: right;">${formatCurrency(invoice.tax_amount)} &euro;</td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 0;"><div style="height: 2px; background: #1f8aa2; margin: 4px 0;"></div></td>
-          </tr>
-          <tr style="background: #f0fdfa;">
-            <td style="padding: 12px 24px 12px 16px; font-size: 16px; font-weight: 800; color: #0f766e;">Gesamtbetrag</td>
-            <td style="padding: 12px 16px; font-size: 16px; font-weight: 800; color: #0f766e; text-align: right;">${formatCurrency(invoice.gross_amount)} &euro;</td>
-          </tr>
-        </table>
-      </div>
+    metaY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.text('Zahlungsziel:', metaX, metaY, { align: 'right' });
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${paymentDays} Tage`, metaVX, metaY, { align: 'right' });
 
-      <!-- ═══ Payment info box ═══ -->
-      <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 20px 24px; margin-bottom: 28px;">
-        <div style="font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 12px;">Zahlungsinformationen</div>
-        <table style="border-collapse: collapse;">
-          ${bankIban ? `<tr>
-            <td style="font-size: 13px; color: #78716c; padding: 4px 20px 4px 0; font-weight: 500;">IBAN:</td>
-            <td style="font-size: 13px; color: #1f2937; padding: 4px 0; font-weight: 600; font-family: 'Courier New', monospace; letter-spacing: 1px;">${escapeHtml(bankIban)}</td>
-          </tr>` : ''}
-          ${bankBic ? `<tr>
-            <td style="font-size: 13px; color: #78716c; padding: 4px 20px 4px 0; font-weight: 500;">BIC:</td>
-            <td style="font-size: 13px; color: #1f2937; padding: 4px 0; font-weight: 600;">${escapeHtml(bankBic)}</td>
-          </tr>` : ''}
-          ${bankName ? `<tr>
-            <td style="font-size: 13px; color: #78716c; padding: 4px 20px 4px 0; font-weight: 500;">Bank:</td>
-            <td style="font-size: 13px; color: #1f2937; padding: 4px 0; font-weight: 600;">${escapeHtml(bankName)}</td>
-          </tr>` : ''}
-          <tr>
-            <td style="font-size: 13px; color: #78716c; padding: 4px 20px 4px 0; font-weight: 500;">Verwendungszweck:</td>
-            <td style="font-size: 13px; color: #1f2937; padding: 4px 0; font-weight: 700;">${escapeHtml(invoice.invoice_number)}</td>
-          </tr>
-        </table>
-      </div>
+    y += 32;
 
-      <!-- Thank you -->
-      <p style="font-size: 13px; color: #4b5563; margin-bottom: 8px;">
-        Vielen Dank f&uuml;r Ihr Vertrauen und die Zusammenarbeit!
-      </p>
-      <p style="font-size: 13px; color: #4b5563; margin-bottom: 4px;">
-        Mit freundlichen Gr&uuml;&szlig;en
-      </p>
-      <p style="font-size: 14px; font-weight: 700; color: #1f8aa2;">
-        Ihr ${escapeHtml(siteName)} Team
-      </p>
-    </div>
+    // ── Vehicle reference box ──────────────────────────────────────
+    doc.setFillColor(GREEN_BG.r, GREEN_BG.g, GREEN_BG.b);
+    doc.setDrawColor(GREEN_BORDER.r, GREEN_BORDER.g, GREEN_BORDER.b);
+    doc.roundedRect(ml, y, cw, 14, 2, 2, 'FD');
+    doc.setTextColor(GREEN_TEXT.r, GREEN_TEXT.g, GREEN_TEXT.b);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FAHRZEUGREFERENZ', ml + 6, y + 5);
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFontSize(10);
+    doc.text(motorhomeName, ml + 6, y + 11);
+    y += 18;
 
-    <!-- ═══ Footer ═══ -->
-    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #0f4f5c; padding: 20px 48px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="font-size: 10px; color: rgba(255,255,255,0.7); line-height: 1.6;">
-          <span style="font-weight: 600; color: #67e8f9;">${escapeHtml(siteName)}</span>
-          ${managingDirector ? ` &bull; Gesch&auml;ftsf&uuml;hrer: ${escapeHtml(managingDirector)}` : ''}
-        </div>
-        <div style="font-size: 10px; color: rgba(255,255,255,0.7); line-height: 1.6; text-align: right;">
-          ${taxNumber ? `Steuernummer: ${escapeHtml(taxNumber)}` : ''}
-          ${ustId ? ` &bull; USt-ID: ${escapeHtml(ustId)}` : ''}
-        </div>
-      </div>
-      <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); text-align: center;">
-        <span style="font-size: 10px; color: rgba(255,255,255,0.5);">
-          ${escapeHtml(contactEmail)}${supportPhone ? ` &bull; ${escapeHtml(supportPhone)}` : ''} &bull; www.caravanwert.de
-        </span>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
+    // ── Intro text ─────────────────────────────────────────────────
+    doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Sehr geehrte Damen und Herren,', ml, y);
+    y += 4;
+    doc.text('hiermit stellen wir Ihnen folgende Leistungen in Rechnung:', ml, y);
+    y += 8;
 
-    // ─── Convert HTML to PDF ─────────────────────────────────────────
-    // Use a free HTML-to-PDF API service
-    
-    let pdfBuffer: ArrayBuffer;
-    
-    // Try multiple PDF generation approaches
-    try {
-      // Approach 1: Use pdf.co or similar service if API key available
-      // Approach 2: Generate PDF from HTML using Deno's built-in capabilities
-      // For reliability, we store the HTML as a well-formatted document that
-      // can be printed to PDF from the browser, and use a conversion service
-      
-      const pdfApiUrl = 'https://html2pdf.app/api/render';
-      const pdfResponse = await fetch(pdfApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          html: invoiceHtml,
-          format: 'A4',
-          margin: { top: 0, right: 0, bottom: 0, left: 0 },
-        }),
+    // ── Table header ───────────────────────────────────────────────
+    doc.setFillColor(248, 250, 252);
+    doc.rect(ml, y, cw, 7, 'F');
+    doc.setDrawColor(ACCENT.r, ACCENT.g, ACCENT.b);
+    doc.setLineWidth(0.5);
+    doc.line(ml, y + 7, ml + cw, y + 7);
+
+    doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('POS.', ml + 4, y + 4.5);
+    doc.text('BESCHREIBUNG', ml + 20, y + 4.5);
+    doc.text('MENGE', ml + 100, y + 4.5, { align: 'center' });
+    doc.text('EINZELPREIS', ml + 130, y + 4.5, { align: 'right' });
+    doc.text('NETTO', ml + cw - 4, y + 4.5, { align: 'right' });
+    y += 10;
+
+    // ── Table rows ─────────────────────────────────────────────────
+    const items = invoice.items || [];
+    if (items.length === 0) {
+      // Fallback: single item from invoice data
+      items.push({
+        description: `Vermittlungsprovision: ${motorhomeName}`,
+        quantity: 1,
+        unit_price: netAmount,
+        total_price: netAmount,
       });
-
-      if (pdfResponse.ok && pdfResponse.headers.get('content-type')?.includes('pdf')) {
-        pdfBuffer = await pdfResponse.arrayBuffer();
-      } else {
-        throw new Error('PDF API not available');
-      }
-    } catch (_pdfApiError) {
-      // Fallback: Store as HTML file (browsers can print to PDF)
-      // This is a reliable fallback that always works
-      console.log('PDF API not available, storing as HTML invoice');
-      
-      const htmlBytes = new TextEncoder().encode(invoiceHtml);
-      const fileName = `${invoice.dealer_id}/${invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g, '_')}.html`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('invoices')
-        .upload(fileName, htmlBytes, {
-          contentType: 'text/html',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        throw new Error(`Failed to upload invoice: ${uploadError.message}`);
-      }
-
-      // Create a signed URL (valid for 1 year)
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('invoices')
-        .createSignedUrl(fileName, 365 * 24 * 60 * 60); // 1 year
-
-      if (signedError) {
-        throw new Error(`Failed to create signed URL: ${signedError.message}`);
-      }
-
-      // Update invoice with PDF URL
-      const { error: updateError } = await supabase
-        .from('invoices')
-        .update({ 
-          pdf_url: signedData.signedUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', invoiceId);
-
-      if (updateError) {
-        console.error('Error updating invoice pdf_url:', updateError);
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          pdfUrl: signedData.signedUrl,
-          format: 'html',
-          invoiceNumber: invoice.invoice_number,
-        }),
-        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
-      );
     }
 
-    // Upload PDF to storage
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const desc1 = `Vermittlungsprovision: ${motorhomeName}`;
+      const desc2 = `(Verkaufspreis: ${formatCurrency(invoice.sale_price || grossAmount / 0.02)})`;
+
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(i + 1), ml + 4, y + 4);
+      doc.text(desc1, ml + 20, y + 4);
+      doc.setFontSize(7.5);
+      doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+      doc.text(desc2, ml + 20, y + 8.5);
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFontSize(8.5);
+      doc.text(String(item.quantity || 1), ml + 100, y + 5.5, { align: 'center' });
+      doc.text(formatCurrency(item.unit_price || netAmount), ml + 130, y + 5.5, { align: 'right' });
+      doc.text(formatCurrency(item.total_price || netAmount), ml + cw - 4, y + 5.5, { align: 'right' });
+
+      doc.setDrawColor(229, 231, 235);
+      doc.setLineWidth(0.2);
+      doc.line(ml, y + 11, ml + cw, y + 11);
+      y += 13;
+    }
+
+    // ── Totals ─────────────────────────────────────────────────────
+    y += 2;
+    const totX = ml + 100;
+    const totVX = ml + cw - 4;
+
+    doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Nettobetrag', totX, y + 4);
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCurrency(netAmount), totVX, y + 4, { align: 'right' });
+
+    y += 7;
+    doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`zzgl. ${taxRate}% MwSt.`, totX, y + 4);
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.text(formatCurrency(taxAmount), totVX, y + 4, { align: 'right' });
+
+    y += 6;
+    doc.setDrawColor(ACCENT.r, ACCENT.g, ACCENT.b);
+    doc.setLineWidth(0.5);
+    doc.line(totX, y, totVX + 4, y);
+
+    y += 2;
+    doc.setFillColor(GREEN_BG.r, GREEN_BG.g, GREEN_BG.b);
+    doc.rect(totX - 4, y, cw - totX + ml + 8, 9, 'F');
+    doc.setTextColor(GREEN_TEXT.r, GREEN_TEXT.g, GREEN_TEXT.b);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Gesamtbetrag', totX, y + 6.5);
+    doc.text(formatCurrency(grossAmount), totVX, y + 6.5, { align: 'right' });
+
+    y += 15;
+
+    // ── Payment info box ───────────────────────────────────────────
+    const payBoxH = 30;
+    doc.setFillColor(AMBER_BG.r, AMBER_BG.g, AMBER_BG.b);
+    doc.setDrawColor(253, 230, 138);
+    doc.roundedRect(ml + 1.5, y, cw - 1.5, payBoxH, 0, 2, 'FD');
+    // Left accent border
+    doc.setFillColor(AMBER_BORDER.r, AMBER_BORDER.g, AMBER_BORDER.b);
+    doc.rect(ml, y, 1.5, payBoxH, 'F');
+
+    doc.setTextColor(AMBER_TEXT.r, AMBER_TEXT.g, AMBER_TEXT.b);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zahlungsinformationen', ml + 8, y + 6);
+
+    const payLabelX = ml + 8;
+    const payValX = ml + 42;
+    let payY = y + 12;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 113, 108);
+    if (bankIban) {
+      doc.text('IBAN:', payLabelX, payY);
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFont('helvetica', 'bold');
+      doc.text(bankIban, payValX, payY);
+      payY += 4.5;
+    }
+    if (bankBic) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 113, 108);
+      doc.text('BIC:', payLabelX, payY);
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFont('helvetica', 'bold');
+      doc.text(bankBic, payValX, payY);
+      payY += 4.5;
+    }
+    if (bankName) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 113, 108);
+      doc.text('Bank:', payLabelX, payY);
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFont('helvetica', 'bold');
+      doc.text(bankName, payValX, payY);
+      payY += 4.5;
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 113, 108);
+    doc.text('Verwendungszweck:', payLabelX, payY);
+    doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(invoice.invoice_number, payValX + 10, payY);
+
+    y += payBoxH + 6;
+
+    // ── Closing text ───────────────────────────────────────────────
+    doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!', ml, y);
+    y += 4.5;
+    doc.text('Mit freundlichen Grüßen', ml, y);
+    y += 5;
+    doc.setTextColor(ACCENT.r, ACCENT.g, ACCENT.b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Ihr ${siteName} Team`, ml, y);
+
+    // ── Footer ─────────────────────────────────────────────────────
+    const footerY = 283;
+    doc.setFillColor(BRAND.r, BRAND.g, BRAND.b);
+    doc.rect(0, footerY, pw, 14, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    const footerLeft = [];
+    footerLeft.push(siteName);
+    if (managingDirector) footerLeft.push(`GF: ${managingDirector}`);
+    if (hrbNumber) footerLeft.push(`HRB ${hrbNumber}`);
+    doc.text(footerLeft.join(' • '), ml, footerY + 5);
+
+    doc.setFont('helvetica', 'normal');
+    const footerRight = [];
+    if (taxNumber) footerRight.push(`StNr: ${taxNumber}`);
+    if (ustId) footerRight.push(`USt-ID: ${ustId}`);
+    if (footerRight.length > 0) {
+      doc.text(footerRight.join(' • '), pw - mr, footerY + 5, { align: 'right' });
+    }
+
+    // Contact line
+    doc.setFontSize(6);
+    const contactLine = [contactEmail, phone, website].filter(Boolean).join(' • ');
+    doc.text(contactLine, pw / 2, footerY + 10, { align: 'center' });
+
+    // ─── Output PDF ────────────────────────────────────────────────
+    const pdfOutput = doc.output('arraybuffer');
+    const pdfBytes = new Uint8Array(pdfOutput);
+
+    // Upload to storage
     const fileName = `${invoice.dealer_id}/${invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
     
     const { error: uploadError } = await supabase.storage
       .from('invoices')
-      .upload(fileName, pdfBuffer, {
+      .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',
         upsert: true,
       });
@@ -455,12 +476,16 @@ Deno.serve(async (req) => {
       console.error('Error updating invoice pdf_url:', updateError);
     }
 
+    // Also return the PDF as base64 for the email attachment
+    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+
     console.log(`Invoice PDF generated: ${invoice.invoice_number}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         pdfUrl: signedData.signedUrl,
+        pdfBase64,
         format: 'pdf',
         invoiceNumber: invoice.invoice_number,
       }),
@@ -478,14 +503,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-// ─── Helper: Escape HTML ─────────────────────────────────────────────────────
-function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}

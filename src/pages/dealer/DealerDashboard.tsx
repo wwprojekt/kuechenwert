@@ -30,6 +30,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
+import { useDealerPending } from "@/hooks/useDealerPending";
+import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
+import { Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -37,6 +40,8 @@ import { de } from "date-fns/locale";
 const DealerDashboard = () => {
   const { user } = useAuth();
   useSettings(); // Initialize settings context
+  const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, refetch: refetchApp } = useDealerPending();
+  const isLocked = isPendingDealer || isRejectedDealer;
   const audioNotifications = useAudioNotification({ enabled: true, volume: 0.8 });
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -305,7 +310,15 @@ const DealerDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isLocked ? 'relative' : ''}`}>
+      {/* Pending Dealer Banner */}
+      {hasDealerApplication && application && (
+        <PendingDealerBanner
+          application={application}
+          onRefresh={() => refetchApp()}
+        />
+      )}
+
       {/* Compact Header with Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -446,7 +459,8 @@ const DealerDashboard = () => {
                                   auction.motorhome?.photos?.[0]?.url;
                 
                 return (
-                  <Link key={auction.id} to={`/auktion/${auction.id}`}>
+                  <div key={auction.id} className={`${isLocked ? 'pointer-events-none' : ''}`}>
+                  <Link to={isLocked ? '#' : `/auktion/${auction.id}`} onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
                     <Card className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full ${
                       isLeading ? 'ring-2 ring-green-500' : hasBid ? 'ring-2 ring-orange-300' : ''
                     }`}>
@@ -531,8 +545,13 @@ const DealerDashboard = () => {
                           )}
                         </div>
                         
-                        <Button className="w-full mt-3" size="sm" variant={isExpired || hasBid ? "outline" : "default"} disabled={isExpired}>
-                          {isExpired ? (
+                        <Button className="w-full mt-3" size="sm" variant={isExpired || hasBid ? "outline" : "default"} disabled={isExpired || isLocked}>
+                          {isLocked ? (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              Gesperrt
+                            </>
+                          ) : isExpired ? (
                             <>Auktion beendet</>
                           ) : hasBid ? (
                             <>
@@ -549,6 +568,7 @@ const DealerDashboard = () => {
                       </CardContent>
                     </Card>
                   </Link>
+                  </div>
                 );
               })}
           </div>
@@ -560,10 +580,10 @@ const DealerDashboard = () => {
               <p className="text-muted-foreground mb-4">
                 Derzeit sind keine Fahrzeuge in Auktion verfügbar
               </p>
-              <Link to="/kaufen">
-                <Button>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Marktplatz besuchen
+              <Link to={isLocked ? '#' : '/kaufen'} onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
+                <Button disabled={isLocked}>
+                  {isLocked ? <Lock className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                  {isLocked ? 'Gesperrt' : 'Marktplatz besuchen'}
                 </Button>
               </Link>
             </CardContent>
@@ -572,9 +592,9 @@ const DealerDashboard = () => {
       </div>
 
       {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>
         {statCards.map((stat, index) => (
-          <Link to={stat.link} key={stat.title} style={{ animationDelay: `${index * 100}ms` }}>
+          <Link to={isLocked ? '#' : stat.link} key={stat.title} style={{ animationDelay: `${index * 100}ms` }} onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
             <Card 
               className="relative overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card animate-scale-in cursor-pointer h-full"
             >
@@ -624,39 +644,39 @@ const DealerDashboard = () => {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <Link
-            to="/kaufen"
-            className="block p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-smooth group"
+          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer'} transition-smooth group`}
+            onClick={isLocked ? undefined : () => window.location.href = '/kaufen'}
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                <h3 className={`font-semibold mb-1 ${isLocked ? '' : 'group-hover:text-primary'} transition-colors`}>
                   Neue Auktionen
+                  {isLocked && <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Aktuelle Fahrzeuge entdecken
                 </p>
               </div>
-              <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <ArrowUpRight className={`h-5 w-5 text-muted-foreground ${isLocked ? '' : 'group-hover:text-primary'} transition-colors`} />
             </div>
-          </Link>
+          </div>
 
-          <Link
-            to="/dashboard/inventory"
-            className="block p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-smooth group"
+          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer'} transition-smooth group`}
+            onClick={isLocked ? undefined : () => window.location.href = '/dashboard/inventory'}
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                <h3 className={`font-semibold mb-1 ${isLocked ? '' : 'group-hover:text-primary'} transition-colors`}>
                   Mein Inventar
+                  {isLocked && <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Gekaufte Fahrzeuge verwalten
                 </p>
               </div>
-              <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <ArrowUpRight className={`h-5 w-5 text-muted-foreground ${isLocked ? '' : 'group-hover:text-primary'} transition-colors`} />
             </div>
-          </Link>
+          </div>
 
           <div className="p-4 border rounded-lg bg-muted/30">
             <div className="flex items-center justify-between">
@@ -742,7 +762,7 @@ const DealerDashboard = () => {
       </Card>
 
       {/* Enhanced Bid Overview with Status Indicators */}
-      {stats?.recentBids && stats.recentBids.length > 0 && (
+      {!isLocked && stats?.recentBids && stats.recentBids.length > 0 && (
         <Card className="border-2 hover:border-primary/20 transition-smooth">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -846,10 +866,10 @@ const DealerDashboard = () => {
             
             {/* Link to full bid history */}
             <div className="mt-4 pt-4 border-t">
-              <Link to="/dashboard/auctions" className="w-full">
-                <Button variant="outline" className="w-full">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Alle Gebote anzeigen
+              <Link to={isLocked ? '#' : '/dashboard/auctions'} className="w-full" onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
+                <Button variant="outline" className="w-full" disabled={isLocked}>
+                  {isLocked ? <Lock className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                  {isLocked ? 'Gesperrt' : 'Alle Gebote anzeigen'}
                 </Button>
               </Link>
             </div>

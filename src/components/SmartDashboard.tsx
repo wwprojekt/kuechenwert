@@ -6,12 +6,15 @@
  * - Uses React Router <Routes>/<Route> for sub-routing instead of manual path matching
  * - Admin users are redirected to /admin on ALL /dashboard/* paths (not just /dashboard)
  * - Dealer vs. Seller layout is determined by useUserRole() and rendered via wrapper components
+ * - Pending dealer applicants (role=seller + pending application) see the dealer dashboard
+ *   in a read-only/locked state with a prominent banner
  * - Lazy-loaded page components are defined at module level (required by React.lazy)
  */
 
 import React, { useEffect, Suspense } from 'react';
 import { useNavigate, Link, Routes, Route } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useDealerPending } from '@/hooks/useDealerPending';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Loader2 } from 'lucide-react';
@@ -57,6 +60,7 @@ function LazyPage({ Component }: { Component: React.LazyExoticComponent<React.Co
 export const SmartDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { primaryRole, isLoading: roleLoading, error } = useUserRole();
+  const { hasDealerApplication, isLoading: pendingLoading } = useDealerPending();
   const navigate = useNavigate();
 
   // If user is not authenticated, redirect to login
@@ -129,6 +133,28 @@ export const SmartDashboard = () => {
         </div>
       </div>
     );
+  }
+
+  // For sellers with pending dealer applications: wait for the check to complete
+  if (primaryRole === 'seller' && pendingLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Lade Dashboard...</p>
+            <p className="text-xs text-muted-foreground">
+              Überprüfe Kontostatus
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pending/rejected dealer applicants see the dealer dashboard (locked)
+  if (primaryRole === 'seller' && hasDealerApplication) {
+    return <DealerDashboardWrapper />;
   }
 
   // Render appropriate dashboard based on primary role
@@ -224,11 +250,19 @@ const UserDashboardWrapper = () => {
 const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const { isPendingDealer, isRejectedDealer } = useDealerPending();
 
   const userInitials = user?.email
     ?.split("@")[0]
     .substring(0, 2)
     .toUpperCase() || "D";
+
+  // Show appropriate label based on status
+  const statusLabel = isPendingDealer
+    ? "Händler (Antrag in Prüfung)"
+    : isRejectedDealer
+    ? "Händler (Antrag abgelehnt)"
+    : `Händler • ${settings?.site_name || "CaravanWert"}`;
 
   return (
     <SidebarProvider>
@@ -259,7 +293,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
                       {user?.email?.split("@")[0]}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Händler • {settings?.site_name || "CaravanWert"}
+                      {statusLabel}
                     </p>
                   </div>
                 </Link>
@@ -268,8 +302,10 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-6 bg-muted/30">
-            {children}
+          <main className="flex-1 p-6 lg:p-8 xl:p-10">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
           </main>
         </div>
       </div>

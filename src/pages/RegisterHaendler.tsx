@@ -269,7 +269,7 @@ const RegisterHaendler = () => {
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Nach der E-Mail-Bestätigung können Sie sich als Händler anmelden. Ihre Unterlagen werden von unserem Team geprüft.
+                Nach der E-Mail-Bestätigung können Sie sich einloggen und den Status Ihres Händlerantrags einsehen. Ihr Antrag wird von unserem Team geprüft und innerhalb von 1-3 Werktagen bearbeitet.
               </AlertDescription>
             </Alert>
             <div className="space-y-3">

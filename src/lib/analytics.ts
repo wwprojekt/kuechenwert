@@ -297,31 +297,24 @@ class AnalyticsManager {
 
   /**
    * Track page views
+   * HINWEIS: Kein gtag('config') Aufruf hier - index.html hat send_page_view: true
+   * und analyticsService.ts trackt Page Views für die Supabase-Datenbank.
+   * Ein zusätzlicher gtag('config') Aufruf würde doppelte Page Views erzeugen.
    */
   trackPageView(path: string, title?: string): void {
     if (!this.isProduction) {
       logger.log('Page View:', { path, title });
     }
 
-    // Send to Google Analytics
-    if (this.gaId && window.gtag) {
-      window.gtag('config', this.gaId, {
-        page_path: path,
-        page_title: title,
-      });
-    }
-
-    // Track as event
-    this.trackEvent({
-      type: 'view',
-      category: 'navigation',
-      action: 'page_view',
-      label: path,
+    // Nur als internes Event tracken, NICHT an GA4 senden
+    // GA4 Page Views werden automatisch über index.html gehandelt
+    this.sendToAnalytics('pageview', {
+      path,
+      title,
       url: window.location.href,
       timestamp: Date.now(),
       sessionId: this.sessionId,
       userId: this.userId,
-      metadata: { title },
     });
   }
 
@@ -505,10 +498,13 @@ class AnalyticsInitializer {
   }
 }
 
-// Initialize all analytics services
-if (import.meta.env.PROD) {
-  AnalyticsInitializer.getInstance();
-}
+// DEAKTIVIERT: AnalyticsInitializer lädt ein zweites gtag.js Script
+// und überschreibt window.gtag, was den Consent Mode Default zurücksetzt.
+// gtag.js wird bereits korrekt in index.html geladen mit Consent Mode v2.
+// Meta Pixel und Mouseflow werden ebenfalls dort oder über separate Dienste geladen.
+// if (import.meta.env.PROD) {
+//   AnalyticsInitializer.getInstance();
+// }
 
 // Enhanced tracking functions
 export const trackMetaPixelEvent = (eventName: string, parameters?: Record<string, any>) => {

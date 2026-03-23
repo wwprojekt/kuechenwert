@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,7 @@ import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { usePageTracking } from "./hooks/useAnalytics";
 import { lazyRetry, clearChunkReloadFlag } from "./lib/lazyRetry";
+import { detectAndSetTrafficType } from "./lib/gadsConversionService";
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
@@ -122,10 +123,16 @@ function AuctionRoute() {
   );
 }
 
-// Component to track page views & clear chunk reload flag on successful load
+// Component to track page views, set user properties & clear chunk reload flag
 function PageTracker() {
   usePageTracking();
   clearChunkReloadFlag();
+
+  // User Properties einmalig pro Session setzen (Traffic-Typ erkennen)
+  useEffect(() => {
+    detectAndSetTrafficType();
+  }, []);
+
   return null;
 }
 

@@ -276,6 +276,12 @@ export function trackWizardStarted(source: string): void {
     event_label: 'wizard_started',
     wizard_source: source,
   });
+
+  // GA4 Zielgruppe 'Wertermittlung gestartet' verwendet dieses Event
+  safeGtag('event', 'wizard_start', {
+    event_category: 'Wizard',
+    wizard_source: source,
+  });
 }
 
 /**
@@ -316,6 +322,14 @@ export function trackWizardCompleted(vehicleInfo: string): void {
   // Google Ads: Bestehende Conversion – Bewertung abgeschlossen
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
+    value: 50.0,
+    currency: 'EUR',
+  });
+
+  // GA4 Zielgruppe 'Wizard-Abbrecher' verwendet wizard_complete als Ausschluss
+  safeGtag('event', 'wizard_complete', {
+    event_category: 'Wizard',
+    vehicle_info: vehicleInfo,
     value: 50.0,
     currency: 'EUR',
   });
@@ -458,6 +472,9 @@ export function trackPhoneClick(phoneNumber: string, pagePath: string): void {
     value: 5.0,
     currency: 'EUR',
   });
+
+  // Einheitliches contact_click Event für GA4 Zielgruppe 'Kontakt-Leads'
+  sendContactClickEvent('phone', pagePath);
 }
 
 /**
@@ -472,6 +489,9 @@ export function trackWhatsAppClick(pagePath: string): void {
     value: 5.0,
     currency: 'EUR',
   });
+
+  // Einheitliches contact_click Event für GA4 Zielgruppe 'Kontakt-Leads'
+  sendContactClickEvent('whatsapp', pagePath);
 }
 
 /**
@@ -486,6 +506,9 @@ export function trackEmailClick(pagePath: string): void {
     value: 5.0,
     currency: 'EUR',
   });
+
+  // Einheitliches contact_click Event für GA4 Zielgruppe 'Kontakt-Leads'
+  sendContactClickEvent('email', pagePath);
 }
 
 /**
@@ -499,6 +522,70 @@ export function trackCTAClick(ctaName: string, pagePath: string, destination?: s
     page_path: pagePath,
     link_url: destination || '',
   });
+}
+
+// ============================================================
+// CONTACT CLICK EVENTS (für GA4 Zielgruppen)
+// Jeder Kontakt-Klick sendet zusätzlich ein 'contact_click' Event
+// das von der GA4 Zielgruppe 'Kontakt-Leads' verwendet wird
+// ============================================================
+
+/**
+ * Wrapper: Sendet ein einheitliches contact_click Event für GA4 Zielgruppen
+ * Wird intern von trackPhoneClick, trackWhatsAppClick, trackEmailClick aufgerufen
+ */
+function sendContactClickEvent(method: string, pagePath: string): void {
+  safeGtag('event', 'contact_click', {
+    event_category: 'Contact',
+    contact_method: method,
+    page_path: pagePath,
+  });
+}
+
+// ============================================================
+// USER PROPERTIES (für GA4 Segmentierung)
+// ============================================================
+
+/**
+ * Setzt GA4 User Properties für bessere Segmentierung
+ * Sollte einmal pro Session aufgerufen werden
+ */
+export function setUserProperties(properties: {
+  traffic_type?: 'organic' | 'paid' | 'direct' | 'referral' | 'social';
+  user_type?: 'visitor' | 'lead' | 'customer';
+  preferred_contact?: 'phone' | 'whatsapp' | 'email' | 'form';
+}): void {
+  safeGtag('set', 'user_properties', properties);
+}
+
+/**
+ * Erkennt den Traffic-Typ basierend auf UTM-Parametern und Referrer
+ * und setzt die entsprechenden User Properties
+ */
+export function detectAndSetTrafficType(): void {
+  const params = new URLSearchParams(window.location.search);
+  const utmSource = params.get('utm_source');
+  const utmMedium = params.get('utm_medium');
+  const referrer = document.referrer;
+
+  let trafficType: 'organic' | 'paid' | 'direct' | 'referral' | 'social' = 'direct';
+
+  if (utmMedium === 'cpc' || utmMedium === 'ppc' || utmSource === 'google_ads') {
+    trafficType = 'paid';
+  } else if (utmSource) {
+    trafficType = 'referral';
+  } else if (referrer) {
+    const referrerHost = new URL(referrer).hostname;
+    if (referrerHost.includes('google') || referrerHost.includes('bing') || referrerHost.includes('yahoo')) {
+      trafficType = 'organic';
+    } else if (referrerHost.includes('facebook') || referrerHost.includes('instagram') || referrerHost.includes('twitter') || referrerHost.includes('linkedin')) {
+      trafficType = 'social';
+    } else {
+      trafficType = 'referral';
+    }
+  }
+
+  setUserProperties({ traffic_type: trafficType, user_type: 'visitor' });
 }
 
 // ============================================================

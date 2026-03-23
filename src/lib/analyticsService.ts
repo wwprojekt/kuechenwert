@@ -216,13 +216,11 @@ class AnalyticsService {
       timestamp: new Date(),
     });
 
-    // Also track in Google Analytics if available
-    if (typeof window !== 'undefined' && (window as any).gtag && hasAnalyticsConsent()) {
-      (window as any).gtag('event', 'page_view', {
-        page_path: pagePath,
-        page_title: pageTitle,
-      });
-    }
+    // HINWEIS: Kein manuelles gtag('event', 'page_view') hier senden!
+    // index.html hat bereits send_page_view: true in der GA4 config,
+    // was automatisch Page Views bei gtag('config') Aufrufen sendet.
+    // Ein zusätzliches manuelles Event würde zu doppelten Page Views führen.
+    // Die Supabase-Datenbank erhält weiterhin Page Views über die Queue.
 
     // Flush if consent is given and session exists
     if (hasAnalyticsConsent() && this.sessionCreated) {

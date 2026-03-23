@@ -141,6 +141,66 @@ Deno.serve(async (req) => {
       `buyer=${user.id}, price=${instantPrice}`,
     );
 
+    // ─── 8. INVOICE FLOW ─────────────────────────────────────────
+    // Step 1: Create invoice via RPC (atomic, with commission calculation)
+    // Step 2: Generate PDF (upload to storage)
+    // Step 3: Send email with PDF attachment to dealer
+    try {
+      console.log('Creating instant-buy invoice for auction:', auctionId, 'dealer:', user.id);
+
+      // Step 1: Create invoice
+      const { data: invoiceId, error: invoiceRpcError } = await supabaseAdmin.rpc('create_instant_buy_invoice', {
+        auction_id_param: auctionId,
+        dealer_id_param: user.id,
+        instant_price_param: instantPrice,
+      });
+
+      if (invoiceRpcError) {
+        console.error('Invoice RPC error:', invoiceRpcError);
+        throw invoiceRpcError;
+      }
+
+      if (!invoiceId) {
+        throw new Error('Invoice creation returned no ID');
+      }
+
+      console.log('Invoice created:', invoiceId);
+
+      // Step 2: Generate PDF
+      try {
+        const { data: pdfResult, error: pdfError } = await supabaseAdmin.functions.invoke('generate-invoice-pdf', {
+          body: { invoiceId }
+        });
+        if (pdfError) {
+          console.error('PDF generation error:', pdfError);
+        } else {
+          console.log('Invoice PDF generated:', pdfResult?.invoiceNumber);
+        }
+      } catch (pdfError) {
+        console.error('Error generating invoice PDF:', pdfError);
+      }
+
+      // Step 3: Send invoice email (with PDF attachment if available)
+      try {
+        const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-invoice-email', {
+          body: { invoiceId }
+        });
+        if (emailError) {
+          console.error('Invoice email error:', emailError);
+        } else {
+          console.log('Invoice email sent:', emailResult?.invoiceNumber, '→', emailResult?.sentTo);
+        }
+      } catch (emailError) {
+        console.error('Error sending invoice email:', emailError);
+      }
+
+      console.log('Invoice flow completed for instant buy:', auctionId);
+    } catch (invoiceError) {
+      console.error('Error in instant-buy invoice flow:', invoiceError);
+      // Don't fail the purchase if invoice creation fails
+      // The admin can manually create the invoice later
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

@@ -62,7 +62,7 @@ export default function AdminFinancials() {
           ),
           reminders:payment_reminders(reminder_level, reminder_date)
         `)
-        .order('created_at', { ascending: false });
+        .order('invoice_date', { ascending: false });
       
       if (error) throw error;
       return data;
@@ -148,9 +148,9 @@ export default function AdminFinancials() {
 
   const filteredInvoices = invoices?.filter(invoice => {
     const matchesSearch = searchTerm === '' || 
-      invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.dealer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (invoice.dealer.company_name && invoice.dealer.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.dealer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (invoice.dealer?.company_name && invoice.dealer.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'paid' && invoice.payment_status === 'paid') ||
@@ -308,12 +308,12 @@ export default function AdminFinancials() {
                             {invoice.invoice_number}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {invoice.dealer.company_name || `${invoice.dealer.first_name} ${invoice.dealer.last_name}`}
+                            {invoice.dealer?.company_name || `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`}
                           </div>
                         </div>
                         <div className="hidden md:block min-w-[150px]">
                           <div className="font-medium">
-                            {invoice.auction.motorhome.manufacturer} {invoice.auction.motorhome.model}
+                            {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Auktion #{invoice.auction_id}
@@ -369,7 +369,7 @@ export default function AdminFinancials() {
 
       {selectedInvoice && (
         <RecordPaymentDialog
-          isOpen={paymentDialogOpen}
+          open={paymentDialogOpen}
           onOpenChange={setPaymentDialogOpen}
           invoice={selectedInvoice}
         />

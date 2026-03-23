@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award } from "lucide-react";
+import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
 import { logger } from "@/lib/logger";
@@ -166,7 +166,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Allgemein</span>
@@ -174,6 +174,10 @@ export default function AdminSettings() {
           <TabsTrigger value="branding" className="gap-2">
             <Palette className="w-4 h-4" />
             <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger value="invoice" className="gap-2">
+            <Receipt className="w-4 h-4" />
+            <span className="hidden sm:inline">Rechnung</span>
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="w-4 h-4" />
@@ -513,6 +517,253 @@ export default function AdminSettings() {
         </TabsContent>
 
         {/* Email Settings */}
+        {/* Invoice / Rechnungseinstellungen */}
+        <TabsContent value="invoice" className="space-y-6">
+          {/* Firmendaten */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-primary" />
+                Firmendaten
+              </CardTitle>
+              <CardDescription>
+                Diese Daten erscheinen als Absender auf Ihren Rechnungen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-company-name">Firmenname</Label>
+                  <Input
+                    id="inv-company-name"
+                    value={formData.site_name || ''}
+                    onChange={(e) => updateField('site_name', e.target.value)}
+                    placeholder="CaravanWert GmbH"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Wird aus den allgemeinen Einstellungen übernommen
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-managing-director">Geschäftsführer</Label>
+                  <Input
+                    id="inv-managing-director"
+                    value={formData.managing_director || ''}
+                    onChange={(e) => updateField('managing_director', e.target.value)}
+                    placeholder="Max Mustermann"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-company-address">Straße & Hausnummer</Label>
+                  <Input
+                    id="inv-company-address"
+                    value={formData.company_address || ''}
+                    onChange={(e) => updateField('company_address', e.target.value)}
+                    placeholder="Musterstraße 123"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-company-city">Stadt</Label>
+                  <Input
+                    id="inv-company-city"
+                    value={formData.company_city || ''}
+                    onChange={(e) => updateField('company_city', e.target.value)}
+                    placeholder="München"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-company-zip">Postleitzahl</Label>
+                  <Input
+                    id="inv-company-zip"
+                    value={formData.company_postal_code || ''}
+                    onChange={(e) => updateField('company_postal_code', e.target.value)}
+                    placeholder="80331"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-company-country">Land</Label>
+                  <Input
+                    id="inv-company-country"
+                    value={formData.company_country || ''}
+                    onChange={(e) => updateField('company_country', e.target.value)}
+                    placeholder="Deutschland"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-contact-email">Kontakt E-Mail (Rechnung)</Label>
+                  <Input
+                    id="inv-contact-email"
+                    type="email"
+                    value={formData.contact_email || ''}
+                    onChange={(e) => updateField('contact_email', e.target.value)}
+                    placeholder="info@caravanwert.de"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-support-phone">Telefon (Rechnung)</Label>
+                  <Input
+                    id="inv-support-phone"
+                    type="tel"
+                    value={formData.support_phone || ''}
+                    onChange={(e) => updateField('support_phone', e.target.value)}
+                    placeholder="+49 511 51532476"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bankverbindung */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-primary" />
+                Bankverbindung
+              </CardTitle>
+              <CardDescription>
+                Bankdaten für die Zahlungsanweisungen auf Ihren Rechnungen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-bank-iban">IBAN</Label>
+                  <Input
+                    id="inv-bank-iban"
+                    value={formData.bank_iban || ''}
+                    onChange={(e) => updateField('bank_iban', e.target.value)}
+                    placeholder="DE89 3704 0044 0532 0130 00"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-bank-bic">BIC / SWIFT</Label>
+                  <Input
+                    id="inv-bank-bic"
+                    value={formData.bank_bic || ''}
+                    onChange={(e) => updateField('bank_bic', e.target.value)}
+                    placeholder="COBADEFFXXX"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-bank-name">Bankname</Label>
+                <Input
+                  id="inv-bank-name"
+                  value={formData.bank_name || ''}
+                  onChange={(e) => updateField('bank_name', e.target.value)}
+                  placeholder="Commerzbank AG"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Steuerliche Angaben */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Steuerliche Angaben
+              </CardTitle>
+              <CardDescription>
+                Pflichtangaben für steuerlich korrekte Rechnungen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-ust-id">Umsatzsteuer-ID (USt-IdNr.)</Label>
+                  <Input
+                    id="inv-ust-id"
+                    value={formData.ust_id || ''}
+                    onChange={(e) => updateField('ust_id', e.target.value)}
+                    placeholder="DE123456789"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Pflichtangabe auf jeder Rechnung gemäß §14 UStG
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-tax-number">Steuernummer</Label>
+                  <Input
+                    id="inv-tax-number"
+                    value={formData.tax_number || ''}
+                    onChange={(e) => updateField('tax_number', e.target.value)}
+                    placeholder="123/456/78901"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inv-hrb-number">Handelsregisternummer</Label>
+                  <Input
+                    id="inv-hrb-number"
+                    value={formData.hrb_number || ''}
+                    onChange={(e) => updateField('hrb_number', e.target.value)}
+                    placeholder="HRB 12345, Amtsgericht München"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inv-payment-terms">Zahlungsziel (Tage)</Label>
+                  <Input
+                    id="inv-payment-terms"
+                    type="number"
+                    value={formData.invoice_payment_terms_days || 14}
+                    onChange={(e) => updateField('invoice_payment_terms_days', parseInt(e.target.value))}
+                    min="1"
+                    max="90"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Standard-Zahlungsfrist in Tagen (wird auf neue Rechnungen angewendet)
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-footer-text">Rechnungs-Fußzeile (optional)</Label>
+                <Textarea
+                  id="inv-footer-text"
+                  value={formData.invoice_footer_text || ''}
+                  onChange={(e) => updateField('invoice_footer_text', e.target.value)}
+                  placeholder="Zusätzlicher Text, der am Ende jeder Rechnung erscheint..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Z.B. AGB-Hinweis, Bankverbindungshinweis oder rechtliche Hinweise
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vorschau-Hinweis */}
+          <Card className="border-dashed border-primary/30 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <Receipt className="w-8 h-8 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1">Rechnungsvorschau</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Alle hier eingetragenen Daten werden automatisch auf jede neue Rechnung übernommen.
+                    Die Rechnungen werden im CaravanWert-Design erstellt und enthalten Ihre Firmendaten,
+                    Bankverbindung und steuerlichen Angaben. Änderungen gelten nur für zukünftige Rechnungen.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    <strong>Pflichtfelder für gültige Rechnungen:</strong> Firmenname, Adresse, USt-ID oder Steuernummer, Bankverbindung (IBAN)
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="email" className="space-y-6">
           <Card>
             <CardHeader>

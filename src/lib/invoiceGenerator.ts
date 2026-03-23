@@ -499,7 +499,7 @@ class InvoiceGeneratorService {
       .from('invoices')
       .select('*')
       .eq('dealer_id', dealerId)
-      .order('created_at', { ascending: false });
+      .order('invoice_date', { ascending: false });
 
     if (error) {
       logger.error('Error fetching dealer invoices:', error);

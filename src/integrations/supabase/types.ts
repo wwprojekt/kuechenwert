@@ -1438,11 +1438,15 @@ export type Database = {
           due_date: string
           gross_amount: number
           id: string
+          invoice_date: string
           invoice_number: string
           net_amount: number
           notes: string | null
           paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
           payment_status: string | null
+          payment_terms_days: number | null
           pdf_url: string | null
           sent_at: string | null
           sepa_mandate_reference: string | null
@@ -1460,11 +1464,15 @@ export type Database = {
           due_date: string
           gross_amount: number
           id?: string
+          invoice_date?: string
           invoice_number: string
           net_amount: number
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
+          payment_terms_days?: number | null
           pdf_url?: string | null
           sent_at?: string | null
           sepa_mandate_reference?: string | null
@@ -1482,11 +1490,15 @@ export type Database = {
           due_date?: string
           gross_amount?: number
           id?: string
+          invoice_date?: string
           invoice_number?: string
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
+          payment_terms_days?: number | null
           pdf_url?: string | null
           sent_at?: string | null
           sepa_mandate_reference?: string | null
@@ -2589,6 +2601,15 @@ export type Database = {
           smtp_user: string | null
           soft_close_extension_minutes: number
           support_phone: string
+          bank_iban: string | null
+          bank_bic: string | null
+          bank_name: string | null
+          ust_id: string | null
+          tax_number: string | null
+          managing_director: string | null
+          hrb_number: string | null
+          invoice_footer_text: string | null
+          invoice_payment_terms_days: number | null
           tuv_badge_url: string | null
           updated_at: string
           whatsapp_number: string | null
@@ -2632,6 +2653,15 @@ export type Database = {
           smtp_user?: string | null
           soft_close_extension_minutes?: number
           support_phone?: string
+          bank_iban?: string | null
+          bank_bic?: string | null
+          bank_name?: string | null
+          ust_id?: string | null
+          tax_number?: string | null
+          managing_director?: string | null
+          hrb_number?: string | null
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
           tuv_badge_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null
@@ -2675,6 +2705,15 @@ export type Database = {
           smtp_user?: string | null
           soft_close_extension_minutes?: number
           support_phone?: string
+          bank_iban?: string | null
+          bank_bic?: string | null
+          bank_name?: string | null
+          ust_id?: string | null
+          tax_number?: string | null
+          managing_director?: string | null
+          hrb_number?: string | null
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
           tuv_badge_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null

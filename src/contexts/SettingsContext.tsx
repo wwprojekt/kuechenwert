@@ -42,6 +42,16 @@ interface SiteSettings {
   company_city: string | null;
   company_postal_code: string | null;
   company_country: string | null;
+  // Rechnungseinstellungen
+  bank_iban: string | null;
+  bank_bic: string | null;
+  bank_name: string | null;
+  ust_id: string | null;
+  tax_number: string | null;
+  managing_director: string | null;
+  hrb_number: string | null;
+  invoice_footer_text: string | null;
+  invoice_payment_terms_days: number | null;
 }
 
 interface SettingsContextType {

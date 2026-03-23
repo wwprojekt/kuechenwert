@@ -2,6 +2,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
+/**
+ * Edge Function: send-invoice-email
+ * 
+ * Sends a professional invoice email to the dealer with:
+ * - Invoice details (number, amount, due date)
+ * - Payment information (bank details from site_settings)
+ * - PDF attachment (downloaded from storage and attached as base64)
+ * 
+ * Called by: close-auction, instant-buy (after invoice + PDF creation)
+ * Auth: service_role or admin
+ */
+
 interface InvoiceEmailRequest {
   invoiceId: string;
 }
@@ -29,7 +41,7 @@ Deno.serve(async (req) => {
       });
     }
     const { data: roles } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some(r => r.role === 'admin');
+    const isAdmin = roles?.some((r: any) => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
         status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
@@ -44,7 +56,7 @@ Deno.serve(async (req) => {
       throw new Error('Invoice ID is required');
     }
 
-    // Fetch invoice with dealer info
+    // ─── Fetch invoice with all related data ───────────────────────
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .select(`
@@ -58,30 +70,52 @@ Deno.serve(async (req) => {
       .single();
 
     if (invoiceError || !invoice) {
-      throw new Error('Invoice not found');
+      throw new Error(`Invoice not found: ${invoiceError?.message || 'Unknown'}`);
     }
 
-    // Get site settings
+    if (!invoice.dealer?.email) {
+      throw new Error('Dealer email not found');
+    }
+
+    // ─── Get site settings ─────────────────────────────────────────
     const { data: settings } = await supabaseAdmin
       .from('site_settings')
       .select('*')
-      .single();
+      .limit(1)
+      .maybeSingle();
 
-    const settingsData = settings || {
-      site_name: 'CaravanWert',
-      site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'kontakt@caravanwert.de',
-      support_phone: '',
+    const siteName = settings?.site_name || 'CaravanWert';
+    const bankIban = settings?.bank_iban || '';
+    const bankBic = settings?.bank_bic || '';
+
+    const settingsData = {
+      site_name: siteName,
+      site_description: settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform',
+      contact_email: settings?.contact_email || 'kontakt@caravanwert.de',
+      support_phone: settings?.support_phone || '',
     };
 
+    // ─── Prepare display values ────────────────────────────────────
     const dealerName = invoice.dealer.company_name || 
-      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
+      `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
     
-    const motorhomeName = invoice.auction ? 
-      `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 
-      'Provision';
+    const motorhomeName = invoice.auction?.motorhome 
+      ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` 
+      : 'Vermittlungsprovision';
 
-    // Build email content with email-builder
+    // Use invoice_date (new column), fallback to created_at
+    const invoiceDate = invoice.invoice_date || invoice.created_at;
+    const invoiceDateFormatted = new Date(invoiceDate).toLocaleDateString('de-DE', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+    const dueDateFormatted = new Date(invoice.due_date).toLocaleDateString('de-DE', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+    const grossFormatted = Number(invoice.gross_amount).toLocaleString('de-DE', { 
+      minimumFractionDigits: 2, maximumFractionDigits: 2 
+    });
+
+    // ─── Build email content ───────────────────────────────────────
     const content = `
       ${paragraph(`Sehr geehrte/r ${dealerName},`)}
       ${paragraph('Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.')}
@@ -89,31 +123,69 @@ Deno.serve(async (req) => {
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}
         ${detailRow('Fahrzeug', motorhomeName)}
-        ${detailRow('Rechnungsdatum', new Date(invoice.invoice_date).toLocaleDateString('de-DE'))}
-        ${detailRow('F&auml;lligkeitsdatum', new Date(invoice.due_date).toLocaleDateString('de-DE'))}
+        ${detailRow('Rechnungsdatum', invoiceDateFormatted)}
+        ${detailRow('F&auml;lligkeitsdatum', dueDateFormatted)}
+        ${detailRow('Zahlungsziel', '14 Tage')}
       `, 'info')}
 
-      ${amountDisplay('Rechnungsbetrag', `&euro;${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
+      ${amountDisplay('Rechnungsbetrag', `&euro;${grossFormatted}`)}
 
       ${infoBox('Zahlungsinformationen', `
-        ${detailRow('IBAN', 'DE89 3704 0044 0532 0130 00')}
-        ${detailRow('BIC', 'COBADEFFXXX')}
+        ${bankIban ? detailRow('IBAN', bankIban) : ''}
+        ${bankBic ? detailRow('BIC', bankBic) : ''}
         ${detailRow('Verwendungszweck', invoice.invoice_number)}
       `)}
 
-      ${invoice.pdf_url ? button('Rechnung als PDF herunterladen', invoice.pdf_url) : ''}
+      ${invoice.pdf_url ? button('Rechnung herunterladen', invoice.pdf_url) : ''}
 
       ${paragraph('Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verf&uuml;gung.')}
-      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr CaravanWert Team')}
     `;
 
-    const emailSubject = `Rechnung ${invoice.invoice_number} - CaravanWert`;
+    const emailSubject = `Rechnung ${invoice.invoice_number} - ${siteName}`;
     const emailHtml = buildEmailLayout(settingsData, 'Neue Rechnung', content);
 
-    // Send email via Resend
+    // ─── Download PDF for attachment (if available) ────────────────
+    let attachments: any[] | undefined = undefined;
+
+    if (invoice.pdf_url) {
+      try {
+        const pdfResponse = await fetch(invoice.pdf_url);
+        if (pdfResponse.ok) {
+          const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+          const pdfBase64 = btoa(
+            String.fromCharCode(...new Uint8Array(pdfArrayBuffer))
+          );
+          
+          const fileExtension = invoice.pdf_url.includes('.pdf') ? 'pdf' : 'html';
+          const mimeType = fileExtension === 'pdf' ? 'application/pdf' : 'text/html';
+          
+          attachments = [{
+            filename: `Rechnung_${invoice.invoice_number}.${fileExtension}`,
+            content: pdfBase64,
+            type: mimeType,
+          }];
+        }
+      } catch (attachError) {
+        console.error('Error downloading PDF for attachment:', attachError);
+        // Continue without attachment - the download link is still in the email
+      }
+    }
+
+    // ─── Send email via Resend ─────────────────────────────────────
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
       throw new Error('RESEND_API_KEY not configured');
+    }
+
+    const emailPayload: any = {
+      from: `${siteName} <info@caravanwert.de>`,
+      to: [invoice.dealer.email],
+      subject: emailSubject,
+      html: emailHtml,
+    };
+
+    if (attachments && attachments.length > 0) {
+      emailPayload.attachments = attachments;
     }
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
@@ -122,31 +194,38 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${resendApiKey}`,
       },
-      body: JSON.stringify({
-        from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
-        to: [invoice.dealer.email],
-        subject: emailSubject,
-        html: emailHtml,
-        attachments: invoice.pdf_url ? [{
-          filename: `Rechnung_${invoice.invoice_number}.pdf`,
-          content: invoice.pdf_url,
-        }] : undefined,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!resendResponse.ok) {
       const errorData = await resendResponse.text();
       console.error('Resend API error:', errorData);
-      throw new Error('Failed to send invoice email');
+      throw new Error(`Failed to send invoice email: ${errorData}`);
     }
 
-    console.log('Invoice email sent successfully to:', invoice.dealer.email);
+    // ─── Update invoice: mark as sent ──────────────────────────────
+    const { error: updateError } = await supabaseAdmin
+      .from('invoices')
+      .update({ 
+        sent_at: new Date().toISOString(),
+        status: 'sent',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      console.error('Error updating invoice sent_at:', updateError);
+    }
+
+    console.log(`Invoice email sent successfully: ${invoice.invoice_number} → ${invoice.dealer.email}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Invoice email sent successfully',
-        invoiceNumber: invoice.invoice_number 
+        invoiceNumber: invoice.invoice_number,
+        sentTo: invoice.dealer.email,
+        hasAttachment: !!attachments,
       }),
       { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );

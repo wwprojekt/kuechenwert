@@ -1,6 +1,21 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
+/**
+ * Edge Function: close-auction
+ * 
+ * Closes an auction after it has ended. Determines the outcome:
+ * - Sold: Reserve price met → update motorhome, create invoice, send emails
+ * - Ended: No bids or reserve not met → notify seller
+ * 
+ * Invoice flow (when sold):
+ * 1. create_auction_invoice RPC → creates invoice + line items
+ * 2. generate-invoice-pdf → generates PDF, uploads to storage, updates pdf_url
+ * 3. send-invoice-email → sends email with PDF attachment to dealer
+ * 
+ * Auth: service_role (cron/internal) or admin
+ */
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -12,7 +27,6 @@ Deno.serve(async (req) => {
   const isServiceRole = authHeader.includes(serviceRoleKey);
 
   if (!isServiceRole) {
-    // Use service role client to validate user token
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -24,12 +38,8 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
-    const supabaseCheck = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    const { data: roles } = await supabaseCheck.from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some(r => r.role === 'admin');
+    const { data: roles } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', user.id);
+    const isAdmin = roles?.some((r: any) => r.role === 'admin');
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
         status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
@@ -94,7 +104,7 @@ Deno.serve(async (req) => {
     // Determine auction outcome
     let newStatus = 'ended';
     let motorhomeStatus = 'available';
-    let soldTo = null;
+    let soldTo: string | null = null;
 
     if (highestBid) {
       const reserveMet = auction.reserve_price
@@ -102,17 +112,14 @@ Deno.serve(async (req) => {
         : true;
 
       if (reserveMet) {
-        // Auction sold - reserve price met
         newStatus = 'sold';
         motorhomeStatus = 'sold';
         soldTo = highestBid.bidder_id;
         console.log('Auction sold to:', soldTo, 'for:', highestBid.amount);
       } else {
-        // Reserve not met
         console.log('Reserve price not met. Highest bid:', highestBid.amount, 'Reserve:', auction.reserve_price);
       }
     } else {
-      // No bids
       console.log('No bids placed on auction');
     }
 
@@ -127,8 +134,9 @@ Deno.serve(async (req) => {
       throw updateAuctionError;
     }
 
-    // Update motorhome status if sold
+    // ─── If sold: Update motorhome, create invoice, send emails ────
     if (motorhomeStatus === 'sold' && soldTo) {
+      // Update motorhome status
       const { error: updateMotorhomeError } = await supabase
         .from('motorhomes')
         .update({
@@ -149,31 +157,74 @@ Deno.serve(async (req) => {
           body: {
             auctionId,
             winnerId: soldTo,
-            amount: highestBid.amount,
+            amount: highestBid!.amount,
           },
         });
       } catch (notifyError) {
         console.error('Error sending winner notification:', notifyError);
       }
 
-      // Create invoice for the winning dealer
+      // ─── INVOICE FLOW ─────────────────────────────────────────────
+      // Step 1: Create invoice via RPC (atomic, with commission calculation)
+      // Step 2: Generate PDF (upload to storage)
+      // Step 3: Send email with PDF attachment
       try {
-        const invoiceId = await supabase.rpc('create_auction_invoice', {
+        console.log('Creating invoice for auction:', auctionId, 'dealer:', soldTo);
+        
+        // Step 1: Create invoice
+        const { data: invoiceId, error: invoiceRpcError } = await supabase.rpc('create_auction_invoice', {
           auction_id_param: auctionId,
           dealer_id_param: soldTo
         });
 
-        if (invoiceId) {
-          // Send invoice email
-          await supabase.functions.invoke('send-invoice-email', {
-            body: { invoiceId: invoiceId }
+        if (invoiceRpcError) {
+          console.error('Invoice RPC error:', invoiceRpcError);
+          throw invoiceRpcError;
+        }
+
+        if (!invoiceId) {
+          throw new Error('Invoice creation returned no ID');
+        }
+
+        console.log('Invoice created:', invoiceId);
+
+        // Step 2: Generate PDF
+        try {
+          const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-invoice-pdf', {
+            body: { invoiceId }
           });
           
-          console.log('Invoice created and sent for auction:', auctionId);
+          if (pdfError) {
+            console.error('PDF generation error:', pdfError);
+          } else {
+            console.log('Invoice PDF generated:', pdfResult?.invoiceNumber);
+          }
+        } catch (pdfError) {
+          console.error('Error generating invoice PDF:', pdfError);
+          // Continue - email can still be sent without PDF attachment
         }
+
+        // Step 3: Send invoice email (with PDF attachment if available)
+        try {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invoice-email', {
+            body: { invoiceId }
+          });
+          
+          if (emailError) {
+            console.error('Invoice email error:', emailError);
+          } else {
+            console.log('Invoice email sent:', emailResult?.invoiceNumber, '→', emailResult?.sentTo);
+          }
+        } catch (emailError) {
+          console.error('Error sending invoice email:', emailError);
+        }
+
+        console.log('Invoice flow completed for auction:', auctionId);
+        
       } catch (invoiceError) {
-        console.error('Error creating/sending invoice:', invoiceError);
+        console.error('Error in invoice flow:', invoiceError);
         // Don't fail the auction closure if invoice creation fails
+        // The admin can manually create the invoice later
       }
     }
 
@@ -182,7 +233,6 @@ Deno.serve(async (req) => {
       const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
       const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
 
-      // Get unique bidders who did NOT win
       const losingBidderIds = [...new Set(
         auction.bids
           .map((b: any) => b.bidder_id)
@@ -190,7 +240,6 @@ Deno.serve(async (req) => {
       )];
 
       for (const loserId of losingBidderIds) {
-        // Get the loser's highest bid
         const loserHighestBid = Math.max(
           ...auction.bids
             .filter((b: any) => b.bidder_id === loserId)
@@ -214,7 +263,7 @@ Deno.serve(async (req) => {
               yourBid: `€${loserHighestBid.toLocaleString()}`,
               currentBid: `€${Number(highestBid.amount).toLocaleString()}`,
             },
-          }).catch((e) => console.error('Error sending loser notification:', e));
+          }).catch((e: any) => console.error('Error sending loser notification:', e));
         }
       }
     }
@@ -239,7 +288,7 @@ Deno.serve(async (req) => {
             auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
             currentBid: highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : 'Keine Gebote',
           },
-        }).catch((e) => console.error('Error sending seller end notification:', e));
+        }).catch((e: any) => console.error('Error sending seller end notification:', e));
       }
     }
 

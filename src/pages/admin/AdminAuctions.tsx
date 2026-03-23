@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit } from "lucide-react";
+import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -129,6 +129,24 @@ export default function AdminAuctions() {
     },
     onError: (error: any) => {
       toast.error("Fehler beim Prüfen abgelaufener Auktionen");
+      logger.error(error);
+    },
+  });
+
+  const deleteAuctionMutation = useMutation({
+    mutationFn: async (auctionId: string) => {
+      // First delete related bids
+      await supabase.from('bids').delete().eq('auction_id', auctionId);
+      // Then delete the auction
+      const { error } = await supabase.from('auctions').delete().eq('id', auctionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich gelöscht");
+      queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
+    },
+    onError: (error: any) => {
+      toast.error("Fehler beim Löschen der Auktion");
       logger.error(error);
     },
   });
@@ -324,10 +342,12 @@ export default function AdminAuctions() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedAuction(auction);
                             setShowEditDialog(true);
                           }}
+                          title="Bearbeiten"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -353,6 +373,38 @@ export default function AdminAuctions() {
                                   disabled={activateAuctionMutation.isPending}
                                 >
                                   Aktivieren
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                        {auction.status === "draft" && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Entwurf löschen">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Entwurf löschen?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Der Auktionsentwurf für "{auction.motorhome?.manufacturer} {auction.motorhome?.model}" wird endgültig gelöscht.
+                                  Dieser Vorgang kann nicht rückgängig gemacht werden.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteAuctionMutation.mutate(auction.id)}
+                                  disabled={deleteAuctionMutation.isPending}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  {deleteAuctionMutation.isPending ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Löschen...</>
+                                  ) : (
+                                    "Endgültig löschen"
+                                  )}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>

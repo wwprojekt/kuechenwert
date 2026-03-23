@@ -652,7 +652,7 @@ const Wertrechner = () => {
                   <div className="animate-fade-in" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
                     <div className="space-y-2">
                       <Label htmlFor="manufacturer">Hersteller</Label>
-                      <div className="relative">
+                      <div>
                         <Input
                           id="manufacturer"
                           placeholder="Hersteller auswählen oder eingeben..."
@@ -668,7 +668,7 @@ const Wertrechner = () => {
                           autoComplete="off"
                         />
                         {showManufacturerDropdown && filteredManufacturers.length > 0 && (
-                          <div className="absolute left-0 top-full z-[100] w-full mt-1 bg-background border rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                          <div className="w-full mt-1 bg-background border rounded-xl shadow-xl max-h-52 overflow-y-auto">
                             {filteredManufacturers.map((m) => (
                               <button
                                 key={m}

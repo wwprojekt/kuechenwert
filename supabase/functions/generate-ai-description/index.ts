@@ -1,5 +1,15 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { checkRateLimit, createRateLimitErrorResponse, RATE_LIMITS } from '../_shared/rate-limiter.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+
+/**
+ * Edge Function: generate-ai-description
+ *
+ * Generates a professional motorhome sales description using OpenAI GPT-4.
+ * Requires authentication to prevent unauthorized API cost accumulation.
+ *
+ * Auth: Requires a valid JWT token (any authenticated user: dealer or admin).
+ */
 
 interface AIDescriptionRequest {
   manufacturer: string;
@@ -22,6 +32,9 @@ interface AIDescriptionRequest {
   additionalEquipment?: string;
 }
 
+// Declare requestData at module scope so it's accessible in catch block
+let requestData: AIDescriptionRequest;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -34,7 +47,40 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const requestData: AIDescriptionRequest = await req.json();
+    // ─── Auth check: require authenticated user ────────────────────
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Nicht autorisiert: Kein Authorization-Header' }),
+        {
+          status: 401,
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Nicht autorisiert: Ungültiger Token' }),
+        {
+          status: 401,
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log('AI description requested by user:', user.id);
+
+    // ─── Parse request ─────────────────────────────────────────────
+    requestData = await req.json();
 
     // Validate required fields
     if (!requestData.manufacturer || !requestData.model || !requestData.year) {
@@ -131,7 +177,7 @@ Verwende einen professionellen, aber warmen Ton. Maximal 500 Wörter.
       .replace(/\n{3,}/g, '\n\n') // Limit line breaks
       .substring(0, 2000); // Limit length
 
-    console.log('AI description generated successfully');
+    console.log('AI description generated successfully for user:', user.id);
 
     return new Response(
       JSON.stringify({
@@ -155,21 +201,21 @@ Verwende einen professionellen, aber warmen Ton. Maximal 500 Wörter.
     console.error('Error in generate-ai-description:', error);
     
     // Return fallback description on error
-    const fallbackDescription = `
-${requestData.manufacturer} ${requestData.model} aus ${requestData.year} mit ${requestData.mileage.toLocaleString('de-DE')} Kilometern.
+    const fallbackDescription = requestData
+      ? `${requestData.manufacturer} ${requestData.model} aus ${requestData.year} mit ${requestData.mileage?.toLocaleString('de-DE') || '0'} Kilometern.
 
-Dieses gepflegte Wohnmobil bietet ${requestData.sleepingPlaces} Schlafplätze und ist in einem ${requestData.condition.toLowerCase()}en Zustand. 
+Dieses gepflegte Wohnmobil bietet ${requestData.sleepingPlaces || 0} Schlafplätze und ist in einem ${(requestData.condition || 'guten').toLowerCase()}en Zustand. 
 
 Die Ausstattung umfasst alle wichtigen Komponenten für komfortables Reisen. Ideal für Camping-Enthusiasten und Reiseliebhaber.
 
-Weitere Details und Besichtigungstermin gerne auf Anfrage.
-    `.trim();
+Weitere Details und Besichtigungstermin gerne auf Anfrage.`
+      : 'Beschreibung konnte nicht generiert werden. Bitte versuchen Sie es erneut.';
 
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
-        fallback_description: fallbackDescription,
+        fallback_description: fallbackDescription.trim(),
       }),
       {
         status: 200, // Don't fail the request, provide fallback

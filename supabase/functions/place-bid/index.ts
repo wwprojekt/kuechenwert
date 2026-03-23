@@ -4,6 +4,15 @@ import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, R
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 /**
+ * Edge Function: place-bid
+ *
+ * Places a bid on an active auction. Uses the place_bid_atomic PostgreSQL
+ * RPC function to prevent race conditions when multiple bids arrive
+ * simultaneously. The entire read-validate-insert-update cycle runs
+ * inside a single database transaction with pg_advisory_xact_lock.
+ */
+
+/**
  * Zod schema for bid request validation
  * Provides type-safe input validation with clear error messages
  */
@@ -42,7 +51,7 @@ Deno.serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Use service role client to validate user token
+    // Use service role client to validate user token and for all DB operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -75,94 +84,51 @@ Deno.serve(async (req) => {
 
     console.log('Place bid request:', { auctionId, amount, userId: user.id, isAutobid });
 
-    const { data: auction, error: auctionError } = await supabaseAdmin
-      .from('auctions')
-      .select('*, motorhome:motorhomes(*)')
-      .eq('id', auctionId)
-      .single();
+    // ─── ATOMIC BID PLACEMENT via PostgreSQL RPC ───────────────────
+    // This replaces the previous non-atomic read-validate-insert-update
+    // sequence with a single database transaction that uses
+    // pg_advisory_xact_lock to prevent race conditions.
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc(
+      'place_bid_atomic',
+      {
+        p_auction_id: auctionId,
+        p_bidder_id: user.id,
+        p_bid_amount: amount,
+        p_is_autobid: isAutobid || false,
+        p_max_autobid_amount: isAutobid ? maxAutobidAmount : null,
+        p_min_increment: 50,
+      },
+    );
 
-    if (auctionError || !auction) {
-      throw new Error('Auction not found');
+    if (rpcError) {
+      console.error('RPC place_bid_atomic error:', rpcError);
+      throw new Error('Fehler beim Platzieren des Gebots: ' + rpcError.message);
     }
 
-    // Validate auction status
-    if (auction.status !== 'active') {
-      throw new Error('Auction is not active');
+    const outcome = result as {
+      success: boolean;
+      error?: string;
+      message?: string;
+      bid_id?: string;
+      amount?: number;
+      auction_extended?: boolean;
+      new_end_time?: string;
+      current_bid?: number;
+      motorhome_seller_id?: string;
+      motorhome_id?: string;
+      minimum_bid?: number;
+    };
+
+    // If the RPC returned a validation error, throw it
+    if (!outcome.success) {
+      throw new Error(outcome.error || 'Gebot konnte nicht platziert werden');
     }
 
-    // Check if auction has ended
-    const now = new Date().getTime();
-    const endTime = new Date(auction.end_time).getTime();
-    if (now > endTime) {
-      throw new Error('Auction has ended');
-    }
+    console.log('Bid placed successfully via RPC:', outcome);
 
-    // Check if motorhome is already sold
-    if (auction.motorhome?.status === 'sold') {
-      throw new Error('Motorhome is already sold');
-    }
+    // ─── Post-bid actions (fire and forget) ────────────────────────
 
-    // Validate bid amount (must be higher than current bid + minimum increment)
-    const currentBid = auction.current_bid || auction.starting_bid;
-    const minIncrement = 50; // €50 minimum increment
-    const minimumBid = Number(currentBid) + minIncrement;
-
-    if (amount < minimumBid) {
-      throw new Error(`Bid must be at least €${minimumBid.toLocaleString()}`);
-    }
-
-    // Check if user is trying to bid on their own auction
-    if (auction.motorhome?.seller_id === user.id) {
-      throw new Error('You cannot bid on your own auction');
-    }
-
-    // Place the bid
-    const { error: bidError } = await supabaseAdmin.from('bids').insert({
-      auction_id: auctionId,
-      bidder_id: user.id,
-      amount: amount,
-      is_autobid: isAutobid || false,
-      max_autobid_amount: isAutobid ? maxAutobidAmount : null,
-    });
-
-    if (bidError) {
-      console.error('Error placing bid:', bidError);
-      throw new Error('Failed to place bid: ' + bidError.message);
-    }
-
-    // Update auction current bid
-    const { error: updateError } = await supabaseAdmin
-      .from('auctions')
-      .update({ current_bid: amount })
-      .eq('id', auctionId);
-
-    if (updateError) {
-      console.error('Error updating auction:', updateError);
-      throw new Error('Failed to update auction');
-    }
-
-    // Check soft-close extension
-    const timeLeft = endTime - now;
-    const softCloseWindow = 5 * 60 * 1000; // 5 minutes
-    let auctionExtended = false;
-    let newEndTime = auction.end_time;
-
-    if (timeLeft < softCloseWindow && timeLeft > 0) {
-      const extensionMinutes = auction.soft_close_extension_minutes || 5;
-      newEndTime = new Date(endTime + extensionMinutes * 60 * 1000).toISOString();
-
-      const { error: extensionError } = await supabaseAdmin
-        .from('auctions')
-        .update({ end_time: newEndTime })
-        .eq('id', auctionId);
-
-      if (!extensionError) {
-        auctionExtended = true;
-        console.log('Auction extended by', extensionMinutes, 'minutes');
-      }
-    }
-
-    // Trigger autobid check for other users (fire and forget)
+    // Trigger autobid check for other users
     supabaseAdmin.functions.invoke('handle-autobid', {
       body: {
         auctionId,
@@ -174,6 +140,20 @@ Deno.serve(async (req) => {
     });
 
     // ─── Notifications (fire and forget) ───────────────────────────
+
+    // Fetch motorhome details for notification text
+    let motorhomeName = '';
+    if (outcome.motorhome_id) {
+      const { data: motorhomeData } = await supabaseAdmin
+        .from('motorhomes')
+        .select('manufacturer, model')
+        .eq('id', outcome.motorhome_id)
+        .single();
+
+      if (motorhomeData) {
+        motorhomeName = `${motorhomeData.manufacturer || ''} ${motorhomeData.model || ''}`.trim();
+      }
+    }
 
     // 1. Notify the current bidder that their bid was placed
     supabaseAdmin.functions.invoke('send-bid-notification', {
@@ -205,7 +185,6 @@ Deno.serve(async (req) => {
       }).catch((e) => console.error('Error sending outbid notification:', e));
 
       // Push notification to outbid user
-      const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
       supabaseAdmin.functions.invoke('send-push-notification', {
         body: {
           userId: previousBids[0].bidder_id,
@@ -218,12 +197,11 @@ Deno.serve(async (req) => {
     }
 
     // 3. Notify the seller about the new bid
-    if (auction.motorhome?.seller_id) {
-      const motorhomeName = `${auction.motorhome.manufacturer || ''} ${auction.motorhome.model || ''}`.trim();
+    if (outcome.motorhome_seller_id) {
       const { data: sellerProfile } = await supabaseAdmin
         .from('profiles')
         .select('email, first_name')
-        .eq('id', auction.motorhome.seller_id)
+        .eq('id', outcome.motorhome_seller_id)
         .single();
 
       if (sellerProfile?.email) {
@@ -240,16 +218,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Notify users who have this motorhome as favorite
-    supabaseAdmin.functions.invoke('send-favorite-notification', {
-      body: {
-        motorhome_id: auction.motorhome_id,
-        auction_id: auctionId,
-        event_type: 'price_change',
-        new_price: amount,
-        auction_title: motorhomeName,
-      },
-    }).catch((e) => console.error('Error sending favorite notifications:', e));
+    // 4. Notify users who have this motorhome as favorite
+    if (outcome.motorhome_id) {
+      supabaseAdmin.functions.invoke('send-favorite-notification', {
+        body: {
+          motorhome_id: outcome.motorhome_id,
+          auction_id: auctionId,
+          event_type: 'price_change',
+          new_price: amount,
+          auction_title: motorhomeName,
+        },
+      }).catch((e) => console.error('Error sending favorite notifications:', e));
+    }
 
     return new Response(
       JSON.stringify({
@@ -260,8 +240,8 @@ Deno.serve(async (req) => {
           isAutobid: isAutobid || false,
           maxAutobidAmount: isAutobid ? maxAutobidAmount : null,
         },
-        auctionExtended,
-        newEndTime: auctionExtended ? newEndTime : auction.end_time,
+        auctionExtended: outcome.auction_extended || false,
+        newEndTime: outcome.new_end_time,
       }),
       { 
         headers: { 

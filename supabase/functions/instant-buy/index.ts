@@ -57,11 +57,7 @@ Deno.serve(async (req) => {
 
     const { auctionId }: InstantBuyRequest = validation.data;
 
-    // 3. Use service role for all subsequent DB operations
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    // 3. Reuse the service role client created above for all DB operations
 
     // 4. Fetch auction + motorhome in a single query
     const { data: auction, error: auctionError } = await supabaseAdmin

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText } from "lucide-react";
+import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
 import { logger } from "@/lib/logger";
@@ -739,6 +739,191 @@ export default function AdminSettings() {
                 <p className="text-xs text-muted-foreground">
                   Z.B. AGB-Hinweis, Bankverbindungshinweis oder rechtliche Hinweise
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mahnwesen-Konfiguration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Gavel className="w-5 h-5 text-orange-600" />
+                <CardTitle>Mahnwesen</CardTitle>
+              </div>
+              <CardDescription>
+                Konfigurieren Sie die Mahnstufen, Fristen und Gebühren für das automatische Mahnverfahren
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Automatisches Mahnwesen aktivieren */}
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Automatisches Mahnwesen</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Mahnungen werden automatisch per E-Mail versendet, wenn Rechnungen überfällig sind
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.dunning_auto_enabled ?? true}
+                  onCheckedChange={(checked) => updateField('dunning_auto_enabled', checked)}
+                />
+              </div>
+
+              {/* Mahnstufe 1 */}
+              <div className="p-4 rounded-lg border border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20 dark:border-yellow-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <h4 className="font-semibold text-yellow-800 dark:text-yellow-400">1. Mahnung – Zahlungserinnerung</h4>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l1-days">Tage nach Fälligkeit</Label>
+                    <Input
+                      id="dunning-l1-days"
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={formData.dunning_level1_days ?? 14}
+                      onChange={(e) => updateField('dunning_level1_days', parseInt(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Nach wie vielen Tagen nach Fälligkeit die 1. Mahnung versendet wird
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l1-fee">Mahngebühr (€)</Label>
+                    <Input
+                      id="dunning-l1-fee"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={formData.dunning_level1_fee ?? 5.00}
+                      onChange={(e) => updateField('dunning_level1_fee', parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gebühr, die bei der 1. Mahnung erhoben wird
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mahnstufe 2 */}
+              <div className="p-4 rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="w-4 h-4 text-orange-600" />
+                  <h4 className="font-semibold text-orange-800 dark:text-orange-400">2. Mahnung – Dringende Zahlungsaufforderung</h4>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l2-days">Tage nach Fälligkeit</Label>
+                    <Input
+                      id="dunning-l2-days"
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={formData.dunning_level2_days ?? 28}
+                      onChange={(e) => updateField('dunning_level2_days', parseInt(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Nach wie vielen Tagen nach Fälligkeit die 2. Mahnung versendet wird
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l2-fee">Mahngebühr (€)</Label>
+                    <Input
+                      id="dunning-l2-fee"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={formData.dunning_level2_fee ?? 10.00}
+                      onChange={(e) => updateField('dunning_level2_fee', parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gebühr, die bei der 2. Mahnung erhoben wird
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mahnstufe 3 */}
+              <div className="p-4 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                  <h4 className="font-semibold text-red-800 dark:text-red-400">3. Mahnung – Letzte Warnung vor rechtlichen Schritten</h4>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l3-days">Tage nach Fälligkeit</Label>
+                    <Input
+                      id="dunning-l3-days"
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={formData.dunning_level3_days ?? 42}
+                      onChange={(e) => updateField('dunning_level3_days', parseInt(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Nach wie vielen Tagen nach Fälligkeit die 3. Mahnung versendet wird
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-l3-fee">Mahngebühr (€)</Label>
+                    <Input
+                      id="dunning-l3-fee"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={formData.dunning_level3_fee ?? 15.00}
+                      onChange={(e) => updateField('dunning_level3_fee', parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gebühr, die bei der 3. Mahnung erhoben wird
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Einschränkung bei Mahnstufe */}
+              <div className="p-4 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold">Kontobeschränkung</h4>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dunning-restrict">Konto sperren ab Mahnstufe</Label>
+                    <select
+                      id="dunning-restrict"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                      value={formData.dunning_restrict_at_level ?? 2}
+                      onChange={(e) => updateField('dunning_restrict_at_level', parseInt(e.target.value))}
+                    >
+                      <option value={1}>Ab 1. Mahnung</option>
+                      <option value={2}>Ab 2. Mahnung</option>
+                      <option value={3}>Ab 3. Mahnung</option>
+                      <option value={0}>Nie sperren</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Ab welcher Mahnstufe der Händler keine neuen Auktionen mehr erstellen kann
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info-Box */}
+              <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                <div className="flex items-start gap-3">
+                  <Receipt className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800 dark:text-blue-300">
+                    <p className="font-medium mb-1">So funktioniert das Mahnwesen:</p>
+                    <p className="text-blue-700 dark:text-blue-400">
+                      Wenn eine Rechnung nicht innerhalb des Zahlungsziels ({formData.invoice_payment_terms_days || 14} Tage) bezahlt wird,
+                      startet automatisch das Mahnverfahren. Die Mahnungen werden in den konfigurierten Abständen per E-Mail versendet.
+                      Mahngebühren werden dem offenen Betrag hinzugerechnet. Im Mahnprozess-Tab unter Finanzen sehen Sie alle
+                      Rechnungen im aktiven Mahnverfahren.
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -54,10 +54,21 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval 
 import { de } from 'date-fns/locale';
 import { getInvoiceStatistics } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
+import { useSettings } from '@/contexts/SettingsContext';
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 
 export default function AdminFinancials() {
+  const { settings } = useSettings();
+
+  // Configurable dunning levels from admin settings
+  const dunningLevel1Days = settings?.dunning_level1_days ?? 14;
+  const dunningLevel2Days = settings?.dunning_level2_days ?? 28;
+  const dunningLevel3Days = settings?.dunning_level3_days ?? 42;
+  const dunningLevel1Fee = settings?.dunning_level1_fee ?? 5.00;
+  const dunningLevel2Fee = settings?.dunning_level2_fee ?? 10.00;
+  const dunningLevel3Fee = settings?.dunning_level3_fee ?? 15.00;
+  const dunningRestrictAtLevel = settings?.dunning_restrict_at_level ?? 2;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -136,9 +147,9 @@ export default function AdminFinancials() {
     },
   });
 
-  // Fetch dunning invoices (30+ days overdue = active dunning process)
+  // Fetch dunning invoices (level1+ days overdue = active dunning process)
   const dunningThresholdDate = new Date();
-  dunningThresholdDate.setDate(dunningThresholdDate.getDate() - 30);
+  dunningThresholdDate.setDate(dunningThresholdDate.getDate() - dunningLevel1Days);
 
   const { data: dunningInvoices } = useQuery({
     queryKey: ['dunning-invoices'],
@@ -808,7 +819,7 @@ export default function AdminFinancials() {
                     Aktive Mahnverfahren
                   </CardTitle>
                   <CardDescription>
-                    Rechnungen die seit mehr als 30 Tagen überfällig sind und sich im Mahnprozess befinden
+                    Rechnungen die seit mehr als {dunningLevel1Days} Tagen überfällig sind und sich im Mahnprozess befinden
                   </CardDescription>
                 </div>
                 {dunningCount > 0 && (
@@ -826,7 +837,7 @@ export default function AdminFinancials() {
                 <div className="text-center py-12 text-muted-foreground">
                   <Scale className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
                   <p className="text-lg font-medium">Keine aktiven Mahnverfahren</p>
-                  <p className="text-sm">Es gibt derzeit keine Rechnungen im Mahnprozess (30+ Tage überfällig).</p>
+                  <p className="text-sm">Es gibt derzeit keine Rechnungen im Mahnprozess ({dunningLevel1Days}+ Tage überfällig).</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -843,17 +854,17 @@ export default function AdminFinancials() {
                     let levelColor = 'bg-yellow-100 border-yellow-300 text-yellow-800';
                     let levelLabel = 'Zahlungserinnerung';
                     let levelBg = 'bg-yellow-50/50 border-yellow-200';
-                    if (maxLevel >= 3 || daysOverdue > 90) {
+                    if (maxLevel >= 3 || daysOverdue > dunningLevel3Days) {
                       levelColor = 'bg-red-100 border-red-300 text-red-800';
-                      levelLabel = '3. Mahnung – Letzte Warnung';
+                      levelLabel = `3. Mahnung – Letzte Warnung (${dunningLevel3Fee.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-red-50/80 border-red-300';
-                    } else if (maxLevel >= 2 || daysOverdue > 60) {
+                    } else if (maxLevel >= 2 || daysOverdue > dunningLevel2Days) {
                       levelColor = 'bg-orange-100 border-orange-300 text-orange-800';
-                      levelLabel = '2. Mahnung';
+                      levelLabel = `2. Mahnung (${dunningLevel2Fee.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-orange-50/50 border-orange-200';
-                    } else if (maxLevel >= 1 || daysOverdue > 30) {
+                    } else if (maxLevel >= 1 || daysOverdue > dunningLevel1Days) {
                       levelColor = 'bg-amber-100 border-amber-300 text-amber-800';
-                      levelLabel = '1. Mahnung';
+                      levelLabel = `1. Mahnung (${dunningLevel1Fee.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-amber-50/50 border-amber-200';
                     }
 

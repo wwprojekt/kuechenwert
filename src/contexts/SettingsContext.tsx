@@ -52,6 +52,15 @@ interface SiteSettings {
   hrb_number: string | null;
   invoice_footer_text: string | null;
   invoice_payment_terms_days: number | null;
+  // Mahnwesen-Konfiguration
+  dunning_level1_days: number | null;
+  dunning_level1_fee: number | null;
+  dunning_level2_days: number | null;
+  dunning_level2_fee: number | null;
+  dunning_level3_days: number | null;
+  dunning_level3_fee: number | null;
+  dunning_restrict_at_level: number | null;
+  dunning_auto_enabled: boolean | null;
 }
 
 interface SettingsContextType {

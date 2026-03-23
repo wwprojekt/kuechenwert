@@ -80,19 +80,33 @@ Deno.serve(async (req) => {
           (Date.now() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        // Determine reminder level based on days past due
+        // Determine reminder level based on configurable days past due
+        const level1Days = settingsData.dunning_level1_days ?? 14;
+        const level2Days = settingsData.dunning_level2_days ?? 28;
+        const level3Days = settingsData.dunning_level3_days ?? 42;
+        const level1Fee = settingsData.dunning_level1_fee ?? 5.00;
+        const level2Fee = settingsData.dunning_level2_fee ?? 10.00;
+        const level3Fee = settingsData.dunning_level3_fee ?? 15.00;
+        const restrictAtLevel = settingsData.dunning_restrict_at_level ?? 2;
+        const autoEnabled = settingsData.dunning_auto_enabled ?? true;
+
+        // Skip if automatic dunning is disabled
+        if (!autoEnabled) {
+          continue;
+        }
+
         let reminderLevel = 1;
         let reminderFee = 0;
         
-        if (daysPastDue >= 42) {
+        if (daysPastDue >= level3Days) {
           reminderLevel = 3;
-          reminderFee = 15.00;
-        } else if (daysPastDue >= 28) {
+          reminderFee = level3Fee;
+        } else if (daysPastDue >= level2Days) {
           reminderLevel = 2;
-          reminderFee = 10.00;
-        } else if (daysPastDue >= 14) {
+          reminderFee = level2Fee;
+        } else if (daysPastDue >= level1Days) {
           reminderLevel = 1;
-          reminderFee = 5.00;
+          reminderFee = level1Fee;
         } else {
           continue;
         }
@@ -103,7 +117,7 @@ Deno.serve(async (req) => {
         );
 
         if (existingReminder) {
-          if (daysPastDue >= 28 && reminderLevel >= 2) {
+          if (restrictAtLevel > 0 && reminderLevel >= restrictAtLevel) {
             await restrictDealerAccount(supabase, invoice.dealer_id);
           }
           continue;
@@ -136,8 +150,8 @@ Deno.serve(async (req) => {
         // Send reminder email
         await sendReminderEmail(invoice, reminder, reminderLevel, settingsData);
 
-        // Restrict account if 2nd reminder
-        if (reminderLevel >= 2) {
+        // Restrict account based on configurable level
+        if (restrictAtLevel > 0 && reminderLevel >= restrictAtLevel) {
           await restrictDealerAccount(supabase, invoice.dealer_id);
         }
 
@@ -260,8 +274,9 @@ Deno.serve(async (req) => {
       ${level >= 3 ? warningBox('Dies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.') : ''}
 
       ${infoBox('Bankverbindung', `
-        ${detailRow('IBAN', 'DE89 3704 0044 0532 0130 00')}
-        ${detailRow('BIC', 'COBADEFFXXX')}
+        ${detailRow('IBAN', settingsData.bank_iban || 'Bitte in Einstellungen hinterlegen')}
+        ${settingsData.bank_bic ? detailRow('BIC', settingsData.bank_bic) : ''}
+        ${settingsData.bank_name ? detailRow('Bank', settingsData.bank_name) : ''}
         ${detailRow('Verwendungszweck', invoice.invoice_number)}
       `)}
 

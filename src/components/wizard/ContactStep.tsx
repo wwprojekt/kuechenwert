@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Lock, Shield, Star, Users, TrendingUp } from "lucide-react";
+import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Lock, Shield, Star, Users, TrendingUp, CheckCircle2 } from "lucide-react";
 import TrustpilotWidget from "@/components/TrustpilotWidget";
 import type { User } from "@supabase/supabase-js";
 

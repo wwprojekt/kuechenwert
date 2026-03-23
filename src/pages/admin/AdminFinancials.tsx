@@ -46,7 +46,9 @@ import {
   Percent,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar
+  Calendar,
+  Gavel,
+  Scale
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -127,6 +129,29 @@ export default function AdminFinancials() {
         `)
         .in('payment_status', ['pending', 'partial'])
         .lt('due_date', new Date().toISOString())
+        .order('due_date');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch dunning invoices (30+ days overdue = active dunning process)
+  const dunningThresholdDate = new Date();
+  dunningThresholdDate.setDate(dunningThresholdDate.getDate() - 30);
+
+  const { data: dunningInvoices } = useQuery({
+    queryKey: ['dunning-invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          dealer:profiles(first_name, last_name, company_name, email, customer_number, phone),
+          reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
+        `)
+        .in('payment_status', ['pending', 'partial'])
+        .lt('due_date', dunningThresholdDate.toISOString())
         .order('due_date');
       
       if (error) throw error;
@@ -326,6 +351,8 @@ export default function AdminFinancials() {
   const paidCount = invoices?.filter(inv => inv.payment_status === 'paid').length || 0;
   const avgInvoiceAmount = invoices?.length ? totalGross / invoices.length : 0;
   const paymentRate = totalGross > 0 ? (totalPaid / totalGross) * 100 : 0;
+  const dunningCount = dunningInvoices?.length || 0;
+  const dunningAmount = dunningInvoices?.reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0) || 0;
 
   // This month stats
   const thisMonthInvoices = invoices?.filter(inv => {
@@ -496,6 +523,11 @@ export default function AdminFinancials() {
             <AlertTriangle className="h-4 w-4" />
             Überfällig
             {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="dunning" className="gap-2">
+            <Gavel className="h-4 w-4" />
+            Mahnprozess
+            {dunningCount > 0 && <Badge variant="destructive" className="ml-1">{dunningCount}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="payments" className="gap-2">
             <History className="h-4 w-4" />
@@ -765,10 +797,164 @@ export default function AdminFinancials() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>        {/* ── Tab: Mahnprozess ────────────────────────────────────────── */}
+        <TabsContent value="dunning">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gavel className="h-5 w-5 text-red-600" />
+                    Aktive Mahnverfahren
+                  </CardTitle>
+                  <CardDescription>
+                    Rechnungen die seit mehr als 30 Tagen überfällig sind und sich im Mahnprozess befinden
+                  </CardDescription>
+                </div>
+                {dunningCount > 0 && (
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-red-600">
+                      {dunningAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{dunningCount} offene Mahnverfahren</div>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!dunningInvoices?.length ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Scale className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p className="text-lg font-medium">Keine aktiven Mahnverfahren</p>
+                  <p className="text-sm">Es gibt derzeit keine Rechnungen im Mahnprozess (30+ Tage überfällig).</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {dunningInvoices.map((invoice: any) => {
+                    const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                    const remaining = Number(invoice.gross_amount) - Number(invoice.amount_paid || 0);
+                    const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
+                    const reminderCount = invoice.reminders?.length || 0;
+                    const maxLevel = invoice.reminders?.reduce((max: number, r: any) => Math.max(max, r.reminder_level || 0), 0) || 0;
+                    const lastReminder = invoice.reminders?.sort((a: any, b: any) => new Date(b.reminder_date).getTime() - new Date(a.reminder_date).getTime())?.[0];
+                    const totalFees = invoice.reminders?.reduce((sum: number, r: any) => sum + Number(r.reminder_fee || 0), 0) || 0;
+                    
+                    // Dunning level classification
+                    let levelColor = 'bg-yellow-100 border-yellow-300 text-yellow-800';
+                    let levelLabel = 'Zahlungserinnerung';
+                    let levelBg = 'bg-yellow-50/50 border-yellow-200';
+                    if (maxLevel >= 3 || daysOverdue > 90) {
+                      levelColor = 'bg-red-100 border-red-300 text-red-800';
+                      levelLabel = '3. Mahnung – Letzte Warnung';
+                      levelBg = 'bg-red-50/80 border-red-300';
+                    } else if (maxLevel >= 2 || daysOverdue > 60) {
+                      levelColor = 'bg-orange-100 border-orange-300 text-orange-800';
+                      levelLabel = '2. Mahnung';
+                      levelBg = 'bg-orange-50/50 border-orange-200';
+                    } else if (maxLevel >= 1 || daysOverdue > 30) {
+                      levelColor = 'bg-amber-100 border-amber-300 text-amber-800';
+                      levelLabel = '1. Mahnung';
+                      levelBg = 'bg-amber-50/50 border-amber-200';
+                    }
+
+                    return (
+                      <div key={invoice.id} className={`p-5 border rounded-lg ${levelBg}`}>
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          {/* Left: Invoice + Dealer Info */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div className="min-w-[160px]">
+                              <div className="font-bold text-lg">{invoice.invoice_number}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {invoice.dealer?.company_name || `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`}
+                              </div>
+                              {custNum && (
+                                <div className="text-xs text-blue-600 font-semibold mt-0.5">{custNum}</div>
+                              )}
+                              {invoice.dealer?.email && (
+                                <div className="text-xs text-muted-foreground">{invoice.dealer.email}</div>
+                              )}
+                            </div>
+                            
+                            {/* Dunning Status */}
+                            <div className="space-y-1.5">
+                              <Badge className={levelColor}>{levelLabel}</Badge>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="font-medium text-red-600">{daysOverdue} Tage überfällig</span>
+                                <span>·</span>
+                                <span>{reminderCount} Mahnung(en) versendet</span>
+                                {totalFees > 0 && (
+                                  <>
+                                    <span>·</span>
+                                    <span>Mahngebühren: {totalFees.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                                  </>
+                                )}
+                              </div>
+                              {lastReminder && (
+                                <div className="text-xs text-muted-foreground">
+                                  Letzte Mahnung: {format(new Date(lastReminder.reminder_date), 'dd.MM.yyyy', { locale: de })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right: Amount + Actions */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div className="text-right min-w-[140px]">
+                              <div className="text-xl font-bold text-red-700">
+                                {remaining.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                von {Number(invoice.gross_amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Fällig: {format(new Date(invoice.due_date), 'dd.MM.yyyy', { locale: de })}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <Button 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedInvoice(invoice);
+                                  setPaymentDialogOpen(true);
+                                }}
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Zahlung erfassen
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => sendReminderMutation.mutate(invoice.id)}
+                                disabled={sendReminderMutation.isPending}
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Nächste Mahnung
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                                onClick={() => {
+                                  setInvoiceToDelete(invoice);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Löschen
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* ── Tab: Zahlungshistorie ────────────────────────────────── */}
-        <TabsContent value="payments">
+        {/* ── Tab: Zahlungshistorie ──────────────────────────────────────── */}     <TabsContent value="payments">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

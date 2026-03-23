@@ -289,7 +289,7 @@ export default function AdminDealerDetail() {
   return (
     <AdminDetailLayout
       title={dealer?.company_name || "Händler"}
-      subtitle={dealer?.city ? `${dealer.street || ""}, ${dealer.postal_code || ""} ${dealer.city}` : undefined}
+      subtitle={dealer?.company_city ? `${dealer.company_address || ""}, ${dealer.company_postal_code || ""} ${dealer.company_city}` : undefined}
       status={dealer ? getStatusBadge(dealer.status) : undefined}
       backUrl="/admin/dealers"
       backLabel="Alle Händler"
@@ -434,8 +434,8 @@ export default function AdminDealerDetail() {
                       Adresse
                     </h4>
                     <InfoGrid columns={2}>
-                      <InfoItem label="Straße" value={dealer.street} />
-                      <InfoItem label="PLZ / Stadt" value={`${dealer.postal_code || ""} ${dealer.city || ""}`} />
+                      <InfoItem label="Straße" value={dealer.company_address} />
+                      <InfoItem label="PLZ / Stadt" value={`${dealer.company_postal_code || ""} ${dealer.company_city || ""}`} />
                     </InfoGrid>
 
                     {dealer.business_description && (
@@ -450,10 +450,10 @@ export default function AdminDealerDetail() {
                 <TabsContent value="contact">
                   <DetailSection title="Kontaktdaten" icon={<User className="w-5 h-5" />}>
                     <InfoGrid columns={2}>
-                      <InfoItem label="Ansprechpartner" value={dealer.contact_person} />
-                      <InfoItem label="Position" value={dealer.contact_position} />
+                      <InfoItem label="Ansprechpartner" value={dealer.contact_person_name} />
+                      <InfoItem label="Position" value={dealer.contact_person_position} />
                       <InfoItem label="E-Mail" value={dealer.profile?.email} icon={<Mail className="w-3 h-3" />} />
-                      <InfoItem label="Telefon" value={dealer.contact_phone || dealer.profile?.phone} icon={<Phone className="w-3 h-3" />} />
+                      <InfoItem label="Telefon" value={dealer.phone || dealer.profile?.phone} icon={<Phone className="w-3 h-3" />} />
                       <InfoItem label="Website" value={dealer.website} icon={<Globe className="w-3 h-3" />} />
                     </InfoGrid>
 

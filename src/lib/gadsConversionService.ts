@@ -23,6 +23,9 @@ declare global {
 // Google Ads Tag ID für das CaravanWert-Konto
 const GOOGLE_ADS_ID = 'AW-18033517246';
 
+// Google Analytics 4 Measurement ID für das CaravanWert-Konto
+const GA4_MEASUREMENT_ID = 'G-H4BCV8DS0B';
+
 // Hilfsfunktion: gtag sicher aufrufen
 // Verwendet window.gtag (explizit in index.html gesetzt) oder
 // fällt auf dataLayer.push zurück falls gtag nicht verfügbar ist
@@ -120,12 +123,14 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
  * Primäre Conversion: Ja (für Gebotsoptimierung)
  */
 export function trackLandingPageLead(landingPage: string, vehicleInfo?: string): void {
+  // Google Ads Conversion
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
     value: 10.0,
     currency: 'EUR',
   });
 
+  // GA4 + Google Ads: generate_lead Event (GA4 empfohlenes Event)
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
     event_label: `landing_page_lead_${landingPage}`,
@@ -143,18 +148,27 @@ export function trackLandingPageLead(landingPage: string, vehicleInfo?: string):
  * Primäre Conversion: Ja
  */
 export function trackKontaktformularGesendet(): void {
+  // Google Ads Conversion
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET}`,
     value: 10.0,
     currency: 'EUR',
   });
 
+  // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
     event_label: 'kontaktformular_gesendet',
     value: 10.0,
     currency: 'EUR',
     lead_source: 'kontaktformular',
+  });
+
+  // GA4: Zusätzliches form_submit Event für detaillierte Analyse
+  safeGtag('event', 'form_submit', {
+    form_id: 'kontaktformular',
+    form_name: 'Kontaktformular',
+    form_destination: '/kontakt',
   });
 }
 
@@ -164,12 +178,14 @@ export function trackKontaktformularGesendet(): void {
  * Primäre Conversion: Ja
  */
 export function trackWertermittlungLead(vehicleInfo?: string): void {
+  // Google Ads Conversion
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WERTERMITTLUNG_LEAD}`,
     value: 10.0,
     currency: 'EUR',
   });
 
+  // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
     event_label: 'wertermittlung_lead',
@@ -177,6 +193,13 @@ export function trackWertermittlungLead(vehicleInfo?: string): void {
     currency: 'EUR',
     lead_source: 'wertermittlung',
     vehicle_info: vehicleInfo || '',
+  });
+
+  // GA4: form_submit Event
+  safeGtag('event', 'form_submit', {
+    form_id: 'wertermittlung',
+    form_name: 'Wertermittlung',
+    form_destination: '/wertermittlung',
   });
 }
 
@@ -186,12 +209,14 @@ export function trackWertermittlungLead(vehicleInfo?: string): void {
  * Primäre Conversion: Ja
  */
 export function trackWertrechnerLead(vehicleInfo?: string): void {
+  // Google Ads Conversion
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WERTRECHNER_LEAD}`,
     value: 10.0,
     currency: 'EUR',
   });
 
+  // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
     event_label: 'wertrechner_lead',
@@ -199,6 +224,13 @@ export function trackWertrechnerLead(vehicleInfo?: string): void {
     currency: 'EUR',
     lead_source: 'wertrechner',
     vehicle_info: vehicleInfo || '',
+  });
+
+  // GA4: form_submit Event
+  safeGtag('event', 'form_submit', {
+    form_id: 'wertrechner',
+    form_name: 'Wertrechner',
+    form_destination: '/wertrechner',
   });
 }
 
@@ -274,26 +306,42 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
  * PRIMÄRE CONVERSION: Wizard Abgeschlossen + Bewertung abgeschlossen
  */
 export function trackWizardCompleted(vehicleInfo: string): void {
-  // Primäre Conversion: Wizard Abgeschlossen
+  // Google Ads: Primäre Conversion – Wizard Abgeschlossen
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN}`,
     value: 10.0,
     currency: 'EUR',
   });
 
-  // Bestehende Conversion: Bewertung abgeschlossen
+  // Google Ads: Bestehende Conversion – Bewertung abgeschlossen
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
     value: 50.0,
     currency: 'EUR',
   });
 
-  safeGtag('event', 'purchase', {
+  // GA4 + Google Ads: generate_lead Event (höchster Wert)
+  safeGtag('event', 'generate_lead', {
     event_category: 'Wizard',
     event_label: 'wizard_completed',
     vehicle_info: vehicleInfo,
-    value: 10.0,
+    value: 50.0,
     currency: 'EUR',
+    lead_source: 'wizard',
+  });
+
+  // GA4: Funnel-Abschluss als purchase Event (für E-Commerce-Berichte)
+  safeGtag('event', 'purchase', {
+    transaction_id: `wizard_${Date.now()}`,
+    value: 50.0,
+    currency: 'EUR',
+    items: [{
+      item_id: 'wizard_completion',
+      item_name: 'Wohnmobil-Bewertung abgeschlossen',
+      item_category: 'Lead',
+      price: 50.0,
+      quantity: 1,
+    }],
   });
 }
 

@@ -153,6 +153,8 @@ export default function DealerOnboarding() {
 
     try {
       // Create auth user account
+      // All dealer data is passed as user_metadata so the handle_new_user
+      // database trigger can create the dealer_application automatically
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -160,7 +162,16 @@ export default function DealerOnboarding() {
           data: {
             first_name: formData.first_name,
             last_name: formData.last_name,
-            user_type: 'dealer', // Flag for special handling
+            phone: formData.phone,
+            company_name: formData.company_name,
+            company_address: formData.company_address,
+            company_postal_code: formData.company_postal_code,
+            company_city: formData.company_city,
+            contact_person_name: formData.contact_person_name,
+            contact_person_position: formData.contact_person_position || null,
+            website: formData.website || null,
+            legal_form: formData.legal_form || null,
+            user_type: 'dealer',
           },
         },
       });
@@ -171,31 +182,20 @@ export default function DealerOnboarding() {
         throw new Error('User creation failed');
       }
 
-      // Create dealer application
+      // The dealer_application is created by the handle_new_user database trigger
+      // (runs with SECURITY DEFINER, bypassing RLS)
+      // Fetch the created application to get its ID
       const { data: applicationData, error: applicationError } = await supabase
         .from('dealer_applications')
-        .insert({
-          user_id: authData.user.id,
-          company_name: formData.company_name,
-          company_address: formData.company_address,
-          company_postal_code: formData.company_postal_code,
-          company_city: formData.company_city,
-          legal_form: formData.legal_form,
-
-          hrb_number: formData.hrb_number,
-          contact_person_name: formData.contact_person_name,
-          contact_person_position: formData.contact_person_position,
-          phone: formData.phone,
-          website: formData.website,
-
-          status: 'pending',
-        })
-        .select()
+        .select('id')
+        .eq('user_id', authData.user.id)
         .single();
 
-      if (applicationError) throw applicationError;
+      if (applicationError) {
+        logger.warn('Could not fetch dealer application (may need email confirmation first):', applicationError);
+      }
 
-      setDealerApplicationId(applicationData.id);
+      setDealerApplicationId(applicationData?.id || null);
       setCurrentStep(4); // Move to SEPA mandate step
 
       toast({

@@ -19,6 +19,10 @@ import {
   Calculator,
   Info,
   Check,
+  User,
+  Mail,
+  Phone,
+  Lock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -29,7 +33,7 @@ import { trackWertrechnerLead } from "@/lib/gadsConversionService";
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
   email: z.string().trim().email("Ungültige E-Mail-Adresse"),
-  phone: z.string().optional(),
+  phone: z.string().trim().min(5, "Bitte geben Sie Ihre Telefonnummer ein"),
 });
 
 const BODY_TYPES = [
@@ -109,11 +113,18 @@ const Wertrechner = () => {
   const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
 
-  const totalSteps = 5;
+  // 6 steps: 1=bodyType, 2=manufacturer/model, 3=year/mileage, 4=condition, 5=contact, 6=result
+  const totalSteps = 6;
   const progress = (step / totalSteps) * 100;
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Calculate value now (after contact data is submitted)
+      const year = parseInt(data.year, 10);
+      const mileage = parseInt(data.mileage, 10);
+      const value = calculateValue(data.bodyType, year, mileage, data.condition);
+      setEstimatedValue(value);
+
       const { error } = await supabase.from("value_assessment_leads").insert({
         name: data.name,
         email: data.email,
@@ -125,8 +136,8 @@ const Wertrechner = () => {
         condition: data.condition || null,
         body_type: data.bodyType || null,
         source: "wertrechner",
-        estimated_value_min: estimatedValue?.min || null,
-        estimated_value_max: estimatedValue?.max || null,
+        estimated_value_min: value.min,
+        estimated_value_max: value.max,
       });
 
       if (error) throw error;
@@ -141,16 +152,20 @@ const Wertrechner = () => {
             phone: data.phone,
             manufacturer: data.manufacturer,
             model: data.model,
-            estimatedMin: estimatedValue?.min,
-            estimatedMax: estimatedValue?.max,
+            estimatedMin: value.min,
+            estimatedMax: value.max,
           },
         });
       } catch {
         // Don't fail if notification fails
       }
+
+      return value;
     },
-    onSuccess: () => {
+    onSuccess: (value) => {
       setLeadSubmitted(true);
+      setEstimatedValue(value);
+      setStep(6);
 
       // Google Ads Conversion Tracking: Wertrechner Lead (Primäre Conversion)
       trackWertrechnerLead(
@@ -158,14 +173,14 @@ const Wertrechner = () => {
       );
 
       toast({
-        title: "Anfrage gesendet!",
-        description: "Wir melden uns für eine genaue Bewertung bei Ihnen.",
+        title: "Vielen Dank!",
+        description: "Hier ist Ihre Wertschätzung.",
       });
     },
     onError: () => {
       toast({
         title: "Fehler",
-        description: "Anfrage konnte nicht gesendet werden.",
+        description: "Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
         variant: "destructive",
       });
     },
@@ -207,8 +222,7 @@ const Wertrechner = () => {
       return;
     }
 
-    const value = calculateValue(formData.bodyType, year, mileage, formData.condition);
-    setEstimatedValue(value);
+    // Don't calculate yet - go to contact step first
     setStep(5);
   }, [formData.bodyType, formData.year, formData.mileage, formData.condition, toast]);
 
@@ -242,10 +256,12 @@ const Wertrechner = () => {
       }
       case 4:
         return !!formData.condition;
+      case 5:
+        return formData.name.trim().length >= 2 && formData.email.trim().length > 0 && formData.phone.trim().length >= 5;
       default:
         return false;
     }
-  }, [step, formData.bodyType, formData.year, formData.mileage, formData.condition]);
+  }, [step, formData.bodyType, formData.year, formData.mileage, formData.condition, formData.name, formData.email, formData.phone]);
 
   // Auto-proceed timer ref
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -270,8 +286,8 @@ const Wertrechner = () => {
   const prevStep = () => {
     if (step > 1) {
       setStep(step - 1);
-      if (step === 5) {
-        setEstimatedValue(null);
+      if (step === 6) {
+        // Don't clear value when going back from result
       }
     }
   };
@@ -289,13 +305,11 @@ const Wertrechner = () => {
       // Small delay for visual feedback before proceeding
       autoNextTimerRef.current = setTimeout(() => {
         if (step === 4) {
-          // For condition step, calculate and proceed
+          // For condition step, go to contact step (not result)
           const year = parseInt(formData.year, 10);
           const mileage = parseInt(formData.mileage, 10);
           const currentYear = new Date().getFullYear();
           if (formData.bodyType && !isNaN(year) && year >= 1950 && year <= currentYear && !isNaN(mileage) && mileage >= 0 && mileage <= 999999) {
-            const calculatedValue = calculateValue(formData.bodyType, year, mileage, value);
-            setEstimatedValue(calculatedValue);
             setStep(5);
           }
         } else {
@@ -320,7 +334,7 @@ const Wertrechner = () => {
             Wohnmobil Wertrechner
           </h1>
           <p className="text-xl text-muted-foreground">
-            Erhalten Sie in nur 4 Schritten eine erste Wertschätzung für Ihr Wohnmobil.
+            Erhalten Sie in nur wenigen Schritten eine erste Wertschätzung für Ihr Wohnmobil.
           </p>
         </div>
       </PageHero>
@@ -328,12 +342,14 @@ const Wertrechner = () => {
       <div className="container py-12">
         <div className="max-w-2xl mx-auto">
           {/* Progress Bar */}
-          <div className="mb-8">
-            <div className="flex justify-end text-sm text-muted-foreground mb-2">
-              <span>{Math.round((Math.min(step, 4) / 4) * 100)}%</span>
+          {step < 6 && (
+            <div className="mb-8">
+              <div className="flex justify-end text-sm text-muted-foreground mb-2">
+                <span>Schritt {step} von 5</span>
+              </div>
+              <Progress value={Math.min((step / 5) * 100, 100)} className="h-2" />
             </div>
-            <Progress value={Math.min(progress, 80)} className="h-2" />
-          </div>
+          )}
 
           <Card className="p-8">
             {/* Step 1: Body Type */}
@@ -402,16 +418,13 @@ const Wertrechner = () => {
                     <Label htmlFor="model">Modell</Label>
                     <Input
                       id="model"
-                      placeholder="z.B. B-Klasse, Globebus, Ixeo..."
+                      placeholder="z.B. B-Klasse MC, Trend, Ixeo..."
                       value={formData.model}
                       onChange={(e) => updateField("model", e.target.value)}
                       className="transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground text-center animate-fade-in" style={{ animationDelay: '150ms' }}>
-                  Diese Angaben sind optional - klicken Sie auf "Weiter" um fortzufahren
-                </p>
               </div>
             )}
 
@@ -421,17 +434,17 @@ const Wertrechner = () => {
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Baujahr & Kilometerstand</h2>
                   <p className="text-muted-foreground">
-                    Diese Daten beeinflussen den Wert erheblich.
+                    Diese Angaben sind entscheidend für die Wertermittlung.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
                     <Label htmlFor="year">Baujahr *</Label>
                     <Input
                       id="year"
                       type="number"
                       placeholder="z.B. 2018"
-                      min={1980}
+                      min={1950}
                       max={new Date().getFullYear()}
                       value={formData.year}
                       onChange={(e) => updateField("year", e.target.value)}
@@ -446,6 +459,7 @@ const Wertrechner = () => {
                       type="number"
                       placeholder="z.B. 45000"
                       min={0}
+                      max={999999}
                       value={formData.mileage}
                       onChange={(e) => updateField("mileage", e.target.value)}
                       className="transition-all focus:ring-2 focus:ring-primary/20 text-lg h-12"
@@ -492,19 +506,111 @@ const Wertrechner = () => {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
-                  Klicken Sie auf eine Option, um den Wert zu berechnen
+                  Klicken Sie auf eine Option, um fortzufahren
                 </p>
               </div>
             )}
 
-            {/* Step 5: Results */}
-            {step === 5 && estimatedValue && (
-              <div className="space-y-8">
+            {/* Step 5: Contact Details (BEFORE showing result) */}
+            {step === 5 && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <Calculator className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">Ihr Ergebnis ist fertig!</h2>
+                  <p className="text-muted-foreground">
+                    Geben Sie Ihre Kontaktdaten ein, um Ihre kostenlose Wertschätzung zu erhalten.
+                  </p>
+                </div>
+
+                {/* Blurred preview teaser */}
+                <div className="relative rounded-xl overflow-hidden">
+                  <div className="bg-primary/5 rounded-xl p-8 text-center blur-md select-none" aria-hidden="true">
+                    <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                      €XX.XXX - €XX.XXX
+                    </div>
+                    <p className="text-muted-foreground">
+                      Geschätzter Marktwert
+                    </p>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 text-primary font-semibold">
+                      <Lock className="w-5 h-5" />
+                      <span>Kontaktdaten eingeben zum Freischalten</span>
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleLeadSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      placeholder="Max Mustermann"
+                      value={formData.name}
+                      onChange={(e) => updateField("name", e.target.value)}
+                      className="h-12 text-base"
+                      autoFocus
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      E-Mail *
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="max@beispiel.de"
+                      value={formData.email}
+                      onChange={(e) => updateField("email", e.target.value)}
+                      className="h-12 text-base"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      Telefon *
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+49 123 456789"
+                      value={formData.phone}
+                      onChange={(e) => updateField("phone", e.target.value)}
+                      className="h-12 text-base"
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full gradient-hero h-14 text-lg font-semibold"
+                    disabled={submitMutation.isPending}
+                  >
+                    {submitMutation.isPending ? "Wird berechnet..." : "Wert jetzt anzeigen"}
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Ihre Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.
+                  </p>
+                </form>
+              </div>
+            )}
+
+            {/* Step 6: Results (only after contact submission) */}
+            {step === 6 && estimatedValue && (
+              <div className="space-y-8 animate-fade-in">
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                    <Calculator className="w-8 h-8 text-green-600" />
+                    <CheckCircle2 className="w-8 h-8 text-green-600" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">Geschätzter Wert</h2>
+                  <h2 className="text-2xl font-bold mb-2">Geschätzter Wert Ihres Wohnmobils</h2>
                   <p className="text-muted-foreground">
                     Basierend auf Ihren Angaben und aktuellen Marktdaten
                   </p>
@@ -523,82 +629,23 @@ const Wertrechner = () => {
                   <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
                     Dies ist eine erste Schätzung. Der tatsächliche Wert kann je nach Ausstattung, 
-                    Wartungshistorie und individuellen Faktoren variieren. Für eine genauere 
-                    Bewertung kontaktieren Sie uns.
+                    Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden 
+                    sich bei Ihnen für eine genauere Bewertung.
                   </p>
                 </div>
 
-                {/* Lead Capture */}
-                {!leadSubmitted ? (
-                  <div className="border-t pt-8">
-                    <h3 className="font-semibold text-lg mb-4">
-                      Genauere Bewertung gewünscht?
-                    </h3>
-                    <p className="text-muted-foreground mb-6">
-                      Hinterlassen Sie Ihre Kontaktdaten und unsere Experten melden sich 
-                      mit einer detaillierten Einschätzung bei Ihnen.
-                    </p>
-                    <form onSubmit={handleLeadSubmit} className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Name *</Label>
-                          <Input
-                            id="name"
-                            placeholder="Max Mustermann"
-                            value={formData.name}
-                            onChange={(e) => updateField("name", e.target.value)}
-
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">E-Mail *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="max@beispiel.de"
-                            value={formData.email}
-                            onChange={(e) => updateField("email", e.target.value)}
-
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Telefon (optional)</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+49 123 456789"
-                          value={formData.phone}
-                          onChange={(e) => updateField("phone", e.target.value)}
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        className="w-full gradient-hero"
-                        disabled={submitMutation.isPending}
-                      >
-                        {submitMutation.isPending ? "Wird gesendet..." : "Expertenberatung anfordern"}
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </form>
-                  </div>
-                ) : (
-                  <div className="border-t pt-8 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-4">
-                      <CheckCircle2 className="w-6 h-6 text-green-600" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">Vielen Dank!</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Wir melden uns in Kürze bei Ihnen.
-                    </p>
-                    <Link to="/verkaufen">
-                      <Button className="gradient-hero">
-                        Jetzt verkaufen
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
-                  </div>
-                )}
+                {/* Thank you + CTA */}
+                <div className="border-t pt-8 text-center space-y-4">
+                  <p className="text-muted-foreground">
+                    Vielen Dank, {formData.name.split(' ')[0]}! Wir melden uns in Kürze bei Ihnen.
+                  </p>
+                  <Link to="/verkaufen">
+                    <Button className="gradient-hero" size="lg">
+                      Jetzt kostenlos verkaufen
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
 
                 {/* Summary */}
                 <div className="border-t pt-6">
@@ -647,17 +694,26 @@ const Wertrechner = () => {
                   disabled={!canProceed()}
                   className="gradient-hero"
                 >
-                  {step === 4 ? "Wert berechnen" : "Weiter"}
+                  {step === 4 ? "Weiter" : "Weiter"}
                   <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             )}
 
             {step === 5 && (
-              <div className="mt-8 pt-6 border-t">
+              <div className="mt-6 pt-4 border-t">
                 <Button variant="ghost" onClick={prevStep} className="w-full">
                   <ChevronLeft className="w-4 h-4 mr-2" />
-                  Angaben ändern
+                  Zurück zu den Fahrzeugdaten
+                </Button>
+              </div>
+            )}
+
+            {step === 6 && (
+              <div className="mt-8 pt-6 border-t">
+                <Button variant="ghost" onClick={() => { setStep(1); setEstimatedValue(null); setLeadSubmitted(false); }} className="w-full">
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Neues Fahrzeug bewerten
                 </Button>
               </div>
             )}

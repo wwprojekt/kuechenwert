@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -23,6 +22,14 @@ import {
   Mail,
   Phone,
   Lock,
+  Shield,
+  Clock,
+  Star,
+  Truck,
+  CarFront,
+  Bus,
+  Caravan,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -37,25 +44,33 @@ const leadSchema = z.object({
 });
 
 const BODY_TYPES = [
-  { value: "integriert", label: "Integriertes Wohnmobil", factor: 1.2 },
-  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", factor: 1.1 },
-  { value: "alkoven", label: "Alkovenmobil", factor: 1.0 },
-  { value: "kastenwagen", label: "Kastenwagen / Van", factor: 0.95 },
-  { value: "campingbus", label: "Campingbus", factor: 0.85 },
+  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", factor: 1.2 },
+  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", factor: 1.1 },
+  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", factor: 1.0 },
+  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", factor: 0.95 },
+  { value: "campingbus", label: "Campingbus", icon: CarFront, description: "Flexibel und alltagstauglich", factor: 0.85 },
 ];
 
 const CONDITIONS = [
-  { value: "new", label: "Neu / Wie neu", factor: 1.0 },
-  { value: "excellent", label: "Ausgezeichnet", factor: 0.9 },
-  { value: "good", label: "Gut", factor: 0.75 },
-  { value: "fair", label: "Befriedigend", factor: 0.6 },
-  { value: "poor", label: "Renovierungsbedürftig", factor: 0.4 },
+  { value: "new", label: "Neu / Wie neu", description: "Keine Gebrauchsspuren, neuwertig", emoji: "✨", factor: 1.0 },
+  { value: "excellent", label: "Ausgezeichnet", description: "Minimale Gebrauchsspuren, top gepflegt", emoji: "🌟", factor: 0.9 },
+  { value: "good", label: "Gut", description: "Normale Gebrauchsspuren, gepflegt", emoji: "👍", factor: 0.75 },
+  { value: "fair", label: "Befriedigend", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.6 },
+  { value: "poor", label: "Renovierungsbedürftig", description: "Erhebliche Mängel, Reparaturbedarf", emoji: "🔧", factor: 0.4 },
 ];
 
-// Base value calculation constants
-const BASE_VALUE_NEW = 80000; // Average base value for a new motorhome
-const DEPRECIATION_RATE = 0.08; // 8% per year
-const MILEAGE_FACTOR = 0.00001; // Reduce 1% per 10000km
+const MANUFACTURERS = [
+  "Adria", "Ahorn Camp", "Bavaria", "Benimar", "Bürstner", "Carado", "Carthago",
+  "Challenger", "Chausson", "Concorde", "Dethleffs", "Elnagh", "Etrusco",
+  "Eura Mobil", "Fendt", "Forster", "Frankia", "Globecar", "Hobby", "Hymer",
+  "Knaus", "Laika", "LMC", "Malibu", "McLouis", "Morelo", "Niesmann+Bischoff",
+  "Pilote", "Pössl", "Rapido", "Roller Team", "Sunlight", "Sun Living",
+  "Volkswagen", "Weinsberg", "Westfalia",
+];
+
+const BASE_VALUE_NEW = 80000;
+const DEPRECIATION_RATE = 0.08;
+const MILEAGE_FACTOR = 0.00001;
 
 const calculateValue = (
   bodyType: string,
@@ -65,24 +80,15 @@ const calculateValue = (
 ): { min: number; max: number } => {
   const currentYear = new Date().getFullYear();
   const age = currentYear - year;
-
-  // Get factors
   const bodyFactor = BODY_TYPES.find((b) => b.value === bodyType)?.factor || 1.0;
   const conditionFactor = CONDITIONS.find((c) => c.value === condition)?.factor || 0.75;
-
-  // Calculate depreciation (limit to 80% max depreciation)
   const ageDepreciation = Math.min(0.8, age * DEPRECIATION_RATE);
   const mileageDepreciation = Math.min(0.3, mileage * MILEAGE_FACTOR);
-
-  // Base calculation
   const baseValue = BASE_VALUE_NEW * bodyFactor;
   const depreciatedValue = baseValue * (1 - ageDepreciation) * (1 - mileageDepreciation);
   const finalValue = depreciatedValue * conditionFactor;
-
-  // Add variance (+/- 15%)
   const min = Math.round(finalValue * 0.85);
   const max = Math.round(finalValue * 1.15);
-
   return { min: Math.max(min, 3000), max: Math.max(max, 5000) };
 };
 
@@ -94,32 +100,256 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+// Generate years for dropdown
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: currentYear - 1979 }, (_, i) => currentYear - i);
+
+// Loading messages for fake calculation
+const LOADING_MESSAGES = [
+  { text: "Fahrzeugdaten werden analysiert...", duration: 800 },
+  { text: "Marktdaten werden abgeglichen...", duration: 1000 },
+  { text: "Vergleichbare Fahrzeuge werden gesucht...", duration: 1200 },
+  { text: "Wert wird berechnet...", duration: 800 },
+];
+
+// Step indicator component
+const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+  const stepLabels = ["Typ", "Marke", "Details", "Zustand", "Kontakt"];
+  return (
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {stepLabels.map((label, i) => {
+        const stepNum = i + 1;
+        const isActive = stepNum === currentStep;
+        const isCompleted = stepNum < currentStep;
+        return (
+          <div key={stepNum} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
+                  isCompleted
+                    ? "bg-primary text-white shadow-md"
+                    : isActive
+                    ? "bg-primary text-white shadow-lg ring-4 ring-primary/20 scale-110"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isCompleted ? <Check className="w-4 h-4" /> : stepNum}
+              </div>
+              <span
+                className={cn(
+                  "text-[10px] mt-1.5 font-medium transition-colors hidden sm:block",
+                  isActive ? "text-primary" : isCompleted ? "text-primary/70" : "text-muted-foreground"
+                )}
+              >
+                {label}
+              </span>
+            </div>
+            {i < stepLabels.length - 1 && (
+              <div
+                className={cn(
+                  "w-8 sm:w-12 h-0.5 mx-1 transition-colors duration-300",
+                  stepNum < currentStep ? "bg-primary" : "bg-muted"
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Trust badges component
+const TrustBadges = () => (
+  <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-4 text-xs sm:text-sm text-muted-foreground">
+    <div className="flex items-center gap-1.5">
+      <Shield className="w-4 h-4 text-green-600" />
+      <span>100% Kostenlos</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <Lock className="w-4 h-4 text-blue-600" />
+      <span>Datenschutz garantiert</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <Clock className="w-4 h-4 text-orange-500" />
+      <span>Ergebnis in 2 Min.</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <Star className="w-4 h-4 text-yellow-500" />
+      <span>Unverbindlich</span>
+    </div>
+  </div>
+);
+
+// Animated counter for result
+const AnimatedValue = ({ value, duration = 1500 }: { value: number; duration?: number }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    let start = 0;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(eased * value);
+      setDisplayValue(current);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value, duration]);
+
+  return (
+    <span ref={ref}>
+      {new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(displayValue)}
+    </span>
+  );
+};
+
+// Loading/Calculation animation component
+const CalculationAnimation = ({ onComplete }: { onComplete: () => void }) => {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let totalElapsed = 0;
+    const totalDuration = LOADING_MESSAGES.reduce((sum, m) => sum + m.duration, 0);
+    let animFrame: number;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const overallProgress = Math.min((elapsed / totalDuration) * 100, 100);
+      setProgress(overallProgress);
+
+      // Determine which message to show
+      let accumulated = 0;
+      for (let i = 0; i < LOADING_MESSAGES.length; i++) {
+        accumulated += LOADING_MESSAGES[i].duration;
+        if (elapsed < accumulated) {
+          setMessageIndex(i);
+          break;
+        }
+      }
+
+      if (elapsed < totalDuration) {
+        animFrame = requestAnimationFrame(animate);
+      } else {
+        setProgress(100);
+        setMessageIndex(LOADING_MESSAGES.length - 1);
+        setTimeout(onComplete, 500);
+      }
+    };
+
+    animFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animFrame);
+  }, [onComplete]);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 space-y-8 animate-fade-in">
+      {/* Animated circle */}
+      <div className="relative w-32 h-32">
+        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/30" />
+          <circle
+            cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="6"
+            className="text-primary transition-all duration-300"
+            strokeDasharray={`${2 * Math.PI * 52}`}
+            strokeDashoffset={`${2 * Math.PI * 52 * (1 - progress / 100)}`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-primary">{Math.round(progress)}%</span>
+        </div>
+      </div>
+
+      {/* Status message */}
+      <div className="text-center space-y-2">
+        <p className="text-lg font-semibold text-foreground animate-pulse">
+          {LOADING_MESSAGES[messageIndex]?.text}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Bitte warten Sie einen Moment...
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full max-w-xs">
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Wertrechner = () => {
   const { toast } = useToast();
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || "CaravanWert";
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    bodyType: "",
-    manufacturer: "",
-    model: "",
-    year: "",
-    mileage: "",
-    condition: "",
-    name: "",
-    email: "",
-    phone: "",
+  const [showCalculation, setShowCalculation] = useState(false);
+  const [formData, setFormData] = useState(() => {
+    // Restore from session storage
+    try {
+      const saved = sessionStorage.getItem("wertrechner_data");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      bodyType: "",
+      manufacturer: "",
+      model: "",
+      year: "",
+      mileage: "",
+      condition: "",
+      name: "",
+      email: "",
+      phone: "",
+    };
   });
   const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [mileageDisplay, setMileageDisplay] = useState(() => {
+    if (formData.mileage) {
+      return parseInt(formData.mileage, 10).toLocaleString("de-DE");
+    }
+    return "";
+  });
+  const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
+  const [manufacturerFilter, setManufacturerFilter] = useState(formData.manufacturer || "");
+  const manufacturerRef = useRef<HTMLDivElement>(null);
 
-  // 6 steps: 1=bodyType, 2=manufacturer/model, 3=year/mileage, 4=condition, 5=contact, 6=result
-  const totalSteps = 6;
-  const progress = (step / totalSteps) * 100;
+  const totalSteps = 5; // Visual steps (calculation animation is between 4 and 5)
+
+  // Save to session storage on change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("wertrechner_data", JSON.stringify(formData));
+    } catch {}
+  }, [formData]);
+
+  // Close manufacturer dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (manufacturerRef.current && !manufacturerRef.current.contains(e.target as Node)) {
+        setShowManufacturerDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Calculate value now (after contact data is submitted)
       const year = parseInt(data.year, 10);
       const mileage = parseInt(data.mileage, 10);
       const value = calculateValue(data.bodyType, year, mileage, data.condition);
@@ -142,7 +372,6 @@ const Wertrechner = () => {
 
       if (error) throw error;
 
-      // Trigger notification Edge Function
       try {
         await supabase.functions.invoke("send-lead-notification", {
           body: {
@@ -156,9 +385,7 @@ const Wertrechner = () => {
             estimatedMax: value.max,
           },
         });
-      } catch {
-        // Don't fail if notification fails
-      }
+      } catch {}
 
       return value;
     },
@@ -166,16 +393,8 @@ const Wertrechner = () => {
       setLeadSubmitted(true);
       setEstimatedValue(value);
       setStep(6);
-
-      // Google Ads Conversion Tracking: Wertrechner Lead (Primäre Conversion)
-      trackWertrechnerLead(
-        `${formData.manufacturer} ${formData.model} ${formData.year}`
-      );
-
-      toast({
-        title: "Vielen Dank!",
-        description: "Hier ist Ihre Wertschätzung.",
-      });
+      trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
+      toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
     },
     onError: () => {
       toast({
@@ -187,8 +406,26 @@ const Wertrechner = () => {
   });
 
   const updateField = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev: typeof formData) => ({ ...prev, [field]: value }));
   };
+
+  const handleMileageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\./g, "").replace(/\D/g, "");
+    if (raw === "") {
+      setMileageDisplay("");
+      updateField("mileage", "");
+      return;
+    }
+    const num = parseInt(raw, 10);
+    if (!isNaN(num) && num <= 999999) {
+      setMileageDisplay(num.toLocaleString("de-DE"));
+      updateField("mileage", String(num));
+    }
+  };
+
+  const filteredManufacturers = MANUFACTURERS.filter((m) =>
+    m.toLowerCase().includes(manufacturerFilter.toLowerCase())
+  );
 
   const calculateAndProceed = useCallback(() => {
     const year = parseInt(formData.year, 10);
@@ -196,35 +433,26 @@ const Wertrechner = () => {
     const currentYear = new Date().getFullYear();
 
     if (!formData.bodyType || !formData.condition || isNaN(year) || isNaN(mileage)) {
-      toast({
-        title: "Felder ausfüllen",
-        description: "Bitte füllen Sie alle erforderlichen Felder aus.",
-        variant: "destructive",
-      });
+      toast({ title: "Felder ausfüllen", description: "Bitte füllen Sie alle erforderlichen Felder aus.", variant: "destructive" });
       return;
     }
-
     if (year < 1950 || year > currentYear) {
-      toast({
-        title: "Ungültiges Baujahr",
-        description: `Baujahr muss zwischen 1950 und ${currentYear} liegen.`,
-        variant: "destructive",
-      });
+      toast({ title: "Ungültiges Baujahr", description: `Baujahr muss zwischen 1950 und ${currentYear} liegen.`, variant: "destructive" });
       return;
     }
-
     if (mileage < 0 || mileage > 999999) {
-      toast({
-        title: "Ungültiger Kilometerstand",
-        description: "Kilometerstand muss zwischen 0 und 999.999 km liegen.",
-        variant: "destructive",
-      });
+      toast({ title: "Ungültiger Kilometerstand", description: "Kilometerstand muss zwischen 0 und 999.999 km liegen.", variant: "destructive" });
       return;
     }
 
-    // Don't calculate yet - go to contact step first
+    // Show calculation animation
+    setShowCalculation(true);
+  }, [formData, toast]);
+
+  const handleCalculationComplete = useCallback(() => {
+    setShowCalculation(false);
     setStep(5);
-  }, [formData.bodyType, formData.year, formData.mileage, formData.condition, toast]);
+  }, []);
 
   const handleLeadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,46 +461,31 @@ const Wertrechner = () => {
       submitMutation.mutate(formData);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          title: "Bitte prüfen Sie Ihre Eingaben",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
+        toast({ title: "Bitte prüfen Sie Ihre Eingaben", description: error.errors[0].message, variant: "destructive" });
       }
     }
   };
 
   const canProceed = useCallback(() => {
     switch (step) {
-      case 1:
-        return !!formData.bodyType;
-      case 2:
-        return true; // Manufacturer/model optional
+      case 1: return !!formData.bodyType;
+      case 2: return true;
       case 3: {
         const y = parseInt(formData.year, 10);
         const m = parseInt(formData.mileage, 10);
-        const currentYear = new Date().getFullYear();
-        return !isNaN(y) && y >= 1950 && y <= currentYear && !isNaN(m) && m >= 0 && m <= 999999;
+        const cy = new Date().getFullYear();
+        return !isNaN(y) && y >= 1950 && y <= cy && !isNaN(m) && m >= 0 && m <= 999999;
       }
-      case 4:
-        return !!formData.condition;
-      case 5:
-        return formData.name.trim().length >= 2 && formData.email.trim().length > 0 && formData.phone.trim().length >= 5;
-      default:
-        return false;
+      case 4: return !!formData.condition;
+      case 5: return formData.name.trim().length >= 2 && formData.email.trim().length > 0 && formData.phone.trim().length >= 5;
+      default: return false;
     }
-  }, [step, formData.bodyType, formData.year, formData.mileage, formData.condition, formData.name, formData.email, formData.phone]);
+  }, [step, formData]);
 
-  // Auto-proceed timer ref
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup timer on unmount
   useEffect(() => {
-    return () => {
-      if (autoNextTimerRef.current) {
-        clearTimeout(autoNextTimerRef.current);
-      }
-    };
+    return () => { if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current); };
   }, []);
 
   const nextStep = useCallback(() => {
@@ -284,40 +497,59 @@ const Wertrechner = () => {
   }, [step, calculateAndProceed, canProceed]);
 
   const prevStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
-      if (step === 6) {
-        // Don't clear value when going back from result
-      }
-    }
+    if (step > 1) setStep(step - 1);
   };
 
-  // Auto-proceed with delay for visual feedback
   const handleSelectionWithAutoNext = useCallback((field: string, value: string, shouldAutoNext: boolean = true) => {
-    // Clear any pending auto-next
-    if (autoNextTimerRef.current) {
-      clearTimeout(autoNextTimerRef.current);
-    }
-    
+    if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current);
     updateField(field, value);
-    
     if (shouldAutoNext) {
-      // Small delay for visual feedback before proceeding
       autoNextTimerRef.current = setTimeout(() => {
-        if (step === 4) {
-          // For condition step, go to contact step (not result)
+        if (field === "condition") {
+          // Trigger calculation animation
           const year = parseInt(formData.year, 10);
           const mileage = parseInt(formData.mileage, 10);
-          const currentYear = new Date().getFullYear();
-          if (formData.bodyType && !isNaN(year) && year >= 1950 && year <= currentYear && !isNaN(mileage) && mileage >= 0 && mileage <= 999999) {
-            setStep(5);
+          const cy = new Date().getFullYear();
+          if (formData.bodyType && !isNaN(year) && year >= 1950 && year <= cy && !isNaN(mileage) && mileage >= 0 && mileage <= 999999) {
+            setShowCalculation(true);
           }
         } else {
-          setStep(s => s + 1);
+          setStep((s) => s + 1);
         }
       }, 400);
     }
   }, [step, formData]);
+
+  // Handle Enter key for text steps
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && canProceed() && step < 5) {
+      e.preventDefault();
+      nextStep();
+    }
+  }, [canProceed, nextStep, step]);
+
+  // Summary chips showing previous selections
+  const SummaryChips = () => {
+    const chips: string[] = [];
+    if (formData.bodyType) chips.push(BODY_TYPES.find((b) => b.value === formData.bodyType)?.label || "");
+    if (formData.manufacturer) chips.push(formData.manufacturer);
+    if (formData.year) chips.push(`BJ ${formData.year}`);
+    if (formData.mileage) chips.push(`${parseInt(formData.mileage, 10).toLocaleString("de-DE")} km`);
+    if (formData.condition) chips.push(CONDITIONS.find((c) => c.value === formData.condition)?.label || "");
+
+    if (chips.length === 0) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-6">
+        {chips.map((chip, i) => (
+          <span key={i} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <Check className="w-3 h-3" />
+            {chip}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <PageLayout
@@ -326,102 +558,143 @@ const Wertrechner = () => {
       description="Ermitteln Sie sofort den geschätzten Wert Ihres Wohnmobils mit unserem kostenlosen Wertrechner. Einfach, schnell und unverbindlich."
       keywords="wohnmobil wertrechner, wohnmobil wert berechnen, camper wert kalkulieren"
       canonicalPath="/wertrechner"
-      structuredData={[generateServiceSchema("Wohnmobil Wertrechner", "Kostenloser Online-Wertrechner für Wohnmobile. Sofort-Schätzung in 2 Minuten basierend auf aktuellen Marktdaten."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertrechner"))]}
+      structuredData={[
+        generateServiceSchema("Wohnmobil Wertrechner", "Kostenloser Online-Wertrechner für Wohnmobile. Sofort-Schätzung in 2 Minuten basierend auf aktuellen Marktdaten."),
+        generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertrechner")),
+      ]}
     >
       <PageHero size="sm">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Wohnmobil Wertrechner
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Erhalten Sie in nur wenigen Schritten eine erste Wertschätzung für Ihr Wohnmobil.
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">Wohnmobil Wertrechner</h1>
+          <p className="text-lg text-muted-foreground mb-4">
+            Erhalten Sie in nur 2 Minuten eine kostenlose Wertschätzung für Ihr Wohnmobil.
           </p>
+          {/* Social proof */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm font-medium text-primary">
+            <TrendingUp className="w-4 h-4" />
+            <span>Über 5.000 Fahrzeuge bewertet</span>
+          </div>
         </div>
       </PageHero>
 
-      <div className="container py-12">
+      <div className="container py-8 sm:py-12">
         <div className="max-w-2xl mx-auto">
-          {/* Progress Bar */}
-          {step < 6 && (
-            <div className="mb-8">
-              <div className="flex justify-end text-sm text-muted-foreground mb-2">
-                <span>Schritt {step} von 5</span>
-              </div>
-              <Progress value={Math.min((step / 5) * 100, 100)} className="h-2" />
-            </div>
-          )}
+          {/* Step Indicator */}
+          {step <= 5 && !showCalculation && <StepIndicator currentStep={step} totalSteps={totalSteps} />}
 
-          <Card className="p-8">
+          <Card className="p-6 sm:p-8 shadow-lg border-0 ring-1 ring-border/50">
+            {/* Summary chips */}
+            {step > 1 && step <= 5 && !showCalculation && <SummaryChips />}
+
+            {/* Calculation Animation */}
+            {showCalculation && <CalculationAnimation onComplete={handleCalculationComplete} />}
+
             {/* Step 1: Body Type */}
-            {step === 1 && (
+            {!showCalculation && step === 1 && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Fahrzeugtyp</h2>
-                  <p className="text-muted-foreground">
-                    Welchen Typ Wohnmobil möchten Sie bewerten?
-                  </p>
+                  <h2 className="text-2xl font-bold mb-1">Fahrzeugtyp</h2>
+                  <p className="text-muted-foreground">Welchen Typ Wohnmobil möchten Sie bewerten?</p>
                 </div>
                 <div className="grid gap-3">
-                  {BODY_TYPES.map((type, index) => (
-                    <button
-                      key={type.value}
-                      onClick={() => handleSelectionWithAutoNext("bodyType", type.value)}
-                      className={cn(
-                        "p-4 rounded-lg border text-left transition-all duration-200 flex items-center justify-between group",
-                        "animate-fade-in",
-                        formData.bodyType === type.value
-                          ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
-                      )}
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <span className="font-medium">{type.label}</span>
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200",
-                        formData.bodyType === type.value
-                          ? "bg-primary text-white scale-100"
-                          : "bg-muted scale-0 group-hover:scale-75 group-hover:bg-muted"
-                      )}>
-                        <Check className="w-4 h-4" />
-                      </div>
-                    </button>
-                  ))}
+                  {BODY_TYPES.map((type, index) => {
+                    const Icon = type.icon;
+                    return (
+                      <button
+                        key={type.value}
+                        onClick={() => handleSelectionWithAutoNext("bodyType", type.value)}
+                        className={cn(
+                          "p-4 rounded-xl border text-left transition-all duration-200 flex items-center gap-4 group animate-fade-in",
+                          formData.bodyType === type.value
+                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                            : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
+                        )}
+                        style={{ animationDelay: `${index * 60}ms` }}
+                      >
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+                          formData.bodyType === type.value
+                            ? "bg-primary text-white"
+                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                        )}>
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-semibold block">{type.label}</span>
+                          <span className="text-sm text-muted-foreground">{type.description}</span>
+                        </div>
+                        <div className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0",
+                          formData.bodyType === type.value
+                            ? "bg-primary text-white scale-100"
+                            : "bg-muted scale-0 group-hover:scale-75"
+                        )}>
+                          <Check className="w-4 h-4" />
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  Klicken Sie auf eine Option, um fortzufahren
-                </p>
               </div>
             )}
 
             {/* Step 2: Manufacturer/Model */}
-            {step === 2 && (
-              <div className="space-y-6 animate-fade-in">
+            {!showCalculation && step === 2 && (
+              <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Hersteller & Modell</h2>
+                  <h2 className="text-2xl font-bold mb-1">Hersteller & Modell</h2>
                   <p className="text-muted-foreground">
-                    Geben Sie Hersteller und Modell an (optional, verbessert die Genauigkeit).
+                    Optional, verbessert die Genauigkeit der Bewertung.
                   </p>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
+                  {/* Manufacturer dropdown */}
+                  <div className="space-y-2 animate-fade-in relative" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
                     <Label htmlFor="manufacturer">Hersteller</Label>
                     <Input
                       id="manufacturer"
-                      placeholder="z.B. Hymer, Dethleffs, Bürstner..."
-                      value={formData.manufacturer}
-                      onChange={(e) => updateField("manufacturer", e.target.value)}
-                      className="transition-all focus:ring-2 focus:ring-primary/20"
+                      placeholder="Hersteller auswählen oder eingeben..."
+                      value={manufacturerFilter}
+                      onChange={(e) => {
+                        setManufacturerFilter(e.target.value);
+                        updateField("manufacturer", e.target.value);
+                        setShowManufacturerDropdown(true);
+                      }}
+                      onFocus={() => setShowManufacturerDropdown(true)}
+                      className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
                       autoFocus
+                      autoComplete="off"
                     />
+                    {showManufacturerDropdown && filteredManufacturers.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-background border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {filteredManufacturers.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            className={cn(
+                              "w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors text-sm",
+                              formData.manufacturer === m && "bg-primary/10 font-medium text-primary"
+                            )}
+                            onClick={() => {
+                              updateField("manufacturer", m);
+                              setManufacturerFilter(m);
+                              setShowManufacturerDropdown(false);
+                            }}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
+                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
                     <Label htmlFor="model">Modell</Label>
                     <Input
                       id="model"
                       placeholder="z.B. B-Klasse MC, Trend, Ixeo..."
                       value={formData.model}
                       onChange={(e) => updateField("model", e.target.value)}
-                      className="transition-all focus:ring-2 focus:ring-primary/20"
+                      className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
@@ -429,55 +702,62 @@ const Wertrechner = () => {
             )}
 
             {/* Step 3: Year/Mileage */}
-            {step === 3 && (
-              <div className="space-y-6 animate-fade-in">
+            {!showCalculation && step === 3 && (
+              <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Baujahr & Kilometerstand</h2>
-                  <p className="text-muted-foreground">
-                    Diese Angaben sind entscheidend für die Wertermittlung.
-                  </p>
+                  <h2 className="text-2xl font-bold mb-1">Baujahr & Kilometerstand</h2>
+                  <p className="text-muted-foreground">Diese Angaben sind entscheidend für die Wertermittlung.</p>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
+                  {/* Year as dropdown */}
+                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: "50ms" }}>
                     <Label htmlFor="year">Baujahr *</Label>
-                    <Input
+                    <select
                       id="year"
-                      type="number"
-                      placeholder="z.B. 2018"
-                      min={1950}
-                      max={new Date().getFullYear()}
                       value={formData.year}
                       onChange={(e) => updateField("year", e.target.value)}
-                      className="transition-all focus:ring-2 focus:ring-primary/20 text-lg h-12"
+                      className={cn(
+                        "flex h-12 w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary",
+                        "transition-all cursor-pointer appearance-none",
+                        !formData.year && "text-muted-foreground"
+                      )}
                       autoFocus
-                    />
+                    >
+                      <option value="">Baujahr auswählen...</option>
+                      {YEARS.map((y) => (
+                        <option key={y} value={String(y)}>{y}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
+                  {/* Mileage with formatting */}
+                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
                     <Label htmlFor="mileage">Kilometerstand *</Label>
-                    <Input
-                      id="mileage"
-                      type="number"
-                      placeholder="z.B. 45000"
-                      min={0}
-                      max={999999}
-                      value={formData.mileage}
-                      onChange={(e) => updateField("mileage", e.target.value)}
-                      className="transition-all focus:ring-2 focus:ring-primary/20 text-lg h-12"
-                    />
-                    <p className="text-xs text-muted-foreground">in Kilometern</p>
+                    <div className="relative">
+                      <Input
+                        id="mileage"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="z.B. 45.000"
+                        value={mileageDisplay}
+                        onChange={handleMileageChange}
+                        className="h-12 text-base pr-12 transition-all focus:ring-2 focus:ring-primary/20"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                        km
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Step 4: Condition */}
-            {step === 4 && (
+            {!showCalculation && step === 4 && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Fahrzeugzustand</h2>
-                  <p className="text-muted-foreground">
-                    Wie würden Sie den Gesamtzustand Ihres Wohnmobils einschätzen?
-                  </p>
+                  <h2 className="text-2xl font-bold mb-1">Fahrzeugzustand</h2>
+                  <p className="text-muted-foreground">Wie würden Sie den Gesamtzustand einschätzen?</p>
                 </div>
                 <div className="grid gap-3">
                   {CONDITIONS.map((cond, index) => (
@@ -485,38 +765,43 @@ const Wertrechner = () => {
                       key={cond.value}
                       onClick={() => handleSelectionWithAutoNext("condition", cond.value)}
                       className={cn(
-                        "p-4 rounded-lg border text-left transition-all duration-200 flex items-center justify-between group",
-                        "animate-fade-in",
+                        "p-4 rounded-xl border text-left transition-all duration-200 flex items-center gap-4 group animate-fade-in",
                         formData.condition === cond.value
                           ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                          : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
                       )}
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      style={{ animationDelay: `${index * 60}ms` }}
                     >
-                      <span className="font-medium">{cond.label}</span>
                       <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200",
+                        "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl transition-transform",
+                        formData.condition === cond.value && "scale-110"
+                      )}>
+                        {cond.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold block">{cond.label}</span>
+                        <span className="text-sm text-muted-foreground">{cond.description}</span>
+                      </div>
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0",
                         formData.condition === cond.value
                           ? "bg-primary text-white scale-100"
-                          : "bg-muted scale-0 group-hover:scale-75 group-hover:bg-muted"
+                          : "bg-muted scale-0 group-hover:scale-75"
                       )}>
                         <Check className="w-4 h-4" />
                       </div>
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  Klicken Sie auf eine Option, um fortzufahren
-                </p>
               </div>
             )}
 
-            {/* Step 5: Contact Details (BEFORE showing result) */}
-            {step === 5 && (
+            {/* Step 5: Contact Details */}
+            {!showCalculation && step === 5 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                    <Calculator className="w-8 h-8 text-primary" />
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-green-600" />
                   </div>
                   <h2 className="text-2xl font-bold mb-2">Ihr Ergebnis ist fertig!</h2>
                   <p className="text-muted-foreground">
@@ -526,18 +811,18 @@ const Wertrechner = () => {
 
                 {/* Blurred preview teaser */}
                 <div className="relative rounded-xl overflow-hidden">
-                  <div className="bg-primary/5 rounded-xl p-8 text-center blur-md select-none" aria-hidden="true">
+                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center blur-md select-none" aria-hidden="true">
                     <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                      €XX.XXX - €XX.XXX
+                      XX.XXX - XX.XXX
                     </div>
-                    <p className="text-muted-foreground">
-                      Geschätzter Marktwert
-                    </p>
+                    <p className="text-muted-foreground">Geschätzter Marktwert</p>
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 text-primary font-semibold">
-                      <Lock className="w-5 h-5" />
-                      <span>Kontaktdaten eingeben zum Freischalten</span>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px]">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Lock className="w-6 h-6 text-primary" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary">Kontaktdaten eingeben zum Freischalten</span>
                     </div>
                   </div>
                 </div>
@@ -590,10 +875,10 @@ const Wertrechner = () => {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full gradient-hero h-14 text-lg font-semibold"
+                    className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
                     disabled={submitMutation.isPending}
                   >
-                    {submitMutation.isPending ? "Wird berechnet..." : "Wert jetzt anzeigen"}
+                    {submitMutation.isPending ? "Wird geladen..." : "Wert jetzt anzeigen"}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
@@ -603,44 +888,39 @@ const Wertrechner = () => {
               </div>
             )}
 
-            {/* Step 6: Results (only after contact submission) */}
-            {step === 6 && estimatedValue && (
+            {/* Step 6: Results */}
+            {!showCalculation && step === 6 && estimatedValue && (
               <div className="space-y-8 animate-fade-in">
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle2 className="w-8 h-8 text-green-600" />
                   </div>
                   <h2 className="text-2xl font-bold mb-2">Geschätzter Wert Ihres Wohnmobils</h2>
-                  <p className="text-muted-foreground">
-                    Basierend auf Ihren Angaben und aktuellen Marktdaten
-                  </p>
+                  <p className="text-muted-foreground">Basierend auf Ihren Angaben und aktuellen Marktdaten</p>
                 </div>
 
-                <div className="bg-primary/5 rounded-xl p-8 text-center">
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center">
                   <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                    {formatCurrency(estimatedValue.min)} - {formatCurrency(estimatedValue.max)}
+                    <AnimatedValue value={estimatedValue.min} /> - <AnimatedValue value={estimatedValue.max} />
                   </div>
-                  <p className="text-muted-foreground">
-                    Geschätzter Marktwert
-                  </p>
+                  <p className="text-muted-foreground">Geschätzter Marktwert</p>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
                   <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    Dies ist eine erste Schätzung. Der tatsächliche Wert kann je nach Ausstattung, 
-                    Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden 
+                    Dies ist eine erste Schätzung. Der tatsächliche Wert kann je nach Ausstattung,
+                    Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden
                     sich bei Ihnen für eine genauere Bewertung.
                   </p>
                 </div>
 
-                {/* Thank you + CTA */}
                 <div className="border-t pt-8 text-center space-y-4">
                   <p className="text-muted-foreground">
-                    Vielen Dank, {formData.name.split(' ')[0]}! Wir melden uns in Kürze bei Ihnen.
+                    Vielen Dank, {formData.name.split(" ")[0]}! Wir melden uns in Kürze bei Ihnen.
                   </p>
                   <Link to="/verkaufen">
-                    <Button className="gradient-hero" size="lg">
+                    <Button className="gradient-hero shadow-lg hover:shadow-xl transition-shadow" size="lg">
                       Jetzt kostenlos verkaufen
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
@@ -649,69 +929,77 @@ const Wertrechner = () => {
 
                 {/* Summary */}
                 <div className="border-t pt-6">
-                  <h4 className="font-medium mb-3 text-sm text-muted-foreground">
-                    Ihre Angaben:
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <span className="text-muted-foreground">Typ:</span>
-                    <span>{BODY_TYPES.find((b) => b.value === formData.bodyType)?.label}</span>
+                    <span className="font-medium">{BODY_TYPES.find((b) => b.value === formData.bodyType)?.label}</span>
                     {formData.manufacturer && (
                       <>
                         <span className="text-muted-foreground">Hersteller:</span>
-                        <span>{formData.manufacturer}</span>
+                        <span className="font-medium">{formData.manufacturer}</span>
                       </>
                     )}
                     {formData.model && (
                       <>
                         <span className="text-muted-foreground">Modell:</span>
-                        <span>{formData.model}</span>
+                        <span className="font-medium">{formData.model}</span>
                       </>
                     )}
                     <span className="text-muted-foreground">Baujahr:</span>
-                    <span>{formData.year}</span>
+                    <span className="font-medium">{formData.year}</span>
                     <span className="text-muted-foreground">Kilometerstand:</span>
-                    <span>{parseInt(formData.mileage, 10).toLocaleString("de-DE")} km</span>
+                    <span className="font-medium">{parseInt(formData.mileage, 10).toLocaleString("de-DE")} km</span>
                     <span className="text-muted-foreground">Zustand:</span>
-                    <span>{CONDITIONS.find((c) => c.value === formData.condition)?.label}</span>
+                    <span className="font-medium">{CONDITIONS.find((c) => c.value === formData.condition)?.label}</span>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Navigation */}
-            {step < 5 && (
+            {!showCalculation && step < 5 && (
               <div className="flex justify-between mt-8 pt-6 border-t">
-                <Button
-                  variant="ghost"
-                  onClick={prevStep}
-                  disabled={step === 1}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Zurück
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  disabled={!canProceed()}
-                  className="gradient-hero"
-                >
-                  {step === 4 ? "Weiter" : "Weiter"}
-                  <ChevronRight className="w-4 h-4 ml-2" />
+                {step > 1 ? (
+                  <Button variant="ghost" onClick={prevStep} className="text-muted-foreground hover:text-foreground">
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Zurück
+                  </Button>
+                ) : (
+                  <div />
+                )}
+                <Button onClick={nextStep} disabled={!canProceed()} className="gradient-hero px-8">
+                  Weiter
+                  <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             )}
 
-            {step === 5 && (
+            {!showCalculation && step === 5 && (
               <div className="mt-6 pt-4 border-t">
-                <Button variant="ghost" onClick={prevStep} className="w-full">
+                <Button variant="ghost" onClick={prevStep} className="w-full text-muted-foreground hover:text-foreground">
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Zurück zu den Fahrzeugdaten
                 </Button>
               </div>
             )}
 
-            {step === 6 && (
+            {!showCalculation && step === 6 && (
               <div className="mt-8 pt-6 border-t">
-                <Button variant="ghost" onClick={() => { setStep(1); setEstimatedValue(null); setLeadSubmitted(false); }} className="w-full">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setStep(1);
+                    setEstimatedValue(null);
+                    setLeadSubmitted(false);
+                    setMileageDisplay("");
+                    setManufacturerFilter("");
+                    setFormData({
+                      bodyType: "", manufacturer: "", model: "", year: "", mileage: "", condition: "", name: "", email: "", phone: "",
+                    });
+                    try { sessionStorage.removeItem("wertrechner_data"); } catch {}
+                  }}
+                  className="w-full text-muted-foreground hover:text-foreground"
+                >
                   <Calculator className="w-4 h-4 mr-2" />
                   Neues Fahrzeug bewerten
                 </Button>
@@ -719,14 +1007,17 @@ const Wertrechner = () => {
             )}
           </Card>
 
+          {/* Trust badges below card */}
+          {step <= 5 && !showCalculation && <TrustBadges />}
+
           {/* Alternative CTA */}
-          {step < 5 && (
-            <div className="mt-8 text-center">
-              <p className="text-muted-foreground mb-4">
+          {step < 5 && !showCalculation && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
                 Lieber eine professionelle Bewertung durch unsere Experten?
               </p>
               <Link to="/wertermittlung">
-                <Button variant="outline">
+                <Button variant="outline" size="sm" className="text-sm">
                   <Euro className="w-4 h-4 mr-2" />
                   Kostenlose Expertenbewertung anfordern
                 </Button>

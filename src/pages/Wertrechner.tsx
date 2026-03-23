@@ -649,43 +649,47 @@ const Wertrechner = () => {
                 </div>
                 <div className="space-y-4">
                   {/* Manufacturer dropdown */}
-                  <div className="space-y-2 animate-fade-in relative" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
-                    <Label htmlFor="manufacturer">Hersteller</Label>
-                    <Input
-                      id="manufacturer"
-                      placeholder="Hersteller auswählen oder eingeben..."
-                      value={manufacturerFilter}
-                      onChange={(e) => {
-                        setManufacturerFilter(e.target.value);
-                        updateField("manufacturer", e.target.value);
-                        setShowManufacturerDropdown(true);
-                      }}
-                      onFocus={() => setShowManufacturerDropdown(true)}
-                      className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
-                      autoFocus
-                      autoComplete="off"
-                    />
-                    {showManufacturerDropdown && filteredManufacturers.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-background border rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                        {filteredManufacturers.map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            className={cn(
-                              "w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors text-sm",
-                              formData.manufacturer === m && "bg-primary/10 font-medium text-primary"
-                            )}
-                            onClick={() => {
-                              updateField("manufacturer", m);
-                              setManufacturerFilter(m);
-                              setShowManufacturerDropdown(false);
-                            }}
-                          >
-                            {m}
-                          </button>
-                        ))}
+                  <div className="animate-fade-in" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
+                    <div className="space-y-2">
+                      <Label htmlFor="manufacturer">Hersteller</Label>
+                      <div className="relative">
+                        <Input
+                          id="manufacturer"
+                          placeholder="Hersteller auswählen oder eingeben..."
+                          value={manufacturerFilter}
+                          onChange={(e) => {
+                            setManufacturerFilter(e.target.value);
+                            updateField("manufacturer", e.target.value);
+                            setShowManufacturerDropdown(true);
+                          }}
+                          onFocus={() => setShowManufacturerDropdown(true)}
+                          className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                          autoFocus
+                          autoComplete="off"
+                        />
+                        {showManufacturerDropdown && filteredManufacturers.length > 0 && (
+                          <div className="absolute left-0 top-full z-[100] w-full mt-1 bg-background border rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                            {filteredManufacturers.map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                className={cn(
+                                  "w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
+                                  formData.manufacturer === m && "bg-primary/10 font-medium text-primary"
+                                )}
+                                onClick={() => {
+                                  updateField("manufacturer", m);
+                                  setManufacturerFilter(m);
+                                  setShowManufacturerDropdown(false);
+                                }}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
                     <Label htmlFor="model">Modell</Label>

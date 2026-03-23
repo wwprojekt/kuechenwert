@@ -108,18 +108,37 @@ const CookieBanner = () => {
 
     // Check if user has already consented
     const storedConsent = getStoredConsent();
-    if (!storedConsent) {
-      // Initialize with new consent ID
-      setConsent(prev => ({
-        ...prev,
-        consentId: generateConsentId(),
-      }));
-      // Delay showing banner slightly for better UX
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (storedConsent) {
+      // WICHTIG: Gespeicherten Consent erneut an Google Consent Mode senden!
+      // consent('default') in index.html setzt alles auf 'denied'.
+      // Wir müssen den gespeicherten Consent als 'update' senden,
+      // damit wiederkehrende Nutzer korrekt getrackt werden.
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('consent', 'update', {
+          analytics_storage: storedConsent.analytics ? 'granted' : 'denied',
+          ad_storage: storedConsent.marketing ? 'granted' : 'denied',
+          ad_user_data: storedConsent.marketing ? 'granted' : 'denied',
+          ad_personalization: storedConsent.marketing ? 'granted' : 'denied',
+          functionality_storage: storedConsent.functional ? 'granted' : 'denied',
+          personalization_storage: storedConsent.functional ? 'granted' : 'denied',
+        });
+        logger.log('Restored consent from localStorage:', storedConsent);
+      }
+      // Banner nicht anzeigen - Nutzer hat bereits zugestimmt
+      return;
     }
+
+    // Neuer Nutzer: Banner anzeigen
+    // Initialize with new consent ID
+    setConsent(prev => ({
+      ...prev,
+      consentId: generateConsentId(),
+    }));
+    // Delay showing banner slightly for better UX
+    const timer = setTimeout(() => {
+      setShowBanner(true);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   const saveConsent = useCallback((newConsent: CookieConsent) => {

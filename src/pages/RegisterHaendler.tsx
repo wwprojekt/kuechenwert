@@ -39,14 +39,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { passwordSchema, emailSchema } from "@/lib/validation";
 
 const LEGAL_FORMS = [
-  { value: "einzelunternehmen", label: "Einzelunternehmen" },
-  { value: "gmbh", label: "GmbH" },
-  { value: "ug", label: "UG (haftungsbeschränkt)" },
-  { value: "gbr", label: "GbR" },
-  { value: "kg", label: "KG" },
-  { value: "ohg", label: "OHG" },
-  { value: "ag", label: "AG" },
-  { value: "gmbh_co_kg", label: "GmbH & Co. KG" },
+  { value: "Einzelunternehmen", label: "Einzelunternehmen" },
+  { value: "GmbH", label: "GmbH" },
+  { value: "UG", label: "UG (haftungsbeschränkt)" },
+  { value: "GbR", label: "GbR" },
+  { value: "KG", label: "KG" },
+  { value: "OHG", label: "OHG" },
+  { value: "AG", label: "AG" },
+  { value: "GmbH & Co. KG", label: "GmbH & Co. KG" },
 ];
 
 const dealerRegistrationSchema = z.object({

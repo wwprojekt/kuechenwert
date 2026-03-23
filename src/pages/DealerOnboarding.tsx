@@ -52,13 +52,14 @@ interface DealerRegistrationForm {
 }
 
 const legalForms = [
-  'GmbH',
-  'UG (haftungsbeschränkt)',
-  'AG',
-  'KG',
-  'OHG', 
   'Einzelunternehmen',
-  'GbR'
+  'GmbH',
+  'UG',
+  'GbR',
+  'KG',
+  'OHG',
+  'AG',
+  'GmbH & Co. KG',
 ];
 
 export default function DealerOnboarding() {

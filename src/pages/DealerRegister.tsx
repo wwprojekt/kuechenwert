@@ -46,7 +46,7 @@ const dealerApplicationSchema = z.object({
   website: z.string().url("Ungültige URL").optional().or(z.literal("")),
 
   // New fields
-  legalForm: z.enum(["einzelunternehmen", "gbr", "ug", "gmbh", "ag"], {
+  legalForm: z.enum(["Einzelunternehmen", "GbR", "UG", "GmbH", "AG", "KG", "OHG", "GmbH & Co. KG"], {
     required_error: "Rechtsform erforderlich",
   }),
   foundedYear: z
@@ -109,7 +109,7 @@ const DealerRegister = () => {
     website: "",
 
     // New fields
-    legalForm: "" as "einzelunternehmen" | "gbr" | "ug" | "gmbh" | "ag" | "",
+    legalForm: "" as "Einzelunternehmen" | "GbR" | "UG" | "GmbH" | "AG" | "KG" | "OHG" | "GmbH & Co. KG" | "",
     foundedYear: "" as number | "",
     handelsregisterNumber: "",
     employeeCount: "" as "1-5" | "6-20" | "21-50" | "50+" | "",
@@ -517,7 +517,7 @@ const DealerRegister = () => {
                       <Label htmlFor="legalForm">Rechtsform *</Label>
                       <Select
                         value={formData.legalForm}
-                        onValueChange={(value: "einzelunternehmen" | "gbr" | "ug" | "gmbh" | "ag") =>
+                        onValueChange={(value: "Einzelunternehmen" | "GbR" | "UG" | "GmbH" | "AG" | "KG" | "OHG" | "GmbH & Co. KG") =>
                           setFormData({ ...formData, legalForm: value })
                         }
                       >
@@ -525,11 +525,14 @@ const DealerRegister = () => {
                           <SelectValue placeholder="Rechtsform wählen" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="einzelunternehmen">Einzelunternehmen</SelectItem>
-                          <SelectItem value="gbr">GbR</SelectItem>
-                          <SelectItem value="ug">UG (haftungsbeschränkt)</SelectItem>
-                          <SelectItem value="gmbh">GmbH</SelectItem>
-                          <SelectItem value="ag">AG</SelectItem>
+                          <SelectItem value="Einzelunternehmen">Einzelunternehmen</SelectItem>
+                          <SelectItem value="GbR">GbR</SelectItem>
+                          <SelectItem value="UG">UG (haftungsbeschränkt)</SelectItem>
+                          <SelectItem value="GmbH">GmbH</SelectItem>
+                          <SelectItem value="AG">AG</SelectItem>
+                          <SelectItem value="KG">KG</SelectItem>
+                          <SelectItem value="OHG">OHG</SelectItem>
+                          <SelectItem value="GmbH & Co. KG">GmbH & Co. KG</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -560,7 +563,7 @@ const DealerRegister = () => {
                     <div className="space-y-2">
                       <Label htmlFor="handelsregisterNumber">
                         Handelsregisternummer
-                        {(formData.legalForm === "gmbh" || formData.legalForm === "ag") && " *"}
+                        {(formData.legalForm === "GmbH" || formData.legalForm === "AG" || formData.legalForm === "GmbH & Co. KG") && " *"}
                       </Label>
                       <Input
                         id="handelsregisterNumber"

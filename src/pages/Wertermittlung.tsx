@@ -33,6 +33,7 @@ import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
+import { trackWertermittlungLead } from "@/lib/gadsConversionService";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -100,6 +101,12 @@ const Wertermittlung = () => {
     },
     onSuccess: () => {
       setSubmitted(true);
+
+      // Google Ads Conversion Tracking: Wertermittlung Lead (Primäre Conversion)
+      trackWertermittlungLead(
+        `${formData.manufacturer} ${formData.model} ${formData.year}`
+      );
+
       toast({
         title: "Anfrage gesendet!",
         description: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",

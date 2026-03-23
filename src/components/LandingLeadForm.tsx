@@ -8,6 +8,7 @@ import { ArrowRight, User, Mail, Phone, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { vehicleTypes, popularManufacturers, bodyTypes } from "@/lib/vehicle-data";
 import { captureOrUpdateLead } from "@/lib/leadTrackingService";
+import { trackLandingPageLead } from "@/lib/gadsConversionService";
 import { cn } from "@/lib/utils";
 
 interface LandingLeadFormProps {
@@ -84,6 +85,12 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
       source: "landing_page",
       pageUrl: window.location.pathname,
     });
+
+    // Google Ads Conversion Tracking: Landing Page Lead (Primäre Conversion)
+    trackLandingPageLead(
+      window.location.pathname,
+      `${manufacturer} ${bodyType}`
+    );
 
     const params = new URLSearchParams();
     if (vehicleType) params.set("vehicleType", vehicleType);

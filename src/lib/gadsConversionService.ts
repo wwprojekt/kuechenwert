@@ -2,10 +2,14 @@
  * Google Ads Conversion Tracking Service
  * 
  * Zentraler Service für alle Google Ads Conversion-Events.
- * Trackt Wizard-Schritte, Lead-Erfassungen, Registrierungen und Auktionen.
+ * Trackt Wizard-Schritte, Lead-Erfassungen, Formulare, Terminbuchungen und Auktionen.
  * 
  * Google Ads Konto: Caravanwert (522-100-4970)
  * Google Tag ID: AW-18033517246
+ * 
+ * Conversion-Strategie:
+ * - PRIMÄRE Conversions: Jede Lead-Erfassung mit Kontaktdaten (für Gebotsoptimierung)
+ * - SEKUNDÄRE Conversions: Zwischenschritte im Wizard (für Beobachtung)
  */
 
 // TypeScript-Deklaration für gtag
@@ -32,25 +36,41 @@ function safeGtag(...args: unknown[]): void {
 
 // ============================================================
 // CONVERSION-LABELS
-// Diese Labels werden in Google Ads unter Conversions erstellt
-// und hier als Konstanten hinterlegt.
-// Format: AW-XXXXXXX/YYYYYYY
+// Alle Labels aus Google Ads Konto 522-100-4970
+// Format: send_to = AW-18033517246/{LABEL}
 // ============================================================
 
 export const CONVERSION_LABELS = {
-  // *** PRIMÄRE CONVERSION (für Kampagnen-Optimierung) ***
-  // "Bewertung abgeschlossen" – Hauptziel der Kampagne
+  // *** PRIMÄRE CONVERSIONS (für Kampagnen-Optimierung / Gebotsoptimierung) ***
+  
+  // Bestehende Conversion: "Bewertung abgeschlossen" – Wizard komplett durchlaufen
   BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpgD',
   
-  // Sekundäre Conversions (für Beobachtung, nicht für Optimierung)
-  // Diese Labels müssen noch in Google Ads erstellt werden:
-  LEAD_CONTACT_DATA: '',       // Lead: Kontaktdaten erfasst (Modal/Formular)
-  WIZARD_STARTED: '',          // Wizard gestartet (Schritt 1)
-  WIZARD_STEP_3: '',           // Wizard Schritt 3 erreicht (50% Fortschritt)
-  WIZARD_STEP_6: '',           // Wizard Schritt 6 erreicht (Fotos)
-  WIZARD_COMPLETED: '',        // Wizard vollständig abgeschlossen (nach Auth)
-  AUCTION_CREATED: '',         // Auktion wurde erstellt
-  BERATUNG_REQUESTED: '',      // Beratung angefragt
+  // Landing Page Lead: Kontaktdaten auf einer der 6 Google Ads Landing Pages erfasst
+  LANDING_PAGE_LEAD: 'IfQvCO-NkY4cEL7FhpdD',
+  
+  // Kontaktformular: /kontakt Formular abgesendet
+  KONTAKTFORMULAR_GESENDET: 'pXp5CPKNkY4cEL7FhpdD',
+  
+  // Wertermittlung: /wertermittlung Formular mit Kontaktdaten abgesendet
+  WERTERMITTLUNG_LEAD: 'AHaxCPWNkY4cEL7FhpdD',
+  
+  // Wertrechner: /wertrechner Lead-Capture mit Kontaktdaten abgesendet
+  WERTRECHNER_LEAD: 'JBEqCPiNkY4cEL7FhpdD',
+  
+  // Wizard Abgeschlossen: Schritt 5 (Kontaktdaten) im VerkaufenWizard abgesendet
+  WIZARD_ABGESCHLOSSEN: 'JO7oCPuNkY4cEL7FhpdD',
+  
+  // Terminbuchung: Termin über AppointmentBookingModal gebucht
+  TERMINBUCHUNG: '3_bOCP6NkY4cEL7FhpdD',
+  
+  // *** SEKUNDÄRE CONVERSIONS (für Beobachtung, nicht für Gebotsoptimierung) ***
+  
+  // Wizard Gestartet: Schritt 1 im VerkaufenWizard geladen
+  WIZARD_GESTARTET: '-m3-CIGOkY4cEL7FhpdD',
+  
+  // Wizard Fahrzeugdaten: Schritt 2 im VerkaufenWizard erreicht (Fahrzeugdaten eingegeben)
+  WIZARD_FAHRZEUGDATEN: '5BvzCISOkY4cEL7FhpdD',
 } as const;
 
 // ============================================================
@@ -70,50 +90,117 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
 }
 
 // ============================================================
-// LEAD-TRACKING EVENTS
+// PRIMÄRE LEAD-TRACKING EVENTS
+// Jedes dieser Events löst eine primäre Conversion aus
 // ============================================================
 
 /**
- * Lead: Kontaktdaten erfasst (Name, E-Mail, Telefon)
- * Dies ist die WICHTIGSTE Conversion für die Kampagne.
- * Wird ausgelöst wenn:
- * - Nutzer das Kontaktdaten-Modal ausfüllt
- * - Nutzer das QuickAuctionForm Schritt 2 ausfüllt
- * - Nutzer das LandingLeadForm ausfüllt
+ * Landing Page Lead: Kontaktdaten auf einer Google Ads Landing Page erfasst
+ * Wird ausgelöst in: LandingLeadForm (alle 6 Landing Pages)
+ * Primäre Conversion: Ja (für Gebotsoptimierung)
  */
-export function trackLeadContactData(source: string, vehicleInfo?: string): void {
-  // Google Ads Conversion Event
+export function trackLandingPageLead(landingPage: string, vehicleInfo?: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.LEAD_CONTACT_DATA ? '/' + CONVERSION_LABELS.LEAD_CONTACT_DATA : ''}`,
-    value: 25.0,
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
+    value: 10.0,
     currency: 'EUR',
   });
 
-  // Custom Event für detailliertes Tracking
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
-    event_label: source,
-    value: 25.0,
+    event_label: `landing_page_lead_${landingPage}`,
+    value: 10.0,
     currency: 'EUR',
-    lead_source: source,
+    lead_source: 'landing_page',
+    landing_page: landingPage,
     vehicle_info: vehicleInfo || '',
   });
 }
 
 /**
- * Beratung angefragt (Button "Beratung vereinbaren")
+ * Kontaktformular gesendet: /kontakt Formular abgesendet
+ * Wird ausgelöst in: Kontakt.tsx
+ * Primäre Conversion: Ja
  */
-export function trackBeratungRequested(pagePath: string): void {
+export function trackKontaktformularGesendet(): void {
   safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.BERATUNG_REQUESTED ? '/' + CONVERSION_LABELS.BERATUNG_REQUESTED : ''}`,
-    value: 15.0,
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET}`,
+    value: 10.0,
     currency: 'EUR',
   });
 
-  safeGtag('event', 'schedule_consultation', {
+  safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
-    event_label: 'beratung_vereinbaren',
-    page_path: pagePath,
+    event_label: 'kontaktformular_gesendet',
+    value: 10.0,
+    currency: 'EUR',
+    lead_source: 'kontaktformular',
+  });
+}
+
+/**
+ * Wertermittlung Lead: /wertermittlung Formular mit Kontaktdaten abgesendet
+ * Wird ausgelöst in: Wertermittlung.tsx
+ * Primäre Conversion: Ja
+ */
+export function trackWertermittlungLead(vehicleInfo?: string): void {
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WERTERMITTLUNG_LEAD}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  safeGtag('event', 'generate_lead', {
+    event_category: 'Lead',
+    event_label: 'wertermittlung_lead',
+    value: 10.0,
+    currency: 'EUR',
+    lead_source: 'wertermittlung',
+    vehicle_info: vehicleInfo || '',
+  });
+}
+
+/**
+ * Wertrechner Lead: /wertrechner Lead-Capture mit Kontaktdaten abgesendet
+ * Wird ausgelöst in: Wertrechner.tsx
+ * Primäre Conversion: Ja
+ */
+export function trackWertrechnerLead(vehicleInfo?: string): void {
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WERTRECHNER_LEAD}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  safeGtag('event', 'generate_lead', {
+    event_category: 'Lead',
+    event_label: 'wertrechner_lead',
+    value: 10.0,
+    currency: 'EUR',
+    lead_source: 'wertrechner',
+    vehicle_info: vehicleInfo || '',
+  });
+}
+
+/**
+ * Terminbuchung: Termin über AppointmentBookingModal gebucht
+ * Wird ausgelöst in: AppointmentBookingModal.tsx
+ * Primäre Conversion: Ja
+ */
+export function trackTerminbuchung(station?: string): void {
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.TERMINBUCHUNG}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  safeGtag('event', 'generate_lead', {
+    event_category: 'Lead',
+    event_label: 'terminbuchung',
+    value: 10.0,
+    currency: 'EUR',
+    lead_source: 'terminbuchung',
+    station: station || '',
   });
 }
 
@@ -123,11 +210,12 @@ export function trackBeratungRequested(pagePath: string): void {
 
 /**
  * Wizard gestartet (Schritt 1 geladen)
+ * Sekundäre Conversion: Für Beobachtung
  */
 export function trackWizardStarted(source: string): void {
   safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.WIZARD_STARTED ? '/' + CONVERSION_LABELS.WIZARD_STARTED : ''}`,
-    value: 5.0,
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_GESTARTET}`,
+    value: 1.0,
     currency: 'EUR',
   });
 
@@ -140,21 +228,14 @@ export function trackWizardStarted(source: string): void {
 
 /**
  * Wizard Schritt gewechselt
+ * Schritt 2 = Sekundäre Conversion (Fahrzeugdaten eingegeben)
  */
 export function trackWizardStep(stepNumber: number, stepName: string): void {
-  // Spezielle Conversion-Events für wichtige Meilensteine
-  if (stepNumber === 3 && CONVERSION_LABELS.WIZARD_STEP_3) {
+  // Sekundäre Conversion: Wizard Fahrzeugdaten (Schritt 2 erreicht)
+  if (stepNumber === 2) {
     safeGtag('event', 'conversion', {
-      send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_STEP_3}`,
-      value: 10.0,
-      currency: 'EUR',
-    });
-  }
-
-  if (stepNumber === 6 && CONVERSION_LABELS.WIZARD_STEP_6) {
-    safeGtag('event', 'conversion', {
-      send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_STEP_6}`,
-      value: 15.0,
+      send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_FAHRZEUGDATEN}`,
+      value: 1.0,
       currency: 'EUR',
     });
   }
@@ -169,10 +250,18 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
 }
 
 /**
- * Wizard vollständig abgeschlossen – PRIMÄRE CONVERSION
- * Sendet die "Bewertung abgeschlossen" Conversion an Google Ads
+ * Wizard vollständig abgeschlossen (Schritt 5: Kontaktdaten abgesendet)
+ * PRIMÄRE CONVERSION: Wizard Abgeschlossen + Bewertung abgeschlossen
  */
 export function trackWizardCompleted(vehicleInfo: string): void {
+  // Primäre Conversion: Wizard Abgeschlossen
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  // Bestehende Conversion: Bewertung abgeschlossen
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
     value: 50.0,
@@ -183,7 +272,7 @@ export function trackWizardCompleted(vehicleInfo: string): void {
     event_category: 'Wizard',
     event_label: 'wizard_completed',
     vehicle_info: vehicleInfo,
-    value: 50.0,
+    value: 10.0,
     currency: 'EUR',
   });
 }
@@ -197,6 +286,51 @@ export function trackWizardAbandoned(stepNumber: number, stepName: string): void
     event_label: `abbruch_schritt_${stepNumber}`,
     step_number: stepNumber,
     step_name: stepName,
+  });
+}
+
+// ============================================================
+// LEGACY FUNKTIONEN (Abwärtskompatibilität)
+// ============================================================
+
+/**
+ * Lead: Kontaktdaten erfasst (generisch)
+ * @deprecated Verwende stattdessen die spezifischen Track-Funktionen
+ * (trackLandingPageLead, trackKontaktformularGesendet, etc.)
+ */
+export function trackLeadContactData(source: string, vehicleInfo?: string): void {
+  // Generisches Lead-Event für Abwärtskompatibilität
+  // Löst die Landing Page Lead Conversion aus (als Fallback)
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  safeGtag('event', 'generate_lead', {
+    event_category: 'Lead',
+    event_label: source,
+    value: 10.0,
+    currency: 'EUR',
+    lead_source: source,
+    vehicle_info: vehicleInfo || '',
+  });
+}
+
+/**
+ * Beratung angefragt (Button "Beratung vereinbaren")
+ */
+export function trackBeratungRequested(pagePath: string): void {
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.TERMINBUCHUNG}`,
+    value: 10.0,
+    currency: 'EUR',
+  });
+
+  safeGtag('event', 'schedule_consultation', {
+    event_category: 'Lead',
+    event_label: 'beratung_vereinbaren',
+    page_path: pagePath,
   });
 }
 
@@ -242,12 +376,6 @@ export function trackUserLoggedIn(method: string): void {
  * Auktion wurde erstellt
  */
 export function trackAuctionCreated(vehicleInfo: string): void {
-  safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}${CONVERSION_LABELS.AUCTION_CREATED ? '/' + CONVERSION_LABELS.AUCTION_CREATED : ''}`,
-    value: 75.0,
-    currency: 'EUR',
-  });
-
   safeGtag('event', 'auction_created', {
     event_category: 'Auction',
     event_label: vehicleInfo,
@@ -276,17 +404,15 @@ export function trackVehicleViewed(vehicleId: string, vehicleInfo: string): void
 }
 
 /**
- * Kontaktformular gesendet
+ * Kontaktformular gesendet (Legacy)
+ * @deprecated Verwende stattdessen trackKontaktformularGesendet()
  */
 export function trackContactFormSubmitted(): void {
-  safeGtag('event', 'contact_form_submit', {
-    event_category: 'Contact',
-    event_label: 'kontaktformular',
-  });
+  trackKontaktformularGesendet();
 }
 
 // ============================================================
-// UTILITY: Conversion-Labels aktualisieren
+// UTILITY: Conversion-Labels anzeigen
 // ============================================================
 
 /**

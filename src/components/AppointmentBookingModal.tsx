@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { format } from "date-fns";
 import { Clock, MapPin, Calendar as CalendarIcon } from "lucide-react";
+import { trackTerminbuchung } from "@/lib/gadsConversionService";
 
 interface AppointmentBookingModalProps {
   open: boolean;
@@ -110,6 +111,10 @@ export const AppointmentBookingModal = ({
       } catch (emailError) {
         logger.error('Email sending failed:', emailError);
       }
+
+      // Google Ads Conversion Tracking: Terminbuchung (Primäre Conversion)
+      const stationName = stations.find(s => s.id === selectedStation)?.name || '';
+      trackTerminbuchung(stationName);
 
       toast.success("Termin erfolgreich gebucht!");
       onOpenChange(false);

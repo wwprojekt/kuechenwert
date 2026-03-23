@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { trackWertrechnerLead } from "@/lib/gadsConversionService";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -150,6 +151,12 @@ const Wertrechner = () => {
     },
     onSuccess: () => {
       setLeadSubmitted(true);
+
+      // Google Ads Conversion Tracking: Wertrechner Lead (Primäre Conversion)
+      trackWertrechnerLead(
+        `${formData.manufacturer} ${formData.model} ${formData.year}`
+      );
+
       toast({
         title: "Anfrage gesendet!",
         description: "Wir melden uns für eine genaue Bewertung bei Ihnen.",

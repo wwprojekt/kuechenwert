@@ -617,7 +617,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 padding: '24px',
                 textAlign: 'center' as const,
               }}>
-                <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+                <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
                 <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
               </div>
               <div style={{ padding: '32px 24px', background: '#ffffff' }}>
@@ -1107,7 +1107,7 @@ function ComposeTab() {
               padding: '24px',
               textAlign: 'center' as const,
             }}>
-              <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+              <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
               <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
@@ -1405,7 +1405,7 @@ function BroadcastTab() {
               padding: '24px',
               textAlign: 'center' as const,
             }}>
-              <img src="https://caravanwert.de/logo.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
+              <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
               <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>

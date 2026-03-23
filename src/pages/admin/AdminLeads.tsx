@@ -33,6 +33,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -56,6 +67,8 @@ import {
   Target,
   RefreshCw,
   Car,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 // ============================================================================
@@ -327,6 +340,11 @@ export default function AdminLeads() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  // Delete states
+  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "quick"; ids: string[] } | null>(null);
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -593,6 +611,102 @@ export default function AdminLeads() {
     },
   });
 
+  // ---- Delete Mutations ----
+
+  const deleteWizardSessions = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("wizard_sessions")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      toast({
+        title: `${ids.length} Session${ids.length > 1 ? "s" : ""} gelöscht`,
+        description: "Die ausgewählten Wizard-Sessions wurden entfernt.",
+      });
+      setSelectedSessionIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler beim Löschen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteQuickLeads = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("quick_leads")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      toast({
+        title: `${ids.length} Lead${ids.length > 1 ? "s" : ""} gelöscht`,
+        description: "Die ausgewählten Quick-Leads wurden entfernt.",
+      });
+      setSelectedLeadIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler beim Löschen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === "wizard") {
+      deleteWizardSessions.mutate(deleteTarget.ids);
+    } else {
+      deleteQuickLeads.mutate(deleteTarget.ids);
+    }
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+  };
+
+  const openDeleteDialog = (type: "wizard" | "quick", ids: string[]) => {
+    setDeleteTarget({ type, ids });
+    setDeleteDialogOpen(true);
+  };
+
+  const toggleSessionSelection = (id: string) => {
+    setSelectedSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllSessions = () => {
+    if (selectedSessionIds.size === filteredSessions.length) {
+      setSelectedSessionIds(new Set());
+    } else {
+      setSelectedSessionIds(new Set(filteredSessions.map((s) => s.id)));
+    }
+  };
+
+  const toggleLeadSelection = (id: string) => {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllLeads = () => {
+    if (selectedLeadIds.size === filteredQuickLeads.length) {
+      setSelectedLeadIds(new Set());
+    } else {
+      setSelectedLeadIds(new Set(filteredQuickLeads.map((l) => l.id)));
+    }
+  };
+
+  const isDeleting = deleteWizardSessions.isPending || deleteQuickLeads.isPending;
+
   // ---- Handlers ----
 
   const openDetail = (session: WizardSession) => {
@@ -779,10 +893,43 @@ export default function AdminLeads() {
 
         {/* Wizard Sessions Tab */}
         <TabsContent value="wizard_sessions">
+          {/* Bulk actions bar */}
+          {selectedSessionIds.size > 0 && (
+            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
+              <span className="text-sm font-medium">
+                {selectedSessionIds.size} Session{selectedSessionIds.size > 1 ? "s" : ""} ausgewählt
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedSessionIds(new Set())}
+                >
+                  Auswahl aufheben
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openDeleteDialog("wizard", Array.from(selectedSessionIds))}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  {selectedSessionIds.size} löschen
+                </Button>
+              </div>
+            </div>
+          )}
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredSessions.length > 0 && selectedSessionIds.size === filteredSessions.length}
+                      onCheckedChange={toggleAllSessions}
+                      aria-label="Alle auswählen"
+                    />
+                  </TableHead>
                   <TableHead>Kunde</TableHead>
                   <TableHead>Fahrzeug</TableHead>
                   <TableHead>Fortschritt</TableHead>
@@ -795,13 +942,13 @@ export default function AdminLeads() {
               <TableBody>
                 {loadingSessions ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Lade Sessions...
                     </TableCell>
                   </TableRow>
                 ) : filteredSessions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Keine Sessions gefunden
                     </TableCell>
                   </TableRow>
@@ -809,9 +956,16 @@ export default function AdminLeads() {
                   filteredSessions.map((session) => (
                     <TableRow
                       key={session.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedSessionIds.has(session.id) ? "bg-primary/5" : ""}`}
                       onClick={() => openDetail(session)}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedSessionIds.has(session.id)}
+                          onCheckedChange={() => toggleSessionSelection(session.id)}
+                          aria-label="Session auswählen"
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium text-sm">
@@ -915,6 +1069,15 @@ export default function AdminLeads() {
                               <Send className="w-4 h-4 text-blue-600" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog("wizard", [session.id])}
+                            title="Session löschen"
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -927,34 +1090,75 @@ export default function AdminLeads() {
 
         {/* Quick Leads Tab */}
         <TabsContent value="quick_leads">
+          {/* Bulk actions bar */}
+          {selectedLeadIds.size > 0 && (
+            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
+              <span className="text-sm font-medium">
+                {selectedLeadIds.size} Lead{selectedLeadIds.size > 1 ? "s" : ""} ausgewählt
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedLeadIds(new Set())}
+                >
+                  Auswahl aufheben
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openDeleteDialog("quick", Array.from(selectedLeadIds))}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  {selectedLeadIds.size} löschen
+                </Button>
+              </div>
+            </div>
+          )}
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredQuickLeads.length > 0 && selectedLeadIds.size === filteredQuickLeads.length}
+                      onCheckedChange={toggleAllLeads}
+                      aria-label="Alle auswählen"
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Fahrzeug</TableHead>
                   <TableHead>Quelle</TableHead>
                   <TableHead>Wizard</TableHead>
                   <TableHead>Erstellt</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingLeads ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Lade Leads...
                     </TableCell>
                   </TableRow>
                 ) : filteredQuickLeads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Keine Leads gefunden
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredQuickLeads.map((lead) => (
-                    <TableRow key={lead.id}>
+                    <TableRow key={lead.id} className={selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedLeadIds.has(lead.id)}
+                          onCheckedChange={() => toggleLeadSelection(lead.id)}
+                          aria-label="Lead auswählen"
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{lead.name || "-"}</TableCell>
                       <TableCell>
                         <div className="space-y-0.5">
@@ -1000,6 +1204,17 @@ export default function AdminLeads() {
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(lead.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog("quick", [lead.id])}
+                          title="Lead löschen"
+                          className="hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1415,6 +1630,51 @@ export default function AdminLeads() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ================================================================== */}
+      {/* Delete Confirmation Dialog */}
+      {/* ================================================================== */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              {deleteTarget?.ids.length === 1 ? "Eintrag löschen" : `${deleteTarget?.ids.length} Einträge löschen`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === "wizard" ? (
+                deleteTarget.ids.length === 1
+                  ? "Möchten Sie diese Wizard-Session wirklich löschen? Alle zugehörigen Daten (Formulardaten, Fortschritt, Notizen) werden unwiderruflich entfernt."
+                  : `Möchten Sie wirklich ${deleteTarget.ids.length} Wizard-Sessions löschen? Alle zugehörigen Daten werden unwiderruflich entfernt.`
+              ) : (
+                deleteTarget?.ids.length === 1
+                  ? "Möchten Sie diesen Quick-Lead wirklich löschen? Die Kontaktdaten werden unwiderruflich entfernt."
+                  : `Möchten Sie wirklich ${deleteTarget?.ids.length} Quick-Leads löschen? Alle Kontaktdaten werden unwiderruflich entfernt.`
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Löschen...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Endgültig löschen
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

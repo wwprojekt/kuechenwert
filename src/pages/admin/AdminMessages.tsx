@@ -30,7 +30,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -59,6 +70,10 @@ export default function AdminMessages() {
   const [response, setResponse] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "open" | "in_progress" | "resolved">("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchMessages = async () => {
     try {
@@ -170,6 +185,43 @@ export default function AdminMessages() {
     }
   };
 
+  const handleDelete = async (ids: string[]) => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("support_messages")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      toast({
+        title: `${ids.length} Nachricht${ids.length > 1 ? "en" : ""} gelöscht`,
+        description: "Die ausgewählten Nachrichten wurden entfernt.",
+      });
+      setSelectedIds(new Set());
+      fetchMessages();
+    } catch (error) {
+      toast({ title: "Fehler beim Löschen", description: String(error), variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeleteIds([]);
+    }
+  };
+
+  const openDeleteDialog = (ids: string[]) => {
+    setDeleteIds(ids);
+    setDeleteDialogOpen(true);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const filteredMessages = messages.filter((msg) => {
     if (filter === "all") return true;
     return msg.status === filter;
@@ -257,6 +309,19 @@ export default function AdminMessages() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredMessages.length > 0 && selectedIds.size === filteredMessages.length}
+                      onCheckedChange={() => {
+                        if (selectedIds.size === filteredMessages.length) {
+                          setSelectedIds(new Set());
+                        } else {
+                          setSelectedIds(new Set(filteredMessages.map((m) => m.id)));
+                        }
+                      }}
+                      aria-label="Alle auswählen"
+                    />
+                  </TableHead>
                   <TableHead>Benutzer</TableHead>
                   <TableHead>Betreff</TableHead>
                   <TableHead>Status</TableHead>
@@ -266,7 +331,14 @@ export default function AdminMessages() {
               </TableHeader>
               <TableBody>
                 {filteredMessages.map((msg) => (
-                  <TableRow key={msg.id}>
+                  <TableRow key={msg.id} className={selectedIds.has(msg.id) ? "bg-primary/5" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(msg.id)}
+                        onCheckedChange={() => toggleSelection(msg.id)}
+                        aria-label="Nachricht auswählen"
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-muted-foreground" />
@@ -310,6 +382,15 @@ export default function AdminMessages() {
                           <Eye className="w-4 h-4 mr-1" />
                           {msg.admin_response ? "Ansehen" : "Beantworten"}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog([msg.id])}
+                          title="Nachricht löschen"
+                          className="hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -319,6 +400,62 @@ export default function AdminMessages() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Delete Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border shadow-lg rounded-lg px-4 py-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} ausgewählt
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Aufheben
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => openDeleteDialog(Array.from(selectedIds))}
+            disabled={isDeleting}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {selectedIds.size} löschen
+          </Button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              {deleteIds.length === 1 ? "Nachricht löschen" : `${deleteIds.length} Nachrichten löschen`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteIds.length === 1
+                ? "Möchten Sie diese Nachricht wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+                : `Möchten Sie wirklich ${deleteIds.length} Nachrichten löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDelete(deleteIds)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Löschen...</>
+              ) : (
+                <><Trash2 className="w-4 h-4 mr-2" />Endgültig löschen</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Response Dialog */}
       <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>

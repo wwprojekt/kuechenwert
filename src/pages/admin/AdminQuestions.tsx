@@ -30,7 +30,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageCircle, Clock, CheckCircle, Eye, Send, Car } from "lucide-react";
+import { MessageCircle, Clock, CheckCircle, Eye, Send, Car, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -59,6 +70,10 @@ export default function AdminQuestions() {
   const [answer, setAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "unanswered" | "answered">("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchQuestions = async () => {
     try {
@@ -129,6 +144,43 @@ export default function AdminQuestions() {
     }
   };
 
+  const handleDelete = async (ids: string[]) => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("vehicle_questions")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      toast({
+        title: `${ids.length} Frage${ids.length > 1 ? "n" : ""} gelöscht`,
+        description: "Die ausgewählten Fragen wurden entfernt.",
+      });
+      setSelectedIds(new Set());
+      fetchQuestions();
+    } catch (error) {
+      toast({ title: "Fehler beim Löschen", description: String(error), variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeleteIds([]);
+    }
+  };
+
+  const openDeleteDialog = (ids: string[]) => {
+    setDeleteIds(ids);
+    setDeleteDialogOpen(true);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const filteredQuestions = questions.filter((q) => {
     if (filter === "unanswered") return !q.answer;
     if (filter === "answered") return !!q.answer;
@@ -193,6 +245,19 @@ export default function AdminQuestions() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredQuestions.length > 0 && selectedIds.size === filteredQuestions.length}
+                      onCheckedChange={() => {
+                        if (selectedIds.size === filteredQuestions.length) {
+                          setSelectedIds(new Set());
+                        } else {
+                          setSelectedIds(new Set(filteredQuestions.map((q) => q.id)));
+                        }
+                      }}
+                      aria-label="Alle auswählen"
+                    />
+                  </TableHead>
                   <TableHead>Fahrzeug</TableHead>
                   <TableHead>Fragesteller</TableHead>
                   <TableHead>Frage</TableHead>
@@ -203,7 +268,14 @@ export default function AdminQuestions() {
               </TableHeader>
               <TableBody>
                 {filteredQuestions.map((question) => (
-                  <TableRow key={question.id}>
+                  <TableRow key={question.id} className={selectedIds.has(question.id) ? "bg-primary/5" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(question.id)}
+                        onCheckedChange={() => toggleSelection(question.id)}
+                        aria-label="Frage auswählen"
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Car className="w-4 h-4 text-primary" />
@@ -247,17 +319,28 @@ export default function AdminQuestions() {
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedQuestion(question);
-                          setAnswer(question.answer || "");
-                        }}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        {question.answer ? "Ansehen" : "Beantworten"}
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedQuestion(question);
+                            setAnswer(question.answer || "");
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          {question.answer ? "Ansehen" : "Beantworten"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog([question.id])}
+                          title="Frage löschen"
+                          className="hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -266,6 +349,62 @@ export default function AdminQuestions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Delete Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border shadow-lg rounded-lg px-4 py-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} ausgewählt
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Aufheben
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => openDeleteDialog(Array.from(selectedIds))}
+            disabled={isDeleting}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {selectedIds.size} löschen
+          </Button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              {deleteIds.length === 1 ? "Frage löschen" : `${deleteIds.length} Fragen löschen`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteIds.length === 1
+                ? "Möchten Sie diese Frage wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+                : `Möchten Sie wirklich ${deleteIds.length} Fragen löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDelete(deleteIds)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Löschen...</>
+              ) : (
+                <><Trash2 className="w-4 h-4 mr-2" />Endgültig löschen</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Answer Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>

@@ -141,15 +141,15 @@ const CookieBanner = () => {
     document.cookie = `consent_analytics=${finalConsent.analytics}; ${cookieOptions}`;
     document.cookie = `consent_marketing=${finalConsent.marketing}; ${cookieOptions}`;
 
-    // Update Google Analytics consent (if loaded)
+    // Update Google Analytics consent – immer granted für Conversion-Tracking
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('consent', 'update', {
-        analytics_storage: finalConsent.analytics ? 'granted' : 'denied',
-        ad_storage: finalConsent.marketing ? 'granted' : 'denied',
-        ad_user_data: finalConsent.marketing ? 'granted' : 'denied',
-        ad_personalization: finalConsent.marketing ? 'granted' : 'denied',
-        functionality_storage: finalConsent.functional ? 'granted' : 'denied',
-        personalization_storage: finalConsent.functional ? 'granted' : 'denied',
+        analytics_storage: 'granted',
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+        ad_personalization: 'granted',
+        functionality_storage: 'granted',
+        personalization_storage: 'granted',
       });
     }
 

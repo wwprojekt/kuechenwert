@@ -186,41 +186,37 @@ const RegisterHaendler = () => {
         throw new Error("Benutzer konnte nicht erstellt werden");
       }
 
-      // Step 2: Upload document if provided
-      let documentUrl = null;
+      // Step 2: Upload document via Edge Function (bypasses RLS)
+      // The Edge Function uses service_role to upload to storage and
+      // update the dealer_application with the document URL.
       if (documentFile) {
         setUploadingDocument(true);
-        const fileExt = documentFile.name.split(".").pop();
-        const fileName = `${authData.user.id}/${Date.now()}.${fileExt}`;
+        try {
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', documentFile);
+          uploadFormData.append('user_id', authData.user.id);
+          uploadFormData.append('file_type', 'trade_license');
 
-        const { error: uploadError } = await supabase.storage
-          .from("dealer-documents")
-          .upload(fileName, documentFile);
+          const { data: uploadResult, error: uploadError } = await supabase.functions.invoke(
+            'dealer-document-upload',
+            { body: uploadFormData }
+          );
 
-        if (uploadError) {
-          logger.error("Document upload error:", uploadError);
-          // Continue without document - not critical
-        } else {
-          const { data: { publicUrl } } = supabase.storage
-            .from("dealer-documents")
-            .getPublicUrl(fileName);
-          documentUrl = publicUrl;
+          if (uploadError) {
+            logger.error("Document upload error:", uploadError);
+            // Continue without document - not critical for registration
+          } else {
+            logger.info("Document uploaded successfully:", uploadResult?.url);
+          }
+        } catch (uploadErr) {
+          logger.error("Document upload failed:", uploadErr);
+          // Continue - document can be uploaded later
+        } finally {
+          setUploadingDocument(false);
         }
-        setUploadingDocument(false);
       }
 
-      // Step 3: Update dealer application with document URL if uploaded
-      // The dealer_application is created by the handle_new_user database trigger
-      // (runs with SECURITY DEFINER, bypassing RLS). We only need to update
-      // the document URL here if a document was uploaded.
-      if (documentUrl) {
-        // Use service-level update via edge function or retry after login
-        // For now, log the document URL - admin can add it later
-        logger.info("Document uploaded for dealer:", documentUrl);
-      }
-
-      // Role is assigned by the handle_new_user trigger automatically
-      // No need for manual role update
+      // Role and dealer_application are created by the handle_new_user trigger automatically
 
       setRegistrationComplete(true);
       toast({

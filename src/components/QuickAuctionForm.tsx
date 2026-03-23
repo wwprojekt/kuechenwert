@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { captureOrUpdateLead } from '@/lib/leadTrackingService';
-import { trackLeadContactData } from '@/lib/gadsConversionService';
+import { trackLandingPageLead } from '@/lib/gadsConversionService';
 import { manufacturerModels, popularManufacturers } from '@/lib/vehicle-data';
 
 type SaleChannel = 'auction' | 'instant' | 'station' | '';
@@ -151,8 +151,8 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
     // Capture lead before navigating
     await captureLead();
 
-    // Google Ads: Lead-Conversion tracken
-    trackLeadContactData('hero_form', `${manufacturer} ${model} - ${bodyType}`);
+    // Google Ads + GA4: Lead-Conversion tracken
+    trackLandingPageLead('homepage_hero', `${manufacturer} ${model} - ${bodyType}`);
 
     // Create URL with prefilled data for the wizard
     const searchParams = new URLSearchParams();

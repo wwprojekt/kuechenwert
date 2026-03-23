@@ -330,19 +330,6 @@ export function trackWizardCompleted(vehicleInfo: string): void {
     lead_source: 'wizard',
   });
 
-  // GA4: Funnel-Abschluss als purchase Event (für E-Commerce-Berichte)
-  safeGtag('event', 'purchase', {
-    transaction_id: `wizard_${Date.now()}`,
-    value: 50.0,
-    currency: 'EUR',
-    items: [{
-      item_id: 'wizard_completion',
-      item_name: 'Wohnmobil-Bewertung abgeschlossen',
-      item_category: 'Lead',
-      price: 50.0,
-      quantity: 1,
-    }],
-  });
 }
 
 /**
@@ -449,6 +436,68 @@ export function trackAuctionCreated(vehicleInfo: string): void {
     event_label: vehicleInfo,
     value: 75.0,
     currency: 'EUR',
+  });
+}
+
+// ============================================================
+// CTA-KLICK-TRACKING (Telefon, WhatsApp, E-Mail)
+// Wichtig für Lead-Gen: Jeder Kontaktkanal muss getrackt werden
+// ============================================================
+
+/**
+ * Telefon-Klick: Nutzer klickt auf Telefonnummer
+ * Wird als GA4 Event + Google Ads Conversion getrackt
+ */
+export function trackPhoneClick(phoneNumber: string, pagePath: string): void {
+  safeGtag('event', 'contact', {
+    event_category: 'CTA',
+    event_label: 'phone_click',
+    contact_method: 'phone',
+    phone_number: phoneNumber,
+    page_path: pagePath,
+    value: 5.0,
+    currency: 'EUR',
+  });
+}
+
+/**
+ * WhatsApp-Klick: Nutzer klickt auf WhatsApp-Button
+ */
+export function trackWhatsAppClick(pagePath: string): void {
+  safeGtag('event', 'contact', {
+    event_category: 'CTA',
+    event_label: 'whatsapp_click',
+    contact_method: 'whatsapp',
+    page_path: pagePath,
+    value: 5.0,
+    currency: 'EUR',
+  });
+}
+
+/**
+ * E-Mail-Klick: Nutzer klickt auf E-Mail-Link
+ */
+export function trackEmailClick(pagePath: string): void {
+  safeGtag('event', 'contact', {
+    event_category: 'CTA',
+    event_label: 'email_click',
+    contact_method: 'email',
+    page_path: pagePath,
+    value: 5.0,
+    currency: 'EUR',
+  });
+}
+
+/**
+ * CTA-Button-Klick: Nutzer klickt auf einen Call-to-Action Button
+ * (z.B. "Jetzt bewerten", "Kostenlos anfragen")
+ */
+export function trackCTAClick(ctaName: string, pagePath: string, destination?: string): void {
+  safeGtag('event', 'cta_click', {
+    event_category: 'CTA',
+    event_label: ctaName,
+    page_path: pagePath,
+    link_url: destination || '',
   });
 }
 

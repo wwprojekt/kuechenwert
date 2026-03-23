@@ -9,6 +9,7 @@ import { MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSettings } from '@/contexts/SettingsContext';
+import { trackWhatsAppClick } from '@/lib/gadsConversionService';
 
 export const WhatsAppButton = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,6 +35,7 @@ export const WhatsAppButton = () => {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hallo! Ich habe eine Frage zu ${siteName}.`;
 
   const handleWhatsAppClick = () => {
+    trackWhatsAppClick(location.pathname);
     window.open(whatsappUrl, '_blank');
     setIsExpanded(false);
   };

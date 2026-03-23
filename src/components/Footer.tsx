@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, ArrowRight, Facebook, Instagram, Youtube, Linkedin, Shield, Award, Clock, CheckCircle2, Cookie } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SiteLogo } from "@/components/SiteLogo";
 import { CookieSettingsModal } from "@/components/CookieSettingsModal";
 import { useToast } from "@/hooks/use-toast";
+import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
 import { z } from "zod";
 
 const newsletterSchema = z.object({
@@ -17,6 +18,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { settings } = useSettings();
   const { toast } = useToast();
+  const location = useLocation();
   const [showCookieSettings, setShowCookieSettings] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
@@ -369,6 +371,7 @@ const Footer = () => {
                   <li>
                     <a 
                       href={`tel:${settings.support_phone.replace(/\s/g, '')}`}
+                      onClick={() => trackPhoneClick(settings.support_phone || '', location.pathname)}
                       className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
                     >
                       <div className="h-9 w-9 rounded-lg bg-slate-800 group-hover:bg-primary flex items-center justify-center flex-shrink-0 transition-colors">
@@ -387,6 +390,7 @@ const Footer = () => {
                   <li>
                     <a 
                       href={`mailto:${settings.contact_email}`}
+                      onClick={() => trackEmailClick(location.pathname)}
                       className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
                     >
                       <div className="h-9 w-9 rounded-lg bg-slate-800 group-hover:bg-primary flex items-center justify-center flex-shrink-0 transition-colors">

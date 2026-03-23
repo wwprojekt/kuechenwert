@@ -122,7 +122,7 @@ export const DamageDocumentation = ({
         .from('damage_photos')
         .insert({
           motorhome_id: motorhomeId,
-          url: publicUrl,
+          photo_url: publicUrl,
           damage_description: newDamageForm.description,
           damage_severity: newDamageForm.severity,
           damage_location: newDamageForm.location,

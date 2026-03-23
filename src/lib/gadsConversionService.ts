@@ -24,11 +24,31 @@ declare global {
 const GOOGLE_ADS_ID = 'AW-18033517246';
 
 // Hilfsfunktion: gtag sicher aufrufen
+// Verwendet window.gtag (explizit in index.html gesetzt) oder
+// fällt auf dataLayer.push zurück falls gtag nicht verfügbar ist
 function safeGtag(...args: unknown[]): void {
   try {
-    if (typeof window !== 'undefined' && window.gtag) {
+    if (typeof window === 'undefined') return;
+
+    // Primär: window.gtag verwenden (wird in index.html gesetzt)
+    if (typeof window.gtag === 'function') {
       window.gtag(...args);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[GadsTracking] Event gesendet via window.gtag:', args);
+      }
+      return;
     }
+
+    // Fallback: Direkt auf dataLayer pushen
+    if (window.dataLayer) {
+      window.dataLayer.push(args);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[GadsTracking] Event gesendet via dataLayer.push:', args);
+      }
+      return;
+    }
+
+    console.warn('[GadsTracking] Weder window.gtag noch dataLayer verfügbar. Event verworfen:', args);
   } catch (error) {
     console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
   }

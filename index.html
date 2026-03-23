@@ -12,6 +12,8 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      // gtag auf window setzen, damit es aus React/TypeScript erreichbar ist
+      window.gtag = gtag;
 
       // Consent Mode v2 Default – MUSS vor gtag config stehen
       gtag('consent', 'default', {
@@ -31,6 +33,7 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
       gtag('js', new Date());
       gtag('config', 'AW-18033517246');
     </script>

@@ -6,7 +6,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Gavel, TrendingUp, Eye, Plus, ArrowUpRight, Sparkles, Clock, Calendar, Package } from "lucide-react";
+import { Car, Gavel, TrendingUp, Eye, Plus, ArrowUpRight, Sparkles, Clock, Calendar, Package, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
@@ -22,6 +22,22 @@ export default function DashboardOverview() {
   const { primaryRole } = useUserRole();
 
   const isDealer = primaryRole === 'dealer';
+
+  // ── Check for pending dealer application ──────────────────────
+  const { data: pendingDealerApp } = useQuery({
+    queryKey: ["pendingDealerApp", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("dealer_applications")
+        .select("id, status, company_name")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && !isDealer,
+  });
 
   // ── Seller stats ──────────────────────────────────────────────
   const { data: sellerStats } = useQuery({
@@ -304,6 +320,27 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      {/* Pending Dealer Application Banner */}
+      {pendingDealerApp && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                Ihr Händlerantrag wird geprüft
+              </h3>
+              <p className="text-amber-700 dark:text-amber-300 text-sm">
+                Ihr Antrag für <strong>{pendingDealerApp.company_name}</strong> wird derzeit von unserem Team geprüft.
+                Sie erhalten eine E-Mail-Benachrichtigung, sobald Ihr Antrag bearbeitet wurde.
+                In der Zwischenzeit können Sie Ihr Profil vervollständigen.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

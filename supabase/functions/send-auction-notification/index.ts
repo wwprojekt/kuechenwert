@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph, button } from '../_shared/email-builder.ts';
+import { buildEmailLayout, infoBox, detailRow, paragraph, button, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -16,6 +16,7 @@ interface AuctionEmailRequest {
   currentBid?: string;
   yourBid?: string;
   endTime?: string;
+  customerNumber?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -24,12 +25,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime }: AuctionEmailRequest = await req.json();
+    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
-    // Fetch site settings
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch customer number if not passed
+    let custNum = passedCustNum || '';
+    if (!custNum) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('customer_number')
+        .eq('email', email)
+        .maybeSingle();
+      custNum = profile?.customer_number || '';
+    }
+
+    // Fetch site settings
     const { data: settings } = await supabase
       .from('site_settings')
       .select('*')
@@ -50,6 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Ihre Auktion wurde gestartet";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Ihr Wohnmobil wurde erfolgreich in die Auktion aufgenommen und ist jetzt für Händler sichtbar.')}
           ${infoBox('Fahrzeugdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -65,6 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Neue Auktion verfügbar";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Eine neue Auktion, die Ihren Kriterien entspricht, ist jetzt verfügbar:')}
           ${infoBox('Fahrzeugdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -79,6 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Neues Gebot eingegangen";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Auf Ihr Wohnmobil wurde ein neues Gebot abgegeben:')}
           ${infoBox('Gebotsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -92,6 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Sie wurden überboten";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Ein anderer Händler hat ein höheres Gebot abgegeben:')}
           ${infoBox('Gebotsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -106,6 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Glückwunsch! Sie haben die Auktion gewonnen";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('<strong>Herzlichen Glückwunsch! Sie haben die Auktion gewonnen!</strong>')}
           ${infoBox('Auktionsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -120,6 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Auktion beendet";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Die Auktion für folgendes Fahrzeug wurde beendet:')}
           ${infoBox('Auktionsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
@@ -135,6 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Auktion endet bald!";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph('Eine Auktion, für die Sie geboten haben, endet in Kürze:')}
           ${infoBox('Auktionsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}

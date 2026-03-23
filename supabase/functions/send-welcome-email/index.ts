@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, paragraph, greeting, button, list, infoBox } from '../_shared/email-builder.ts';
+import { buildEmailLayout, paragraph, greeting, button, list, infoBox, customerBadge } from '../_shared/email-builder.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, email, account_type')
+      .select('first_name, last_name, email, account_type, customer_number')
       .eq('id', userId)
       .single();
 
@@ -81,6 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (isDealer) {
       emailContent = `
         ${greeting(name || undefined)}
+        ${customerBadge(profile.customer_number)}
         ${paragraph(`Herzlich willkommen bei <strong>${settingsData.site_name}</strong> &ndash; Deutschlands f&uuml;hrender Wohnmobil-Handelsplattform f&uuml;r H&auml;ndler!`)}
         ${paragraph('Ihr Konto wurde erfolgreich erstellt. Um auf Auktionen bieten zu k&ouml;nnen, reichen Sie bitte Ihre H&auml;ndler-Bewerbung ein.')}
         ${infoBox('Ihre n&auml;chsten Schritte', `

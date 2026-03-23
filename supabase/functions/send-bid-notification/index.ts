@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph } from '../_shared/email-builder.ts';
+import { buildEmailLayout, infoBox, detailRow, paragraph, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -27,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch bidder profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email, first_name, last_name')
+      .select('email, first_name, last_name, customer_number')
       .eq('id', bidderId)
       .single();
 
@@ -70,6 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
     const content = isOutbid 
       ? `
         ${paragraph(`Hallo ${userName},`)}
+        ${customerBadge(profile.customer_number)}
         ${paragraph(`Sie wurden bei der Auktion für <strong>${motorhomeName}</strong> überboten.`)}
         
         ${infoBox('Gebotsstatus', `
@@ -84,6 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
       `
       : `
         ${paragraph(`Hallo ${userName},`)}
+        ${customerBadge(profile.customer_number)}
         ${paragraph(`Ihr Gebot für <strong>${motorhomeName}</strong> wurde erfolgreich platziert!`)}
         
         ${infoBox('Gebotsstatus', `

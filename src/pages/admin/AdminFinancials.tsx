@@ -1,7 +1,8 @@
 /**
  * Admin Financial Dashboard
  * Complete financial management and invoice overview
- * Supports full and partial payment tracking
+ * Features: Search by invoice/customer number, delete invoices, extended stats,
+ * customer number display, date range filter, payment history
  */
 
 import { useState } from 'react';
@@ -13,7 +14,18 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Euro, 
   FileText, 
@@ -23,9 +35,20 @@ import {
   Clock,
   Download,
   Send,
-  CreditCard
+  CreditCard,
+  Trash2,
+  Search,
+  Users,
+  BarChart3,
+  History,
+  RefreshCw,
+  Eye,
+  Percent,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { getInvoiceStatistics } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
@@ -38,17 +61,21 @@ export default function AdminFinancials() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('invoices');
 
   // Fetch financial statistics
   const { data: stats } = useQuery({
     queryKey: ['financial-stats'],
     queryFn: getInvoiceStatistics,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Fetch all invoices
+  // Fetch all invoices with customer_number
   const { data: invoices, isLoading: invoicesLoading } = useQuery({
     queryKey: ['admin-invoices'],
     queryFn: async () => {
@@ -56,7 +83,7 @@ export default function AdminFinancials() {
         .from('invoices')
         .select(`
           *,
-          dealer:profiles(first_name, last_name, company_name, email),
+          dealer:profiles(first_name, last_name, company_name, email, customer_number),
           auction:auctions(
             motorhome:motorhomes(manufacturer, model)
           ),
@@ -69,22 +96,26 @@ export default function AdminFinancials() {
     },
   });
 
-  const { exportCSV, exportExcel, isExporting } = useExport({
-    filename: "finanzen",
-    columns: [
-      { key: "invoice_number", label: "Rechnungsnummer" },
-      { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || "" },
-      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
-      { key: "gross_amount", label: "Betrag", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "amount_paid", label: "Bezahlt", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "gross_amount", label: "Restbetrag", format: (value: any, row: any) => `€${(Number(row.gross_amount) - Number(row.amount_paid)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "payment_status", label: "Status" },
-      { key: "created_at", label: "Erstellt am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
-      { key: "due_date", label: "Fällig am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
-    ],
+  // Fetch payment history
+  const { data: paymentHistory } = useQuery({
+    queryKey: ['payment-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('dealer_payment_history')
+        .select(`
+          *,
+          invoice:invoices(invoice_number, customer_number),
+          dealer:profiles(first_name, last_name, company_name, customer_number)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return data;
+    },
   });
 
-  // Fetch overdue invoices (includes pending and partial)
+  // Fetch overdue invoices
   const { data: overdueInvoices } = useQuery({
     queryKey: ['overdue-invoices'],
     queryFn: async () => {
@@ -92,7 +123,7 @@ export default function AdminFinancials() {
         .from('invoices')
         .select(`
           *,
-          dealer:profiles(first_name, last_name, company_name, email)
+          dealer:profiles(first_name, last_name, company_name, email, customer_number)
         `)
         .in('payment_status', ['pending', 'partial'])
         .lt('due_date', new Date().toISOString())
@@ -100,6 +131,87 @@ export default function AdminFinancials() {
       
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "finanzen",
+    columns: [
+      { key: "invoice_number", label: "Rechnungsnummer" },
+      { key: "customer_number", label: "Kundennummer" },
+      { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
+      { key: "dealer", label: "Kd.-Nr.", format: (value: any) => value?.customer_number || '' },
+      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
+      { key: "gross_amount", label: "Betrag", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "amount_paid", label: "Bezahlt", format: (value: any) => `€${Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "gross_amount", label: "Restbetrag", format: (value: any, row: any) => `€${(Number(row.gross_amount) - Number(row.amount_paid || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
+      { key: "payment_status", label: "Status" },
+      { key: "invoice_date", label: "Rechnungsdatum", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
+      { key: "due_date", label: "Fällig am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
+    ],
+  });
+
+  // Delete invoice mutation
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      // First delete invoice_items
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (itemsError) throw itemsError;
+
+      // Delete payment_reminders
+      const { error: remindersError } = await supabase
+        .from('payment_reminders')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (remindersError) throw remindersError;
+
+      // Delete payment history
+      const { error: historyError } = await supabase
+        .from('dealer_payment_history')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (historyError) throw historyError;
+
+      // Delete the invoice itself
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
+      if (invoiceError) throw invoiceError;
+
+      // Try to delete PDF from storage (non-critical)
+      try {
+        const invoice = invoices?.find((i: any) => i.id === invoiceId);
+        if (invoice?.dealer_id && invoice?.invoice_number) {
+          await supabase.storage
+            .from('invoices')
+            .remove([`${invoice.dealer_id}/${invoice.invoice_number}.pdf`]);
+        }
+      } catch {
+        // Storage deletion is non-critical
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+      toast({
+        title: 'Rechnung gelöscht',
+        description: 'Die Rechnung und alle zugehörigen Daten wurden gelöscht.',
+      });
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Fehler beim Löschen',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 
@@ -130,6 +242,10 @@ export default function AdminFinancials() {
       return <Badge className="bg-blue-100 text-blue-800">Teilbezahlt</Badge>;
     }
     
+    if (invoice.payment_status === 'cancelled') {
+      return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
+    }
+    
     const isOverdue = new Date(invoice.due_date) < new Date();
     const reminderCount = invoice.reminders?.length || 0;
     
@@ -146,11 +262,43 @@ export default function AdminFinancials() {
     return <Badge variant="outline">Offen</Badge>;
   };
 
+  // Date filter logic
+  const filterByDate = (invoice: any) => {
+    if (dateFilter === 'all') return true;
+    const invoiceDate = new Date(invoice.invoice_date || invoice.created_at);
+    const now = new Date();
+    
+    switch (dateFilter) {
+      case '7days':
+        return invoiceDate >= subDays(now, 7);
+      case '30days':
+        return invoiceDate >= subDays(now, 30);
+      case 'thisMonth':
+        return isWithinInterval(invoiceDate, { start: startOfMonth(now), end: endOfMonth(now) });
+      case 'lastMonth': {
+        const lastMonth = subMonths(now, 1);
+        return isWithinInterval(invoiceDate, { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) });
+      }
+      case '3months':
+        return invoiceDate >= subMonths(now, 3);
+      case '6months':
+        return invoiceDate >= subMonths(now, 6);
+      case '12months':
+        return invoiceDate >= subMonths(now, 12);
+      default:
+        return true;
+    }
+  };
+
   const filteredInvoices = invoices?.filter(invoice => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = searchTerm === '' || 
-      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.dealer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (invoice.dealer?.company_name && invoice.dealer.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      invoice.invoice_number?.toLowerCase().includes(searchLower) ||
+      invoice.customer_number?.toLowerCase().includes(searchLower) ||
+      invoice.dealer?.email?.toLowerCase().includes(searchLower) ||
+      invoice.dealer?.customer_number?.toLowerCase().includes(searchLower) ||
+      (invoice.dealer?.company_name && invoice.dealer.company_name.toLowerCase().includes(searchLower)) ||
+      (`${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.toLowerCase().includes(searchLower));
     
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'paid' && invoice.payment_status === 'paid') ||
@@ -158,8 +306,35 @@ export default function AdminFinancials() {
       (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
       (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && new Date(invoice.due_date) < new Date());
     
-    return matchesSearch && matchesStatus;
+    const matchesDate = filterByDate(invoice);
+    
+    return matchesSearch && matchesStatus && matchesDate;
   });
+
+  // Extended statistics
+  const totalGross = invoices?.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0) || 0;
+  const totalPaid = invoices?.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0) || 0;
+  const totalOutstanding = totalGross - totalPaid;
+  const overdueCount = invoices?.filter(inv => 
+    (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
+    new Date(inv.due_date) < new Date()
+  ).length || 0;
+  const overdueAmount = invoices?.filter(inv => 
+    (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
+    new Date(inv.due_date) < new Date()
+  ).reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0) || 0;
+  const paidCount = invoices?.filter(inv => inv.payment_status === 'paid').length || 0;
+  const avgInvoiceAmount = invoices?.length ? totalGross / invoices.length : 0;
+  const paymentRate = totalGross > 0 ? (totalPaid / totalGross) * 100 : 0;
+
+  // This month stats
+  const thisMonthInvoices = invoices?.filter(inv => {
+    const d = new Date(inv.invoice_date || inv.created_at);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }) || [];
+  const thisMonthRevenue = thisMonthInvoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
+  const thisMonthCount = thisMonthInvoices.length;
 
   return (
     <div className="space-y-6">
@@ -167,13 +342,26 @@ export default function AdminFinancials() {
         <div>
           <h1 className="text-3xl font-bold">Finanzen & Rechnungen</h1>
           <p className="text-muted-foreground">
-            Übersicht über alle Rechnungen und Zahlungen
+            Komplette Finanzübersicht mit Rechnungs- und Zahlungsverwaltung
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+          }}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Aktualisieren
+        </Button>
       </div>
 
-      {/* Financial Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* Extended Financial Statistics - Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gesamtumsatz</CardTitle>
@@ -181,10 +369,25 @@ export default function AdminFinancials() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {stats?.totalRevenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) || '€0'}
+              {totalGross.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Bezahlte Rechnungen
+              {invoices?.length || 0} Rechnungen gesamt
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Einnahmen</CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {totalPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {paidCount} bezahlte Rechnungen
             </p>
           </CardContent>
         </Card>
@@ -192,11 +395,11 @@ export default function AdminFinancials() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ausstehend</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {stats?.outstandingAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) || '€0'}
+              {totalOutstanding.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
               Offene Forderungen
@@ -207,166 +410,433 @@ export default function AdminFinancials() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Überfällig</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {stats?.overdueInvoices || 0}
+              {overdueAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Rechnungen
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bezahlt</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats?.paidInvoices || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Rechnungen
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.totalInvoices || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Rechnungen
+              {overdueCount} überfällige Rechnungen
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Rechnungsübersicht</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1 flex gap-4">
-              <Input
-                placeholder="Suchen nach Rechnungsnummer, E-Mail oder Firma..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              <ExportButton
-                onExportCSV={() => exportCSV(invoices || [])}
-                onExportExcel={() => exportExcel(invoices || [])}
-                isExporting={isExporting}
-              />
+      {/* Extended Statistics - Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Zahlungsquote</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {paymentRate.toFixed(1)}%
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Status</SelectItem>
-                <SelectItem value="pending">Offen</SelectItem>
-                <SelectItem value="partial">Teilbezahlt</SelectItem>
-                <SelectItem value="paid">Bezahlt</SelectItem>
-                <SelectItem value="overdue">Überfällig</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <Progress value={paymentRate} className="h-2 mt-2" />
+          </CardContent>
+        </Card>
 
-          {/* Invoice List */}
-          <div className="space-y-4">
-            {invoicesLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ø Rechnungsbetrag</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {avgInvoiceAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Durchschnitt pro Rechnung
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Diesen Monat</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              {thisMonthRevenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {thisMonthCount} neue Rechnungen
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Kunden</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Set(invoices?.map(inv => inv.dealer_id)).size || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Aktive Rechnungsempfänger
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs: Rechnungen / Überfällig / Zahlungshistorie */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="invoices" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Rechnungen
+            {invoices?.length ? <Badge variant="secondary" className="ml-1">{invoices.length}</Badge> : null}
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Überfällig
+            {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="gap-2">
+            <History className="h-4 w-4" />
+            Zahlungshistorie
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Tab: Rechnungen ──────────────────────────────────────── */}
+        <TabsContent value="invoices">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rechnungsübersicht</CardTitle>
+              <CardDescription>
+                Suchen Sie nach Rechnungsnummer, Kundennummer, Firma oder E-Mail
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Search and Filters */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <div className="relative flex-1 min-w-[250px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechnungsnr., Kundennr., Firma oder E-Mail..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Status</SelectItem>
+                    <SelectItem value="pending">Offen</SelectItem>
+                    <SelectItem value="partial">Teilbezahlt</SelectItem>
+                    <SelectItem value="paid">Bezahlt</SelectItem>
+                    <SelectItem value="overdue">Überfällig</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Zeiträume</SelectItem>
+                    <SelectItem value="7days">Letzte 7 Tage</SelectItem>
+                    <SelectItem value="30days">Letzte 30 Tage</SelectItem>
+                    <SelectItem value="thisMonth">Dieser Monat</SelectItem>
+                    <SelectItem value="lastMonth">Letzter Monat</SelectItem>
+                    <SelectItem value="3months">Letzte 3 Monate</SelectItem>
+                    <SelectItem value="6months">Letzte 6 Monate</SelectItem>
+                    <SelectItem value="12months">Letzte 12 Monate</SelectItem>
+                  </SelectContent>
+                </Select>
+                <ExportButton
+                  onExportCSV={() => exportCSV(filteredInvoices || [])}
+                  onExportExcel={() => exportExcel(filteredInvoices || [])}
+                  isExporting={isExporting}
+                />
               </div>
-            ) : (
-              filteredInvoices?.map((invoice: any) => {
-                const amountPaid = invoice.amount_paid || 0;
-                const remaining = invoice.gross_amount - amountPaid;
-                const paymentProgress = (amountPaid / invoice.gross_amount) * 100;
-                
-                return (
-                  <div
-                    key={invoice.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-6">
-                        <div className="min-w-[140px]">
-                          <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}>
-                            {invoice.invoice_number}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {invoice.dealer?.company_name || `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`}
+
+              {/* Results count */}
+              {searchTerm && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  {filteredInvoices?.length || 0} Ergebnis{(filteredInvoices?.length || 0) !== 1 ? 'se' : ''} gefunden
+                  {searchTerm && ` für "${searchTerm}"`}
+                </p>
+              )}
+
+              {/* Invoice List */}
+              <div className="space-y-3">
+                {invoicesLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  </div>
+                ) : filteredInvoices?.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                    <p className="text-lg font-medium">Keine Rechnungen gefunden</p>
+                    <p className="text-sm">Passen Sie Ihre Suchkriterien oder Filter an.</p>
+                  </div>
+                ) : (
+                  filteredInvoices?.map((invoice: any) => {
+                    const amountPaid = Number(invoice.amount_paid || 0);
+                    const grossAmount = Number(invoice.gross_amount);
+                    const remaining = grossAmount - amountPaid;
+                    const paymentProgress = grossAmount > 0 ? (amountPaid / grossAmount) * 100 : 0;
+                    const dealerName = invoice.dealer?.company_name || 
+                      `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim() || 'Unbekannt';
+                    const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
+                    
+                    return (
+                      <div
+                        key={invoice.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-6">
+                            {/* Invoice Number + Customer */}
+                            <div className="min-w-[160px]">
+                              <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}>
+                                {invoice.invoice_number}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {dealerName}
+                              </div>
+                              {custNum && (
+                                <div className="text-xs text-blue-600 font-medium">
+                                  {custNum}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Vehicle */}
+                            <div className="hidden lg:block min-w-[150px]">
+                              <div className="font-medium text-sm">
+                                {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
+                              </div>
+                            </div>
+
+                            {/* Status + Progress */}
+                            <div className="flex-1 min-w-[180px]">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span>{getStatusBadge(invoice)}</span>
+                                <span className="font-semibold">
+                                  {amountPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {grossAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                                </span>
+                              </div>
+                              <Progress value={paymentProgress} className="h-2" />
+                            </div>
                           </div>
                         </div>
-                        <div className="hidden md:block min-w-[150px]">
-                          <div className="font-medium">
-                            {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Auktion #{invoice.auction_id}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-[150px]">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>{getStatusBadge(invoice)}</span>
-                            <span className="font-semibold">{amountPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {invoice.gross_amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
-                          </div>
-                          <Progress value={paymentProgress} className="h-2" />
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 ml-4">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}
+                            title="Rechnung ansehen"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setPaymentDialogOpen(true);
+                            }}
+                            disabled={invoice.payment_status === 'paid'}
+                            title="Zahlung erfassen"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => sendReminderMutation.mutate(invoice.id)}
+                            disabled={sendReminderMutation.isPending || invoice.payment_status === 'paid'}
+                            title="Mahnung senden"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setInvoiceToDelete(invoice);
+                              setDeleteDialogOpen(true);
+                            }}
+                            title="Rechnung löschen"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-6">
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ansehen
-                      </Button>
-                      <Button 
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedInvoice(invoice);
-                          setPaymentDialogOpen(true);
-                        }}
-                        disabled={invoice.payment_status === 'paid'}
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Zahlung
-                      </Button>
-                      <Button 
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => sendReminderMutation.mutate(invoice.id)}
-                        disabled={sendReminderMutation.isPending || invoice.payment_status === 'paid'}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Mahnung
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
+        {/* ── Tab: Überfällig ──────────────────────────────────────── */}
+        <TabsContent value="overdue">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Überfällige Rechnungen
+              </CardTitle>
+              <CardDescription>
+                Rechnungen die das Fälligkeitsdatum überschritten haben
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!overdueInvoices?.length ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p className="text-lg font-medium">Keine überfälligen Rechnungen</p>
+                  <p className="text-sm">Alle Rechnungen sind im Zeitplan.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {overdueInvoices.map((invoice: any) => {
+                    const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                    const remaining = Number(invoice.gross_amount) - Number(invoice.amount_paid || 0);
+                    const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
+                    
+                    return (
+                      <div key={invoice.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/50">
+                        <div className="flex items-center gap-6">
+                          <div className="min-w-[140px]">
+                            <div className="font-semibold text-red-700">{invoice.invoice_number}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {invoice.dealer?.company_name || `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`}
+                            </div>
+                            {custNum && (
+                              <div className="text-xs text-blue-600 font-medium">{custNum}</div>
+                            )}
+                          </div>
+                          <div>
+                            <Badge variant="destructive">{daysOverdue} Tage überfällig</Badge>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-red-700">
+                              {remaining.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Fällig: {format(new Date(invoice.due_date), 'dd.MM.yyyy', { locale: de })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setPaymentDialogOpen(true);
+                            }}
+                          >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Zahlung
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => sendReminderMutation.mutate(invoice.id)}
+                            disabled={sendReminderMutation.isPending}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Mahnung
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Tab: Zahlungshistorie ────────────────────────────────── */}
+        <TabsContent value="payments">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Zahlungshistorie
+              </CardTitle>
+              <CardDescription>
+                Letzte 50 erfasste Zahlungseingänge
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!paymentHistory?.length ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium">Keine Zahlungen erfasst</p>
+                  <p className="text-sm">Zahlungseingänge werden hier chronologisch angezeigt.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {paymentHistory.map((payment: any) => (
+                    <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-6">
+                        <div className="min-w-[120px]">
+                          <div className="font-semibold text-green-700">
+                            +{Number(payment.amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(payment.created_at), 'dd.MM.yyyy HH:mm', { locale: de })}
+                          </div>
+                        </div>
+                        <div className="min-w-[140px]">
+                          <div className="text-sm font-medium">{payment.invoice?.invoice_number || '—'}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {payment.dealer?.company_name || `${payment.dealer?.first_name || ''} ${payment.dealer?.last_name || ''}`}
+                          </div>
+                          {payment.dealer?.customer_number && (
+                            <div className="text-xs text-blue-600 font-medium">{payment.dealer.customer_number}</div>
+                          )}
+                        </div>
+                        <div>
+                          <Badge variant="outline">
+                            {payment.payment_method === 'bank_transfer' ? 'Überweisung' :
+                             payment.payment_method === 'cash' ? 'Bar' :
+                             payment.payment_method === 'paypal' ? 'PayPal' :
+                             payment.payment_method === 'credit_card' ? 'Kreditkarte' :
+                             payment.payment_method === 'direct_debit' ? 'Lastschrift' :
+                             payment.payment_method || 'Sonstige'}
+                          </Badge>
+                        </div>
+                        {payment.payment_reference && (
+                          <div className="text-xs text-muted-foreground">
+                            Ref: {payment.payment_reference}
+                          </div>
+                        )}
+                      </div>
+                      <Badge className="bg-green-100 text-green-800">
+                        {payment.status === 'completed' ? 'Abgeschlossen' : payment.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Payment Dialog */}
       {selectedInvoice && (
         <RecordPaymentDialog
           open={paymentDialogOpen}
@@ -374,6 +844,61 @@ export default function AdminFinancials() {
           invoice={selectedInvoice}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Rechnung unwiderruflich löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Sie sind dabei, die Rechnung <strong>{invoiceToDelete?.invoice_number}</strong> zu löschen.
+              </p>
+              {invoiceToDelete?.dealer && (
+                <p>
+                  Kunde: <strong>
+                    {invoiceToDelete.dealer.company_name || 
+                     `${invoiceToDelete.dealer.first_name || ''} ${invoiceToDelete.dealer.last_name || ''}`}
+                  </strong>
+                  {(invoiceToDelete.customer_number || invoiceToDelete.dealer?.customer_number) && (
+                    <> ({invoiceToDelete.customer_number || invoiceToDelete.dealer.customer_number})</>
+                  )}
+                </p>
+              )}
+              <p>
+                Betrag: <strong>
+                  {Number(invoiceToDelete?.gross_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                </strong>
+              </p>
+              <p className="text-destructive font-medium mt-3">
+                Folgende Daten werden ebenfalls gelöscht:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Alle Rechnungspositionen</li>
+                <li>Alle Zahlungseingänge zu dieser Rechnung</li>
+                <li>Alle Mahnungen zu dieser Rechnung</li>
+                <li>Das gespeicherte PDF</li>
+              </ul>
+              <p className="font-bold text-destructive mt-2">
+                Diese Aktion kann nicht rückgängig gemacht werden!
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => invoiceToDelete && deleteInvoiceMutation.mutate(invoiceToDelete.id)}
+              disabled={deleteInvoiceMutation.isPending}
+            >
+              {deleteInvoiceMutation.isPending ? 'Wird gelöscht...' : 'Endgültig löschen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1434,6 +1434,7 @@ export type Database = {
           amount_paid: number | null
           auction_id: string | null
           created_at: string | null
+          customer_number: string | null
           dealer_id: string
           due_date: string
           gross_amount: number
@@ -1460,6 +1461,7 @@ export type Database = {
           amount_paid?: number | null
           auction_id?: string | null
           created_at?: string | null
+          customer_number?: string | null
           dealer_id: string
           due_date: string
           gross_amount: number
@@ -1486,6 +1488,7 @@ export type Database = {
           amount_paid?: number | null
           auction_id?: string | null
           created_at?: string | null
+          customer_number?: string | null
           dealer_id?: string
           due_date?: string
           gross_amount?: number
@@ -2074,6 +2077,7 @@ export type Database = {
           company_street: string | null
           company_zip: string | null
           created_at: string
+          customer_number: string | null
           description: string | null
           email: string
           first_name: string | null
@@ -2109,6 +2113,7 @@ export type Database = {
           company_street?: string | null
           company_zip?: string | null
           created_at?: string
+          customer_number?: string | null
           description?: string | null
           email: string
           first_name?: string | null
@@ -2144,6 +2149,7 @@ export type Database = {
           company_street?: string | null
           company_zip?: string | null
           created_at?: string
+          customer_number?: string | null
           description?: string | null
           email?: string
           first_name?: string | null

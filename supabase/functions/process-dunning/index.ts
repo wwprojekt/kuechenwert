@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox } from '../_shared/email-builder.ts';
+import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email),
+        dealer:profiles(first_name, last_name, company_name, email, customer_number),
         reminders:payment_reminders(reminder_level, reminder_date)
       `)
       .eq('payment_status', 'pending')
@@ -243,6 +243,7 @@ Deno.serve(async (req) => {
     // Build email content with email-builder
     const content = `
       ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${customerBadge(invoice.dealer?.customer_number)}
       ${paragraph(`unsere Rechnung <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist noch nicht beglichen.`)}
 
       ${infoBox('Rechnungsdetails', `

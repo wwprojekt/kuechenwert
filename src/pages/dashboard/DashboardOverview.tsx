@@ -6,7 +6,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Gavel, TrendingUp, Eye, Plus, ArrowUpRight, Sparkles, Clock, Calendar, Package, Info } from "lucide-react";
+import { Car, Gavel, TrendingUp, Eye, Plus, ArrowUpRight, Sparkles, Clock, Calendar, Package, Info, Hash } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
@@ -23,7 +23,20 @@ export default function DashboardOverview() {
 
   const isDealer = primaryRole === 'dealer';
 
-
+  // ── Profile (customer number) ─────────────────────────────────
+  const { data: profile } = useQuery({
+    queryKey: ["dashboardProfile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('customer_number, company_name, first_name, last_name')
+        .eq('id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   // ── Seller stats ──────────────────────────────────────────────
   const { data: sellerStats } = useQuery({
@@ -282,8 +295,15 @@ export default function DashboardOverview() {
               <p className="text-muted-foreground text-lg">
                 {isDealer
                   ? "Verwalten Sie Ihre Gebote und Ihr Inventar"
-                  : "Verwalten Sie Ihre Inserate und verfolgen Sie Ihre Aktivitäten"}
+                  : "Verwalten Sie Ihre Inserate und verfolgen Sie Ihre Aktivit\u00e4ten"}
               </p>
+              {profile?.customer_number && (
+                <div className="mt-3 inline-flex items-center gap-2 bg-background/80 border border-border rounded-lg px-4 py-2">
+                  <Hash className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-muted-foreground font-medium">Kundennummer:</span>
+                  <span className="text-sm font-bold text-primary">{profile.customer_number}</span>
+                </div>
+              )}
             </div>
             {/* CTA: Seller → new listing, Dealer → browse auctions */}
             {!isDealer ? (

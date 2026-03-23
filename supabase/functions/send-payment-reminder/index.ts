@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay } from '../_shared/email-builder.ts';
+import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay, customerBadge } from '../_shared/email-builder.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -65,7 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Get buyer profile
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, email')
+          .select('first_name, last_name, email, customer_number')
           .eq('id', invoice.buyer_id)
           .single();
 
@@ -81,11 +81,12 @@ const handler = async (req: Request): Promise<Response> => {
 
         const amount = typeof invoice.amount === 'number'
           ? invoice.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-          : `${invoice.amount} €`;
+          : `${invoice.amount} \u20ac`;
 
-        const subject = `Freundliche Zahlungserinnerung – Rechnung ${invoice.invoice_number}`;
+        const subject = `Freundliche Zahlungserinnerung \u2013 Rechnung ${invoice.invoice_number}`;
         const emailContent = `
           ${greeting(name || undefined)}
+          ${customerBadge(profile.customer_number)}
           ${paragraph(`Wir m&ouml;chten Sie freundlich daran erinnern, dass die folgende Rechnung noch offen ist:`)}
           ${infoBox('Rechnungsdetails', `
             ${detailRow('Rechnung Nr.', invoice.invoice_number)}

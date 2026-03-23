@@ -313,6 +313,21 @@ export const divider = () => {
   `;
 };
 
+export const customerBadge = (customerNumber?: string | null) => {
+  if (!customerNumber) return '';
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 16px;">
+      <tr>
+        <td>
+          <span style="display: inline-block; background-color: ${BRAND.bgGray}; border: 1px solid ${BRAND.border}; border-radius: 6px; padding: 4px 12px; font-size: 12px; color: ${BRAND.textLight}; font-weight: 600; letter-spacing: 0.3px;">
+            Kundennr.: <span style="color: ${BRAND.primary}; font-weight: 700;">${customerNumber}</span>
+          </span>
+        </td>
+      </tr>
+    </table>
+  `;
+};
+
 export const greeting = (name?: string) => {
   if (name) {
     return `<p style="color: ${BRAND.text}; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">Guten Tag ${name},</p>`;

@@ -13,9 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, Hash } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+
+interface DealerProfile {
+  customer_number: string | null;
+}
 
 interface Invoice {
   id: string;
@@ -43,6 +47,7 @@ export default function MyInvoices() {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customerNumber, setCustomerNumber] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -50,6 +55,14 @@ export default function MyInvoices() {
     const loadInvoices = async () => {
       setLoading(true);
       try {
+        // Load customer number
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('customer_number')
+          .eq('id', user.id)
+          .single();
+        if (profileData?.customer_number) setCustomerNumber(profileData.customer_number);
+
         const { data, error } = await supabase
           .from("invoices")
           .select(`
@@ -129,11 +142,20 @@ export default function MyInvoices() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Meine Rechnungen</h1>
-        <p className="text-muted-foreground">
-          Übersicht Ihrer Rechnungen und Zahlungen
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Meine Rechnungen</h1>
+          <p className="text-muted-foreground">
+            Übersicht Ihrer Rechnungen und Zahlungen
+          </p>
+        </div>
+        {customerNumber && (
+          <div className="inline-flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-2">
+            <Hash className="h-4 w-4 text-primary" />
+            <span className="text-sm text-muted-foreground font-medium">Kundennummer:</span>
+            <span className="text-sm font-bold text-primary">{customerNumber}</span>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}

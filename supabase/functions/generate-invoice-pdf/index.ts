@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country),
+        dealer:profiles(first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, customer_number),
         auction:auctions(
           motorhome:motorhomes(manufacturer, model)
         ),
@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
     const dealerName = invoice.dealer?.company_name ||
       `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim() || 'Händler';
     const dealerEmail = invoice.dealer?.email || '';
+    const customerNumber = invoice.customer_number || invoice.dealer?.customer_number || '';
 
     const motorhomeName = invoice.auction?.motorhome
       ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}`
@@ -185,7 +186,12 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(TEXT_MED.r, TEXT_MED.g, TEXT_MED.b);
-    doc.text(dealerEmail, ml, y + 9);
+    if (customerNumber) {
+      doc.text(`Kd.-Nr.: ${customerNumber}`, ml, y + 9);
+      doc.text(dealerEmail, ml, y + 13);
+    } else {
+      doc.text(dealerEmail, ml, y + 9);
+    }
 
     // Right: RECHNUNG title + meta
     doc.setTextColor(ACCENT.r, ACCENT.g, ACCENT.b);
@@ -227,6 +233,16 @@ Deno.serve(async (req) => {
     doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
     doc.setFont('helvetica', 'bold');
     doc.text(`${paymentDays} Tage`, metaVX, metaY, { align: 'right' });
+
+    if (customerNumber) {
+      metaY += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+      doc.text('Kundennr.:', metaX, metaY, { align: 'right' });
+      doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+      doc.setFont('helvetica', 'bold');
+      doc.text(customerNumber, metaVX, metaY, { align: 'right' });
+    }
 
     y += 32;
 

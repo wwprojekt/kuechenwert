@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button } from '../_shared/email-builder.ts';
+import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 /**
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email),
+        dealer:profiles(first_name, last_name, company_name, email, customer_number),
         auction:auctions(
           motorhome:motorhomes(manufacturer, model)
         )
@@ -119,6 +119,7 @@ Deno.serve(async (req) => {
     // ─── Build email content ───────────────────────────────────────
     const content = `
       ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${customerBadge(invoice.dealer.customer_number || invoice.customer_number)}
       ${paragraph('Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.')}
       
       ${infoBox('Rechnungsdetails', `

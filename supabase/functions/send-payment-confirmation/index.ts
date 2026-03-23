@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph, list } from '../_shared/email-builder.ts';
+import { buildEmailLayout, infoBox, detailRow, paragraph, list, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -27,8 +27,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending payment confirmation to:", email);
 
-    // Fetch site settings
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch customer number
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('customer_number')
+      .eq('email', email)
+      .maybeSingle();
+    const custNum = profile?.customer_number || '';
+
+    // Fetch site settings
     const { data: settings } = await supabase
       .from('site_settings')
       .select('*')
@@ -46,6 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build email content
     const content = `
       ${paragraph(`Hallo ${name},`)}
+      ${customerBadge(custNum)}
       ${paragraph('Vielen Dank für Ihr Vertrauen! Die Übergabe Ihres Wohnmobils wurde erfolgreich abgeschlossen.')}
       
       ${infoBox('Zahlungsdetails', `

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph, button, list } from '../_shared/email-builder.ts';
+import { buildEmailLayout, infoBox, detailRow, paragraph, button, list, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -13,6 +13,7 @@ interface DealerEmailRequest {
   type: "application_received" | "approved" | "rejected";
   companyName: string;
   rejectionReason?: string;
+  customerNumber?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -48,12 +49,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, type, companyName, rejectionReason }: DealerEmailRequest = await req.json();
+    const { email, name, type, companyName, rejectionReason, customerNumber: passedCustNum }: DealerEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to dealer:`, email);
 
-    // Fetch site settings
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch customer number if not passed
+    let custNum = passedCustNum || '';
+    if (!custNum) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('customer_number')
+        .eq('email', email)
+        .maybeSingle();
+      custNum = profile?.customer_number || '';
+    }
+
+    // Fetch site settings
     const { data: settings } = await supabase
       .from('site_settings')
       .select('*')
@@ -87,9 +100,11 @@ const handler = async (req: Request): Promise<Response> => {
         subject = "Händler-Bewerbung genehmigt";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
           ${paragraph(`<strong>Herzlichen Glückwunsch! Ihre Bewerbung als Händler wurde genehmigt.</strong>`)}
           ${infoBox(`Willkommen bei ${settingsData.site_name}!`, `
             ${detailRow('Unternehmen', companyName)}
+            ${custNum ? detailRow('Ihre Kundennummer', `<strong style="color: #1f8aa2; font-size: 16px;">${custNum}</strong>`) : ''}
             ${paragraph('Sie haben jetzt Zugriff auf unser Händler-Portal und können auf Wohnmobile bieten.')}
           `, 'success', settingsData)}
           ${infoBox('Nächste Schritte', `

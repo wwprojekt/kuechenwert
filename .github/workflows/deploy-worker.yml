@@ -1,0 +1,66 @@
+name: Deploy Cloudflare Pre-Render Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/pages/**'
+      - 'src/data/ratgeber/**'
+      - 'src/data/landing-pages/**'
+      - 'src/components/PageLayout.tsx'
+      - 'src/lib/seo.ts'
+      - 'worker/**'
+
+  workflow_dispatch:
+
+jobs:
+  deploy-worker:
+    name: Build & Deploy Worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build Worker (extract SEO data)
+        run: python3 worker/build.py
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy Worker
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CF_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CF_EMAIL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: wrangler deploy
+
+      - name: Purge KV Cache (optional, on worker/ changes)
+        if: contains(github.event.head_commit.message, '[purge-cache]')
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_EMAIL: ${{ secrets.CF_EMAIL }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          KV_NAMESPACE_ID: '073bb1aa9a4c47a0ac2408f647e79f47'
+        run: |
+          echo "Purging KV cache..."
+          KEYS=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$KV_NAMESPACE_ID/keys" \
+            -H "X-Auth-Key: $CF_API_KEY" \
+            -H "X-Auth-Email: $CF_EMAIL" | python3 -c "import json,sys; [print(k['name']) for k in json.load(sys.stdin).get('result',[])]")
+          for key in $KEYS; do
+            curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$KV_NAMESPACE_ID/values/$key" \
+              -H "X-Auth-Key: $CF_API_KEY" \
+              -H "X-Auth-Email: $CF_EMAIL"
+            echo "Deleted: $key"
+          done
+          echo "Cache purged."

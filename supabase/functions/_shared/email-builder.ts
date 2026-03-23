@@ -52,7 +52,7 @@ const BRAND = {
 
   // Sonstiges
   font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  logoUrl: 'https://caravanwert.de/logo.png',
+  logoUrl: 'https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png',
 };
 
 export const buildEmailLayout = (settings: Settings, title: string, content: string) => {

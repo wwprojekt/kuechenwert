@@ -1,0 +1,22 @@
+name = "caravanwert-prerender"
+main = "dist/index.js"
+compatibility_date = "2026-03-22"
+compatibility_flags = ["nodejs_compat"]
+
+# KV Namespace for caching rendered pages
+kv_namespaces = [
+  { binding = "PRERENDER_CACHE", id = "073bb1aa9a4c47a0ac2408f647e79f47" }
+]
+
+# Non-sensitive variables
+[vars]
+CF_ACCOUNT_ID = "4e101512091f867faf40ab7798abee0c"
+
+# Routes
+[[routes]]
+pattern = "caravanwert.de/*"
+zone_name = "caravanwert.de"
+
+[[routes]]
+pattern = "www.caravanwert.de/*"
+zone_name = "caravanwert.de"

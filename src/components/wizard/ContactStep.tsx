@@ -187,9 +187,11 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
       {formData.saleChannel === "auction" && (
         <div className="space-y-2 animate-fade-in">
           <Label htmlFor="reservePrice">Mindestpreis (optional)</Label>
-          <Input
-            id="reservePrice"
-            type="number"
+            <Input
+              id="reservePrice"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
             placeholder="z.B. 35000"
             value={formData.reservePrice || ""}
             onChange={(e) => updateFormData({ reservePrice: e.target.value ? parseInt(e.target.value) : null })}

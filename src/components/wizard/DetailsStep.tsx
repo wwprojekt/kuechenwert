@@ -81,6 +81,8 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
             <Input
               id="power_ps"
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="z.B. 130"
               value={formData.power_ps || ""}
               onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}

@@ -19,12 +19,12 @@ const PageHero = ({ children, className = "", size = "md" }: PageHeroProps) => {
   return (
     <section className={`relative overflow-hidden ${sizeClasses[size]} ${className}`}>
       {/* Gradient background matching main Hero */}
-      <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+      <div className="absolute inset-0 bg-gradient-to-b from-cyan-100/70 via-sky-50/50 to-slate-50" />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
       
       {/* Decorative elements for depth */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent" />
+      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-50 to-transparent" />
       
       {/* Subtle pattern overlay */}
       <div 

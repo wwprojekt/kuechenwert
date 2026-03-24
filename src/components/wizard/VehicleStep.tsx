@@ -181,6 +181,8 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
           <Input
             id="mileage"
             type="number"
+            inputMode="numeric"
+            pattern="[0-9]*"
             placeholder="z.B. 45000"
             value={formData.mileage || ""}
             onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}

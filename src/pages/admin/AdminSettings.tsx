@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel } from "lucide-react";
+import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Brain, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
 import { logger } from "@/lib/logger";
@@ -166,7 +166,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Allgemein</span>
@@ -189,6 +189,10 @@ export default function AdminSettings() {
           </TabsTrigger>
           <TabsTrigger value="auction" className="gap-2">
             <span className="hidden sm:inline">Auktionen</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Brain className="w-4 h-4" />
+            <span className="hidden sm:inline">KI / API</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1232,6 +1236,85 @@ export default function AdminSettings() {
                       checked={formData.buy_now_enabled || false}
                       onCheckedChange={(checked) => updateField('buy_now_enabled', checked)}
                     />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* KI / API Settings */}
+        <TabsContent value="ai" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5" />
+                KI-Bewertungssystem
+              </CardTitle>
+              <CardDescription>
+                Konfigurieren Sie die KI-gest\u00fctzte Wohnmobil-Bewertung. Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="openai-api-key" className="flex items-center gap-2">
+                  OpenAI API-Key
+                  {formData.openai_api_key ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-600 font-normal">
+                      <CheckCircle2 className="w-3 h-3" /> Konfiguriert
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-orange-500 font-normal">
+                      <XCircle className="w-3 h-3" /> Nicht konfiguriert
+                    </span>
+                  )}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="openai-api-key"
+                    type={formData._showApiKey ? "text" : "password"}
+                    value={formData.openai_api_key || ''}
+                    onChange={(e) => updateField('openai_api_key', e.target.value)}
+                    placeholder="sk-..."
+                    className="pr-10 font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, _showApiKey: !formData._showApiKey })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {formData._showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ben\u00f6tigt f\u00fcr die KI-Bewertung im Wertrechner. Erhalten Sie einen Key unter{" "}
+                  <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    platform.openai.com/api-keys
+                  </a>
+                  . Kosten: ca. 0,001\u20ac pro Bewertung.
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
+                <h4 className="font-medium text-sm">So funktioniert das KI-System:</h4>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                  <li>Ein Nutzer bewertet sein Wohnmobil im <strong>Wertrechner</strong></li>
+                  <li>Der <strong>Algorithmus</strong> berechnet einen Sch\u00e4tzwert basierend auf Marke, Typ, Alter und Zustand</li>
+                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zus\u00e4tzliche Sch\u00e4tzung</li>
+                  <li>Sie tragen im Admin-Bereich unter <strong>Leads \u2192 Wertrechner</strong> Ihren fundierten Expertenwert ein</li>
+                  <li>Die KI <strong>lernt</strong> aus Ihren Expertenwerten und wird mit jeder Bewertung genauer</li>
+                </ol>
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800">Hinweis zur Sicherheit</p>
+                    <p className="text-amber-700 mt-1">
+                      Der API-Key wird verschl\u00fcsselt in der Datenbank gespeichert und nur serverseitig in Edge Functions verwendet.
+                      Er ist niemals im Frontend sichtbar.
+                    </p>
                   </div>
                 </div>
               </div>

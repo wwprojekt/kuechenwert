@@ -97,10 +97,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. OpenAI API Key prüfen
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    // 2. OpenAI API Key aus site_settings laden
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from('site_settings')
+      .select('openai_api_key')
+      .eq('id', '00000000-0000-0000-0000-000000000000')
+      .single();
+
+    if (settingsError) {
+      console.error('Error loading settings:', settingsError);
+      throw new Error('Einstellungen konnten nicht geladen werden');
+    }
+
+    const openaiApiKey = settingsData?.openai_api_key || Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          hasAiEstimate: false,
+          reason: 'no_api_key',
+          message: 'Kein OpenAI API-Key konfiguriert. Bitte unter Einstellungen → KI / API eintragen.',
+        }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
     }
 
     // 3. Trainingsdaten als kompakten Text aufbereiten
@@ -151,7 +170,7 @@ Antworte NUR im folgenden JSON-Format, ohne weitere Erklärung:
         'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -207,7 +226,7 @@ Antworte NUR im folgenden JSON-Format, ohne weitere Erklärung:
         aiReasoning: aiResult.reasoning || '',
         trainingCount,
         metadata: {
-          model: 'gpt-4',
+          model: 'gpt-4.1-mini',
           tokens_used: openaiData.usage?.total_tokens || 0,
           generated_at: new Date().toISOString(),
         },

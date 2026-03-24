@@ -180,59 +180,14 @@ const VerkaufenWizard = () => {
       <div className="min-h-screen py-8 md:py-16 bg-muted/20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* Step Indicator */}
+            {/* Progress Indicator - nur Prozentbalken */}
             <div className="mb-8 animate-slide-up">
-              {/* Step dots */}
-              <div className="flex items-center justify-between mb-4">
-                {steps.map((step, index) => (
-                  <div key={step.id} className="flex items-center flex-1 last:flex-none">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-                          step.id < currentStep
-                            ? "bg-primary text-primary-foreground"
-                            : step.id === currentStep
-                            ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {step.id < currentStep ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          step.id
-                        )}
-                      </div>
-                      <span
-                        className={`text-xs mt-1 hidden sm:block ${
-                          step.id === currentStep
-                            ? "font-semibold text-foreground"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {step.name}
-                      </span>
-                    </div>
-                    {index < steps.length - 1 && (
-                      <div
-                        className={`flex-1 h-0.5 mx-2 ${
-                          step.id < currentStep ? "bg-primary" : "bg-muted"
-                        }`}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Progress bar */}
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-foreground">
-                  Schritt {currentStep} von {steps.length}: {steps[currentStep - 1].name}
-                </span>
+              <div className="flex justify-end items-center mb-2">
                 <span className="text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={progress} className="h-2.5 rounded-full" />
             </div>
 
             {/* Main Content Area */}

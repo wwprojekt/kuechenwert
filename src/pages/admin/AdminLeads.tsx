@@ -69,6 +69,8 @@ import {
   Car,
   Trash2,
   Loader2,
+  Calculator,
+  Euro,
 } from "lucide-react";
 
 // ============================================================================
@@ -110,6 +112,26 @@ interface QuickLead {
   source: string | null;
   wizard_completed: boolean;
   created_at: string;
+}
+
+interface ValuationLead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  year: number | null;
+  mileage: number | null;
+  condition: string | null;
+  body_type: string | null;
+  message: string | null;
+  source: string;
+  estimated_value_min: number | null;
+  estimated_value_max: number | null;
+  created_at: string | null;
+  contacted_at: string | null;
+  status: string | null;
 }
 
 // ============================================================================
@@ -343,8 +365,9 @@ export default function AdminLeads() {
   // Delete states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [selectedValuationIds, setSelectedValuationIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "quick"; ids: string[] } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "quick" | "valuation"; ids: string[] } | null>(null);
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -418,6 +441,19 @@ export default function AdminLeads() {
     },
   });
 
+  const { data: valuationLeads = [], isLoading: loadingValuationLeads } = useQuery({
+    queryKey: ["adminValuationLeads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("value_assessment_leads")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as ValuationLead[];
+    },
+    refetchInterval: 30000,
+  });
+
   // ---- Statistics ----
 
   const stats = useMemo(() => {
@@ -461,8 +497,9 @@ export default function AdminLeads() {
       actionableLeads,
       notContacted,
       quickLeadsTotal: quickLeads.length,
+      valuationLeadsTotal: valuationLeads.length,
     };
-  }, [wizardSessions, quickLeads]);
+  }, [wizardSessions, quickLeads, valuationLeads]);
 
   // ---- Filtering ----
 
@@ -531,6 +568,19 @@ export default function AdminLeads() {
         (lead.model || "").toLowerCase().includes(q)
     );
   }, [quickLeads, searchQuery]);
+
+  const filteredValuationLeads = useMemo(() => {
+    if (!searchQuery) return valuationLeads;
+    const q = searchQuery.toLowerCase();
+    return valuationLeads.filter(
+      (lead) =>
+        (lead.name || "").toLowerCase().includes(q) ||
+        (lead.email || "").toLowerCase().includes(q) ||
+        (lead.phone || "").toLowerCase().includes(q) ||
+        (lead.manufacturer || "").toLowerCase().includes(q) ||
+        (lead.model || "").toLowerCase().includes(q)
+    );
+  }, [valuationLeads, searchQuery]);
 
   // ---- Mutations ----
 
@@ -655,18 +705,55 @@ export default function AdminLeads() {
     },
   });
 
+  const deleteValuationLeads = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      toast({
+        title: `${ids.length} Lead${ids.length > 1 ? "s" : ""} gelöscht`,
+        description: "Die ausgewählten Wertrechner-Leads wurden entfernt.",
+      });
+      setSelectedValuationIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler beim Löschen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markValuationContacted = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .update({ contacted_at: new Date().toISOString(), status: "contacted" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Als kontaktiert markiert" });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    },
+  });
+
   const confirmDelete = () => {
     if (!deleteTarget) return;
     if (deleteTarget.type === "wizard") {
       deleteWizardSessions.mutate(deleteTarget.ids);
-    } else {
+    } else if (deleteTarget.type === "quick") {
       deleteQuickLeads.mutate(deleteTarget.ids);
+    } else {
+      deleteValuationLeads.mutate(deleteTarget.ids);
     }
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
   };
 
-  const openDeleteDialog = (type: "wizard" | "quick", ids: string[]) => {
+  const openDeleteDialog = (type: "wizard" | "quick" | "valuation", ids: string[]) => {
     setDeleteTarget({ type, ids });
     setDeleteDialogOpen(true);
   };
@@ -705,7 +792,24 @@ export default function AdminLeads() {
     }
   };
 
-  const isDeleting = deleteWizardSessions.isPending || deleteQuickLeads.isPending;
+  const toggleValuationSelection = (id: string) => {
+    setSelectedValuationIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllValuationLeads = () => {
+    if (selectedValuationIds.size === filteredValuationLeads.length) {
+      setSelectedValuationIds(new Set());
+    } else {
+      setSelectedValuationIds(new Set(filteredValuationLeads.map((l) => l.id)));
+    }
+  };
+
+  const isDeleting = deleteWizardSessions.isPending || deleteQuickLeads.isPending || deleteValuationLeads.isPending;
 
   // ---- Handlers ----
 
@@ -774,6 +878,7 @@ export default function AdminLeads() {
           onClick={() => {
             queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
             queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+            queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
           }}
         >
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -787,7 +892,7 @@ export default function AdminLeads() {
           title="Gesamt Sessions"
           value={stats.total}
           icon={Users}
-          description={`${stats.quickLeadsTotal} Quick-Leads zusätzlich`}
+          description={`${stats.quickLeadsTotal} Quick-Leads, ${stats.valuationLeadsTotal} Wertrechner`}
           color="bg-blue-500"
         />
         <StatCard
@@ -857,6 +962,10 @@ export default function AdminLeads() {
             <TabsTrigger value="quick_leads" className="gap-2">
               <UserPlus className="w-4 h-4" />
               Quick-Leads ({quickLeads.length})
+            </TabsTrigger>
+            <TabsTrigger value="valuation_leads" className="gap-2">
+              <Calculator className="w-4 h-4" />
+              Wertrechner ({valuationLeads.length})
             </TabsTrigger>
           </TabsList>
 
@@ -1215,6 +1324,183 @@ export default function AdminLeads() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Wertrechner / Wertermittlung Leads Tab */}
+        <TabsContent value="valuation_leads">
+          {/* Bulk actions bar */}
+          {selectedValuationIds.size > 0 && (
+            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
+              <span className="text-sm font-medium">
+                {selectedValuationIds.size} Lead{selectedValuationIds.size > 1 ? "s" : ""} ausgewählt
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedValuationIds(new Set())}
+                >
+                  Auswahl aufheben
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openDeleteDialog("valuation", Array.from(selectedValuationIds))}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  {selectedValuationIds.size} löschen
+                </Button>
+              </div>
+            </div>
+          )}
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredValuationLeads.length > 0 && selectedValuationIds.size === filteredValuationLeads.length}
+                      onCheckedChange={toggleAllValuationLeads}
+                      aria-label="Alle auswählen"
+                    />
+                  </TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Kontakt</TableHead>
+                  <TableHead>Fahrzeug</TableHead>
+                  <TableHead>Geschätzter Wert</TableHead>
+                  <TableHead>Quelle</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Erstellt</TableHead>
+                  <TableHead className="w-24">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingValuationLeads ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      Lade Wertrechner-Leads...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredValuationLeads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      Keine Wertrechner-Leads gefunden
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredValuationLeads.map((lead) => (
+                    <TableRow key={lead.id} className={selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedValuationIds.has(lead.id)}
+                          onCheckedChange={() => toggleValuationSelection(lead.id)}
+                          aria-label="Lead auswählen"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{lead.name || "-"}</TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          {lead.email && (
+                            <p className="text-xs flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              <a href={`mailto:${lead.email}`} className="hover:underline text-primary">{lead.email}</a>
+                            </p>
+                          )}
+                          {lead.phone && (
+                            <p className="text-xs flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              <a href={`tel:${lead.phone}`} className="hover:underline text-primary">{lead.phone}</a>
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="text-sm">
+                            {[lead.manufacturer, lead.model].filter(Boolean).join(" ") || "-"}
+                          </span>
+                          {(lead.year || lead.body_type) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[lead.body_type, lead.year ? `BJ ${lead.year}` : null, lead.mileage ? `${lead.mileage.toLocaleString("de-DE")} km` : null].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {lead.condition && (
+                            <p className="text-xs text-muted-foreground">Zustand: {lead.condition}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {lead.estimated_value_min != null && lead.estimated_value_max != null ? (
+                          <div className="flex items-center gap-1">
+                            <Euro className="w-3 h-3 text-green-600" />
+                            <span className="text-sm font-medium text-green-700">
+                              {lead.estimated_value_min.toLocaleString("de-DE")} – {lead.estimated_value_max.toLocaleString("de-DE")} €
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Experten-Bewertung</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {lead.source === "wertrechner" ? "Wertrechner" : lead.source === "wertermittlung" ? "Wertermittlung" : lead.source}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {lead.contacted_at ? (
+                          <Badge className="bg-green-500 text-xs">Kontaktiert</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-orange-500">Offen</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">
+                          {lead.created_at ? format(new Date(lead.created_at), "dd.MM.yyyy HH:mm", { locale: de }) : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {lead.phone && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                window.open(`tel:${lead.phone}`);
+                                markValuationContacted.mutate(lead.id);
+                              }}
+                              title="Anrufen & als kontaktiert markieren"
+                            >
+                              <PhoneCall className="w-4 h-4 text-green-600" />
+                            </Button>
+                          )}
+                          {!lead.contacted_at && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markValuationContacted.mutate(lead.id)}
+                              title="Als kontaktiert markieren"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog("valuation", [lead.id])}
+                            title="Lead löschen"
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1646,6 +1932,10 @@ export default function AdminLeads() {
                 deleteTarget.ids.length === 1
                   ? "Möchten Sie diese Wizard-Session wirklich löschen? Alle zugehörigen Daten (Formulardaten, Fortschritt, Notizen) werden unwiderruflich entfernt."
                   : `Möchten Sie wirklich ${deleteTarget.ids.length} Wizard-Sessions löschen? Alle zugehörigen Daten werden unwiderruflich entfernt.`
+              ) : deleteTarget?.type === "valuation" ? (
+                deleteTarget.ids.length === 1
+                  ? "Möchten Sie diesen Wertrechner-Lead wirklich löschen? Die Kontaktdaten und Bewertung werden unwiderruflich entfernt."
+                  : `Möchten Sie wirklich ${deleteTarget.ids.length} Wertrechner-Leads löschen? Alle Kontaktdaten werden unwiderruflich entfernt.`
               ) : (
                 deleteTarget?.ids.length === 1
                   ? "Möchten Sie diesen Quick-Lead wirklich löschen? Die Kontaktdaten werden unwiderruflich entfernt."

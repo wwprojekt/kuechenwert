@@ -84,6 +84,9 @@ const AdminMotorhomeDetail = lazyRetry(() => import("./pages/admin/AdminMotorhom
 const AdminUserDetail = lazyRetry(() => import("./pages/admin/AdminUserDetail"));
 const AdminDealerDetail = lazyRetry(() => import("./pages/admin/AdminDealerDetail"));
 const AdminAppointmentDetail = lazyRetry(() => import("./pages/admin/AdminAppointmentDetail"));
+const AdminClaims = lazyRetry(() => import("./pages/admin/AdminClaims"));
+const AdminPostAuctionOffers = lazyRetry(() => import("./pages/admin/AdminPostAuctionOffers"));
+const AdminReviews = lazyRetry(() => import("./pages/admin/AdminReviews"));
 
 // SEO Landing Pages
 const WohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/WohnmobilVerkaufen"));
@@ -232,6 +235,9 @@ const App = () => (
                 <Route path="appointments" element={<AdminAppointments />} />
                 <Route path="appointments/:id" element={<AdminAppointmentDetail />} />
                 <Route path="handover" element={<AdminStationHandover />} />
+                <Route path="claims" element={<AdminClaims />} />
+                <Route path="offers" element={<AdminPostAuctionOffers />} />
+                <Route path="reviews" element={<AdminReviews />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="error-logs" element={<AdminErrorLogs />} />

@@ -21,6 +21,8 @@ import {
   UserPlus,
   Mail,
   Shield,
+  FileWarning,
+  Star,
 } from "lucide-react";
 import {
   Sidebar,
@@ -54,6 +56,9 @@ const menuItems = [
   { title: "Ankaufstationen", url: "/admin/stations", icon: Building2 },
   { title: "Termine", url: "/admin/appointments", icon: Calendar },
   { title: "Übergabe", url: "/admin/handover", icon: HandshakeIcon },
+  { title: "Reklamationen", url: "/admin/claims", icon: FileWarning },
+  { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon },
+  { title: "Bewertungen", url: "/admin/reviews", icon: Star },
   { title: "Blog", url: "/admin/blog", icon: FileText },
   { title: "Rechtliches", url: "/admin/legal", icon: Scale },
   { title: "Fehlerprotokoll", url: "/admin/error-logs", icon: AlertTriangle },

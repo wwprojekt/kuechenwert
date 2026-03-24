@@ -129,6 +129,14 @@ interface ValuationLead {
   source: string;
   estimated_value_min: number | null;
   estimated_value_max: number | null;
+  algorithm_value_min: number | null;
+  algorithm_value_max: number | null;
+  brand_tier: string | null;
+  admin_estimated_value: number | null;
+  admin_notes: string | null;
+  admin_valued_at: string | null;
+  ai_estimated_value: number | null;
+  ai_confidence: number | null;
   created_at: string | null;
   contacted_at: string | null;
   status: string | null;
@@ -368,6 +376,13 @@ export default function AdminLeads() {
   const [selectedValuationIds, setSelectedValuationIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "quick" | "valuation"; ids: string[] } | null>(null);
+  // Valuation detail dialog
+  const [valuationDetailOpen, setValuationDetailOpen] = useState(false);
+  const [selectedValuation, setSelectedValuation] = useState<ValuationLead | null>(null);
+  const [expertValue, setExpertValue] = useState("");
+  const [expertNotes, setExpertNotes] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<{ value: number; confidence: number; reasoning: string; trainingCount: number } | null>(null);
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -730,7 +745,7 @@ export default function AdminLeads() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("value_assessment_leads")
-        .update({ contacted_at: new Date().toISOString(), status: "contacted" })
+        .update({ contacted_at: new Date().toISOString(), status: "contacted" } as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -739,6 +754,86 @@ export default function AdminLeads() {
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
     },
   });
+
+  const saveExpertValue = useMutation({
+    mutationFn: async ({ id, value, notes }: { id: string; value: number; notes: string }) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .update({
+          admin_estimated_value: value,
+          admin_notes: notes || null,
+          admin_valued_at: new Date().toISOString(),
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Expertenwert gespeichert", description: "Der Wert wird f\u00fcr das KI-Training verwendet." });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+      setValuationDetailOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler beim Speichern", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const requestAiValuation = async (lead: ValuationLead) => {
+    setAiLoading(true);
+    setAiResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-valuation", {
+        body: {
+          manufacturer: lead.manufacturer || undefined,
+          model: lead.model || undefined,
+          bodyType: lead.body_type || "kastenwagen",
+          year: lead.year || 2020,
+          mileage: lead.mileage || 0,
+          condition: lead.condition || "good",
+          algorithmMin: lead.algorithm_value_min || lead.estimated_value_min || 0,
+          algorithmMax: lead.algorithm_value_max || lead.estimated_value_max || 0,
+        },
+      });
+      if (error) throw error;
+      if (data?.hasAiEstimate) {
+        setAiResult({
+          value: data.aiEstimatedValue,
+          confidence: data.aiConfidence,
+          reasoning: data.aiReasoning,
+          trainingCount: data.trainingCount,
+        });
+        // Save AI result to DB
+        await supabase
+          .from("value_assessment_leads")
+          .update({
+            ai_estimated_value: data.aiEstimatedValue,
+            ai_confidence: data.aiConfidence,
+          } as any)
+          .eq("id", lead.id);
+      } else {
+        toast({
+          title: "KI-Sch\u00e4tzung nicht m\u00f6glich",
+          description: data?.message || "Noch nicht gen\u00fcgend Trainingsdaten vorhanden.",
+        });
+      }
+    } catch (err: any) {
+      toast({ title: "KI-Fehler", description: err.message || "KI-Bewertung fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const openValuationDetail = (lead: ValuationLead) => {
+    setSelectedValuation(lead);
+    setExpertValue(lead.admin_estimated_value ? String(lead.admin_estimated_value) : "");
+    setExpertNotes(lead.admin_notes || "");
+    setAiResult(lead.ai_estimated_value ? {
+      value: lead.ai_estimated_value,
+      confidence: lead.ai_confidence || 0,
+      reasoning: "",
+      trainingCount: 0,
+    } : null);
+    setValuationDetailOpen(true);
+  };
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
@@ -1438,16 +1533,28 @@ export default function AdminLeads() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {lead.estimated_value_min != null && lead.estimated_value_max != null ? (
-                          <div className="flex items-center gap-1">
-                            <Euro className="w-3 h-3 text-green-600" />
-                            <span className="text-sm font-medium text-green-700">
-                              {lead.estimated_value_min.toLocaleString("de-DE")} – {lead.estimated_value_max.toLocaleString("de-DE")} €
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Experten-Bewertung</span>
-                        )}
+                        <div className="space-y-0.5">
+                          {lead.estimated_value_min != null && lead.estimated_value_max != null ? (
+                            <div className="flex items-center gap-1">
+                              <Euro className="w-3 h-3 text-green-600" />
+                              <span className="text-sm font-medium text-green-700">
+                                {lead.estimated_value_min.toLocaleString("de-DE")} – {lead.estimated_value_max.toLocaleString("de-DE")} €
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Experten-Bewertung</span>
+                          )}
+                          {lead.admin_estimated_value && (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              Experte: {lead.admin_estimated_value.toLocaleString("de-DE")} €
+                            </Badge>
+                          )}
+                          {lead.ai_estimated_value && !lead.admin_estimated_value && (
+                            <Badge className="bg-purple-100 text-purple-800 text-xs">
+                              KI: {lead.ai_estimated_value.toLocaleString("de-DE")} €
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
@@ -1468,6 +1575,14 @@ export default function AdminLeads() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openValuationDetail(lead)}
+                            title="Bewerten & Details"
+                          >
+                            <Eye className="w-4 h-4 text-primary" />
+                          </Button>
                           {lead.phone && (
                             <Button
                               variant="ghost"
@@ -1495,7 +1610,7 @@ export default function AdminLeads() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openDeleteDialog("valuation", [lead.id])}
-                            title="Lead löschen"
+                            title="Lead l\u00f6schen"
                             className="hover:text-destructive"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1914,6 +2029,210 @@ export default function AdminLeads() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ================================================================== */}
+      {/* Valuation Detail Dialog – Expertenwert & KI */}
+      {/* ================================================================== */}
+      <Dialog open={valuationDetailOpen} onOpenChange={setValuationDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedValuation && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5" />
+                  Wertrechner-Lead bewerten
+                </DialogTitle>
+                <DialogDescription>
+                  {[selectedValuation.manufacturer, selectedValuation.model].filter(Boolean).join(" ") || "Unbekanntes Fahrzeug"}
+                  {selectedValuation.year ? ` (${selectedValuation.year})` : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* Kontaktdaten */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4" /> Kontaktdaten
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="font-medium">{selectedValuation.name || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">E-Mail</p>
+                      {selectedValuation.email ? (
+                        <a href={`mailto:${selectedValuation.email}`} className="font-medium text-primary hover:underline text-xs">{selectedValuation.email}</a>
+                      ) : <p className="text-muted-foreground">-</p>}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefon</p>
+                      {selectedValuation.phone ? (
+                        <a href={`tel:${selectedValuation.phone}`} className="font-medium text-primary hover:underline">{selectedValuation.phone}</a>
+                      ) : <p className="text-muted-foreground">-</p>}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Fahrzeugdaten */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                    <Car className="w-4 h-4" /> Fahrzeugdaten
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Hersteller</span><span className="font-medium">{selectedValuation.manufacturer || "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Modell</span><span className="font-medium">{selectedValuation.model || "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{selectedValuation.year || "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Aufbautyp</span><span className="font-medium">{selectedValuation.body_type || "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Kilometerstand</span><span className="font-medium">{selectedValuation.mileage ? `${selectedValuation.mileage.toLocaleString("de-DE")} km` : "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Zustand</span><span className="font-medium">{selectedValuation.condition || "-"}</span></div>
+                    {selectedValuation.brand_tier && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">Preisklasse</span><Badge variant="outline" className="text-xs">{selectedValuation.brand_tier}</Badge></div>
+                    )}
+                  </div>
+                  {selectedValuation.message && (
+                    <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                      <p className="text-xs text-muted-foreground mb-1">Nachricht des Kunden:</p>
+                      <p className="italic">{selectedValuation.message}</p>
+                    </div>
+                  )}
+                </Card>
+
+                {/* Wertvergleich: Algorithmus / KI / Experte */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                    <TrendingUp className="w-4 h-4" /> Wertvergleich
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Algorithmus-Wert */}
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                      <p className="text-xs text-blue-600 font-medium mb-1">Algorithmus</p>
+                      {(selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min) ? (
+                        <>
+                          <p className="text-lg font-bold text-blue-700">
+                            {Math.round(((selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0) + (selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0)) / 2).toLocaleString("de-DE")} \u20ac
+                          </p>
+                          <p className="text-xs text-blue-500">
+                            {(selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0).toLocaleString("de-DE")} \u2013 {(selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0).toLocaleString("de-DE")} \u20ac
+                          </p>
+                        </>
+                      ) : <p className="text-sm text-muted-foreground">-</p>}
+                    </div>
+
+                    {/* KI-Wert */}
+                    <div className="p-3 rounded-lg bg-purple-50 border border-purple-200 text-center">
+                      <p className="text-xs text-purple-600 font-medium mb-1">KI-Sch\u00e4tzung</p>
+                      {aiResult ? (
+                        <>
+                          <p className="text-lg font-bold text-purple-700">{aiResult.value.toLocaleString("de-DE")} \u20ac</p>
+                          <p className="text-xs text-purple-500">Konfidenz: {aiResult.confidence}%</p>
+                          {aiResult.reasoning && <p className="text-xs text-purple-400 mt-1 italic">{aiResult.reasoning}</p>}
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => requestAiValuation(selectedValuation)}
+                          disabled={aiLoading}
+                          className="mt-1 text-xs"
+                        >
+                          {aiLoading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Berechne...</> : "KI-Wert anfordern"}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Experten-Wert */}
+                    <div className={`p-3 rounded-lg text-center ${selectedValuation.admin_estimated_value ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200"}`}>
+                      <p className={`text-xs font-medium mb-1 ${selectedValuation.admin_estimated_value ? "text-green-600" : "text-gray-500"}`}>Expertenwert</p>
+                      {selectedValuation.admin_estimated_value ? (
+                        <>
+                          <p className="text-lg font-bold text-green-700">{selectedValuation.admin_estimated_value.toLocaleString("de-DE")} \u20ac</p>
+                          {selectedValuation.admin_valued_at && (
+                            <p className="text-xs text-green-500">{format(new Date(selectedValuation.admin_valued_at), "dd.MM.yyyy", { locale: de })}</p>
+                          )}
+                        </>
+                      ) : <p className="text-sm text-muted-foreground">Noch nicht bewertet</p>}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Expertenwert eingeben */}
+                <Card className="p-4 border-2 border-primary/20">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                    <Euro className="w-4 h-4 text-primary" /> Deinen Expertenwert eintragen
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Gesch\u00e4tzter Marktwert (\u20ac)</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={expertValue}
+                          onChange={(e) => setExpertValue(e.target.value)}
+                          placeholder="z.B. 45000"
+                          className="text-lg font-bold"
+                        />
+                        <span className="text-lg font-bold text-muted-foreground">\u20ac</span>
+                      </div>
+                      {aiResult && expertValue && (
+                        <p className="text-xs mt-1 text-muted-foreground">
+                          Abweichung zur KI: {expertValue ? `${((Number(expertValue) - aiResult.value) / aiResult.value * 100).toFixed(1)}%` : "-"}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Notizen / Begr\u00fcndung</label>
+                      <Textarea
+                        value={expertNotes}
+                        onChange={(e) => setExpertNotes(e.target.value)}
+                        placeholder="z.B. Marke hat hohen Wiederverkaufswert, guter Zustand f\u00fcr das Alter..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Deine Bewertungen trainieren die KI \u2013 je mehr Werte du eintr\u00e4gst, desto besser wird die KI-Sch\u00e4tzung.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setValuationDetailOpen(false)}>
+                  Abbrechen
+                </Button>
+                {selectedValuation.phone && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.open(`tel:${selectedValuation.phone}`);
+                      markValuationContacted.mutate(selectedValuation.id);
+                    }}
+                  >
+                    <PhoneCall className="w-4 h-4 mr-2" /> Anrufen
+                  </Button>
+                )}
+                <Button
+                  onClick={() => {
+                    const val = Number(expertValue);
+                    if (!val || val <= 0) {
+                      toast({ title: "Bitte einen g\u00fcltigen Wert eingeben", variant: "destructive" });
+                      return;
+                    }
+                    saveExpertValue.mutate({ id: selectedValuation.id, value: val, notes: expertNotes });
+                  }}
+                  disabled={saveExpertValue.isPending || !expertValue}
+                >
+                  {saveExpertValue.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Speichern...</>
+                  ) : (
+                    <><CheckCircle2 className="w-4 h-4 mr-2" /> Expertenwert speichern</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

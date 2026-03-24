@@ -44,19 +44,19 @@ const leadSchema = z.object({
 });
 
 const BODY_TYPES = [
-  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", factor: 1.2 },
-  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", factor: 1.1 },
-  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", factor: 1.0 },
-  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", factor: 0.95 },
-  { value: "campingbus", label: "Campingbus", icon: CarFront, description: "Flexibel und alltagstauglich", factor: 0.85 },
+  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", basePrice: 120000 },
+  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", basePrice: 90000 },
+  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", basePrice: 80000 },
+  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", basePrice: 65000 },
+  { value: "campingbus", label: "Campingbus", icon: CarFront, description: "Flexibel und alltagstauglich", basePrice: 55000 },
 ];
 
 const CONDITIONS = [
   { value: "new", label: "Neu / Wie neu", description: "Keine Gebrauchsspuren, neuwertig", emoji: "✨", factor: 1.0 },
-  { value: "excellent", label: "Ausgezeichnet", description: "Minimale Gebrauchsspuren, top gepflegt", emoji: "🌟", factor: 0.9 },
-  { value: "good", label: "Gut", description: "Normale Gebrauchsspuren, gepflegt", emoji: "👍", factor: 0.75 },
-  { value: "fair", label: "Befriedigend", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.6 },
-  { value: "poor", label: "Renovierungsbedürftig", description: "Erhebliche Mängel, Reparaturbedarf", emoji: "🔧", factor: 0.4 },
+  { value: "excellent", label: "Ausgezeichnet", description: "Minimale Gebrauchsspuren, top gepflegt", emoji: "🌟", factor: 0.92 },
+  { value: "good", label: "Gut", description: "Normale Gebrauchsspuren, gepflegt", emoji: "👍", factor: 0.80 },
+  { value: "fair", label: "Befriedigend", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.65 },
+  { value: "poor", label: "Renovierungsbedürftig", description: "Erhebliche Mängel, Reparaturbedarf", emoji: "🔧", factor: 0.45 },
 ];
 
 const MANUFACTURERS = [
@@ -68,28 +68,97 @@ const MANUFACTURERS = [
   "Volkswagen", "Weinsberg", "Westfalia",
 ];
 
-const BASE_VALUE_NEW = 80000;
-const DEPRECIATION_RATE = 0.08;
-const MILEAGE_FACTOR = 0.00001;
+// Markenspezifische Preisklassen (Tier-System)
+const BRAND_TIERS: Record<string, string> = {
+  // Luxus
+  "Concorde": "luxus", "Morelo": "luxus", "Volkner": "luxus",
+  // Premium
+  "Carthago": "premium", "Hymer": "premium", "Niesmann+Bischoff": "premium",
+  "Frankia": "premium", "Eura Mobil": "premium", "Rapido": "premium",
+  "La Strada": "premium", "Phoenix": "premium",
+  // Mittelklasse
+  "Knaus": "mittelklasse", "Bürstner": "mittelklasse", "Dethleffs": "mittelklasse",
+  "Hobby": "mittelklasse", "LMC": "mittelklasse", "Chausson": "mittelklasse",
+  "Challenger": "mittelklasse", "Pilote": "mittelklasse", "Adria": "mittelklasse",
+  "Benimar": "mittelklasse", "Laika": "mittelklasse", "Elnagh": "mittelklasse",
+  "Globecar": "mittelklasse", "Pössl": "mittelklasse", "Malibu": "mittelklasse",
+  "Westfalia": "mittelklasse", "Volkswagen": "mittelklasse", "Fendt": "mittelklasse",
+  "Bavaria": "mittelklasse",
+  // Economy
+  "Sunlight": "economy", "Sun Living": "economy", "Etrusco": "economy",
+  "Forster": "economy", "Roller Team": "economy", "McLouis": "economy",
+  "Carado": "economy", "Weinsberg": "economy", "Ahorn Camp": "economy",
+};
+
+const TIER_MULTIPLIERS: Record<string, number> = {
+  luxus: 2.8,
+  premium: 1.4,
+  mittelklasse: 1.0,
+  economy: 0.8,
+};
+
+// Degressive Abschreibungskurven nach Aufbautyp [Jahr1, Jahr2, Jahr3, Jahr4, ab_Jahr5]
+const DEPRECIATION_CURVES: Record<string, number[]> = {
+  campingbus: [0.15, 0.06, 0.05, 0.04, 0.03],
+  kastenwagen: [0.15, 0.06, 0.05, 0.04, 0.03],
+  alkoven: [0.16, 0.08, 0.06, 0.04, 0.03],
+  teilintegriert: [0.16, 0.07, 0.06, 0.04, 0.03],
+  integriert: [0.17, 0.07, 0.06, 0.05, 0.03],
+};
+
+// Kilometer-Anpassungsfaktor (relativ zum Alter)
+const getMileageAdjustment = (age: number, mileage: number): number => {
+  if (age <= 0) return 1.0;
+  const expectedKm = age * 10000;
+  const kmRatio = expectedKm > 0 ? mileage / expectedKm : 1.0;
+  if (kmRatio <= 0.5) return 1.10;
+  if (kmRatio <= 0.8) return 1.05;
+  if (kmRatio <= 1.2) return 1.0;
+  if (kmRatio <= 1.5) return 0.95;
+  if (kmRatio <= 2.0) return 0.90;
+  if (kmRatio <= 3.0) return 0.85;
+  return 0.80;
+};
 
 const calculateValue = (
   bodyType: string,
   year: number,
   mileage: number,
-  condition: string
-): { min: number; max: number } => {
+  condition: string,
+  manufacturer?: string
+): { min: number; max: number; brandTier: string } => {
   const currentYear = new Date().getFullYear();
   const age = currentYear - year;
-  const bodyFactor = BODY_TYPES.find((b) => b.value === bodyType)?.factor || 1.0;
-  const conditionFactor = CONDITIONS.find((c) => c.value === condition)?.factor || 0.75;
-  const ageDepreciation = Math.min(0.8, age * DEPRECIATION_RATE);
-  const mileageDepreciation = Math.min(0.3, mileage * MILEAGE_FACTOR);
-  const baseValue = BASE_VALUE_NEW * bodyFactor;
-  const depreciatedValue = baseValue * (1 - ageDepreciation) * (1 - mileageDepreciation);
-  const finalValue = depreciatedValue * conditionFactor;
-  const min = Math.round(finalValue * 0.85);
-  const max = Math.round(finalValue * 1.15);
-  return { min: Math.max(min, 3000), max: Math.max(max, 5000) };
+
+  // 1. Basispreis nach Aufbautyp
+  const basePrice = BODY_TYPES.find((b) => b.value === bodyType)?.basePrice || 80000;
+
+  // 2. Marken-Multiplikator
+  const brandTier = manufacturer ? (BRAND_TIERS[manufacturer] || "mittelklasse") : "mittelklasse";
+  const tierMult = TIER_MULTIPLIERS[brandTier] || 1.0;
+  const adjustedBase = basePrice * tierMult;
+
+  // 3. Degressive Altersabschreibung
+  const curve = DEPRECIATION_CURVES[bodyType] || [0.16, 0.07, 0.06, 0.04, 0.03];
+  let remaining = 1.0;
+  for (let y = 0; y < age; y++) {
+    const rate = y < curve.length - 1 ? curve[y] : curve[curve.length - 1];
+    remaining *= (1 - rate);
+  }
+  const ageAdjusted = adjustedBase * remaining;
+
+  // 4. Kilometer-Anpassung
+  const kmFactor = getMileageAdjustment(age, mileage);
+  const kmAdjusted = ageAdjusted * kmFactor;
+
+  // 5. Zustandsfaktor
+  const conditionFactor = CONDITIONS.find((c) => c.value === condition)?.factor || 0.80;
+  const finalValue = kmAdjusted * conditionFactor;
+
+  // 6. Ergebnis-Spanne (±12%)
+  const min = Math.round(finalValue * 0.88);
+  const max = Math.round(finalValue * 1.12);
+  return { min: Math.max(min, 2000), max: Math.max(max, 3500), brandTier };
 };
 
 const formatCurrency = (value: number): string => {
@@ -318,6 +387,7 @@ const Wertrechner = () => {
   });
   const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [aiEstimate, setAiEstimate] = useState<{ value: number; confidence: number; reasoning?: string; trainingCount: number } | null>(null);
   const [mileageDisplay, setMileageDisplay] = useState(() => {
     if (formData.mileage) {
       return parseInt(formData.mileage, 10).toLocaleString("de-DE");
@@ -352,7 +422,7 @@ const Wertrechner = () => {
     mutationFn: async (data: typeof formData) => {
       const year = parseInt(data.year, 10);
       const mileage = parseInt(data.mileage, 10);
-      const value = calculateValue(data.bodyType, year, mileage, data.condition);
+      const value = calculateValue(data.bodyType, year, mileage, data.condition, data.manufacturer);
       setEstimatedValue(value);
 
       const { error } = await supabase.from("value_assessment_leads").insert({
@@ -368,7 +438,10 @@ const Wertrechner = () => {
         source: "wertrechner",
         estimated_value_min: value.min,
         estimated_value_max: value.max,
-      });
+        algorithm_value_min: value.min,
+        algorithm_value_max: value.max,
+        brand_tier: value.brandTier,
+      } as any);
 
       if (error) throw error;
 
@@ -394,7 +467,35 @@ const Wertrechner = () => {
       setEstimatedValue(value);
       setStep(6);
       trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
-      toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
+      toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertsch\u00e4tzung." });
+
+      // KI-Sch\u00e4tzung im Hintergrund abrufen (non-blocking)
+      (async () => {
+        try {
+          const { data: aiData } = await supabase.functions.invoke("ai-valuation", {
+            body: {
+              manufacturer: formData.manufacturer || null,
+              model: formData.model || null,
+              bodyType: formData.bodyType,
+              year: parseInt(formData.year, 10),
+              mileage: parseInt(formData.mileage, 10),
+              condition: formData.condition,
+              algorithmMin: value.min,
+              algorithmMax: value.max,
+            },
+          });
+          if (aiData?.success && aiData.estimatedValue) {
+            setAiEstimate({
+              value: aiData.estimatedValue,
+              confidence: aiData.confidence || 0,
+              reasoning: aiData.reasoning,
+              trainingCount: aiData.trainingDataCount || 0,
+            });
+          }
+        } catch {
+          // KI-Sch\u00e4tzung ist optional, Fehler ignorieren
+        }
+      })();
     },
     onError: () => {
       toast({
@@ -907,15 +1008,38 @@ const Wertrechner = () => {
                   <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
                     <AnimatedValue value={estimatedValue.min} /> - <AnimatedValue value={estimatedValue.max} />
                   </div>
-                  <p className="text-muted-foreground">Geschätzter Marktwert</p>
+                  <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
                 </div>
+
+                {/* KI-Sch\u00e4tzung anzeigen wenn verf\u00fcgbar */}
+                {aiEstimate && (
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 text-center border border-purple-200">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center">
+                        <TrendingUp className="w-4 h-4 text-purple-700" />
+                      </div>
+                      <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Bewertung</span>
+                    </div>
+                    <div className="text-3xl font-bold text-purple-700 mb-1">
+                      {aiEstimate.value.toLocaleString("de-DE")} \u20ac
+                    </div>
+                    <div className="flex items-center justify-center gap-3 text-xs text-purple-500">
+                      <span>Konfidenz: {aiEstimate.confidence}%</span>
+                      <span>\u2022</span>
+                      <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                    </div>
+                    {aiEstimate.reasoning && (
+                      <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
                   <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    Dies ist eine erste Schätzung. Der tatsächliche Wert kann je nach Ausstattung,
+                    Dies ist eine erste Sch\u00e4tzung. Der tats\u00e4chliche Wert kann je nach Ausstattung,
                     Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden
-                    sich bei Ihnen für eine genauere Bewertung.
+                    sich bei Ihnen f\u00fcr eine genauere Bewertung.
                   </p>
                 </div>
 

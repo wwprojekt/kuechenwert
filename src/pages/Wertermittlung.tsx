@@ -79,7 +79,7 @@ const Wertermittlung = () => {
         condition: data.condition || null,
         message: data.message || null,
         source: "wertermittlung",
-      });
+      } as any);
 
       if (error) throw error;
 

@@ -170,20 +170,20 @@ const VerkaufenWizard = () => {
       {/* Hero */}
       <PageHero size="sm">
         <div className="text-center animate-fade-in max-w-4xl mx-auto">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2 md:mb-4">
             Verkaufen Sie Ihr Wohnmobil
           </h1>
-          <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto">
             Kostenloses Angebot in nur 2 Minuten – unverbindlich und ohne Registrierungspflicht
           </p>
         </div>
       </PageHero>
 
-      <div className="min-h-screen py-8 md:py-16 bg-muted/20">
+      <div className="min-h-screen py-4 md:py-16 bg-muted/20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator - nur Prozentbalken */}
-            <div className="mb-8 animate-slide-up">
+            <div className="mb-4 md:mb-8 animate-slide-up">
               <div className="flex justify-end items-center mb-2">
                 <span className="text-sm font-semibold text-primary">
                   {Math.round(progress)}%
@@ -196,12 +196,12 @@ const VerkaufenWizard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Form Card - 2/3 width on desktop */}
               <div className="lg:col-span-2">
-                <Card className="p-4 md:p-8 shadow-elegant mb-6 transition-all">
-                  <div className="min-h-[400px]">{renderStep()}</div>
+                <Card className="p-3 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
+                  <div className="min-h-[200px] md:min-h-[400px]">{renderStep()}</div>
                 </Card>
 
                 {/* Navigation Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between">
                   <Button
                     variant="outline"
                     size="lg"
@@ -237,7 +237,7 @@ const VerkaufenWizard = () => {
               </div>
 
               {/* Sidebar - 1/3 width on desktop, hidden on mobile for steps 1-2 */}
-              <div className={`space-y-4 ${currentStep <= 2 ? "hidden lg:block" : ""}`}>
+              <div className="space-y-4 hidden lg:block">
                 {/* Vehicle Summary (shown from step 2 onwards) */}
                 {currentStep >= 2 && formData.manufacturer && (
                   <Card className="p-4 bg-primary/5 border-primary/20">

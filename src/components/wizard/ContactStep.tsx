@@ -47,8 +47,8 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-          <Mail className="w-6 h-6 text-primary" />
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+          <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fast geschafft – Ihre Kontaktdaten
         </h2>
         <p className="text-muted-foreground">
@@ -84,15 +84,15 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
         >
           {/* Sofortpreis */}
           <Card
-            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+            className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "instant_price"
-                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
-                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md hover:scale-[1.005]"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
+                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md md:hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "instant_price" })}
           >
-            <div className="flex items-center gap-4">
-              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
                 formData.saleChannel === "instant_price"
                   ? "bg-yellow-500 text-white shadow-md shadow-yellow-500/30"
                   : "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-500 group-hover:bg-yellow-100 dark:group-hover:bg-yellow-950/50"
@@ -115,10 +115,10 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
 
           {/* Händler-Auktion - Empfohlen */}
           <Card
-            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+            className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "auction"
-                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
-                : "border-2 border-primary/20 bg-card hover:border-primary/40 hover:shadow-md hover:scale-[1.005]"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
+                : "border-2 border-primary/20 bg-card hover:border-primary/40 hover:shadow-md md:hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "auction" })}
           >
@@ -128,8 +128,8 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
                 Empfohlen
               </span>
             </div>
-            <div className="flex items-center gap-4">
-              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
                 formData.saleChannel === "auction"
                   ? "bg-blue-500 text-white shadow-md shadow-blue-500/30"
                   : "bg-blue-50 dark:bg-blue-950/30 text-blue-500 group-hover:bg-blue-100 dark:group-hover:bg-blue-950/50"
@@ -152,15 +152,15 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
 
           {/* Ankaufstation */}
           <Card
-            className={`relative p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
+            className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "station"
-                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.01]"
-                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md hover:scale-[1.005]"
+                ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
+                : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md md:hover:scale-[1.005]"
             }`}
             onClick={() => updateFormData({ saleChannel: "station" })}
           >
-            <div className="flex items-center gap-4">
-              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
                 formData.saleChannel === "station"
                   ? "bg-green-500 text-white shadow-md shadow-green-500/30"
                   : "bg-green-50 dark:bg-green-950/30 text-green-500 group-hover:bg-green-100 dark:group-hover:bg-green-950/50"

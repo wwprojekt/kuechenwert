@@ -49,8 +49,8 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-          <Camera className="w-6 h-6 text-primary" />
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+          <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fotos Ihres Wohnmobils
         </h2>
         <p className="text-muted-foreground">
@@ -74,7 +74,7 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
           <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
             <label
               htmlFor="photo-upload"
-              className="flex flex-col items-center justify-center py-10 px-4 cursor-pointer"
+              className="flex flex-col items-center justify-center py-6 md:py-10 px-4 cursor-pointer"
             >
               <Upload className="w-10 h-10 text-muted-foreground mb-3" />
               <span className="text-base font-medium text-foreground mb-1">
@@ -111,7 +111,7 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
                     <button
                       type="button"
                       onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 md:p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
                     >
                       <X className="w-3 h-3" />
                     </button>

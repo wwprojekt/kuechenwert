@@ -37,8 +37,8 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-          <Settings className="w-6 h-6 text-primary" />
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+          <Settings className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Ausstattung
         </h2>
         <p className="text-muted-foreground">

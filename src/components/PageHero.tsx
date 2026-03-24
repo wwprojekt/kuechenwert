@@ -11,9 +11,9 @@ interface PageHeroProps {
  */
 const PageHero = ({ children, className = "", size = "md" }: PageHeroProps) => {
   const sizeClasses = {
-    sm: "py-12 md:py-16",
-    md: "py-16 md:py-24",
-    lg: "py-20 md:py-32",
+    sm: "py-6 md:py-16",
+    md: "py-10 md:py-24",
+    lg: "py-14 md:py-32",
   };
 
   return (

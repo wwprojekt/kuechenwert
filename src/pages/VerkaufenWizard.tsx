@@ -179,7 +179,7 @@ const VerkaufenWizard = () => {
         </div>
       </PageHero>
 
-      <div className="min-h-screen py-4 md:py-16 bg-muted/50">
+      <div className="min-h-screen py-4 md:py-16 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator - nur Prozentbalken */}

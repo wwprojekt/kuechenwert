@@ -55,7 +55,7 @@ const Ankaufstationen = () => {
     <PageLayout
       breadcrumbs={true}
       title="Ankaufstationen – Wohnmobil vor Ort abgeben"
-      description="Finden Sie eine CaravanWert-Ankaufstation in Ihrer Nähe. Persönliche Übergabe, sofortige Barzahlung und professionelle Abwicklung an über 6 Standorten deutschlandweit."
+      description="Finden Sie eine CaravanWert-Ankaufstation in Ihrer Nähe. Persönliche Übergabe, sofortige Barzahlung und professionelle Abwicklung deutschlandweit."
       keywords="ankaufstation, wohnmobil übergabe, abgabestelle, wohnmobil verkaufen vor ort"
       canonicalPath="/ankaufstationen"
       structuredData={[generateServiceSchema("Wohnmobil-Ankaufstation", "Persönliche Übergabe Ihres Wohnmobils an einer unserer Ankaufstationen mit sofortiger Barzahlung."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/ankaufstationen"))]}

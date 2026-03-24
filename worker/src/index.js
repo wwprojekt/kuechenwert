@@ -1,8 +1,8 @@
 // Cloudflare Worker: Pre-Renderer für caravanwert.de
-// Strategie:
-// 1. KV-Cache prüfen → gecachtes HTML sofort zurückgeben
-// 2. Meta-Injection sofort zurückgeben (schnell, für SEO-Basics)
-// 3. Im Hintergrund: REST API Browser Rendering für vollen Content → KV-Cache
+// Version: v6 (2026-03-24)
+// Fixes: Robuste Meta-Tag-Entfernung, korrekter waitForSelector, robots.txt,
+//        og:locale, twitter:image, optimierte robots-Direktive, Fallback-SEO,
+//        synchrones Rendering für Bots
 
 // ─── Bot Detection ──────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ function shouldSkip(pathname) {
 
 function getCacheKey(pathname) {
   const path = pathname.replace(/\/+$/, "") || "/";
-  return `render:v4:${path}`;
+  return `render:v6:${path}`;
 }
 
 function escapeHtml(str) {
@@ -61,12 +61,25 @@ function escapeHtml(str) {
 
 const SEO_ROUTES = __SEO_ROUTES_PLACEHOLDER__;
 
-// ─── Meta-Tag Injection (fast fallback) ─────────────────────────────────────
+// ─── Fallback SEO for unknown paths ────────────────────────────────────────
+
+function getFallbackSeo(path) {
+  const segments = path.split("/").filter(Boolean);
+  const lastSegment = segments[segments.length - 1] || "";
+  const title = lastSegment
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    title: `${title || "CaravanWert"} | CaravanWert`,
+    description: `Informationen zu ${title || "Wohnmobil-Verkauf"} auf CaravanWert. Ihr Partner für Wohnmobil-Ankauf und Bewertung.`
+  };
+}
+
+// ─── Meta-Tag Injection (robust, removes all existing SEO tags first) ──────
 
 function injectMeta(html, path) {
-  const seoData = SEO_ROUTES[path];
-  if (!seoData) return null;
-
+  const seoData = SEO_ROUTES[path] || getFallbackSeo(path);
   const { title, description } = seoData;
   const canonicalUrl = "https://caravanwert.de" + path;
 
@@ -80,10 +93,12 @@ function injectMeta(html, path) {
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="CaravanWert" />
     <meta property="og:image" content="https://caravanwert.de/og-image.png" />
+    <meta property="og:locale" content="de_DE" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
-    <meta name="robots" content="index, follow" />
+    <meta name="twitter:image" content="https://caravanwert.de/og-image.png" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   `;
 
   const noscriptContent = `
@@ -102,8 +117,20 @@ function injectMeta(html, path) {
     </noscript>
   `;
 
-  html = html.replace(/<title>[^<]*<\/title>/, "");
+  // Remove ALL existing SEO tags to prevent duplicates
+  // This handles React Helmet tags (with data-rh attribute) and standard tags
+  html = html.replace(/<title[^>]*>[^<]*<\/title>/gi, "");
+  html = html.replace(/<meta\s+name=["']description["'][^>]*>/gi, "");
+  html = html.replace(/<meta\s+name=["']robots["'][^>]*>/gi, "");
+  html = html.replace(/<meta\s+name=["']keywords["'][^>]*>/gi, "");
+  html = html.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, "");
+  html = html.replace(/<meta\s+property=["']og:[^"']*["'][^>]*>/gi, "");
+  html = html.replace(/<meta\s+name=["']twitter:[^"']*["'][^>]*>/gi, "");
+
+  // Inject our clean meta tags before </head>
   html = html.replace("</head>", metaTags + "\n  </head>");
+
+  // Inject noscript content after root div (for crawlers without JS)
   html = html.replace(
     '<div id="root"></div>',
     '<div id="root"></div>' + noscriptContent
@@ -112,7 +139,64 @@ function injectMeta(html, path) {
   return html;
 }
 
-// ─── REST API Browser Rendering ─────────────────────────────────────────────
+// ─── robots.txt (consolidated, overrides Cloudflare managed) ───────────────
+
+function getRobotsTxt() {
+  return `# robots.txt for CaravanWert
+# https://caravanwert.de
+# Last updated: 2026-03-24
+
+# Default: Allow all search engine crawlers
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verkaufen/danke
+
+# Google Ads bots (critical for Google Ads compliance)
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+
+# Block AI training bots
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+# Sitemap location
+Sitemap: https://caravanwert.de/sitemap.xml
+`;
+}
+
+// ─── REST API Browser Rendering (synchronous, correct selector) ────────────
 
 async function renderWithRestApi(url, env) {
   const response = await fetch(
@@ -125,11 +209,11 @@ async function renderWithRestApi(url, env) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        url: url,
+        url,
         rejectResourceTypes: ["image", "font", "media"],
         waitForSelector: {
-          selector: "#root > *",
-          timeout: 10000
+          selector: "h1, h2, main, footer",
+          timeout: 15000
         }
       })
     }
@@ -144,7 +228,6 @@ async function renderWithRestApi(url, env) {
   if (!data.success || !data.result) {
     throw new Error("REST API returned no result");
   }
-
   return data.result;
 }
 
@@ -160,17 +243,28 @@ export default {
       return fetch(request);
     }
 
+    // Serve optimized robots.txt (overrides Cloudflare managed + origin)
+    if (url.pathname === "/robots.txt") {
+      return new Response(getRobotsTxt(), {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "public, max-age=86400",
+          "x-robots-source": "worker"
+        }
+      });
+    }
+
     // Skip static assets and private paths
     if (shouldSkip(url.pathname)) {
       return fetch(request);
     }
 
-    // Only process bot requests
+    // Non-bot requests: pass through to origin
     if (!isBot(userAgent)) {
       return fetch(request);
     }
 
-    // Only handle HTML requests
+    // Only handle HTML requests for bots
     const accept = request.headers.get("accept") || "";
     if (!accept.includes("text/html") && !accept.includes("*/*")) {
       return fetch(request);
@@ -189,7 +283,7 @@ export default {
             "content-type": "text/html; charset=utf-8",
             "x-prerender": "cached",
             "x-prerender-path": path,
-            "cache-control": "public, max-age=3600, s-maxage=86400",
+            "cache-control": "public, max-age=3600, s-maxage=86400"
           }
         });
       }
@@ -197,74 +291,68 @@ export default {
       console.error("KV read error:", e.message);
     }
 
-    // ── Step 2: Immediately return meta-injected version ──
-    console.log(`Cache MISS - meta-injection for: ${path}`);
+    console.log(`Cache MISS: ${path}`);
 
-    let originResponse;
+    // ── Step 2: Fetch origin HTML ──
+    let originHtml;
     try {
-      originResponse = await fetch(request);
+      const originResponse = await fetch(request);
+      if (!originResponse.ok) {
+        return originResponse;
+      }
+      originHtml = await originResponse.text();
     } catch (e) {
       console.error("Origin fetch error:", e.message);
       return new Response("Service unavailable", { status: 503 });
     }
 
-    if (!originResponse.ok) {
-      return originResponse;
+    // ── Step 3: Inject meta tags into origin HTML ──
+    const injectedHtml = injectMeta(originHtml, path);
+
+    // ── Step 4: Try synchronous Browser Rendering API for full content ──
+    try {
+      const targetUrl = `https://caravanwert.de${path}`;
+      console.log(`Rendering: ${path}`);
+      const rendered = await renderWithRestApi(targetUrl, env);
+
+      if (rendered && rendered.length > 5000) {
+        // Inject SEO meta tags into the fully rendered HTML as well
+        const enrichedHtml = injectMeta(rendered, path);
+
+        // Cache the fully rendered + meta-enriched HTML
+        ctx.waitUntil(
+          env.PRERENDER_CACHE.put(cacheKey, enrichedHtml, { expirationTtl: CACHE_TTL })
+            .then(() => console.log(`Cached rendered: ${path} (${enrichedHtml.length} bytes)`))
+            .catch((e) => console.error(`Cache write error: ${e.message}`))
+        );
+
+        return new Response(enrichedHtml, {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "x-prerender": "rendered",
+            "x-prerender-path": path,
+            "cache-control": "public, max-age=3600, s-maxage=86400"
+          }
+        });
+      }
+    } catch (e) {
+      console.error(`Render error for ${path}: ${e.message}`);
     }
 
-    let html = await originResponse.text();
-    const injectedHtml = injectMeta(html, path);
-
-    // ── Step 3: Background REST API rendering → KV cache ──
+    // ── Step 5: Fallback - serve meta-injected HTML and cache it ──
     ctx.waitUntil(
-      (async () => {
-        try {
-          const targetUrl = `https://caravanwert.de${path}`;
-          console.log(`Background: REST API render for ${path}`);
-          const rendered = await renderWithRestApi(targetUrl, env);
-
-          if (rendered && rendered.length > 1000) {
-            await env.PRERENDER_CACHE.put(cacheKey, rendered, {
-              expirationTtl: CACHE_TTL
-            });
-            console.log(`Background: cached REST API render for ${path} (${rendered.length} bytes)`);
-          } else {
-            // Cache meta-injected as fallback
-            if (injectedHtml) {
-              await env.PRERENDER_CACHE.put(cacheKey, injectedHtml, {
-                expirationTtl: CACHE_TTL
-              });
-            }
-          }
-        } catch (e) {
-          console.error(`Background render error for ${path}:`, e.message);
-          // Cache meta-injected version as fallback
-          if (injectedHtml) {
-            try {
-              await env.PRERENDER_CACHE.put(cacheKey, injectedHtml, {
-                expirationTtl: CACHE_TTL
-              });
-            } catch (e2) {}
-          }
-        }
-      })()
+      env.PRERENDER_CACHE.put(cacheKey, injectedHtml, { expirationTtl: CACHE_TTL })
+        .then(() => console.log(`Cached meta-injected: ${path}`))
+        .catch((e) => console.error(`Cache write error: ${e.message}`))
     );
 
-    // Return meta-injected version immediately
-    if (injectedHtml) {
-      return new Response(injectedHtml, {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "x-prerender": "meta-injected",
-          "x-prerender-path": path,
-          "cache-control": "public, max-age=3600, s-maxage=86400",
-        }
-      });
-    }
-
-    // Unknown path - return origin response as-is
-    return new Response(html, {
-      headers: originResponse.headers,
+    return new Response(injectedHtml, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "x-prerender": "meta-injected",
+        "x-prerender-path": path,
+        "cache-control": "public, max-age=3600, s-maxage=86400"
+      }
     });
   }
 };

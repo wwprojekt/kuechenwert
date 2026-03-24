@@ -484,12 +484,12 @@ const Wertrechner = () => {
               algorithmMax: value.max,
             },
           });
-          if (aiData?.success && aiData.estimatedValue) {
+          if (aiData?.success && aiData.hasAiEstimate && aiData.aiEstimatedValue) {
             setAiEstimate({
-              value: aiData.estimatedValue,
-              confidence: aiData.confidence || 0,
-              reasoning: aiData.reasoning,
-              trainingCount: aiData.trainingDataCount || 0,
+              value: aiData.aiEstimatedValue,
+              confidence: aiData.aiConfidence || 0,
+              reasoning: aiData.aiReasoning,
+              trainingCount: aiData.trainingCount || 0,
             });
           }
         } catch {
@@ -1004,34 +1004,71 @@ const Wertrechner = () => {
                   <p className="text-muted-foreground">Basierend auf Ihren Angaben und aktuellen Marktdaten</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center">
-                  <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                    <AnimatedValue value={estimatedValue.min} /> - <AnimatedValue value={estimatedValue.max} />
-                  </div>
-                  <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
-                </div>
-
-                {/* KI-Sch\u00e4tzung anzeigen wenn verf\u00fcgbar */}
-                {aiEstimate && (
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 text-center border border-purple-200">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-purple-700" />
+                {/* KI-Übernahme: Ab Konfidenz >= 75% und >= 20 Trainingsdaten wird KI-Wert zum Hauptwert */}
+                {aiEstimate && aiEstimate.confidence >= 75 && aiEstimate.trainingCount >= 20 ? (
+                  <>
+                    {/* KI-Wert als Hauptwert */}
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-8 text-center border-2 border-purple-300 shadow-lg">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-purple-700" />
+                        </div>
+                        <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Expertenbewertung</span>
                       </div>
-                      <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Bewertung</span>
+                      <div className="text-4xl md:text-5xl font-bold text-purple-700 mb-2">
+                        <AnimatedValue value={Math.round(aiEstimate.value * 0.95)} /> - <AnimatedValue value={Math.round(aiEstimate.value * 1.05)} />
+                      </div>
+                      <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
+                      <div className="flex items-center justify-center gap-3 text-xs text-purple-500 mt-2">
+                        <span>Konfidenz: {aiEstimate.confidence}%</span>
+                        <span>\u2022</span>
+                        <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                      </div>
+                      {aiEstimate.reasoning && (
+                        <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
+                      )}
                     </div>
-                    <div className="text-3xl font-bold text-purple-700 mb-1">
-                      {aiEstimate.value.toLocaleString("de-DE")} \u20ac
+                    {/* Algorithmus-Wert als Zusatzinfo */}
+                    <div className="bg-muted/30 rounded-lg p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Algorithmische Sch\u00e4tzung</p>
+                      <p className="text-lg font-semibold text-muted-foreground">
+                        {formatCurrency(estimatedValue.min)} - {formatCurrency(estimatedValue.max)}
+                      </p>
                     </div>
-                    <div className="flex items-center justify-center gap-3 text-xs text-purple-500">
-                      <span>Konfidenz: {aiEstimate.confidence}%</span>
-                      <span>\u2022</span>
-                      <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                  </>
+                ) : (
+                  <>
+                    {/* Algorithmus-Wert als Hauptwert (Standard) */}
+                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center">
+                      <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                        <AnimatedValue value={estimatedValue.min} /> - <AnimatedValue value={estimatedValue.max} />
+                      </div>
+                      <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
                     </div>
-                    {aiEstimate.reasoning && (
-                      <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
+
+                    {/* KI-Sch\u00e4tzung als Zusatzinfo wenn verf\u00fcgbar aber noch nicht \u00fcbernommen */}
+                    {aiEstimate && (
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 text-center border border-purple-200">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-purple-700" />
+                          </div>
+                          <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Bewertung</span>
+                        </div>
+                        <div className="text-3xl font-bold text-purple-700 mb-1">
+                          {aiEstimate.value.toLocaleString("de-DE")} \u20ac
+                        </div>
+                        <div className="flex items-center justify-center gap-3 text-xs text-purple-500">
+                          <span>Konfidenz: {aiEstimate.confidence}%</span>
+                          <span>\u2022</span>
+                          <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                        </div>
+                        {aiEstimate.reasoning && (
+                          <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
 
                 <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">

@@ -75,9 +75,11 @@ export default function AdminSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // UI-interne Felder rausfiltern vor dem Speichern
+      const { _showApiKey, ...saveData } = formData;
       const { error } = await supabase
         .from('site_settings')
-        .update(formData)
+        .update(saveData)
         .eq('id', SETTINGS_ID);
 
       if (error) throw error;

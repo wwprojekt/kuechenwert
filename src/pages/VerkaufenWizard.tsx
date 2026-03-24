@@ -92,7 +92,9 @@ const VerkaufenWizard = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentStep, formData, steps.length, saveProgress]);
 
-  const progress = (currentStep / steps.length) * 100;
+  // Ungerade Prozentwerte wirken authentischer und weniger konstruiert
+  const progressMap: Record<number, number> = { 1: 17, 2: 39, 3: 58, 4: 76, 5: 100 };
+  const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);

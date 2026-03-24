@@ -1,8 +1,8 @@
 // Cloudflare Worker: Pre-Renderer für caravanwert.de
-// Version: v6 (2026-03-24)
+// Version: v7 (2026-03-24)
 // Fixes: Robuste Meta-Tag-Entfernung, korrekter waitForSelector, robots.txt,
 //        og:locale, twitter:image, optimierte robots-Direktive, Fallback-SEO,
-//        synchrones Rendering für Bots
+//        synchrones Rendering für Bots, IndexNow-Integration für Bing
 
 // ─── Bot Detection ──────────────────────────────────────────────────────────
 
@@ -30,6 +30,15 @@ const SKIP_PATHS = [
 ];
 
 const CACHE_TTL = 60 * 60 * 24; // 24 hours
+
+// ─── IndexNow Configuration ──────────────────────────────────────────────────
+
+const INDEXNOW_KEY = "67fe483c8b4144049d80db9937f2374a";
+const INDEXNOW_HOST = "caravanwert.de";
+const INDEXNOW_ENDPOINTS = [
+  "https://api.indexnow.org/indexnow",
+  "https://www.bing.com/indexnow"
+];
 
 function isBot(userAgent) {
   if (!userAgent) return false;
@@ -196,6 +205,36 @@ Sitemap: https://caravanwert.de/sitemap.xml
 `;
 }
 
+// ─── IndexNow Submission ─────────────────────────────────────────────────────
+
+async function submitToIndexNow(urls) {
+  if (!urls || urls.length === 0) return;
+
+  const urlList = urls.map(path => `https://${INDEXNOW_HOST}${path}`);
+
+  const body = JSON.stringify({
+    host: INDEXNOW_HOST,
+    key: INDEXNOW_KEY,
+    keyLocation: `https://${INDEXNOW_HOST}/${INDEXNOW_KEY}.txt`,
+    urlList
+  });
+
+  const results = await Promise.allSettled(
+    INDEXNOW_ENDPOINTS.map(endpoint =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body
+      }).then(async (res) => {
+        console.log(`IndexNow ${endpoint}: ${res.status}`);
+        return res.status;
+      })
+    )
+  );
+
+  return results;
+}
+
 // ─── REST API Browser Rendering (synchronous, correct selector) ────────────
 
 async function renderWithRestApi(url, env) {
@@ -241,6 +280,39 @@ export default {
     // Only handle GET requests
     if (request.method !== "GET") {
       return fetch(request);
+    }
+
+    // Serve IndexNow key verification file
+    if (url.pathname === `/${INDEXNOW_KEY}.txt`) {
+      return new Response(INDEXNOW_KEY + "\n", {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "public, max-age=86400"
+        }
+      });
+    }
+
+    // Handle IndexNow bulk submission trigger (protected by secret header)
+    if (url.pathname === "/api/indexnow-submit" && request.headers.get("x-indexnow-secret") === INDEXNOW_KEY) {
+      const allPaths = Object.keys(SEO_ROUTES);
+      try {
+        const results = await submitToIndexNow(allPaths);
+        return new Response(JSON.stringify({
+          success: true,
+          submitted: allPaths.length,
+          results: results.map((r, i) => ({
+            endpoint: INDEXNOW_ENDPOINTS[i],
+            status: r.status === "fulfilled" ? r.value : r.reason?.message
+          }))
+        }), {
+          headers: { "content-type": "application/json" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          status: 500,
+          headers: { "content-type": "application/json" }
+        });
+      }
     }
 
     // Serve optimized robots.txt (overrides Cloudflare managed + origin)
@@ -320,10 +392,14 @@ export default {
         const enrichedHtml = injectMeta(rendered, path);
 
         // Cache the fully rendered + meta-enriched HTML
+        // and notify IndexNow about the freshly rendered page
         ctx.waitUntil(
           env.PRERENDER_CACHE.put(cacheKey, enrichedHtml, { expirationTtl: CACHE_TTL })
-            .then(() => console.log(`Cached rendered: ${path} (${enrichedHtml.length} bytes)`))
-            .catch((e) => console.error(`Cache write error: ${e.message}`))
+            .then(() => {
+              console.log(`Cached rendered: ${path} (${enrichedHtml.length} bytes)`);
+              return submitToIndexNow([path]);
+            })
+            .catch((e) => console.error(`Cache/IndexNow error: ${e.message}`))
         );
 
         return new Response(enrichedHtml, {

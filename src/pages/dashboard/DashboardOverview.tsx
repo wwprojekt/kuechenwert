@@ -456,11 +456,15 @@ export default function DashboardOverview() {
               {recentActivity.map((auction: any, index: number) => {
                 const firstPhoto = auction.motorhome?.photos
                   ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
-                
+                const detailUrl = isDealer
+                  ? `/auktion/${auction.id}`
+                  : `/dashboard/listings/${auction.motorhome?.id}`;
+
                 return (
-                  <div
+                  <Link
                     key={auction.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl border border-border/50 hover:border-primary/20 bg-gradient-to-r from-background to-muted/20 hover:shadow-md transition-all gap-4"
+                    to={detailUrl}
+                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl border border-border/50 hover:border-primary/20 bg-gradient-to-r from-background to-muted/20 hover:shadow-md transition-all gap-4 no-underline cursor-pointer"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center gap-4">
@@ -499,17 +503,11 @@ export default function DashboardOverview() {
                           €{Number(auction.current_bid || auction.starting_bid).toLocaleString('de-DE')}
                         </p>
                       </div>
-                      <Link to={isDealer ? `/auktion/${auction.id}` : `/dashboard/listings/${auction.motorhome?.id}`}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="hover:bg-primary/10 hover:text-primary transition-colors rounded-full"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </Button>
-                      </Link>
+                      <div className="p-2 rounded-full hover:bg-primary/10 transition-colors">
+                        <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

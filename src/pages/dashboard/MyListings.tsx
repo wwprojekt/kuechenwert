@@ -5,12 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, Eye, Edit, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 export default function MyListings() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: motorhomes, isLoading } = useQuery({
     queryKey: ["myListings", user?.id],
@@ -100,7 +101,8 @@ export default function MyListings() {
             const auction = motorhome.auction?.[0];
 
             return (
-              <Card key={motorhome.id} className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card">
+              <Link key={motorhome.id} to={`/dashboard/listings/${motorhome.id}`} className="no-underline">
+              <Card className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer">
                 {/* Image */}
                 <div className="relative h-48 bg-muted">
                   {firstPhoto ? (
@@ -172,21 +174,26 @@ export default function MyListings() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Link to={`/dashboard/listings/${motorhome.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Details
-                      </Button>
-                    </Link>
-                    <Link to={`/dashboard/listings/${motorhome.id}/edit`} className="flex-1">
-                      <Button variant="outline" className="w-full">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Bearbeiten
-                      </Button>
-                    </Link>
+                    <Button variant="outline" className="flex-1">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Details
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/dashboard/listings/${motorhome.id}/edit`);
+                      }}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Bearbeiten
+                    </Button>
                   </div>
                 </div>
               </Card>
+              </Link>
             );
           })}
         </div>

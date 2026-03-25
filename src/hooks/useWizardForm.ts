@@ -397,6 +397,21 @@ export const useWizardForm = () => {
         return true;
       }
 
+      // Ensure profile exists before motorhome insert (handles race condition
+      // where handle_new_user trigger may have failed silently)
+      try {
+        const nameParts = (formData.customerName || "").split(" ");
+        await supabase.rpc('ensure_profile_exists', {
+          p_user_id: user.id,
+          p_email: formData.customerEmail || user.email || '',
+          p_first_name: nameParts[0] || null,
+          p_last_name: nameParts.slice(1).join(' ') || null,
+          p_phone: formData.customerPhone || null,
+        });
+      } catch (profileError) {
+        logger.warn('ensure_profile_exists RPC failed, proceeding anyway:', profileError);
+      }
+
       // Upload photos
       const photoUrls: string[] = [];
       for (let i = 0; i < formData.photos.length; i++) {

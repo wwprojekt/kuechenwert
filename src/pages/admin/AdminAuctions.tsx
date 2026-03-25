@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2, Mail } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
@@ -33,9 +33,74 @@ import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 
+/**
+ * Helper: After activating an auction, check if the seller's email is unconfirmed
+ * (i.e. account was created by admin via ConvertToMotorhomeDialog).
+ * If so, automatically send a registration invite so the customer can access their dashboard.
+ */
+async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
+  try {
+    // Load motorhome with seller info
+    const { data: motorhome, error: mhError } = await supabase
+      .from("motorhomes")
+      .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name)")
+      .eq("id", motorhomeId)
+      .maybeSingle();
+
+    if (mhError || !motorhome) {
+      logger.warn("Could not load motorhome for invite check:", mhError?.message);
+      return;
+    }
+
+    const seller = motorhome.seller as any;
+    if (!seller?.email) {
+      logger.info("No seller email found, skipping invite");
+      return;
+    }
+
+    // Send registration invite
+    const customerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ");
+    const { data, error } = await supabase.functions.invoke("send-registration-invite", {
+      body: {
+        email: seller.email,
+        customerName: customerName || undefined,
+        motorhomeId: motorhome.id,
+      },
+    });
+
+    if (error) {
+      logger.error("Failed to send registration invite:", error.message);
+      toast.info(
+        `Auktion aktiviert. Registrierungslink an ${seller.email} konnte nicht automatisch gesendet werden.`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    if (data?.error) {
+      logger.error("Registration invite error:", data.error);
+      toast.info(
+        `Auktion aktiviert. Registrierungslink an ${seller.email} konnte nicht automatisch gesendet werden.`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    toast.success(
+      `Registrierungslink automatisch an ${seller.email} gesendet`,
+      { duration: 5000 }
+    );
+    logger.info(`Registration invite sent to ${seller.email} for motorhome ${motorhome.id}`);
+  } catch (err: any) {
+    logger.error("Error in sendRegistrationInviteIfNeeded:", err);
+    // Non-critical: don't block the auction activation
+  }
+}
+
 export default function AdminAuctions() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
@@ -66,6 +131,63 @@ export default function AdminAuctions() {
       return data;
     },
   });
+
+  // ---- Handle ?create=motorhomeId URL parameter ----
+  // When admin clicks "Auktion erstellen" from AdminMotorhomes or AdminMotorhomeDetail,
+  // they navigate to /admin/auctions?create={motorhomeId}
+  // We auto-create a draft auction for that motorhome
+  const createAuctionMutation = useMutation({
+    mutationFn: async (motorhomeId: string) => {
+      // Check if a draft auction already exists for this motorhome
+      const { data: existing } = await supabase
+        .from("auctions")
+        .select("id")
+        .eq("motorhome_id", motorhomeId)
+        .in("status", ["draft", "active"])
+        .maybeSingle();
+
+      if (existing) {
+        return { id: existing.id, alreadyExists: true };
+      }
+
+      // Create new draft auction
+      const { data: auction, error } = await supabase
+        .from("auctions")
+        .insert({
+          motorhome_id: motorhomeId,
+          starting_bid: 50,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      return { id: auction.id, alreadyExists: false };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
+      if (result.alreadyExists) {
+        toast.info("Es existiert bereits eine Auktion für dieses Fahrzeug");
+      } else {
+        toast.success("Auktionsentwurf erfolgreich erstellt");
+      }
+      // Clear the create parameter from URL
+      setSearchParams({});
+    },
+    onError: (error: any) => {
+      toast.error(`Fehler beim Erstellen der Auktion: ${error.message}`);
+      logger.error("Create auction error:", error);
+      setSearchParams({});
+    },
+  });
+
+  useEffect(() => {
+    const createForMotorhome = searchParams.get("create");
+    if (createForMotorhome && !createAuctionMutation.isPending) {
+      createAuctionMutation.mutate(createForMotorhome);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "auktionen",
@@ -170,7 +292,7 @@ export default function AdminAuctions() {
   });
 
   const activateAuctionMutation = useMutation({
-    mutationFn: async (auctionId: string) => {
+    mutationFn: async (auction: { id: string; motorhome_id: string }) => {
       // Set auction to active with end_time 7 days from now
       const endTime = new Date();
       endTime.setDate(endTime.getDate() + 7);
@@ -182,13 +304,20 @@ export default function AdminAuctions() {
           end_time: endTime.toISOString(),
           start_time: new Date().toISOString()
         })
-        .eq('id', auctionId);
+        .eq('id', auction.id);
       
       if (error) throw error;
+
+      return auction;
     },
-    onSuccess: () => {
+    onSuccess: (auction) => {
       toast.success("Auktion erfolgreich aktiviert");
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
+
+      // Automatically send registration invite to seller if their email is unconfirmed
+      if (auction.motorhome_id) {
+        sendRegistrationInviteIfNeeded(auction.motorhome_id);
+      }
     },
     onError: (error: any) => {
       toast.error("Fehler beim Aktivieren der Auktion");
@@ -238,6 +367,16 @@ export default function AdminAuctions() {
           </Button>
         </div>
       </div>
+
+      {/* Loading indicator for auto-create from URL parameter */}
+      {createAuctionMutation.isPending && (
+        <Card className="p-4 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="text-sm text-blue-800 dark:text-blue-200">Auktionsentwurf wird erstellt...</span>
+          </div>
+        </Card>
+      )}
 
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
         <Table>
@@ -354,7 +493,7 @@ export default function AdminAuctions() {
                         {auction.status === "draft" && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Auktion aktivieren">
                                 <Play className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -364,15 +503,31 @@ export default function AdminAuctions() {
                                 <AlertDialogDescription>
                                   Die Auktion wird für 7 Tage aktiviert und ist dann auf der Startseite sichtbar.
                                   Händler können ab sofort Gebote abgeben.
+                                  {auction.motorhome?.seller?.email && (
+                                    <>
+                                      <br /><br />
+                                      <span className="flex items-center gap-1.5 text-blue-600">
+                                        <Mail className="w-3.5 h-3.5" />
+                                        Ein Registrierungslink wird automatisch an <strong>{auction.motorhome.seller.email}</strong> gesendet.
+                                      </span>
+                                    </>
+                                  )}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Abbrechen</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => activateAuctionMutation.mutate(auction.id)}
+                                  onClick={() => activateAuctionMutation.mutate({
+                                    id: auction.id,
+                                    motorhome_id: auction.motorhome_id,
+                                  })}
                                   disabled={activateAuctionMutation.isPending}
                                 >
-                                  Aktivieren
+                                  {activateAuctionMutation.isPending ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Aktivieren...</>
+                                  ) : (
+                                    "Aktivieren"
+                                  )}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>

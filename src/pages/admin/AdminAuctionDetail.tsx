@@ -397,6 +397,8 @@ export default function AdminAuctionDetail() {
                     <InfoItem label="Kilometerstand" value={auction.motorhome?.mileage ? `${auction.motorhome.mileage.toLocaleString()} km` : "—"} />
                     <InfoItem label="Zustand" value={auction.motorhome?.condition} />
                     <InfoItem label="Aufbauart" value={auction.motorhome?.body_type} />
+                    <InfoItem label="PLZ (Standort)" value={auction.motorhome?.postal_code || "—"} />
+                    <InfoItem label="Stadt" value={auction.motorhome?.city || "—"} />
                   </InfoGrid>
                 </div>
               </DetailSection>

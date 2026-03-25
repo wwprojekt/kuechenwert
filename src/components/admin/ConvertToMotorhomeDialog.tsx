@@ -339,6 +339,8 @@ export function ConvertToMotorhomeDialog({
         gas_system: formData.gas_system || null,
         main_tires: formData.main_tires || null,
         second_tires: formData.second_tires || null,
+        postal_code: formData.postal_code ? String(formData.postal_code) : null,
+        city: formData.city ? String(formData.city) : null,
         status: "available",
       };
 
@@ -688,6 +690,31 @@ export function ConvertToMotorhomeDialog({
                     onChange={(e) => updateField("description", e.target.value)}
                     placeholder="Fahrzeugbeschreibung, Besonderheiten..."
                   />
+                </div>
+
+                {/* Standort */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="conv-postal-code">
+                      PLZ (Fahrzeugstandort)
+                    </Label>
+                    <Input
+                      id="conv-postal-code"
+                      value={String(formData.postal_code || "")}
+                      onChange={(e) => updateField("postal_code", e.target.value)}
+                      placeholder="z.B. 80331"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="conv-city">Stadt</Label>
+                    <Input
+                      id="conv-city"
+                      value={String(formData.city || "")}
+                      onChange={(e) => updateField("city", e.target.value)}
+                      placeholder="z.B. München"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

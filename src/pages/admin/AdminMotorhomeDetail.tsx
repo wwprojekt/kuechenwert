@@ -357,6 +357,8 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Fahrgestellnr." value={motorhome.vehicle_identification_number} />
                       <InfoItem label="Kennzeichen" value={motorhome.license_plate} />
                       <InfoItem label="Listennummer" value={motorhome.listing_number} />
+                      <InfoItem label="PLZ (Standort)" value={motorhome.postal_code || "—"} />
+                      <InfoItem label="Stadt" value={motorhome.city || "—"} />
                     </InfoGrid>
                     {motorhome.description && (
                       <div className="mt-6 p-4 rounded-lg bg-muted/50">

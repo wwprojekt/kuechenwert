@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph, button, customerBadge } from '../_shared/email-builder.ts';
+import { buildEmailLayout, infoBox, detailRow, paragraph, button, customerBadge, amountDisplay } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -147,6 +147,47 @@ const handler = async (req: Request): Promise<Response> => {
           `, 'default', settingsData)}
           ${paragraph('Entdecken Sie weitere verfügbare Wohnmobile in unserer Plattform.')}
           ${button('Weitere Auktionen', 'https://caravanwert.de/kaufen', settingsData)}
+        `;
+        break;
+
+      case "seller_sold":
+        subject = "Ihr Wohnmobil wurde erfolgreich verkauft!";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Großartige Neuigkeiten!</strong> Ihr Wohnmobil wurde über unsere Plattform erfolgreich an einen geprüften Händler verkauft.')}
+          ${infoBox('Verkaufsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Verkaufspreis', currentBid) : ''}
+          `, 'success', settingsData)}
+          ${paragraph('Wir werden uns in Kürze bei Ihnen melden, um die nächsten Schritte zu besprechen:')}
+          ${paragraph('<strong>1.</strong> Terminvereinbarung für die Fahrzeugübergabe<br><strong>2.</strong> Bereitstellung aller Fahrzeugdokumente<br><strong>3.</strong> Zahlungsabwicklung')}
+          ${paragraph('Den Kaufvertrag erhalten Sie in einer separaten E-Mail.')}
+          ${button('Zum Dashboard', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns jederzeit unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph('Vielen Dank für Ihr Vertrauen!<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+
+      case "seller_not_sold":
+        subject = "Ihre Auktion ist beendet – Fahrzeug nicht verkauft";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Ihre Auktion für das folgende Fahrzeug ist leider ohne Verkauf beendet worden:')}
+          ${infoBox('Auktionsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Höchstes Gebot', currentBid) : detailRow('Gebote', 'Keine Gebote eingegangen')}
+          `, 'default', settingsData)}
+          ${paragraph(currentBid 
+            ? 'Das Mindestgebot wurde leider nicht erreicht. Das bedeutet, dass kein verbindlicher Verkauf zustande gekommen ist.' 
+            : 'Leider wurden keine Gebote auf Ihr Fahrzeug abgegeben.'
+          )}
+          ${paragraph('<strong>Wie geht es weiter?</strong> Unser Team wird sich in Kürze bei Ihnen melden, um die weiteren Optionen zu besprechen. Mögliche nächste Schritte sind:')}
+          ${paragraph('<strong>1.</strong> Erneute Auktion mit angepasstem Mindestgebot<br><strong>2.</strong> Direktverkauf an einen unserer Partnerhändler<br><strong>3.</strong> Individuelle Beratung durch unser Expertenteam')}
+          ${button('Zum Dashboard', auctionUrl, settingsData)}
+          ${paragraph(`Kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
 

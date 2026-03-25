@@ -117,7 +117,7 @@ const AuthConfirm = () => {
       noIndex={true}
     >
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="max-w-md w-full mx-auto p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg text-center">
+        <div className="max-w-md w-full mx-auto p-8 bg-card dark:bg-gray-800 rounded-2xl shadow-lg text-center">
           {status === "loading" && (
             <>
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>

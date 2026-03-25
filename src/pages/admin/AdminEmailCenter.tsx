@@ -1198,7 +1198,7 @@ function ComposeTab() {
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-card dark:bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((s) => (
                     <button
                       key={s.id}

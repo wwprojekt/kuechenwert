@@ -51,14 +51,14 @@ const MotorhomeShowcase = () => {
   ];
 
   return (
-    <section className="py-12 lg:py-16 bg-gradient-to-b from-white via-slate-50/50 to-white overflow-hidden">
+    <section className="py-12 lg:py-16 bg-gradient-to-b from-slate-50/30 via-slate-50/50 to-slate-50/30 overflow-hidden">
       <div className="container px-4 sm:px-6 lg:px-8">
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-8 mb-12">
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="flex flex-col items-center text-center p-4 rounded-xl bg-white dark:bg-card shadow-sm border border-slate-100 dark:border-border"
+              className="flex flex-col items-center text-center p-4 rounded-xl bg-card dark:bg-card shadow-sm border border-slate-100 dark:border-border"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                 <stat.icon className="w-5 h-5 text-primary" />

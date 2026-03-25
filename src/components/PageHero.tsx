@@ -24,7 +24,7 @@ const PageHero = ({ children, className = "", size = "md" }: PageHeroProps) => {
       
       {/* Decorative elements for depth */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-50 to-transparent" />
+      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-100/50 to-transparent" />
       
       {/* Subtle pattern overlay */}
       <div 

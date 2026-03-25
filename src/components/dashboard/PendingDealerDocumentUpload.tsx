@@ -353,7 +353,7 @@ export default function PendingDealerDocumentUpload({
                   doc
                     ? doc.verified
                       ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20"
-                      : "border-blue-200 bg-white dark:border-blue-800 dark:bg-slate-900/50"
+                      : "border-blue-200 bg-card dark:border-blue-800 dark:bg-slate-900/50"
                     : "border-dashed border-muted-foreground/30 bg-muted/20"
                 }`}
               >

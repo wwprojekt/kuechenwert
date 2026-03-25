@@ -256,7 +256,7 @@ export const AIDescriptionGenerator = ({
               </div>
             </div>
             
-            <div className="bg-white dark:bg-card p-4 rounded-lg border mb-4">
+            <div className="bg-card dark:bg-card p-4 rounded-lg border mb-4">
               <Textarea
                 value={generatedDescription}
                 onChange={(e) => setGeneratedDescription(e.target.value)}

@@ -16,13 +16,13 @@ html, body, #root {
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
+    --background: 210 20% 96%;
     --foreground: 210 24% 16%;
 
-    --card: 210 14% 99%;
+    --card: 210 14% 97%;
     --card-foreground: 210 24% 16%;
 
-    --popover: 210 14% 99%;
+    --popover: 210 14% 97%;
     --popover-foreground: 210 24% 16%;
 
     --primary: 191 68% 38%;
@@ -33,7 +33,7 @@ html, body, #root {
     --secondary: 210 24% 16%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 95%;
+    --muted: 210 20% 93%;
     --muted-foreground: 210 12% 46%;
 
     --accent: 191 68% 38%;
@@ -42,8 +42,8 @@ html, body, #root {
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 92%;
-    --input: 210 20% 94%;
+    --border: 210 20% 90%;
+    --input: 210 20% 92%;
     --ring: 191 68% 38%;
 
     --radius: 0.375rem;
@@ -51,7 +51,7 @@ html, body, #root {
     --gradient-hero: linear-gradient(135deg, hsl(191 68% 43%) 0%, hsl(191 68% 32%) 100%);
     --gradient-hero-hover: linear-gradient(135deg, hsl(191 68% 46%) 0%, hsl(191 68% 35%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(210 24% 16%) 0%, hsl(210 30% 24%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 20% 98%) 0%, hsl(210 25% 96%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 20% 96%) 0%, hsl(210 25% 94%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(191 68% 38%) 0%, hsl(200 68% 35%) 100%);
     --gradient-mesh: radial-gradient(at 40% 20%, hsl(191 68% 43% / 0.3) 0px, transparent 50%),
                      radial-gradient(at 80% 0%, hsl(191 68% 38% / 0.2) 0px, transparent 50%),
@@ -68,7 +68,7 @@ html, body, #root {
     --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 210 15% 96%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
 
@@ -203,7 +203,7 @@ html, body, #root {
   }
   
   .glass {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+    @apply bg-background/80 backdrop-blur-xl border border-border/20;
   }
   
   .glass-dark {

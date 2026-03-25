@@ -31,7 +31,7 @@ interface QuickAuctionFormProps {
 const GrayInput = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
   <Input
     className={cn(
-      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-white dark:focus:bg-card",
+      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-card dark:focus:bg-card",
       "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md",
       "placeholder:text-slate-400 dark:placeholder:text-muted-foreground h-11",
       className
@@ -44,9 +44,9 @@ const GrayInput = ({ className, ...props }: React.ComponentProps<typeof Input>) 
 const GraySelectTrigger = ({ className, children, ...props }: React.ComponentProps<typeof SelectTrigger>) => (
   <SelectTrigger
     className={cn(
-      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-white dark:focus:bg-card",
+      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-card dark:focus:bg-card",
       "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md h-11",
-      "[&>span]:text-slate-600 dark:[&>span]:text-slate-300 [&[data-state=open]]:bg-white dark:[&[data-state=open]]:bg-card [&[data-state=open]]:border-primary",
+      "[&>span]:text-slate-600 dark:[&>span]:text-slate-300 [&[data-state=open]]:bg-card dark:[&[data-state=open]]:bg-card [&[data-state=open]]:border-primary",
       className
     )}
     {...props}
@@ -255,7 +255,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
   ];
 
   return (
-    <Card className={`p-6 lg:p-8 bg-white/85 dark:bg-card/90 backdrop-blur-md shadow-2xl border-0 rounded-2xl ${className}`}>
+    <Card className={`p-6 lg:p-8 bg-card/90 dark:bg-card/90 backdrop-blur-md shadow-2xl border-0 rounded-2xl ${className}`}>
       <div className="space-y-5">
         {/* Header - Left aligned, compact */}
         <div className="pb-1">

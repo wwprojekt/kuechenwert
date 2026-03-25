@@ -233,7 +233,7 @@ const CookieBanner = () => {
         isClosing ? "translate-y-full" : "translate-y-0"
       )}
     >
-      <div className="bg-white dark:bg-gray-900 border-t border-border shadow-2xl">
+      <div className="bg-card dark:bg-gray-900 border-t border-border shadow-2xl">
         <div className="container mx-auto px-4 py-5 sm:py-6">
           {/* Main Banner Content */}
           <div className="flex flex-col gap-4">

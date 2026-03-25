@@ -244,7 +244,7 @@ export const DamageDocumentation = ({
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             {damagePhotos.map((damage) => (
-              <div key={damage.id} className="bg-white dark:bg-card p-4 rounded-lg border">
+              <div key={damage.id} className="bg-card dark:bg-card p-4 rounded-lg border">
                 <div className="aspect-video mb-3 overflow-hidden rounded-lg bg-muted">
                   <img
                     src={damage.photo_url}

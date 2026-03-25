@@ -86,7 +86,7 @@ const LandingPageTemplate = ({ config }: LandingPageTemplateProps) => {
       {config.sections.map((section, idx) => (
         <section
           key={idx}
-          className={`py-16 md:py-20 ${idx % 2 === 1 ? "bg-gradient-to-br from-sky-50/60 via-slate-50/40 to-white" : "bg-gradient-to-b from-white to-slate-50/30"}`}
+          className={`py-16 md:py-20 ${idx % 2 === 1 ? "bg-gradient-to-br from-sky-50/60 via-slate-50/40 to-slate-50/20" : "bg-gradient-to-b from-slate-50/20 to-slate-50/30"}`}
         >
           <div className="container max-w-6xl">
             <div className="max-w-3xl mx-auto text-center mb-12">
@@ -142,7 +142,7 @@ const LandingPageTemplate = ({ config }: LandingPageTemplateProps) => {
       ))}
 
       {/* Trust Signals */}
-      <section className="py-16 bg-gradient-to-b from-slate-50 to-white border-y">
+      <section className="py-16 bg-gradient-to-b from-slate-100/60 to-slate-50/40 border-y">
         <div className="container">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold">Darauf können Sie sich verlassen</h2>

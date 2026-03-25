@@ -4,7 +4,7 @@ import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -113,7 +113,7 @@ interface QuickLead {
   body_type: string | null;
   sale_channel: string | null;
   source: string | null;
-  wizard_completed: boolean;
+  wizard_completed: boolean | null;
   created_at: string;
   updated_at: string | null;
   // Extended fields
@@ -931,11 +931,17 @@ export default function AdminLeads() {
 
   const saveExpertValue = useMutation({
     mutationFn: async ({ id, value, notes }: { id: string; value: number; notes: string }) => {
+      // Combine expert notes with existing admin notes to avoid overwriting
+      const currentLead = valuationLeads.find(l => l.id === id);
+      const existingAdminNotes = valuationAdminNotes || currentLead?.admin_notes || "";
+      const combinedNotes = existingAdminNotes
+        ? `${existingAdminNotes}\n---\n[Expertenbewertung ${new Date().toLocaleDateString("de-DE")}]: ${notes}`
+        : notes || null;
       const { error } = await supabase
         .from("value_assessment_leads")
         .update({
           admin_estimated_value: value,
-          admin_notes: notes || null,
+          admin_notes: combinedNotes,
           admin_valued_at: new Date().toISOString(),
         } as any)
         .eq("id", id);

@@ -28,7 +28,7 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       const validFiles = files.filter(
-        (file) => file.type.startsWith("image/") && file.size <= 10 * 1024 * 1024
+        (file) => file.type.startsWith("image/") && file.size <= 100 * 1024 * 1024
       );
       const newPhotos = [...formData.photos, ...validFiles].slice(0, 30);
       updateFormData({ photos: newPhotos });
@@ -81,7 +81,7 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
                 Fotos hochladen
               </span>
               <span className="text-sm text-muted-foreground text-center">
-                Klicken oder Dateien hierher ziehen (max. 30 Fotos, je max. 10 MB)
+                Klicken oder Dateien hierher ziehen (max. 30 Fotos, je max. 100 MB)
               </span>
               <input
                 id="photo-upload"

@@ -349,14 +349,14 @@ export default function ListingEdit() {
         throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.");
       }
 
-      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
       const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
       // Validate files before uploading
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`Die Datei "${file.name}" ist zu groß (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximal 10 MB erlaubt.`);
+          throw new Error(`Die Datei "${file.name}" ist zu groß (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximal 100 MB erlaubt.`);
         }
         if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
           throw new Error(`Die Datei "${file.name}" hat ein nicht unterstütztes Format (${file.type}). Erlaubt: JPEG, PNG, WebP, HEIC.`);
@@ -432,7 +432,7 @@ export default function ListingEdit() {
         : error.message?.includes('Format')
         ? error.message
         : error.message?.includes('Payload too large')
-        ? 'Die Datei ist zu groß. Maximal 10 MB pro Foto erlaubt.'
+        ? 'Die Datei ist zu groß. Maximal 100 MB pro Foto erlaubt.'
         : error.message?.includes('mime')
         ? 'Das Dateiformat wird nicht unterstützt. Erlaubt: JPEG, PNG, WebP, HEIC.'
         : error.message?.includes('security') || error.message?.includes('policy')

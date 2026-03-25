@@ -168,11 +168,12 @@ const DealerRegister = () => {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: signedData, error: signedError } = await supabase.storage
           .from("dealer-documents")
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 10 * 365 * 24 * 60 * 60); // 10 years
 
-        documentUrl = publicUrl;
+        if (signedError) throw signedError;
+        documentUrl = signedData.signedUrl;
         setUploadingDocument(false);
       }
 

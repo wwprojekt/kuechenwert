@@ -28,6 +28,7 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
+import { openPrivateDocument } from "@/lib/storageUtils";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -557,9 +558,9 @@ export function DealerEditDialog({
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() =>
-                      window.open(dealer.trade_license_document_url!, "_blank")
-                    }
+                    onClick={async () => {
+                      await openPrivateDocument(dealer.trade_license_document_url!, "dealer-documents");
+                    }}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Dokument öffnen

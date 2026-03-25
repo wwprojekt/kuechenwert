@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { useExport } from "@/hooks/useExport";
+import { openPrivateDocument } from "@/lib/storageUtils";
 
 // ============================================================================
 // Types
@@ -506,9 +507,9 @@ export default function AdminContracts() {
                             variant="ghost"
                             size="icon"
                             title="PDF herunterladen"
-                            onClick={() =>
-                              window.open(contract.contract_url!, "_blank")
-                            }
+                            onClick={async () => {
+                              await openPrivateDocument(contract.contract_url!, "purchase-contracts");
+                            }}
                           >
                             <Download className="w-4 h-4" />
                           </Button>
@@ -665,9 +666,9 @@ export default function AdminContracts() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      window.open(selectedContract.contract_url!, "_blank")
-                    }
+                    onClick={async () => {
+                      await openPrivateDocument(selectedContract.contract_url!, "purchase-contracts");
+                    }}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Verkäufer-PDF
@@ -677,12 +678,9 @@ export default function AdminContracts() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      window.open(
-                        selectedContract.buyer_contract_url!,
-                        "_blank"
-                      )
-                    }
+                    onClick={async () => {
+                      await openPrivateDocument(selectedContract.buyer_contract_url!, "purchase-contracts");
+                    }}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Käufer-PDF

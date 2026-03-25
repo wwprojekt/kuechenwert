@@ -80,6 +80,7 @@ import {
 } from "@/components/admin/AdminDetailLayout";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
 import { logger } from "@/lib/logger";
+import { openPrivateDocument, downloadPrivateDocument } from "@/lib/storageUtils";
 
 export default function AdminDealerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -790,10 +791,19 @@ export default function AdminDealerDetail() {
                                 {/* Action buttons */}
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {/* View document */}
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
-                                    <a href={doc.file_url || doc.document_url} target="_blank" rel="noopener noreferrer" title="Dokument \u00f6ffnen">
-                                      <Eye className="w-4 h-4" />
-                                    </a>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    title="Dokument öffnen"
+                                    onClick={async () => {
+                                      const url = doc.file_url || doc.document_url;
+                                      if (url) {
+                                        await openPrivateDocument(url, "dealer-documents");
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="w-4 h-4" />
                                   </Button>
 
                                   {/* Add/edit note – only for real DB documents */}
@@ -1017,12 +1027,12 @@ export default function AdminDealerDetail() {
                     <Button
                       variant="outline"
                       className="w-full justify-start"
-                      asChild
+                      onClick={async () => {
+                        await openPrivateDocument(dealer.trade_license_url, "dealer-documents");
+                      }}
                     >
-                      <a href={dealer.trade_license_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Gewerbeschein
-                      </a>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Gewerbeschein
                     </Button>
                   )}
                 </CardContent>

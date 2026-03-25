@@ -130,9 +130,12 @@ export const LegalDocumentUpload = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('dealer-documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 10 * 365 * 24 * 60 * 60); // 10 years
+
+      if (signedError) throw signedError;
+      const documentUrl = signedData.signedUrl;
 
       // Save document record
       const { data: document, error: documentError } = await supabase
@@ -141,7 +144,7 @@ export const LegalDocumentUpload = ({
           dealer_application_id: dealerApplicationId,
           document_type: selectedDocumentType,
           document_name: file.name,
-          file_url: publicUrl,
+          file_url: documentUrl,
           file_size: file.size,
           mime_type: file.type,
         })

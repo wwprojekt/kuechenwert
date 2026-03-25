@@ -233,17 +233,27 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Create signed URL (valid for 10 years for legal documents)
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('dealer-documents')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 10 * 365 * 24 * 60 * 60); // 10 years
+
+    if (signedError) {
+      console.error('Signed URL error:', signedError);
+      return new Response(JSON.stringify({ error: 'Signierte URL konnte nicht erstellt werden' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const documentUrl = signedData.signedUrl;
 
     // --- Legacy: Update dealer_applications URL column (for trade_license, gewerbenachweis, hrb) ---
     const column = COLUMN_MAP[fileType];
     if (column) {
       const { error: updateError } = await supabase
         .from('dealer_applications')
-        .update({ [column]: publicUrl })
+        .update({ [column]: documentUrl })
         .eq('user_id', userId);
 
       if (updateError) {
@@ -281,8 +291,8 @@ Deno.serve(async (req: Request) => {
           dealer_application_id: resolvedAppId,
           document_type: fileType,
           document_name: FILE_TYPE_LABELS[fileType],
-          document_url: publicUrl,
-          file_url: publicUrl,
+          document_url: documentUrl,
+          file_url: documentUrl,
           original_filename: file.name,
           file_size: file.size,
           mime_type: file.type,
@@ -298,7 +308,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      url: publicUrl,
+      url: documentUrl,
       file_type: fileType,
       document_name: FILE_TYPE_LABELS[fileType],
       legal_document_tracked: !!resolvedAppId,

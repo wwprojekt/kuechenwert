@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
+import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
@@ -179,6 +180,12 @@ const AuctionDetail = () => {
       }
 
       setAuction(data);
+
+      // Google Ads: Fahrzeug angesehen (Remarketing)
+      if (data.motorhome) {
+        const mh = data.motorhome;
+        trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
+      }
     };
 
     fetchAuction();
@@ -365,6 +372,24 @@ const AuctionDetail = () => {
         throw new Error(data.error);
       }
 
+      // Google Ads: Sofortkauf-Conversion
+      try {
+        const safeGtag = window.gtag || ((...args: unknown[]) => window.dataLayer?.push(args));
+        safeGtag('event', 'conversion', {
+          send_to: 'AW-18033517246/JO7oCPuNkY4cEL7FhpdD',
+          value: motorhome.instant_price,
+          currency: 'EUR',
+        });
+        safeGtag('event', 'purchase', {
+          event_category: 'Auction',
+          event_label: `instant_buy_${motorhome.manufacturer}_${motorhome.model}`,
+          value: motorhome.instant_price,
+          currency: 'EUR',
+          transaction_id: id,
+          items: [{ id: motorhome.id, name: `${motorhome.manufacturer} ${motorhome.model}`, category: 'Wohnmobil', price: motorhome.instant_price }],
+        });
+      } catch { /* tracking should never break the purchase flow */ }
+
       toast({
         title: "Kauf erfolgreich!",
         description: `Sie haben dieses Wohnmobil für €${motorhome.instant_price.toLocaleString()} gekauft. Wir werden uns in Kürze bei Ihnen melden.`,
@@ -512,6 +537,18 @@ const AuctionDetail = () => {
           description: "Die Auktion wurde um 5 Minuten verlängert",
         });
       }
+
+      // Google Ads: Gebot-Tracking
+      try {
+        const safeGtag = window.gtag || ((...args: unknown[]) => window.dataLayer?.push(args));
+        safeGtag('event', 'add_to_cart', {
+          event_category: 'Auction',
+          event_label: `bid_placed_${auction.motorhome?.manufacturer}_${auction.motorhome?.model}`,
+          value: amount,
+          currency: 'EUR',
+          items: [{ id: auction.motorhome?.id, name: `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`, category: 'Wohnmobil', price: amount }],
+        });
+      } catch { /* tracking should never break the bid flow */ }
 
       toast({
         title: "Gebot erfolgreich!",

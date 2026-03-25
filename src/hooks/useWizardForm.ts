@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
+import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
 import { ensureValidSession, isSessionOrRLSError } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -362,6 +363,8 @@ export const useWizardForm = () => {
         // In that case auth.uid() would be null and RLS would block inserts.
         if (signUpData.session) {
           user = signUpData.user;
+          // Google Ads: Registrierung im Wizard
+          trackUserRegistered('wizard_signup');
         } else {
           // No active session – treat as guest submission.
           // The user will receive a confirmation email and can log in later.
@@ -389,6 +392,11 @@ export const useWizardForm = () => {
           logger.error("Failed to send wizard lead notification:", emailError);
         }
         clearDraft();
+
+        // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
+        await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
+        trackWizardCompleted(formData.saleChannel || 'direct', formData.manufacturer || 'Unbekannt');
+
         toast({
           title: "Anfrage erfolgreich gesendet!",
           description: "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen. Sie erhalten in Kürze eine Bestätigung per E-Mail.",
@@ -595,6 +603,10 @@ export const useWizardForm = () => {
       }
 
       clearDraft();
+
+      // Google Ads: Enhanced Conversions + Wizard abgeschlossen (authentifizierter Pfad)
+      await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
+      trackWizardCompleted(formData.saleChannel || 'direct', formData.manufacturer || 'Unbekannt');
 
       toast({
         title: "Erfolgreich eingestellt!",

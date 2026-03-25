@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
+import { trackUserLoggedIn } from "@/lib/gadsConversionService";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
@@ -74,6 +75,9 @@ const Login = () => {
       });
 
       if (error) throw error;
+
+      // Google Ads: Login-Tracking
+      trackUserLoggedIn('email');
 
       toast({
         title: "Anmeldung erfolgreich!",

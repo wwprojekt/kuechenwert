@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { trackBeratungRequested, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -221,6 +222,11 @@ const Ankaufstationen = () => {
       });
 
       setSubmitted(true);
+
+      // Google Ads: Enhanced Conversions + Ankaufstation-Anfrage
+      await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
+      trackBeratungRequested('ankaufstation');
+
       toast({
         title: "Anfrage gesendet",
         description: `Ihre Anfrage wurde an ${selectedStation.name} gesendet. Sie erhalten eine Bestätigung per E-Mail.`,

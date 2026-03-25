@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { trackUserRegistered, setEnhancedConversionData } from '@/lib/gadsConversionService';
 import { Building2, User, FileText, Shield, CheckCircle } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { SepaMandate } from '@/components/SepaMandate';
@@ -198,6 +199,10 @@ export default function DealerOnboarding() {
 
       setDealerApplicationId(applicationData?.id || null);
       setCurrentStep(4); // Move to SEPA mandate step
+
+      // Google Ads: Enhanced Conversions + Händler-Onboarding Konto erstellt
+      await setEnhancedConversionData({ email: formData.email, firstName: formData.first_name, lastName: formData.last_name, phone: formData.phone });
+      trackUserRegistered('dealer_onboarding');
 
       toast({
         title: 'Konto erstellt!',

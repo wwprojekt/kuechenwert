@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
+import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
 import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { passwordSchema, emailSchema } from "@/lib/validation";
@@ -76,6 +77,10 @@ const Register = () => {
       });
 
       if (error) throw error;
+
+      // Google Ads: Enhanced Conversions + Registrierung
+      await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone });
+      trackUserRegistered('email');
 
       toast({
         title: "Registrierung erfolgreich!",

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
 import { z } from "zod";
 import {
   Building2,
@@ -217,10 +218,14 @@ const DealerRegister = () => {
         console.error("Failed to send dealer notification:", emailError);
       }
 
+      // Google Ads: Enhanced Conversions + Händler-Antrag eingereicht
+      await setEnhancedConversionData({ email: user!.email || '', firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
+      trackUserRegistered('dealer_application');
+
       toast({
         title: "Antrag erfolgreich eingereicht!",
         description:
-          "Wir werden Ihre Unterlagen pr\u00fcfen und uns innerhalb von 2-3 Werktagen bei Ihnen melden. Sie erhalten in K\u00fcrze eine Best\u00e4tigung per E-Mail.",
+          "Wir werden Ihre Unterlagen prüfen und uns innerhalb von 2-3 Werktagen bei Ihnen melden. Sie erhalten in Kürze eine Bestätigung per E-Mail.",
       });
 
       navigate("/");

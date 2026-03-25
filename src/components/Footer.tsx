@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SiteLogo } from "@/components/SiteLogo";
 import { CookieSettingsModal } from "@/components/CookieSettingsModal";
 import { useToast } from "@/hooks/use-toast";
-import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
+import { trackPhoneClick, trackEmailClick, trackCTAClick } from "@/lib/gadsConversionService";
 import { z } from "zod";
 
 const newsletterSchema = z.object({
@@ -37,6 +37,10 @@ const Footer = () => {
       return;
     }
     setNewsletterSubmitted(true);
+
+    // Google Ads: Newsletter-Anmeldung tracken
+    trackCTAClick('newsletter_signup', location.pathname, '/newsletter');
+
     toast({
       title: "Anmeldung erfolgreich!",
       description: "Sie erhalten ab sofort unseren Newsletter.",

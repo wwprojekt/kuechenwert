@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
+import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
 import { logger } from "@/lib/logger";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -217,6 +218,10 @@ const RegisterHaendler = () => {
       }
 
       // Role and dealer_application are created by the handle_new_user trigger automatically
+
+      // Google Ads: Enhanced Conversions + Händler-Registrierung
+      await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
+      trackUserRegistered('dealer_registration');
 
       setRegistrationComplete(true);
       toast({

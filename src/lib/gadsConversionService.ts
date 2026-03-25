@@ -625,3 +625,106 @@ export function trackContactFormSubmitted(): void {
 export function getConversionLabels(): typeof CONVERSION_LABELS {
   return CONVERSION_LABELS;
 }
+
+// ============================================================
+// ENHANCED CONVERSIONS
+// Sendet gehashte Nutzerdaten an Google für bessere Attribution
+// Besonders wichtig für Safari/ITP wo Cookies schnell verfallen
+// Docs: https://support.google.com/google-ads/answer/13258081
+// ============================================================
+
+/**
+ * SHA-256 Hash einer Zeichenkette (für Enhanced Conversions)
+ * Google erwartet gehashte Daten im Klartext-SHA256-Format
+ */
+async function sha256(value: string): Promise<string> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(value.trim().toLowerCase());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Setzt Enhanced Conversion Daten für Google Ads
+ * Muss VOR dem Conversion-Event aufgerufen werden
+ * 
+ * Die Daten werden automatisch gehasht und an Google gesendet.
+ * Google nutzt diese Daten um Conversions auch ohne Third-Party-Cookies
+ * korrekt zuzuordnen (besonders wichtig für Safari/ITP).
+ * 
+ * @param userData - Nutzerdaten (mindestens E-Mail empfohlen)
+ */
+export async function setEnhancedConversionData(userData: {
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<void> {
+  try {
+    if (typeof window === 'undefined') return;
+
+    const enhancedData: Record<string, string> = {};
+
+    if (userData.email) {
+      enhancedData.email = userData.email.trim().toLowerCase();
+    }
+    if (userData.phone) {
+      // Normalisiere Telefonnummer: Entferne Leerzeichen, Bindestriche, Klammern
+      const normalizedPhone = userData.phone.replace(/[\s\-()]/g, '');
+      enhancedData.phone_number = normalizedPhone;
+    }
+    if (userData.firstName) {
+      enhancedData.first_name = userData.firstName.trim();
+    }
+    if (userData.lastName) {
+      enhancedData.last_name = userData.lastName.trim();
+    }
+
+    // Nur senden wenn mindestens ein Feld vorhanden ist
+    if (Object.keys(enhancedData).length === 0) return;
+
+    // Methode 1: gtag('set', 'user_data', ...) – empfohlene Methode
+    safeGtag('set', 'user_data', enhancedData);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[GadsTracking] Enhanced Conversion Data gesetzt:', Object.keys(enhancedData));
+    }
+  } catch (error) {
+    console.warn('[GadsTracking] Enhanced Conversion Data Fehler:', error);
+  }
+}
+
+/**
+ * Convenience: Setzt Enhanced Conversion Daten aus Formular-Feldern
+ * Kann direkt vor einem Conversion-Event aufgerufen werden
+ */
+export async function setEnhancedConversionFromForm(formData: {
+  customerEmail?: string;
+  customerName?: string;
+  customerPhone?: string;
+  email?: string;
+  name?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<void> {
+  const email = formData.customerEmail || formData.email;
+  const phone = formData.customerPhone || formData.phone;
+  let firstName = formData.firstName;
+  let lastName = formData.lastName;
+
+  // Falls nur ein Name-Feld vorhanden ist, aufteilen
+  if (!firstName && !lastName) {
+    const fullName = formData.customerName || formData.name || '';
+    const parts = fullName.trim().split(/\s+/);
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ') || '';
+  }
+
+  await setEnhancedConversionData({ email, phone, firstName, lastName });
+}

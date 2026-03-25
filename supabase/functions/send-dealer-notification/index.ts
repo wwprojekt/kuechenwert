@@ -115,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
               'Geben Sie Ihr erstes Gebot ab'
             ])}
           `, 'default', settingsData)}
-          ${button('Zum Händler-Portal', 'https://caravanwert.de/dealer', settingsData)}
+          ${button('Zum Händler-Portal', 'https://caravanwert.de/dashboard', settingsData)}
         `;
         break;
 

@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
             'Geben Sie Ihr erstes Gebot ab',
           ])}
         `, 'info', settingsData)}
-        ${button('Zum H&auml;ndler-Portal', 'https://caravanwert.de/dealer', settingsData)}
+        ${button('Zum H&auml;ndler-Portal', 'https://caravanwert.de/dashboard', settingsData)}
         ${paragraph('Unser Team pr&uuml;ft Ihre Bewerbung in der Regel innerhalb von 1&ndash;2 Werktagen. Sie erhalten eine Best&auml;tigung per E-Mail.')}
       `;
     } else {

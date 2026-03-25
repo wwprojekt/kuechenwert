@@ -70,7 +70,7 @@ export const DealerNotification = ({
                 <Text style={{ fontSize: '14px', margin: '4px 0' }}>✓ Entdecken Sie aktuelle Auktionen</Text>
                 <Text style={{ fontSize: '14px', margin: '4px 0' }}>✓ Geben Sie Ihr erstes Gebot ab</Text>
               </InfoBox>
-              <CTAButton href="https://caravanwert.de/dealer" text="Zum Händler-Portal" />
+              <CTAButton href="https://caravanwert.de/dashboard" text="Zum Händler-Portal" />
             </>
           ),
         };

@@ -67,13 +67,13 @@ export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSIONS (für Kampagnen-Optimierung / Gebotsoptimierung) ***
   
   // Bestehende Conversion: "Bewertung abgeschlossen" – Wizard komplett durchlaufen
-  BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpgD',
+  BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpdD',
   
   // Landing Page Lead: Kontaktdaten auf einer der 6 Google Ads Landing Pages erfasst
-  LANDING_PAGE_LEAD: 'IfQvCO-NkY4cEL7FhpdD',
+  LANDING_PAGE_LEAD: 'ZiKsCMmOkY4cEL7FhpdD',
   
   // Kontaktformular: /kontakt Formular abgesendet
-  KONTAKTFORMULAR_GESENDET: 'pXp5CPKNkY4cEL7FhpdD',
+  KONTAKTFORMULAR_GESENDET: '5RLHCN2SkY4cEL7FhpdD',
   
   // Wertermittlung: /wertermittlung Formular mit Kontaktdaten abgesendet
   WERTERMITTLUNG_LEAD: 'AHaxCPWNkY4cEL7FhpdD',

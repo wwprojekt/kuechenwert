@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, MessageSquare } from "lucide-react";
+import { withSessionRetry } from "@/lib/sessionGuard";
 
 interface PostAuctionOfferDialogProps {
   auctionId: string;
@@ -68,15 +69,16 @@ export function PostAuctionOfferDialog({
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
-      const { error } = await supabase.from("post_auction_offers").insert({
-        auction_id: auctionId,
-        buyer_id: user.id,
-        offer_amount: amount,
-        message: message.trim() || null,
-        expires_at: expiresAt.toISOString(),
-      });
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase.from("post_auction_offers").insert({
+          auction_id: auctionId,
+          buyer_id: user.id,
+          offer_amount: amount,
+          message: message.trim() || null,
+          expires_at: expiresAt.toISOString(),
+        });
+        if (error) throw error;
+      }, 'PostAuctionOffer.insert');
 
       toast({
         title: "Angebot gesendet",

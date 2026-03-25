@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { withSessionRetry } from "@/lib/sessionGuard";
 
 const dealerApplicationSchema = z.object({
   companyName: z.string().min(2, "Firmenname erforderlich"),
@@ -175,30 +176,30 @@ const DealerRegister = () => {
         setUploadingDocument(false);
       }
 
-      const { error } = await supabase.from("dealer_applications").insert({
-        user_id: user!.id,
-        company_name: validated.companyName,
-        company_address: validated.companyAddress,
-        company_postal_code: validated.companyPostalCode,
-        company_city: validated.companyCity,
+      await withSessionRetry(async () => {
+        const { error } = await supabase.from("dealer_applications").insert({
+          user_id: user!.id,
+          company_name: validated.companyName,
+          company_address: validated.companyAddress,
+          company_postal_code: validated.companyPostalCode,
+          company_city: validated.companyCity,
 
-        contact_person_name: validated.contactPersonName,
-        contact_person_position: validated.contactPersonPosition || null,
-        phone: validated.phone,
-        website: validated.website || null,
+          contact_person_name: validated.contactPersonName,
+          contact_person_position: validated.contactPersonPosition || null,
+          phone: validated.phone,
+          website: validated.website || null,
 
-        trade_license_document_url: documentUrl,
-        // New fields
-        legal_form: validated.legalForm,
-        founded_year: validated.foundedYear,
-        handelsregister_number: validated.handelsregisterNumber || null,
-        employee_count: validated.employeeCount,
-        annual_revenue: validated.annualRevenue || null,
-        iban: validated.iban,
-        bic: validated.bic,
-      });
-
-      if (error) throw error;
+          trade_license_document_url: documentUrl,
+          legal_form: validated.legalForm,
+          founded_year: validated.foundedYear,
+          handelsregister_number: validated.handelsregisterNumber || null,
+          employee_count: validated.employeeCount,
+          annual_revenue: validated.annualRevenue || null,
+          iban: validated.iban,
+          bic: validated.bic,
+        });
+        if (error) throw error;
+      }, 'DealerRegister.insert');
 
       // Send email notification to admin + confirmation to dealer
       try {

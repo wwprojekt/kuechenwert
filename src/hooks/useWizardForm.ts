@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
+import { ensureValidSession, isSessionOrRLSError } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
@@ -326,8 +327,13 @@ export const useWizardForm = () => {
   const submitForm = async (registerPassword?: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
-      // Check if user is already authenticated
-      let { data: { user } } = await supabase.auth.getUser();
+      // Check if user is already authenticated (with session validation)
+      const sessionResult = await ensureValidSession();
+      let user = sessionResult.user;
+
+      if (sessionResult.wasRefreshed) {
+        logger.info('Wizard submit: Session was proactively refreshed');
+      }
 
       // If not authenticated and password provided, register the user
       if (!user && registerPassword && formData.customerEmail) {
@@ -480,7 +486,41 @@ export const useWizardForm = () => {
         .select()
         .single();
 
-      if (motorhomeError) throw motorhomeError;
+      if (motorhomeError) {
+        // If RLS error, the session might have expired between validation and insert.
+        // Fall back to lead-only submission so the user's data is not lost.
+        if (isSessionOrRLSError(motorhomeError)) {
+          logger.warn('Wizard submit: RLS error on motorhomes insert, falling back to lead-only submission', {
+            error: motorhomeError.message,
+            userId: user.id,
+          });
+
+          // Try to save as lead instead
+          try {
+            await supabase.functions.invoke("send-lead-notification", {
+              body: {
+                type: "wizard",
+                name: formData.customerName || user.email || "Unbekannt",
+                email: formData.customerEmail || user.email || "",
+                phone: formData.customerPhone || undefined,
+                manufacturer: formData.manufacturer || undefined,
+                model: formData.model || undefined,
+              },
+            });
+          } catch (emailError) {
+            logger.error("Failed to send fallback lead notification:", emailError);
+          }
+
+          clearDraft();
+          toast({
+            title: "Anfrage erfolgreich gesendet!",
+            description: "Ihre Sitzung war abgelaufen, aber wir haben Ihre Daten sicher erhalten. Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
+          });
+          navigate("/verkaufen/danke");
+          return true;
+        }
+        throw motorhomeError;
+      }
 
       // Insert photos
       if (photoUrls.length > 0) {

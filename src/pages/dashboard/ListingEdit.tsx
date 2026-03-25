@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from "lucide-react";
+import { withSessionRetry } from "@/lib/sessionGuard";
 import { useState, useEffect } from "react";
 
 export default function ListingEdit() {
@@ -259,13 +260,14 @@ export default function ListingEdit() {
         updateData.reserve_price = Number(data.reserve_price);
       }
 
-      const { error } = await supabase
-        .from("motorhomes")
-        .update(updateData)
-        .eq("id", id)
-        .eq("seller_id", user.id);
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase
+          .from("motorhomes")
+          .update(updateData)
+          .eq("id", id)
+          .eq("seller_id", user.id);
+        if (error) throw error;
+      }, 'ListingEdit.update');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["motorhomeEdit", id] });
@@ -312,12 +314,13 @@ export default function ListingEdit() {
       }
 
       // Delete from database
-      const { error } = await supabase
-        .from("motorhome_photos")
-        .delete()
-        .eq("id", photoId);
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase
+          .from("motorhome_photos")
+          .delete()
+          .eq("id", photoId);
+        if (error) throw error;
+      }, 'ListingEdit.deletePhoto');
     },
     onSuccess: () => {
       refetchPhotos();
@@ -376,11 +379,12 @@ export default function ListingEdit() {
         display_order: startOrder + index + 1,
       }));
 
-      const { error } = await supabase
-        .from("motorhome_photos")
-        .insert(photoRecords);
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase
+          .from("motorhome_photos")
+          .insert(photoRecords);
+        if (error) throw error;
+      }, 'ListingEdit.uploadPhotos');
     },
     onSuccess: () => {
       refetchPhotos();

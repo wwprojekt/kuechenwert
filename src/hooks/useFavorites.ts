@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { withSessionRetry } from "@/lib/sessionGuard";
 
 interface UseFavoritesResult {
   favorites: string[]; // Array of motorhome IDs
@@ -61,18 +62,16 @@ export function useFavorites(): UseFavoritesResult {
     }
 
     try {
-      const { error } = await supabase.from("user_favorites").insert({
-        user_id: user.id,
-        motorhome_id: motorhomeId,
-      });
-
-      if (error) {
-        if (error.code === "23505") {
-          // Already exists, ignore
-          return;
+      await withSessionRetry(async () => {
+        const { error } = await supabase.from("user_favorites").insert({
+          user_id: user.id,
+          motorhome_id: motorhomeId,
+        });
+        if (error) {
+          if (error.code === "23505") return; // Already exists, ignore
+          throw error;
         }
-        throw error;
-      }
+      }, 'Favorites.add');
 
       setFavorites(prev => [...prev, motorhomeId]);
       toast({
@@ -93,13 +92,14 @@ export function useFavorites(): UseFavoritesResult {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from("user_favorites")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("motorhome_id", motorhomeId);
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase
+          .from("user_favorites")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("motorhome_id", motorhomeId);
+        if (error) throw error;
+      }, 'Favorites.remove');
 
       setFavorites(prev => prev.filter(id => id !== motorhomeId));
       toast({

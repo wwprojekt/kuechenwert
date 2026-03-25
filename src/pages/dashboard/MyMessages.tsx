@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle, Send } from "lucide-react";
+import { withSessionRetry } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { z } from "zod";
@@ -92,13 +93,14 @@ export default function MyMessages() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("support_messages").insert({
-        user_id: user.id,
-        subject: newMessage.subject.trim(),
-        message: newMessage.message.trim(),
-      });
-
-      if (error) throw error;
+      await withSessionRetry(async () => {
+        const { error } = await supabase.from("support_messages").insert({
+          user_id: user.id,
+          subject: newMessage.subject.trim(),
+          message: newMessage.message.trim(),
+        });
+        if (error) throw error;
+      }, 'MyMessages.send');
 
       toast({
         title: "Nachricht gesendet",

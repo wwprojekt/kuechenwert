@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { withSessionRetry } from "@/lib/sessionGuard";
 
 const VAPID_PUBLIC_KEY = "BFTM0rOp1vES8byyQEcpS5o4rKRQMCoG4sVhF_0Y5syTHh4jqZwZaybLuaI0AaNw9xX_vWyAPzS4WCiZfZYaXP8";
 
@@ -72,20 +73,23 @@ export function usePushNotifications() {
 
       const subJson = subscription.toJSON();
 
-      // Save subscription to Supabase
-      const { error } = await supabase.from("push_subscriptions").upsert(
-        {
-          user_id: user.id,
-          endpoint: subJson.endpoint!,
-          p256dh: subJson.keys!.p256dh!,
-          auth: subJson.keys!.auth!,
-          user_agent: navigator.userAgent,
-        },
-        { onConflict: "user_id,endpoint" }
-      );
-
-      if (error) {
-        console.error("Failed to save push subscription:", error);
+      // Save subscription to Supabase (with session retry for expired tokens)
+      try {
+        await withSessionRetry(async () => {
+          const { error } = await supabase.from("push_subscriptions").upsert(
+            {
+              user_id: user.id,
+              endpoint: subJson.endpoint!,
+              p256dh: subJson.keys!.p256dh!,
+              auth: subJson.keys!.auth!,
+              user_agent: navigator.userAgent,
+            },
+            { onConflict: "user_id,endpoint" }
+          );
+          if (error) throw error;
+        }, 'PushNotifications.upsert');
+      } catch (err) {
+        console.error("Failed to save push subscription:", err);
         setIsLoading(false);
         return false;
       }
@@ -109,12 +113,17 @@ export function usePushNotifications() {
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
-        // Remove from Supabase
-        await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("endpoint", subscription.endpoint);
+        // Remove from Supabase (with session retry)
+        await withSessionRetry(async () => {
+          const { error } = await supabase
+            .from("push_subscriptions")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("endpoint", subscription.endpoint);
+          if (error) throw error;
+        }, 'PushNotifications.delete').catch(err => {
+          console.error("Failed to delete push subscription from DB:", err);
+        });
 
         // Unsubscribe from push
         await subscription.unsubscribe();

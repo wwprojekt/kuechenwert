@@ -97,8 +97,48 @@ export const manufacturerModels: Record<string, string[]> = {
   'Andere': ['Sonstiges Modell']
 };
 
-// Sorted manufacturer list
+// Sorted manufacturer list for Wohnmobile
 export const popularManufacturers = Object.keys(manufacturerModels).sort();
+
+// Comprehensive manufacturer-to-model mapping for Wohnwagen (Caravans)
+export const wohnwagenManufacturerModels: Record<string, string[]> = {
+  'Adria': ['Alpina', 'Adora', 'Altea', 'Aviva', 'Action'],
+  'Abbey': ['GTS', 'Vogue', 'Expression'],
+  'Beachy': ['Strandwagen'],
+  'Bürstner': ['Premio', 'Averso', 'Fun', 'Harmony Line', 'Premio Plus', 'Averso Plus', 'Belcanto', 'Amara', 'Flipper'],
+  'Cabby': ['Cailin', 'Comfort'],
+  'Carado': ['Delight'],
+  'Caretta': ['Mini-Caravan', 'Offroad'],
+  'Dethleffs': ['Camper', 'Beduin', 'c-go', 'Nomad', 'Exclusiv', 'Aero', 'c-joy', 'Globetrotter'],
+  'Eifelland': ['Holiday', 'Deseo'],
+  'Elddis': ['Affinity', 'Avante', 'Crusader'],
+  'Eriba': ['Touring', 'Nova', 'Feeling', 'Exciting', 'Living'],
+  'Fendt': ['Bianco', 'Tendenza', 'Opal', 'Diamant', 'Saphir', 'Apero'],
+  'Hobby': ['De Luxe', 'Excellent', 'Prestige', 'Maxia', 'OnTour', 'Landhaus', 'Excellent Edition', 'Beachy'],
+  'Hymer': ['Eriba Touring', 'Eriba Nova', 'Eriba Exciting', 'Eriba Feeling'],
+  'Kabe': ['Royal', 'Imperial', 'Briljant', 'Hacienda', 'Ametist', 'Smaragd', 'Safir', 'Rubin', 'Onyx'],
+  'Knaus': ['Sport', 'Südwind', 'Starclass', 'Deseo', 'Travelino', 'YASEO'],
+  'LMC': ['Musica', 'Sassino', 'Style', 'Vivo', 'Style Lift', 'Exquisite VIP'],
+  'La Mancelle': ['Fantaisy', 'Liberty'],
+  'Niewiadow': ['N126', 'N132', 'N-Line'],
+  'Rapido': ['Caravan'],
+  'Soma': ['Caravan'],
+  'Sun Living': ['Caravan'],
+  'Sunlight': ['Njoy', 'C-Klasse'],
+  'Swift': ['Sprite', 'Challenger', 'Elegance', 'Conqueror'],
+  'Sterckeman': ['Starlett', 'Evolution', 'Alize'],
+  'Caravelair': ['Allegra', 'Antares', 'Alba', 'Artica'],
+  'Tabbert': ['Rossini', 'Da Vinci', 'Pep', 'Vivaldi', 'Puccini', 'Cellini', 'Pantiga', 'Cazadora', 'Senara'],
+  'TEC': ['TravelKing', 'Rotec', 'Travelbird'],
+  'Trigano': ['Silver', 'Caravelair'],
+  'Weinsberg': ['CaraOne', 'CaraTwo', 'CaraCito'],
+  'Wilk': ['Deluxe', 'Sento', 'Vida', 'Eterno', 'Safari', 'S3', 'S4', 'De Luxe', 'Stern', 'Sport'],
+  'Wingamm': ['Caravan'],
+  'Andere': ['Sonstiges Modell']
+};
+
+// Sorted manufacturer list for Wohnwagen
+export const wohnwagenManufacturers = Object.keys(wohnwagenManufacturerModels).sort();
 
 // Body type options matching the motorhome_body_type enum
 export const bodyTypes = [
@@ -107,6 +147,13 @@ export const bodyTypes = [
   'Vollintegriert',
   'Kastenwagen',
   'Campingbus',
+] as const;
+
+// Wohnwagen body types
+export const wohnwagenBodyTypes = [
+  'Wohnwagen',
+  'Faltcaravan',
+  'Mobilheim',
 ] as const;
 
 // Vehicle type options

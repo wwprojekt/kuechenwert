@@ -335,7 +335,7 @@ export function ConvertToMotorhomeDialog({
         gas_system: formData.gas_system || null,
         main_tires: formData.main_tires || null,
         second_tires: formData.second_tires || null,
-        status: "active",
+        status: "available",
       };
 
       // Insert motorhome

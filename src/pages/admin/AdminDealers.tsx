@@ -115,6 +115,7 @@ export default function AdminDealers() {
   const [activeTab, setActiveTab] = useState("applications");
   const [searchTerm, setSearchTerm] = useState("");
   const [authStatusMap, setAuthStatusMap] = useState<Record<string, { email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null }>>({});
+  const [resendingUserId, setResendingUserId] = useState<string | null>(null);
 
   // Fetch all applications
   const { data: applications, isLoading } = useQuery({
@@ -299,6 +300,37 @@ export default function AdminDealers() {
   });
 
   // Suspend/Unsuspend dealer mutation
+  // Resend confirmation email mutation
+  const resendConfirmationMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      setResendingUserId(userId);
+      const { data, error } = await supabase.functions.invoke('resend-confirmation-email', {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bestätigungslink gesendet",
+        description: data?.message || "Der Bestätigungslink wurde erfolgreich gesendet.",
+      });
+      setResendingUserId(null);
+      // Refresh auth status
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler beim Senden",
+        description: error.message,
+        variant: "destructive",
+      });
+      setResendingUserId(null);
+    },
+  });
+
   const suspendMutation = useMutation({
     mutationFn: async ({ dealerId, suspend }: { dealerId: string; suspend: boolean }) => {
       const { error } = await supabase
@@ -491,9 +523,21 @@ export default function AdminDealers() {
                             <MailCheck className="w-3 h-3" /> Bestätigt
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
-                            <MailX className="w-3 h-3" /> Unbestätigt
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
+                              <MailX className="w-3 h-3" /> Unbestätigt
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              disabled={resendingUserId === application.user_id}
+                              onClick={() => resendConfirmationMutation.mutate({ userId: application.user_id })}
+                            >
+                              <MailCheck className="w-3 h-3" />
+                              {resendingUserId === application.user_id ? "Sende..." : "Link senden"}
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(application.status)}</TableCell>
@@ -652,9 +696,21 @@ export default function AdminDealers() {
                             <MailCheck className="w-3 h-3" /> Bestätigt
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
-                            <MailX className="w-3 h-3" /> Unbestätigt
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
+                              <MailX className="w-3 h-3" /> Unbestätigt
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              disabled={resendingUserId === dealer.user_id}
+                              onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id })}
+                            >
+                              <MailCheck className="w-3 h-3" />
+                              {resendingUserId === dealer.user_id ? "Sende..." : "Link senden"}
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -685,6 +741,15 @@ export default function AdminDealers() {
                               <Edit className="mr-2 h-4 w-4" />
                               <span>Stammdaten bearbeiten</span>
                             </DropdownMenuItem>
+                            {!authStatusMap[dealer.user_id]?.email_confirmed_at && (
+                              <DropdownMenuItem
+                                onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id })}
+                                disabled={resendingUserId === dealer.user_id}
+                              >
+                                <MailCheck className="mr-2 h-4 w-4" />
+                                <span>{resendingUserId === dealer.user_id ? "Sende..." : "Bestätigungslink senden"}</span>
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() =>

@@ -1074,14 +1074,36 @@ const AdminErrorLogs = () => {
                   </details>
                 )}
 
+                {/* Login-Versuch Details */}
+                {selectedError.metadata && (selectedError.metadata as any).attempted_email && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                    <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                      Login-Versuch
+                    </h4>
+                    <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
+                      <span className="text-amber-700 font-medium">E-Mail:</span>
+                      <span className="font-mono text-amber-900 select-all">{(selectedError.metadata as any).attempted_email}</span>
+                      <span className="text-amber-700 font-medium">Passwort:</span>
+                      <span className="font-mono text-amber-900 select-all">{(selectedError.metadata as any).attempted_password}</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Metadata */}
-                {selectedError.metadata && Object.keys(selectedError.metadata).length > 0 && (
+                {selectedError.metadata && Object.keys(selectedError.metadata).filter(k => !k.startsWith('attempted_')).length > 0 && (
                   <details>
                     <summary className="text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground">
                       Metadaten anzeigen
                     </summary>
                     <pre className="text-xs font-mono bg-muted rounded-lg p-3 mt-2 overflow-auto max-h-48">
-                      {JSON.stringify(selectedError.metadata, null, 2)}
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(selectedError.metadata).filter(([k]) => !k.startsWith('attempted_'))
+                        ),
+                        null,
+                        2
+                      )}
                     </pre>
                   </details>
                 )}

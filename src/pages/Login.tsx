@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
+import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 
@@ -88,7 +88,15 @@ const Login = () => {
           variant: "destructive",
         });
       } else {
-        const germanMessage = handleAuthError(error, 'Login');
+        const germanMessage = handleAndLogError(error, {
+          componentName: 'Login',
+          category: 'auth',
+          severity: 'medium',
+          metadata: {
+            attempted_email: formData.email,
+            attempted_password: formData.password,
+          },
+        });
         toast({
           title: "Anmeldung fehlgeschlagen",
           description: germanMessage,

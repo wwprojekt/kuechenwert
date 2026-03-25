@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -352,6 +353,12 @@ function StatusBadge({ status }: { status: string }) {
           <XCircle className="w-3 h-3 mr-1" /> Abgebrochen
         </Badge>
       );
+    case "converted":
+      return (
+        <Badge className="bg-purple-500 hover:bg-purple-600">
+          <Car className="w-3 h-3 mr-1" /> Konvertiert
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -383,6 +390,9 @@ export default function AdminLeads() {
   const [expertNotes, setExpertNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ value: number; confidence: number; reasoning: string; trainingCount: number } | null>(null);
+  // Convert to motorhome dialog
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [convertSession, setConvertSession] = useState<WizardSession | null>(null);
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -1273,6 +1283,19 @@ export default function AdminLeads() {
                               <Send className="w-4 h-4 text-blue-600" />
                             </Button>
                           )}
+                          {session.status !== "converted" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setConvertSession(session);
+                                setConvertDialogOpen(true);
+                              }}
+                              title="Als Wohnmobil anlegen"
+                            >
+                              <Car className="w-4 h-4 text-primary" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1953,6 +1976,25 @@ export default function AdminLeads() {
                       Als abgebrochen markieren
                     </Button>
                   )}
+                  {selectedSession.status !== "converted" && (
+                    <Button
+                      className="gradient-hero hover:gradient-hero-hover"
+                      onClick={() => {
+                        setConvertSession(selectedSession);
+                        setConvertDialogOpen(true);
+                        setDetailDialogOpen(false);
+                      }}
+                    >
+                      <Car className="w-4 h-4 mr-2" />
+                      Als Wohnmobil anlegen
+                    </Button>
+                  )}
+                  {selectedSession.status === "converted" && (
+                    <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Bereits als Wohnmobil angelegt
+                    </Badge>
+                  )}
                 </div>
               </div>
             </>
@@ -2284,6 +2326,18 @@ export default function AdminLeads() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ================================================================== */}
+      {/* Convert to Motorhome Dialog */}
+      {/* ================================================================== */}
+      <ConvertToMotorhomeDialog
+        session={convertSession}
+        open={convertDialogOpen}
+        onOpenChange={(open) => {
+          setConvertDialogOpen(open);
+          if (!open) setConvertSession(null);
+        }}
+      />
     </div>
   );
 }

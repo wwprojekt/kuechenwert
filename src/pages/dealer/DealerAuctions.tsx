@@ -89,7 +89,7 @@ const DealerAuctions = () => {
         throw error;
       }
       logger.log(`Fetched ${data?.length || 0} active auctions`);
-      setAuctions(data || []);
+      setAuctions(Array.isArray(data) ? data : []);
     } catch (error: any) {
       logger.error('Error fetching auctions:', error);
       toast.error(`Fehler beim Laden der Auktionen: ${error.message || 'Unbekannter Fehler'}`);
@@ -99,7 +99,8 @@ const DealerAuctions = () => {
   };
 
   const getUserHighestBid = (auction: Auction) => {
-    const userBids = auction.bids?.filter(bid => bid.bidder_id === user?.id) || [];
+    const safeBids = Array.isArray(auction.bids) ? auction.bids : auction.bids ? [auction.bids] : [];
+    const userBids = safeBids.filter(bid => bid.bidder_id === user?.id);
     if (userBids.length === 0) return null;
     return Math.max(...userBids.map(bid => Number(bid.amount)));
   };
@@ -127,7 +128,8 @@ const DealerAuctions = () => {
   };
 
   const filteredAuctions = auctions.filter(auction => {
-    const matchesSearch = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`
+    if (!auction.motorhome || typeof auction.motorhome !== 'object' || Array.isArray(auction.motorhome)) return false;
+    const matchesSearch = `${auction.motorhome.manufacturer || ''} ${auction.motorhome.model || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
@@ -194,8 +196,8 @@ const DealerAuctions = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAuctions.map((auction) => {
-            const firstPhoto = auction.motorhome.motorhome_photos
-              ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
+            const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
+            const firstPhoto = safePhotos.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
 

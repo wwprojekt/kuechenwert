@@ -240,10 +240,11 @@ export default function DealerClaims() {
                     <SelectValue placeholder="Auktion auswählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    {wonAuctions?.map((auction: any) => (
+                    {(Array.isArray(wonAuctions) ? wonAuctions : []).map((auction: any) => (
                       <SelectItem key={auction.id} value={auction.id}>
-                        {auction.motorhome.manufacturer} {auction.motorhome.model} 
-                        ({auction.motorhome.listing_number})
+                        {auction.motorhome && typeof auction.motorhome === 'object' && !Array.isArray(auction.motorhome)
+                          ? `${auction.motorhome.manufacturer} ${auction.motorhome.model} (${auction.motorhome.listing_number})`
+                          : 'Unbekanntes Fahrzeug'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -366,8 +367,9 @@ export default function DealerClaims() {
                     </div>
                     
                     <p className="text-sm text-muted-foreground mb-3">
-                      {claim.motorhome.manufacturer} {claim.motorhome.model} 
-                      ({claim.motorhome.listing_number})
+                      {claim.motorhome && typeof claim.motorhome === 'object' && !Array.isArray(claim.motorhome)
+                        ? `${claim.motorhome.manufacturer} ${claim.motorhome.model} (${claim.motorhome.listing_number})`
+                        : 'Fahrzeug unbekannt'}
                     </p>
                     
                     <p className="text-sm mb-3">{claim.description}</p>
@@ -377,10 +379,10 @@ export default function DealerClaims() {
                       {claim.claim_amount && (
                         <span>Schadenshöhe: €{claim.claim_amount.toLocaleString('de-DE')}</span>
                       )}
-                      {claim.photos.length > 0 && (
+                      {(Array.isArray(claim.photos) ? claim.photos : claim.photos ? [claim.photos] : []).length > 0 && (
                         <span className="flex items-center gap-1">
                           <Camera className="h-3 w-3" />
-                          {claim.photos.length} Foto{claim.photos.length !== 1 ? 's' : ''}
+                          {(Array.isArray(claim.photos) ? claim.photos : [claim.photos]).length} Foto{(Array.isArray(claim.photos) ? claim.photos : [claim.photos]).length !== 1 ? 's' : ''}
                         </span>
                       )}
                     </div>

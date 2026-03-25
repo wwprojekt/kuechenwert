@@ -154,7 +154,8 @@ export default function ListingDetail() {
   }
 
   const auction = motorhome.auction?.[0];
-  const sortedPhotos = motorhome.photos?.sort((a, b) => a.display_order - b.display_order) || [];
+  const rawPhotos = motorhome.photos;
+  const sortedPhotos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
 
   return (
     <div className="space-y-6 animate-fade-in">

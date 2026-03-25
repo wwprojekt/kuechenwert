@@ -98,9 +98,27 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       device_type: getDeviceType(),
     };
 
-    const { error } = await supabase
-      .from('error_logs')
-      .insert([logEntry]);
+    // Verwende RPC-Funktion (SECURITY DEFINER) statt direktem INSERT,
+    // da RLS INSERT Policies für anon/authenticated nicht greifen (PG17 Kompatibilität)
+    const { error } = await supabase.rpc('log_error', {
+      p_error_code: logEntry.error_code,
+      p_error_message: logEntry.error_message,
+      p_error_category: logEntry.error_category,
+      p_severity: logEntry.severity,
+      p_page_url: logEntry.page_url,
+      p_page_path: logEntry.page_path,
+      p_page_title: logEntry.page_title,
+      p_component_name: logEntry.component_name,
+      p_user_id: logEntry.user_id,
+      p_user_role: logEntry.user_role,
+      p_user_email: logEntry.user_email,
+      p_stack_trace: logEntry.stack_trace,
+      p_original_error: logEntry.original_error,
+      p_metadata: logEntry.metadata,
+      p_user_agent: logEntry.user_agent,
+      p_browser: logEntry.browser,
+      p_device_type: logEntry.device_type,
+    });
 
     if (error) {
       // Fehler beim Loggen nur in der Konsole ausgeben, nicht erneut anzeigen

@@ -151,7 +151,8 @@ const DealerInventory = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredInventory.map((item) => {
-            const firstPhoto = item.photos?.sort((a: any, b: any) => 
+            const itemPhotos = Array.isArray(item.photos) ? item.photos : item.photos ? [item.photos] : [];
+            const firstPhoto = itemPhotos.sort((a: any, b: any) => 
               a.display_order - b.display_order
             )[0]?.url;
 

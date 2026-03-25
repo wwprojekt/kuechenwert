@@ -197,7 +197,7 @@ const AuctionDetail = () => {
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setBids(data);
+        setBids(Array.isArray(data) ? data : []);
       }
     };
 
@@ -237,7 +237,7 @@ const AuctionDetail = () => {
             bidder: profile,
           };
 
-          setBids((prev) => [newBid, ...prev]);
+          setBids((prev) => [newBid, ...(Array.isArray(prev) ? prev : [])]);
 
           // Update auction current bid
           setAuction((prev) => prev ? ({
@@ -546,7 +546,8 @@ const AuctionDetail = () => {
   }
 
   const motorhome = auction.motorhome;
-  const photos = motorhome.photos?.sort((a, b) => a.display_order - b.display_order) || [];
+  const rawPhotos = motorhome.photos;
+  const photos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
   const currentBid = auction.current_bid || auction.starting_bid;
   const reserveMet = auction.reserve_price ? currentBid >= auction.reserve_price : true;
   // Only show reserve price info to the seller or admin
@@ -1162,8 +1163,9 @@ const AuctionDetail = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Aktuell führend</p>
                         <p className="font-semibold text-primary">
-                          {bids[0]?.bidder?.company_name || 
-                           `${bids[0]?.bidder?.first_name} ${bids[0]?.bidder?.last_name}`}
+                          {bids[0]?.bidder && typeof bids[0].bidder === 'object' && !Array.isArray(bids[0].bidder)
+                           ? (bids[0].bidder.company_name || `${bids[0].bidder.first_name} ${bids[0].bidder.last_name}`)
+                           : 'Unbekannt'}
                         </p>
                       </div>
                       <div className="text-right">
@@ -1197,8 +1199,9 @@ const AuctionDetail = () => {
                           </div>
                           <div>
                             <p className="font-semibold flex items-center gap-2">
-                              {bid.bidder?.company_name ||
-                                `${bid.bidder?.first_name} ${bid.bidder?.last_name}`}
+                              {bid.bidder && typeof bid.bidder === 'object' && !Array.isArray(bid.bidder)
+                                ? (bid.bidder.company_name || `${bid.bidder.first_name} ${bid.bidder.last_name}`)
+                                : 'Unbekannt'}
                               {bid.is_autobid && (
                                 <Badge variant="outline" className="text-xs gap-1">
                                   <Zap className="w-3 h-3" /> Auto
@@ -1277,7 +1280,12 @@ const AuctionDetail = () => {
                   <p className="text-muted-foreground mb-2">
                     {motorhome.body_type} • {motorhome.year}
                   </p>
-
+                  {motorhome.seller && typeof motorhome.seller === 'object' && !Array.isArray(motorhome.seller) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="w-4 h-4" />
+                      <span>Verkäufer: {motorhome.seller.company_name || `${motorhome.seller.first_name} ${motorhome.seller.last_name}`}</span>
+                    </div>
+                  )}
                   {/* Anonymized Location & Distance */}
                   {motorhome.postal_code && (() => {
                     const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);

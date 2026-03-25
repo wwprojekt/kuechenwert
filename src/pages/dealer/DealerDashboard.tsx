@@ -466,8 +466,9 @@ const DealerDashboard = () => {
                 const isExpired = timeLeft <= 0;
                 const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
                 const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
-                const mainPhoto = auction.motorhome?.photos?.find((p: any) => p.display_order === 0)?.url || 
-                                  auction.motorhome?.photos?.[0]?.url;
+                const auctionPhotos = Array.isArray(auction.motorhome?.photos) ? auction.motorhome.photos : auction.motorhome?.photos ? [auction.motorhome.photos] : [];
+                const mainPhoto = auctionPhotos.find((p: any) => p.display_order === 0)?.url || 
+                                  auctionPhotos[0]?.url;
                 
                 return (
                   <div key={auction.id} className={`${isLocked ? 'pointer-events-none' : ''}`}>

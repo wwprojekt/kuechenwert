@@ -308,8 +308,8 @@ const AuctionDetail = () => {
      setIsSubmitting(true);
     try {
       // Refresh session token before instant buy to prevent JWT expiry errors
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
         toast({
           title: "Sitzung abgelaufen",
           description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -321,8 +321,11 @@ const AuctionDetail = () => {
       }
 
       // Call server-side Edge Function for secure instant buy
+      // Pass the fresh access token explicitly to avoid race conditions
+      // where getSession() might return a stale/null token
       const { data, error } = await supabase.functions.invoke('instant-buy', {
         body: { auctionId: id },
+        headers: { Authorization: `Bearer ${refreshData.session.access_token}` },
       });
 
       if (error) {
@@ -408,8 +411,8 @@ const AuctionDetail = () => {
 
     try {
       // Refresh session token before placing bid to prevent JWT expiry errors
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
         toast({
           title: "Sitzung abgelaufen",
           description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -435,6 +438,8 @@ const AuctionDetail = () => {
       }
 
       // Place bid via edge function
+      // Pass the fresh access token explicitly to avoid race conditions
+      // where getSession() might return a stale/null token (causing ANON KEY fallback)
       const { data, error } = await supabase.functions.invoke('place-bid', {
         body: {
           auctionId: id,
@@ -442,6 +447,7 @@ const AuctionDetail = () => {
           isAutobid: enableAutobid,
           maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
         },
+        headers: { Authorization: `Bearer ${refreshData.session.access_token}` },
       });
 
       if (error) {

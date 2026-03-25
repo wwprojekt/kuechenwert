@@ -326,11 +326,16 @@ const AuctionDetail = () => {
       });
 
       if (error) {
-        // Edge Function returned an error
-        const errorBody = typeof error === 'object' && 'message' in error
-          ? error.message
-          : 'Kauf konnte nicht abgeschlossen werden';
-        throw new Error(errorBody);
+        // Extract actual error message from FunctionsHttpError
+        let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
+        if ('context' in error && (error as any).context) {
+          try {
+            const ctx = (error as any).context;
+            const body = typeof ctx.json === 'function' ? await ctx.json() : null;
+            if (body?.error) errorMsg = body.error;
+          } catch { /* use default */ }
+        }
+        throw new Error(errorMsg);
       }
 
       if (data?.error) {
@@ -441,10 +446,17 @@ const AuctionDetail = () => {
 
       if (error) {
         // Try to extract the actual error message from the edge function response
+        // FunctionsHttpError.context is the Response object itself (not context.body)
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
-        if ('context' in error && (error as any).context?.body) {
+        if ('context' in error && (error as any).context) {
           try {
-            const body = await (error as any).context.body.json?.() || JSON.parse(await (error as any).context.body.text?.());
+            const ctx = (error as any).context;
+            // context is a Response object - use .json() directly
+            const body = typeof ctx.json === 'function' 
+              ? await ctx.json() 
+              : typeof ctx.body?.json === 'function'
+                ? await ctx.body.json()
+                : null;
             if (body?.error) errorMsg = body.error;
           } catch { /* use default error message */ }
         }

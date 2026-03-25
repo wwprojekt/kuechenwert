@@ -191,12 +191,13 @@ export default function AdminMotorhomeDetail() {
       )
     : [];
 
-  const auctionsArray = Array.isArray(motorhome?.auctions)
-    ? motorhome.auctions
-    : motorhome?.auctions
-    ? [motorhome.auctions]
-    : [];
-  const activeAuction = auctionsArray.find((a: any) => a.status === "active");
+  // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
+  const auctionData = motorhome?.auctions;
+  const activeAuction = auctionData && !Array.isArray(auctionData)
+    ? (auctionData.status === "active" ? auctionData : null)
+    : Array.isArray(auctionData)
+      ? auctionData.find((a: any) => a.status === "active")
+      : null;
 
   return (
     <AdminDetailLayout

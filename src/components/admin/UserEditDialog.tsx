@@ -1,5 +1,11 @@
 /**
- * Dialog to edit user profile and manage roles in the admin panel
+ * Dialog to edit user profile and manage roles in the admin panel.
+ *
+ * When the admin switches a user's role from "private" (seller) to "dealer",
+ * the role is NOT changed directly. Instead a dealer_application with
+ * status = "pending" is created so the standard dealer-approval workflow
+ * kicks in (banner in dashboard, admin review under "Händler", email
+ * notification, etc.).
  */
 
 import { useState, useEffect } from "react";
@@ -19,9 +25,10 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Shield, User, Ban } from "lucide-react";
+import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 interface UserRole {
@@ -68,6 +75,7 @@ export function UserEditDialog({
     company_name: "",
   });
   const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [originalRoles, setOriginalRoles] = useState<string[]>([]);
   const [isSuspended, setIsSuspended] = useState(false);
   const [suspendedReason, setSuspendedReason] = useState("");
 
@@ -79,11 +87,20 @@ export function UserEditDialog({
         phone: user.phone || "",
         company_name: user.company_name || "",
       });
-      setUserRoles(user.roles?.map((r) => r.role) || []);
+      const roles = user.roles?.map((r) => r.role) || [];
+      setUserRoles(roles);
+      setOriginalRoles(roles);
       setIsSuspended(user.is_suspended || false);
       setSuspendedReason(user.suspended_reason || "");
     }
   }, [user]);
+
+  // Detect if this is a seller→dealer upgrade
+  const isSellerToDealerUpgrade =
+    originalRoles.includes("private") &&
+    !originalRoles.includes("dealer") &&
+    userRoles.includes("dealer") &&
+    !userRoles.includes("private");
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
@@ -105,7 +122,83 @@ export function UserEditDialog({
 
       if (profileError) throw profileError;
 
-      // Get current roles
+      // ── Seller → Dealer upgrade path ──────────────────────────────
+      if (isSellerToDealerUpgrade) {
+        // 1. Check if there is already a dealer_application for this user
+        const { data: existingApp } = await supabase
+          .from("dealer_applications")
+          .select("id, status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (existingApp && existingApp.status === "pending") {
+          // Already has a pending application – nothing to do
+          toast({
+            title: "Hinweis",
+            description: "Dieser Benutzer hat bereits einen offenen Händlerantrag.",
+          });
+          return;
+        }
+
+        // 2. If there is an old rejected/approved application, delete it first
+        //    (user_id is UNIQUE, so we need to clear it)
+        if (existingApp) {
+          const { error: deleteError } = await supabase
+            .from("dealer_applications")
+            .delete()
+            .eq("id", existingApp.id);
+          if (deleteError) {
+            logger.error("Failed to delete old dealer application:", deleteError);
+            throw new Error("Alte Händler-Bewerbung konnte nicht entfernt werden.");
+          }
+        }
+
+        // 3. Create a new dealer_application with status "pending"
+        const contactName = [formData.first_name, formData.last_name]
+          .filter(Boolean)
+          .join(" ") || user.email;
+
+        const { error: insertError } = await supabase
+          .from("dealer_applications")
+          .insert({
+            user_id: user.id,
+            company_name: formData.company_name || `${contactName} (Händler)`,
+            company_address: "Wird vom Händler ergänzt",
+            company_postal_code: "00000",
+            company_city: "Wird vom Händler ergänzt",
+            contact_person_name: contactName,
+            phone: formData.phone || "Wird vom Händler ergänzt",
+            status: "pending",
+          });
+
+        if (insertError) {
+          logger.error("Failed to create dealer application:", insertError);
+          throw new Error("Händler-Antrag konnte nicht erstellt werden: " + insertError.message);
+        }
+
+        // 4. Keep the role as "private" (seller) – do NOT change to dealer yet.
+        //    The approve_dealer_application RPC will handle the role change.
+        //    But still update other profile fields and non-dealer role changes.
+
+        // 5. Send notification email to the user (fire-and-forget)
+        try {
+          await supabase.functions.invoke("send-dealer-notification", {
+            body: {
+              email: user.email,
+              name: contactName,
+              type: "role_upgrade",
+              companyName: formData.company_name || `${contactName} (Händler)`,
+            },
+          });
+        } catch (emailErr) {
+          logger.warn("Failed to send role_upgrade email:", emailErr);
+          // Don't fail the whole operation
+        }
+
+        return; // Skip normal role update logic
+      }
+
+      // ── Standard role update (non seller→dealer) ──────────────────
       const { data: currentRoles, error: getRolesError } = await supabase
         .from("user_roles")
         .select("role")
@@ -143,17 +236,27 @@ export function UserEditDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      toast({
-        title: "Gespeichert",
-        description: "Benutzer wurde erfolgreich aktualisiert.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+
+      if (isSellerToDealerUpgrade) {
+        toast({
+          title: "Händlerantrag erstellt",
+          description:
+            "Ein Händlerantrag wurde erstellt. Der Benutzer wurde per E-Mail benachrichtigt. Sie finden den Antrag unter Händler → Offene Anträge.",
+        });
+      } else {
+        toast({
+          title: "Gespeichert",
+          description: "Benutzer wurde erfolgreich aktualisiert.",
+        });
+      }
       onOpenChange(false);
     },
     onError: (error) => {
       logger.error("Update error:", error);
       toast({
         title: "Fehler",
-        description: "Benutzer konnte nicht aktualisiert werden.",
+        description: error instanceof Error ? error.message : "Benutzer konnte nicht aktualisiert werden.",
         variant: "destructive",
       });
     },
@@ -290,6 +393,24 @@ export function UserEditDialog({
                 ))}
               </div>
 
+              {/* Info banner when seller→dealer upgrade is detected */}
+              {isSellerToDealerUpgrade && (
+                <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <ArrowRightLeft className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    <strong>Rollenwechsel: Verkäufer → Händler</strong>
+                    <br />
+                    <span className="text-sm">
+                      Die Rolle wird nicht sofort geändert. Stattdessen wird ein
+                      Händlerantrag erstellt, den Sie unter{" "}
+                      <strong>Händler → Offene Anträge</strong> genehmigen können.
+                      Der Benutzer wird per E-Mail benachrichtigt und sieht im
+                      Dashboard einen Hinweis.
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="mt-4 p-3 bg-muted rounded-lg">
                 <p className="text-sm">
                   <strong>Aktive Rollen:</strong>{" "}
@@ -352,10 +473,12 @@ export function UserEditDialog({
           <Button onClick={handleSave} disabled={updateProfileMutation.isPending}>
             {updateProfileMutation.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : isSellerToDealerUpgrade ? (
+              <ArrowRightLeft className="w-4 h-4 mr-2" />
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            Speichern
+            {isSellerToDealerUpgrade ? "Händlerantrag erstellen" : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>

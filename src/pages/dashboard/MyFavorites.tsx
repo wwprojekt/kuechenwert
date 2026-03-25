@@ -33,7 +33,12 @@ interface FavoriteVehicle {
       status: string;
       current_bid: number | null;
       end_time: string;
-    }>;
+    }> | {
+      id: string;
+      status: string;
+      current_bid: number | null;
+      end_time: string;
+    } | null;
   };
 }
 
@@ -89,8 +94,9 @@ export default function MyFavorites() {
   };
 
   const getAuctionLink = (favorite: FavoriteVehicle): string => {
-    const safeAuctions = Array.isArray(favorite.motorhome.auctions) ? favorite.motorhome.auctions : favorite.motorhome.auctions ? [favorite.motorhome.auctions] : [];
-    const activeAuction = safeAuctions.find(
+    const auctionsData = favorite.motorhome.auctions;
+    const auctionsArray = Array.isArray(auctionsData) ? auctionsData : auctionsData ? [auctionsData] : [];
+    const activeAuction = auctionsArray.find(
       a => a.status === 'active' || a.status === 'scheduled'
     );
     if (activeAuction) {
@@ -129,10 +135,12 @@ export default function MyFavorites() {
         <div className="grid gap-4">
           {favorites.map((favorite) => {
             const motorhome = favorite.motorhome;
-            const safePhotos = Array.isArray(motorhome.photos) ? motorhome.photos : motorhome.photos ? [motorhome.photos] : [];
-            const firstPhoto = [...safePhotos].sort((a, b) => a.display_order - b.display_order)[0];
-            const safeAucts = Array.isArray(motorhome.auctions) ? motorhome.auctions : motorhome.auctions ? [motorhome.auctions] : [];
-            const activeAuction = safeAucts.find(a => a.status === 'active');
+            const photosData = motorhome.photos;
+            const photosArray = Array.isArray(photosData) ? photosData : photosData ? [photosData] : [];
+            const firstPhoto = [...photosArray].sort((a, b) => a.display_order - b.display_order)[0];
+            const mAuctionsData = motorhome.auctions;
+            const mAuctionsArray = Array.isArray(mAuctionsData) ? mAuctionsData : mAuctionsData ? [mAuctionsData] : [];
+            const activeAuction = mAuctionsArray.find(a => a.status === 'active');
 
             return (
               <Card key={favorite.id} className="overflow-hidden">

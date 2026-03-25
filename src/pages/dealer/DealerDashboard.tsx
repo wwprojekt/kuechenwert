@@ -91,7 +91,8 @@ const DealerDashboard = () => {
       const activeBids = bidsRes.data?.filter(bid => bid.auctions?.status === "active") || [];
       const wonMothorhomes = soldMotorhomesRes.data || [];
       const totalSpent = wonMothorhomes.reduce((sum, mh: any) => {
-        const auction = mh.auctions?.[0];
+        // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
+        const auction = Array.isArray(mh.auctions) ? mh.auctions[0] : mh.auctions;
         return sum + Number(auction?.current_bid || 0);
       }, 0);
       const totalCommissions = commissionsRes.data?.reduce((sum, calc) => sum + Number(calc.commission_amount || 0), 0) || 0;

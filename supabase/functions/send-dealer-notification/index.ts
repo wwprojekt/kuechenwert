@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface DealerEmailRequest {
   email: string;
   name: string;
-  type: "application_received" | "approved" | "rejected";
+  type: "application_received" | "approved" | "rejected" | "role_upgrade";
   companyName: string;
   rejectionReason?: string;
   customerNumber?: string;
@@ -130,6 +130,21 @@ const handler = async (req: Request): Promise<Response> => {
             ${rejectionReason ? paragraph(`<strong>Grund:</strong> ${rejectionReason}`) : ''}
           `, 'warning', settingsData)}
           ${paragraph('Sie können sich jederzeit erneut bewerben. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
+        `;
+        break;
+
+      case "role_upgrade":
+        subject = "Ihr Konto wird zum Händlerkonto aufgewertet";
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph(`Gute Nachrichten! Unser Admin-Team hat Ihr Konto bei ${settingsData.site_name} für ein Upgrade zum Händlerkonto vorgemerkt.`)}
+          ${infoBox('Händler-Upgrade', `
+            ${companyName ? detailRow('Unternehmen', companyName) : ''}
+            ${paragraph('Ihr Antrag wird derzeit geprüft. Sobald er genehmigt wurde, erhalten Sie vollen Zugriff auf das Händler-Portal und können auf Wohnmobile bieten.')}
+          `, 'info', settingsData)}
+          ${paragraph('Bitte loggen Sie sich in Ihr Dashboard ein, um den Status Ihres Antrags zu verfolgen. Dort können Sie auch weitere Unterlagen ergänzen.')}
+          ${button('Zum Dashboard', 'https://caravanwert.de/dashboard', settingsData)}
+          ${paragraph('Die Prüfung dauert in der Regel 1-2 Werktage.')}
         `;
         break;
     }

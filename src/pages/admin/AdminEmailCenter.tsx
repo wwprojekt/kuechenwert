@@ -532,13 +532,48 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 <Paperclip className="w-4 h-4" /> {attachments.length} Anhang/Anhänge
               </p>
               <div className="flex flex-wrap gap-2">
-                {attachments.map((att: any, i: number) => (
-                  <Badge key={i} variant="secondary" className="gap-1">
-                    <FileText className="w-3 h-3" />
-                    {att.filename || `Anhang ${i + 1}`}
-                    {att.size && <span className="text-xs opacity-70">({Math.round(att.size / 1024)}KB)</span>}
-                  </Badge>
-                ))}
+                {attachments.map((att: any, i: number) => {
+                  const hasUrl = att.download_url;
+                  const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
+                  const canOpen = hasUrl && !isExpired;
+
+                  const handleAttachmentClick = async () => {
+                    if (canOpen) {
+                      window.open(att.download_url, '_blank');
+                    } else if (att.id && (orig as AdminEmail).resend_id) {
+                      // Fetch fresh download URL from Resend API via Edge Function
+                      try {
+                        const res = await fetch(
+                          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-attachment-url`,
+                          {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await (window as any).__supabase?.auth?.getSession())?.data?.session?.access_token || ''}` },
+                            body: JSON.stringify({ emailId: (orig as AdminEmail).resend_id, attachmentId: att.id }),
+                          }
+                        );
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.download_url) window.open(data.download_url, '_blank');
+                        }
+                      } catch (err) {
+                        console.error('Failed to fetch attachment URL:', err);
+                      }
+                    }
+                  };
+
+                  return (
+                    <Badge
+                      key={i}
+                      variant="secondary"
+                      className={`gap-1 ${hasUrl || att.id ? 'cursor-pointer hover:bg-accent' : 'opacity-60'}`}
+                      onClick={handleAttachmentClick}
+                    >
+                      <FileText className="w-3 h-3" />
+                      {att.filename || `Anhang ${i + 1}`}
+                      {att.size > 0 && <span className="text-xs opacity-70">({Math.round(att.size / 1024)}KB)</span>}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           )}

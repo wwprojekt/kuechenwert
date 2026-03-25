@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") || '';
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
 
 /**
  * Resend Webhook Handler (v2)
@@ -245,14 +246,95 @@ const handler = async (req: Request): Promise<Response> => {
       inReplyTo = existingThread.id;
     }
 
-    // Process attachments metadata
-    const attachmentsMeta = (emailData.attachments || []).map((att: any) => ({
-      filename: att.filename,
-      content_type: att.content_type,
-      size: att.content ? Math.round(att.content.length * 0.75) : 0,
-    }));
+    // ── Fetch full email content from Resend Received Email API ────
+    // Webhooks only contain metadata, not the body or attachment content.
+    let fullHtml = emailData.html || '';
+    let fullText = emailData.text || '';
+    let fullAttachments: any[] = [];
+    let rawHeaders = emailData.headers || null;
 
-    // Store the inbound email
+    const receivedEmailId = emailData.email_id;
+    if (RESEND_API_KEY && receivedEmailId) {
+      try {
+        // Fetch full email content
+        const emailRes = await fetch(`https://api.resend.com/emails/receiving/${receivedEmailId}`, {
+          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+        });
+
+        if (emailRes.ok) {
+          const fullEmail = await emailRes.json();
+          fullHtml = fullEmail.html || fullHtml;
+          fullText = fullEmail.text || fullText;
+          rawHeaders = fullEmail.headers || rawHeaders;
+
+          // Process attachments with download URLs
+          if (fullEmail.attachments && fullEmail.attachments.length > 0) {
+            for (const att of fullEmail.attachments) {
+              try {
+                const attRes = await fetch(
+                  `https://api.resend.com/emails/receiving/${receivedEmailId}/attachments/${att.id}`,
+                  { headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` } }
+                );
+
+                if (attRes.ok) {
+                  const attData = await attRes.json();
+                  fullAttachments.push({
+                    id: att.id,
+                    filename: att.filename || attData.filename,
+                    content_type: att.content_type || attData.content_type,
+                    size: attData.size || 0,
+                    download_url: attData.download_url || null,
+                    expires_at: attData.expires_at || null,
+                  });
+                } else {
+                  // Fallback: store metadata only
+                  fullAttachments.push({
+                    id: att.id,
+                    filename: att.filename,
+                    content_type: att.content_type,
+                    size: 0,
+                  });
+                }
+              } catch (attErr) {
+                console.error(`Error fetching attachment ${att.id}:`, attErr);
+                fullAttachments.push({
+                  id: att.id,
+                  filename: att.filename,
+                  content_type: att.content_type,
+                  size: 0,
+                });
+              }
+            }
+          }
+          console.log(`Fetched full email content: html=${fullHtml.length}chars, attachments=${fullAttachments.length}`);
+        } else {
+          console.error('Failed to fetch received email:', await emailRes.text());
+          // Fallback: use webhook metadata for attachments
+          fullAttachments = (emailData.attachments || []).map((att: any) => ({
+            filename: att.filename,
+            content_type: att.content_type,
+            size: att.content ? Math.round(att.content.length * 0.75) : 0,
+          }));
+        }
+      } catch (fetchErr) {
+        console.error('Error fetching full email from Resend API:', fetchErr);
+        // Fallback: use webhook metadata
+        fullAttachments = (emailData.attachments || []).map((att: any) => ({
+          filename: att.filename,
+          content_type: att.content_type,
+          size: att.content ? Math.round(att.content.length * 0.75) : 0,
+        }));
+      }
+    } else {
+      // No API key or email ID – use webhook metadata as fallback
+      fullAttachments = (emailData.attachments || []).map((att: any) => ({
+        filename: att.filename,
+        content_type: att.content_type,
+        size: att.content ? Math.round(att.content.length * 0.75) : 0,
+      }));
+    }
+
+    // Store the inbound email with full content
     const { data: emailRecord, error: insertError } = await supabase
       .from('admin_emails')
       .insert({
@@ -262,16 +344,16 @@ const handler = async (req: Request): Promise<Response> => {
         recipient_name: 'CaravanWert',
         recipient_id: null,
         subject: emailData.subject || '(Kein Betreff)',
-        body_html: emailData.html || '',
-        body_text: emailData.text || '',
+        body_html: fullHtml,
+        body_text: fullText,
         email_type: 'inbound',
         direction: 'inbound',
         status: 'unread',
-        resend_id: emailData.email_id || null,
+        resend_id: receivedEmailId || null,
         thread_id: threadId,
         in_reply_to: inReplyTo,
-        raw_headers: emailData.headers || null,
-        attachments: attachmentsMeta.length > 0 ? attachmentsMeta : [],
+        raw_headers: rawHeaders,
+        attachments: fullAttachments.length > 0 ? fullAttachments : [],
         is_read: false,
         sent_by: senderProfile?.id || null,
       })

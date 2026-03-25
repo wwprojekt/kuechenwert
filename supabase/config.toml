@@ -1,5 +1,6 @@
 project_id = "cmvhcudymrtvmbomkenq"
 
+# --- Auction & Bidding ---
 [functions.handle-autobid]
 verify_jwt = false
 
@@ -9,19 +10,36 @@ verify_jwt = true
 [functions.close-auction]
 verify_jwt = false
 
-[functions.notify-auction-winner]
+[functions.check-expired-auctions]
 verify_jwt = false
 
-[functions.send-appointment-confirmation]
+[functions.instant-buy]
+verify_jwt = true
+
+# --- Auction Notifications ---
+[functions.notify-auction-winner]
 verify_jwt = false
 
 [functions.send-auction-notification]
 verify_jwt = false
 
-[functions.send-dealer-notification]
+[functions.send-auction-ending-notification]
 verify_jwt = false
 
-[functions.send-payment-confirmation]
+[functions.send-auction-summary]
+verify_jwt = false
+
+[functions.send-bid-notification]
+verify_jwt = false
+
+[functions.send-favorite-notification]
+verify_jwt = false
+
+# --- Appointment & Handover ---
+[functions.send-appointment-confirmation]
+verify_jwt = false
+
+[functions.send-appointment-reminder]
 verify_jwt = false
 
 [functions.generate-appointment-pin]
@@ -34,4 +52,86 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.generate-handover-pdf]
+verify_jwt = false
+
+# --- Dealer ---
+[functions.dealer-document-upload]
+verify_jwt = false
+
+[functions.send-dealer-notification]
+verify_jwt = false
+
+[functions.get-dealer-auth-status]
+verify_jwt = false
+
+# --- Email & Communication ---
+[functions.send-admin-email]
+verify_jwt = false
+
+[functions.send-broadcast-email]
+verify_jwt = false
+
+[functions.send-auto-response]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-wizard-resume-email]
+verify_jwt = false
+
+[functions.send-inactivity-email]
+verify_jwt = false
+
+[functions.send-lead-notification]
+verify_jwt = false
+
+[functions.send-registration-invite]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.inbound-webhook]
+verify_jwt = false
+
+[functions.process-scheduled-emails]
+verify_jwt = false
+
+# --- Payment & Invoicing ---
+[functions.send-payment-confirmation]
+verify_jwt = false
+
+[functions.send-payment-reminder]
+verify_jwt = false
+
+[functions.send-invoice-email]
+verify_jwt = false
+
+[functions.generate-invoice-pdf]
+verify_jwt = false
+
+[functions.process-dunning]
+verify_jwt = false
+
+# --- AI & Generation ---
+[functions.ai-valuation]
+verify_jwt = false
+
+[functions.generate-ai-description]
+verify_jwt = false
+
+# --- Admin ---
+[functions.admin-create-user]
+verify_jwt = true
+
+[functions.get-recipient-count]
+verify_jwt = false
+
+# --- Automation ---
+[functions.process-abandoned-wizards]
+verify_jwt = false
+
+# --- SEO ---
+[functions.sitemap]
 verify_jwt = false

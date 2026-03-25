@@ -89,7 +89,8 @@ export default function MyFavorites() {
   };
 
   const getAuctionLink = (favorite: FavoriteVehicle): string => {
-    const activeAuction = favorite.motorhome.auctions?.find(
+    const safeAuctions = Array.isArray(favorite.motorhome.auctions) ? favorite.motorhome.auctions : favorite.motorhome.auctions ? [favorite.motorhome.auctions] : [];
+    const activeAuction = safeAuctions.find(
       a => a.status === 'active' || a.status === 'scheduled'
     );
     if (activeAuction) {
@@ -128,8 +129,10 @@ export default function MyFavorites() {
         <div className="grid gap-4">
           {favorites.map((favorite) => {
             const motorhome = favorite.motorhome;
-            const firstPhoto = motorhome.photos?.sort((a, b) => a.display_order - b.display_order)[0];
-            const activeAuction = motorhome.auctions?.find(a => a.status === 'active');
+            const safePhotos = Array.isArray(motorhome.photos) ? motorhome.photos : motorhome.photos ? [motorhome.photos] : [];
+            const firstPhoto = [...safePhotos].sort((a, b) => a.display_order - b.display_order)[0];
+            const safeAucts = Array.isArray(motorhome.auctions) ? motorhome.auctions : motorhome.auctions ? [motorhome.auctions] : [];
+            const activeAuction = safeAucts.find(a => a.status === 'active');
 
             return (
               <Card key={favorite.id} className="overflow-hidden">

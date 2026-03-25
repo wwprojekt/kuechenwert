@@ -381,7 +381,15 @@ export default function AdminDealerDetail() {
     return statusConfig[status] || { label: status, variant: "outline" };
   };
 
-  const totalBidAmount = dealer?.bids?.reduce((sum: number, bid: any) => sum + bid.amount, 0) || 0;
+  // Ensure all Supabase relations are always arrays (Supabase may return a single object for 1:N)
+  const safeArray = (val: any): any[] => Array.isArray(val) ? val : val ? [val] : [];
+  const dealerBids = safeArray(dealer?.bids);
+  const dealerLegalDocs = safeArray(dealer?.legal_documents);
+  const dealerSepaMandates = safeArray(dealer?.sepa_mandates);
+  const dealerInvoices = safeArray(dealer?.invoices);
+  const dealerWonAuctions = safeArray(dealer?.wonAuctions);
+
+  const totalBidAmount = dealerBids.reduce((sum: number, bid: any) => sum + bid.amount, 0) || 0;
 
   return (
     <AdminDetailLayout
@@ -465,7 +473,7 @@ export default function AdminDealerDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               label="Gebote gesamt"
-              value={dealer.bids?.length || 0}
+              value={dealerBids.length}
               icon={<Gavel className="w-5 h-5" />}
             />
             <StatsCard
@@ -475,12 +483,12 @@ export default function AdminDealerDetail() {
             />
             <StatsCard
               label="Gewonnene Auktionen"
-              value={dealer.wonAuctions?.length || 0}
+              value={dealerWonAuctions.length}
               icon={<Award className="w-5 h-5" />}
             />
             <StatsCard
               label="Rechnungen"
-              value={dealer.invoices?.length || 0}
+              value={dealerInvoices.length}
               icon={<FileText className="w-5 h-5" />}
             />
           </div>
@@ -618,8 +626,8 @@ export default function AdminDealerDetail() {
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {["gewerbenachweis", "ausweis_front", "ausweis_back"].map((reqType) => {
-                            const hasDoc = dealer.legal_documents?.some((d: any) => d.document_type === reqType);
-                            const isVerified = dealer.legal_documents?.some((d: any) => d.document_type === reqType && d.verified);
+                            const hasDoc = dealerLegalDocs.some((d: any) => d.document_type === reqType);
+                            const isVerified = dealerLegalDocs.some((d: any) => d.document_type === reqType && d.verified);
                             return (
                               <div key={reqType} className={`flex items-center gap-2 p-2 rounded-md text-sm ${
                                 isVerified
@@ -644,9 +652,9 @@ export default function AdminDealerDetail() {
                     )}
 
                     {/* Document list */}
-                    {dealer.legal_documents && dealer.legal_documents.length > 0 ? (
+                    {dealerLegalDocs.length > 0 ? (
                       <div className="space-y-3">
-                        {dealer.legal_documents.map((doc: any) => {
+                        {dealerLegalDocs.map((doc: any) => {
                           const isPostReg = isPostRegistrationUpload(doc.uploaded_at, dealer.created_at);
                           return (
                             <div
@@ -775,12 +783,12 @@ export default function AdminDealerDetail() {
                     )}
 
                     {/* SEPA Mandates */}
-                    {dealer.sepa_mandates && dealer.sepa_mandates.length > 0 && (
+                    {dealerSepaMandates.length > 0 && (
                       <>
                         <Separator className="my-6" />
                         <h4 className="font-semibold mb-4">SEPA-Lastschriftmandate</h4>
                         <div className="space-y-3">
-                          {dealer.sepa_mandates.map((mandate: any) => (
+                          {dealerSepaMandates.map((mandate: any) => (
                             <div key={mandate.id} className="flex items-center justify-between p-3 rounded-lg border">
                               <div>
                                 <p className="font-mono text-sm">{mandate.mandate_reference}</p>
@@ -801,7 +809,7 @@ export default function AdminDealerDetail() {
 
                 <TabsContent value="activity">
                   <DetailSection title="Gebotsaktivität" icon={<Gavel className="w-5 h-5" />}>
-                    {dealer.bids && dealer.bids.length > 0 ? (
+                    {dealerBids.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -812,7 +820,7 @@ export default function AdminDealerDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {dealer.bids.map((bid: any) => (
+                          {dealerBids.map((bid: any) => (
                             <TableRow key={bid.id}>
                               <TableCell>
                                 <p className="font-medium">
@@ -886,10 +894,10 @@ export default function AdminDealerDetail() {
               </Card>
 
               {/* Invoices */}
-              {dealer.invoices && dealer.invoices.length > 0 && (
+              {dealerInvoices.length > 0 && (
                 <DetailSection title="Letzte Rechnungen" icon={<FileText className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    {dealer.invoices.map((invoice: any) => (
+                    {dealerInvoices.map((invoice: any) => (
                       <div key={invoice.id} className="p-3 rounded-lg border">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-mono text-sm">{invoice.invoice_number}</span>

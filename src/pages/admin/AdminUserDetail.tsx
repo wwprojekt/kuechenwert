@@ -138,7 +138,7 @@ export default function AdminUserDetail() {
 
       return {
         ...profile,
-        roles: profile.user_roles?.map((r: any) => r.role) || [],
+        roles: (Array.isArray(profile.user_roles) ? profile.user_roles : profile.user_roles ? [profile.user_roles] : []).map((r: any) => r.role),
         motorhomes: motorhomes || [],
         bids: bids || [],
         favoritesCount: favoritesCount || 0,
@@ -379,7 +379,7 @@ export default function AdminUserDetail() {
 
                 <TabsContent value="listings">
                   <DetailSection title="Inserate" icon={<Car className="w-5 h-5" />}>
-                    {user.motorhomes && user.motorhomes.length > 0 ? (
+                    {Array.isArray(user.motorhomes) && user.motorhomes.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -392,7 +392,8 @@ export default function AdminUserDetail() {
                         </TableHeader>
                         <TableBody>
                           {user.motorhomes.map((motorhome: any) => {
-                            const mainPhoto = motorhome.motorhome_photos?.sort(
+                            const safePhotos = Array.isArray(motorhome.motorhome_photos) ? motorhome.motorhome_photos : motorhome.motorhome_photos ? [motorhome.motorhome_photos] : [];
+                            const mainPhoto = [...safePhotos].sort(
                               (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
                             )[0];
                             return (
@@ -452,7 +453,7 @@ export default function AdminUserDetail() {
 
                 <TabsContent value="bids">
                   <DetailSection title="Gebote" icon={<Gavel className="w-5 h-5" />}>
-                    {user.bids && user.bids.length > 0 ? (
+                    {Array.isArray(user.bids) && user.bids.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>

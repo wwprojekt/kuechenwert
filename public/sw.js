@@ -1,27 +1,32 @@
 /**
  * Service Worker for CaravanWert
- * Provides offline support and caching strategies
+ * 
+ * Caching strategies:
+ *   - Hashed build assets (/assets/*.js, /assets/*.css): Network-First with cache fallback
+ *     → Vite generates unique hashes per build, so stale chunks must never be served from cache
+ *   - Immutable assets (fonts, favicon, manifest): Cache-First (they rarely change)
+ *   - Images: Cache-First with network fallback
+ *   - API / Supabase: Network-First with 5-min cache fallback
+ *   - Navigation (HTML): Network-First, fallback to cached /index.html for SPA routing
+ *
+ * IMPORTANT: After every deployment the chunk hashes change. The old Cache-First strategy
+ * caused "Failed to fetch dynamically imported module" errors because the SW served stale
+ * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_NAME = 'caravanwert-v1';
-const STATIC_CACHE_NAME = 'caravanwert-static-v1';
-const DYNAMIC_CACHE_NAME = 'caravanwert-dynamic-v1';
-const IMAGE_CACHE_NAME = 'caravanwert-images-v1';
+const CACHE_VERSION = 'v2';
+const STATIC_CACHE_NAME = `caravanwert-static-${CACHE_VERSION}`;
+const ASSETS_CACHE_NAME = `caravanwert-assets-${CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `caravanwert-dynamic-${CACHE_VERSION}`;
+const IMAGE_CACHE_NAME = `caravanwert-images-${CACHE_VERSION}`;
 
-// Static assets to cache immediately
-const STATIC_ASSETS = [
+// Only truly immutable files that rarely change
+const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
-];
-
-// API endpoints that should be cached
-const API_CACHE_PATTERNS = [
-  /\/api\/auctions/,
-  /\/api\/motorhomes/,
-  /\/api\/stations/,
 ];
 
 // Image patterns to cache
@@ -30,18 +35,19 @@ const IMAGE_PATTERNS = [
   /supabase\.co.*\/storage\/v1\/object\/public/,
 ];
 
-// Install event - cache static assets
+// ─── Install ────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installing...');
-  
+
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('Service Worker: Pre-caching shell assets');
+        return cache.addAll(PRECACHE_ASSETS);
       })
       .then(() => {
         console.log('Service Worker: Installation complete');
+        // Activate immediately so the new SW takes over right away
         return self.skipWaiting();
       })
       .catch((error) => {
@@ -50,19 +56,25 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// ─── Activate ───────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activating...');
-  
+
+  // List of caches that belong to the CURRENT version
+  const currentCaches = [
+    STATIC_CACHE_NAME,
+    ASSETS_CACHE_NAME,
+    DYNAMIC_CACHE_NAME,
+    IMAGE_CACHE_NAME,
+  ];
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            // Delete old caches
-            if (cacheName !== STATIC_CACHE_NAME && 
-                cacheName !== DYNAMIC_CACHE_NAME && 
-                cacheName !== IMAGE_CACHE_NAME) {
+            // Delete any cache that is NOT in the current set
+            if (!currentCaches.includes(cacheName)) {
               console.log('Service Worker: Deleting old cache', cacheName);
               return caches.delete(cacheName);
             }
@@ -71,200 +83,250 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => {
         console.log('Service Worker: Activation complete');
+        // Take control of all open tabs immediately
         return self.clients.claim();
       })
   );
 });
 
-// Fetch event - implement caching strategies
+// ─── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
 
-  // Skip chrome-extension requests
-  if (url.protocol === 'chrome-extension:') {
-    return;
-  }
+  // Skip chrome-extension and other non-http(s) requests
+  if (!url.protocol.startsWith('http')) return;
 
-  // Handle different types of requests
-  if (isStaticAsset(request)) {
-    event.respondWith(handleStaticAsset(request));
-  } else if (isImage(request)) {
+  // Route to the correct handler
+  if (isHashedBuildAsset(url)) {
+    event.respondWith(handleHashedAsset(request));
+  } else if (isImmutableAsset(url)) {
+    event.respondWith(handleImmutableAsset(request));
+  } else if (isImage(url)) {
     event.respondWith(handleImage(request));
-  } else if (isApiRequest(request)) {
+  } else if (isApiRequest(url)) {
     event.respondWith(handleApiRequest(request));
   } else if (isNavigationRequest(request)) {
     event.respondWith(handleNavigation(request));
   }
+  // All other requests pass through to the network without interception
 });
 
-// Check if request is for a static asset
-function isStaticAsset(request) {
-  const url = new URL(request.url);
+// ─── Request classifiers ────────────────────────────────────────────────────
+
+/**
+ * Hashed build assets produced by Vite: /assets/SomeChunk-Ab12Cd34.js
+ * These MUST use Network-First because after a deployment the hash changes
+ * and old cached chunks would cause "Failed to fetch dynamically imported module".
+ */
+function isHashedBuildAsset(url) {
+  return url.origin === location.origin &&
+    url.pathname.startsWith('/assets/') &&
+    (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'));
+}
+
+/**
+ * Truly immutable assets that almost never change: fonts, favicon, manifest.
+ * Safe to use Cache-First.
+ */
+function isImmutableAsset(url) {
   return url.origin === location.origin && (
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.woff') ||
     url.pathname.endsWith('.woff2') ||
     url.pathname === '/manifest.json' ||
-    url.pathname === '/favicon.ico'
+    url.pathname === '/favicon.ico' ||
+    url.pathname === '/favicon.png'
   );
 }
 
-// Check if request is for an image
-function isImage(request) {
-  return IMAGE_PATTERNS.some(pattern => pattern.test(request.url));
+function isImage(url) {
+  return IMAGE_PATTERNS.some((pattern) => pattern.test(url.href));
 }
 
-// Check if request is for API
-function isApiRequest(request) {
-  const url = new URL(request.url);
-  return url.hostname.includes('supabase.co') || 
-         API_CACHE_PATTERNS.some(pattern => pattern.test(request.url));
+function isApiRequest(url) {
+  return url.hostname.includes('supabase.co');
 }
 
-// Check if request is a navigation request
 function isNavigationRequest(request) {
   return request.mode === 'navigate';
 }
 
-// Handle static assets with cache-first strategy
-async function handleStaticAsset(request) {
+// ─── Handlers ───────────────────────────────────────────────────────────────
+
+/**
+ * NETWORK-FIRST for hashed build assets.
+ * Try the network; on success, update the cache. On failure, fall back to cache.
+ * This ensures users always get the latest chunks after a deployment.
+ */
+async function handleHashedAsset(request) {
+  const cache = await caches.open(ASSETS_CACHE_NAME);
+
   try {
-    const cache = await caches.open(STATIC_CACHE_NAME);
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      // Update cache with the fresh response
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // Network unavailable – try cache as fallback
     const cachedResponse = await cache.match(request);
-    
     if (cachedResponse) {
+      console.log('Service Worker: Serving cached build asset (offline)', request.url);
       return cachedResponse;
     }
 
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.error('Service Worker: Static asset fetch failed', error);
+    console.error('Service Worker: Build asset unavailable', request.url);
     return new Response('Asset not available offline', { status: 503 });
   }
 }
 
-// Handle images with cache-first strategy and long-term caching
-async function handleImage(request) {
+/**
+ * CACHE-FIRST for immutable assets (fonts, favicon).
+ * These files almost never change, so cache-first is safe and fast.
+ */
+async function handleImmutableAsset(request) {
   try {
-    const cache = await caches.open(IMAGE_CACHE_NAME);
+    const cache = await caches.open(STATIC_CACHE_NAME);
     const cachedResponse = await cache.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
 
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
-      // Cache images for a long time
-      const responseToCache = networkResponse.clone();
-      cache.put(request, responseToCache);
+      cache.put(request, networkResponse.clone());
     }
-    
+
+    return networkResponse;
+  } catch (error) {
+    console.error('Service Worker: Immutable asset fetch failed', error);
+    return new Response('Asset not available offline', { status: 503 });
+  }
+}
+
+/**
+ * CACHE-FIRST for images with network fallback.
+ */
+async function handleImage(request) {
+  try {
+    const cache = await caches.open(IMAGE_CACHE_NAME);
+    const cachedResponse = await cache.match(request);
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
+    }
+
     return networkResponse;
   } catch (error) {
     console.error('Service Worker: Image fetch failed', error);
-    // Return a placeholder image or empty response
     return new Response('', { status: 503 });
   }
 }
 
-// Handle API requests with network-first strategy and short-term caching
+/**
+ * NETWORK-FIRST for API / Supabase requests with 5-minute cache fallback.
+ */
 async function handleApiRequest(request) {
   try {
     const cache = await caches.open(DYNAMIC_CACHE_NAME);
-    
-    // Try network first for fresh data
+
     try {
       const networkResponse = await fetch(request);
-      
+
       if (networkResponse.ok) {
-        // Cache successful responses for short time
-        const responseToCache = networkResponse.clone();
-        
-        // Set a short TTL for API responses
-        const headers = new Headers(responseToCache.headers);
+        const headers = new Headers(networkResponse.headers);
         headers.set('sw-cached-at', Date.now().toString());
-        
-        const cachedResponse = new Response(responseToCache.body, {
-          status: responseToCache.status,
-          statusText: responseToCache.statusText,
-          headers: headers
+
+        const responseToCache = new Response(networkResponse.clone().body, {
+          status: networkResponse.status,
+          statusText: networkResponse.statusText,
+          headers: headers,
         });
-        
-        cache.put(request, cachedResponse);
+
+        cache.put(request, responseToCache);
       }
-      
+
       return networkResponse;
     } catch (networkError) {
-      // Network failed, try cache
       const cachedResponse = await cache.match(request);
-      
+
       if (cachedResponse) {
-        // Check if cached response is still fresh (5 minutes)
         const cachedAt = cachedResponse.headers.get('sw-cached-at');
         const age = Date.now() - parseInt(cachedAt || '0');
         const maxAge = 5 * 60 * 1000; // 5 minutes
-        
+
         if (age < maxAge) {
           console.log('Service Worker: Serving cached API response');
           return cachedResponse;
         }
       }
-      
+
       throw networkError;
     }
   } catch (error) {
     console.error('Service Worker: API fetch failed', error);
     return new Response(
-      JSON.stringify({ error: 'Service temporarily unavailable' }), 
-      { 
+      JSON.stringify({ error: 'Service temporarily unavailable' }),
+      {
         status: 503,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }
 }
 
-// Handle navigation requests with network-first, fallback to cached index.html
+/**
+ * NETWORK-FIRST for navigation, fallback to cached /index.html for SPA routing.
+ */
 async function handleNavigation(request) {
   try {
-    // Try network first
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
+      // Update cached index.html with the latest version
+      const cache = await caches.open(STATIC_CACHE_NAME);
+      cache.put('/index.html', networkResponse.clone());
       return networkResponse;
     }
-    
-    // Network failed, serve cached index.html for SPA routing
+
+    // Non-ok network response – fall back to cached shell
     const cache = await caches.open(STATIC_CACHE_NAME);
     const cachedResponse = await cache.match('/index.html');
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     throw new Error('No cached fallback available');
   } catch (error) {
+    // Offline – serve cached SPA shell
+    const cache = await caches.open(STATIC_CACHE_NAME);
+    const cachedResponse = await cache.match('/index.html');
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
     console.error('Service Worker: Navigation fetch failed', error);
     return new Response('Page not available offline', { status: 503 });
   }
 }
 
-// Message handling for cache management
+// ─── Message handling ───────────────────────────────────────────────────────
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type) {
     switch (event.data.type) {
@@ -273,35 +335,31 @@ self.addEventListener('message', (event) => {
         break;
       case 'CLEAR_CACHE':
         clearAllCaches().then(() => {
-          event.ports[0].postMessage({ success: true });
+          if (event.ports[0]) event.ports[0].postMessage({ success: true });
         });
         break;
       case 'GET_CACHE_SIZE':
         getCacheSize().then((size) => {
-          event.ports[0].postMessage({ size });
+          if (event.ports[0]) event.ports[0].postMessage({ size });
         });
         break;
     }
   }
 });
 
-// Clear all caches
 async function clearAllCaches() {
   const cacheNames = await caches.keys();
-  return Promise.all(
-    cacheNames.map(cacheName => caches.delete(cacheName))
-  );
+  return Promise.all(cacheNames.map((name) => caches.delete(name)));
 }
 
-// Get total cache size
 async function getCacheSize() {
   const cacheNames = await caches.keys();
   let totalSize = 0;
-  
+
   for (const cacheName of cacheNames) {
     const cache = await caches.open(cacheName);
     const requests = await cache.keys();
-    
+
     for (const request of requests) {
       const response = await cache.match(request);
       if (response) {
@@ -310,14 +368,14 @@ async function getCacheSize() {
       }
     }
   }
-  
+
   return totalSize;
 }
 
-// Push notification handler
+// ─── Push notifications ─────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   console.log('Service Worker: Push received');
-  
+
   let data = {
     title: 'CaravanWert',
     body: 'Neue Benachrichtigung',
@@ -351,7 +409,6 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
   };
 
-  // Add actions based on notification type
   if (data.tag === 'outbid') {
     options.actions = [
       { action: 'bid', title: 'Jetzt bieten' },
@@ -373,41 +430,33 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification click handler
 self.addEventListener('notificationclick', (event) => {
   console.log('Service Worker: Notification clicked', event.action);
   event.notification.close();
 
   const url = event.notification.data?.url || 'https://caravanwert.de';
 
-  if (event.action === 'dismiss') {
-    return;
-  }
+  if (event.action === 'dismiss') return;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Focus existing window if available
         for (const client of clientList) {
           if (client.url.includes('caravanwert.de') && 'focus' in client) {
             client.navigate(url);
             return client.focus();
           }
         }
-        // Open new window
         return clients.openWindow(url);
       })
   );
 });
 
-// Push subscription change handler
 self.addEventListener('pushsubscriptionchange', (event) => {
   console.log('Service Worker: Push subscription changed');
-  // The subscription has changed, we need to re-subscribe
   event.waitUntil(
     self.registration.pushManager.subscribe(event.oldSubscription.options)
       .then((subscription) => {
-        // Send new subscription to server
         return fetch('https://zcrwqxsyptjwkuxfacvq.supabase.co/functions/v1/save-push-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -417,4 +466,4 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   );
 });
 
-console.log('Service Worker: Loaded');
+console.log('Service Worker: Loaded (v2 – Network-First for build assets)');

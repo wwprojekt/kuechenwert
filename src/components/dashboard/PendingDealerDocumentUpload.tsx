@@ -123,7 +123,8 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ||
+// SUPABASE_ANON_KEY no longer needed – we use the user's JWT token instead
+const _UNUSED_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ||
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
 /* ------------------------------------------------------------------ */
@@ -214,13 +215,20 @@ export default function PendingDealerDocumentUpload({
 
       setUploadProgress(30);
 
-      // Call the edge function
+      // Get the user's JWT token for authenticated upload
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error("Nicht angemeldet. Bitte laden Sie die Seite neu.");
+      }
+
+      // Call the edge function with user JWT
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/dealer-document-upload`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: formData,
         }

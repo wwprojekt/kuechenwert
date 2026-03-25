@@ -95,6 +95,29 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // --- JWT Authentication: Verify the caller's identity ---
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Authentifizierung erforderlich' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const jwt = authHeader.replace('Bearer ', '');
+    // Create a client with the user's JWT to verify their identity
+    const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !authUser) {
+      return new Response(JSON.stringify({ error: 'Ungültiges oder abgelaufenes Token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // --- End JWT Authentication ---
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const userId = formData.get('user_id') as string | null;
@@ -123,6 +146,25 @@ Deno.serve(async (req: Request) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // --- Authorization: Ensure the authenticated user matches the user_id ---
+    // Admins (checked via user_roles) may upload on behalf of others
+    if (authUser.id !== userId) {
+      const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: roleData } = await supabaseService
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authUser.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: 'Sie können nur Dokumente für Ihr eigenes Konto hochladen' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // Validate file_type

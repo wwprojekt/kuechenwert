@@ -283,7 +283,8 @@ export default function AdminFinancials() {
     }
     
     const isOverdue = new Date(invoice.due_date) < new Date();
-    const reminderCount = invoice.reminders?.length || 0;
+    const safeRem = Array.isArray(invoice.reminders) ? invoice.reminders : invoice.reminders ? [invoice.reminders] : [];
+    const reminderCount = safeRem.length;
     
     if (isOverdue) {
       if (reminderCount >= 2) {
@@ -845,10 +846,11 @@ export default function AdminFinancials() {
                     const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
                     const remaining = Number(invoice.gross_amount) - Number(invoice.amount_paid || 0);
                     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
-                    const reminderCount = invoice.reminders?.length || 0;
-                    const maxLevel = invoice.reminders?.reduce((max: number, r: any) => Math.max(max, r.reminder_level || 0), 0) || 0;
-                    const lastReminder = invoice.reminders?.sort((a: any, b: any) => new Date(b.reminder_date).getTime() - new Date(a.reminder_date).getTime())?.[0];
-                    const totalFees = invoice.reminders?.reduce((sum: number, r: any) => sum + Number(r.reminder_fee || 0), 0) || 0;
+                    const safeReminders = Array.isArray(invoice.reminders) ? invoice.reminders : invoice.reminders ? [invoice.reminders] : [];
+                    const reminderCount = safeReminders.length;
+                    const maxLevel = safeReminders.reduce((max: number, r: any) => Math.max(max, r.reminder_level || 0), 0);
+                    const lastReminder = [...safeReminders].sort((a: any, b: any) => new Date(b.reminder_date).getTime() - new Date(a.reminder_date).getTime())[0];
+                    const totalFees = safeReminders.reduce((sum: number, r: any) => sum + Number(r.reminder_fee || 0), 0);
                     
                     // Dunning level classification
                     let levelColor = 'bg-yellow-100 border-yellow-300 text-yellow-800';

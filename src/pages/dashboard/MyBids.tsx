@@ -160,8 +160,8 @@ export default function MyBids() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredBids.map((group: any) => {
             const motorhome = group.auction?.motorhome;
-            const firstPhoto = motorhome?.photos
-              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+            const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
+            const firstPhoto = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
             const bidCount = group.bids.length;
             const isActive = group.auction.status === "active";
             const timeLeft = new Date(group.auction.end_time).getTime() - Date.now();

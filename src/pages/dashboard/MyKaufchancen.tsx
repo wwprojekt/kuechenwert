@@ -201,7 +201,8 @@ export default function MyKaufchancen() {
             <div className="grid gap-4">
               {kaufchancen.map((auction) => {
                 const motorhome = auction.motorhome;
-                const firstPhoto = motorhome.photos?.sort((a, b) => a.display_order - b.display_order)[0];
+                const safePhotos = Array.isArray(motorhome.photos) ? motorhome.photos : motorhome.photos ? [motorhome.photos] : [];
+                const firstPhoto = [...safePhotos].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
                   <Card key={auction.id} className="overflow-hidden">
@@ -297,7 +298,8 @@ export default function MyKaufchancen() {
               {myOffers.map((offer) => {
                 const auction = offer.auction;
                 const motorhome = auction?.motorhome;
-                const firstPhoto = motorhome?.photos?.sort((a, b) => a.display_order - b.display_order)[0];
+                const safePhotos2 = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
+                const firstPhoto = [...safePhotos2].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
                   <Card key={offer.id} className="overflow-hidden">

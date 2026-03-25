@@ -199,16 +199,21 @@ export default function AdminAuctionDetail() {
     return statusConfig[status] || { label: status, variant: "outline" };
   };
 
-  const sortedBids = auction?.bids?.sort(
+  // Ensure bids is always an array (Supabase may return a single object for 1:N relations)
+  const rawBids = auction?.bids;
+  const bidsArray = Array.isArray(rawBids) ? rawBids : rawBids ? [rawBids] : [];
+  const sortedBids = [...bidsArray].sort(
     (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ) || [];
+  );
 
   const highestBid = sortedBids[0];
   const bidCount = sortedBids.length;
   const uniqueBidders = new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
 
-  // Get main photo
-  const mainPhoto = auction?.motorhome?.motorhome_photos?.sort(
+  // Get main photo – ensure motorhome_photos is always an array
+  const rawPhotos = auction?.motorhome?.motorhome_photos;
+  const photosArray = Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : [];
+  const mainPhoto = [...photosArray].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
   )[0];
 
@@ -529,17 +534,17 @@ export default function AdminAuctionDetail() {
               )}
 
               {/* Photos Preview */}
-              {auction.motorhome?.motorhome_photos && auction.motorhome.motorhome_photos.length > 0 && (
+              {photosArray.length > 0 && (
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <ImageIcon className="w-4 h-4" />
-                      Fotos ({auction.motorhome.motorhome_photos.length})
+                      Fotos ({photosArray.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-2">
-                      {auction.motorhome.motorhome_photos.slice(0, 6).map((photo: any, index: number) => (
+                      {photosArray.slice(0, 6).map((photo: any, index: number) => (
                         <div key={photo.id} className="aspect-square rounded-md overflow-hidden bg-muted">
                           <img
                             src={photo.url}

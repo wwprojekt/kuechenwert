@@ -23,13 +23,24 @@ const FeatureCheckbox = ({ id, label, checked, onCheckedChange, icon }: FeatureC
     className={`flex items-center space-x-2 rounded-lg p-3 cursor-pointer transition-all border ${
       checked ? "bg-primary/5 border-primary/30" : "bg-muted/20 border-transparent hover:bg-muted/40"
     }`}
-    onClick={() => onCheckedChange(!checked)}
+    onClick={(e) => {
+      e.preventDefault();
+      onCheckedChange(!checked);
+    }}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onCheckedChange(!checked); } }}
   >
-    <Checkbox id={id} checked={checked} onCheckedChange={(c) => onCheckedChange(c as boolean)} />
-    <label htmlFor={id} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+    <Checkbox
+      id={id}
+      checked={checked}
+      onCheckedChange={(c) => onCheckedChange(c as boolean)}
+      onClick={(e) => e.stopPropagation()}
+    />
+    <span className="text-sm font-medium cursor-pointer flex items-center gap-2">
       {icon}
       {label}
-    </label>
+    </span>
   </div>
 );
 

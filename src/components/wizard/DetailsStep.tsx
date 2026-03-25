@@ -1,9 +1,9 @@
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Used for Select labels
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+// RadioGroup nicht mehr benötigt - Cards mit eigenem State
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon } from "lucide-react";
@@ -155,37 +155,64 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
           Fahrzeugzustand
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="flex items-center space-x-2 bg-muted/30 rounded-lg p-3">
+          <div
+            className={`flex items-center space-x-2 rounded-lg p-3 cursor-pointer transition-all border ${
+              formData.accident_free ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-transparent hover:bg-muted/40"
+            }`}
+            onClick={(e) => { e.preventDefault(); updateFormData({ accident_free: !formData.accident_free }); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); updateFormData({ accident_free: !formData.accident_free }); } }}
+          >
             <Checkbox
               id="accident_free"
               checked={formData.accident_free}
               onCheckedChange={(checked) => updateFormData({ accident_free: checked as boolean })}
+              onClick={(e) => e.stopPropagation()}
             />
-            <label htmlFor="accident_free" className="text-sm font-medium cursor-pointer">
+            <span className="text-sm font-medium cursor-pointer">
               Unfallfrei
-            </label>
+            </span>
           </div>
 
-          <div className="flex items-center space-x-2 bg-muted/30 rounded-lg p-3">
+          <div
+            className={`flex items-center space-x-2 rounded-lg p-3 cursor-pointer transition-all border ${
+              formData.non_smoker ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-transparent hover:bg-muted/40"
+            }`}
+            onClick={(e) => { e.preventDefault(); updateFormData({ non_smoker: !formData.non_smoker }); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); updateFormData({ non_smoker: !formData.non_smoker }); } }}
+          >
             <Checkbox
               id="non_smoker"
               checked={formData.non_smoker}
               onCheckedChange={(checked) => updateFormData({ non_smoker: checked as boolean })}
+              onClick={(e) => e.stopPropagation()}
             />
-            <label htmlFor="non_smoker" className="text-sm font-medium cursor-pointer">
+            <span className="text-sm font-medium cursor-pointer">
               Nichtraucher
-            </label>
+            </span>
           </div>
 
-          <div className="flex items-center space-x-2 bg-muted/30 rounded-lg p-3">
+          <div
+            className={`flex items-center space-x-2 rounded-lg p-3 cursor-pointer transition-all border ${
+              formData.service_history_available ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-transparent hover:bg-muted/40"
+            }`}
+            onClick={(e) => { e.preventDefault(); updateFormData({ service_history_available: !formData.service_history_available }); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); updateFormData({ service_history_available: !formData.service_history_available }); } }}
+          >
             <Checkbox
               id="service_history_available"
               checked={formData.service_history_available}
               onCheckedChange={(checked) => updateFormData({ service_history_available: checked as boolean })}
+              onClick={(e) => e.stopPropagation()}
             />
-            <label htmlFor="service_history_available" className="text-sm font-medium cursor-pointer">
+            <span className="text-sm font-medium cursor-pointer">
               Scheckheft
-            </label>
+            </span>
           </div>
         </div>
       </div>
@@ -196,23 +223,26 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
           <AlertTriangle className="w-5 h-5 text-orange-500" />
           Bekannte Mängel
         </h3>
-        <RadioGroup
-          value={formData.no_known_defects ? "no" : formData.known_defects !== undefined ? "yes" : ""}
-          onValueChange={handleDefectsToggle}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Card
             className={`p-3 cursor-pointer transition-all ${
               formData.no_known_defects ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "hover:border-muted-foreground/50"
             }`}
             onClick={() => handleDefectsToggle("no")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleDefectsToggle("no"); } }}
           >
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="no" id="no-defects" />
-              <Label htmlFor="no-defects" className="cursor-pointer flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                formData.no_known_defects ? "border-green-500 bg-green-500" : "border-muted-foreground/30"
+              }`}>
+                {formData.no_known_defects && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+              <span className="cursor-pointer flex items-center gap-2 text-sm font-medium">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
                 Keine Mängel bekannt
-              </Label>
+              </span>
             </div>
           </Card>
 
@@ -223,16 +253,23 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                 : "hover:border-muted-foreground/50"
             }`}
             onClick={() => handleDefectsToggle("yes")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleDefectsToggle("yes"); } }}
           >
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="yes" id="has-defects" />
-              <Label htmlFor="has-defects" className="cursor-pointer flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                !formData.no_known_defects && formData.known_defects !== undefined ? "border-orange-500 bg-orange-500" : "border-muted-foreground/30"
+              }`}>
+                {!formData.no_known_defects && formData.known_defects !== undefined && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+              <span className="cursor-pointer flex items-center gap-2 text-sm font-medium">
                 <AlertTriangle className="w-4 h-4 text-orange-500" />
                 Mängel vorhanden
-              </Label>
+              </span>
             </div>
           </Card>
-        </RadioGroup>
+        </div>
 
         {!formData.no_known_defects && formData.known_defects !== undefined && (
           <Textarea

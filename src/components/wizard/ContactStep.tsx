@@ -109,7 +109,7 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
                   Erhalten Sie sofort ein verbindliches Kaufangebot von geprüften Händlern
                 </p>
               </div>
-              <RadioGroupItem value="instant_price" id="instant_price" className="flex-shrink-0" />
+              <RadioGroupItem value="instant_price" id="instant_price" className="flex-shrink-0" onClick={(e) => e.stopPropagation()} />
             </div>
           </Card>
 
@@ -146,7 +146,7 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
                   Mehrere Händler bieten auf Ihr Fahrzeug – oft der höchste Preis
                 </p>
               </div>
-              <RadioGroupItem value="auction" id="auction" className="flex-shrink-0" />
+              <RadioGroupItem value="auction" id="auction" className="flex-shrink-0" onClick={(e) => e.stopPropagation()} />
             </div>
           </Card>
 
@@ -177,7 +177,7 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
                   Persönliche Bewertung vor Ort – Bargeld am selben Tag
                 </p>
               </div>
-              <RadioGroupItem value="station" id="station" className="flex-shrink-0" />
+              <RadioGroupItem value="station" id="station" className="flex-shrink-0" onClick={(e) => e.stopPropagation()} />
             </div>
           </Card>
         </RadioGroup>
@@ -287,15 +287,22 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
       {/* Optionale Registrierung */}
       {!user && (
         <div className="space-y-3 border-t pt-4">
-          <div className="flex items-center space-x-2">
+          <div
+            className="flex items-center space-x-2 cursor-pointer rounded-lg p-2 hover:bg-muted/30 transition-colors"
+            onClick={(e) => { e.preventDefault(); setWantAccount(!wantAccount); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setWantAccount(!wantAccount); } }}
+          >
             <Checkbox
               id="want-account"
               checked={wantAccount}
               onCheckedChange={(c) => setWantAccount(c as boolean)}
+              onClick={(e) => e.stopPropagation()}
             />
-            <label htmlFor="want-account" className="text-sm cursor-pointer">
+            <span className="text-sm cursor-pointer">
               <strong>Konto erstellen</strong> – Inserat verwalten, Gebote verfolgen, Nachrichten empfangen
-            </label>
+            </span>
           </div>
 
           {wantAccount && (

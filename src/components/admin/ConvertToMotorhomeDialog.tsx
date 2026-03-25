@@ -71,11 +71,16 @@ interface ConvertToMotorhomeDialogProps {
 // ============================================================================
 
 const BODY_TYPES = [
+  // Wohnmobil
   { value: "Teilintegriert", label: "Teilintegriert" },
   { value: "Alkoven", label: "Alkoven" },
   { value: "Vollintegriert", label: "Vollintegriert" },
   { value: "Kastenwagen", label: "Kastenwagen" },
   { value: "Campingbus", label: "Campingbus" },
+  // Wohnwagen
+  { value: "Wohnwagen", label: "Wohnwagen" },
+  { value: "Faltcaravan", label: "Faltcaravan" },
+  { value: "Mobilheim", label: "Mobilheim" },
 ];
 
 const CONDITIONS = [
@@ -155,7 +160,7 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     has_esp: Boolean(formData.has_esp),
     has_swivel_seats: Boolean(formData.has_swivel_seats),
     has_satellite: Boolean(formData.has_satellite_system),
-    has_tv: Boolean(formData.has_satellite_system),
+    has_tv: Boolean(formData.has_tv),
     // Condition details
     accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,
     first_registration: formData.first_registration ? String(formData.first_registration) : null,

@@ -3328,6 +3328,9 @@ export type Database = {
         | "Vollintegriert"
         | "Kastenwagen"
         | "Campingbus"
+        | "Wohnwagen"
+        | "Faltcaravan"
+        | "Mobilheim"
       motorhome_condition:
         | "Neuwertig"
         | "Sehr gut"
@@ -3491,6 +3494,9 @@ export const Constants = {
         "Vollintegriert",
         "Kastenwagen",
         "Campingbus",
+        "Wohnwagen",
+        "Faltcaravan",
+        "Mobilheim",
       ],
       motorhome_condition: [
         "Neuwertig",

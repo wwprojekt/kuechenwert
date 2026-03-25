@@ -77,15 +77,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Also check auth.users via admin API (in case profile doesn't exist yet)
-    const { data: authLookup } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
-
-    // Use getUserByEmail if available, otherwise create new
-    // Note: listUsers doesn't filter by email, so we use createUser which will fail if exists
-    
     // Create user via Supabase Admin API
     // email_confirm: false means the user exists but hasn't confirmed their email yet
     // They will receive a magic link via send-registration-invite to activate their account

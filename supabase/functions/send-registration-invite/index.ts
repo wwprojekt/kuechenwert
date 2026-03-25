@@ -243,13 +243,23 @@ const handler = async (req: Request): Promise<Response> => {
       is_read: true,
     });
 
-    // Update wizard session if sessionId provided
+    // Update wizard session if sessionId provided (APPEND to existing notes, don't overwrite)
     if (body.sessionId) {
+      const { data: existingSession } = await supabase
+        .from("wizard_sessions")
+        .select("admin_notes")
+        .eq("id", body.sessionId)
+        .maybeSingle();
+
+      const timestamp = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const newNote = `[${timestamp}] Registrierungslink gesendet an ${email}`;
+      const updatedNotes = existingSession?.admin_notes
+        ? `${existingSession.admin_notes}\n${newNote}`
+        : newNote;
+
       await supabase
         .from("wizard_sessions")
-        .update({
-          admin_notes: `Registrierungslink gesendet am ${new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`,
-        } as any)
+        .update({ admin_notes: updatedNotes } as any)
         .eq("id", body.sessionId);
     }
 

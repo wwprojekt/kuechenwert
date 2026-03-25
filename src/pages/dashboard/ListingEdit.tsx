@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
+import { handleAndLogError } from "@/lib/errorLogService";
 import { useState, useEffect } from "react";
 
 export default function ListingEdit() {
@@ -342,18 +343,41 @@ export default function ListingEdit() {
     mutationFn: async (files: FileList) => {
       if (!id || !user) throw new Error("Nicht authentifiziert");
 
+      // Validate session is active before attempting upload
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.");
+      }
+
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+
+      // Validate files before uploading
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > MAX_FILE_SIZE) {
+          throw new Error(`Die Datei "${file.name}" ist zu groß (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximal 10 MB erlaubt.`);
+        }
+        if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
+          throw new Error(`Die Datei "${file.name}" hat ein nicht unterstütztes Format (${file.type}). Erlaubt: JPEG, PNG, WebP, HEIC.`);
+        }
+      }
+
       const photoUrls: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileExt = file.name.split(".").pop();
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || 'jpg';
         const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("motorhome-photos")
           .upload(fileName, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
         const {
           data: { publicUrl },
@@ -393,10 +417,31 @@ export default function ListingEdit() {
         description: "Die Fotos wurden erfolgreich hinzugefügt",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      // Log the error for debugging
+      handleAndLogError(error, 'ListingEdit.uploadPhotos', {
+        motorhomeId: id,
+        userId: user?.id,
+      });
+
+      // Show user-friendly error message
+      const message = error.message?.includes('Sitzung') 
+        ? error.message
+        : error.message?.includes('zu groß')
+        ? error.message
+        : error.message?.includes('Format')
+        ? error.message
+        : error.message?.includes('Payload too large')
+        ? 'Die Datei ist zu groß. Maximal 10 MB pro Foto erlaubt.'
+        : error.message?.includes('mime')
+        ? 'Das Dateiformat wird nicht unterstützt. Erlaubt: JPEG, PNG, WebP, HEIC.'
+        : error.message?.includes('security') || error.message?.includes('policy')
+        ? 'Keine Berechtigung zum Hochladen. Bitte melden Sie sich erneut an.'
+        : 'Fotos konnten nicht hochgeladen werden. Bitte versuchen Sie es erneut.';
+
       toast({
-        title: "Fehler",
-        description: "Fotos konnten nicht hochgeladen werden",
+        title: "Fehler beim Foto-Upload",
+        description: message,
         variant: "destructive",
       });
     },

@@ -2,7 +2,14 @@
  * Error Log Service
  * 
  * Loggt jeden Fehler, der einem Nutzer angezeigt wird, in die Supabase error_logs Tabelle.
- * Wird vom zentralen Toast-Wrapper und ErrorBoundary aufgerufen.
+ * Wird vom zentralen Toast-Wrapper, ErrorBoundary und globalem Error-Handler aufgerufen.
+ * 
+ * Erweitert um:
+ * - Breadcrumbs (letzte Navigationen/Aktionen des Users)
+ * - Session-Tracking (Session-ID für zusammenhängende Fehler)
+ * - Error-Fingerprinting (Hash für Gruppierung gleicher Fehler)
+ * - Device/Network-Kontext (Bildschirmauflösung, Verbindungstyp, Speicher)
+ * - HTTP-Status und Request-Info bei API-Fehlern
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +31,174 @@ export interface ErrorLogEntry {
   originalError?: string;
   stackTrace?: string;
   metadata?: Record<string, unknown>;
+  httpStatus?: number;
+  requestInfo?: Record<string, unknown>;
+  errorSource?: 'caught' | 'uncaught' | 'unhandled-rejection' | 'error-boundary' | 'global';
+}
+
+// ============================================================================
+// Session & Breadcrumb Tracking
+// ============================================================================
+
+const SESSION_ID = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const APP_VERSION = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_VERSION) || 'unknown';
+const MAX_BREADCRUMBS = 20;
+
+interface Breadcrumb {
+  type: 'navigation' | 'click' | 'input' | 'api' | 'error' | 'custom';
+  message: string;
+  timestamp: number;
+  data?: Record<string, unknown>;
+}
+
+const breadcrumbs: Breadcrumb[] = [];
+
+/**
+ * Fügt einen Breadcrumb hinzu (letzte Aktionen des Users vor dem Fehler)
+ */
+export function addBreadcrumb(crumb: Omit<Breadcrumb, 'timestamp'>): void {
+  breadcrumbs.push({
+    ...crumb,
+    timestamp: Date.now(),
+  });
+  // Nur die letzten MAX_BREADCRUMBS behalten
+  if (breadcrumbs.length > MAX_BREADCRUMBS) {
+    breadcrumbs.shift();
+  }
+}
+
+/**
+ * Gibt die aktuellen Breadcrumbs zurück
+ */
+function getBreadcrumbs(): Breadcrumb[] {
+  return [...breadcrumbs];
+}
+
+// ============================================================================
+// Automatische Breadcrumb-Erfassung
+// ============================================================================
+
+let _breadcrumbsInitialized = false;
+
+export function initBreadcrumbTracking(): void {
+  if (_breadcrumbsInitialized || typeof window === 'undefined') return;
+  _breadcrumbsInitialized = true;
+
+  // Navigation tracking
+  let lastUrl = window.location.href;
+  const checkNavigation = () => {
+    if (window.location.href !== lastUrl) {
+      addBreadcrumb({
+        type: 'navigation',
+        message: `Navigiert zu ${window.location.pathname}`,
+        data: { from: lastUrl, to: window.location.href },
+      });
+      lastUrl = window.location.href;
+    }
+  };
+
+  // Überwache URL-Änderungen
+  const origPushState = history.pushState;
+  history.pushState = function (...args) {
+    origPushState.apply(this, args);
+    checkNavigation();
+  };
+  const origReplaceState = history.replaceState;
+  history.replaceState = function (...args) {
+    origReplaceState.apply(this, args);
+    checkNavigation();
+  };
+  window.addEventListener('popstate', checkNavigation);
+
+  // Click tracking (nur auf Buttons, Links, und interaktive Elemente)
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const interactiveEl = target.closest('button, a, [role="button"], [data-track]');
+    if (interactiveEl) {
+      const text = (interactiveEl as HTMLElement).textContent?.trim().slice(0, 50) || '';
+      const tag = interactiveEl.tagName.toLowerCase();
+      const id = interactiveEl.id ? `#${interactiveEl.id}` : '';
+      const className = interactiveEl.className && typeof interactiveEl.className === 'string'
+        ? `.${interactiveEl.className.split(' ')[0]}` : '';
+      addBreadcrumb({
+        type: 'click',
+        message: `Klick auf ${tag}${id || className}: "${text}"`,
+      });
+    }
+  }, { passive: true, capture: true });
+
+  // API-Call tracking (fetch interceptor)
+  const origFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : (input as Request).url;
+    // Nur Supabase-Calls tracken, nicht alle Fetches
+    if (url.includes('supabase') || url.includes('/rest/') || url.includes('/functions/')) {
+      const method = init?.method || 'GET';
+      addBreadcrumb({
+        type: 'api',
+        message: `${method} ${new URL(url, window.location.origin).pathname}`,
+        data: { method, url: url.slice(0, 200) },
+      });
+    }
+    return origFetch.apply(this, [input, init]);
+  };
+}
+
+// ============================================================================
+// Error Fingerprinting
+// ============================================================================
+
+/**
+ * Erzeugt einen Hash-Fingerprint für einen Fehler.
+ * Gleiche Fehler (gleicher Code + gleiche Seite + gleiche Komponente) bekommen den gleichen Hash.
+ */
+function generateErrorHash(entry: ErrorLogEntry): string {
+  const parts = [
+    entry.errorCode,
+    entry.pagePath,
+    entry.componentName || '',
+    // Ersten 100 Zeichen der Original-Fehlermeldung (ohne dynamische Teile)
+    (entry.originalError || entry.errorMessage || '')
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID') // UUIDs ersetzen
+      .replace(/\d{10,}/g, 'TIMESTAMP') // Timestamps ersetzen
+      .replace(/\d+\.\d+\.\d+\.\d+/g, 'IP') // IPs ersetzen
+      .slice(0, 100),
+  ].join('|');
+
+  // Simple hash function (djb2)
+  let hash = 5381;
+  for (let i = 0; i < parts.length; i++) {
+    hash = ((hash << 5) + hash) + parts.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return `err_${Math.abs(hash).toString(36)}`;
+}
+
+// ============================================================================
+// Device & Network Context
+// ============================================================================
+
+function getScreenResolution(): string {
+  if (typeof window === 'undefined') return 'unknown';
+  return `${window.screen.width}x${window.screen.height}@${window.devicePixelRatio || 1}x`;
+}
+
+function getConnectionType(): string {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  if (!conn) return 'unknown';
+  return conn.effectiveType || conn.type || 'unknown';
+}
+
+function getMemoryUsage(): Record<string, unknown> | null {
+  if (typeof performance === 'undefined') return null;
+  const mem = (performance as any).memory;
+  if (!mem) return null;
+  return {
+    usedJSHeapSize: Math.round(mem.usedJSHeapSize / 1024 / 1024),
+    totalJSHeapSize: Math.round(mem.totalJSHeapSize / 1024 / 1024),
+    jsHeapSizeLimit: Math.round(mem.jsHeapSizeLimit / 1024 / 1024),
+  };
 }
 
 // ============================================================================
@@ -51,12 +226,33 @@ function getBrowser(): string {
 // Haupt-Logging-Funktion
 // ============================================================================
 
+// Throttle: Maximal 10 Fehler pro Minute loggen um Spam zu vermeiden
+let _errorCount = 0;
+let _errorCountResetTime = Date.now();
+const MAX_ERRORS_PER_MINUTE = 10;
+
+function isThrottled(): boolean {
+  const now = Date.now();
+  if (now - _errorCountResetTime > 60000) {
+    _errorCount = 0;
+    _errorCountResetTime = now;
+  }
+  _errorCount++;
+  return _errorCount > MAX_ERRORS_PER_MINUTE;
+}
+
 /**
  * Loggt einen Fehler in die Supabase error_logs Tabelle.
  * Wird asynchron ausgeführt und blockiert nicht die UI.
  */
 export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
   try {
+    // Throttle check
+    if (isThrottled()) {
+      logger.warn('Error logging throttled - too many errors per minute');
+      return;
+    }
+
     // Aktuellen Nutzer und Rolle ermitteln
     const { data: { user } } = await supabase.auth.getUser();
     let userRole = 'anonymous';
@@ -78,46 +274,38 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       }
     }
 
-    const logEntry = {
-      error_code: entry.errorCode,
-      error_message: entry.errorMessage,
-      error_category: entry.errorCategory,
-      severity: entry.severity,
-      page_url: window.location.href,
-      page_path: entry.pagePath || window.location.pathname,
-      page_title: entry.pageTitle || getPageTitle(window.location.pathname),
-      component_name: entry.componentName || null,
-      user_id: user?.id || null,
-      user_role: userRole,
-      user_email: userEmail || null,
-      stack_trace: entry.stackTrace || null,
-      original_error: entry.originalError || null,
-      metadata: entry.metadata || {},
-      user_agent: navigator.userAgent,
-      browser: getBrowser(),
-      device_type: getDeviceType(),
-    };
+    const errorHash = generateErrorHash(entry);
 
-    // Verwende RPC-Funktion (SECURITY DEFINER) statt direktem INSERT,
-    // da RLS INSERT Policies für anon/authenticated nicht greifen (PG17 Kompatibilität)
     const { error } = await supabase.rpc('log_error', {
-      p_error_code: logEntry.error_code,
-      p_error_message: logEntry.error_message,
-      p_error_category: logEntry.error_category,
-      p_severity: logEntry.severity,
-      p_page_url: logEntry.page_url,
-      p_page_path: logEntry.page_path,
-      p_page_title: logEntry.page_title,
-      p_component_name: logEntry.component_name,
-      p_user_id: logEntry.user_id,
-      p_user_role: logEntry.user_role,
-      p_user_email: logEntry.user_email,
-      p_stack_trace: logEntry.stack_trace,
-      p_original_error: logEntry.original_error,
-      p_metadata: logEntry.metadata,
-      p_user_agent: logEntry.user_agent,
-      p_browser: logEntry.browser,
-      p_device_type: logEntry.device_type,
+      p_error_code: entry.errorCode,
+      p_error_message: entry.errorMessage,
+      p_error_category: entry.errorCategory,
+      p_severity: entry.severity,
+      p_page_url: window.location.href,
+      p_page_path: entry.pagePath || window.location.pathname,
+      p_page_title: entry.pageTitle || getPageTitle(window.location.pathname),
+      p_component_name: entry.componentName || null,
+      p_user_id: user?.id || null,
+      p_user_role: userRole,
+      p_user_email: userEmail || null,
+      p_stack_trace: entry.stackTrace || null,
+      p_original_error: entry.originalError || null,
+      p_metadata: entry.metadata || {},
+      p_user_agent: navigator.userAgent,
+      p_browser: getBrowser(),
+      p_device_type: getDeviceType(),
+      // New fields
+      p_error_hash: errorHash,
+      p_session_id: SESSION_ID,
+      p_app_version: APP_VERSION,
+      p_http_status: entry.httpStatus || null,
+      p_request_info: entry.requestInfo || {},
+      p_breadcrumbs: getBreadcrumbs(),
+      p_environment: import.meta.env.PROD ? 'production' : 'development',
+      p_error_source: entry.errorSource || 'caught',
+      p_screen_resolution: getScreenResolution(),
+      p_connection_type: getConnectionType(),
+      p_memory_usage: getMemoryUsage(),
     });
 
     if (error) {
@@ -145,6 +333,9 @@ export function handleAndLogError(
     category?: ErrorCategory;
     severity?: ErrorSeverity;
     metadata?: Record<string, unknown>;
+    httpStatus?: number;
+    requestInfo?: Record<string, unknown>;
+    errorSource?: ErrorLogEntry['errorSource'];
   }
 ): string {
   const originalMessage = error instanceof Error 
@@ -171,6 +362,9 @@ export function handleAndLogError(
     originalError: originalMessage,
     stackTrace: error instanceof Error ? error.stack : undefined,
     metadata: options?.metadata,
+    httpStatus: options?.httpStatus,
+    requestInfo: options?.requestInfo,
+    errorSource: options?.errorSource || 'caught',
   });
 
   return translated.message;
@@ -199,7 +393,11 @@ export function handleValidationError(
         pageTitle: getPageTitle(window.location.pathname),
         componentName,
         originalError: firstError.message,
-        metadata: { field: firstError.path?.join('.') },
+        metadata: { 
+          field: firstError.path?.join('.'),
+          allErrors: zodError.errors.map(e => ({ message: e.message, path: e.path?.join('.') })),
+        },
+        errorSource: 'caught',
       });
 
       return translated.message;
@@ -214,9 +412,10 @@ export function handleValidationError(
  */
 export function handleAuthError(
   error: unknown,
-  componentName?: string
+  componentName?: string,
+  metadata?: Record<string, unknown>
 ): string {
-  return handleAndLogError(error, { componentName, category: 'auth', severity: 'medium' });
+  return handleAndLogError(error, { componentName, category: 'auth', severity: 'medium', metadata });
 }
 
 /**
@@ -227,7 +426,21 @@ export function handleApiError(
   componentName?: string,
   metadata?: Record<string, unknown>
 ): string {
-  return handleAndLogError(error, { componentName, category: 'api', severity: 'medium', metadata });
+  // Versuche HTTP-Status aus dem Fehler zu extrahieren
+  let httpStatus: number | undefined;
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    if (typeof err.status === 'number') httpStatus = err.status;
+    else if (typeof err.statusCode === 'number') httpStatus = err.statusCode;
+  }
+  
+  return handleAndLogError(error, { 
+    componentName, 
+    category: 'api', 
+    severity: 'medium', 
+    metadata,
+    httpStatus,
+  });
 }
 
 /**
@@ -238,4 +451,116 @@ export function handleBusinessError(
   componentName?: string
 ): string {
   return handleAndLogError(error, { componentName, category: 'business', severity: 'low' });
+}
+
+// ============================================================================
+// Global Error Handler Integration
+// ============================================================================
+
+let _globalHandlersInstalled = false;
+
+/**
+ * Installiert globale Fehler-Handler die ALLE ungefangenen Fehler an Supabase senden.
+ * Sollte einmal beim App-Start aufgerufen werden.
+ */
+export function installGlobalErrorHandlers(): void {
+  if (_globalHandlersInstalled || typeof window === 'undefined') return;
+  _globalHandlersInstalled = true;
+
+  // Fange ungefangene JavaScript-Fehler
+  window.addEventListener('error', (event) => {
+    // Ignoriere Fehler von externen Scripts (CORS)
+    if (!event.filename || event.filename === '') return;
+    // Ignoriere ResizeObserver-Fehler (harmlos)
+    if (event.message?.includes('ResizeObserver')) return;
+
+    const translated = translateError(event.message || 'Uncaught error');
+    logErrorToSupabase({
+      errorCode: 'GLOBAL_UNCAUGHT_ERROR',
+      errorMessage: translated.message,
+      errorCategory: 'system',
+      severity: 'high',
+      pagePath: window.location.pathname,
+      pageTitle: getPageTitle(window.location.pathname),
+      originalError: event.message,
+      stackTrace: event.error?.stack || `at ${event.filename}:${event.lineno}:${event.colno}`,
+      metadata: {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        errorName: event.error?.name,
+      },
+      errorSource: 'uncaught',
+    });
+  });
+
+  // Fange ungefangene Promise-Rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = reason instanceof Error 
+      ? reason.message 
+      : typeof reason === 'string' 
+        ? reason 
+        : 'Unhandled Promise Rejection';
+
+    // Ignoriere bestimmte harmlose Rejections
+    if (message.includes('AbortError') || message.includes('The user aborted')) return;
+
+    const translated = translateError(message);
+    logErrorToSupabase({
+      errorCode: 'GLOBAL_UNHANDLED_REJECTION',
+      errorMessage: translated.message,
+      errorCategory: 'system',
+      severity: 'high',
+      pagePath: window.location.pathname,
+      pageTitle: getPageTitle(window.location.pathname),
+      originalError: message,
+      stackTrace: reason instanceof Error ? reason.stack : undefined,
+      metadata: {
+        reasonType: typeof reason,
+        reasonName: reason instanceof Error ? reason.name : undefined,
+      },
+      errorSource: 'unhandled-rejection',
+    });
+  });
+
+  // Console.error interceptor - fängt Fehler die nur in die Console geloggt werden
+  const origConsoleError = console.error;
+  console.error = function (...args: unknown[]) {
+    origConsoleError.apply(console, args);
+
+    // Nur loggen wenn es ein echter Fehler ist (nicht unsere eigenen Logs)
+    const firstArg = args[0];
+    if (typeof firstArg === 'string' && (
+      firstArg.includes('Error-Log-Service') ||
+      firstArg.includes('Fehler beim Speichern') ||
+      firstArg.startsWith('[ERROR]')
+    )) {
+      return; // Eigene Logs nicht erneut loggen
+    }
+
+    // Nur Error-Objekte und bestimmte Strings loggen
+    const errorArg = args.find(a => a instanceof Error) as Error | undefined;
+    if (errorArg) {
+      const translated = translateError(errorArg.message);
+      logErrorToSupabase({
+        errorCode: 'CONSOLE_ERROR',
+        errorMessage: translated.message,
+        errorCategory: translated.category,
+        severity: 'medium',
+        pagePath: window.location.pathname,
+        pageTitle: getPageTitle(window.location.pathname),
+        originalError: errorArg.message,
+        stackTrace: errorArg.stack,
+        metadata: {
+          consoleArgs: args.map(a => {
+            if (a instanceof Error) return { name: a.name, message: a.message };
+            if (typeof a === 'string') return a.slice(0, 200);
+            try { return JSON.parse(JSON.stringify(a)); } catch { return String(a).slice(0, 200); }
+          }),
+        },
+        errorSource: 'global',
+      });
+    }
+  };
 }

@@ -135,3 +135,7 @@ verify_jwt = false
 # --- SEO ---
 [functions.sitemap]
 verify_jwt = false
+
+# --- Purchase Inquiry ---
+[functions.send-purchase-inquiry-notification]
+verify_jwt = false

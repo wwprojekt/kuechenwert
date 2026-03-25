@@ -127,6 +127,74 @@ export default function AdminDealerDetail() {
         .eq("dealer_application_id", data.id)
         .order("uploaded_at", { ascending: false });
 
+      // 3b. Fallback: If no legal_documents exist, create virtual entries from
+      // dealer_applications document URLs (gewerbenachweis_url, trade_license_document_url)
+      let effectiveLegalDocs = legalDocs || [];
+      if (effectiveLegalDocs.length === 0) {
+        const fallbackDocs: any[] = [];
+        if (data.gewerbenachweis_url) {
+          fallbackDocs.push({
+            id: `fallback-gewerbenachweis-${data.id}`,
+            document_type: "gewerbenachweis",
+            document_name: "Gewerbenachweis",
+            file_url: data.gewerbenachweis_url,
+            document_url: data.gewerbenachweis_url,
+            original_filename: data.gewerbenachweis_url.split("/").pop() || "Gewerbenachweis",
+            file_size: null,
+            mime_type: null,
+            uploaded_at: data.created_at,
+            verified: false,
+            verified_at: null,
+            verified_by: null,
+            notes: "Aus H\u00e4ndler-Registrierung importiert",
+          });
+        }
+        if (data.trade_license_document_url) {
+          // Detect if this is an ID document (ausweis) based on filename
+          const filename = (data.trade_license_document_url.split("/").pop() || "").toLowerCase();
+          const isAusweis = filename.includes("ausweis");
+          const docType = isAusweis
+            ? (filename.includes("back") ? "ausweis_back" : filename.includes("front") ? "ausweis_front" : "ausweis_back")
+            : "trade_license";
+          const docName = isAusweis
+            ? (docType === "ausweis_back" ? "Ausweis \u2013 R\u00fcckseite" : "Ausweis \u2013 Vorderseite")
+            : "Gewerbeschein";
+          fallbackDocs.push({
+            id: `fallback-trade-license-${data.id}`,
+            document_type: docType,
+            document_name: docName,
+            file_url: data.trade_license_document_url,
+            document_url: data.trade_license_document_url,
+            original_filename: data.trade_license_document_url.split("/").pop() || "Dokument",
+            file_size: null,
+            mime_type: null,
+            uploaded_at: data.created_at,
+            verified: false,
+            verified_at: null,
+            verified_by: null,
+            notes: "Aus H\u00e4ndler-Registrierung importiert",
+          });
+        }
+        if (data.hrb_document_url) {
+          fallbackDocs.push({
+            id: `fallback-hrb-${data.id}`,
+            document_type: "hrb_register",
+            document_name: "Handelsregisterauszug",
+            file_url: data.hrb_document_url,
+            document_url: data.hrb_document_url,
+            original_filename: data.hrb_document_url.split("/").pop() || "HRB-Dokument",
+            file_size: null,
+            mime_type: null,
+            uploaded_at: data.created_at,
+            verified: false,
+            verified_at: null,
+            verified_by: null,
+            notes: "Aus H\u00e4ndler-Registrierung importiert",
+          });
+        }
+        effectiveLegalDocs = fallbackDocs;
+      }
+
       // 4. Fetch SEPA mandates
       const { data: sepaMandates } = await supabase
         .from("sepa_mandates")
@@ -185,7 +253,7 @@ export default function AdminDealerDetail() {
       return {
         ...data,
         profile,
-        legal_documents: legalDocs || [],
+        legal_documents: effectiveLegalDocs,
         sepa_mandates: sepaMandates || [],
         bids,
         wonAuctions,
@@ -728,44 +796,48 @@ export default function AdminDealerDetail() {
                                     </a>
                                   </Button>
 
-                                  {/* Add/edit note */}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    title="Hinweis hinzuf\u00fcgen"
-                                    onClick={() => {
-                                      setDocNoteDialogId(doc.id);
-                                      setDocNote(doc.notes || "");
-                                    }}
-                                  >
-                                    <MessageSquare className="w-4 h-4" />
-                                  </Button>
+                                  {/* Add/edit note – only for real DB documents */}
+                                  {!String(doc.id).startsWith("fallback-") && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      title="Hinweis hinzuf\u00fcgen"
+                                      onClick={() => {
+                                        setDocNoteDialogId(doc.id);
+                                        setDocNote(doc.notes || "");
+                                      }}
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                    </Button>
+                                  )}
 
-                                  {/* Verify / Unverify */}
-                                  <Button
-                                    variant={doc.verified ? "outline" : "default"}
-                                    size="sm"
-                                    className={`h-8 ${
-                                      doc.verified
-                                        ? ""
-                                        : "bg-green-600 hover:bg-green-700 text-white"
-                                    }`}
-                                    disabled={verifyDocMutation.isPending}
-                                    onClick={() =>
-                                      verifyDocMutation.mutate({
-                                        docId: doc.id,
-                                        verified: !doc.verified,
-                                      })
-                                    }
-                                    title={doc.verified ? "Verifizierung aufheben" : "Als verifiziert markieren"}
-                                  >
-                                    {doc.verified ? (
-                                      <><XCircle className="w-4 h-4 mr-1" /> Aufheben</>
-                                    ) : (
-                                      <><CheckCircle2 className="w-4 h-4 mr-1" /> Verifizieren</>
-                                    )}
-                                  </Button>
+                                  {/* Verify / Unverify – only for real DB documents */}
+                                  {!String(doc.id).startsWith("fallback-") && (
+                                    <Button
+                                      variant={doc.verified ? "outline" : "default"}
+                                      size="sm"
+                                      className={`h-8 ${
+                                        doc.verified
+                                          ? ""
+                                          : "bg-green-600 hover:bg-green-700 text-white"
+                                      }`}
+                                      disabled={verifyDocMutation.isPending}
+                                      onClick={() =>
+                                        verifyDocMutation.mutate({
+                                          docId: doc.id,
+                                          verified: !doc.verified,
+                                        })
+                                      }
+                                      title={doc.verified ? "Verifizierung aufheben" : "Als verifiziert markieren"}
+                                    >
+                                      {doc.verified ? (
+                                        <><XCircle className="w-4 h-4 mr-1" /> Aufheben</>
+                                      ) : (
+                                        <><CheckCircle2 className="w-4 h-4 mr-1" /> Verifizieren</>
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>

@@ -31,6 +31,7 @@ const VerkaufenWizard = () => {
   const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
+  const registerPasswordRef = useRef<string | undefined>(undefined);
 
   // Prefill form data from URL parameters
   useEffect(() => {
@@ -130,7 +131,7 @@ const VerkaufenWizard = () => {
       phone: formData.customerPhone,
     });
 
-    const success = await submitForm();
+    const success = await submitForm(registerPasswordRef.current);
     if (success) {
       await markCompleted();
       markLeadWizardCompleted();
@@ -150,7 +151,7 @@ const VerkaufenWizard = () => {
       case 4:
         return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 5:
-        return <ContactStep formData={formData} updateFormData={updateFormData} />;
+        return <ContactStep formData={formData} updateFormData={updateFormData} onPasswordChange={(pw) => { registerPasswordRef.current = pw; }} />;
       default:
         return null;
     }

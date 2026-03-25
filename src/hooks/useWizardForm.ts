@@ -352,9 +352,61 @@ export const useWizardForm = () => {
         user = signUpData.user;
       }
 
-      // If still no user (no registration), create a guest submission
-      // We store the lead data in wizard_sessions (form_data is already saved by useWizardSession)
-      // and send email notifications to admin + customer
+      // If still no user, auto-create an account so the motorhome can be saved
+      // This ensures every completed wizard creates a proper motorhome entry
+      if (!user && formData.customerEmail) {
+        const nameParts = (formData.customerName || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        // Generate a secure random password for the auto-created account
+        const autoPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
+
+        const { data: autoSignUpData, error: autoSignUpError } = await supabase.auth.signUp({
+          email: formData.customerEmail,
+          password: autoPassword,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: formData.customerPhone || undefined,
+              role: "private",
+              auto_created: true,
+            },
+          },
+        });
+
+        if (autoSignUpError) {
+          // If auto-signup fails (e.g. email already exists), still save as lead
+          logger.warn("Auto-signup failed, saving as lead only:", autoSignUpError.message);
+          
+          // Send email notification to admin + confirmation to customer (from remote HEAD)
+          try {
+            await supabase.functions.invoke("send-lead-notification", {
+              body: {
+                type: "wizard",
+                name: formData.customerName || "Unbekannt",
+                email: formData.customerEmail || "",
+                phone: formData.customerPhone || undefined,
+                manufacturer: formData.manufacturer || undefined,
+                model: formData.model || undefined,
+              },
+            });
+          } catch (emailError) {
+            logger.error("Failed to send wizard lead notification:", emailError);
+          }
+
+          clearDraft();
+          toast({
+            title: "Anfrage erfolgreich gesendet!",
+            description: "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen. Sie erhalten in Kürze eine Bestätigung per E-Mail.",
+          });
+          navigate("/verkaufen/danke");
+          return true;
+        }
+        user = autoSignUpData.user;
+      }
+
+      // Final fallback: if still no user (no email provided), save as lead only
       if (!user) {
         // Send email notification to admin + confirmation to customer
         try {
@@ -369,10 +421,8 @@ export const useWizardForm = () => {
             },
           });
         } catch (emailError) {
-          // Don't fail the submission if email fails
           logger.error("Failed to send wizard lead notification:", emailError);
         }
-
         clearDraft();
         toast({
           title: "Anfrage erfolgreich gesendet!",

@@ -14,9 +14,10 @@ import type { User } from "@supabase/supabase-js";
 interface ContactStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  onPasswordChange?: (password: string | undefined) => void;
 }
 
-export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
+export const ContactStep = ({ formData, updateFormData, onPasswordChange }: ContactStepProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [wantAccount, setWantAccount] = useState(false);
   const [password, setPassword] = useState("");
@@ -40,6 +41,17 @@ export const ContactStep = ({ formData, updateFormData }: ContactStepProps) => {
     };
     checkUser();
   }, []);
+
+  // Passwort an Parent-Komponente weiterleiten wenn sich etwas ändert
+  useEffect(() => {
+    if (onPasswordChange) {
+      if (wantAccount && password && password === confirmPassword && password.length >= 6) {
+        onPasswordChange(password);
+      } else {
+        onPasswordChange(undefined);
+      }
+    }
+  }, [wantAccount, password, confirmPassword, onPasswordChange]);
 
   // Dynamischer FOMO-Counter
   const [dealerCount] = useState(() => Math.floor(Math.random() * 30) + 110);

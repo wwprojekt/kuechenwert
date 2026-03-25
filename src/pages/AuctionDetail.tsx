@@ -67,7 +67,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize,
-  User,
   AlertTriangle,
   MapPin,
   Navigation,
@@ -1278,12 +1277,7 @@ const AuctionDetail = () => {
                   <p className="text-muted-foreground mb-2">
                     {motorhome.body_type} • {motorhome.year}
                   </p>
-                  {motorhome.seller && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>Verkäufer: {motorhome.seller.company_name || `${motorhome.seller.first_name} ${motorhome.seller.last_name}`}</span>
-                    </div>
-                  )}
+
                   {/* Anonymized Location & Distance */}
                   {motorhome.postal_code && (() => {
                     const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);

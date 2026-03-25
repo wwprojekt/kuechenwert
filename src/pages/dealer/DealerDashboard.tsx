@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAudioNotification } from "@/hooks/useAudioNotification";
 import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
+import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -313,10 +314,19 @@ const DealerDashboard = () => {
     <div className={`space-y-6 ${isLocked ? 'relative' : ''}`}>
       {/* Pending Dealer Banner */}
       {hasDealerApplication && application && (
-        <PendingDealerBanner
-          application={application}
-          onRefresh={() => refetchApp()}
-        />
+        <>
+          <PendingDealerBanner
+            application={application}
+            onRefresh={() => refetchApp()}
+          />
+
+          {/* Document Upload for pending/rejected dealers */}
+          {(isPendingDealer || isRejectedDealer) && (
+            <PendingDealerDocumentUpload
+              dealerApplicationId={application.id}
+            />
+          )}
+        </>
       )}
 
       {/* Compact Header with Stats */}

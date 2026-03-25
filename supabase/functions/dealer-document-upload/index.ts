@@ -1,14 +1,23 @@
 /**
  * Edge Function: dealer-document-upload
  * 
- * Handles document uploads for dealer registration.
- * Uses service_role to bypass RLS, since the user has no active session
- * after signUp (email confirmation required).
+ * Handles document uploads for dealer registration and post-registration
+ * document submissions (e.g. when admin requests additional documents).
+ * 
+ * Uses service_role to bypass RLS, since the user may have no active session
+ * after signUp (email confirmation required), or may be a pending dealer
+ * uploading documents from the locked dashboard.
  * 
  * Expects multipart/form-data with:
  * - file: The document file (PDF, JPG, PNG, max 10MB)
- * - user_id: The UUID of the newly registered user
- * - file_type: Optional type identifier (e.g., "trade_license", "gewerbenachweis", "hrb")
+ * - user_id: The UUID of the user
+ * - file_type: Type identifier:
+ *     "trade_license"    – Gewerbeschein
+ *     "gewerbenachweis"  – Gewerbenachweis
+ *     "hrb"              – Handelsregisterauszug
+ *     "ausweis_front"    – Ausweis Vorderseite
+ *     "ausweis_back"     – Ausweis Rückseite
+ * - dealer_application_id: (optional) UUID of the dealer application for legal_documents tracking
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
@@ -55,6 +64,22 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+/** All supported file types and their human-readable German labels */
+const FILE_TYPE_LABELS: Record<string, string> = {
+  'trade_license': 'Gewerbeschein',
+  'gewerbenachweis': 'Gewerbenachweis',
+  'hrb': 'Handelsregisterauszug',
+  'ausweis_front': 'Ausweis Vorderseite',
+  'ausweis_back': 'Ausweis Rückseite',
+};
+
+/** Map file_type to the corresponding URL column in dealer_applications (legacy) */
+const COLUMN_MAP: Record<string, string> = {
+  'trade_license': 'trade_license_document_url',
+  'gewerbenachweis': 'gewerbenachweis_url',
+  'hrb': 'hrb_document_url',
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -74,6 +99,7 @@ Deno.serve(async (req: Request) => {
     const file = formData.get('file') as File | null;
     const userId = formData.get('user_id') as string | null;
     const fileType = (formData.get('file_type') as string) || 'trade_license';
+    const dealerApplicationId = formData.get('dealer_application_id') as string | null;
 
     // Validate inputs
     if (!file) {
@@ -99,7 +125,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Validate file type
+    // Validate file_type
+    if (!FILE_TYPE_LABELS[fileType]) {
+      return new Response(JSON.stringify({ 
+        error: `Ungültiger Dokumenttyp. Erlaubt: ${Object.keys(FILE_TYPE_LABELS).join(', ')}` 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate file type (MIME)
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return new Response(JSON.stringify({ error: 'Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG' }), {
         status: 400,
@@ -160,37 +196,70 @@ Deno.serve(async (req: Request) => {
       .from('dealer-documents')
       .getPublicUrl(fileName);
 
-    // Determine which column to update based on file_type
-    const columnMap: Record<string, string> = {
-      'trade_license': 'trade_license_document_url',
-      'gewerbenachweis': 'gewerbenachweis_url',
-      'hrb': 'hrb_document_url',
-    };
-    const column = columnMap[fileType] || 'trade_license_document_url';
+    // --- Legacy: Update dealer_applications URL column (for trade_license, gewerbenachweis, hrb) ---
+    const column = COLUMN_MAP[fileType];
+    if (column) {
+      const { error: updateError } = await supabase
+        .from('dealer_applications')
+        .update({ [column]: publicUrl })
+        .eq('user_id', userId);
 
-    // Update dealer_application with document URL
-    const { error: updateError } = await supabase
-      .from('dealer_applications')
-      .update({ [column]: publicUrl })
-      .eq('user_id', userId);
+      if (updateError) {
+        console.error('DB update error (dealer_applications):', updateError);
+      }
+    }
 
-    if (updateError) {
-      console.error('DB update error:', updateError);
-      // File is uploaded but DB update failed - still return success with warning
-      return new Response(JSON.stringify({ 
-        success: true, 
-        url: publicUrl,
-        warning: 'Datei hochgeladen, aber Verknüpfung mit Antrag fehlgeschlagen'
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // --- New: Create entry in legal_documents for tracking & admin verification ---
+    // Resolve the dealer_application_id if not provided
+    let resolvedAppId = dealerApplicationId;
+    if (!resolvedAppId) {
+      const { data: appData } = await supabase
+        .from('dealer_applications')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      resolvedAppId = appData?.id || null;
+    }
+
+    if (resolvedAppId) {
+      // Delete any existing document of the same type (replace, not duplicate)
+      await supabase
+        .from('legal_documents')
+        .delete()
+        .eq('dealer_application_id', resolvedAppId)
+        .eq('document_type', fileType);
+
+      // Insert new legal_documents entry
+      const { error: legalDocError } = await supabase
+        .from('legal_documents')
+        .insert({
+          dealer_application_id: resolvedAppId,
+          document_type: fileType,
+          document_name: FILE_TYPE_LABELS[fileType],
+          document_url: publicUrl,
+          file_url: publicUrl,
+          original_filename: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_at: new Date().toISOString(),
+          verified: false,
+        });
+
+      if (legalDocError) {
+        console.error('legal_documents insert error:', legalDocError);
+        // Non-critical: file is uploaded, just tracking failed
+      }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       url: publicUrl,
-      column: column,
+      file_type: fileType,
+      document_name: FILE_TYPE_LABELS[fileType],
+      legal_document_tracked: !!resolvedAppId,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

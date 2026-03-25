@@ -21,6 +21,7 @@ import {
   Calendar,
   FileText,
   CheckCircle2,
+  CheckCircle,
   XCircle,
   Clock,
   Edit,
@@ -33,6 +34,10 @@ import {
   CreditCard,
   Users,
   Award,
+  Shield,
+  Upload as UploadIcon,
+  Eye,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +89,9 @@ export default function AdminDealerDetail() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [verifyingDocId, setVerifyingDocId] = useState<string | null>(null);
+  const [docNoteDialogId, setDocNoteDialogId] = useState<string | null>(null);
+  const [docNote, setDocNote] = useState("");
 
   // Fetch dealer application with all related data
   // NOTE: Cannot use Supabase JOIN syntax profile:user_id(...) because
@@ -112,11 +120,12 @@ export default function AdminDealerDetail() {
         profile = profileData;
       }
 
-      // 3. Fetch legal documents
+      // 3. Fetch legal documents (extended with verification fields)
       const { data: legalDocs } = await supabase
         .from("legal_documents")
-        .select("id, document_type, file_url, uploaded_at")
-        .eq("dealer_application_id", data.id);
+        .select("id, document_type, document_name, file_url, document_url, original_filename, file_size, mime_type, uploaded_at, verified, verified_at, verified_by, notes")
+        .eq("dealer_application_id", data.id)
+        .order("uploaded_at", { ascending: false });
 
       // 4. Fetch SEPA mandates
       const { data: sepaMandates } = await supabase
@@ -263,6 +272,75 @@ export default function AdminDealerDetail() {
       toast.error("Fehler beim Aktualisieren des Händlerstatus");
     },
   });
+
+  // Verify document mutation
+  const verifyDocMutation = useMutation({
+    mutationFn: async ({ docId, verified }: { docId: string; verified: boolean }) => {
+      const { error } = await supabase
+        .from("legal_documents")
+        .update({
+          verified,
+          verified_at: verified ? new Date().toISOString() : null,
+          verified_by: verified ? (await supabase.auth.getUser()).data.user?.id : null,
+        })
+        .eq("id", docId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { verified }) => {
+      toast.success(verified ? "Dokument verifiziert" : "Verifizierung aufgehoben");
+      setVerifyingDocId(null);
+      queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
+    },
+    onError: (error) => {
+      logger.error("Verify document error:", error);
+      toast.error("Fehler beim Aktualisieren des Dokuments");
+    },
+  });
+
+  // Add note to document mutation
+  const addDocNoteMutation = useMutation({
+    mutationFn: async ({ docId, notes }: { docId: string; notes: string }) => {
+      const { error } = await supabase
+        .from("legal_documents")
+        .update({ notes })
+        .eq("id", docId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Hinweis gespeichert");
+      setDocNoteDialogId(null);
+      setDocNote("");
+      queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
+    },
+    onError: (error) => {
+      logger.error("Add doc note error:", error);
+      toast.error("Fehler beim Speichern des Hinweises");
+    },
+  });
+
+  /** Human-readable label for document types */
+  const getDocTypeLabel = (docType: string): string => {
+    const labels: Record<string, string> = {
+      gewerbenachweis: "Gewerbenachweis",
+      ausweis_front: "Ausweis – Vorderseite",
+      ausweis_back: "Ausweis – Rückseite",
+      trade_license: "Gewerbeschein",
+      hrb_register: "Handelsregisterauszug",
+      hrb: "Handelsregisterauszug",
+      ust_id_certificate: "USt-ID Bescheinigung",
+      other: "Sonstiges Dokument",
+    };
+    return labels[docType] || docType.replace(/_/g, " ");
+  };
+
+  /** Check if a document was uploaded after the initial application */
+  const isPostRegistrationUpload = (docUploadedAt: string | null, appCreatedAt: string | null): boolean => {
+    if (!docUploadedAt || !appCreatedAt) return false;
+    const docDate = new Date(docUploadedAt).getTime();
+    const appDate = new Date(appCreatedAt).getTime();
+    // If uploaded more than 10 minutes after application creation, it's a post-registration upload
+    return docDate - appDate > 10 * 60 * 1000;
+  };
 
   if (error) {
     return (
@@ -530,33 +608,169 @@ export default function AdminDealerDetail() {
                 </TabsContent>
 
                 <TabsContent value="documents">
-                  <DetailSection title="Dokumente" icon={<FileText className="w-5 h-5" />}>
+                  <DetailSection title="Verifizierungsdokumente" icon={<Shield className="w-5 h-5" />}>
+                    {/* Required documents checklist */}
+                    {dealer.status === "pending" && (
+                      <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                          <AlertTriangle className="w-4 h-4" />
+                          Erforderliche Dokumente f\u00fcr Freischaltung
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {["gewerbenachweis", "ausweis_front", "ausweis_back"].map((reqType) => {
+                            const hasDoc = dealer.legal_documents?.some((d: any) => d.document_type === reqType);
+                            const isVerified = dealer.legal_documents?.some((d: any) => d.document_type === reqType && d.verified);
+                            return (
+                              <div key={reqType} className={`flex items-center gap-2 p-2 rounded-md text-sm ${
+                                isVerified
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                                  : hasDoc
+                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
+                                  : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                              }`}>
+                                {isVerified ? (
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                ) : hasDoc ? (
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-red-600" />
+                                )}
+                                <span className="font-medium">{getDocTypeLabel(reqType)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Document list */}
                     {dealer.legal_documents && dealer.legal_documents.length > 0 ? (
                       <div className="space-y-3">
-                        {dealer.legal_documents.map((doc: any) => (
-                          <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium capitalize">{doc.document_type.replace("_", " ")}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Hochgeladen: {formatDate(doc.uploaded_at)}
-                                </p>
+                        {dealer.legal_documents.map((doc: any) => {
+                          const isPostReg = isPostRegistrationUpload(doc.uploaded_at, dealer.created_at);
+                          return (
+                            <div
+                              key={doc.id}
+                              className={`p-4 rounded-lg border transition-colors ${
+                                doc.verified
+                                  ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20"
+                                  : "border-border"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    doc.verified
+                                      ? "bg-green-100 dark:bg-green-900/50"
+                                      : "bg-muted"
+                                  }`}>
+                                    {doc.verified ? (
+                                      <CheckCircle className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <FileText className="w-5 h-5 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="font-semibold text-sm">
+                                        {getDocTypeLabel(doc.document_type)}
+                                      </p>
+                                      {doc.verified && (
+                                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px]">
+                                          <CheckCircle className="w-2.5 h-2.5 mr-1" />
+                                          Verifiziert
+                                        </Badge>
+                                      )}
+                                      {isPostReg && (
+                                        <Badge variant="outline" className="text-[10px] border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300">
+                                          <UploadIcon className="w-2.5 h-2.5 mr-1" />
+                                          Nachtr\u00e4glich hochgeladen
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                      {doc.original_filename && (
+                                        <p className="truncate">Datei: {doc.original_filename}</p>
+                                      )}
+                                      <p>Hochgeladen: {formatDate(doc.uploaded_at)}</p>
+                                      {doc.file_size && (
+                                        <p>Gr\u00f6\u00dfe: {(doc.file_size / 1024).toFixed(0)} KB</p>
+                                      )}
+                                      {doc.verified_at && (
+                                        <p className="text-green-600 dark:text-green-400">
+                                          Gepr\u00fcft am: {formatDate(doc.verified_at)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {doc.notes && (
+                                      <div className="mt-2 p-2 rounded bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                        <MessageSquare className="w-3 h-3 inline mr-1" />
+                                        <strong>Hinweis:</strong> {doc.notes}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {/* View document */}
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                                    <a href={doc.file_url || doc.document_url} target="_blank" rel="noopener noreferrer" title="Dokument \u00f6ffnen">
+                                      <Eye className="w-4 h-4" />
+                                    </a>
+                                  </Button>
+
+                                  {/* Add/edit note */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    title="Hinweis hinzuf\u00fcgen"
+                                    onClick={() => {
+                                      setDocNoteDialogId(doc.id);
+                                      setDocNote(doc.notes || "");
+                                    }}
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                  </Button>
+
+                                  {/* Verify / Unverify */}
+                                  <Button
+                                    variant={doc.verified ? "outline" : "default"}
+                                    size="sm"
+                                    className={`h-8 ${
+                                      doc.verified
+                                        ? ""
+                                        : "bg-green-600 hover:bg-green-700 text-white"
+                                    }`}
+                                    disabled={verifyDocMutation.isPending}
+                                    onClick={() =>
+                                      verifyDocMutation.mutate({
+                                        docId: doc.id,
+                                        verified: !doc.verified,
+                                      })
+                                    }
+                                    title={doc.verified ? "Verifizierung aufheben" : "Als verifiziert markieren"}
+                                  >
+                                    {doc.verified ? (
+                                      <><XCircle className="w-4 h-4 mr-1" /> Aufheben</>
+                                    ) : (
+                                      <><CheckCircle2 className="w-4 h-4 mr-1" /> Verifizieren</>
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Öffnen
-                              </a>
-                            </Button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>Keine Dokumente hochgeladen</p>
+                        {dealer.status === "pending" && (
+                          <p className="text-sm mt-2 text-amber-600">Der H\u00e4ndler hat noch keine Dokumente eingereicht.</p>
+                        )}
                       </div>
                     )}
 
@@ -746,6 +960,39 @@ export default function AdminDealerDetail() {
           onOpenChange={setShowEditDialog}
         />
       )}
+
+      {/* Document Note Dialog */}
+      <Dialog open={!!docNoteDialogId} onOpenChange={(open) => { if (!open) { setDocNoteDialogId(null); setDocNote(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hinweis zum Dokument</DialogTitle>
+            <DialogDescription>
+              Fügen Sie einen Hinweis hinzu, der dem Händler in seinem Dashboard angezeigt wird (z.B. "Bitte in besserer Qualität erneut hochladen").
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Hinweis eingeben..."
+            value={docNote}
+            onChange={(e) => setDocNote(e.target.value)}
+            rows={3}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDocNoteDialogId(null); setDocNote(""); }}>
+              Abbrechen
+            </Button>
+            <Button
+              onClick={() => {
+                if (docNoteDialogId) {
+                  addDocNoteMutation.mutate({ docId: docNoteDialogId, notes: docNote });
+                }
+              }}
+              disabled={addDocNoteMutation.isPending}
+            >
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>

@@ -2,9 +2,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Car, Calendar, Gauge, Users, TrendingUp } from "lucide-react";
-import { popularManufacturers, manufacturerModels, bodyTypes } from "@/lib/vehicle-data";
-import { useMemo } from "react";
+import { Car, Calendar, Gauge, Users, TrendingUp, Caravan } from "lucide-react";
+import {
+  popularManufacturers, manufacturerModels, bodyTypes,
+  wohnwagenManufacturers, wohnwagenManufacturerModels, wohnwagenBodyTypes,
+  vehicleTypes,
+} from "@/lib/vehicle-data";
+import { useMemo, useState } from "react";
 
 interface VehicleStepProps {
   formData: WizardFormData;
@@ -12,11 +16,31 @@ interface VehicleStepProps {
 }
 
 export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
+  // Fahrzeugtyp-State (default: Wohnmobil für Abwärtskompatibilität)
+  const [vehicleType, setVehicleType] = useState<string>(
+    (formData as Record<string, unknown>).vehicleType as string || "Wohnmobil"
+  );
+
+  // Dynamische Hersteller basierend auf Fahrzeugtyp
+  const currentManufacturers = useMemo(() => {
+    return vehicleType === "Wohnwagen" ? wohnwagenManufacturers : popularManufacturers;
+  }, [vehicleType]);
+
+  // Dynamische Modelle basierend auf Fahrzeugtyp und Hersteller
+  const currentModelsMap = useMemo(() => {
+    return vehicleType === "Wohnwagen" ? wohnwagenManufacturerModels : manufacturerModels;
+  }, [vehicleType]);
+
+  // Dynamische Aufbauarten basierend auf Fahrzeugtyp
+  const currentBodyTypes = useMemo(() => {
+    return vehicleType === "Wohnwagen" ? wohnwagenBodyTypes : bodyTypes;
+  }, [vehicleType]);
+
   // Kaskadierende Modelle basierend auf dem ausgewählten Hersteller
   const availableModels = useMemo(() => {
     if (!formData.manufacturer) return [];
-    return manufacturerModels[formData.manufacturer] || [];
-  }, [formData.manufacturer]);
+    return currentModelsMap[formData.manufacturer] || [];
+  }, [formData.manufacturer, currentModelsMap]);
 
   // Baujahr-Optionen (aktuelles Jahr+1 bis 1980)
   const yearOptions = useMemo(() => {
@@ -27,6 +51,16 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
     }
     return years;
   }, []);
+
+  const handleVehicleTypeChange = (value: string) => {
+    setVehicleType(value);
+    // Reset manufacturer, model, bodyType when vehicle type changes
+    updateFormData({
+      manufacturer: "",
+      model: "",
+      bodyType: "",
+    });
+  };
 
   const handleManufacturerChange = (value: string) => {
     // Wenn Hersteller wechselt, Modell zurücksetzen
@@ -52,11 +86,39 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
           <TrendingUp className="w-4 h-4" />
         </div>
         <p className="text-sm text-foreground">
-          <strong>127 Händler</strong> suchen aktuell nach Wohnmobilen in Ihrer Region
+          <strong>127 Händler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"} in Ihrer Region
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        {/* Fahrzeugtyp - Wohnmobil / Wohnwagen */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="vehicleType" className="flex items-center gap-1">
+            Fahrzeugtyp <span className="text-red-500">*</span>
+          </Label>
+          <div className="grid grid-cols-2 gap-3">
+            {vehicleTypes.map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => handleVehicleTypeChange(type.value)}
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                  vehicleType === type.value
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                {type.value === "Wohnmobil" ? (
+                  <Car className="w-5 h-5" />
+                ) : (
+                  <Caravan className="w-5 h-5" />
+                )}
+                {type.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Hersteller - Dropdown */}
         <div className="space-y-2">
           <Label htmlFor="manufacturer" className="flex items-center gap-1">
@@ -70,7 +132,7 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
               <SelectValue placeholder="Hersteller wählen" />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              {popularManufacturers.map((manufacturer) => (
+              {currentManufacturers.map((manufacturer) => (
                 <SelectItem key={manufacturer} value={manufacturer}>
                   {manufacturer}
                 </SelectItem>
@@ -140,7 +202,7 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
               <SelectValue placeholder="Aufbauart wählen" />
             </SelectTrigger>
             <SelectContent>
-              {bodyTypes.map((type) => (
+              {currentBodyTypes.map((type) => (
                 <SelectItem key={type} value={type}>
                   {type}
                 </SelectItem>

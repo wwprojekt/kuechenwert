@@ -162,8 +162,6 @@ const handler = async (req: Request): Promise<Response> => {
 
       ${vehicleDetails ? infoBox("Ihre Fahrzeugdaten", vehicleDetails, "info", settingsData) : ""}
 
-      ${lead.admin_notes ? infoBox("Hinweis unseres Experten", `<p style="margin: 0; font-size: 14px; line-height: 1.6; color: #374151; font-style: italic;">${lead.admin_notes.replace(/\n/g, "<br>")}</p>`, "default", settingsData) : ""}
-
       ${divider()}
 
       ${paragraph(`<strong>M&ouml;chten Sie Ihr ${vehicleTypeLabel} jetzt verkaufen?</strong> Geben Sie Ihr Fahrzeug f&uuml;r unsere H&auml;ndler-Auktion frei und erzielen Sie den besten Preis &ndash; schnell, sicher und ohne Aufwand.`)}

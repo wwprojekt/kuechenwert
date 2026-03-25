@@ -185,11 +185,18 @@ export default function AdminMotorhomeDetail() {
     return channelConfig[channel] || { label: channel, variant: "outline" };
   };
 
-  const sortedPhotos = motorhome?.motorhome_photos?.sort(
-    (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
-  ) || [];
+  const sortedPhotos = Array.isArray(motorhome?.motorhome_photos)
+    ? [...motorhome.motorhome_photos].sort(
+        (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
+      )
+    : [];
 
-  const activeAuction = motorhome?.auctions?.find((a: any) => a.status === "active");
+  const auctionsArray = Array.isArray(motorhome?.auctions)
+    ? motorhome.auctions
+    : motorhome?.auctions
+    ? [motorhome.auctions]
+    : [];
+  const activeAuction = auctionsArray.find((a: any) => a.status === "active");
 
   return (
     <AdminDetailLayout
@@ -490,7 +497,7 @@ export default function AdminMotorhomeDetail() {
               </Tabs>
 
               {/* Damage Photos */}
-              {motorhome.damage_photos && motorhome.damage_photos.length > 0 && (
+              {Array.isArray(motorhome.damage_photos) && motorhome.damage_photos.length > 0 && (
                 <DetailSection title="Schäden dokumentiert" icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {motorhome.damage_photos.map((damage: any) => (
@@ -593,7 +600,7 @@ export default function AdminMotorhomeDetail() {
               )}
 
               {/* Appointment Info */}
-              {motorhome.appointments && motorhome.appointments.length > 0 && (
+              {Array.isArray(motorhome.appointments) && motorhome.appointments.length > 0 && (
                 <DetailSection title="Termine" icon={<Calendar className="w-5 h-5" />}>
                   <div className="space-y-3">
                     {motorhome.appointments.slice(0, 3).map((appointment: any) => (

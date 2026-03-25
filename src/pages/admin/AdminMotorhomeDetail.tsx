@@ -192,12 +192,18 @@ export default function AdminMotorhomeDetail() {
     : [];
 
   // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
+  // Supabase may return: object (single match), array (multiple), string (error), or null
   const auctionData = motorhome?.auctions;
-  const activeAuction = auctionData && !Array.isArray(auctionData)
-    ? (auctionData.status === "active" ? auctionData : null)
-    : Array.isArray(auctionData)
-      ? auctionData.find((a: any) => a.status === "active")
-      : null;
+  const activeAuction = (() => {
+    if (!auctionData || typeof auctionData === 'string') return null;
+    if (Array.isArray(auctionData)) {
+      return auctionData.find((a: any) => a?.status === 'active') || null;
+    }
+    if (typeof auctionData === 'object' && auctionData.status === 'active') {
+      return auctionData;
+    }
+    return null;
+  })();
 
   return (
     <AdminDetailLayout

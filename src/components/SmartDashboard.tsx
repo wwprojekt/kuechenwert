@@ -12,6 +12,7 @@
  */
 
 import React, { useEffect, Suspense } from 'react';
+import { lazyRetry } from '@/lib/lazyRetry';
 import { useNavigate, Link, Routes, Route } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDealerPending } from '@/hooks/useDealerPending';
@@ -30,21 +31,22 @@ import DashboardOverview from '@/pages/dashboard/DashboardOverview';
 
 /**
  * Module-level lazy imports for code splitting
- * IMPORTANT: React.lazy() must be called at module level, NOT inside render functions
+ * Uses lazyRetry() to auto-reload on stale chunk errors after deployments.
+ * IMPORTANT: Must be called at module level, NOT inside render functions.
  */
-const DealerAuctions = React.lazy(() => import('@/pages/dealer/DealerAuctions'));
-const DealerInventory = React.lazy(() => import('@/pages/dealer/DealerInventory'));
-const ListingEdit = React.lazy(() => import('@/pages/dashboard/ListingEdit'));
-const ListingDetail = React.lazy(() => import('@/pages/dashboard/ListingDetail'));
-const MyListings = React.lazy(() => import('@/pages/dashboard/MyListings'));
-const MyBids = React.lazy(() => import('@/pages/dashboard/MyBids'));
-const MyAppointments = React.lazy(() => import('@/pages/dashboard/MyAppointments'));
-const MyFavorites = React.lazy(() => import('@/pages/dashboard/MyFavorites'));
-const MyKaufchancen = React.lazy(() => import('@/pages/dashboard/MyKaufchancen'));
-const MyMessages = React.lazy(() => import('@/pages/dashboard/MyMessages'));
-const MyInvoices = React.lazy(() => import('@/pages/dashboard/MyInvoices'));
-const UserProfile = React.lazy(() => import('@/pages/dashboard/UserProfile'));
-const DealerSettings = React.lazy(() => import('@/pages/dealer/DealerSettings'));
+const DealerAuctions = lazyRetry(() => import('@/pages/dealer/DealerAuctions'));
+const DealerInventory = lazyRetry(() => import('@/pages/dealer/DealerInventory'));
+const ListingEdit = lazyRetry(() => import('@/pages/dashboard/ListingEdit'));
+const ListingDetail = lazyRetry(() => import('@/pages/dashboard/ListingDetail'));
+const MyListings = lazyRetry(() => import('@/pages/dashboard/MyListings'));
+const MyBids = lazyRetry(() => import('@/pages/dashboard/MyBids'));
+const MyAppointments = lazyRetry(() => import('@/pages/dashboard/MyAppointments'));
+const MyFavorites = lazyRetry(() => import('@/pages/dashboard/MyFavorites'));
+const MyKaufchancen = lazyRetry(() => import('@/pages/dashboard/MyKaufchancen'));
+const MyMessages = lazyRetry(() => import('@/pages/dashboard/MyMessages'));
+const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
+const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
+const DealerSettings = lazyRetry(() => import('@/pages/dealer/DealerSettings'));
 
 /**
  * Wrap a lazy component in Suspense with a consistent loading fallback

@@ -323,7 +323,22 @@ export default function AdminContracts() {
     }));
   }, [filteredContracts]);
 
-  const { exportCSV, exportExcel } = useExport();
+  const { exportCSV, exportExcel } = useExport({
+    filename: "kaufvertraege",
+    columns: [
+      { key: "Vertragsnummer", label: "Vertragsnummer" },
+      { key: "Status", label: "Status" },
+      { key: "Verkäufer", label: "Verkäufer" },
+      { key: "Käufer", label: "Käufer" },
+      { key: "Kundennummer", label: "Kundennummer" },
+      { key: "Fahrzeug", label: "Fahrzeug" },
+      { key: "Kaufpreis", label: "Kaufpreis" },
+      { key: "Erstellt", label: "Erstellt" },
+      { key: "Storniert", label: "Storniert" },
+      { key: "Stornierungsgrund", label: "Stornierungsgrund" },
+      { key: "Notizen", label: "Notizen" },
+    ],
+  });
 
   // ---- Detail Dialog ----
 
@@ -373,8 +388,8 @@ export default function AdminContracts() {
             Aktualisieren
           </Button>
           <ExportButton
-            onExportCSV={() => exportCSV(exportData, "kaufvertraege")}
-            onExportExcel={() => exportExcel(exportData, "kaufvertraege")}
+            onExportCSV={() => exportCSV(exportData)}
+            onExportExcel={() => exportExcel(exportData)}
           />
         </div>
       </div>

@@ -58,7 +58,7 @@ interface UserEditDialogProps {
 const AVAILABLE_ROLES = [
   { value: "admin", label: "Admin", description: "Vollzugriff auf alle Funktionen" },
   { value: "dealer", label: "Händler", description: "Kann auf Auktionen bieten" },
-  { value: "private", label: "Verkäufer", description: "Kann Wohnmobile einstellen" },
+  { value: "seller", label: "Verkäufer", description: "Kann Wohnmobile einstellen" },
 ];
 
 export function UserEditDialog({
@@ -97,10 +97,10 @@ export function UserEditDialog({
 
   // Detect if this is a seller→dealer upgrade
   const isSellerToDealerUpgrade =
-    originalRoles.includes("private") &&
+    originalRoles.includes("seller") &&
     !originalRoles.includes("dealer") &&
     userRoles.includes("dealer") &&
-    !userRoles.includes("private");
+    !userRoles.includes("seller");
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {

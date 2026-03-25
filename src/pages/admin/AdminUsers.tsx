@@ -298,7 +298,7 @@ export default function AdminUsers() {
               <SelectItem value="all">Alle Rollen</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="dealer">Händler</SelectItem>
-              <SelectItem value="private">Verkäufer</SelectItem>
+              <SelectItem value="seller">Verkäufer</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>

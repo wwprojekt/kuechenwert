@@ -1,0 +1,11 @@
+Aktueller handle_new_user() Trigger in der Datenbank (Projekt: zcrwqxsyptjwkuxfacvq):
+
+- Alle neuen User bekommen die Rolle 'seller' (NICHT 'dealer')
+- Wenn user_type = 'dealer', wird eine dealer_application mit status 'pending' erstellt
+- Der Trigger erstellt auch die Firma-Daten direkt aus den Metadaten
+
+FAZIT: Bug 1 existiert NICHT in der Datenbank! 
+Die Migration-Datei im Repo (20260322200000_one_role_per_user.sql) ist VERALTET.
+Der tatsächliche Trigger wurde bereits korrekt aktualisiert (vermutlich über eine spätere Migration oder manuell).
+
+Die Projekt-ID ist: zcrwqxsyptjwkuxfacvq (NICHT xjmqwkkfhxhunbwdefwi wie im Code)

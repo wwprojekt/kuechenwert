@@ -4,8 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Car, Calendar, Gauge, Users, TrendingUp, Caravan } from "lucide-react";
 import {
-  popularManufacturers, manufacturerModels, bodyTypes,
-  wohnwagenManufacturers, wohnwagenManufacturerModels, wohnwagenBodyTypes,
+  popularManufacturers, bodyTypes,
+  wohnwagenManufacturers, wohnwagenBodyTypes,
   vehicleTypes,
 } from "@/lib/vehicle-data";
 import { useMemo, useState } from "react";
@@ -26,21 +26,10 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
     return vehicleType === "Wohnwagen" ? wohnwagenManufacturers : popularManufacturers;
   }, [vehicleType]);
 
-  // Dynamische Modelle basierend auf Fahrzeugtyp und Hersteller
-  const currentModelsMap = useMemo(() => {
-    return vehicleType === "Wohnwagen" ? wohnwagenManufacturerModels : manufacturerModels;
-  }, [vehicleType]);
-
   // Dynamische Aufbauarten basierend auf Fahrzeugtyp
   const currentBodyTypes = useMemo(() => {
     return vehicleType === "Wohnwagen" ? wohnwagenBodyTypes : bodyTypes;
   }, [vehicleType]);
-
-  // Kaskadierende Modelle basierend auf dem ausgewählten Hersteller
-  const availableModels = useMemo(() => {
-    if (!formData.manufacturer) return [];
-    return currentModelsMap[formData.manufacturer] || [];
-  }, [formData.manufacturer, currentModelsMap]);
 
   // Baujahr-Optionen (aktuelles Jahr+1 bis 1980)
   const yearOptions = useMemo(() => {
@@ -141,52 +130,21 @@ export const VehicleStep = ({ formData, updateFormData }: VehicleStepProps) => {
           </Select>
         </div>
 
-        {/* Modell - Kaskadierendes Dropdown */}
+        {/* Modell - Freitexteingabe */}
         <div className="space-y-2">
           <Label htmlFor="model" className="flex items-center gap-1">
             Modell / Baureihe <span className="text-red-500">*</span>
           </Label>
-          {availableModels.length > 0 ? (
-            <Select
-              value={formData.model}
-              onValueChange={(value) => updateFormData({ model: value })}
-            >
-              <SelectTrigger id="model" className="transition-smooth">
-                <SelectValue placeholder="Modell wählen" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {availableModels.map((model) => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-                <SelectItem value="__other">Anderes Modell</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              id="model"
-              type="text"
-              placeholder={formData.manufacturer ? "Modell eingeben" : "Bitte zuerst Hersteller wählen"}
-              value={formData.model}
-              onChange={(e) => updateFormData({ model: e.target.value })}
-              className="transition-smooth"
-              disabled={!formData.manufacturer}
-              autoComplete="off"
-            />
-          )}
-          {/* Freitext-Fallback wenn "Anderes Modell" gewählt */}
-          {formData.model === "__other" && (
-            <Input
-              type="text"
-              placeholder="Modellbezeichnung eingeben"
-              value=""
-              onChange={(e) => updateFormData({ model: e.target.value })}
-              className="transition-smooth mt-2"
-              autoComplete="off"
-              autoFocus
-            />
-          )}
+          <Input
+            id="model"
+            type="text"
+            placeholder={formData.manufacturer ? "z.B. B-Klasse, California, Coral..." : "Bitte zuerst Hersteller wählen"}
+            value={formData.model}
+            onChange={(e) => updateFormData({ model: e.target.value })}
+            className="transition-smooth"
+            disabled={!formData.manufacturer}
+            autoComplete="off"
+          />
         </div>
 
         {/* Aufbauart - Dropdown */}

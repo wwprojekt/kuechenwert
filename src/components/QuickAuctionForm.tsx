@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { captureOrUpdateLead } from '@/lib/leadTrackingService';
 import { trackLandingPageLead } from '@/lib/gadsConversionService';
-import { manufacturerModels, popularManufacturers } from '@/lib/vehicle-data';
+import { popularManufacturers } from '@/lib/vehicle-data';
 
 type SaleChannel = 'auction' | 'instant' | 'station' | '';
 
@@ -72,9 +72,6 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
   useEffect(() => {
     setModel('');
   }, [manufacturer]);
-
-  // Get available models for selected manufacturer
-  const availableModels = manufacturer ? manufacturerModels[manufacturer] || [] : [];
 
   // Capture lead in database via central tracking service
   const captureLead = async () => {
@@ -314,22 +311,15 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
                 <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                   Modell*
                 </label>
-                <Select 
-                  value={model} 
-                  onValueChange={setModel}
+                <GrayInput
+                  type="text"
+                  placeholder={manufacturer ? "z.B. B-Klasse, California..." : "Erst Hersteller wählen"}
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
                   disabled={!manufacturer}
-                >
-                  <GraySelectTrigger className={!manufacturer ? "opacity-50 cursor-not-allowed" : ""}>
-                    <SelectValue placeholder={manufacturer ? "Modell wählen" : "Erst Hersteller wählen"} />
-                  </GraySelectTrigger>
-                  <SelectContent>
-                    {availableModels.map((modelName) => (
-                      <SelectItem key={modelName} value={modelName}>
-                        {modelName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className={!manufacturer ? "opacity-50 cursor-not-allowed" : ""}
+                  autoComplete="off"
+                />
               </div>
               
               <div className="space-y-1.5 col-span-2">

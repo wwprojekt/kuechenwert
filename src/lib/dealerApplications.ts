@@ -112,16 +112,12 @@ export async function approveDealerApplication(applicationId: string): Promise<v
       throw new Error('Application not found');
     }
 
-    // Get profile data separately
-    const { data: profile, error: profileError } = await supabase
+    // Get profile data separately - don't fail if profile doesn't exist
+    const { data: profile } = await supabase
       .from('profiles')
       .select('first_name, last_name, email')
       .eq('id', application.user_id)
       .single();
-
-    if (profileError) {
-      throw new Error(`Profile fetch error: ${profileError.message}`);
-    }
 
     // Use the database function for proper role assignment
     const { error: approvalError } = await supabase
@@ -131,16 +127,22 @@ export async function approveDealerApplication(applicationId: string): Promise<v
 
     if (approvalError) throw approvalError;
 
-  // Send approval email
-  if (profile?.email) {
-    await supabase.functions.invoke('send-dealer-notification', {
-      body: {
-        email: profile.email,
-        name: `${profile.first_name} ${profile.last_name}`,
-        type: 'approved',
-        companyName: application.company_name,
-      },
-    });
+  // Send approval email - don't fail the whole operation if email fails
+  try {
+    if (profile?.email) {
+      await supabase.functions.invoke('send-dealer-notification', {
+        body: {
+          email: profile.email,
+          name: profile.first_name && profile.last_name 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : application.contact_person_name || application.company_name,
+          type: 'approved',
+          companyName: application.company_name,
+        },
+      });
+    }
+  } catch (emailError) {
+    console.warn('Failed to send approval email, but application was approved:', emailError);
   }
 }
 
@@ -148,54 +150,74 @@ export async function approveDealerApplication(applicationId: string): Promise<v
  * Reject dealer application
  */
 export async function rejectDealerApplication(applicationId: string, reason: string): Promise<void> {
+  // Get current user for reviewed_by
+  const { data: { user } } = await supabase.auth.getUser();
+
   // Get application details first
-    const { data: application, error: fetchError } = await supabase
-      .from('dealer_applications')
-      .select('*')
-      .eq('id', applicationId)
-      .single();
+  const { data: application, error: fetchError } = await supabase
+    .from('dealer_applications')
+    .select('*')
+    .eq('id', applicationId)
+    .single();
 
-    if (fetchError) {
-      throw new Error(`Application fetch error: ${fetchError.message}`);
+  if (fetchError) {
+    throw new Error(`Application fetch error: ${fetchError.message}`);
+  }
+
+  if (!application) {
+    throw new Error('Application not found');
+  }
+
+  // Update application status FIRST - this is the critical operation
+  const { error: updateError } = await supabase
+    .from('dealer_applications')
+    .update({
+      status: 'rejected',
+      rejection_reason: reason,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user?.id || null,
+    })
+    .eq('id', applicationId);
+
+  if (updateError) throw updateError;
+
+  // Get profile data for email - don't fail if profile doesn't exist
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, email')
+    .eq('id', application.user_id)
+    .single();
+
+  // Send rejection email - don't fail the whole operation if email fails
+  try {
+    if (profile?.email) {
+      await supabase.functions.invoke('send-dealer-notification', {
+        body: {
+          email: profile.email,
+          name: profile.first_name && profile.last_name 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : application.contact_person_name || application.company_name,
+          type: 'rejected',
+          companyName: application.company_name,
+          rejectionReason: reason,
+        },
+      });
     }
+  } catch (emailError) {
+    console.warn('Failed to send rejection email, but application was rejected:', emailError);
+  }
+}
 
-    if (!application) {
-      throw new Error('Application not found');
-    }
+/**
+ * Delete dealer application (for rejected/unwanted applications)
+ */
+export async function deleteDealerApplication(applicationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('dealer_applications')
+    .delete()
+    .eq('id', applicationId);
 
-    // Get profile data separately
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, email')
-      .eq('id', application.user_id)
-      .single();
-
-    if (profileError) {
-      throw new Error(`Profile fetch error: ${profileError.message}`);
-    }
-
-    // Update application status
-    const { error: updateError } = await supabase
-      .from('dealer_applications')
-      .update({
-        status: 'rejected',
-        rejection_reason: reason,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', applicationId);
-
-    if (updateError) throw updateError;
-
-  // Send rejection email
-  if (profile?.email) {
-    await supabase.functions.invoke('send-dealer-notification', {
-      body: {
-        email: profile.email,
-        name: `${profile.first_name} ${profile.last_name}`,
-        type: 'rejected',
-        companyName: application.company_name,
-        rejectionReason: reason,
-      },
-    });
+  if (error) {
+    throw new Error(`Delete error: ${error.message}`);
   }
 }

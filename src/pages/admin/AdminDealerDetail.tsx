@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { approveDealerApplication, rejectDealerApplication } from "@/lib/dealerApplications";
+import { approveDealerApplication, rejectDealerApplication, deleteDealerApplication } from "@/lib/dealerApplications";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -25,6 +25,7 @@ import {
   Clock,
   Edit,
   AlertTriangle,
+  Trash2,
   Euro,
   Gavel,
   Ban,
@@ -81,6 +82,7 @@ export default function AdminDealerDetail() {
   const queryClient = useQueryClient();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   // Fetch dealer application with all related data
@@ -221,6 +223,23 @@ export default function AdminDealerDetail() {
     },
   });
 
+  // Delete dealer application mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error('Application ID is required');
+      await deleteDealerApplication(id);
+    },
+    onSuccess: () => {
+      toast.success("Händlerantrag gelöscht");
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      navigate("/admin/dealers");
+    },
+    onError: (error) => {
+      logger.error("Delete dealer error:", error);
+      toast.error("Fehler beim Löschen des Antrags");
+    },
+  });
+
   // Suspend dealer mutation
   const suspendMutation = useMutation({
     mutationFn: async (suspend: boolean) => {
@@ -324,6 +343,17 @@ export default function AdminDealerDetail() {
                   Ablehnen
                 </Button>
               </>
+            )}
+            {dealer.status === "rejected" && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleteMutation.isPending ? "Löschen..." : "Antrag löschen"}
+              </Button>
             )}
             {dealer.status === "approved" && (
               dealer.profile?.is_suspended ? (
@@ -746,6 +776,38 @@ export default function AdminDealerDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Antrag endgültig löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Antrag von <strong>{dealer?.company_name}</strong> wird unwiderruflich gelöscht.
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {dealer?.rejection_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm">
+              <p className="font-medium text-red-800 mb-1">Ablehnungsgrund:</p>
+              <p className="text-red-700">{dealer.rejection_reason}</p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Löschen..." : "Endgültig löschen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminDetailLayout>
   );
 }

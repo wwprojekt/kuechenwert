@@ -8,6 +8,7 @@ import {
   fetchDealerApplications,
   approveDealerApplication,
   rejectDealerApplication,
+  deleteDealerApplication,
 } from "@/lib/dealerApplications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ import {
   Ban,
   MailCheck,
   MailX,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -106,6 +109,7 @@ export default function AdminDealers() {
     useState<DealerApplication | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
@@ -273,6 +277,27 @@ export default function AdminDealers() {
     },
   });
 
+  // Delete dealer application mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteDealerApplication,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      toast({
+        title: "Antrag gelöscht",
+        description: "Der Händlerantrag wurde erfolgreich gelöscht.",
+      });
+      setShowDeleteDialog(false);
+      setSelectedApplication(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler beim Löschen",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Suspend/Unsuspend dealer mutation
   const suspendMutation = useMutation({
     mutationFn: async ({ dealerId, suspend }: { dealerId: string; suspend: boolean }) => {
@@ -341,6 +366,16 @@ export default function AdminDealers() {
   // Filter pending applications for the applications tab
   const pendingApplications = useMemo(() => {
     return applications?.filter((a: DealerApplication) => a.status === "pending") || [];
+  }, [applications]);
+
+  // Filter rejected applications
+  const rejectedApplications = useMemo(() => {
+    return applications?.filter((a: DealerApplication) => a.status === "rejected") || [];
+  }, [applications]);
+
+  // Filter approved applications (not yet active dealers)
+  const approvedApplications = useMemo(() => {
+    return applications?.filter((a: DealerApplication) => a.status === "approved") || [];
   }, [applications]);
 
   return (
@@ -413,7 +448,8 @@ export default function AdminDealers() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="applications">Händleranträge</TabsTrigger>
+          <TabsTrigger value="applications">Händleranträge ({pendingApplications.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Abgelehnt ({rejectedApplications.length})</TabsTrigger>
           <TabsTrigger value="dealers">Aktive Händler</TabsTrigger>
         </TabsList>
 
@@ -477,6 +513,78 @@ export default function AdminDealers() {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
                       Keine ausstehenden Anträge gefunden.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Rejected Applications Tab */}
+        <TabsContent value="rejected" className="space-y-4">
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Firma</TableHead>
+                  <TableHead>Ansprechpartner</TableHead>
+                  <TableHead>Eingereicht am</TableHead>
+                  <TableHead>Ablehnungsgrund</TableHead>
+                  <TableHead>Abgelehnt am</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rejectedApplications.length > 0 ? (
+                  rejectedApplications.map((application: DealerApplication) => (
+                    <TableRow key={application.id} className="bg-red-50/50">
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        {application.company_name}
+                      </TableCell>
+                      <TableCell>{application.contact_person_name}</TableCell>
+                      <TableCell>
+                        {format(new Date(application.submitted_at), "dd.MM.yyyy", { locale: de })}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={application.rejection_reason || ""}>
+                        {application.rejection_reason || "Kein Grund angegeben"}
+                      </TableCell>
+                      <TableCell>
+                        {application.reviewed_at
+                          ? format(new Date(application.reviewed_at), "dd.MM.yyyy HH:mm", { locale: de })
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(application)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Details
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              setSelectedApplication(application);
+                              setShowDeleteDialog(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Löschen
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Keine abgelehnten Anträge vorhanden.
                     </TableCell>
                   </TableRow>
                 )}
@@ -644,6 +752,43 @@ export default function AdminDealers() {
               disabled={rejectMutation.isPending || !rejectionReason}
             >
               {rejectMutation.isPending ? "Ablehnen..." : "Ablehnung bestätigen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Deleting Application */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Antrag endgültig löschen?
+            </DialogTitle>
+            <DialogDescription>
+              Der Antrag von <strong>{selectedApplication?.company_name}</strong> wird unwiderruflich gelöscht.
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedApplication?.rejection_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm">
+              <p className="font-medium text-red-800 mb-1">Ablehnungsgrund:</p>
+              <p className="text-red-700">{selectedApplication.rejection_reason}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                selectedApplication &&
+                deleteMutation.mutate(selectedApplication.id)
+              }
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Löschen..." : "Endgültig löschen"}
             </Button>
           </DialogFooter>
         </DialogContent>

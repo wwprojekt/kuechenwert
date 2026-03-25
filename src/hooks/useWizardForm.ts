@@ -355,7 +355,19 @@ export const useWizardForm = () => {
         });
 
         if (signUpError) throw signUpError;
-        user = signUpData.user;
+
+        // After signUp, verify we have an active session.
+        // If mailer_autoconfirm is disabled or the email already exists,
+        // Supabase may return a user object without creating a session.
+        // In that case auth.uid() would be null and RLS would block inserts.
+        if (signUpData.session) {
+          user = signUpData.user;
+        } else {
+          // No active session – treat as guest submission.
+          // The user will receive a confirmation email and can log in later.
+          logger.info("SignUp returned user but no session (email confirmation pending). Falling back to guest path.");
+          user = null;
+        }
       }
 
       // If still no user (guest submission), save as lead only.

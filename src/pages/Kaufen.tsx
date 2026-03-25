@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
+import { anonymizePostalCode } from "@/lib/plzCoordinates";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
@@ -305,6 +306,7 @@ const Kaufen = () => {
                         listingNumber={auction.motorhome?.listing_number}
                         bodyType={auction.motorhome?.body_type}
                         country={auction.motorhome?.country}
+                        location={auction.motorhome?.postal_code ? `${anonymizePostalCode(auction.motorhome.postal_code)}${auction.motorhome?.city ? ` (${auction.motorhome.city})` : ''}` : undefined}
                         isAuction={true}
                         currentBid={auction.current_bid}
                         startingBid={auction.starting_bid}

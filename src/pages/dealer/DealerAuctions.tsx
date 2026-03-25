@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
-import { Gavel, Search, Clock, TrendingUp } from "lucide-react";
+import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
+import { calculateDistance, formatDistance } from "@/lib/geolocation";
 
 interface Auction {
   id: string;
@@ -24,6 +26,8 @@ interface Auction {
     model: string;
     year: number;
     mileage: number;
+    postal_code: string | null;
+    city: string | null;
     motorhome_photos: Array<{ url: string; display_order: number }>;
   };
   bids: Array<{
@@ -37,6 +41,23 @@ const DealerAuctions = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
+
+  // Fetch dealer's postal code for distance calculation
+  useEffect(() => {
+    const fetchDealerPlz = async () => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_zip, address_zip")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile) {
+        setDealerPostalCode(profile.company_zip || profile.address_zip || null);
+      }
+    };
+    fetchDealerPlz();
+  }, [user]);
 
   useEffect(() => {
     fetchAuctions();
@@ -54,6 +75,8 @@ const DealerAuctions = () => {
             model,
             year,
             mileage,
+            postal_code,
+            city,
             motorhome_photos(url, display_order)
           ),
           bids(bidder_id, amount)
@@ -211,6 +234,28 @@ const DealerAuctions = () => {
                   <CardDescription>
                     {auction.motorhome.year} • {auction.motorhome.mileage.toLocaleString('de-DE')} km
                   </CardDescription>
+                  {auction.motorhome.postal_code && (() => {
+                    const vehicleCoords = getPlzCoordinates(auction.motorhome.postal_code);
+                    const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
+                    const dist = vehicleCoords && dCoords
+                      ? calculateDistance(
+                          { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
+                          { latitude: dCoords.lat, longitude: dCoords.lng }
+                        )
+                      : null;
+                    return (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                        <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        <span>{anonymizePostalCode(auction.motorhome.postal_code)}{auction.motorhome.city ? ` (${auction.motorhome.city})` : ''}</span>
+                        {dist !== null && (
+                          <span className="flex items-center gap-0.5 ml-auto text-primary">
+                            <Navigation className="w-3 h-3" />
+                            ca. {formatDistance(dist)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">

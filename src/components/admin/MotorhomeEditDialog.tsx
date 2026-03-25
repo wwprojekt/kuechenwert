@@ -64,6 +64,8 @@ interface MotorhomeData {
   has_tv: boolean | null;
   has_backup_camera: boolean | null;
   additional_equipment: string | null;
+  postal_code: string | null;
+  city: string | null;
 }
 
 interface MotorhomeEditDialogProps {
@@ -158,6 +160,8 @@ export function MotorhomeEditDialog({
           has_tv: data.has_tv,
           has_backup_camera: data.has_backup_camera,
           additional_equipment: data.additional_equipment,
+          postal_code: data.postal_code,
+          city: data.city,
         })
         .eq("id", motorhome.id);
 
@@ -327,6 +331,30 @@ export function MotorhomeEditDialog({
                     type="number"
                     value={formData.reserve_price || ""}
                     onChange={(e) => updateField("reserve_price", parseInt(e.target.value) || null)}
+                  />
+                </div>
+              </div>
+
+              {/* Standort */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="postal_code">PLZ (Fahrzeugstandort) *</Label>
+                  <Input
+                    id="postal_code"
+                    value={formData.postal_code || ""}
+                    onChange={(e) => updateField("postal_code", e.target.value)}
+                    placeholder="z.B. 80331"
+                    maxLength={5}
+                  />
+                  <p className="text-xs text-muted-foreground">Wird für Händler anonymisiert angezeigt (z.B. 803xx)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Stadt</Label>
+                  <Input
+                    id="city"
+                    value={formData.city || ""}
+                    onChange={(e) => updateField("city", e.target.value)}
+                    placeholder="z.B. München"
                   />
                 </div>
               </div>

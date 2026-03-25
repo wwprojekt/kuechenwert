@@ -17,6 +17,8 @@ import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
+import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
+import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
@@ -67,6 +69,8 @@ import {
   Maximize,
   User,
   AlertTriangle,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -97,9 +101,26 @@ const AuctionDetail = () => {
   const [isWatched, setIsWatched] = useState(false);
   const hotbidSoundPlayed = useRef(false);
   const { playNotification } = useAudioNotification();
+  const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
 
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+  // Fetch dealer's postal code for distance calculation
+  useEffect(() => {
+    const fetchDealerPostalCode = async () => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_zip, address_zip")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile) {
+        setDealerPostalCode(profile.company_zip || profile.address_zip || null);
+      }
+    };
+    fetchDealerPostalCode();
+  }, [user]);
 
   // Fetch auction details
   useEffect(() => {
@@ -782,6 +803,36 @@ const AuctionDetail = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Vehicle Location */}
+                    {motorhome.postal_code && (
+                      <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin className="w-5 h-5 text-primary" />
+                          <h3 className="font-semibold">Fahrzeugstandort</h3>
+                        </div>
+                        <p className="text-muted-foreground">
+                          PLZ-Bereich: <span className="font-semibold">{anonymizePostalCode(motorhome.postal_code)}</span>
+                          {motorhome.city && <span> (Raum {motorhome.city})</span>}
+                        </p>
+                        {(() => {
+                          const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
+                          const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
+                          const dist = vehicleCoords && dCoords
+                            ? calculateDistance(
+                                { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
+                                { latitude: dCoords.lat, longitude: dCoords.lng }
+                              )
+                            : null;
+                          return dist !== null ? (
+                            <p className="text-sm text-primary mt-1 flex items-center gap-1">
+                              <Navigation className="w-4 h-4" />
+                              Ungefähre Entfernung zu Ihrem Standort: <span className="font-semibold">ca. {formatDistance(dist)}</span>
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
                     
                     {motorhome.description && (
                       <div className="mt-6 p-4 bg-muted/30 rounded-lg">
@@ -1233,6 +1284,30 @@ const AuctionDetail = () => {
                       <span>Verkäufer: {motorhome.seller.company_name || `${motorhome.seller.first_name} ${motorhome.seller.last_name}`}</span>
                     </div>
                   )}
+                  {/* Anonymized Location & Distance */}
+                  {motorhome.postal_code && (() => {
+                    const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);
+                    const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
+                    const dealerCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
+                    const distanceKm = vehicleCoords && dealerCoords
+                      ? calculateDistance(
+                          { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
+                          { latitude: dealerCoords.lat, longitude: dealerCoords.lng }
+                        )
+                      : null;
+                    return (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span>Standort: {anonymizedPlz}{motorhome.city ? ` (Raum ${motorhome.city})` : ''}</span>
+                        {distanceKm !== null && (
+                          <span className="flex items-center gap-1 ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                            <Navigation className="w-3 h-3" />
+                            ca. {formatDistance(distanceKm)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Trust Indicators & Vehicle Badges */}

@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2, Mail } from "lucide-react";
+import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2, Mail, MapPin, AlertTriangle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -116,6 +116,8 @@ export default function AdminAuctions() {
             manufacturer,
             model,
             year,
+            postal_code,
+            city,
             motorhome_photos(url, display_order),
             seller:profiles!left (
               first_name,
@@ -293,6 +295,17 @@ export default function AdminAuctions() {
 
   const activateAuctionMutation = useMutation({
     mutationFn: async (auction: { id: string; motorhome_id: string }) => {
+      // Check if motorhome has a postal_code set
+      const { data: mh } = await supabase
+        .from('motorhomes')
+        .select('postal_code, city')
+        .eq('id', auction.motorhome_id)
+        .maybeSingle();
+
+      if (!mh?.postal_code) {
+        throw new Error('PLZ_MISSING');
+      }
+
       // Set auction to active with end_time 7 days from now
       const endTime = new Date();
       endTime.setDate(endTime.getDate() + 7);
@@ -320,8 +333,12 @@ export default function AdminAuctions() {
       }
     },
     onError: (error: any) => {
-      toast.error("Fehler beim Aktivieren der Auktion");
-      logger.error(error);
+      if (error?.message === 'PLZ_MISSING') {
+        toast.error("Bitte zuerst den Fahrzeugstandort (PLZ) eintragen, bevor die Auktion aktiviert wird. Klicken Sie auf 'Bearbeiten'.", { duration: 6000 });
+      } else {
+        toast.error("Fehler beim Aktivieren der Auktion");
+        logger.error(error);
+      }
     },
   });
 
@@ -500,9 +517,16 @@ export default function AdminAuctions() {
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
-                                <AlertDialogDescription>
+                                <AlertDialogDescription asChild>
+                                  <div className="text-sm text-muted-foreground">
                                   Die Auktion wird für 7 Tage aktiviert und ist dann auf der Startseite sichtbar.
                                   Händler können ab sofort Gebote abgeben.
+                                  {!auction.motorhome?.postal_code && (
+                                    <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
+                                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                      <span>Achtung: Es wurde noch keine PLZ für den Fahrzeugstandort eingetragen. Bitte zuerst über &quot;Bearbeiten&quot; die PLZ eintragen.</span>
+                                    </span>
+                                  )}
                                   {auction.motorhome?.seller?.email && (
                                     <>
                                       <br /><br />
@@ -512,6 +536,7 @@ export default function AdminAuctions() {
                                       </span>
                                     </>
                                   )}
+                                  </div>
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

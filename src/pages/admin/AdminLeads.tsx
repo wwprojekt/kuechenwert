@@ -514,6 +514,9 @@ export default function AdminLeads() {
   const [valuationAdminNotes, setValuationAdminNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ value: number; confidence: number; reasoning: string; trainingCount: number } | null>(null);
+  // Send expert valuation email
+  const [sendingValuationEmail, setSendingValuationEmail] = useState(false);
+  const [valuationEmailSent, setValuationEmailSent] = useState(false);
   // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
@@ -1058,7 +1061,33 @@ export default function AdminLeads() {
       reasoning: "",
       trainingCount: 0,
     } : null);
+    setValuationEmailSent(false);
     setValuationDetailOpen(true);
+  };
+
+  const sendExpertValuationEmail = async (leadId: string, recipientEmail?: string) => {
+    setSendingValuationEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-expert-valuation", {
+        body: { lead_id: leadId, recipient_email: recipientEmail || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setValuationEmailSent(true);
+      toast({
+        title: "Expertenbewertung versendet",
+        description: `E-Mail wurde an ${data?.recipient || recipientEmail || "den Kunden"} gesendet.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    } catch (err: any) {
+      toast({
+        title: "Fehler beim Versenden",
+        description: err.message || "E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingValuationEmail(false);
+    }
   };
 
   const confirmDelete = () => {
@@ -2855,6 +2884,23 @@ export default function AdminLeads() {
                     <><CheckCircle2 className="w-4 h-4 mr-2" /> Expertenwert speichern</>
                   )}
                 </Button>
+                {/* Send Expert Valuation Email Button */}
+                {selectedValuation.admin_estimated_value && selectedValuation.email && (
+                  <Button
+                    variant="default"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => sendExpertValuationEmail(selectedValuation.id)}
+                    disabled={sendingValuationEmail || valuationEmailSent}
+                  >
+                    {sendingValuationEmail ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sende...</>
+                    ) : valuationEmailSent ? (
+                      <><CheckCircle2 className="w-4 h-4 mr-2" /> Versendet!</>
+                    ) : (
+                      <><Send className="w-4 h-4 mr-2" /> Bewertung senden</>
+                    )}
+                  </Button>
+                )}
               </DialogFooter>
             </>
           )}

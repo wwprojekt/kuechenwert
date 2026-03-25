@@ -34,7 +34,7 @@ import {
   StarOff, Archive, Trash2, RefreshCw, Search, Plus,
   Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
   BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
-  ChevronLeft, ChevronRight, Unlink,
+  ChevronLeft, ChevronRight, Unlink, Zap, Bot,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -141,7 +141,7 @@ export default function AdminEmailCenter() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <Inbox className="w-4 h-4" />
             Posteingang
@@ -167,6 +167,10 @@ export default function AdminEmailCenter() {
             <History className="w-4 h-4" />
             Gesendet
           </TabsTrigger>
+          <TabsTrigger value="system" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            System
+          </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
             Statistiken
@@ -187,6 +191,9 @@ export default function AdminEmailCenter() {
         </TabsContent>
         <TabsContent value="sent">
           <SentTab />
+        </TabsContent>
+        <TabsContent value="system">
+          <SystemEmailsTab />
         </TabsContent>
         <TabsContent value="stats">
           <StatsTab />
@@ -212,6 +219,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [showHistory, setShowHistory] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<InboxItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchInbox = useCallback(async () => {
     setLoading(true);
@@ -410,6 +419,32 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.source === 'email') {
+        const { error } = await supabase.from('admin_emails').delete().eq('id', deleteTarget.id);
+        if (error) throw error;
+      } else if (deleteTarget.source === 'support') {
+        const { error } = await supabase.from('support_messages').delete().eq('id', deleteTarget.id);
+        if (error) throw error;
+      } else if (deleteTarget.source === 'contact') {
+        const { error } = await supabase.from('contact_messages').delete().eq('id', deleteTarget.id);
+        if (error) throw error;
+      }
+      toast.success("Nachricht gelöscht");
+      setSelectedItem(null);
+      setDeleteTarget(null);
+      fetchInbox();
+    } catch (error: any) {
+      console.error("Error deleting message:", error);
+      toast.error("Nachricht konnte nicht gelöscht werden");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredItems = items.filter(item => {
     if (filter === "unread" && item.is_read) return false;
     if (filter === "starred" && !item.is_starred) return false;
@@ -543,6 +578,14 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteTarget(selectedItem)}
+            >
+              <Trash2 className="w-4 h-4 mr-1" /> Löschen
+            </Button>
           </div>
 
           {/* Reply section */}
@@ -629,6 +672,30 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Nachricht löschen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sind Sie sicher, dass Sie diese Nachricht von <strong>{deleteTarget?.from_name}</strong> mit dem Betreff
+                &quot;{deleteTarget?.subject}&quot; endgültig löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Endgültig löschen
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </Card>
     );
   }
@@ -717,13 +784,22 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                       {item.subject}
                     </p>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(item.created_at), "dd.MM.yy", { locale: de })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(item.created_at), "HH:mm", { locale: de })}
-                    </p>
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(item.created_at), "dd.MM.yy", { locale: de })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(item.created_at), "HH:mm", { locale: de })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
+                      className="flex-shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Löschen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -2102,5 +2178,309 @@ function StatsTab() {
         </Card>
       )}
     </div>
+  );
+}
+
+// ─── Tab: System-E-Mails (automatisch versendete E-Mails) ─────────────────
+
+// System email types that are NOT manually sent by admin
+const SYSTEM_EMAIL_TYPES = [
+  'auto_response',
+  'welcome',
+  'wizard_recovery_first',
+  'wizard_recovery_followup',
+  'inactivity',
+  'appointment_reminder',
+  'payment_reminder',
+  'auction_summary',
+  'favorite_notification',
+  'scheduled',
+];
+
+const SYSTEM_TYPE_LABELS: Record<string, string> = {
+  auto_response: 'Auto-Antwort',
+  welcome: 'Willkommen',
+  wizard_recovery_first: 'Wizard-Erinnerung (2h)',
+  wizard_recovery_followup: 'Wizard-Follow-up (14d)',
+  inactivity: 'Inaktivitäts-Erinnerung',
+  appointment_reminder: 'Termin-Erinnerung',
+  payment_reminder: 'Zahlungserinnerung',
+  auction_summary: 'Auktions-Zusammenfassung',
+  favorite_notification: 'Favoriten-Benachrichtigung',
+  scheduled: 'Geplant',
+};
+
+const SYSTEM_TYPE_COLORS: Record<string, string> = {
+  auto_response: 'text-blue-600 border-blue-600',
+  welcome: 'text-green-600 border-green-600',
+  wizard_recovery_first: 'text-orange-600 border-orange-600',
+  wizard_recovery_followup: 'text-amber-600 border-amber-600',
+  inactivity: 'text-purple-600 border-purple-600',
+  appointment_reminder: 'text-cyan-600 border-cyan-600',
+  payment_reminder: 'text-red-600 border-red-600',
+  auction_summary: 'text-indigo-600 border-indigo-600',
+  favorite_notification: 'text-pink-600 border-pink-600',
+  scheduled: 'text-slate-600 border-slate-600',
+};
+
+function SystemEmailsTab() {
+  const [emails, setEmails] = useState<AdminEmail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEmail, setSelectedEmail] = useState<AdminEmail | null>(null);
+  const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+
+  const fetchSystemEmails = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch all outbound emails that are NOT manual (single, reply, broadcast)
+      const { data, error } = await supabase
+        .from('admin_emails')
+        .select('*')
+        .eq('direction', 'outbound')
+        .not('email_type', 'in', '("single","reply","broadcast")')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+      setEmails((data || []) as AdminEmail[]);
+    } catch (error) {
+      console.error("Error fetching system emails:", error);
+      toast.error("System-E-Mails konnten nicht geladen werden");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSystemEmails(); }, [fetchSystemEmails]);
+
+  // Filter by type and search
+  const filteredEmails = emails.filter(e => {
+    if (filter !== 'all' && e.email_type !== filter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        e.subject.toLowerCase().includes(q) ||
+        e.recipient_email.toLowerCase().includes(q) ||
+        (e.recipient_name || '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredEmails.length / PAGE_SIZE);
+  const paginatedEmails = filteredEmails.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Count per type for summary
+  const typeCounts = emails.reduce<Record<string, number>>((acc, e) => {
+    acc[e.email_type] = (acc[e.email_type] || 0) + 1;
+    return acc;
+  }, {});
+
+  const getSystemTypeBadge = (type: string) => {
+    const label = SYSTEM_TYPE_LABELS[type] || type;
+    const color = SYSTEM_TYPE_COLORS[type] || 'text-gray-600 border-gray-600';
+    return <Badge variant="outline" className={`${color} gap-1`}><Zap className="w-3 h-3" />{label}</Badge>;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <Badge variant="outline" className="text-green-600 border-green-600 gap-1"><CheckCircle className="w-3 h-3" />Gesendet</Badge>;
+      case 'delivered':
+        return <Badge variant="outline" className="text-green-700 border-green-700 gap-1"><CheckCircle className="w-3 h-3" />Zugestellt</Badge>;
+      case 'opened':
+        return <Badge variant="outline" className="text-blue-600 border-blue-600 gap-1"><Eye className="w-3 h-3" />Geöffnet</Badge>;
+      case 'bounced':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-600 gap-1"><AlertCircle className="w-3 h-3" />Bounced</Badge>;
+      case 'failed':
+        return <Badge variant="outline" className="text-red-600 border-red-600 gap-1"><XCircle className="w-3 h-3" />Fehlgeschlagen</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  // Detail view
+  if (selectedEmail) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedEmail(null)}>
+              <ArrowLeft className="w-4 h-4 mr-1" /> Zurück
+            </Button>
+            {getSystemTypeBadge(selectedEmail.email_type)}
+            {getStatusBadge(selectedEmail.status)}
+          </div>
+          <CardTitle className="text-xl mt-2">{selectedEmail.subject}</CardTitle>
+          <CardDescription>
+            An <strong>{selectedEmail.recipient_name || selectedEmail.recipient_email}</strong> ({selectedEmail.recipient_email}) am{" "}
+            {format(new Date(selectedEmail.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-muted/50 rounded-lg border">
+            <div dangerouslySetInnerHTML={{ __html: selectedEmail.body_html || selectedEmail.body_text }} className="prose prose-sm max-w-none" />
+          </div>
+          {selectedEmail.resend_id && (
+            <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">
+              <ExternalLink className="w-3 h-3" /> Resend-ID: {selectedEmail.resend_id}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Unique types found in data for the filter dropdown
+  const availableTypes = [...new Set(emails.map(e => e.email_type))].sort();
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              System-E-Mails
+            </CardTitle>
+            <CardDescription>
+              Automatisch versendete E-Mails (Willkommen, Erinnerungen, Benachrichtigungen)
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Suchen..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                className="pl-9 w-[200px]"
+              />
+            </div>
+            <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Alle Typen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Typen</SelectItem>
+                {availableTypes.map(type => (
+                  <SelectItem key={type} value={type}>
+                    {SYSTEM_TYPE_LABELS[type] || type} ({typeCounts[type] || 0})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" onClick={fetchSystemEmails}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Summary badges */}
+        {Object.keys(typeCounts).length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b">
+            <Badge variant="secondary" className="gap-1">
+              <Bot className="w-3 h-3" /> Gesamt: {emails.length}
+            </Badge>
+            {Object.entries(typeCounts)
+              .sort(([, a], [, b]) => b - a)
+              .map(([type, count]) => (
+                <Badge
+                  key={type}
+                  variant="outline"
+                  className={`gap-1 cursor-pointer hover:bg-muted/50 ${filter === type ? 'bg-primary/10 ring-1 ring-primary' : ''} ${SYSTEM_TYPE_COLORS[type] || ''}`}
+                  onClick={() => { setFilter(filter === type ? 'all' : type); setPage(1); }}
+                >
+                  {SYSTEM_TYPE_LABELS[type] || type}: {count}
+                </Badge>
+              ))
+            }
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
+        ) : paginatedEmails.length === 0 ? (
+          <div className="text-center py-8">
+            <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+            <p className="text-muted-foreground">
+              {filter !== 'all' ? 'Keine System-E-Mails für diesen Typ' : 'Noch keine System-E-Mails versendet'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empfänger</TableHead>
+                  <TableHead>Betreff</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Datum</TableHead>
+                  <TableHead className="text-right">Aktion</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedEmails.map((e) => (
+                  <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedEmail(e)}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">{e.recipient_name || e.recipient_email}</p>
+                        {e.recipient_name && <p className="text-xs text-muted-foreground">{e.recipient_email}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[250px]">
+                      <p className="truncate text-sm">{e.subject}</p>
+                    </TableCell>
+                    <TableCell>{getSystemTypeBadge(e.email_type)}</TableCell>
+                    <TableCell>{getStatusBadge(e.status)}</TableCell>
+                    <TableCell className="text-sm">
+                      {format(new Date(e.created_at), "dd.MM.yy HH:mm", { locale: de })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={(ev) => { ev.stopPropagation(); setSelectedEmail(e); }}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Seite {page} von {totalPages} ({filteredEmails.length} System-E-Mails)
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) pageNum = i + 1;
+                    else if (page <= 3) pageNum = i + 1;
+                    else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
+                    else pageNum = page - 2 + i;
+                    return (
+                      <Button key={pageNum} variant={page === pageNum ? "default" : "outline"} size="sm" onClick={() => setPage(pageNum)} className="w-8 h-8 p-0">
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

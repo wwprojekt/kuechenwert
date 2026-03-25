@@ -707,11 +707,11 @@ export default function AdminLeads() {
     const q = searchQuery.toLowerCase();
     return quickLeads.filter(
       (lead) =>
-        (lead.name || "").toLowerCase().includes(q) ||
-        (lead.email || "").toLowerCase().includes(q) ||
-        (lead.phone || "").toLowerCase().includes(q) ||
-        (lead.manufacturer || "").toLowerCase().includes(q) ||
-        (lead.model || "").toLowerCase().includes(q)
+        (lead.name || (lead.form_data_snapshot?.customerName as string) || (lead.form_data_snapshot?.name as string) || "").toLowerCase().includes(q) ||
+        (lead.email || (lead.form_data_snapshot?.customerEmail as string) || "").toLowerCase().includes(q) ||
+        (lead.phone || (lead.form_data_snapshot?.customerPhone as string) || "").toLowerCase().includes(q) ||
+        (lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string) || "").toLowerCase().includes(q) ||
+        (lead.model || (lead.form_data_snapshot?.model as string) || "").toLowerCase().includes(q)
     );
   }, [quickLeads, searchQuery]);
 
@@ -1613,27 +1613,32 @@ export default function AdminLeads() {
                           aria-label="Lead auswählen"
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{lead.name || "-"}</TableCell>
+                      <TableCell className="font-medium">
+                        {lead.name
+                          || (lead.form_data_snapshot?.customerName as string)
+                          || (lead.form_data_snapshot?.name as string)
+                          || "-"}
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-0.5">
-                          {lead.email && (
+                          {(lead.email || (lead.form_data_snapshot?.customerEmail as string)) && (
                             <p className="text-xs flex items-center gap-1">
-                              <Mail className="w-3 h-3" /> {lead.email}
+                              <Mail className="w-3 h-3" /> {lead.email || (lead.form_data_snapshot?.customerEmail as string)}
                             </p>
                           )}
-                          {lead.phone && (
+                          {(lead.phone || (lead.form_data_snapshot?.customerPhone as string)) && (
                             <p className="text-xs flex items-center gap-1">
-                              <Phone className="w-3 h-3" /> {lead.phone}
+                              <Phone className="w-3 h-3" /> {lead.phone || (lead.form_data_snapshot?.customerPhone as string)}
                             </p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {[lead.manufacturer, lead.model].filter(Boolean).join(" ") || "-"}
+                          {[lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string), lead.model || (lead.form_data_snapshot?.model as string)].filter(Boolean).join(" ") || "-"}
                         </span>
-                        {lead.body_type && (
-                          <p className="text-xs text-muted-foreground">{lead.body_type}</p>
+                        {(lead.body_type || (lead.form_data_snapshot?.bodyType as string)) && (
+                          <p className="text-xs text-muted-foreground">{lead.body_type || (lead.form_data_snapshot?.bodyType as string)}</p>
                         )}
                       </TableCell>
                       <TableCell>

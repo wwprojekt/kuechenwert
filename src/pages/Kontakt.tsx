@@ -67,6 +67,22 @@ const Kontakt = () => {
 
       if (error) throw error;
 
+      // Send email notification to admin + confirmation to customer
+      try {
+        await supabase.functions.invoke("send-lead-notification", {
+          body: {
+            type: "kontakt",
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            phone: formData.phone.trim() || undefined,
+            subject: formData.subject.trim(),
+            messageText: formData.message.trim(),
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send contact notification:", emailError);
+      }
+
       setIsSubmitted(true);
 
       // Google Ads Conversion Tracking: Kontaktformular gesendet (Primäre Conversion)

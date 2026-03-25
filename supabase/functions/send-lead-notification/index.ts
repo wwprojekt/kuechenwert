@@ -15,7 +15,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "admin@caravanwert.de";
 
 interface LeadNotificationRequest {
-  type: "wertermittlung" | "wertrechner";
+  type: "wertermittlung" | "wertrechner" | "wizard" | "kontakt" | "dealer";
   name: string;
   email: string;
   phone?: string;
@@ -23,6 +23,11 @@ interface LeadNotificationRequest {
   model?: string;
   estimatedMin?: number;
   estimatedMax?: number;
+  // Extra fields for contact form
+  subject?: string;
+  messageText?: string;
+  // Extra fields for dealer registration
+  companyName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -59,8 +64,14 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "0800 123 456 78",
     };
 
-    const sourceLabel =
-      type === "wertermittlung" ? "Wertermittlung" : "Wertrechner";
+    const sourceLabels: Record<string, string> = {
+      wertermittlung: "Wertermittlung",
+      wertrechner: "Wertrechner",
+      wizard: "Verkaufen-Wizard",
+      kontakt: "Kontaktformular",
+      dealer: "H\u00e4ndler-Bewerbung",
+    };
+    const sourceLabel = sourceLabels[type] || type;
 
     // 1. Send notification to admin
     const adminSubject = `Neue Anfrage: ${sourceLabel} von ${name}`;
@@ -86,12 +97,35 @@ const handler = async (req: Request): Promise<Response> => {
         ${
           estimatedMin && estimatedMax
             ? detailRow(
-                "Geschätzter Wert",
-                `${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
+                "Gesch\u00e4tzter Wert",
+                `${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} \u20ac`
               )
             : ""
         }
       `,
+              "default",
+              settingsData
+            )
+          : ""
+      }
+      ${
+        data.subject || data.messageText
+          ? infoBox(
+              "Nachricht",
+              `
+        ${data.subject ? detailRow("Betreff", data.subject) : ""}
+        ${data.messageText ? paragraph(data.messageText) : ""}
+      `,
+              "default",
+              settingsData
+            )
+          : ""
+      }
+      ${
+        data.companyName
+          ? infoBox(
+              "Firmendetails",
+              `${detailRow("Firma", data.companyName)}`,
               "default",
               settingsData
             )
@@ -131,15 +165,25 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 2. Send confirmation to user
-    const userSubject =
-      type === "wertermittlung"
-        ? "Ihre Anfrage zur Wertermittlung"
-        : "Ihre Anfrage über den Wertrechner";
+    const userSubjects: Record<string, string> = {
+      wertermittlung: "Ihre Anfrage zur Wertermittlung",
+      wertrechner: "Ihre Anfrage \u00fcber den Wertrechner",
+      wizard: "Ihre Verkaufsanfrage bei CaravanWert",
+      kontakt: "Ihre Kontaktanfrage bei CaravanWert",
+      dealer: "Ihre H\u00e4ndler-Bewerbung bei CaravanWert",
+    };
+    const userSubject = userSubjects[type] || "Ihre Anfrage bei CaravanWert";
 
     const userContent = `
       ${paragraph(`Hallo ${name},`)}
       ${paragraph(
-        `Vielen Dank für Ihre Anfrage über unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in Kürze bei Ihnen melden.`
+        type === "dealer"
+          ? `Vielen Dank f\u00fcr Ihre H\u00e4ndler-Bewerbung bei ${settingsData.site_name}. Wir pr\u00fcfen Ihre Unterlagen und melden uns in K\u00fcrze bei Ihnen.`
+          : type === "kontakt"
+          ? `Vielen Dank f\u00fcr Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstm\u00f6glich bei Ihnen melden.`
+          : type === "wizard"
+          ? `Vielen Dank f\u00fcr Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
+          : `Vielen Dank f\u00fcr Ihre Anfrage \u00fcber unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in K\u00fcrze bei Ihnen melden.`
       )}
       ${infoBox(
         "Ihre Anfrage",

@@ -200,10 +200,25 @@ const DealerRegister = () => {
 
       if (error) throw error;
 
+      // Send email notification to admin + confirmation to dealer
+      try {
+        await supabase.functions.invoke("send-lead-notification", {
+          body: {
+            type: "dealer",
+            name: validated.contactPersonName,
+            email: user!.email || "",
+            phone: validated.phone || undefined,
+            companyName: validated.companyName,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send dealer notification:", emailError);
+      }
+
       toast({
         title: "Antrag erfolgreich eingereicht!",
         description:
-          "Wir werden Ihre Unterlagen prüfen und uns innerhalb von 2-3 Werktagen bei Ihnen melden.",
+          "Wir werden Ihre Unterlagen pr\u00fcfen und uns innerhalb von 2-3 Werktagen bei Ihnen melden. Sie erhalten in K\u00fcrze eine Best\u00e4tigung per E-Mail.",
       });
 
       navigate("/");

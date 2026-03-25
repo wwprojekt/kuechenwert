@@ -28,13 +28,14 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Mail, Inbox, Send, Users, FileText, History,
   Clock, CheckCircle, AlertCircle, Eye, Reply, Star,
   StarOff, Archive, Trash2, RefreshCw, Search, Plus,
   Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
   BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
-  ChevronLeft, ChevronRight, Unlink, Zap, Bot,
+  ChevronLeft, ChevronRight, Unlink, Zap, Bot, CheckSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -221,6 +222,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [previewHtml, setPreviewHtml] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<InboxItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   const fetchInbox = useCallback(async () => {
     setLoading(true);
@@ -445,6 +448,57 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
   };
 
+  // ── Bulk selection helpers ──
+  const itemKey = (item: InboxItem) => `${item.source}-${item.id}`;
+
+  const toggleSelect = (item: InboxItem) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const key = itemKey(item);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const toDelete = items.filter(i => selectedIds.has(itemKey(i)));
+      const emailIds = toDelete.filter(i => i.source === 'email').map(i => i.id);
+      const supportIds = toDelete.filter(i => i.source === 'support').map(i => i.id);
+      const contactIds = toDelete.filter(i => i.source === 'contact').map(i => i.id);
+
+      const errors: string[] = [];
+      if (emailIds.length > 0) {
+        const { error } = await supabase.from('admin_emails').delete().in('id', emailIds);
+        if (error) errors.push(`E-Mails: ${error.message}`);
+      }
+      if (supportIds.length > 0) {
+        const { error } = await supabase.from('support_messages').delete().in('id', supportIds);
+        if (error) errors.push(`Support: ${error.message}`);
+      }
+      if (contactIds.length > 0) {
+        const { error } = await supabase.from('contact_messages').delete().in('id', contactIds);
+        if (error) errors.push(`Kontakt: ${error.message}`);
+      }
+
+      if (errors.length > 0) {
+        toast.error(`Fehler beim Löschen: ${errors.join(', ')}`);
+      } else {
+        toast.success(`${toDelete.length} Nachricht${toDelete.length > 1 ? 'en' : ''} gelöscht`);
+      }
+      setSelectedIds(new Set());
+      setShowBulkDeleteDialog(false);
+      setSelectedItem(null);
+      fetchInbox();
+    } catch (error: any) {
+      console.error("Bulk delete error:", error);
+      toast.error("Nachrichten konnten nicht gelöscht werden");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredItems = items.filter(item => {
     if (filter === "unread" && item.is_read) return false;
     if (filter === "starred" && !item.is_starred) return false;
@@ -459,6 +513,22 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
   const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE);
   const paginatedItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const pageKeys = paginatedItems.map(itemKey);
+  const allPageSelected = pageKeys.length > 0 && pageKeys.every(k => selectedIds.has(k));
+  const somePageSelected = pageKeys.some(k => selectedIds.has(k));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pageKeys.forEach(k => next.delete(k));
+      } else {
+        pageKeys.forEach(k => next.add(k));
+      }
+      return next;
+    });
+  };
 
   const getSourceBadge = (source: string) => {
     switch (source) {
@@ -493,7 +563,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
     const attachments = selectedItem.source === 'email' ? (orig as AdminEmail).attachments : null;
 
-    return (
+    return (<>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -708,34 +778,35 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           </DialogContent>
         </Dialog>
 
-        {/* Delete confirmation dialog */}
-        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Nachricht löschen?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Sind Sie sicher, dass Sie diese Nachricht von <strong>{deleteTarget?.from_name}</strong> mit dem Betreff
-                &quot;{deleteTarget?.subject}&quot; endgültig löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Endgültig löschen
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </Card>
-    );
+
+      {/* Single delete confirmation dialog - in detail view */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nachricht löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie diese Nachricht von <strong>{deleteTarget?.from_name}</strong> mit dem Betreff
+              &quot;{deleteTarget?.subject}&quot; endgültig löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Endgültig löschen
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>);
   }
 
-  return (
+  return (<>
     <Card>
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -784,60 +855,106 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           </div>
         ) : (
           <>
-            <div className="divide-y">
-              {paginatedItems.map((item) => (
-                <div
-                  key={`${item.source}-${item.id}`}
-                  className={`flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${!item.is_read ? 'bg-blue-50/50 font-medium' : ''}`}
-                  onClick={() => { setSelectedItem(item); handleMarkRead(item); }}
-                >
-                  {item.source === 'email' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleToggleStar(item); }}
-                      className="flex-shrink-0"
-                    >
-                      {item.is_starred
-                        ? <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        : <Star className="w-4 h-4 text-muted-foreground hover:text-yellow-500" />
-                      }
-                    </button>
-                  )}
-                  {item.source !== 'email' && <div className="w-4" />}
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">
-                      {item.from_name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm truncate ${!item.is_read ? 'font-semibold' : ''}`}>
-                        {item.from_name}
-                      </span>
-                      {getSourceBadge(item.source)}
-                    </div>
-                    <p className={`text-sm truncate ${!item.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {item.subject}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 flex items-center gap-2">
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(item.created_at), "dd.MM.yy", { locale: de })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(item.created_at), "HH:mm", { locale: de })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
-                      className="flex-shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Löschen"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {/* Bulk action toolbar */}
+            <div className="flex items-center gap-3 px-3 py-2 border-b bg-muted/30 rounded-t-lg">
+              <Checkbox
+                checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Alle auswählen"
+              />
+              {selectedIds.size > 0 ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {selectedIds.size} ausgewählt
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowBulkDeleteDialog(true)}
+                    className="gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Löschen ({selectedIds.size})
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-muted-foreground"
+                  >
+                    Auswahl aufheben
+                  </Button>
                 </div>
-              ))}
+              ) : (
+                <span className="text-sm text-muted-foreground">Alle auswählen</span>
+              )}
+            </div>
+
+            <div className="divide-y">
+              {paginatedItems.map((item) => {
+                const key = itemKey(item);
+                const isSelected = selectedIds.has(key);
+                return (
+                  <div
+                    key={key}
+                    className={`flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${!item.is_read ? 'bg-blue-50/50 dark:bg-blue-950/20 font-medium' : ''} ${isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={() => { setSelectedItem(item); handleMarkRead(item); }}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(item)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`${item.from_name} auswählen`}
+                      className="flex-shrink-0"
+                    />
+                    {item.source === 'email' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleStar(item); }}
+                        className="flex-shrink-0"
+                      >
+                        {item.is_starred
+                          ? <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          : <Star className="w-4 h-4 text-muted-foreground hover:text-yellow-500" />
+                        }
+                      </button>
+                    )}
+                    {item.source !== 'email' && <div className="w-4" />}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">
+                        {item.from_name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm truncate ${!item.is_read ? 'font-semibold' : ''}`}>
+                          {item.from_name}
+                        </span>
+                        {getSourceBadge(item.source)}
+                      </div>
+                      <p className={`text-sm truncate ${!item.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {item.subject}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(item.created_at), "dd.MM.yy", { locale: de })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(item.created_at), "HH:mm", { locale: de })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
+                        className="flex-shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Löschen"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination */}
@@ -893,6 +1010,55 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         )}
       </CardContent>
     </Card>
+
+    {/* Single delete confirmation dialog - for list view */}
+    <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Nachricht löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Sind Sie sicher, dass Sie diese Nachricht von <strong>{deleteTarget?.from_name}</strong> mit dem Betreff
+            &quot;{deleteTarget?.subject}&quot; endgültig löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+            Endgültig löschen
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Bulk delete confirmation dialog */}
+    <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{selectedIds.size} Nachrichten löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Sind Sie sicher, dass Sie <strong>{selectedIds.size} ausgewählte Nachrichten</strong> endgültig löschen möchten?
+            Dieser Vorgang kann nicht rückgängig gemacht werden.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            onClick={handleBulkDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+            {selectedIds.size} Nachrichten löschen
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 

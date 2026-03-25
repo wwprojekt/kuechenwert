@@ -13,7 +13,7 @@ export default function AdminLayout() {
             <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
               <SidebarTrigger />
             </header>
-            <main className="flex-1 p-6 bg-muted/30">
+            <main className="flex-1 p-6 bg-muted/50">
               <Outlet />
             </main>
           </div>

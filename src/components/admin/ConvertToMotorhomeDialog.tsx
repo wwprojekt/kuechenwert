@@ -41,6 +41,8 @@ import {
   MapPin,
   CheckCircle2,
   AlertTriangle,
+  Send,
+  Mail,
 } from "lucide-react";
 import { logger } from "@/lib/logger";
 
@@ -188,6 +190,9 @@ export function ConvertToMotorhomeDialog({
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
+  // Success state for showing invite button after conversion
+  const [conversionResult, setConversionResult] = useState<{ motorhomeId: string; saleChannel: unknown } | null>(null);
+
   // Initialize form from wizard session data
   useEffect(() => {
     if (session) {
@@ -196,6 +201,7 @@ export function ConvertToMotorhomeDialog({
       setCustomerName(session.customer_name || String(session.form_data?.customerName || ""));
       setCustomerEmail(session.customer_email || String(session.form_data?.customerEmail || ""));
       setCustomerPhone(session.customer_phone || String(session.form_data?.customerPhone || ""));
+      setConversionResult(null); // Reset success state when dialog opens with new session
     }
   }, [session]);
 
@@ -350,19 +356,47 @@ export function ConvertToMotorhomeDialog({
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
-
-      const channelLabel = SALE_CHANNELS.find((c) => c.value === result.saleChannel)?.label || result.saleChannel;
-
-      toast({
-        title: "Wohnmobil erfolgreich angelegt!",
-        description: `${formData.manufacturer} ${formData.model} wurde als "${channelLabel}" erstellt. Sie können das Inserat jetzt unter Wohnmobile verwalten.`,
-      });
-      onOpenChange(false);
+      setConversionResult(result);
     },
     onError: (error: Error) => {
       logger.error("Convert to motorhome failed:", error);
       toast({
         title: "Fehler beim Anlegen",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // ---- Invite Mutation: Send registration link ----
+  const inviteMutation = useMutation({
+    mutationFn: async (motorhomeId: string) => {
+      const { data, error } = await supabase.functions.invoke(
+        "send-registration-invite",
+        {
+          body: {
+            email: customerEmail.trim(),
+            customerName: customerName.trim() || undefined,
+            motorhomeId,
+            sessionId: session?.id,
+          },
+        }
+      );
+
+      if (error) throw new Error(error.message || "E-Mail konnte nicht gesendet werden");
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Registrierungslink gesendet!",
+        description: `Eine E-Mail mit dem Aktivierungslink wurde an ${customerEmail} gesendet.`,
+      });
+    },
+    onError: (error: Error) => {
+      logger.error("Send registration invite failed:", error);
+      toast({
+        title: "Fehler beim Senden",
         description: error.message,
         variant: "destructive",
       });
@@ -855,27 +889,89 @@ export function ConvertToMotorhomeDialog({
           </div>
         </ScrollArea>
 
+        {/* Success Screen after conversion */}
+        {conversionResult && (
+          <Card className="p-6 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                  Wohnmobil erfolgreich angelegt!
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-300 mb-4">
+                  {formData.manufacturer} {formData.model} wurde erstellt.
+                  Senden Sie dem Kunden jetzt einen Registrierungslink, damit er sein Fahrzeug
+                  in seinem Dashboard sehen und verwalten kann.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => inviteMutation.mutate(conversionResult.motorhomeId)}
+                    disabled={inviteMutation.isPending || inviteMutation.isSuccess}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {inviteMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Wird gesendet...
+                      </>
+                    ) : inviteMutation.isSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Link gesendet an {customerEmail}
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Registrierungslink senden
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setConversionResult(null);
+                      onOpenChange(false);
+                    }}
+                  >
+                    Schlie\u00dfen
+                  </Button>
+                </div>
+                {inviteMutation.isSuccess && (
+                  <p className="text-xs text-green-600 mt-2">
+                    Der Kunde erh\u00e4lt eine E-Mail mit einem Aktivierungslink.
+                    Nach dem Klick wird er automatisch eingeloggt und sieht sein Fahrzeug im Dashboard.
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Abbrechen
-          </Button>
-          <Button
-            onClick={() => convertMutation.mutate()}
-            disabled={convertMutation.isPending || !isValid}
-            className="gradient-hero hover:gradient-hero-hover"
-          >
-            {convertMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Wird angelegt...
-              </>
-            ) : (
-              <>
-                <Car className="w-4 h-4 mr-2" />
-                Als Wohnmobil anlegen
-              </>
-            )}
-          </Button>
+          {!conversionResult && (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Abbrechen
+              </Button>
+              <Button
+                onClick={() => convertMutation.mutate()}
+                disabled={convertMutation.isPending || !isValid}
+                className="gradient-hero hover:gradient-hero-hover"
+              >
+                {convertMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Wird angelegt...
+                  </>
+                ) : (
+                  <>
+                    <Car className="w-4 h-4 mr-2" />
+                    Als Wohnmobil anlegen
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

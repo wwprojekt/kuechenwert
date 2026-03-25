@@ -1296,6 +1296,41 @@ export default function AdminLeads() {
                               <Car className="w-4 h-4 text-primary" />
                             </Button>
                           )}
+                          {session.status === "converted" && session.customer_email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const { data, error } = await supabase.functions.invoke(
+                                    "send-registration-invite",
+                                    {
+                                      body: {
+                                        email: session.customer_email,
+                                        customerName: session.customer_name || undefined,
+                                        sessionId: session.id,
+                                      },
+                                    }
+                                  );
+                                  if (error) throw error;
+                                  if (data?.error) throw new Error(data.error);
+                                  toast({
+                                    title: "Registrierungslink gesendet!",
+                                    description: `E-Mail an ${session.customer_email} gesendet.`,
+                                  });
+                                } catch (err: any) {
+                                  toast({
+                                    title: "Fehler",
+                                    description: err.message || "Konnte nicht gesendet werden",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              title="Registrierungslink senden"
+                            >
+                              <Mail className="w-4 h-4 text-purple-600" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1990,10 +2025,48 @@ export default function AdminLeads() {
                     </Button>
                   )}
                   {selectedSession.status === "converted" && (
-                    <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      Bereits als Wohnmobil angelegt
-                    </Badge>
+                    <>
+                      <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Bereits als Wohnmobil angelegt
+                      </Badge>
+                      {selectedSession.customer_email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          onClick={async () => {
+                            try {
+                              const { data, error } = await supabase.functions.invoke(
+                                "send-registration-invite",
+                                {
+                                  body: {
+                                    email: selectedSession.customer_email,
+                                    customerName: selectedSession.customer_name || undefined,
+                                    sessionId: selectedSession.id,
+                                  },
+                                }
+                              );
+                              if (error) throw error;
+                              if (data?.error) throw new Error(data.error);
+                              toast({
+                                title: "Registrierungslink gesendet!",
+                                description: `E-Mail an ${selectedSession.customer_email} gesendet.`,
+                              });
+                            } catch (err: any) {
+                              toast({
+                                title: "Fehler",
+                                description: err.message || "Konnte nicht gesendet werden",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <Mail className="w-4 h-4 mr-2" />
+                          Registrierungslink senden
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

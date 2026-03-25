@@ -142,6 +142,26 @@ serve(async (req) => {
           console.error('Email send failed:', await emailResponse.text());
         } else {
           console.log('PIN email sent successfully to:', fullAppointment.profiles.email);
+          const pinResult = await emailResponse.json();
+          // Log in admin_emails for System tab
+          try {
+            await supabaseClient.from('admin_emails').insert({
+              sender_email: 'info@caravanwert.de',
+              sender_name: settingsData.site_name || 'CaravanWert',
+              recipient_email: fullAppointment.profiles.email,
+              recipient_name: fullAppointment.profiles.first_name || null,
+              subject: 'Ihr Freigabe-PIN f\u00fcr die Fahrzeug\u00fcbergabe',
+              body_html: emailHtml,
+              body_text: '',
+              email_type: 'appointment_pin',
+              direction: 'outbound',
+              status: 'sent',
+              resend_id: pinResult?.id || null,
+              is_read: true,
+            });
+          } catch (logErr) {
+            console.error('Failed to log email in admin_emails:', logErr);
+          }
         }
       } catch (emailError) {
         console.error('Error sending email:', emailError);

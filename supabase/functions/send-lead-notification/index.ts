@@ -162,6 +162,26 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Admin email failed:", error);
     } else {
       console.log("Admin notification sent successfully");
+      const adminResult = await adminEmailResponse.json();
+      // Log admin notification in admin_emails
+      try {
+        await supabase.from('admin_emails').insert({
+          sender_email: 'info@caravanwert.de',
+          sender_name: settingsData.site_name,
+          recipient_email: ADMIN_EMAIL,
+          recipient_name: 'Admin',
+          subject: adminSubject,
+          body_html: adminHtml,
+          body_text: '',
+          email_type: `lead_admin_${type}`,
+          direction: 'outbound',
+          status: 'sent',
+          resend_id: adminResult?.id || null,
+          is_read: true,
+        });
+      } catch (logErr) {
+        console.error('Failed to log admin email in admin_emails:', logErr);
+      }
     }
 
     // 2. Send confirmation to user
@@ -231,6 +251,26 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("User email failed:", error);
     } else {
       console.log("User confirmation sent successfully");
+      const userResult = await userEmailResponse.json();
+      // Log user confirmation in admin_emails
+      try {
+        await supabase.from('admin_emails').insert({
+          sender_email: 'info@caravanwert.de',
+          sender_name: settingsData.site_name,
+          recipient_email: email,
+          recipient_name: name || null,
+          subject: userSubject,
+          body_html: userHtml,
+          body_text: '',
+          email_type: `lead_user_${type}`,
+          direction: 'outbound',
+          status: 'sent',
+          resend_id: userResult?.id || null,
+          is_read: true,
+        });
+      } catch (logErr) {
+        console.error('Failed to log user email in admin_emails:', logErr);
+      }
     }
 
     return new Response(

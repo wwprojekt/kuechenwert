@@ -147,14 +147,22 @@ Deno.serve(async (req) => {
     }
 
     // Log to admin_emails
-    await supabase.from("admin_emails").insert({
-      direction: "outgoing",
-      from_email: "info@caravanwert.de",
-      to_email: `${sent} Favoriten-Nutzer`,
-      subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
-      body: `Automatische Favoriten-Benachrichtigung für ${auction_title || motorhome_id}. ${sent} E-Mails gesendet.`,
-      status: errors.length > 0 ? "partial" : "sent",
-    });
+    try {
+      await supabase.from("admin_emails").insert({
+        sender_email: "info@caravanwert.de",
+        sender_name: "CaravanWert",
+        recipient_email: `${sent} Favoriten-Nutzer`,
+        subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
+        body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || motorhome_id}. ${sent} E-Mails gesendet.`,
+        body_text: '',
+        email_type: 'favorite_notification',
+        direction: "outbound",
+        status: errors.length > 0 ? "partial" : "sent",
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log email in admin_emails:', logErr);
+    }
 
     return new Response(JSON.stringify({ success: true, sent, errors: errors.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -216,6 +216,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const resumeResult = await resendRes.json();
+
+    // Log in admin_emails for System tab
+    try {
+      await supabase.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: 'CaravanWert',
+        recipient_email: recipientEmail,
+        subject: 'Ihr Wohnmobil-Inserat wartet \u2013 machen Sie jetzt weiter!',
+        body_html: emailHtml,
+        body_text: '',
+        email_type: 'wizard_resume',
+        direction: 'outbound',
+        status: 'sent',
+        resend_id: resumeResult?.id || null,
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log email in admin_emails:', logErr);
+    }
+
     // Update session: mark email sent
     await supabase
       .from("wizard_sessions")

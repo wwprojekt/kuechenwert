@@ -132,6 +132,28 @@ const handler = async (req: Request): Promise<Response> => {
           throw new Error(error);
         }
 
+        const resendResult = await emailResponse.json();
+
+        // Log in admin_emails for System tab
+        try {
+          await supabase.from('admin_emails').insert({
+            sender_email: 'info@caravanwert.de',
+            sender_name: settingsData.site_name,
+            recipient_email: profile.email,
+            recipient_name: name || null,
+            subject: `Ihre Auktions-Übersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`,
+            body_html: html,
+            body_text: '',
+            email_type: 'auction_summary',
+            direction: 'outbound',
+            status: 'sent',
+            resend_id: resendResult?.id || null,
+            is_read: true,
+          });
+        } catch (logErr) {
+          console.error('Failed to log email in admin_emails:', logErr);
+        }
+
         sent++;
       } catch (err: any) {
         console.error(`Failed to send auction summary to seller ${sellerId}:`, err.message);

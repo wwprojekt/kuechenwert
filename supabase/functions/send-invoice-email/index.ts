@@ -215,6 +215,28 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to send invoice email: ${errorData}`);
     }
 
+    const resendResult = await resendResponse.json();
+
+    // ─── Log in admin_emails for System tab ─────────────────────────
+    try {
+      await supabaseAdmin.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: siteName,
+        recipient_email: invoice.dealer.email,
+        recipient_name: dealerName || null,
+        subject: emailSubject,
+        body_html: emailHtml,
+        body_text: '',
+        email_type: 'invoice',
+        direction: 'outbound',
+        status: 'sent',
+        resend_id: resendResult?.id || null,
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log email in admin_emails:', logErr);
+    }
+
     // ─── Update invoice: mark as sent ──────────────────────────────
     const { error: updateError } = await supabaseAdmin
       .from('invoices')

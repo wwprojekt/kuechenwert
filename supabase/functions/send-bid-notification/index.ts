@@ -127,6 +127,26 @@ const handler = async (req: Request): Promise<Response> => {
     const result = await emailResponse.json();
     console.log(`Bid notification sent to ${profile.email}`);
 
+    // Log in admin_emails for System tab
+    try {
+      await supabase.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: settingsData.site_name,
+        recipient_email: profile.email,
+        recipient_name: userName || null,
+        subject: isOutbid ? `Sie wurden überboten - ${motorhomeName}` : `Gebot bestätigt - ${motorhomeName}`,
+        body_html: html,
+        body_text: '',
+        email_type: isOutbid ? 'bid_outbid' : 'bid_confirmed',
+        direction: 'outbound',
+        status: 'sent',
+        resend_id: result?.id || null,
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log email in admin_emails:', logErr);
+    }
+
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },

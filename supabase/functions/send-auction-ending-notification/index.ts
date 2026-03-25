@@ -133,9 +133,30 @@ const handler = async (req: Request): Promise<Response> => {
             }),
           });
 
+          const resendResult = emailResponse.ok ? await emailResponse.json() : null;
           if (emailResponse.ok) {
             notifications.push({ bidderId, auctionId: auction.id, success: true });
             console.log(`Notification sent to ${profile.email} for auction ${auction.id}`);
+
+            // Log in admin_emails for System tab
+            try {
+              await supabase.from('admin_emails').insert({
+                sender_email: 'info@caravanwert.de',
+                sender_name: settingsData.site_name,
+                recipient_email: profile.email,
+                recipient_name: userName || null,
+                subject: `⏰ Auktion endet bald - ${motorhomeName}`,
+                body_html: html,
+                body_text: '',
+                email_type: 'auction_ending_soon',
+                direction: 'outbound',
+                status: 'sent',
+                resend_id: resendResult?.id || null,
+                is_read: true,
+              });
+            } catch (logErr) {
+              console.error('Failed to log email in admin_emails:', logErr);
+            }
           } else {
             throw new Error(await emailResponse.text());
           }

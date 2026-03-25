@@ -304,6 +304,27 @@ Deno.serve(async (req) => {
       throw new Error('Failed to send reminder email');
     }
 
+    const resendResult = await resendResponse.json();
     console.log(`${level}. Mahnung sent to ${invoice.dealer.email}`);
+
+    // Log in admin_emails for System tab
+    try {
+      await supabase.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: settingsData.site_name,
+        recipient_email: invoice.dealer.email,
+        recipient_name: dealerName || null,
+        subject: reminder.subject,
+        body_html: emailHtml,
+        body_text: '',
+        email_type: `dunning_level_${level}`,
+        direction: 'outbound',
+        status: 'sent',
+        resend_id: resendResult?.id || null,
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log email in admin_emails:', logErr);
+    }
   }
 });

@@ -60,10 +60,13 @@ interface WizardSessionData {
   status: string;
 }
 
+type LeadSourceType = "wizard" | "quick" | "valuation";
+
 interface ConvertToMotorhomeDialogProps {
   session: WizardSessionData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  sourceType?: LeadSourceType;
 }
 
 // ============================================================================
@@ -185,6 +188,7 @@ export function ConvertToMotorhomeDialog({
   session,
   open,
   onOpenChange,
+  sourceType = "wizard",
 }: ConvertToMotorhomeDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -347,19 +351,40 @@ export function ConvertToMotorhomeDialog({
 
       if (insertError) throw insertError;
 
-      // Mark wizard session as converted
-      await supabase
-        .from("wizard_sessions")
-        .update({
-          status: "converted",
-          admin_notes: `${session.admin_notes ? session.admin_notes + "\n" : ""}[${new Date().toLocaleDateString("de-DE")}] Als Wohnmobil angelegt (ID: ${motorhome.id})`,
-        } as any)
-        .eq("id", session.id);
+      // Mark source lead as converted
+      const convertNote = `[${new Date().toLocaleDateString("de-DE")}] Als Wohnmobil angelegt (ID: ${motorhome.id})`;
+
+      if (sourceType === "wizard") {
+        await supabase
+          .from("wizard_sessions")
+          .update({
+            status: "converted",
+            admin_notes: `${(session as any).admin_notes ? (session as any).admin_notes + "\n" : ""}${convertNote}`,
+          } as any)
+          .eq("id", session.id);
+      } else if (sourceType === "quick") {
+        await supabase
+          .from("quick_leads")
+          .update({
+            notes: `${(session as any).notes ? (session as any).notes + "\n" : ""}${convertNote}`,
+            lead_quality: "converted",
+          } as any)
+          .eq("id", session.id);
+      } else if (sourceType === "valuation") {
+        await supabase
+          .from("value_assessment_leads")
+          .update({
+            status: "converted",
+          } as any)
+          .eq("id", session.id);
+      }
 
       return { motorhomeId: motorhome.id, saleChannel: formData.sale_channel };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       setConversionResult(result);
     },
@@ -424,10 +449,10 @@ export function ConvertToMotorhomeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Car className="w-5 h-5 text-primary" />
-            Wizard-Anfrage als Wohnmobil anlegen
+            {sourceType === "wizard" ? "Wizard-Anfrage" : sourceType === "quick" ? "Quick-Lead" : "Wertrechner-Lead"} als Wohnmobil anlegen
           </DialogTitle>
           <DialogDescription>
-            Prüfen und bearbeiten Sie die Daten aus der Wizard-Session. Nach dem Anlegen
+            Prüfen und bearbeiten Sie die Daten{sourceType === "wizard" ? " aus der Wizard-Session" : ""}. Nach dem Anlegen
             erscheint das Fahrzeug in der Wohnmobil-Verwaltung.
           </DialogDescription>
         </DialogHeader>

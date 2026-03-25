@@ -72,6 +72,8 @@ import {
   Loader2,
   Calculator,
   Euro,
+  FileText,
+  Globe,
 } from "lucide-react";
 
 // ============================================================================
@@ -113,6 +115,19 @@ interface QuickLead {
   source: string | null;
   wizard_completed: boolean;
   created_at: string;
+  updated_at: string | null;
+  // Extended fields
+  admin_notes: string | null;
+  notes: string | null;
+  status: string | null;
+  contacted_at: string | null;
+  lead_quality: string | null;
+  form_data_snapshot: Record<string, unknown> | null;
+  last_wizard_step: number | null;
+  max_wizard_step: number | null;
+  page_url: string | null;
+  referrer: string | null;
+  user_agent: string | null;
 }
 
 interface ValuationLead {
@@ -171,15 +186,19 @@ const FIELD_LABELS: Record<string, string> = {
   model: "Modell",
   year: "Baujahr",
   bodyType: "Aufbauart",
+  body_type: "Aufbauart",
   mileage: "Kilometerstand",
   vehicleType: "Fahrzeugtyp",
   // Technik
   fuelType: "Kraftstoff",
+  fuel_type: "Kraftstoff",
   transmission: "Getriebe",
   enginePower: "Motorleistung (PS)",
+  engine_power_hp: "Motorleistung (PS)",
   engine_displacement_ccm: "Hubraum (ccm)",
   driveTrain: "Antrieb",
   emissionClass: "Schadstoffklasse",
+  emission_class: "Schadstoffklasse",
   // Abmessungen
   length_m: "Länge (cm)",
   width_m: "Breite (cm)",
@@ -229,7 +248,9 @@ const FIELD_LABELS: Record<string, string> = {
   vehicle_identification_number: "Fahrgestellnummer (VIN)",
   // Verkauf
   saleChannel: "Verkaufsweg",
+  sale_channel: "Verkaufsweg",
   reservePrice: "Mindestpreis",
+  reserve_price: "Mindestpreis",
   desiredPrice: "Wunschpreis",
   description: "Beschreibung",
   // Kontakt
@@ -249,11 +270,11 @@ const SALE_CHANNEL_LABELS: Record<string, string> = {
 const FIELD_GROUPS: { title: string; fields: string[] }[] = [
   {
     title: "Fahrzeug",
-    fields: ["manufacturer", "model", "year", "bodyType", "vehicleType", "mileage"],
+    fields: ["manufacturer", "model", "year", "bodyType", "body_type", "vehicleType", "mileage"],
   },
   {
     title: "Technik",
-    fields: ["fuelType", "transmission", "enginePower", "engine_displacement_ccm", "driveTrain", "emissionClass"],
+    fields: ["fuelType", "fuel_type", "transmission", "enginePower", "engine_power_hp", "engine_displacement_ccm", "driveTrain", "emissionClass", "emission_class"],
   },
   {
     title: "Abmessungen",
@@ -277,20 +298,20 @@ const FIELD_GROUPS: { title: string; fields: string[] }[] = [
   },
   {
     title: "Verkauf",
-    fields: ["saleChannel", "reservePrice", "desiredPrice", "description"],
+    fields: ["saleChannel", "sale_channel", "reservePrice", "reserve_price", "desiredPrice", "description"],
   },
 ];
 
 function formatFieldValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Ja" : "Nein";
-  if (key === "saleChannel" && typeof value === "string") {
+  if ((key === "saleChannel" || key === "sale_channel") && typeof value === "string") {
     return SALE_CHANNEL_LABELS[value] || value;
   }
   if (key === "mileage" && typeof value === "number") {
     return `${value.toLocaleString("de-DE")} km`;
   }
-  if ((key === "reservePrice" || key === "desiredPrice") && typeof value === "number") {
+  if ((key === "reservePrice" || key === "desiredPrice" || key === "reserve_price") && typeof value === "number") {
     return `${value.toLocaleString("de-DE")} EUR`;
   }
   if ((key.endsWith("_liters") || key === "weight_kg" || key === "payload_kg") && typeof value === "number") {
@@ -364,6 +385,103 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
+function QuickLeadStatusBadge({ status, leadQuality, contactedAt }: { status: string | null; leadQuality: string | null; contactedAt: string | null }) {
+  if (status === "converted" || leadQuality === "converted") {
+    return (
+      <Badge className="bg-purple-500 hover:bg-purple-600">
+        <Car className="w-3 h-3 mr-1" /> Konvertiert
+      </Badge>
+    );
+  }
+  if (contactedAt) {
+    return (
+      <Badge className="bg-green-500 hover:bg-green-600">
+        <CheckCircle2 className="w-3 h-3 mr-1" /> Kontaktiert
+      </Badge>
+    );
+  }
+  if (leadQuality === "hot") {
+    return (
+      <Badge className="bg-orange-500 hover:bg-orange-600">
+        <TrendingUp className="w-3 h-3 mr-1" /> Hot
+      </Badge>
+    );
+  }
+  if (leadQuality === "warm") {
+    return (
+      <Badge className="bg-yellow-500 hover:bg-yellow-600">
+        <Target className="w-3 h-3 mr-1" /> Warm
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="text-orange-500">
+      Offen
+    </Badge>
+  );
+}
+
+/**
+ * Helper to map a QuickLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
+ */
+function quickLeadToSessionData(lead: QuickLead): {
+  id: string;
+  user_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  form_data: Record<string, unknown>;
+  status: string;
+} {
+  // Merge direct fields + form_data_snapshot
+  const formData: Record<string, unknown> = {
+    ...(lead.form_data_snapshot || {}),
+    manufacturer: lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string) || "",
+    model: lead.model || (lead.form_data_snapshot?.model as string) || "",
+    bodyType: lead.body_type || (lead.form_data_snapshot?.bodyType as string) || "",
+    saleChannel: lead.sale_channel || (lead.form_data_snapshot?.saleChannel as string) || "auction",
+  };
+  return {
+    id: lead.id,
+    user_id: null,
+    customer_name: lead.name,
+    customer_email: lead.email,
+    customer_phone: lead.phone,
+    form_data: formData,
+    status: lead.status || "new",
+  };
+}
+
+/**
+ * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
+ */
+function valuationLeadToSessionData(lead: ValuationLead): {
+  id: string;
+  user_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  form_data: Record<string, unknown>;
+  status: string;
+} {
+  return {
+    id: lead.id,
+    user_id: null,
+    customer_name: lead.name,
+    customer_email: lead.email,
+    customer_phone: lead.phone,
+    form_data: {
+      manufacturer: lead.manufacturer || "",
+      model: lead.model || "",
+      year: lead.year || "",
+      mileage: lead.mileage || "",
+      bodyType: lead.body_type || "",
+      condition: lead.condition || "",
+    },
+    status: lead.status || "new",
+  };
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -372,11 +490,16 @@ export default function AdminLeads() {
   const [activeTab, setActiveTab] = useState("wizard_sessions");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Wizard session detail dialog
   const [selectedSession, setSelectedSession] = useState<WizardSession | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  // Quick lead detail dialog
+  const [selectedQuickLead, setSelectedQuickLead] = useState<QuickLead | null>(null);
+  const [quickLeadDetailOpen, setQuickLeadDetailOpen] = useState(false);
+  const [quickLeadAdminNotes, setQuickLeadAdminNotes] = useState("");
   // Delete states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
@@ -388,11 +511,13 @@ export default function AdminLeads() {
   const [selectedValuation, setSelectedValuation] = useState<ValuationLead | null>(null);
   const [expertValue, setExpertValue] = useState("");
   const [expertNotes, setExpertNotes] = useState("");
+  const [valuationAdminNotes, setValuationAdminNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ value: number; confidence: number; reasoning: string; trainingCount: number } | null>(null);
   // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [convertSession, setConvertSession] = useState<WizardSession | null>(null);
+  const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
+  const [convertSourceType, setConvertSourceType] = useState<"wizard" | "quick" | "valuation">("wizard");
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -451,7 +576,7 @@ export default function AdminLeads() {
       if (error) throw error;
       return (data || []) as WizardSession[];
     },
-    refetchInterval: 30000, // Auto-refresh every 30s
+    refetchInterval: 30000,
   });
 
   const { data: quickLeads = [], isLoading: loadingLeads } = useQuery({
@@ -464,6 +589,7 @@ export default function AdminLeads() {
       if (error) throw error;
       return (data || []) as QuickLead[];
     },
+    refetchInterval: 30000,
   });
 
   const { data: valuationLeads = [], isLoading: loadingValuationLeads } = useQuery({
@@ -488,7 +614,6 @@ export default function AdminLeads() {
     const total = wizardSessions.length;
     const conversionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    // Average step where users abandon
     const abandonedSessions = wizardSessions.filter((s) => s.status === "abandoned");
     const avgAbandonStep =
       abandonedSessions.length > 0
@@ -498,12 +623,10 @@ export default function AdminLeads() {
           )
         : 0;
 
-    // Leads with contact info (actionable)
     const actionableLeads = wizardSessions.filter(
       (s) => s.status !== "completed" && (s.customer_email || s.customer_phone)
     ).length;
 
-    // Not yet contacted
     const notContacted = wizardSessions.filter(
       (s) =>
         s.status !== "completed" &&
@@ -528,13 +651,11 @@ export default function AdminLeads() {
 
   // ---- Filtering ----
 
-  // Enrich wizard sessions with contact data from quick_leads as fallback
   const enrichedSessions = useMemo(() => {
     return wizardSessions.map((session) => {
       if (session.customer_name && session.customer_email && session.customer_phone) {
-        return session; // Already has all contact data
+        return session;
       }
-      // Try to find matching quick_lead
       const matchingLead = quickLeads.find((lead) => {
         if (session.customer_email && lead.email) {
           return lead.email === session.customer_email;
@@ -564,10 +685,7 @@ export default function AdminLeads() {
 
   const filteredSessions = useMemo(() => {
     return enrichedSessions.filter((session) => {
-      // Status filter
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
-
-      // Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -686,6 +804,52 @@ export default function AdminLeads() {
     },
   });
 
+  // ---- Quick Lead Mutations ----
+
+  const markQuickLeadContacted = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("quick_leads")
+        .update({ contacted_at: new Date().toISOString(), status: "contacted" } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Als kontaktiert markiert" });
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+    },
+  });
+
+  const updateQuickLeadAdminNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from("quick_leads")
+        .update({ admin_notes: notes } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Notiz gespeichert" });
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+    },
+  });
+
+  // ---- Valuation Lead Mutations ----
+
+  const updateValuationAdminNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .update({ admin_notes: notes } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Admin-Notiz gespeichert" });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    },
+  });
+
   // ---- Delete Mutations ----
 
   const deleteWizardSessions = useMutation({
@@ -778,7 +942,7 @@ export default function AdminLeads() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Expertenwert gespeichert", description: "Der Wert wird f\u00fcr das KI-Training verwendet." });
+      toast({ title: "Expertenwert gespeichert", description: "Der Wert wird für das KI-Training verwendet." });
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
       setValuationDetailOpen(false);
     },
@@ -811,7 +975,6 @@ export default function AdminLeads() {
           reasoning: data.aiReasoning,
           trainingCount: data.trainingCount,
         });
-        // Save AI result to DB
         await supabase
           .from("value_assessment_leads")
           .update({
@@ -821,8 +984,8 @@ export default function AdminLeads() {
           .eq("id", lead.id);
       } else {
         toast({
-          title: "KI-Sch\u00e4tzung nicht m\u00f6glich",
-          description: data?.message || "Noch nicht gen\u00fcgend Trainingsdaten vorhanden.",
+          title: "KI-Schätzung nicht möglich",
+          description: data?.message || "Noch nicht genügend Trainingsdaten vorhanden.",
         });
       }
     } catch (err: any) {
@@ -832,10 +995,57 @@ export default function AdminLeads() {
     }
   };
 
+  // ---- Handlers ----
+
+  const openDetail = (session: WizardSession) => {
+    let enrichedSession = { ...session };
+    if (!session.customer_name || !session.customer_email || !session.customer_phone) {
+      const matchingLead = quickLeads.find((lead) => {
+        if (session.customer_email && lead.email) {
+          return lead.email === session.customer_email;
+        }
+        if (lead.manufacturer && session.vehicle_summary) {
+          const leadTime = new Date(lead.created_at).getTime();
+          const sessionTime = new Date(session.created_at).getTime();
+          const timeDiff = Math.abs(leadTime - sessionTime);
+          return (
+            session.vehicle_summary.includes(lead.manufacturer) &&
+            timeDiff < 5 * 60 * 1000
+          );
+        }
+        return false;
+      });
+      if (matchingLead) {
+        enrichedSession = {
+          ...session,
+          customer_name: session.customer_name || matchingLead.name,
+          customer_email: session.customer_email || matchingLead.email,
+          customer_phone: session.customer_phone || matchingLead.phone,
+        };
+      }
+    }
+    setSelectedSession(enrichedSession);
+    setAdminNotes(session.admin_notes || "");
+    setDetailDialogOpen(true);
+  };
+
+  const openEmailDialog = (session: WizardSession) => {
+    setSelectedSession(session);
+    setCustomMessage("");
+    setEmailDialogOpen(true);
+  };
+
+  const openQuickLeadDetail = (lead: QuickLead) => {
+    setSelectedQuickLead(lead);
+    setQuickLeadAdminNotes(lead.admin_notes || lead.notes || "");
+    setQuickLeadDetailOpen(true);
+  };
+
   const openValuationDetail = (lead: ValuationLead) => {
     setSelectedValuation(lead);
     setExpertValue(lead.admin_estimated_value ? String(lead.admin_estimated_value) : "");
     setExpertNotes(lead.admin_notes || "");
+    setValuationAdminNotes(lead.admin_notes || "");
     setAiResult(lead.ai_estimated_value ? {
       value: lead.ai_estimated_value,
       confidence: lead.ai_confidence || 0,
@@ -916,49 +1126,31 @@ export default function AdminLeads() {
 
   const isDeleting = deleteWizardSessions.isPending || deleteQuickLeads.isPending || deleteValuationLeads.isPending;
 
-  // ---- Handlers ----
-
-  const openDetail = (session: WizardSession) => {
-    // If session has no contact data, try to find matching quick_lead by vehicle/timing
-    let enrichedSession = { ...session };
-    if (!session.customer_name || !session.customer_email || !session.customer_phone) {
-      // Find matching quick_lead by email, or by vehicle + close timestamp
-      const matchingLead = quickLeads.find((lead) => {
-        // Match by email if available
-        if (session.customer_email && lead.email) {
-          return lead.email === session.customer_email;
+  const sendRegistrationInvite = async (email: string, name?: string, sourceId?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "send-registration-invite",
+        {
+          body: {
+            email,
+            customerName: name || undefined,
+            sessionId: sourceId || undefined,
+          },
         }
-        // Match by vehicle info and close creation time (within 5 minutes)
-        if (lead.manufacturer && session.vehicle_summary) {
-          const leadTime = new Date(lead.created_at).getTime();
-          const sessionTime = new Date(session.created_at).getTime();
-          const timeDiff = Math.abs(leadTime - sessionTime);
-          return (
-            session.vehicle_summary.includes(lead.manufacturer) &&
-            timeDiff < 5 * 60 * 1000
-          );
-        }
-        return false;
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Registrierungslink gesendet!",
+        description: `E-Mail an ${email} gesendet.`,
       });
-
-      if (matchingLead) {
-        enrichedSession = {
-          ...session,
-          customer_name: session.customer_name || matchingLead.name,
-          customer_email: session.customer_email || matchingLead.email,
-          customer_phone: session.customer_phone || matchingLead.phone,
-        };
-      }
+    } catch (err: any) {
+      toast({
+        title: "Fehler",
+        description: err.message || "Konnte nicht gesendet werden",
+        variant: "destructive",
+      });
     }
-    setSelectedSession(enrichedSession);
-    setAdminNotes(session.admin_notes || "");
-    setDetailDialogOpen(true);
-  };
-
-  const openEmailDialog = (session: WizardSession) => {
-    setSelectedSession(session);
-    setCustomMessage("");
-    setEmailDialogOpen(true);
   };
 
   // ============================================================================
@@ -1056,7 +1248,7 @@ export default function AdminLeads() {
         </div>
       </Card>
 
-      {/* Tabs: Wizard Sessions / Quick Leads */}
+      {/* Tabs: Wizard Sessions / Quick Leads / Valuation Leads */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <TabsList>
@@ -1105,20 +1297,17 @@ export default function AdminLeads() {
           </div>
         </div>
 
+        {/* ================================================================ */}
         {/* Wizard Sessions Tab */}
+        {/* ================================================================ */}
         <TabsContent value="wizard_sessions">
-          {/* Bulk actions bar */}
           {selectedSessionIds.size > 0 && (
             <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
               <span className="text-sm font-medium">
                 {selectedSessionIds.size} Session{selectedSessionIds.size > 1 ? "s" : ""} ausgewählt
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedSessionIds(new Set())}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSelectedSessionIds(new Set())}>
                   Auswahl aufheben
                 </Button>
                 <Button
@@ -1252,12 +1441,7 @@ export default function AdminLeads() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDetail(session)}
-                            title="Details anzeigen"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(session)} title="Details anzeigen">
                             <Eye className="w-4 h-4" />
                           </Button>
                           {session.customer_phone && (
@@ -1274,12 +1458,7 @@ export default function AdminLeads() {
                             </Button>
                           )}
                           {session.customer_email && session.status !== "completed" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEmailDialog(session)}
-                              title="Wiederaufnahme-E-Mail senden"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => openEmailDialog(session)} title="Wiederaufnahme-E-Mail senden">
                               <Send className="w-4 h-4 text-blue-600" />
                             </Button>
                           )}
@@ -1289,6 +1468,7 @@ export default function AdminLeads() {
                               size="sm"
                               onClick={() => {
                                 setConvertSession(session);
+                                setConvertSourceType("wizard");
                                 setConvertDialogOpen(true);
                               }}
                               title="Als Wohnmobil anlegen"
@@ -1300,32 +1480,7 @@ export default function AdminLeads() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={async () => {
-                                try {
-                                  const { data, error } = await supabase.functions.invoke(
-                                    "send-registration-invite",
-                                    {
-                                      body: {
-                                        email: session.customer_email,
-                                        customerName: session.customer_name || undefined,
-                                        sessionId: session.id,
-                                      },
-                                    }
-                                  );
-                                  if (error) throw error;
-                                  if (data?.error) throw new Error(data.error);
-                                  toast({
-                                    title: "Registrierungslink gesendet!",
-                                    description: `E-Mail an ${session.customer_email} gesendet.`,
-                                  });
-                                } catch (err: any) {
-                                  toast({
-                                    title: "Fehler",
-                                    description: err.message || "Konnte nicht gesendet werden",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
+                              onClick={() => sendRegistrationInvite(session.customer_email!, session.customer_name || undefined, session.id)}
                               title="Registrierungslink senden"
                             >
                               <Mail className="w-4 h-4 text-purple-600" />
@@ -1350,20 +1505,17 @@ export default function AdminLeads() {
           </Card>
         </TabsContent>
 
-        {/* Quick Leads Tab */}
+        {/* ================================================================ */}
+        {/* Quick Leads Tab - EXTENDED */}
+        {/* ================================================================ */}
         <TabsContent value="quick_leads">
-          {/* Bulk actions bar */}
           {selectedLeadIds.size > 0 && (
             <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
               <span className="text-sm font-medium">
                 {selectedLeadIds.size} Lead{selectedLeadIds.size > 1 ? "s" : ""} ausgewählt
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedLeadIds(new Set())}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds(new Set())}>
                   Auswahl aufheben
                 </Button>
                 <Button
@@ -1392,29 +1544,34 @@ export default function AdminLeads() {
                   <TableHead>Name</TableHead>
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Fahrzeug</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Quelle</TableHead>
                   <TableHead>Wizard</TableHead>
                   <TableHead>Erstellt</TableHead>
-                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingLeads ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Lade Leads...
                     </TableCell>
                   </TableRow>
                 ) : filteredQuickLeads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Keine Leads gefunden
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredQuickLeads.map((lead) => (
-                    <TableRow key={lead.id} className={selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""}>
-                      <TableCell>
+                    <TableRow
+                      key={lead.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""}`}
+                      onClick={() => openQuickLeadDetail(lead)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedLeadIds.has(lead.id)}
                           onCheckedChange={() => toggleLeadSelection(lead.id)}
@@ -1445,6 +1602,9 @@ export default function AdminLeads() {
                         )}
                       </TableCell>
                       <TableCell>
+                        <QuickLeadStatusBadge status={lead.status} leadQuality={lead.lead_quality} contactedAt={lead.contacted_at} />
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {lead.source === "hero_form_partial"
                             ? "Teilweise"
@@ -1456,6 +1616,10 @@ export default function AdminLeads() {
                       <TableCell>
                         {lead.wizard_completed ? (
                           <Badge className="bg-green-500 text-xs">Ja</Badge>
+                        ) : lead.max_wizard_step ? (
+                          <Badge variant="outline" className="text-xs text-blue-500">
+                            Schritt {lead.max_wizard_step}
+                          </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs text-orange-500">
                             Nein
@@ -1467,16 +1631,58 @@ export default function AdminLeads() {
                           {format(new Date(lead.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog("quick", [lead.id])}
-                          title="Lead löschen"
-                          className="hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" onClick={() => openQuickLeadDetail(lead)} title="Details anzeigen">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {lead.phone && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                window.open(`tel:${lead.phone}`);
+                                markQuickLeadContacted.mutate(lead.id);
+                              }}
+                              title="Anrufen & als kontaktiert markieren"
+                            >
+                              <PhoneCall className="w-4 h-4 text-green-600" />
+                            </Button>
+                          )}
+                          {lead.status !== "converted" && lead.lead_quality !== "converted" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setConvertSession(quickLeadToSessionData(lead));
+                                setConvertSourceType("quick");
+                                setConvertDialogOpen(true);
+                              }}
+                              title="Als Wohnmobil anlegen"
+                            >
+                              <Car className="w-4 h-4 text-primary" />
+                            </Button>
+                          )}
+                          {(lead.status === "converted" || lead.lead_quality === "converted") && lead.email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => sendRegistrationInvite(lead.email!, lead.name || undefined, lead.id)}
+                              title="Registrierungslink senden"
+                            >
+                              <Mail className="w-4 h-4 text-purple-600" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog("quick", [lead.id])}
+                            title="Lead löschen"
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1486,20 +1692,17 @@ export default function AdminLeads() {
           </Card>
         </TabsContent>
 
-        {/* Wertrechner / Wertermittlung Leads Tab */}
+        {/* ================================================================ */}
+        {/* Wertrechner / Wertermittlung Leads Tab - EXTENDED */}
+        {/* ================================================================ */}
         <TabsContent value="valuation_leads">
-          {/* Bulk actions bar */}
           {selectedValuationIds.size > 0 && (
             <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
               <span className="text-sm font-medium">
                 {selectedValuationIds.size} Lead{selectedValuationIds.size > 1 ? "s" : ""} ausgewählt
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedValuationIds(new Set())}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSelectedValuationIds(new Set())}>
                   Auswahl aufheben
                 </Button>
                 <Button
@@ -1532,7 +1735,7 @@ export default function AdminLeads() {
                   <TableHead>Quelle</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Erstellt</TableHead>
-                  <TableHead className="w-24">Aktionen</TableHead>
+                  <TableHead className="w-32">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1550,8 +1753,8 @@ export default function AdminLeads() {
                   </TableRow>
                 ) : (
                   filteredValuationLeads.map((lead) => (
-                    <TableRow key={lead.id} className={selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""}>
-                      <TableCell>
+                    <TableRow key={lead.id} className={`cursor-pointer hover:bg-muted/50 ${selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""}`} onClick={() => openValuationDetail(lead)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedValuationIds.has(lead.id)}
                           onCheckedChange={() => toggleValuationSelection(lead.id)}
@@ -1564,13 +1767,13 @@ export default function AdminLeads() {
                           {lead.email && (
                             <p className="text-xs flex items-center gap-1">
                               <Mail className="w-3 h-3" />
-                              <a href={`mailto:${lead.email}`} className="hover:underline text-primary">{lead.email}</a>
+                              <a href={`mailto:${lead.email}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>{lead.email}</a>
                             </p>
                           )}
                           {lead.phone && (
                             <p className="text-xs flex items-center gap-1">
                               <Phone className="w-3 h-3" />
-                              <a href={`tel:${lead.phone}`} className="hover:underline text-primary">{lead.phone}</a>
+                              <a href={`tel:${lead.phone}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>{lead.phone}</a>
                             </p>
                           )}
                         </div>
@@ -1620,7 +1823,9 @@ export default function AdminLeads() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {lead.contacted_at ? (
+                        {lead.status === "converted" ? (
+                          <Badge className="bg-purple-500 text-xs"><Car className="w-3 h-3 mr-1" /> Konvertiert</Badge>
+                        ) : lead.contacted_at ? (
                           <Badge className="bg-green-500 text-xs">Kontaktiert</Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs text-orange-500">Offen</Badge>
@@ -1632,13 +1837,8 @@ export default function AdminLeads() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openValuationDetail(lead)}
-                            title="Bewerten & Details"
-                          >
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" onClick={() => openValuationDetail(lead)} title="Bewerten & Details">
                             <Eye className="w-4 h-4 text-primary" />
                           </Button>
                           {lead.phone && (
@@ -1654,7 +1854,31 @@ export default function AdminLeads() {
                               <PhoneCall className="w-4 h-4 text-green-600" />
                             </Button>
                           )}
-                          {!lead.contacted_at && (
+                          {lead.status !== "converted" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setConvertSession(valuationLeadToSessionData(lead));
+                                setConvertSourceType("valuation");
+                                setConvertDialogOpen(true);
+                              }}
+                              title="Als Wohnmobil anlegen"
+                            >
+                              <Car className="w-4 h-4 text-primary" />
+                            </Button>
+                          )}
+                          {lead.status === "converted" && lead.email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => sendRegistrationInvite(lead.email, lead.name || undefined, lead.id)}
+                              title="Registrierungslink senden"
+                            >
+                              <Mail className="w-4 h-4 text-purple-600" />
+                            </Button>
+                          )}
+                          {!lead.contacted_at && lead.status !== "converted" && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1668,7 +1892,7 @@ export default function AdminLeads() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openDeleteDialog("valuation", [lead.id])}
-                            title="Lead l\u00f6schen"
+                            title="Lead löschen"
                             className="hover:text-destructive"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1685,7 +1909,7 @@ export default function AdminLeads() {
       </Tabs>
 
       {/* ================================================================== */}
-      {/* Detail Dialog */}
+      {/* Wizard Session Detail Dialog */}
       {/* ================================================================== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1707,16 +1931,11 @@ export default function AdminLeads() {
                   <StatusBadge status={selectedSession.status} />
                   <div className="flex items-center gap-2">
                     <Progress
-                      value={
-                        (selectedSession.max_step_reached / selectedSession.total_steps) * 100
-                      }
+                      value={(selectedSession.max_step_reached / selectedSession.total_steps) * 100}
                       className="h-3 w-32"
                     />
                     <span className="text-sm font-medium">
-                      {Math.round(
-                        (selectedSession.max_step_reached / selectedSession.total_steps) * 100
-                      )}
-                      %
+                      {Math.round((selectedSession.max_step_reached / selectedSession.total_steps) * 100)}%
                     </span>
                   </div>
                 </div>
@@ -1729,17 +1948,12 @@ export default function AdminLeads() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="font-medium">
-                        {selectedSession.customer_name || "Nicht angegeben"}
-                      </p>
+                      <p className="font-medium">{selectedSession.customer_name || "Nicht angegeben"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">E-Mail</p>
                       {selectedSession.customer_email ? (
-                        <a
-                          href={`mailto:${selectedSession.customer_email}`}
-                          className="font-medium text-primary hover:underline"
-                        >
+                        <a href={`mailto:${selectedSession.customer_email}`} className="font-medium text-primary hover:underline">
                           {selectedSession.customer_email}
                         </a>
                       ) : (
@@ -1749,10 +1963,7 @@ export default function AdminLeads() {
                     <div>
                       <p className="text-xs text-muted-foreground">Telefon</p>
                       {selectedSession.customer_phone ? (
-                        <a
-                          href={`tel:${selectedSession.customer_phone}`}
-                          className="font-medium text-primary hover:underline"
-                        >
+                        <a href={`tel:${selectedSession.customer_phone}`} className="font-medium text-primary hover:underline">
                           {selectedSession.customer_phone}
                         </a>
                       ) : (
@@ -1805,7 +2016,7 @@ export default function AdminLeads() {
                   </div>
                 </Card>
 
-                {/* Form Data Preview - Grouped with readable labels */}
+                {/* Form Data Preview */}
                 <Card className="p-4">
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <Eye className="w-4 h-4" /> Eingegebene Daten
@@ -1828,12 +2039,8 @@ export default function AdminLeads() {
                                 const val = (selectedSession.form_data as Record<string, unknown>)[field];
                                 return (
                                   <div key={field} className="flex justify-between py-0.5">
-                                    <span className="text-muted-foreground">
-                                      {FIELD_LABELS[field] || field}
-                                    </span>
-                                    <span className="font-medium text-right max-w-[180px] truncate">
-                                      {formatFieldValue(field, val)}
-                                    </span>
+                                    <span className="text-muted-foreground">{FIELD_LABELS[field] || field}</span>
+                                    <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(field, val)}</span>
                                   </div>
                                 );
                               })}
@@ -1841,20 +2048,15 @@ export default function AdminLeads() {
                           </div>
                         );
                       })}
-                      {/* Show any remaining fields not in groups */}
+                      {/* Ungrouped fields */}
                       {(() => {
                         const allGroupedFields = FIELD_GROUPS.flatMap((g) => g.fields);
                         const ungrouped = Object.entries(selectedSession.form_data || {}).filter(
                           ([key, val]) =>
                             !allGroupedFields.includes(key) &&
-                            val !== null &&
-                            val !== undefined &&
-                            val !== "" &&
-                            key !== "photos" &&
-                            key !== "photos_count" &&
-                            key !== "customerName" &&
-                            key !== "customerEmail" &&
-                            key !== "customerPhone"
+                            val !== null && val !== undefined && val !== "" &&
+                            key !== "photos" && key !== "photos_count" &&
+                            key !== "customerName" && key !== "customerEmail" && key !== "customerPhone"
                         );
                         if (ungrouped.length === 0) return null;
                         return (
@@ -1865,25 +2067,18 @@ export default function AdminLeads() {
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                               {ungrouped.map(([key, val]) => (
                                 <div key={key} className="flex justify-between py-0.5">
-                                  <span className="text-muted-foreground">
-                                    {FIELD_LABELS[key] || key}
-                                  </span>
-                                  <span className="font-medium text-right max-w-[180px] truncate">
-                                    {formatFieldValue(key, val)}
-                                  </span>
+                                  <span className="text-muted-foreground">{FIELD_LABELS[key] || key}</span>
+                                  <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(key, val)}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         );
                       })()}
-                      {/* Photo count */}
                       {selectedSession.form_data?.photos_count != null && (
                         <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
                           <span className="text-muted-foreground">Fotos hochgeladen:</span>
-                          <Badge variant="outline">
-                            {String(selectedSession.form_data.photos_count)} Fotos
-                          </Badge>
+                          <Badge variant="outline">{String(selectedSession.form_data.photos_count)} Fotos</Badge>
                         </div>
                       )}
                     </div>
@@ -1900,53 +2095,28 @@ export default function AdminLeads() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Erstellt</span>
-                      <span>
-                        {format(new Date(selectedSession.created_at), "dd.MM.yyyy HH:mm", {
-                          locale: de,
-                        })}
-                      </span>
+                      <span>{format(new Date(selectedSession.created_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Letzte Aktivität</span>
-                      <span>
-                        {formatDistanceToNow(new Date(selectedSession.last_activity_at), {
-                          addSuffix: true,
-                          locale: de,
-                        })}
-                      </span>
+                      <span>{formatDistanceToNow(new Date(selectedSession.last_activity_at), { addSuffix: true, locale: de })}</span>
                     </div>
                     {selectedSession.resume_email_sent_at && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">E-Mail gesendet</span>
-                        <span>
-                          {format(
-                            new Date(selectedSession.resume_email_sent_at),
-                            "dd.MM.yyyy HH:mm",
-                            { locale: de }
-                          )}
-                        </span>
+                        <span>{format(new Date(selectedSession.resume_email_sent_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
                       </div>
                     )}
                     {selectedSession.admin_called_at && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Angerufen</span>
-                        <span>
-                          {format(
-                            new Date(selectedSession.admin_called_at),
-                            "dd.MM.yyyy HH:mm",
-                            { locale: de }
-                          )}
-                        </span>
+                        <span>{format(new Date(selectedSession.admin_called_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
                       </div>
                     )}
                     {selectedSession.completed_at && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Abgeschlossen</span>
-                        <span>
-                          {format(new Date(selectedSession.completed_at), "dd.MM.yyyy HH:mm", {
-                            locale: de,
-                          })}
-                        </span>
+                        <span>{format(new Date(selectedSession.completed_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
                       </div>
                     )}
                   </div>
@@ -1966,12 +2136,7 @@ export default function AdminLeads() {
                   <Button
                     size="sm"
                     className="mt-2"
-                    onClick={() =>
-                      updateAdminNotes.mutate({
-                        sessionId: selectedSession.id,
-                        notes: adminNotes,
-                      })
-                    }
+                    onClick={() => updateAdminNotes.mutate({ sessionId: selectedSession.id, notes: adminNotes })}
                     disabled={updateAdminNotes.isPending}
                   >
                     {updateAdminNotes.isPending ? "Speichern..." : "Notiz speichern"}
@@ -1993,10 +2158,7 @@ export default function AdminLeads() {
                     </Button>
                   )}
                   {selectedSession.customer_email && selectedSession.status !== "completed" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => openEmailDialog(selectedSession)}
-                    >
+                    <Button variant="outline" onClick={() => openEmailDialog(selectedSession)}>
                       <Send className="w-4 h-4 mr-2 text-blue-600" />
                       Wiederaufnahme-E-Mail
                     </Button>
@@ -2016,6 +2178,7 @@ export default function AdminLeads() {
                       className="gradient-hero hover:gradient-hero-hover"
                       onClick={() => {
                         setConvertSession(selectedSession);
+                        setConvertSourceType("wizard");
                         setConvertDialogOpen(true);
                         setDetailDialogOpen(false);
                       }}
@@ -2035,32 +2198,304 @@ export default function AdminLeads() {
                           variant="outline"
                           size="sm"
                           className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                          onClick={async () => {
-                            try {
-                              const { data, error } = await supabase.functions.invoke(
-                                "send-registration-invite",
-                                {
-                                  body: {
-                                    email: selectedSession.customer_email,
-                                    customerName: selectedSession.customer_name || undefined,
-                                    sessionId: selectedSession.id,
-                                  },
-                                }
-                              );
-                              if (error) throw error;
-                              if (data?.error) throw new Error(data.error);
-                              toast({
-                                title: "Registrierungslink gesendet!",
-                                description: `E-Mail an ${selectedSession.customer_email} gesendet.`,
-                              });
-                            } catch (err: any) {
-                              toast({
-                                title: "Fehler",
-                                description: err.message || "Konnte nicht gesendet werden",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
+                          onClick={() => sendRegistrationInvite(selectedSession.customer_email!, selectedSession.customer_name || undefined, selectedSession.id)}
+                        >
+                          <Mail className="w-4 h-4 mr-2" />
+                          Registrierungslink senden
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ================================================================== */}
+      {/* Quick Lead Detail Dialog - NEW */}
+      {/* ================================================================== */}
+      <Dialog open={quickLeadDetailOpen} onOpenChange={setQuickLeadDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedQuickLead && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5" />
+                  Quick-Lead Details
+                </DialogTitle>
+                <DialogDescription>
+                  {[selectedQuickLead.manufacturer, selectedQuickLead.model].filter(Boolean).join(" ") || "Keine Fahrzeugdaten"}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Status */}
+                <div className="flex items-center justify-between">
+                  <QuickLeadStatusBadge
+                    status={selectedQuickLead.status}
+                    leadQuality={selectedQuickLead.lead_quality}
+                    contactedAt={selectedQuickLead.contacted_at}
+                  />
+                  {selectedQuickLead.lead_quality && (
+                    <Badge variant="outline" className="text-xs">
+                      Qualität: {selectedQuickLead.lead_quality}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Contact Info */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Kontaktdaten
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="font-medium">{selectedQuickLead.name || "Nicht angegeben"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">E-Mail</p>
+                      {selectedQuickLead.email ? (
+                        <a href={`mailto:${selectedQuickLead.email}`} className="font-medium text-primary hover:underline text-sm">
+                          {selectedQuickLead.email}
+                        </a>
+                      ) : (
+                        <p className="text-muted-foreground">Nicht angegeben</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefon</p>
+                      {selectedQuickLead.phone ? (
+                        <a href={`tel:${selectedQuickLead.phone}`} className="font-medium text-primary hover:underline">
+                          {selectedQuickLead.phone}
+                        </a>
+                      ) : (
+                        <p className="text-muted-foreground">Nicht angegeben</p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Vehicle Data */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Car className="w-4 h-4" /> Fahrzeugdaten
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Hersteller</span>
+                      <span className="font-medium">{selectedQuickLead.manufacturer || "-"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Modell</span>
+                      <span className="font-medium">{selectedQuickLead.model || "-"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Aufbauart</span>
+                      <span className="font-medium">{selectedQuickLead.body_type || "-"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Verkaufsweg</span>
+                      <span className="font-medium">{selectedQuickLead.sale_channel ? (SALE_CHANNEL_LABELS[selectedQuickLead.sale_channel] || selectedQuickLead.sale_channel) : "-"}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Form Data Snapshot (if available) */}
+                {selectedQuickLead.form_data_snapshot && Object.keys(selectedQuickLead.form_data_snapshot).length > 0 && (
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" /> Wizard-Daten Snapshot
+                    </h3>
+                    <div className="space-y-4">
+                      {FIELD_GROUPS.map((group) => {
+                        const groupEntries = group.fields.filter((field) => {
+                          const val = (selectedQuickLead.form_data_snapshot as Record<string, unknown>)?.[field];
+                          return val !== null && val !== undefined && val !== "" && field !== "photos";
+                        });
+                        if (groupEntries.length === 0) return null;
+                        return (
+                          <div key={group.title}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
+                              {group.title}
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              {groupEntries.map((field) => {
+                                const val = (selectedQuickLead.form_data_snapshot as Record<string, unknown>)[field];
+                                return (
+                                  <div key={field} className="flex justify-between py-0.5">
+                                    <span className="text-muted-foreground">{FIELD_LABELS[field] || field}</span>
+                                    <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(field, val)}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Ungrouped fields */}
+                      {(() => {
+                        const allGroupedFields = FIELD_GROUPS.flatMap((g) => g.fields);
+                        const ungrouped = Object.entries(selectedQuickLead.form_data_snapshot || {}).filter(
+                          ([key, val]) =>
+                            !allGroupedFields.includes(key) &&
+                            val !== null && val !== undefined && val !== "" &&
+                            key !== "photos" && key !== "photos_count" &&
+                            key !== "customerName" && key !== "customerEmail" && key !== "customerPhone"
+                        );
+                        if (ungrouped.length === 0) return null;
+                        return (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
+                              Sonstige
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              {ungrouped.map(([key, val]) => (
+                                <div key={key} className="flex justify-between py-0.5">
+                                  <span className="text-muted-foreground">{FIELD_LABELS[key] || key}</span>
+                                  <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(key, val)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Meta Info */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Herkunft & Tracking
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Quelle</span>
+                      <span>{selectedQuickLead.source || "-"}</span>
+                    </div>
+                    {selectedQuickLead.page_url && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Seite</span>
+                        <span className="text-right max-w-[250px] truncate">{selectedQuickLead.page_url}</span>
+                      </div>
+                    )}
+                    {selectedQuickLead.referrer && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Referrer</span>
+                        <span className="text-right max-w-[250px] truncate">{selectedQuickLead.referrer}</span>
+                      </div>
+                    )}
+                    {selectedQuickLead.max_wizard_step != null && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Max. Wizard-Schritt</span>
+                        <span>{selectedQuickLead.max_wizard_step} ({STEP_NAMES[selectedQuickLead.max_wizard_step] || "-"})</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Wizard abgeschlossen</span>
+                      <span>{selectedQuickLead.wizard_completed ? "Ja" : "Nein"}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Timeline */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Zeitverlauf
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Erstellt</span>
+                      <span>{format(new Date(selectedQuickLead.created_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
+                    </div>
+                    {selectedQuickLead.updated_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Zuletzt aktualisiert</span>
+                        <span>{formatDistanceToNow(new Date(selectedQuickLead.updated_at), { addSuffix: true, locale: de })}</span>
+                      </div>
+                    )}
+                    {selectedQuickLead.contacted_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Kontaktiert</span>
+                        <span>{format(new Date(selectedQuickLead.contacted_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Admin Notes */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" /> Admin-Notizen
+                  </h3>
+                  <Textarea
+                    value={quickLeadAdminNotes}
+                    onChange={(e) => setQuickLeadAdminNotes(e.target.value)}
+                    placeholder="Notizen zum Lead hinzufügen (z.B. Gesprächsnotizen, Vereinbarungen...)"
+                    rows={3}
+                  />
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => updateQuickLeadAdminNotes.mutate({ id: selectedQuickLead.id, notes: quickLeadAdminNotes })}
+                    disabled={updateQuickLeadAdminNotes.isPending}
+                  >
+                    {updateQuickLeadAdminNotes.isPending ? "Speichern..." : "Notiz speichern"}
+                  </Button>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {selectedQuickLead.phone && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        window.open(`tel:${selectedQuickLead.phone}`);
+                        markQuickLeadContacted.mutate(selectedQuickLead.id);
+                      }}
+                    >
+                      <PhoneCall className="w-4 h-4 mr-2 text-green-600" />
+                      Anrufen & vermerken
+                    </Button>
+                  )}
+                  {!selectedQuickLead.contacted_at && (
+                    <Button
+                      variant="outline"
+                      onClick={() => markQuickLeadContacted.mutate(selectedQuickLead.id)}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2 text-blue-600" />
+                      Als kontaktiert markieren
+                    </Button>
+                  )}
+                  {selectedQuickLead.status !== "converted" && selectedQuickLead.lead_quality !== "converted" && (
+                    <Button
+                      className="gradient-hero hover:gradient-hero-hover"
+                      onClick={() => {
+                        setConvertSession(quickLeadToSessionData(selectedQuickLead));
+                        setConvertSourceType("quick");
+                        setConvertDialogOpen(true);
+                        setQuickLeadDetailOpen(false);
+                      }}
+                    >
+                      <Car className="w-4 h-4 mr-2" />
+                      Als Wohnmobil anlegen
+                    </Button>
+                  )}
+                  {(selectedQuickLead.status === "converted" || selectedQuickLead.lead_quality === "converted") && (
+                    <>
+                      <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Bereits als Wohnmobil angelegt
+                      </Badge>
+                      {selectedQuickLead.email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          onClick={() => sendRegistrationInvite(selectedQuickLead.email!, selectedQuickLead.name || undefined, selectedQuickLead.id)}
                         >
                           <Mail className="w-4 h-4 mr-2" />
                           Registrierungslink senden
@@ -2148,7 +2583,7 @@ export default function AdminLeads() {
       </Dialog>
 
       {/* ================================================================== */}
-      {/* Valuation Detail Dialog – Expertenwert & KI */}
+      {/* Valuation Detail Dialog – Expertenwert & KI - EXTENDED */}
       {/* ================================================================== */}
       <Dialog open={valuationDetailOpen} onOpenChange={setValuationDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2166,6 +2601,17 @@ export default function AdminLeads() {
               </DialogHeader>
 
               <div className="space-y-4">
+                {/* Status */}
+                <div className="flex items-center gap-2">
+                  {selectedValuation.status === "converted" ? (
+                    <Badge className="bg-purple-500"><Car className="w-3 h-3 mr-1" /> Konvertiert</Badge>
+                  ) : selectedValuation.contacted_at ? (
+                    <Badge className="bg-green-500">Kontaktiert</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-orange-500">Offen</Badge>
+                  )}
+                </div>
+
                 {/* Kontaktdaten */}
                 <Card className="p-4">
                   <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
@@ -2227,10 +2673,10 @@ export default function AdminLeads() {
                       {(selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min) ? (
                         <>
                           <p className="text-lg font-bold text-blue-700">
-                            {Math.round(((selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0) + (selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0)) / 2).toLocaleString("de-DE")} \u20ac
+                            {Math.round(((selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0) + (selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0)) / 2).toLocaleString("de-DE")} €
                           </p>
                           <p className="text-xs text-blue-500">
-                            {(selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0).toLocaleString("de-DE")} \u2013 {(selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0).toLocaleString("de-DE")} \u20ac
+                            {(selectedValuation.algorithm_value_min || selectedValuation.estimated_value_min || 0).toLocaleString("de-DE")} – {(selectedValuation.algorithm_value_max || selectedValuation.estimated_value_max || 0).toLocaleString("de-DE")} €
                           </p>
                         </>
                       ) : <p className="text-sm text-muted-foreground">-</p>}
@@ -2238,10 +2684,10 @@ export default function AdminLeads() {
 
                     {/* KI-Wert */}
                     <div className="p-3 rounded-lg bg-purple-50 border border-purple-200 text-center">
-                      <p className="text-xs text-purple-600 font-medium mb-1">KI-Sch\u00e4tzung</p>
+                      <p className="text-xs text-purple-600 font-medium mb-1">KI-Schätzung</p>
                       {aiResult ? (
                         <>
-                          <p className="text-lg font-bold text-purple-700">{aiResult.value.toLocaleString("de-DE")} \u20ac</p>
+                          <p className="text-lg font-bold text-purple-700">{aiResult.value.toLocaleString("de-DE")} €</p>
                           <p className="text-xs text-purple-500">Konfidenz: {aiResult.confidence}%</p>
                           {aiResult.reasoning && <p className="text-xs text-purple-400 mt-1 italic">{aiResult.reasoning}</p>}
                         </>
@@ -2263,7 +2709,7 @@ export default function AdminLeads() {
                       <p className={`text-xs font-medium mb-1 ${selectedValuation.admin_estimated_value ? "text-green-600" : "text-gray-500"}`}>Expertenwert</p>
                       {selectedValuation.admin_estimated_value ? (
                         <>
-                          <p className="text-lg font-bold text-green-700">{selectedValuation.admin_estimated_value.toLocaleString("de-DE")} \u20ac</p>
+                          <p className="text-lg font-bold text-green-700">{selectedValuation.admin_estimated_value.toLocaleString("de-DE")} €</p>
                           {selectedValuation.admin_valued_at && (
                             <p className="text-xs text-green-500">{format(new Date(selectedValuation.admin_valued_at), "dd.MM.yyyy", { locale: de })}</p>
                           )}
@@ -2280,7 +2726,7 @@ export default function AdminLeads() {
                   </h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Gesch\u00e4tzter Marktwert (\u20ac)</label>
+                      <label className="text-sm font-medium mb-1 block">Geschätzter Marktwert (€)</label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
@@ -2289,7 +2735,7 @@ export default function AdminLeads() {
                           placeholder="z.B. 45000"
                           className="text-lg font-bold"
                         />
-                        <span className="text-lg font-bold text-muted-foreground">\u20ac</span>
+                        <span className="text-lg font-bold text-muted-foreground">€</span>
                       </div>
                       {aiResult && expertValue && (
                         <p className="text-xs mt-1 text-muted-foreground">
@@ -2298,41 +2744,99 @@ export default function AdminLeads() {
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Notizen / Begr\u00fcndung</label>
+                      <label className="text-sm font-medium mb-1 block">Notizen / Begründung</label>
                       <Textarea
                         value={expertNotes}
                         onChange={(e) => setExpertNotes(e.target.value)}
-                        placeholder="z.B. Marke hat hohen Wiederverkaufswert, guter Zustand f\u00fcr das Alter..."
+                        placeholder="z.B. Marke hat hohen Wiederverkaufswert, guter Zustand für das Alter..."
                         rows={3}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Deine Bewertungen trainieren die KI \u2013 je mehr Werte du eintr\u00e4gst, desto besser wird die KI-Sch\u00e4tzung.
+                        Deine Bewertungen trainieren die KI – je mehr Werte du einträgst, desto besser wird die KI-Schätzung.
                       </p>
                     </div>
                   </div>
                 </Card>
+
+                {/* Admin Notes (separate from expert notes) */}
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" /> Admin-Notizen
+                  </h3>
+                  <Textarea
+                    value={valuationAdminNotes}
+                    onChange={(e) => setValuationAdminNotes(e.target.value)}
+                    placeholder="Interne Notizen (z.B. Gesprächsnotizen, Vereinbarungen...)"
+                    rows={3}
+                  />
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => updateValuationAdminNotes.mutate({ id: selectedValuation.id, notes: valuationAdminNotes })}
+                    disabled={updateValuationAdminNotes.isPending}
+                  >
+                    {updateValuationAdminNotes.isPending ? "Speichern..." : "Admin-Notiz speichern"}
+                  </Button>
+                </Card>
+
+                {/* Action Buttons for Valuation */}
+                <div className="flex flex-wrap gap-2">
+                  {selectedValuation.phone && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        window.open(`tel:${selectedValuation.phone}`);
+                        markValuationContacted.mutate(selectedValuation.id);
+                      }}
+                    >
+                      <PhoneCall className="w-4 h-4 mr-2" /> Anrufen
+                    </Button>
+                  )}
+                  {selectedValuation.status !== "converted" && (
+                    <Button
+                      className="gradient-hero hover:gradient-hero-hover"
+                      onClick={() => {
+                        setConvertSession(valuationLeadToSessionData(selectedValuation));
+                        setConvertSourceType("valuation");
+                        setConvertDialogOpen(true);
+                        setValuationDetailOpen(false);
+                      }}
+                    >
+                      <Car className="w-4 h-4 mr-2" />
+                      Als Wohnmobil anlegen
+                    </Button>
+                  )}
+                  {selectedValuation.status === "converted" && (
+                    <>
+                      <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Bereits als Wohnmobil angelegt
+                      </Badge>
+                      {selectedValuation.email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          onClick={() => sendRegistrationInvite(selectedValuation.email, selectedValuation.name || undefined, selectedValuation.id)}
+                        >
+                          <Mail className="w-4 h-4 mr-2" />
+                          Registrierungslink senden
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setValuationDetailOpen(false)}>
-                  Abbrechen
+                  Schließen
                 </Button>
-                {selectedValuation.phone && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      window.open(`tel:${selectedValuation.phone}`);
-                      markValuationContacted.mutate(selectedValuation.id);
-                    }}
-                  >
-                    <PhoneCall className="w-4 h-4 mr-2" /> Anrufen
-                  </Button>
-                )}
                 <Button
                   onClick={() => {
                     const val = Number(expertValue);
                     if (!val || val <= 0) {
-                      toast({ title: "Bitte einen g\u00fcltigen Wert eingeben", variant: "destructive" });
+                      toast({ title: "Bitte einen gültigen Wert eingeben", variant: "destructive" });
                       return;
                     }
                     saveExpertValue.mutate({ id: selectedValuation.id, value: val, notes: expertNotes });
@@ -2408,8 +2912,12 @@ export default function AdminLeads() {
         open={convertDialogOpen}
         onOpenChange={(open) => {
           setConvertDialogOpen(open);
-          if (!open) setConvertSession(null);
+          if (!open) {
+            setConvertSession(null);
+            setConvertSourceType("wizard");
+          }
         }}
+        sourceType={convertSourceType}
       />
     </div>
   );

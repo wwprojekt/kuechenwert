@@ -2226,7 +2226,9 @@ export type Database = {
       }
       quick_leads: {
         Row: {
+          admin_notes: string | null
           body_type: string | null
+          contacted_at: string | null
           created_at: string | null
           email: string | null
           form_data_snapshot: Record<string, unknown> | null
@@ -2243,12 +2245,15 @@ export type Database = {
           referrer: string | null
           sale_channel: string | null
           source: string | null
+          status: string | null
           updated_at: string | null
           user_agent: string | null
           wizard_completed: boolean | null
         }
         Insert: {
+          admin_notes?: string | null
           body_type?: string | null
+          contacted_at?: string | null
           created_at?: string | null
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
@@ -2265,12 +2270,15 @@ export type Database = {
           referrer?: string | null
           sale_channel?: string | null
           source?: string | null
+          status?: string | null
           updated_at?: string | null
           user_agent?: string | null
           wizard_completed?: boolean | null
         }
         Update: {
+          admin_notes?: string | null
           body_type?: string | null
+          contacted_at?: string | null
           created_at?: string | null
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
@@ -2287,6 +2295,7 @@ export type Database = {
           referrer?: string | null
           sale_channel?: string | null
           source?: string | null
+          status?: string | null
           updated_at?: string | null
           user_agent?: string | null
           wizard_completed?: boolean | null
@@ -3014,6 +3023,7 @@ export type Database = {
       }
       value_assessment_leads: {
         Row: {
+          admin_notes: string | null
           body_type: string | null
           condition: string | null
           contacted_at: string | null
@@ -3033,6 +3043,7 @@ export type Database = {
           year: number | null
         }
         Insert: {
+          admin_notes?: string | null
           body_type?: string | null
           condition?: string | null
           contacted_at?: string | null
@@ -3052,6 +3063,7 @@ export type Database = {
           year?: number | null
         }
         Update: {
+          admin_notes?: string | null
           body_type?: string | null
           condition?: string | null
           contacted_at?: string | null

@@ -74,6 +74,9 @@ import {
   Euro,
   FileText,
   Globe,
+  PhoneOff,
+  PhoneMissed,
+  Undo2,
 } from "lucide-react";
 
 // ============================================================================
@@ -101,6 +104,7 @@ interface WizardSession {
   updated_at: string;
   last_activity_at: string;
   completed_at: string | null;
+  disposition: string | null;
 }
 
 interface QuickLead {
@@ -128,6 +132,7 @@ interface QuickLead {
   page_url: string | null;
   referrer: string | null;
   user_agent: string | null;
+  disposition: string | null;
 }
 
 interface ValuationLead {
@@ -156,6 +161,7 @@ interface ValuationLead {
   created_at: string | null;
   contacted_at: string | null;
   status: string | null;
+  disposition: string | null;
 }
 
 // ============================================================================
@@ -383,6 +389,99 @@ function StatusBadge({ status }: { status: string }) {
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
+}
+
+// ============================================================================
+// Disposition Constants & Helpers
+// ============================================================================
+
+const DISPOSITION_LABELS: Record<string, string> = {
+  wrong_number: "Falsche Nummer",
+  no_answer: "Nicht rangegangen",
+  considering: "Überlegt sich das",
+};
+
+const DISPOSITION_COLORS: Record<string, string> = {
+  wrong_number: "bg-red-100 text-red-700 border-red-200",
+  no_answer: "bg-amber-100 text-amber-700 border-amber-200",
+  considering: "bg-blue-100 text-blue-700 border-blue-200",
+};
+
+const DISPOSITION_ICONS: Record<string, React.ElementType> = {
+  wrong_number: PhoneOff,
+  no_answer: PhoneMissed,
+  considering: Clock,
+};
+
+function DispositionBadge({ disposition }: { disposition: string | null }) {
+  if (!disposition || !DISPOSITION_LABELS[disposition]) return null;
+  const Icon = DISPOSITION_ICONS[disposition];
+  return (
+    <Badge variant="outline" className={`${DISPOSITION_COLORS[disposition]} text-xs`}>
+      {Icon && <Icon className="w-3 h-3 mr-1" />}
+      {DISPOSITION_LABELS[disposition]}
+    </Badge>
+  );
+}
+
+interface DispositionButtonsProps {
+  currentDisposition: string | null;
+  onSetDisposition: (disposition: string | null) => void;
+  isPending: boolean;
+}
+
+function DispositionButtons({ currentDisposition, onSetDisposition, isPending }: DispositionButtonsProps) {
+  return (
+    <Card className="p-4">
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        <PhoneOff className="w-4 h-4" /> Disposition / Anrufergebnis
+      </h3>
+      {currentDisposition && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm text-muted-foreground">Aktuell:</span>
+          <DispositionBadge disposition={currentDisposition} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSetDisposition(null)}
+            disabled={isPending}
+            className="text-xs h-7"
+          >
+            <Undo2 className="w-3 h-3 mr-1" /> Zurücksetzen
+          </Button>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={currentDisposition === "wrong_number" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("wrong_number")}
+          disabled={isPending || currentDisposition === "wrong_number"}
+          className={currentDisposition === "wrong_number" ? "bg-red-600 hover:bg-red-700" : "text-red-600 border-red-200 hover:bg-red-50"}
+        >
+          <PhoneOff className="w-4 h-4 mr-1" /> Falsche Nummer
+        </Button>
+        <Button
+          variant={currentDisposition === "no_answer" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("no_answer")}
+          disabled={isPending || currentDisposition === "no_answer"}
+          className={currentDisposition === "no_answer" ? "bg-amber-600 hover:bg-amber-700" : "text-amber-600 border-amber-200 hover:bg-amber-50"}
+        >
+          <PhoneMissed className="w-4 h-4 mr-1" /> Nicht rangegangen
+        </Button>
+        <Button
+          variant={currentDisposition === "considering" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("considering")}
+          disabled={isPending || currentDisposition === "considering"}
+          className={currentDisposition === "considering" ? "bg-blue-600 hover:bg-blue-700" : "text-blue-600 border-blue-200 hover:bg-blue-50"}
+        >
+          <Clock className="w-4 h-4 mr-1" /> Überlegt sich das
+        </Button>
+      </div>
+    </Card>
+  );
 }
 
 function QuickLeadStatusBadge({ status, leadQuality, contactedAt }: { status: string | null; leadQuality: string | null; contactedAt: string | null }) {
@@ -728,6 +827,85 @@ export default function AdminLeads() {
     );
   }, [valuationLeads, searchQuery]);
 
+  // ---- Disposition Filtered Lists ----
+
+  type DispositionItem = {
+    id: string;
+    type: "wizard" | "quick" | "valuation";
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    vehicle: string;
+    disposition: string | null;
+    created_at: string | null;
+    source_label: string;
+  };
+
+  const dispositionLeads = useMemo(() => {
+    const items: DispositionItem[] = [];
+    // Wizard sessions with disposition
+    wizardSessions.filter(s => s.disposition).forEach(s => {
+      items.push({
+        id: s.id,
+        type: "wizard",
+        name: s.customer_name,
+        email: s.customer_email,
+        phone: s.customer_phone,
+        vehicle: s.vehicle_summary || "-",
+        disposition: s.disposition,
+        created_at: s.created_at,
+        source_label: "Wizard",
+      });
+    });
+    // Quick leads with disposition
+    quickLeads.filter(l => l.disposition).forEach(l => {
+      items.push({
+        id: l.id,
+        type: "quick",
+        name: l.name,
+        email: l.email,
+        phone: l.phone,
+        vehicle: [l.manufacturer, l.model].filter(Boolean).join(" ") || "-",
+        disposition: l.disposition,
+        created_at: l.created_at,
+        source_label: "Quick-Lead",
+      });
+    });
+    // Valuation leads with disposition
+    valuationLeads.filter(l => l.disposition).forEach(l => {
+      items.push({
+        id: l.id,
+        type: "valuation",
+        name: l.name,
+        email: l.email,
+        phone: l.phone,
+        vehicle: [l.manufacturer, l.model].filter(Boolean).join(" ") || "-",
+        disposition: l.disposition,
+        created_at: l.created_at,
+        source_label: "Wertrechner",
+      });
+    });
+    return items.sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [wizardSessions, quickLeads, valuationLeads]);
+
+  const wrongNumberLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "wrong_number"), [dispositionLeads]);
+  const noAnswerLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "no_answer"), [dispositionLeads]);
+  const consideringLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "considering"), [dispositionLeads]);
+
+  const handleDispositionChange = (item: DispositionItem, newDisposition: string | null) => {
+    if (item.type === "wizard") {
+      updateWizardDisposition.mutate({ id: item.id, disposition: newDisposition });
+    } else if (item.type === "quick") {
+      updateQuickLeadDisposition.mutate({ id: item.id, disposition: newDisposition });
+    } else {
+      updateValuationDisposition.mutate({ id: item.id, disposition: newDisposition });
+    }
+  };
+
   // ---- Mutations ----
 
   const sendResumeMail = useMutation({
@@ -957,6 +1135,59 @@ export default function AdminLeads() {
     },
     onError: (error: Error) => {
       toast({ title: "Fehler beim Speichern", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // ---- Disposition Mutations ----
+
+  const updateWizardDisposition = useMutation({
+    mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
+      const { error } = await supabase
+        .from("wizard_sessions")
+        .update({ disposition } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Disposition aktualisiert" });
+      queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateQuickLeadDisposition = useMutation({
+    mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
+      const { error } = await supabase
+        .from("quick_leads")
+        .update({ disposition } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Disposition aktualisiert" });
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateValuationDisposition = useMutation({
+    mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .update({ disposition } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Disposition aktualisiert" });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1298,6 +1529,18 @@ export default function AdminLeads() {
             <TabsTrigger value="valuation_leads" className="gap-2">
               <Calculator className="w-4 h-4" />
               Wertrechner ({valuationLeads.length})
+            </TabsTrigger>
+            <TabsTrigger value="wrong_number" className="gap-2">
+              <PhoneOff className="w-4 h-4" />
+              Falsche Nr. ({wrongNumberLeads.length})
+            </TabsTrigger>
+            <TabsTrigger value="no_answer" className="gap-2">
+              <PhoneMissed className="w-4 h-4" />
+              Nicht rangeg. ({noAnswerLeads.length})
+            </TabsTrigger>
+            <TabsTrigger value="considering" className="gap-2">
+              <Clock className="w-4 h-4" />
+              Überlegt ({consideringLeads.length})
             </TabsTrigger>
           </TabsList>
 
@@ -1946,6 +2189,83 @@ export default function AdminLeads() {
             </Table>
           </Card>
         </TabsContent>
+
+        {/* ================================================================ */}
+        {/* Disposition Tabs: Falsche Nummer / Nicht rangegangen / Überlegt */}
+        {/* ================================================================ */}
+        {(["wrong_number", "no_answer", "considering"] as const).map((dispositionKey) => {
+          const items = dispositionKey === "wrong_number" ? wrongNumberLeads : dispositionKey === "no_answer" ? noAnswerLeads : consideringLeads;
+          const Icon = DISPOSITION_ICONS[dispositionKey];
+          const label = DISPOSITION_LABELS[dispositionKey];
+          return (
+            <TabsContent key={dispositionKey} value={dispositionKey}>
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Kontakt</TableHead>
+                      <TableHead>Fahrzeug</TableHead>
+                      <TableHead>Quelle</TableHead>
+                      <TableHead>Datum</TableHead>
+                      <TableHead className="text-right">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                          <Icon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          Keine Leads mit Status "{label}"
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      items.map((item) => (
+                        <TableRow key={`${item.type}-${item.id}`}>
+                          <TableCell className="font-medium">{item.name || "Unbekannt"}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              {item.email && (
+                                <a href={`mailto:${item.email}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                  <Mail className="w-3 h-3" /> {item.email}
+                                </a>
+                              )}
+                              {item.phone && (
+                                <a href={`tel:${item.phone}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                  <Phone className="w-3 h-3" /> {item.phone}
+                                </a>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{item.vehicle}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">{item.source_label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {item.created_at ? format(new Date(item.created_at), "dd.MM.yyyy", { locale: de }) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDispositionChange(item, null)}
+                                title="Disposition zurücksetzen"
+                                className="text-xs"
+                              >
+                                <Undo2 className="w-4 h-4 mr-1" /> Zurücksetzen
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       {/* ================================================================== */}
@@ -2182,6 +2502,13 @@ export default function AdminLeads() {
                     {updateAdminNotes.isPending ? "Speichern..." : "Notiz speichern"}
                   </Button>
                 </Card>
+
+                {/* Disposition Buttons */}
+                <DispositionButtons
+                  currentDisposition={selectedSession.disposition}
+                  onSetDisposition={(d) => updateWizardDisposition.mutate({ id: selectedSession.id, disposition: d })}
+                  isPending={updateWizardDisposition.isPending}
+                />
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
@@ -2486,6 +2813,13 @@ export default function AdminLeads() {
                     {updateQuickLeadAdminNotes.isPending ? "Speichern..." : "Notiz speichern"}
                   </Button>
                 </Card>
+
+                {/* Disposition Buttons */}
+                <DispositionButtons
+                  currentDisposition={selectedQuickLead.disposition}
+                  onSetDisposition={(d) => updateQuickLeadDisposition.mutate({ id: selectedQuickLead.id, disposition: d })}
+                  isPending={updateQuickLeadDisposition.isPending}
+                />
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
@@ -2818,6 +3152,13 @@ export default function AdminLeads() {
                     {updateValuationAdminNotes.isPending ? "Speichern..." : "Admin-Notiz speichern"}
                   </Button>
                 </Card>
+
+                {/* Disposition Buttons */}
+                <DispositionButtons
+                  currentDisposition={selectedValuation.disposition}
+                  onSetDisposition={(d) => updateValuationDisposition.mutate({ id: selectedValuation.id, disposition: d })}
+                  isPending={updateValuationDisposition.isPending}
+                />
 
                 {/* Action Buttons for Valuation */}
                 <div className="flex flex-wrap gap-2">

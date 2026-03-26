@@ -2230,6 +2230,7 @@ export type Database = {
           body_type: string | null
           contacted_at: string | null
           created_at: string | null
+          disposition: string | null
           email: string | null
           form_data_snapshot: Record<string, unknown> | null
           id: string
@@ -2255,6 +2256,7 @@ export type Database = {
           body_type?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          disposition?: string | null
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
           id?: string
@@ -2280,6 +2282,7 @@ export type Database = {
           body_type?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          disposition?: string | null
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
           id?: string
@@ -3028,6 +3031,7 @@ export type Database = {
           condition: string | null
           contacted_at: string | null
           created_at: string | null
+          disposition: string | null
           email: string
           estimated_value_max: number | null
           estimated_value_min: number | null
@@ -3048,6 +3052,7 @@ export type Database = {
           condition?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          disposition?: string | null
           email: string
           estimated_value_max?: number | null
           estimated_value_min?: number | null
@@ -3068,6 +3073,7 @@ export type Database = {
           condition?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          disposition?: string | null
           email?: string
           estimated_value_max?: number | null
           estimated_value_min?: number | null
@@ -3142,6 +3148,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           current_step: number
+          disposition: string | null
           customer_email: string | null
           customer_name: string | null
           customer_phone: string | null
@@ -3165,6 +3172,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           current_step?: number
+          disposition?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
@@ -3188,6 +3196,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           current_step?: number
+          disposition?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null

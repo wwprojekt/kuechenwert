@@ -35,6 +35,7 @@ import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
+import { ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -603,6 +604,33 @@ const DealerDashboard = () => {
         )}
       </div>
 
+      {/* Sofortkauf Teaser Section */}
+      {!isLocked && (
+        <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:border-green-300 transition-smooth">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <ShoppingCart className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Sofortkauf-Angebote</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Fahrzeuge zum Festpreis kaufen – kein Bieten nötig
+                  </p>
+                </div>
+              </div>
+              <Link to="/dashboard/sofortkauf">
+                <Button className="bg-green-600 hover:bg-green-700">
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Angebote ansehen
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Enhanced Stats Grid */}
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>
         {statCards.map((stat, index) => (
@@ -670,6 +698,23 @@ const DealerDashboard = () => {
                 </p>
               </div>
               <ArrowUpRight className={`h-5 w-5 text-muted-foreground ${isLocked ? '' : 'group-hover:text-primary'} transition-colors`} />
+            </div>
+          </div>
+
+          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-green-500 hover:bg-green-50 cursor-pointer'} transition-smooth group`}
+            onClick={isLocked ? undefined : () => window.location.href = '/dashboard/sofortkauf'}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`font-semibold mb-1 ${isLocked ? '' : 'group-hover:text-green-600'} transition-colors`}>
+                  Sofortkauf-Angebote
+                  {isLocked && <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Fahrzeuge zum Festpreis kaufen
+                </p>
+              </div>
+              <ArrowUpRight className={`h-5 w-5 text-muted-foreground ${isLocked ? '' : 'group-hover:text-green-600'} transition-colors`} />
             </div>
           </div>
 

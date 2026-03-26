@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   Lock,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,6 +48,7 @@ const menuItems: MenuItem[] = [
   { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showBadge: true },
   { title: "Inventar", url: "/dashboard/inventory", icon: Package },
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
+  { title: "Sofortkauf", url: "/dashboard/sofortkauf", icon: ShoppingCart },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
   { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare },

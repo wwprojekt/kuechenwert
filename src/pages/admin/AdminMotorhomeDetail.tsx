@@ -68,6 +68,7 @@ import {
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
+import { AdminPhotoManager } from "@/components/admin/AdminPhotoManager";
 import { logger } from "@/lib/logger";
 
 export default function AdminMotorhomeDetail() {
@@ -75,7 +76,6 @@ export default function AdminMotorhomeDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   // Fetch motorhome with all related data
   const { data: motorhome, isLoading, error } = useQuery({
@@ -289,52 +289,12 @@ export default function AdminMotorhomeDetail() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Photo Gallery */}
-              <Card>
-                <CardContent className="p-4">
-                  {sortedPhotos.length > 0 ? (
-                    <div className="space-y-4">
-                      {/* Main Photo */}
-                      <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                        <img
-                          src={sortedPhotos[selectedPhotoIndex]?.url}
-                          alt={`${motorhome.manufacturer} ${motorhome.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      {/* Thumbnails */}
-                      {sortedPhotos.length > 1 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                          {sortedPhotos.map((photo: any, index: number) => (
-                            <button
-                              key={photo.id}
-                              onClick={() => setSelectedPhotoIndex(index)}
-                              className={`flex-shrink-0 w-20 h-16 rounded-md overflow-hidden border-2 transition-colors ${
-                                index === selectedPhotoIndex
-                                  ? "border-primary"
-                                  : "border-transparent hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              <img
-                                src={photo.url}
-                                alt={`Foto ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-2" />
-                        <p>Keine Fotos vorhanden</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Photo Manager */}
+              <AdminPhotoManager
+                motorhomeId={motorhome.id}
+                photos={sortedPhotos}
+                queryKey={["adminMotorhomeDetail", id!]}
+              />
 
               {/* Tabs for Details */}
               <Tabs defaultValue="basic" className="space-y-4">

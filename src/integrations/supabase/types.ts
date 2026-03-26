@@ -2228,6 +2228,7 @@ export type Database = {
         Row: {
           admin_notes: string | null
           body_type: string | null
+          admin_estimated_value: number | null
           contacted_at: string | null
           created_at: string | null
           disposition: string | null
@@ -2238,6 +2239,8 @@ export type Database = {
           lead_quality: string | null
           manufacturer: string | null
           max_wizard_step: number | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
           model: string | null
           name: string | null
           notes: string | null
@@ -2276,6 +2279,9 @@ export type Database = {
           updated_at?: string | null
           user_agent?: string | null
           wizard_completed?: boolean | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
+          admin_estimated_value?: number | null
         }
         Update: {
           admin_notes?: string | null
@@ -2302,6 +2308,9 @@ export type Database = {
           updated_at?: string | null
           user_agent?: string | null
           wizard_completed?: boolean | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
+          admin_estimated_value?: number | null
         }
         Relationships: []
       }
@@ -3044,6 +3053,8 @@ export type Database = {
           phone: string | null
           source: string
           status: string | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
           year: number | null
         }
         Insert: {
@@ -3055,6 +3066,8 @@ export type Database = {
           disposition?: string | null
           email: string
           estimated_value_max?: number | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
           estimated_value_min?: number | null
           id?: string
           manufacturer?: string | null
@@ -3086,6 +3099,8 @@ export type Database = {
           phone?: string | null
           source?: string
           status?: string | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
           year?: number | null
         }
         Relationships: []
@@ -3164,6 +3179,9 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           vehicle_summary: string | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
+          admin_estimated_value: number | null
         }
         Insert: {
           admin_called_at?: string | null
@@ -3188,6 +3206,9 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vehicle_summary?: string | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
+          admin_estimated_value?: number | null
         }
         Update: {
           admin_called_at?: string | null
@@ -3212,6 +3233,9 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vehicle_summary?: string | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
+          admin_estimated_value?: number | null
         }
         Relationships: []
       }

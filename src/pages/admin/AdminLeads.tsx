@@ -105,6 +105,9 @@ interface WizardSession {
   last_activity_at: string;
   completed_at: string | null;
   disposition: string | null;
+  wrong_number_email_count: number | null;
+  wrong_number_email_last_sent: string | null;
+  admin_estimated_value: number | null;
 }
 
 interface QuickLead {
@@ -133,6 +136,9 @@ interface QuickLead {
   referrer: string | null;
   user_agent: string | null;
   disposition: string | null;
+  wrong_number_email_count: number | null;
+  wrong_number_email_last_sent: string | null;
+  admin_estimated_value: number | null;
 }
 
 interface ValuationLead {
@@ -162,7 +168,27 @@ interface ValuationLead {
   contacted_at: string | null;
   status: string | null;
   disposition: string | null;
+  wrong_number_email_count: number | null;
+  wrong_number_email_last_sent: string | null;
 }
+
+// ============================================================================
+// Disposition Item Type
+// ============================================================================
+
+type DispositionItem = {
+  id: string;
+  type: "wizard" | "quick" | "valuation";
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  vehicle: string;
+  disposition: string | null;
+  created_at: string | null;
+  source_label: string;
+  wrong_number_email_count: number;
+  admin_estimated_value: number | null;
+};
 
 // ============================================================================
 // Step Names
@@ -616,6 +642,11 @@ export default function AdminLeads() {
   // Send expert valuation email
   const [sendingValuationEmail, setSendingValuationEmail] = useState(false);
   const [valuationEmailSent, setValuationEmailSent] = useState(false);
+  // Wrong number email
+  const [sendingWrongNumberEmail, setSendingWrongNumberEmail] = useState<string | null>(null);
+  const [wrongNumberValueDialogOpen, setWrongNumberValueDialogOpen] = useState(false);
+  const [wrongNumberValueInput, setWrongNumberValueInput] = useState("");
+  const [wrongNumberEmailTarget, setWrongNumberEmailTarget] = useState<DispositionItem | null>(null);
   // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
@@ -835,18 +866,6 @@ export default function AdminLeads() {
 
   // ---- Disposition Filtered Lists ----
 
-  type DispositionItem = {
-    id: string;
-    type: "wizard" | "quick" | "valuation";
-    name: string | null;
-    email: string | null;
-    phone: string | null;
-    vehicle: string;
-    disposition: string | null;
-    created_at: string | null;
-    source_label: string;
-  };
-
   const dispositionLeads = useMemo(() => {
     const items: DispositionItem[] = [];
     // Wizard sessions with disposition
@@ -861,6 +880,8 @@ export default function AdminLeads() {
         disposition: s.disposition,
         created_at: s.created_at,
         source_label: "Wizard",
+        wrong_number_email_count: s.wrong_number_email_count || 0,
+        admin_estimated_value: s.admin_estimated_value || null,
       });
     });
     // Quick leads with disposition
@@ -875,6 +896,8 @@ export default function AdminLeads() {
         disposition: l.disposition,
         created_at: l.created_at,
         source_label: "Quick-Lead",
+        wrong_number_email_count: l.wrong_number_email_count || 0,
+        admin_estimated_value: l.admin_estimated_value || null,
       });
     });
     // Valuation leads with disposition
@@ -889,6 +912,8 @@ export default function AdminLeads() {
         disposition: l.disposition,
         created_at: l.created_at,
         source_label: "Wertrechner",
+        wrong_number_email_count: l.wrong_number_email_count || 0,
+        admin_estimated_value: l.admin_estimated_value || l.ai_estimated_value || null,
       });
     });
     return items.sort((a, b) => {
@@ -909,6 +934,58 @@ export default function AdminLeads() {
       updateQuickLeadDisposition.mutate({ id: item.id, disposition: newDisposition });
     } else {
       updateValuationDisposition.mutate({ id: item.id, disposition: newDisposition });
+    }
+  };
+
+  // ---- Wrong Number Email ----
+
+  const handleSendWrongNumberEmail = async (item: DispositionItem, estimatedValue?: number) => {
+    if (!item.email) {
+      toast({ title: "Keine E-Mail", description: "Dieser Lead hat keine E-Mail-Adresse.", variant: "destructive" });
+      return;
+    }
+    // Check if we have a value - if not, open the value input dialog
+    const value = estimatedValue || item.admin_estimated_value;
+    if (!value) {
+      setWrongNumberEmailTarget(item);
+      setWrongNumberValueInput("");
+      setWrongNumberValueDialogOpen(true);
+      return;
+    }
+    setSendingWrongNumberEmail(item.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-wrong-number-email", {
+        body: { lead_id: item.id, lead_type: item.type, estimated_value: value },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "E-Mail gesendet",
+        description: `Falsche-Nummer-E-Mail wurde an ${data?.recipient || item.email} gesendet. (${data?.email_count || 1}x)`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+    } catch (err: any) {
+      toast({
+        title: "Fehler beim Versenden",
+        description: err.message || "E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWrongNumberEmail(null);
+    }
+  };
+
+  const handleConfirmWrongNumberValue = () => {
+    const value = parseFloat(wrongNumberValueInput);
+    if (!value || value <= 0) {
+      toast({ title: "Ungültiger Wert", description: "Bitte geben Sie einen gültigen Expertenwert ein.", variant: "destructive" });
+      return;
+    }
+    setWrongNumberValueDialogOpen(false);
+    if (wrongNumberEmailTarget) {
+      handleSendWrongNumberEmail(wrongNumberEmailTarget, value);
     }
   };
 
@@ -2203,6 +2280,7 @@ export default function AdminLeads() {
           const items = dispositionKey === "wrong_number" ? wrongNumberLeads : dispositionKey === "no_answer" ? noAnswerLeads : consideringLeads;
           const Icon = DISPOSITION_ICONS[dispositionKey];
           const label = DISPOSITION_LABELS[dispositionKey];
+          const isWrongNumber = dispositionKey === "wrong_number";
           return (
             <TabsContent key={dispositionKey} value={dispositionKey}>
               <Card>
@@ -2214,6 +2292,7 @@ export default function AdminLeads() {
                       <TableHead>Fahrzeug</TableHead>
                       <TableHead>Quelle</TableHead>
                       <TableHead>Datum</TableHead>
+                      {isWrongNumber && <TableHead>E-Mail</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Aktionen</TableHead>
                     </TableRow>
@@ -2221,7 +2300,7 @@ export default function AdminLeads() {
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={isWrongNumber ? 8 : 7} className="text-center py-12 text-muted-foreground">
                           <Icon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                           Keine Leads mit Status "{label}"
                         </TableCell>
@@ -2232,7 +2311,6 @@ export default function AdminLeads() {
                           key={`${item.type}-${item.id}`}
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => {
-                            // Öffne den passenden Detail-Dialog je nach Typ
                             if (item.type === "wizard") {
                               const session = wizardSessions.find(s => s.id === item.id);
                               if (session) openDetail(session);
@@ -2267,6 +2345,31 @@ export default function AdminLeads() {
                           <TableCell className="text-xs text-muted-foreground">
                             {item.created_at ? format(new Date(item.created_at), "dd.MM.yyyy", { locale: de }) : "-"}
                           </TableCell>
+                          {isWrongNumber && (
+                            <TableCell>
+                              <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); handleSendWrongNumberEmail(item); }}
+                                  disabled={sendingWrongNumberEmail === item.id || !item.email}
+                                  className="text-xs bg-red-600 hover:bg-red-700"
+                                  title={!item.email ? "Keine E-Mail-Adresse vorhanden" : "Falsche-Nummer-E-Mail senden"}
+                                >
+                                  {sendingWrongNumberEmail === item.id ? (
+                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Sende...</>
+                                  ) : (
+                                    <><Send className="w-3 h-3 mr-1" /> E-Mail senden</>
+                                  )}
+                                </Button>
+                                {item.wrong_number_email_count > 0 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.wrong_number_email_count}x gesendet
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
                           <TableCell>
                             <DispositionBadge disposition={item.disposition} />
                           </TableCell>
@@ -2277,7 +2380,6 @@ export default function AdminLeads() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // Öffne den passenden Detail-Dialog
                                   if (item.type === "wizard") {
                                     const session = wizardSessions.find(s => s.id === item.id);
                                     if (session) openDetail(session);
@@ -3364,6 +3466,57 @@ export default function AdminLeads() {
         }}
         sourceType={convertSourceType}
       />
+
+      {/* ================================================================== */}
+      {/* Wrong Number: Expertenwert eingeben Dialog */}
+      {/* ================================================================== */}
+      <Dialog open={wrongNumberValueDialogOpen} onOpenChange={setWrongNumberValueDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-red-600" />
+              Expertenwert eingeben
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Für diesen Lead ist noch kein Expertenwert hinterlegt. Bitte geben Sie den geschätzten Wert ein, der in der E-Mail angezeigt wird.
+            </p>
+            {wrongNumberEmailTarget && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">{wrongNumberEmailTarget.name || "Unbekannt"}</p>
+                <p className="text-xs text-muted-foreground">{wrongNumberEmailTarget.vehicle}</p>
+                <p className="text-xs text-muted-foreground">{wrongNumberEmailTarget.email}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Geschätzter Wert (€)</label>
+              <input
+                type="number"
+                value={wrongNumberValueInput}
+                onChange={(e) => setWrongNumberValueInput(e.target.value)}
+                placeholder="z.B. 25000"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                min="0"
+                step="500"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setWrongNumberValueDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleConfirmWrongNumberValue}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={!wrongNumberValueInput || parseFloat(wrongNumberValueInput) <= 0}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              E-Mail senden
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

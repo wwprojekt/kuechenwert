@@ -51,33 +51,42 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
     >
       {/* Hero Section */}
       <PageHero size="lg">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl gradient-hero mb-6 shadow-glow-sm">
-            <BookOpen className="h-8 w-8 text-primary-foreground" />
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl gradient-hero mb-6 shadow-glow-sm">
+              <BookOpen className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              {config.h1}
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
+              {config.heroSubtitle}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                asChild
+                size="lg"
+                className="gradient-hero hover:gradient-hero-hover h-14 text-lg font-semibold px-8"
+              >
+                <Link to={config.primaryCta.href}>
+                  {config.primaryCta.text}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-14 text-lg px-8">
+                <Link to={config.secondaryCta.href}>
+                  {config.secondaryCta.text}
+                </Link>
+              </Button>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            {config.h1}
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
-            {config.heroSubtitle}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              asChild
-              size="lg"
-              className="gradient-hero hover:gradient-hero-hover h-14 text-lg font-semibold px-8"
-            >
-              <Link to={config.primaryCta.href}>
-                {config.primaryCta.text}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-14 text-lg px-8">
-              <Link to={config.secondaryCta.href}>
-                {config.secondaryCta.text}
-              </Link>
-            </Button>
+          <div className="hidden lg:block">
+            <LandingLeadForm defaultManufacturer={config.brandName} />
           </div>
+        </div>
+        {/* Mobile lead form */}
+        <div className="lg:hidden mt-10">
+          <LandingLeadForm defaultManufacturer={config.brandName} />
         </div>
       </PageHero>
 
@@ -167,7 +176,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
               </ul>
             </div>
             <div>
-              <LandingLeadForm />
+              <LandingLeadForm defaultManufacturer={config.brandName} />
             </div>
           </div>
         </div>

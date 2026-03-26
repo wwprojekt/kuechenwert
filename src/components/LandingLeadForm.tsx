@@ -20,13 +20,14 @@ const BODY_TYPE_MAP: Record<string, string> = {
 
 interface LandingLeadFormProps {
   className?: string;
+  defaultManufacturer?: string;
 }
 
-export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
+export function LandingLeadForm({ className = "", defaultManufacturer }: LandingLeadFormProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [vehicleType, setVehicleType] = useState("");
-  const [manufacturer, setManufacturer] = useState("");
+  const [manufacturer, setManufacturer] = useState(defaultManufacturer || "");
   const [bodyType, setBodyType] = useState("");
 
   const handleStartWertrechner = async () => {

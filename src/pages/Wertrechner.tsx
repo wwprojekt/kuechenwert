@@ -31,7 +31,7 @@ import {
   Caravan,
   TrendingUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -365,10 +365,35 @@ const Wertrechner = () => {
   const { toast } = useToast();
   const { settings } = useSettings();
   const siteName = settings?.site_name || "CaravanWert";
-  const [step, setStep] = useState(1);
+  const [searchParams] = useSearchParams();
+
+  // Determine initial state from URL params (e.g. from LandingLeadForm)
+  const prefillBodyType = searchParams.get("bodyType") || "";
+  const prefillManufacturer = searchParams.get("manufacturer") || "";
+  const fromLanding = searchParams.get("from") === "landing";
+
+  const [step, setStep] = useState(() => {
+    // If coming from landing page with prefilled data, skip to step 3 (Baujahr/km)
+    if (fromLanding && prefillBodyType) return 3;
+    return 1;
+  });
   const [showCalculation, setShowCalculation] = useState(false);
   const [formData, setFormData] = useState(() => {
-    // Restore from session storage
+    // If coming from landing page, use URL params as initial data
+    if (fromLanding && prefillBodyType) {
+      return {
+        bodyType: prefillBodyType,
+        manufacturer: prefillManufacturer,
+        model: "",
+        year: "",
+        mileage: "",
+        condition: "",
+        name: "",
+        email: "",
+        phone: "",
+      };
+    }
+    // Otherwise restore from session storage
     try {
       const saved = sessionStorage.getItem("wertrechner_data");
       if (saved) return JSON.parse(saved);

@@ -20,7 +20,13 @@ Deno.serve(async (req: Request) => {
     
     const { data: { user: adminUser }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !adminUser) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      const errorMsg = userError?.message?.includes('expired') 
+        ? 'Sitzung abgelaufen. Bitte laden Sie die Seite neu und melden Sie sich erneut an.'
+        : !token 
+          ? 'Nicht authentifiziert. Bitte melden Sie sich an.'
+          : 'Sitzung ungültig. Bitte laden Sie die Seite neu.';
+      console.error('Auth error in resend-confirmation-email:', userError?.message || 'No user found', 'Token present:', !!token);
+      return new Response(JSON.stringify({ error: errorMsg }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

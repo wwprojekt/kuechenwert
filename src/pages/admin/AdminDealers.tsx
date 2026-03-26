@@ -304,6 +304,13 @@ export default function AdminDealers() {
   const resendConfirmationMutation = useMutation({
     mutationFn: async ({ userId }: { userId: string }) => {
       setResendingUserId(userId);
+      
+      // Session explizit refreshen um sicherzustellen dass der JWT gültig ist
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        throw new Error('Sitzung abgelaufen. Bitte melden Sie sich erneut an.');
+      }
+      
       const { data, error } = await supabase.functions.invoke('resend-confirmation-email', {
         body: { user_id: userId },
       });
@@ -324,7 +331,7 @@ export default function AdminDealers() {
     onError: (error: Error) => {
       toast({
         title: "Fehler beim Senden",
-        description: error.message,
+        description: error.message || "Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
         variant: "destructive",
       });
       setResendingUserId(null);

@@ -273,6 +273,38 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // ─── Server-Side Conversion Tracking (non-blocking) ───────────
+    try {
+      const conversionPayload = {
+        event_name: "generate_lead",
+        lead_type: type,
+        name,
+        email,
+        phone,
+        manufacturer,
+        model,
+        estimated_min: estimatedMin,
+        estimated_max: estimatedMax,
+      };
+
+      // Call track-conversion Edge Function via Supabase
+      const trackingUrl = `${SUPABASE_URL}/functions/v1/track-conversion`;
+      fetch(trackingUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(conversionPayload),
+      }).then(res => {
+        console.log(`[track-conversion] Triggered: ${res.status}`);
+      }).catch(err => {
+        console.error("[track-conversion] Failed to trigger:", err);
+      });
+    } catch (trackErr) {
+      console.error("[track-conversion] Error preparing tracking:", trackErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: "Notifications sent" }),
       {

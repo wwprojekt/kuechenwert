@@ -35,7 +35,7 @@ import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
-import { trackWertrechnerLead } from "@/lib/gadsConversionService";
+import { trackWertrechnerLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -466,6 +466,8 @@ const Wertrechner = () => {
       setLeadSubmitted(true);
       setEstimatedValue(value);
       setStep(6);
+      // Google Ads: Enhanced Conversions vor dem Conversion-Event setzen
+      setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertsch\u00e4tzung." });
 

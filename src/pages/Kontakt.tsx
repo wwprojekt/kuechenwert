@@ -12,7 +12,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
-import { trackKontaktformularGesendet } from "@/lib/gadsConversionService";
+import { trackKontaktformularGesendet, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -85,7 +85,8 @@ const Kontakt = () => {
 
       setIsSubmitted(true);
 
-      // Google Ads Conversion Tracking: Kontaktformular gesendet (Primäre Conversion)
+      // Google Ads: Enhanced Conversions + Kontaktformular gesendet (Primäre Conversion)
+      await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       trackKontaktformularGesendet();
 
       toast({

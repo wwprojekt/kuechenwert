@@ -395,7 +395,7 @@ export const useWizardForm = () => {
 
         // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
         await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
-        trackWizardCompleted(formData.saleChannel || 'direct', formData.manufacturer || 'Unbekannt');
+        trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`);
 
         toast({
           title: "Anfrage erfolgreich gesendet!",
@@ -606,7 +606,7 @@ export const useWizardForm = () => {
 
       // Google Ads: Enhanced Conversions + Wizard abgeschlossen (authentifizierter Pfad)
       await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
-      trackWizardCompleted(formData.saleChannel || 'direct', formData.manufacturer || 'Unbekannt');
+      trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`);
 
       toast({
         title: "Erfolgreich eingestellt!",

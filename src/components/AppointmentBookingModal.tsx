@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { format } from "date-fns";
 import { Clock, MapPin, Calendar as CalendarIcon } from "lucide-react";
-import { trackTerminbuchung } from "@/lib/gadsConversionService";
+import { trackTerminbuchung, setEnhancedConversionData } from "@/lib/gadsConversionService";
 
 interface AppointmentBookingModalProps {
   open: boolean;
@@ -112,7 +112,10 @@ export const AppointmentBookingModal = ({
         logger.error('Email sending failed:', emailError);
       }
 
-      // Google Ads Conversion Tracking: Terminbuchung (Primäre Conversion)
+      // Google Ads: Enhanced Conversions + Terminbuchung (Primäre Conversion)
+      if (user?.email) {
+        await setEnhancedConversionData({ email: user.email });
+      }
       const stationName = stations.find(s => s.id === selectedStation)?.name || '';
       trackTerminbuchung(stationName);
 

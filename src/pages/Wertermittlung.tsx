@@ -33,7 +33,7 @@ import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
-import { trackWertermittlungLead } from "@/lib/gadsConversionService";
+import { trackWertermittlungLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -102,7 +102,8 @@ const Wertermittlung = () => {
     onSuccess: () => {
       setSubmitted(true);
 
-      // Google Ads Conversion Tracking: Wertermittlung Lead (Primäre Conversion)
+      // Google Ads: Enhanced Conversions + Wertermittlung Lead (Primäre Conversion)
+      setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       trackWertermittlungLead(
         `${formData.manufacturer} ${formData.model} ${formData.year}`
       );

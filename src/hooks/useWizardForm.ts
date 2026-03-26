@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 import { ensureValidSession, isSessionOrRLSError } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -378,6 +379,7 @@ export const useWizardForm = () => {
       if (!user) {
         // Send email notification to admin + confirmation to customer
         try {
+          const trackingData = getTrackingData();
           await supabase.functions.invoke("send-lead-notification", {
             body: {
               type: "wizard",
@@ -386,6 +388,10 @@ export const useWizardForm = () => {
               phone: formData.customerPhone || undefined,
               manufacturer: formData.manufacturer || undefined,
               model: formData.model || undefined,
+              gclid: trackingData.gclid,
+              gbraid: trackingData.gbraid,
+              wbraid: trackingData.wbraid,
+              ga4ClientId: trackingData.ga4ClientId,
             },
           });
         } catch (emailError) {
@@ -532,6 +538,7 @@ export const useWizardForm = () => {
 
           // Try to save as lead instead
           try {
+            const trackingData = getTrackingData();
             await supabase.functions.invoke("send-lead-notification", {
               body: {
                 type: "wizard",
@@ -540,6 +547,10 @@ export const useWizardForm = () => {
                 phone: formData.customerPhone || undefined,
                 manufacturer: formData.manufacturer || undefined,
                 model: formData.model || undefined,
+                gclid: trackingData.gclid,
+                gbraid: trackingData.gbraid,
+                wbraid: trackingData.wbraid,
+                ga4ClientId: trackingData.ga4ClientId,
               },
             });
           } catch (emailError) {
@@ -588,6 +599,7 @@ export const useWizardForm = () => {
 
       // Send notification to admin about new listing
       try {
+        const trackingData = getTrackingData();
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wizard",
@@ -596,6 +608,10 @@ export const useWizardForm = () => {
             phone: formData.customerPhone || undefined,
             manufacturer: formData.manufacturer || undefined,
             model: formData.model || undefined,
+            gclid: trackingData.gclid,
+            gbraid: trackingData.gbraid,
+            wbraid: trackingData.wbraid,
+            ga4ClientId: trackingData.ga4ClientId,
           },
         });
       } catch (emailError) {

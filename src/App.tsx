@@ -14,6 +14,7 @@ import ScrollRestoration from "./components/ScrollRestoration";
 import { usePageTracking } from "./hooks/useAnalytics";
 import { lazyRetry, clearChunkReloadFlag } from "./lib/lazyRetry";
 import { detectAndSetTrafficType } from "./lib/gadsConversionService";
+import { captureClickIds } from "./lib/clickIdService";
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
@@ -133,8 +134,10 @@ function PageTracker() {
   clearChunkReloadFlag();
 
   // User Properties einmalig pro Session setzen (Traffic-Typ erkennen)
+  // Click-IDs (GCLID, GBRAID, WBRAID) aus URL-Parametern erfassen
   useEffect(() => {
     detectAndSetTrafficType();
+    captureClickIds();
   }, []);
 
   return null;

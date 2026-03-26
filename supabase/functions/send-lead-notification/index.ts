@@ -28,6 +28,11 @@ interface LeadNotificationRequest {
   messageText?: string;
   // Extra fields for dealer registration
   companyName?: string;
+  // Google Ads Click-IDs für serverseitige Conversion-Attribution
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  ga4ClientId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -285,6 +290,11 @@ const handler = async (req: Request): Promise<Response> => {
         model,
         estimated_min: estimatedMin,
         estimated_max: estimatedMax,
+        // Google Ads Click-IDs für direkte Attribution
+        gclid: data.gclid || undefined,
+        gbraid: data.gbraid || undefined,
+        wbraid: data.wbraid || undefined,
+        client_id: data.ga4ClientId || undefined,
       };
 
       // Call track-conversion Edge Function via Supabase

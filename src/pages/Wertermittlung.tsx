@@ -34,6 +34,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackWertermittlungLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -85,6 +86,7 @@ const Wertermittlung = () => {
 
       // Trigger notification Edge Function
       try {
+        const trackingData = getTrackingData();
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wertermittlung",
@@ -93,6 +95,10 @@ const Wertermittlung = () => {
             phone: data.phone,
             manufacturer: data.manufacturer,
             model: data.model,
+            gclid: trackingData.gclid,
+            gbraid: trackingData.gbraid,
+            wbraid: trackingData.wbraid,
+            ga4ClientId: trackingData.ga4ClientId,
           },
         });
       } catch {

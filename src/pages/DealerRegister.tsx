@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 import { z } from "zod";
 import {
   Building2,
@@ -205,6 +206,7 @@ const DealerRegister = () => {
 
       // Send email notification to admin + confirmation to dealer
       try {
+        const trackingData = getTrackingData();
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "dealer",
@@ -212,6 +214,10 @@ const DealerRegister = () => {
             email: user!.email || "",
             phone: validated.phone || undefined,
             companyName: validated.companyName,
+            gclid: trackingData.gclid,
+            gbraid: trackingData.gbraid,
+            wbraid: trackingData.wbraid,
+            ga4ClientId: trackingData.ga4ClientId,
           },
         });
       } catch (emailError) {

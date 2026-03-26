@@ -36,6 +36,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackWertrechnerLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -471,6 +472,8 @@ const Wertrechner = () => {
       if (error) throw error;
 
       try {
+        // Tracking-Daten (Click-IDs, GA4 Client-ID) für Server-Side Conversion Tracking
+        const trackingData = getTrackingData();
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wertrechner",
@@ -481,6 +484,11 @@ const Wertrechner = () => {
             model: data.model,
             estimatedMin: value.min,
             estimatedMax: value.max,
+            // Google Ads Click-IDs für serverseitige Attribution
+            gclid: trackingData.gclid,
+            gbraid: trackingData.gbraid,
+            wbraid: trackingData.wbraid,
+            ga4ClientId: trackingData.ga4ClientId,
           },
         });
       } catch {}

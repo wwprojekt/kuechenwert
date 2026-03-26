@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackKontaktformularGesendet, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -69,6 +70,7 @@ const Kontakt = () => {
 
       // Send email notification to admin + confirmation to customer
       try {
+        const trackingData = getTrackingData();
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "kontakt",
@@ -77,6 +79,10 @@ const Kontakt = () => {
             phone: formData.phone.trim() || undefined,
             subject: formData.subject.trim(),
             messageText: formData.message.trim(),
+            gclid: trackingData.gclid,
+            gbraid: trackingData.gbraid,
+            wbraid: trackingData.wbraid,
+            ga4ClientId: trackingData.ga4ClientId,
           },
         });
       } catch (emailError) {

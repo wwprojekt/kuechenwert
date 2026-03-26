@@ -87,7 +87,7 @@ const Kontakt = () => {
 
       // Google Ads: Enhanced Conversions + Kontaktformular gesendet (Primäre Conversion)
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      trackKontaktformularGesendet();
+      await trackKontaktformularGesendet();
 
       toast({
         title: "Nachricht gesendet!",

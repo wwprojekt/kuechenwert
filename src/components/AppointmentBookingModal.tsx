@@ -117,7 +117,7 @@ export const AppointmentBookingModal = ({
         await setEnhancedConversionData({ email: user.email });
       }
       const stationName = stations.find(s => s.id === selectedStation)?.name || '';
-      trackTerminbuchung(stationName);
+      await trackTerminbuchung(stationName);
 
       toast.success("Termin erfolgreich gebucht!");
       onOpenChange(false);

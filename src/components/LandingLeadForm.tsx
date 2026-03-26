@@ -88,7 +88,7 @@ export function LandingLeadForm({ className = "" }: LandingLeadFormProps) {
 
     // Google Ads: Enhanced Conversions + Landing Page Lead (Primäre Conversion)
     await setEnhancedConversionFromForm({ customerEmail, customerName, customerPhone });
-    trackLandingPageLead(
+    await trackLandingPageLead(
       window.location.pathname,
       `${manufacturer} ${bodyType}`
     );

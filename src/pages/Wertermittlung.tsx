@@ -99,12 +99,12 @@ const Wertermittlung = () => {
         // Don't fail if notification fails
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setSubmitted(true);
 
       // Google Ads: Enhanced Conversions + Wertermittlung Lead (Primäre Conversion)
-      setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      trackWertermittlungLead(
+      await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
+      await trackWertermittlungLead(
         `${formData.manufacturer} ${formData.model} ${formData.year}`
       );
 

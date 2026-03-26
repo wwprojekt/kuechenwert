@@ -150,7 +150,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
 
     // Google Ads: Enhanced Conversions + Lead-Conversion tracken
     await setEnhancedConversionFromForm({ customerEmail, customerName, customerPhone });
-    trackLandingPageLead('homepage_hero', `${manufacturer} ${model} - ${bodyType}`);
+    await trackLandingPageLead('homepage_hero', `${manufacturer} ${model} - ${bodyType}`);
 
     // Create URL with prefilled data for the wizard
     const searchParams = new URLSearchParams();

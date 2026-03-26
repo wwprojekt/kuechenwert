@@ -462,13 +462,13 @@ const Wertrechner = () => {
 
       return value;
     },
-    onSuccess: (value) => {
+    onSuccess: async (value) => {
       setLeadSubmitted(true);
       setEstimatedValue(value);
       setStep(6);
       // Google Ads: Enhanced Conversions vor dem Conversion-Event setzen
-      setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
+      await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
+      await trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertsch\u00e4tzung." });
 
       // KI-Sch\u00e4tzung im Hintergrund abrufen (non-blocking)

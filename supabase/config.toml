@@ -136,6 +136,17 @@ verify_jwt = false
 [functions.sitemap]
 verify_jwt = false
 
+# --- Valuation & Wrong Number ---
+[functions.send-expert-valuation]
+verify_jwt = false
+
+[functions.send-wrong-number-email]
+verify_jwt = false
+
+# --- Error Logging ---
+[functions.log-error]
+verify_jwt = false
+
 # --- Purchase Inquiry ---
 [functions.send-purchase-inquiry-notification]
 verify_jwt = false

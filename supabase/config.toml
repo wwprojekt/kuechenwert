@@ -150,3 +150,7 @@ verify_jwt = false
 # --- Purchase Inquiry ---
 [functions.send-purchase-inquiry-notification]
 verify_jwt = false
+
+# --- Conversion Tracking ---
+[functions.track-conversion]
+verify_jwt = false

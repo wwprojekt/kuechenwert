@@ -2235,22 +2235,13 @@ export default function AdminLeads() {
                             // Öffne den passenden Detail-Dialog je nach Typ
                             if (item.type === "wizard") {
                               const session = wizardSessions.find(s => s.id === item.id);
-                              if (session) {
-                                setSelectedSession(session);
-                                setDetailDialogOpen(true);
-                              }
+                              if (session) openDetail(session);
                             } else if (item.type === "quick") {
                               const lead = quickLeads.find(l => l.id === item.id);
-                              if (lead) {
-                                setSelectedQuickLead(lead);
-                                setQuickLeadDialogOpen(true);
-                              }
+                              if (lead) openQuickLeadDetail(lead);
                             } else if (item.type === "valuation") {
                               const lead = valuationLeads.find(l => l.id === item.id);
-                              if (lead) {
-                                setSelectedValuation(lead);
-                                setValuationDialogOpen(true);
-                              }
+                              if (lead) openValuationDetail(lead);
                             }
                           }}
                         >
@@ -2289,13 +2280,13 @@ export default function AdminLeads() {
                                   // Öffne den passenden Detail-Dialog
                                   if (item.type === "wizard") {
                                     const session = wizardSessions.find(s => s.id === item.id);
-                                    if (session) { setSelectedSession(session); setDetailDialogOpen(true); }
+                                    if (session) openDetail(session);
                                   } else if (item.type === "quick") {
                                     const lead = quickLeads.find(l => l.id === item.id);
-                                    if (lead) { setSelectedQuickLead(lead); setQuickLeadDialogOpen(true); }
+                                    if (lead) openQuickLeadDetail(lead);
                                   } else {
                                     const lead = valuationLeads.find(l => l.id === item.id);
-                                    if (lead) { setSelectedValuation(lead); setValuationDialogOpen(true); }
+                                    if (lead) openValuationDetail(lead);
                                   }
                                 }}
                                 className="text-xs"

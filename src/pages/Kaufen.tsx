@@ -34,7 +34,7 @@ const Kaufen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 500000],
-    yearRange: [2015, 2024],
+    yearRange: [1990, 2026],
     vehicleTypes: [],
     brand: null,
     beds: null,

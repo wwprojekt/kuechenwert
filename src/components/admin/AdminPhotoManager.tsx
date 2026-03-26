@@ -10,7 +10,7 @@
  * Uses @dnd-kit for accessible drag-and-drop sorting.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -58,7 +58,6 @@ import {
   Image as ImageIcon,
   Star,
   Loader2,
-  X,
   Plus,
 } from "lucide-react";
 
@@ -70,7 +69,6 @@ interface Photo {
   id: string;
   url: string;
   display_order: number | null;
-  is_primary: boolean | null;
 }
 
 interface AdminPhotoManagerProps {
@@ -203,10 +201,18 @@ export function AdminPhotoManager({
   const [hasOrderChanged, setHasOrderChanged] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const isDragging = useRef(false);
 
   // Sync with parent when initialPhotos change (e.g. after refetch)
-  // We only sync if we haven't made local changes
-  // useEffect is intentionally omitted to avoid overwriting drag state
+  // Only sync if we haven't made unsaved local changes and no drag is active
+  useEffect(() => {
+    if (!hasOrderChanged && !isDragging.current) {
+      const sorted = [...initialPhotos].sort(
+        (a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)
+      );
+      setPhotos(sorted);
+    }
+  }, [initialPhotos, hasOrderChanged]);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -251,7 +257,7 @@ export function AdminPhotoManager({
       }));
 
       // Use Promise.all for parallel updates
-      await Promise.all(
+      const results = await Promise.all(
         updates.map(({ id, display_order, is_primary }) =>
           supabase
             .from("motorhome_photos")
@@ -259,6 +265,13 @@ export function AdminPhotoManager({
             .eq("id", id)
         )
       );
+
+      // Check for errors in any of the updates
+      const failed = results.filter((r) => r.error);
+      if (failed.length > 0) {
+        logger.error("Some photo order updates failed:", failed.map((r) => r.error));
+        throw new Error(`${failed.length} von ${results.length} Updates fehlgeschlagen`);
+      }
     },
     onSuccess: () => {
       toast.success("Reihenfolge gespeichert");
@@ -504,7 +517,12 @@ export function AdminPhotoManager({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+            onDragStart={() => { isDragging.current = true; }}
+            onDragEnd={(event) => {
+              isDragging.current = false;
+              handleDragEnd(event);
+            }}
+            onDragCancel={() => { isDragging.current = false; }}
           >
             <SortableContext
               items={photos.map((p) => p.id)}

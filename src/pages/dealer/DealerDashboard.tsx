@@ -1000,7 +1000,7 @@ const DealerDashboard = () => {
                 return (
                   <Link 
                     key={bid.id} 
-                    to={`/auctions/${bid.auction_id}`}
+                    to={`/auktion/${bid.auction_id}`}
                     className="block"
                   >
                     <div className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-md ${

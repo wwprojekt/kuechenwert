@@ -787,6 +787,8 @@ export default function AdminLeads() {
 
   const filteredSessions = useMemo(() => {
     return enrichedSessions.filter((session) => {
+      // Leads mit Disposition aus dem Original-Tab ausblenden
+      if (session.disposition) return false;
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -802,9 +804,11 @@ export default function AdminLeads() {
   }, [enrichedSessions, statusFilter, searchQuery]);
 
   const filteredQuickLeads = useMemo(() => {
-    if (!searchQuery) return quickLeads;
+    // Leads mit Disposition aus dem Original-Tab ausblenden
+    const withoutDisposition = quickLeads.filter(l => !l.disposition);
+    if (!searchQuery) return withoutDisposition;
     const q = searchQuery.toLowerCase();
-    return quickLeads.filter(
+    return withoutDisposition.filter(
       (lead) =>
         (lead.name || (lead.form_data_snapshot?.customerName as string) || (lead.form_data_snapshot?.name as string) || "").toLowerCase().includes(q) ||
         (lead.email || (lead.form_data_snapshot?.customerEmail as string) || "").toLowerCase().includes(q) ||
@@ -815,9 +819,11 @@ export default function AdminLeads() {
   }, [quickLeads, searchQuery]);
 
   const filteredValuationLeads = useMemo(() => {
-    if (!searchQuery) return valuationLeads;
+    // Leads mit Disposition aus dem Original-Tab ausblenden
+    const withoutDisposition = valuationLeads.filter(l => !l.disposition);
+    if (!searchQuery) return withoutDisposition;
     const q = searchQuery.toLowerCase();
-    return valuationLeads.filter(
+    return withoutDisposition.filter(
       (lead) =>
         (lead.name || "").toLowerCase().includes(q) ||
         (lead.email || "").toLowerCase().includes(q) ||
@@ -2208,30 +2214,56 @@ export default function AdminLeads() {
                       <TableHead>Fahrzeug</TableHead>
                       <TableHead>Quelle</TableHead>
                       <TableHead>Datum</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Aktionen</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                           <Icon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                           Keine Leads mit Status "{label}"
                         </TableCell>
                       </TableRow>
                     ) : (
                       items.map((item) => (
-                        <TableRow key={`${item.type}-${item.id}`}>
+                        <TableRow
+                          key={`${item.type}-${item.id}`}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => {
+                            // Öffne den passenden Detail-Dialog je nach Typ
+                            if (item.type === "wizard") {
+                              const session = wizardSessions.find(s => s.id === item.id);
+                              if (session) {
+                                setSelectedSession(session);
+                                setDetailDialogOpen(true);
+                              }
+                            } else if (item.type === "quick") {
+                              const lead = quickLeads.find(l => l.id === item.id);
+                              if (lead) {
+                                setSelectedQuickLead(lead);
+                                setQuickLeadDialogOpen(true);
+                              }
+                            } else if (item.type === "valuation") {
+                              const lead = valuationLeads.find(l => l.id === item.id);
+                              if (lead) {
+                                setSelectedValuation(lead);
+                                setValuationDialogOpen(true);
+                              }
+                            }
+                          }}
+                        >
                           <TableCell className="font-medium">{item.name || "Unbekannt"}</TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-0.5">
                               {item.email && (
-                                <a href={`mailto:${item.email}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                <a href={`mailto:${item.email}`} className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                   <Mail className="w-3 h-3" /> {item.email}
                                 </a>
                               )}
                               {item.phone && (
-                                <a href={`tel:${item.phone}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                <a href={`tel:${item.phone}`} className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                   <Phone className="w-3 h-3" /> {item.phone}
                                 </a>
                               )}
@@ -2244,14 +2276,38 @@ export default function AdminLeads() {
                           <TableCell className="text-xs text-muted-foreground">
                             {item.created_at ? format(new Date(item.created_at), "dd.MM.yyyy", { locale: de }) : "-"}
                           </TableCell>
+                          <TableCell>
+                            <DispositionBadge disposition={item.disposition} />
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Öffne den passenden Detail-Dialog
+                                  if (item.type === "wizard") {
+                                    const session = wizardSessions.find(s => s.id === item.id);
+                                    if (session) { setSelectedSession(session); setDetailDialogOpen(true); }
+                                  } else if (item.type === "quick") {
+                                    const lead = quickLeads.find(l => l.id === item.id);
+                                    if (lead) { setSelectedQuickLead(lead); setQuickLeadDialogOpen(true); }
+                                  } else {
+                                    const lead = valuationLeads.find(l => l.id === item.id);
+                                    if (lead) { setSelectedValuation(lead); setValuationDialogOpen(true); }
+                                  }
+                                }}
+                                className="text-xs"
+                              >
+                                <Eye className="w-4 h-4 mr-1" /> Details
+                              </Button>
+                              <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDispositionChange(item, null)}
-                                title="Disposition zurücksetzen"
-                                className="text-xs"
+                                onClick={(e) => { e.stopPropagation(); handleDispositionChange(item, null); }}
+                                title="Disposition zurücksetzen (zurück in Original-Tab)"
+                                className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                               >
                                 <Undo2 className="w-4 h-4 mr-1" /> Zurücksetzen
                               </Button>

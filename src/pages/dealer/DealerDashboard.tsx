@@ -26,7 +26,10 @@ import {
   Star,
   Zap,
   Crown,
-  Lock
+  Lock,
+  Truck,
+  MapPin,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,6 +163,40 @@ const DealerDashboard = () => {
       }
 
       return auctions?.map(auction => ({ ...auction, bids: [] })) || [];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch instant-buy motorhomes for Sofortkauf section
+  const { data: instantBuyMothorhomes } = useQuery({
+    queryKey: ["dashboardInstantBuy"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("motorhomes")
+        .select(`
+          id,
+          manufacturer,
+          model,
+          year,
+          body_type,
+          listing_number,
+          instant_price,
+          mileage,
+          location_city,
+          location_state,
+          sale_channel,
+          status,
+          photos:motorhome_photos(url, display_order)
+        `)
+        .eq("sale_channel", "instant_price")
+        .eq("status", "available")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching instant buy motorhomes:", error);
+        throw error;
+      }
+      return data || [];
     },
     enabled: !!user,
   });
@@ -604,32 +641,139 @@ const DealerDashboard = () => {
         )}
       </div>
 
-      {/* Sofortkauf Teaser Section */}
-      {!isLocked && (
-        <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:border-green-300 transition-smooth">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                  <ShoppingCart className="h-7 w-7 text-white" />
+      {/* Sofortkauf Section - Directly under Auctions */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-green-600" />
+              Sofortkauf-Angebote
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {instantBuyMothorhomes?.length || 0} Fahrzeuge zum Festpreis verfügbar
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
+            <Euro className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-green-700">Festpreis &ndash; kein Bieten nötig</span>
+          </div>
+        </div>
+
+        {instantBuyMothorhomes && instantBuyMothorhomes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {instantBuyMothorhomes.map((mh: any) => {
+              const photos = Array.isArray(mh.photos) ? mh.photos : mh.photos ? [mh.photos] : [];
+              const mainPhoto = photos.find((p: any) => p.display_order === 0)?.url || photos[0]?.url;
+
+              return (
+                <div key={mh.id} className={`${isLocked ? 'pointer-events-none' : ''}`}>
+                  <Link to={isLocked ? '#' : `/dashboard/sofortkauf`} onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full ring-2 ring-green-200 hover:ring-green-400">
+                      {/* Photo */}
+                      <div className="relative h-40 bg-muted">
+                        {mainPhoto ? (
+                          <img
+                            src={mainPhoto}
+                            alt={`${mh.manufacturer} ${mh.model}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Truck className="h-12 w-12 text-muted-foreground/30" />
+                          </div>
+                        )}
+
+                        {/* Sofortkauf Badge */}
+                        <div className="absolute top-2 left-2 z-10">
+                          <Badge className="bg-green-600 text-white shadow-lg text-xs">
+                            <ShoppingCart className="h-3 w-3 mr-1" />
+                            Sofortkauf
+                          </Badge>
+                        </div>
+
+                        {/* Body Type Badge */}
+                        {mh.body_type && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="secondary" className="shadow-lg text-xs">
+                              {mh.body_type}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <CardContent className="p-4">
+                        <div className="mb-2">
+                          <h3 className="font-semibold text-sm line-clamp-1">
+                            {mh.manufacturer} {mh.model}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {mh.year && <><CalendarIcon className="inline h-3 w-3 mr-1" />{mh.year}</>}
+                            {mh.listing_number && <> &bull; #{mh.listing_number}</>}
+                          </p>
+                        </div>
+
+                        {/* Location */}
+                        {(mh.location_city || mh.location_state) && (
+                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {[mh.location_city, mh.location_state].filter(Boolean).join(", ")}
+                          </p>
+                        )}
+
+                        {/* Price */}
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Sofortkauf-Preis</p>
+                            {mh.instant_price ? (
+                              <p className="text-lg font-bold text-green-600">
+                                €{mh.instant_price.toLocaleString('de-DE')}
+                              </p>
+                            ) : (
+                              <p className="text-sm font-medium text-muted-foreground">
+                                Preis auf Anfrage
+                              </p>
+                            )}
+                          </div>
+                          {mh.mileage && (
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">{Number(mh.mileage).toLocaleString('de-DE')} km</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <Button className="w-full mt-3 bg-green-600 hover:bg-green-700" size="sm" disabled={isLocked}>
+                          {isLocked ? (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              Gesperrt
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Details ansehen
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">Sofortkauf-Angebote</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Fahrzeuge zum Festpreis kaufen – kein Bieten nötig
-                  </p>
-                </div>
-              </div>
-              <Link to="/dashboard/sofortkauf">
-                <Button className="bg-green-600 hover:bg-green-700">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Angebote ansehen
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border-2 border-dashed border-green-200">
+            <CardContent className="text-center py-8">
+              <ShoppingCart className="h-10 w-10 mx-auto mb-3 text-green-400 opacity-50" />
+              <h3 className="font-semibold mb-1">Keine Sofortkauf-Angebote</h3>
+              <p className="text-muted-foreground text-sm">
+                Derzeit sind keine Fahrzeuge zum Sofortkauf verfügbar
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Enhanced Stats Grid */}
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>

@@ -143,12 +143,9 @@ const MyAppointments = () => {
         <Card className="p-12 text-center">
           <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Keine Termine vorhanden</h3>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-muted-foreground">
             Sie haben noch keine Übergabetermine gebucht
           </p>
-          <Button asChild>
-            <a href="/verkaufen">Wohnmobil verkaufen</a>
-          </Button>
         </Card>
       ) : (
         <div className="space-y-4">

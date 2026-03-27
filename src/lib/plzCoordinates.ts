@@ -702,13 +702,13 @@ export function getPlzCoordinates(postalCode: string | null | undefined): PlzCoo
 }
 
 /**
- * Anonymize a postal code by showing only the first 3 digits.
- * Example: "80331" -> "803xx"
+ * Anonymize a postal code by showing only the first 2 digits.
+ * Example: "80331" -> "80xxx"
  * @param postalCode Full postal code
  * @returns Anonymized postal code
  */
 export function anonymizePostalCode(postalCode: string | null | undefined): string {
-  if (!postalCode || postalCode.length < 3) return 'Unbekannt';
+  if (!postalCode || postalCode.length < 2) return 'Unbekannt';
   const clean = postalCode.replace(/\s/g, '');
-  return clean.substring(0, 3) + 'xx';
+  return clean.substring(0, 2) + 'xxx';
 }

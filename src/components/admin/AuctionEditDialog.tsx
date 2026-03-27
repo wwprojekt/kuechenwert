@@ -343,7 +343,7 @@ export function AuctionEditDialog({
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Händler sehen nur die ersten 3 Ziffern der PLZ (z.B. &quot;803xx&quot;) und die ungefähre Entfernung.
+              Händler sehen nur die ersten 2 Ziffern der PLZ (z.B. &quot;80xxx&quot;) und die ungefähre Entfernung.
             </p>
           </div>
 

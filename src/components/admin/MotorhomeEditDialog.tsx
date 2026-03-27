@@ -346,7 +346,7 @@ export function MotorhomeEditDialog({
                     placeholder="z.B. 80331"
                     maxLength={5}
                   />
-                  <p className="text-xs text-muted-foreground">Wird für Händler anonymisiert angezeigt (z.B. 803xx)</p>
+                  <p className="text-xs text-muted-foreground">Wird für Händler anonymisiert angezeigt (z.B. 80xxx)</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Stadt</Label>

@@ -866,11 +866,35 @@ const AuctionDetail = () => {
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-muted-foreground">Baujahr</span>
+                          <span className="font-semibold">{motorhome.year}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-muted-foreground">Kilometerstand</span>
+                          <span className="font-semibold">{motorhome.mileage.toLocaleString()} km</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Vorbesitzer</span>
-                          <span className="font-semibold">{motorhome.previous_owners || 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{motorhome.previous_owners != null ? motorhome.previous_owners : 'Nicht angegeben'}</span>
                         </div>
                       </div>
                       <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-muted-foreground">Kraftstoff</span>
+                          <span className="font-semibold">{motorhome.fuel_type || 'Nicht angegeben'}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-muted-foreground">Getriebe</span>
+                          <span className="font-semibold">{motorhome.transmission || 'Nicht angegeben'}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="text-muted-foreground">Leistung</span>
+                          <span className="font-semibold">
+                            {motorhome.engine_power_hp
+                              ? `${motorhome.engine_power_hp} PS${(motorhome as any).power_kw ? ` (${(motorhome as any).power_kw} kW)` : ''}`
+                              : 'Nicht angegeben'}
+                          </span>
+                        </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Gesamtgewicht</span>
                           <span className="font-semibold">{motorhome.weight_kg ? `${motorhome.weight_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
@@ -878,10 +902,6 @@ const AuctionDetail = () => {
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Nutzlast</span>
                           <span className="font-semibold">{motorhome.payload_kg ? `${motorhome.payload_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <span className="text-muted-foreground">Achsen</span>
-                          <span className="font-semibold">{motorhome.number_of_axles || 'Nicht angegeben'}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Sitzplätze mit Gurt</span>

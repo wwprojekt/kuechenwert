@@ -947,10 +947,6 @@ const AuctionDetail = () => {
                           <span className="text-muted-foreground">Kilometerstand</span>
                           <span className="font-semibold">{motorhome.mileage.toLocaleString()} km</span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <span className="text-muted-foreground">Vorbesitzer</span>
-                          <span className="font-semibold">{motorhome.previous_owners != null ? motorhome.previous_owners : 'Nicht angegeben'}</span>
-                        </div>
                       </div>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -977,10 +973,25 @@ const AuctionDetail = () => {
                           <span className="text-muted-foreground">Nutzlast</span>
                           <span className="font-semibold">{motorhome.payload_kg ? `${motorhome.payload_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <span className="text-muted-foreground">Sitzplätze mit Gurt</span>
-                          <span className="font-semibold">{motorhome.seats || 'Nicht angegeben'}</span>
-                        </div>
+                      </div>
+                    </div>
+                    {/* Weitere Details */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-muted-foreground text-sm">Vorbesitzer</span>
+                        <span className="font-semibold text-sm">{motorhome.previous_owners != null ? motorhome.previous_owners : 'k.A.'}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-muted-foreground text-sm">Sitzplätze</span>
+                        <span className="font-semibold text-sm">{motorhome.seats || 'k.A.'}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-muted-foreground text-sm">Schlafplätze</span>
+                        <span className="font-semibold text-sm">{motorhome.sleeping_places || 'k.A.'}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-muted-foreground text-sm">Achsen</span>
+                        <span className="font-semibold text-sm">{motorhome.number_of_axles || 'k.A.'}</span>
                       </div>
                     </div>
 
@@ -1347,154 +1358,10 @@ const AuctionDetail = () => {
                 </TabsContent>
               </Tabs>
 
-              {/* Enhanced Bid History */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <Users className="w-6 h-6 text-primary" />
-                    Gebotsverlauf
-                  </h2>
-                  <Badge variant="outline" className="px-3 py-1">
-                    {bids.length} Gebote
-                  </Badge>
-                </div>
-
-                {bids.length > 0 && (
-                  <div className={`mb-4 p-4 rounded-lg border transition-all duration-300 ${
-                    isHighestBidder
-                      ? 'bg-emerald-50 border-emerald-200'
-                      : wasOutbid
-                      ? 'bg-red-50 border-red-200'
-                      : 'bg-primary/5 border-primary/20'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Aktuell führend</p>
-                        <p className={`font-semibold ${
-                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
-                        }`}>
-                          {isHighestBidder ? 'Sie!' : `Bieter #1`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-2xl font-bold ${
-                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
-                        }`}>
-                          €{(bids[0]?.amount ?? 0).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          vor {bids[0]?.created_at ? Math.floor((Date.now() - new Date(bids[0].created_at).getTime()) / (1000 * 60)) : 0} Min.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {bids.length > 0 ? (
-                    bids.map((bid, index) => {
-                      const isMine = user && bid.bidder_id === user.id;
-                      return (
-                        <div
-                          key={bid.id}
-                          className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 ${
-                            isMine && index === 0
-                              ? 'bg-emerald-50 border border-emerald-200 ring-1 ring-emerald-100'
-                              : isMine
-                              ? 'bg-amber-50/70 border border-amber-200/50'
-                              : index === 0 
-                              ? 'bg-primary/10 border border-primary/20' 
-                              : 'bg-muted/50 hover:bg-muted/70'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                              isMine && index === 0 ? 'bg-emerald-500 text-white'
-                              : isMine ? 'bg-amber-400 text-white'
-                              : index === 0 ? 'bg-primary text-white'
-                              : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {isMine ? <User className="w-4 h-4" /> : `#${index + 1}`}
-                            </div>
-                            <div>
-                              <p className="font-semibold flex items-center gap-2">
-                                {isMine ? 'Ihr Gebot' : 'Gebot'}
-                                {bid.is_autobid && (
-                                  <Badge variant="outline" className="text-xs gap-1">
-                                    <Zap className="w-3 h-3" /> Auto
-                                  </Badge>
-                                )}
-                                {index === 0 && (
-                                  <Badge className={`text-xs ${
-                                    isMine ? 'bg-emerald-500' : 'bg-green-500'
-                                  }`}>
-                                    {isMine ? <><Crown className="w-3 h-3 mr-0.5" /> Führend</> : 'Führend'}
-                                  </Badge>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(bid.created_at).toLocaleString("de-DE")}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-lg font-bold ${
-                              isMine && index === 0 ? 'text-emerald-600'
-                              : isMine ? 'text-amber-600'
-                              : index === 0 ? 'text-primary'
-                              : 'text-foreground'
-                            }`}>
-                              €{bid.amount.toLocaleString()}
-                            </p>
-                            {index > 0 && (
-                              <p className="text-xs text-green-600">
-                                +€{(bid.amount - bids[index]?.amount || 0).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-12">
-                      <Gavel className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-                      <p className="text-muted-foreground font-medium">Noch keine Gebote vorhanden</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Seien Sie der Erste und geben Sie ein Gebot ab!
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {bids.length > 0 && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Durchschnitt</p>
-                        <p className="font-semibold">
-                          €{Math.round(bids.reduce((sum, bid) => sum + bid.amount, 0) / bids.length).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Höchstes Gebot</p>
-                        <p className="font-semibold text-primary">
-                          €{Math.max(...bids.map(b => b.amount)).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Bieter</p>
-                        <p className="font-semibold">
-                          {new Set(bids.map(b => b.bidder_id)).size}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
             </div>
 
             {/* Simplified Right column - Bidding Sidebar */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-6">
               <Card className="p-6 sticky top-24 space-y-6">
                 <div>
                   <h1 className="text-2xl font-bold mb-2">
@@ -1876,6 +1743,151 @@ const AuctionDetail = () => {
                     <Badge variant="secondary" className="text-lg">
                       Auktion beendet
                     </Badge>
+                  </div>
+                )}
+              </Card>
+
+              {/* Gebotsverlauf - direkt unter der Bidding Sidebar */}
+              <Card className="p-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    Gebotsverlauf
+                  </h2>
+                  <Badge variant="outline" className="px-3 py-1">
+                    {bids.length} Gebote
+                  </Badge>
+                </div>
+
+                {bids.length > 0 && (
+                  <div className={`mb-4 p-3 rounded-lg border transition-all duration-300 ${
+                    isHighestBidder
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : wasOutbid
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-primary/5 border-primary/20'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Aktuell führend</p>
+                        <p className={`font-semibold text-sm ${
+                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                        }`}>
+                          {isHighestBidder ? 'Sie!' : `Bieter #1`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xl font-bold ${
+                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                        }`}>
+                          €{(bids[0]?.amount ?? 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          vor {bids[0]?.created_at ? Math.floor((Date.now() - new Date(bids[0].created_at).getTime()) / (1000 * 60)) : 0} Min.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {bids.length > 0 ? (
+                    bids.map((bid, index) => {
+                      const isMine = user && bid.bidder_id === user.id;
+                      return (
+                        <div
+                          key={bid.id}
+                          className={`flex items-center justify-between p-2.5 rounded-lg transition-all duration-300 ${
+                            isMine && index === 0
+                              ? 'bg-emerald-50 border border-emerald-200 ring-1 ring-emerald-100'
+                              : isMine
+                              ? 'bg-amber-50/70 border border-amber-200/50'
+                              : index === 0 
+                              ? 'bg-primary/10 border border-primary/20' 
+                              : 'bg-muted/50 hover:bg-muted/70'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isMine && index === 0 ? 'bg-emerald-500 text-white'
+                              : isMine ? 'bg-amber-400 text-white'
+                              : index === 0 ? 'bg-primary text-white'
+                              : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {isMine ? <User className="w-3.5 h-3.5" /> : `#${index + 1}`}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm flex items-center gap-1.5">
+                                {isMine ? 'Ihr Gebot' : 'Gebot'}
+                                {bid.is_autobid && (
+                                  <Badge variant="outline" className="text-[10px] gap-0.5 px-1 py-0">
+                                    <Zap className="w-2.5 h-2.5" /> Auto
+                                  </Badge>
+                                )}
+                                {index === 0 && (
+                                  <Badge className={`text-[10px] px-1.5 py-0 ${
+                                    isMine ? 'bg-emerald-500' : 'bg-green-500'
+                                  }`}>
+                                    {isMine ? <><Crown className="w-2.5 h-2.5 mr-0.5" /> Führend</> : 'Führend'}
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {new Date(bid.created_at).toLocaleString("de-DE")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-base font-bold ${
+                              isMine && index === 0 ? 'text-emerald-600'
+                              : isMine ? 'text-amber-600'
+                              : index === 0 ? 'text-primary'
+                              : 'text-foreground'
+                            }`}>
+                              €{bid.amount.toLocaleString()}
+                            </p>
+                            {index > 0 && (
+                              <p className="text-[11px] text-green-600">
+                                +€{(bid.amount - bids[index]?.amount || 0).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8">
+                      <Gavel className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
+                      <p className="text-muted-foreground font-medium text-sm">Noch keine Gebote</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Seien Sie der Erste!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {bids.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Durchschnitt</p>
+                        <p className="font-semibold text-sm">
+                          €{Math.round(bids.reduce((sum, bid) => sum + bid.amount, 0) / bids.length).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Höchstes</p>
+                        <p className="font-semibold text-sm text-primary">
+                          €{Math.max(...bids.map(b => b.amount)).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Bieter</p>
+                        <p className="font-semibold text-sm">
+                          {new Set(bids.map(b => b.bidder_id)).size}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </Card>

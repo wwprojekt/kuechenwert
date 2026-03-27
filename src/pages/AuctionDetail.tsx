@@ -376,12 +376,12 @@ const AuctionDetail = () => {
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-      const enteringHotbid = distance < 5 * 60 * 1000;
+      const enteringHotbid = distance < 1 * 60 * 1000;
       if (enteringHotbid && !hotbidSoundPlayed.current) {
         hotbidSoundPlayed.current = true;
         playNotification('general');
       }
-      setIsEndingSoon(enteringHotbid); // < 5 minutes = urgent
+      setIsEndingSoon(enteringHotbid); // < 1 minute = urgent (soft-close window)
 
       if (days > 0) {
         setTimeRemaining(`${days}T ${hours}h ${minutes}m`);
@@ -620,7 +620,7 @@ const AuctionDetail = () => {
         setAuction((prev) => prev ? ({ ...prev, end_time: data.newEndTime }) : null);
         toast({
           title: "Auktion verlängert!",
-          description: "Die Auktion wurde um 5 Minuten verlängert",
+          description: "Die Auktion wurde um 1 Minute verlängert (Soft-Close)",
         });
       }
 
@@ -1431,7 +1431,7 @@ const AuctionDetail = () => {
                       {timeRemaining}
                     </p>
                     <p className="text-xs text-destructive/80 mt-1 font-medium">
-                      Gebote verlängern die Auktion!
+                      Gebot in letzter Minute verlängert um 1 Min!
                     </p>
                   </div>
                 ) : (
@@ -1616,6 +1616,34 @@ const AuctionDetail = () => {
                         step={50}
                         className="text-lg h-12"
                       />
+                    </div>
+
+                    {/* Rapid Bid Buttons - 1-Klick-Schnellgebote */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Schnellgebot</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[100, 500, 1000].map((increment) => {
+                          const rapidBidValue = currentBid + increment;
+                          return (
+                            <Button
+                              key={increment}
+                              variant="outline"
+                              size="sm"
+                              className="h-10 text-sm font-semibold hover:bg-primary/10 hover:border-primary/50 transition-all"
+                              onClick={() => {
+                                setBidAmount(rapidBidValue.toString());
+                              }}
+                              disabled={isSubmitting || auction.status !== 'active'}
+                            >
+                              <ArrowUp className="w-3 h-3 mr-1" />
+                              +€{increment.toLocaleString()}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        Klicken Sie auf einen Betrag, um Ihr Gebot schnell zu setzen
+                      </p>
                     </div>
 
                     {/* Commission Display */}

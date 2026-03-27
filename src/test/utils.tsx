@@ -35,7 +35,7 @@ const MockSettingsContext = React.createContext({
     meta_description: 'Test Meta Description',
     meta_keywords: 'test, keywords',
     default_auction_duration_days: 7,
-    soft_close_extension_minutes: 5,
+    soft_close_extension_minutes: 1,
     min_bid_increment_percent: 2,
     commission_rate_percent: 5,
     reserve_price_required: false,
@@ -168,7 +168,7 @@ export const createMockAuction = (overrides = {}) => ({
   status: 'active',
   start_time: new Date().toISOString(),
   end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-  soft_close_extension_minutes: 5,
+  soft_close_extension_minutes: 1,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,

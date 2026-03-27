@@ -5,7 +5,7 @@ import PageHero from "@/components/PageHero";
 import RelatedContent, { kaufenRelatedLinks } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Search, Star, CheckCircle2 } from "lucide-react";
+import { Shield, Search, Star, CheckCircle2, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
 import MotorhomeCard from "@/components/MotorhomeCard";
@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { anonymizePostalCode } from "@/lib/plzCoordinates";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -29,6 +31,12 @@ interface AuctionWithMotorhome extends AuctionRow {
 
 const Kaufen = () => {
   const { settings } = useSettings();
+  const { user } = useAuth();
+  const { isDealer } = useUserRole();
+  const [showSaveSearchDialog, setShowSaveSearchDialog] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchFrequency, setSaveSearchFrequency] = useState('immediate');
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
   const [auctions, setAuctions] = useState<AuctionWithMotorhome[]>([]);
   const [bidCounts, setBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -278,11 +286,123 @@ const Kaufen = () => {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">
-                    {isLoading ? "Lädt..." : `${filteredAuctions.length} Auktionen gefunden`}
+                    {isLoading ? "L\u00e4dt..." : `${filteredAuctions.length} Auktionen gefunden`}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">Aktive Auktionen</p>
                 </div>
+                {user && isDealer && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      setSaveSearchName('');
+                      setShowSaveSearchDialog(true);
+                    }}
+                  >
+                    <Bell className="h-4 w-4" />
+                    <span className="hidden sm:inline">Suche speichern</span>
+                  </Button>
+                )}
               </div>
+
+              {/* Save Search Dialog */}
+              {showSaveSearchDialog && (
+                <div className="mb-6 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
+                  <h3 className="font-semibold mb-3">Suchauftrag speichern</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Erhalten Sie eine Benachrichtigung, wenn neue Fahrzeuge Ihren Kriterien entsprechen.
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Name des Suchauftrags</label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        placeholder="z.B. Kastenwagen unter 50.000\u20ac"
+                        value={saveSearchName}
+                        onChange={(e) => setSaveSearchName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Benachrichtigungsfrequenz</label>
+                      <select
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        value={saveSearchFrequency}
+                        onChange={(e) => setSaveSearchFrequency(e.target.value)}
+                      >
+                        <option value="immediate">Sofort</option>
+                        <option value="daily">T\u00e4glich</option>
+                        <option value="weekly">W\u00f6chentlich</option>
+                      </select>
+                    </div>
+                    <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                      <strong>Aktuelle Filter:</strong>{' '}
+                      {filters.brand ? `Marke: ${filters.brand}` : 'Alle Marken'}
+                      {filters.vehicleTypes.length > 0 ? ` \u2022 Typ: ${filters.vehicleTypes.join(', ')}` : ''}
+                      {filters.priceRange[1] < 500000 ? ` \u2022 Max: \u20ac${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
+                      {filters.yearRange[0] > 1990 ? ` \u2022 Ab ${filters.yearRange[0]}` : ''}
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSaveSearchDialog(false)}
+                      >
+                        Abbrechen
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={!saveSearchName.trim() || isSavingSearch}
+                        onClick={async () => {
+                          if (!user || !saveSearchName.trim()) return;
+                          setIsSavingSearch(true);
+                          try {
+                            const criteria: Record<string, any> = {};
+                            if (filters.brand) criteria.manufacturer = filters.brand;
+                            if (filters.vehicleTypes.length > 0) criteria.body_type = filters.vehicleTypes[0];
+                            if (filters.priceRange[1] < 500000) criteria.max_price = filters.priceRange[1];
+                            if (filters.yearRange[0] > 1990) criteria.min_year = filters.yearRange[0];
+                            if (filters.yearRange[1] < 2026) criteria.max_year = filters.yearRange[1];
+                            if (filters.beds) criteria.sleeping_places = parseInt(filters.beds);
+
+                            const { error } = await supabase
+                              .from('search_alerts')
+                              .insert({
+                                dealer_id: user.id,
+                                alert_name: saveSearchName.trim(),
+                                search_criteria: criteria,
+                                email_enabled: true,
+                                alert_frequency: saveSearchFrequency,
+                                max_price: criteria.max_price || null,
+                                is_active: true,
+                              });
+
+                            if (error) throw error;
+
+                            toast({
+                              title: 'Suchauftrag gespeichert',
+                              description: 'Sie erhalten Benachrichtigungen bei passenden Fahrzeugen.',
+                            });
+                            setShowSaveSearchDialog(false);
+                          } catch (error) {
+                            logger.error('Error saving search alert:', error);
+                            toast({
+                              title: 'Fehler',
+                              description: 'Der Suchauftrag konnte nicht gespeichert werden.',
+                              variant: 'destructive',
+                            });
+                          } finally {
+                            setIsSavingSearch(false);
+                          }
+                        }}
+                      >
+                        {isSavingSearch ? 'Speichert...' : 'Speichern'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {isLoading ? (
                 <AuctionCardSkeletonGrid count={6} />

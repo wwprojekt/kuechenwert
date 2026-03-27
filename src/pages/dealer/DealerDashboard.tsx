@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,9 @@ import {
   Lock,
   Truck,
   MapPin,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  AlertTriangle,
+  ArrowRight
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +47,7 @@ import { de } from "date-fns/locale";
 
 const DealerDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   useSettings(); // Initialize settings context
   const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, refetch: refetchApp } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
@@ -286,6 +290,21 @@ const DealerDashboard = () => {
     });
   }, [recentAuctions, searchQuery, filterStatus]);
 
+  // Compute outbid auctions for the alert section
+  const outbidAuctions = useMemo(() => {
+    if (!recentAuctions) return [];
+    return recentAuctions.filter((auction: any) => {
+      const userBid = auction.bids?.[0];
+      const hasBid = !!userBid;
+      const isLeading = hasBid && userBid?.amount === auction.current_bid;
+      const timeLeft = new Date(auction.end_time).getTime() - Date.now();
+      return hasBid && !isLeading && timeLeft > 0;
+    }).sort((a: any, b: any) => {
+      // Sort by urgency: ending soonest first
+      return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
+    });
+  }, [recentAuctions]);
+
   // Sort: recommended auctions first, then by end_time
   const sortedAuctions = useMemo(() => {
     if (!filteredAuctions || !dealerPreferences) return filteredAuctions;
@@ -456,6 +475,88 @@ const DealerDashboard = () => {
                     />
                   </div>
                 </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* OUTBID ALERT SECTION */}
+      {!isLocked && outbidAuctions.length > 0 && (
+        <Card className="border-2 border-orange-400 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md animate-scale-in">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-orange-800 dark:text-orange-300 text-lg">
+                  Achtung: Sie wurden bei {outbidAuctions.length} {outbidAuctions.length === 1 ? 'Auktion' : 'Auktionen'} überboten!
+                </h3>
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  Reagieren Sie jetzt, bevor die Auktionen enden
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-orange-400 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-shrink-0"
+                onClick={() => setFilterStatus('outbid')}
+              >
+                Alle anzeigen
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {outbidAuctions.slice(0, 3).map((auction: any) => {
+                const userBid = auction.bids?.[0];
+                const diff = (auction.current_bid || 0) - (userBid?.amount || 0);
+                const timeLeft = new Date(auction.end_time).getTime() - Date.now();
+                const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
+                const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
+                const isUrgent = timeLeft < 2 * 60 * 60 * 1000; // Less than 2 hours
+                return (
+                  <div
+                    key={auction.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                      isUrgent
+                        ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-700'
+                        : 'bg-white border-orange-200 dark:bg-orange-950/20 dark:border-orange-700'
+                    }`}
+                    onClick={() => navigate(`/auktion/${auction.id}`)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>Ihr Gebot: <strong>€{userBid?.amount?.toLocaleString('de-DE')}</strong></span>
+                          <span className="text-orange-600 dark:text-orange-400 font-medium">
+                            +€{diff.toLocaleString('de-DE')} überboten
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="text-right">
+                        <Badge variant="secondary" className={`text-xs ${
+                          isUrgent ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : ''
+                        }`}>
+                          <Clock className="h-3 w-3 mr-1" />
+                          {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`}
+                        </Badge>
+                      </div>
+                      <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              {outbidAuctions.length > 3 && (
+                <p className="text-center text-sm text-orange-600 dark:text-orange-400 pt-1">
+                  + {outbidAuctions.length - 3} weitere überbotene {outbidAuctions.length - 3 === 1 ? 'Auktion' : 'Auktionen'}
+                </p>
               )}
             </div>
           </CardContent>

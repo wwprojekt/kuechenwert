@@ -155,6 +155,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 0a. In-App Notification: Bid confirmed for current bidder
+    supabaseAdmin
+      .from('dealer_notifications')
+      .insert({
+        user_id: user.id,
+        type: 'bid_confirmed',
+        title: 'Gebot platziert',
+        message: `Ihr Gebot von \u20ac${amount.toLocaleString('de-DE')} auf ${motorhomeName || 'eine Auktion'} wurde erfolgreich platziert.`,
+        link: `/auktion/${auctionId}`,
+        auction_id: auctionId,
+      })
+      .then(({ error }) => { if (error) console.error('Error inserting bid_confirmed notification:', error); })
+      .catch((e: unknown) => console.error('Error inserting bid_confirmed notification:', e));
+
     // 1. Notify the current bidder that their bid was placed
     supabaseAdmin.functions.invoke('send-bid-notification', {
       body: {
@@ -175,6 +189,20 @@ Deno.serve(async (req) => {
       .limit(1);
 
     if (previousBids && previousBids.length > 0) {
+      // 2a. In-App Notification: Outbid notification for previous highest bidder
+      supabaseAdmin
+        .from('dealer_notifications')
+        .insert({
+          user_id: previousBids[0].bidder_id,
+          type: 'outbid',
+          title: 'Sie wurden \u00fcberboten!',
+          message: `Ihr Gebot auf ${motorhomeName || 'eine Auktion'} wurde \u00fcberboten. Neuer Preis: \u20ac${amount.toLocaleString('de-DE')}`,
+          link: `/auktion/${auctionId}`,
+          auction_id: auctionId,
+        })
+        .then(({ error }) => { if (error) console.error('Error inserting outbid notification:', error); })
+        .catch((e: unknown) => console.error('Error inserting outbid notification:', e));
+
       supabaseAdmin.functions.invoke('send-bid-notification', {
         body: {
           bidderId: previousBids[0].bidder_id,

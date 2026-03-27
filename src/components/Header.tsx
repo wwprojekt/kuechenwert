@@ -8,6 +8,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SiteLogo } from "@/components/SiteLogo";
 import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
+import NotificationCenter from "@/components/NotificationCenter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -195,6 +196,7 @@ const Header = () => {
             <div className="h-6 w-px bg-border/50" />
             <DarkModeToggle />
             <div className="flex items-center gap-2">
+              {user && isDealer && <NotificationCenter />}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -263,18 +265,21 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
+          {/* Mobile Notification + Menu Buttons */}
+          <div className="lg:hidden flex items-center gap-1">
+            {user && isDealer && <NotificationCenter />}
+            <button
+              className="p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
             {mobileMenuOpen ? (
               <X className="h-6 w-6" />
             ) : (
               <Menu className="h-6 w-6" />
             )}
-          </button>
+            </button>
+          </div>
         </nav>
 
         {/* Mobile Navigation */}

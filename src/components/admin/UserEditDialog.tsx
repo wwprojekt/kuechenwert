@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft, MapPin } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 interface UserRole {
@@ -42,6 +42,17 @@ interface UserData {
   last_name: string | null;
   phone: string | null;
   company_name: string | null;
+  // Privatadresse
+  address_street: string | null;
+  address_zip: string | null;
+  address_city: string | null;
+  address_country: string | null;
+  // Firmenadresse
+  company_street: string | null;
+  company_zip: string | null;
+  company_city: string | null;
+  company_country: string | null;
+  //
   is_suspended?: boolean;
   suspended_at?: string | null;
   suspended_reason?: string | null;
@@ -73,6 +84,16 @@ export function UserEditDialog({
     last_name: "",
     phone: "",
     company_name: "",
+    // Privatadresse
+    address_street: "",
+    address_zip: "",
+    address_city: "",
+    address_country: "",
+    // Firmenadresse
+    company_street: "",
+    company_zip: "",
+    company_city: "",
+    company_country: "",
   });
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [originalRoles, setOriginalRoles] = useState<string[]>([]);
@@ -86,6 +107,16 @@ export function UserEditDialog({
         last_name: user.last_name || "",
         phone: user.phone || "",
         company_name: user.company_name || "",
+        // Privatadresse
+        address_street: user.address_street || "",
+        address_zip: user.address_zip || "",
+        address_city: user.address_city || "",
+        address_country: user.address_country || "",
+        // Firmenadresse
+        company_street: user.company_street || "",
+        company_zip: user.company_zip || "",
+        company_city: user.company_city || "",
+        company_country: user.company_country || "",
       });
       const roles = user.roles?.map((r) => r.role) || [];
       setUserRoles(roles);
@@ -102,11 +133,14 @@ export function UserEditDialog({
     userRoles.includes("dealer") &&
     !userRoles.includes("seller");
 
+  // Check if user has dealer role (to show company address section)
+  const isDealer = userRoles.includes("dealer");
+
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("No user ID");
 
-      // Update profile
+      // Update profile including address fields
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -114,6 +148,17 @@ export function UserEditDialog({
           last_name: formData.last_name || null,
           phone: formData.phone || null,
           company_name: formData.company_name || null,
+          // Privatadresse (Verkäufer)
+          address_street: formData.address_street || null,
+          address_zip: formData.address_zip || null,
+          address_city: formData.address_city || null,
+          address_country: formData.address_country || null,
+          // Firmenadresse (Händler/Käufer)
+          company_street: formData.company_street || null,
+          company_zip: formData.company_zip || null,
+          company_city: formData.company_city || null,
+          company_country: formData.company_country || null,
+          // Status
           is_suspended: isSuspended,
           suspended_at: isSuspended ? new Date().toISOString() : null,
           suspended_reason: isSuspended ? suspendedReason : null,
@@ -163,9 +208,9 @@ export function UserEditDialog({
           .insert({
             user_id: user.id,
             company_name: formData.company_name || `${contactName} (Händler)`,
-            company_address: "Wird vom Händler ergänzt",
-            company_postal_code: "00000",
-            company_city: "Wird vom Händler ergänzt",
+            company_address: formData.company_street || "Wird vom Händler ergänzt",
+            company_postal_code: formData.company_zip || "00000",
+            company_city: formData.company_city || "Wird vom Händler ergänzt",
             contact_person_name: contactName,
             phone: formData.phone || "Wird vom Händler ergänzt",
             status: "pending",
@@ -236,6 +281,7 @@ export function UserEditDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["adminUserDetail"] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
 
       if (isSellerToDealerUpgrade) {
@@ -286,8 +332,9 @@ export function UserEditDialog({
 
         <ScrollArea className="h-[60vh] pr-4">
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="address">Adresse</TabsTrigger>
               <TabsTrigger value="roles">Rollen</TabsTrigger>
               <TabsTrigger value="status">Status</TabsTrigger>
             </TabsList>
@@ -347,6 +394,141 @@ export function UserEditDialog({
                   }
                 />
               </div>
+            </TabsContent>
+
+            {/* Address Tab */}
+            <TabsContent value="address" className="space-y-6 mt-4">
+              {/* Privatadresse (Verkäufer) */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Privatadresse (Verkäufer)</Label>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Wird im Kaufvertrag als Verkäufer-Anschrift verwendet
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address_street">Straße und Hausnummer</Label>
+                  <Input
+                    id="address_street"
+                    placeholder="z.B. Musterstraße 12"
+                    value={formData.address_street}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address_street: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address_zip">PLZ</Label>
+                    <Input
+                      id="address_zip"
+                      placeholder="30627"
+                      value={formData.address_zip}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address_zip: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="address_city">Stadt</Label>
+                    <Input
+                      id="address_city"
+                      placeholder="Hannover"
+                      value={formData.address_city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address_city: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address_country">Land</Label>
+                  <Input
+                    id="address_country"
+                    placeholder="Deutschland"
+                    value={formData.address_country}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address_country: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Firmenadresse (Händler/Käufer) */}
+              <div className="border-t pt-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Firmenadresse (Händler/Käufer)</Label>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Wird im Kaufvertrag als Käufer-Anschrift verwendet
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company_street">Straße und Hausnummer</Label>
+                  <Input
+                    id="company_street"
+                    placeholder="z.B. Gewerbestraße 5"
+                    value={formData.company_street}
+                    onChange={(e) =>
+                      setFormData({ ...formData, company_street: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="company_zip">PLZ</Label>
+                    <Input
+                      id="company_zip"
+                      placeholder="30627"
+                      value={formData.company_zip}
+                      onChange={(e) =>
+                        setFormData({ ...formData, company_zip: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="company_city">Stadt</Label>
+                    <Input
+                      id="company_city"
+                      placeholder="Hannover"
+                      value={formData.company_city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, company_city: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company_country">Land</Label>
+                  <Input
+                    id="company_country"
+                    placeholder="Deutschland"
+                    value={formData.company_country}
+                    onChange={(e) =>
+                      setFormData({ ...formData, company_country: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Hinweis für den Admin */}
+              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-700">
+                <MapPin className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                  <strong>Hinweis zur Kaufvertragserstellung:</strong> Die
+                  Privatadresse wird als Verkäufer-Anschrift und die Firmenadresse
+                  als Käufer-Anschrift im Kaufvertrag verwendet. Bitte stellen Sie
+                  sicher, dass die Adressdaten vollständig und korrekt sind, bevor
+                  ein Kaufvertrag generiert wird.
+                </AlertDescription>
+              </Alert>
             </TabsContent>
 
             {/* Roles Tab */}

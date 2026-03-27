@@ -26,6 +26,7 @@ import {
   Edit,
   AlertTriangle,
   ExternalLink,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -328,6 +329,47 @@ export default function AdminUserDetail() {
                   <InfoItem label="Firma" value={user.company_name} icon={<Building2 className="w-3 h-3" />} />
                   <InfoItem label="Registriert" value={formatDate(user.created_at)} icon={<Calendar className="w-3 h-3" />} />
                 </InfoGrid>
+
+                {/* Adressen */}
+                {(user.address_street || user.company_street) && (
+                  <div className="mt-6">
+                    <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Adressen
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {user.address_street && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Privatadresse (Verkäufer)</p>
+                          <p className="text-sm">{user.address_street}</p>
+                          <p className="text-sm">{[user.address_zip, user.address_city].filter(Boolean).join(' ')}</p>
+                          {user.address_country && <p className="text-sm text-muted-foreground">{user.address_country}</p>}
+                        </div>
+                      )}
+                      {user.company_street && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Firmenadresse (Käufer)</p>
+                          <p className="text-sm">{user.company_street}</p>
+                          <p className="text-sm">{[user.company_zip, user.company_city].filter(Boolean).join(' ')}</p>
+                          {user.company_country && <p className="text-sm text-muted-foreground">{user.company_country}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Adresse fehlt Warnung */}
+                {!user.address_street && !user.company_street && (
+                  <div className="mt-6 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Keine Adresse hinterlegt</span>
+                    </div>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Für die Kaufvertragserstellung wird eine Adresse benötigt. Klicken Sie auf "Bearbeiten", um die Adresse zu ergänzen.
+                    </p>
+                  </div>
+                )}
 
                 {/* Roles */}
                 <div className="mt-6">

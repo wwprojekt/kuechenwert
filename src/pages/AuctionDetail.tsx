@@ -995,41 +995,7 @@ const AuctionDetail = () => {
                       </div>
                     </div>
 
-                    {/* Vehicle Location */}
-                    {motorhome.postal_code && (
-                      <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <MapPin className="w-5 h-5 text-primary" />
-                          <h3 className="font-semibold">Fahrzeugstandort</h3>
-                        </div>
-                        <p className="text-muted-foreground">
-                          PLZ-Bereich: <span className="font-semibold">{anonymizePostalCode(motorhome.postal_code)}</span>
-                        </p>
-                        {(() => {
-                          const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
-                          const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
-                          const dist = vehicleCoords && dCoords
-                            ? calculateDistance(
-                                { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
-                                { latitude: dCoords.lat, longitude: dCoords.lng }
-                              )
-                            : null;
-                          return dist !== null ? (
-                            <p className="text-sm text-primary mt-1 flex items-center gap-1">
-                              <Navigation className="w-4 h-4" />
-                              Ungefähre Entfernung zu Ihrem Standort: <span className="font-semibold">ca. {formatDistance(dist)}</span>
-                            </p>
-                          ) : null;
-                        })()}
-                      </div>
-                    )}
-                    
-                    {motorhome.description && (
-                      <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                        <h3 className="font-semibold mb-2">Beschreibung</h3>
-                        <p className="text-muted-foreground whitespace-pre-wrap">{motorhome.description}</p>
-                      </div>
-                    )}
+
 
                     {/* Nachträge des Verkäufers */}
                     {addenda.length > 0 && (

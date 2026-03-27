@@ -43,6 +43,7 @@ import {
   Clock,
   TrendingUp,
   Users,
+  User,
   Gauge,
   Calendar,
   Bed,
@@ -71,6 +72,10 @@ import {
   AlertTriangle,
   MapPin,
   Navigation,
+  ArrowUp,
+  ArrowDown,
+  Crown,
+  Bell,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -100,8 +105,12 @@ const AuctionDetail = () => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
   const hotbidSoundPlayed = useRef(false);
-  const { playNotification } = useAudioNotification();
+  const { playNotification, notifyOutbid } = useAudioNotification();
   const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
+
+  // Live Bidding Status
+  const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
+  const prevHighestBidderRef = useRef<boolean | null>(null);
 
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -252,8 +261,39 @@ const AuctionDetail = () => {
             current_bid: payload.new.amount,
           }) : null);
 
-          // Show toast for new bid
-          if (payload.new.bidder_id !== user?.id) {
+          // ─── Live Bidding Status & Sound ───────────────────────
+          if (user) {
+            const isNewBidFromMe = payload.new.bidder_id === user.id;
+            
+            if (isNewBidFromMe) {
+              // I just placed a bid successfully → I'm the highest bidder
+              setBidStatusAnimation('pulse-green');
+              setTimeout(() => setBidStatusAnimation('none'), 2000);
+            } else {
+              // Someone else placed a bid
+              // Check if I was previously the highest bidder (i.e., I got outbid)
+              const wasHighestBidder = prevHighestBidderRef.current;
+              if (wasHighestBidder) {
+                // I was the highest bidder and someone else just bid → I got outbid!
+                setBidStatusAnimation('pulse-red');
+                setTimeout(() => setBidStatusAnimation('none'), 3000);
+                // Play outbid sound and show browser notification
+                notifyOutbid(payload.new.amount);
+              }
+              
+              // Show toast for new bid from others
+              toast({
+                title: wasHighestBidder ? "Sie wurden überboten!" : "Neues Gebot!",
+                description: wasHighestBidder
+                  ? `Neues Höchstgebot: €${payload.new.amount.toLocaleString()}. Bieten Sie erneut!`
+                  : `€${payload.new.amount.toLocaleString()} von ${
+                      profile?.company_name || `${profile?.first_name} ${profile?.last_name}`
+                    }`,
+                variant: wasHighestBidder ? "destructive" : "default",
+              });
+            }
+          } else {
+            // Not logged in - just show generic toast
             toast({
               title: "Neues Gebot!",
               description: `€${payload.new.amount.toLocaleString()} von ${
@@ -269,7 +309,7 @@ const AuctionDetail = () => {
       isSubscribed = false; // Mark as unmounted
       supabase.removeChannel(channel);
     };
-  }, [id, user, toast]);
+  }, [id, user, toast, notifyOutbid]);
 
   // Countdown timer
   useEffect(() => {
@@ -589,6 +629,15 @@ const AuctionDetail = () => {
   const reserveMet = auction.reserve_price ? currentBid >= auction.reserve_price : true;
   // Only show reserve price info to the seller or admin
   const canSeeReservePrice = user?.id === (motorhome as any).seller_id || isAdmin;
+
+  // ─── Live Bidding Status (computed) ─────────────────────────
+  const userBids = user ? bids.filter(b => b.bidder_id === user.id) : [];
+  const userHighestBid = userBids.length > 0 ? Math.max(...userBids.map(b => b.amount)) : 0;
+  const hasBid = userBids.length > 0;
+  const isHighestBidder = hasBid && bids.length > 0 && bids[0]?.bidder_id === user?.id;
+  const wasOutbid = hasBid && !isHighestBidder;
+  // Keep ref in sync for realtime callback
+  prevHighestBidderRef.current = isHighestBidder;
 
   // Generate Product structured data
   const productSchema = {
@@ -1194,16 +1243,26 @@ const AuctionDetail = () => {
                 </div>
 
                 {bids.length > 0 && (
-                  <div className="mb-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className={`mb-4 p-4 rounded-lg border transition-all duration-300 ${
+                    isHighestBidder
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : wasOutbid
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-primary/5 border-primary/20'
+                  }`}>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Aktuell führend</p>
-                        <p className="font-semibold text-primary">
-                          Bieter #{1}
+                        <p className={`font-semibold ${
+                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                        }`}>
+                          {isHighestBidder ? 'Sie!' : `Bieter #1`}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">
+                        <p className={`text-2xl font-bold ${
+                          isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                        }`}>
                           €{(bids[0]?.amount ?? 0).toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -1216,54 +1275,69 @@ const AuctionDetail = () => {
 
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {bids.length > 0 ? (
-                    bids.map((bid, index) => (
-                      <div
-                        key={bid.id}
-                        className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                          index === 0 
-                            ? 'bg-primary/10 border border-primary/20' 
-                            : 'bg-muted/50 hover:bg-muted/70'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                            index === 0 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
-                          }`}>
-                            #{index + 1}
+                    bids.map((bid, index) => {
+                      const isMine = user && bid.bidder_id === user.id;
+                      return (
+                        <div
+                          key={bid.id}
+                          className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 ${
+                            isMine && index === 0
+                              ? 'bg-emerald-50 border border-emerald-200 ring-1 ring-emerald-100'
+                              : isMine
+                              ? 'bg-amber-50/70 border border-amber-200/50'
+                              : index === 0 
+                              ? 'bg-primary/10 border border-primary/20' 
+                              : 'bg-muted/50 hover:bg-muted/70'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isMine && index === 0 ? 'bg-emerald-500 text-white'
+                              : isMine ? 'bg-amber-400 text-white'
+                              : index === 0 ? 'bg-primary text-white'
+                              : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {isMine ? <User className="w-4 h-4" /> : `#${index + 1}`}
+                            </div>
+                            <div>
+                              <p className="font-semibold flex items-center gap-2">
+                                {isMine ? 'Ihr Gebot' : 'Gebot'}
+                                {bid.is_autobid && (
+                                  <Badge variant="outline" className="text-xs gap-1">
+                                    <Zap className="w-3 h-3" /> Auto
+                                  </Badge>
+                                )}
+                                {index === 0 && (
+                                  <Badge className={`text-xs ${
+                                    isMine ? 'bg-emerald-500' : 'bg-green-500'
+                                  }`}>
+                                    {isMine ? <><Crown className="w-3 h-3 mr-0.5" /> Führend</> : 'Führend'}
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(bid.created_at).toLocaleString("de-DE")}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold flex items-center gap-2">
-                              Gebot
-                              {bid.is_autobid && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Zap className="w-3 h-3" /> Auto
-                                </Badge>
-                              )}
-                              {index === 0 && (
-                                <Badge className="text-xs bg-green-500">
-                                  Führend
-                                </Badge>
-                              )}
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${
+                              isMine && index === 0 ? 'text-emerald-600'
+                              : isMine ? 'text-amber-600'
+                              : index === 0 ? 'text-primary'
+                              : 'text-foreground'
+                            }`}>
+                              €{bid.amount.toLocaleString()}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(bid.created_at).toLocaleString("de-DE")}
-                            </p>
+                            {index > 0 && (
+                              <p className="text-xs text-green-600">
+                                +€{(bid.amount - bids[index]?.amount || 0).toLocaleString()}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${
-                            index === 0 ? 'text-primary' : 'text-foreground'
-                          }`}>
-                            €{bid.amount.toLocaleString()}
-                          </p>
-                          {index > 0 && (
-                            <p className="text-xs text-green-600">
-                              +€{(bid.amount - bids[index]?.amount || 0).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center py-12">
                       <Gavel className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -1435,17 +1509,58 @@ const AuctionDetail = () => {
 
                 <Separator />
 
-                {/* Current bid */}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Aktuelles Gebot</p>
-                  <p className="text-4xl font-bold text-primary">
+                {/* Current bid with Live Status */}
+                <div className={`relative rounded-xl p-4 -mx-2 transition-all duration-500 ${
+                  bidStatusAnimation === 'pulse-green'
+                    ? 'bg-emerald-50 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-100'
+                    : bidStatusAnimation === 'pulse-red'
+                    ? 'bg-red-50 ring-2 ring-red-400/50 shadow-lg shadow-red-100'
+                    : isHighestBidder
+                    ? 'bg-emerald-50/50 ring-1 ring-emerald-200'
+                    : wasOutbid
+                    ? 'bg-red-50/50 ring-1 ring-red-200'
+                    : ''
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
+                    {hasBid && (
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
+                        isHighestBidder
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        {isHighestBidder ? (
+                          <><Crown className="w-3.5 h-3.5" /> Höchstbietender</>
+                        ) : (
+                          <><ArrowDown className="w-3.5 h-3.5" /> Überboten</>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <p className={`text-4xl font-bold transition-colors duration-500 ${
+                    isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                  }`}>
                     €{currentBid.toLocaleString()}
                   </p>
+                  
+                  {/* User's own bid info */}
+                  {hasBid && (
+                    <div className={`mt-2 flex items-center gap-2 text-sm font-medium ${
+                      isHighestBidder ? 'text-emerald-600' : 'text-red-600'
+                    }`}>
+                      {isHighestBidder ? (
+                        <><CheckCircle className="w-4 h-4" /> Ihr Gebot: €{userHighestBid.toLocaleString()}</>
+                      ) : (
+                        <><AlertTriangle className="w-4 h-4" /> Ihr Gebot: €{userHighestBid.toLocaleString()} — €{(currentBid - userHighestBid).toLocaleString()} zurück</>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                     <TrendingUp className="w-4 h-4" />
                     <span>Startgebot: €{auction.starting_bid.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm">
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     <span>{bids.length} Gebote</span>
                     <span>{bids.length > 0 ? new Set(bids.map(b => b.bidder_id)).size : 0} Bieter</span>
                   </div>

@@ -850,7 +850,6 @@ const AuctionDetail = () => {
                         </div>
                         <p className="text-muted-foreground">
                           PLZ-Bereich: <span className="font-semibold">{anonymizePostalCode(motorhome.postal_code)}</span>
-                          {motorhome.city && <span> (Raum {motorhome.city})</span>}
                         </p>
                         {(() => {
                           const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
@@ -1200,9 +1199,7 @@ const AuctionDetail = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Aktuell führend</p>
                         <p className="font-semibold text-primary">
-                          {bids[0]?.bidder && typeof bids[0].bidder === 'object' && !Array.isArray(bids[0].bidder)
-                           ? (bids[0].bidder.company_name || `${bids[0].bidder.first_name} ${bids[0].bidder.last_name}`)
-                           : 'Unbekannt'}
+                          Bieter #{1}
                         </p>
                       </div>
                       <div className="text-right">
@@ -1236,9 +1233,7 @@ const AuctionDetail = () => {
                           </div>
                           <div>
                             <p className="font-semibold flex items-center gap-2">
-                              {bid.bidder && typeof bid.bidder === 'object' && !Array.isArray(bid.bidder)
-                                ? (bid.bidder.company_name || `${bid.bidder.first_name} ${bid.bidder.last_name}`)
-                                : 'Unbekannt'}
+                              Gebot
                               {bid.is_autobid && (
                                 <Badge variant="outline" className="text-xs gap-1">
                                   <Zap className="w-3 h-3" /> Auto
@@ -1337,7 +1332,7 @@ const AuctionDetail = () => {
                     return (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span>Standort: {anonymizedPlz}{motorhome.city ? ` (Raum ${motorhome.city})` : ''}</span>
+                        <span>Standort: {anonymizedPlz}</span>
                         {distanceKm !== null && (
                           <span className="flex items-center gap-1 ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                             <Navigation className="w-3 h-3" />

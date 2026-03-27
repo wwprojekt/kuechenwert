@@ -306,7 +306,7 @@ const Kaufen = () => {
                         listingNumber={auction.motorhome?.listing_number}
                         bodyType={auction.motorhome?.body_type}
                         country={auction.motorhome?.country}
-                        location={auction.motorhome?.postal_code ? `${anonymizePostalCode(auction.motorhome.postal_code)}${auction.motorhome?.city ? ` (${auction.motorhome.city})` : ''}` : undefined}
+                        location={auction.motorhome?.postal_code ? anonymizePostalCode(auction.motorhome.postal_code) : undefined}
                         isAuction={true}
                         currentBid={auction.current_bid}
                         startingBid={auction.starting_bid}

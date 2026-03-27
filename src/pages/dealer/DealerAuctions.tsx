@@ -248,7 +248,7 @@ const DealerAuctions = () => {
                     return (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                         <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        <span>{anonymizePostalCode(auction.motorhome.postal_code)}{auction.motorhome.city ? ` (${auction.motorhome.city})` : ''}</span>
+                        <span>{anonymizePostalCode(auction.motorhome.postal_code)}</span>
                         {dist !== null && (
                           <span className="flex items-center gap-0.5 ml-auto text-primary">
                             <Navigation className="w-3 h-3" />

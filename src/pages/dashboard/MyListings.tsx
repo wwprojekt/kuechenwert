@@ -98,7 +98,7 @@ export default function MyListings() {
           {motorhomes.map((motorhome) => {
             const firstPhoto = motorhome.photos
               ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
-            const auction = motorhome.auction?.[0];
+            const auction = Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction;
 
             return (
               <Link key={motorhome.id} to={`/dashboard/listings/${motorhome.id}`} className="no-underline">

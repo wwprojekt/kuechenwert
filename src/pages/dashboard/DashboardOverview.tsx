@@ -84,20 +84,20 @@ export default function DashboardOverview() {
       // For each motorhome with an active auction, get bid stats
       const enriched = await Promise.all(
         (motorhomes || []).map(async (mh) => {
-          const auction = mh.auction?.[0];
+          const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           let bidStats = null;
 
           if (auction) {
             const { data: bids } = await supabase
               .from("bids")
-              .select("amount, created_at")
+              .select("amount, created_at, bidder_id")
               .eq("auction_id", auction.id)
               .order("created_at", { ascending: false });
 
             if (bids && bids.length > 0) {
               bidStats = {
                 totalBids: bids.length,
-                uniqueBidders: new Set(bids.map(() => Math.random())).size, // placeholder
+                uniqueBidders: new Set(bids.map((b) => b.bidder_id)).size,
                 highestBid: Math.max(...bids.map((b) => Number(b.amount))),
                 latestBidTime: bids[0].created_at,
               };
@@ -200,7 +200,7 @@ export default function DashboardOverview() {
 
   // ── Helper: Determine timeline step for a motorhome ──────────
   const getTimelineStep = (mh: any) => {
-    const auction = mh.auction?.[0];
+    const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
 
     if (!auction) {
       // No auction yet
@@ -372,7 +372,7 @@ export default function DashboardOverview() {
         {/* Motorhome cards with timeline */}
         {motorhomes.map((mh: any) => {
           const timeline = getTimelineStep(mh);
-          const auction = mh.auction?.[0];
+          const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           const firstPhoto = mh.photos
             ?.sort(
               (a: any, b: any) => a.display_order - b.display_order

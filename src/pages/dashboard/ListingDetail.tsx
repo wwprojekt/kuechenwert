@@ -116,10 +116,15 @@ export default function ListingDetail() {
     enabled: !!id && !!user,
   });
 
+  // Helper: Array-safe auction access (Supabase returns object when FK is UNIQUE)
+  const resolvedAuction = motorhome?.auction
+    ? (Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction)
+    : null;
+
   const { data: bidStats } = useQuery({
-    queryKey: ["bidStats", motorhome?.auction?.[0]?.id],
+    queryKey: ["bidStats", resolvedAuction?.id],
     queryFn: async () => {
-      const auctionId = motorhome?.auction?.[0]?.id;
+      const auctionId = resolvedAuction?.id;
       if (!auctionId) return null;
 
       const { data, error } = await supabase
@@ -141,11 +146,11 @@ export default function ListingDetail() {
         recentBids: data.slice(0, 5),
       };
     },
-    enabled: !!motorhome?.auction?.[0]?.id,
+    enabled: !!resolvedAuction?.id,
   });
 
   // ── Addenda: Nachträge für diese Auktion laden ──
-  const auctionIdForAddenda = motorhome?.auction?.[0]?.id;
+  const auctionIdForAddenda = resolvedAuction?.id;
   const { data: addenda = [] } = useQuery({
     queryKey: ["auctionAddenda", auctionIdForAddenda],
     queryFn: async () => {
@@ -219,7 +224,7 @@ export default function ListingDetail() {
     );
   }
 
-  const auction = motorhome.auction?.[0];
+  const auction = resolvedAuction;
   const isAuctionLive = auction?.status === 'active' || auction?.status === 'kaufchance';
   const rawPhotos = motorhome.photos;
   const sortedPhotos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);

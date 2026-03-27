@@ -292,6 +292,9 @@ const ResetPassword = () => {
                     <li className={/[0-9]/.test(password) ? "text-green-600" : ""}>
                       • Mindestens eine Zahl
                     </li>
+                    <li className={/[^A-Za-z0-9]/.test(password) ? "text-green-600" : ""}>
+                      • Mindestens ein Sonderzeichen (!@#$%^&* etc.)
+                    </li>
                   </ul>
                 </div>
 

@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
-import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { passwordSchema, emailSchema } from "@/lib/validation";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -201,13 +201,37 @@ const Register = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Mind. 8 Zeichen, Groß-/Kleinbuchstabe, Zahl & Sonderzeichen"
+                  placeholder="Ihr sicheres Passwort"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                   className="h-12 text-base"
                 />
+                {/* Passwort-Anforderungen */}
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                    Passwort-Anforderungen
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
+                    <li className={formData.password.length >= 8 ? "text-green-600" : ""}>
+                      • Mindestens 8 Zeichen
+                    </li>
+                    <li className={/[A-Z]/.test(formData.password) ? "text-green-600" : ""}>
+                      • Mindestens ein Großbuchstabe
+                    </li>
+                    <li className={/[a-z]/.test(formData.password) ? "text-green-600" : ""}>
+                      • Mindestens ein Kleinbuchstabe
+                    </li>
+                    <li className={/[0-9]/.test(formData.password) ? "text-green-600" : ""}>
+                      • Mindestens eine Zahl
+                    </li>
+                    <li className={/[^A-Za-z0-9]/.test(formData.password) ? "text-green-600" : ""}>
+                      • Mindestens ein Sonderzeichen (!@#$%^&* etc.)
+                    </li>
+                  </ul>
+                </div>
               </div>
 
               <div className="space-y-2">

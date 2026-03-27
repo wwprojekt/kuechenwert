@@ -22,6 +22,7 @@ import {
   getCorsHeaders,
   handleCorsPreflightRequest,
 } from "../_shared/cors.ts";
+import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -48,12 +49,26 @@ interface PurchaseInquiryRequest {
   stationManagerName?: string | null;
 }
 
+// Rate limit: max 5 purchase inquiry notifications per IP per 15 minutes
+const INQUIRY_RATE_LIMIT = {
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    // ─── Rate Limiting ───────────────────────────────────────────────
+    const rateLimitResult = await checkRateLimit(req, INQUIRY_RATE_LIMIT);
+    if (!rateLimitResult.allowed) {
+      return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
+    }
+
     const data: PurchaseInquiryRequest = await req.json();
     const {
       customerName,
@@ -74,6 +89,33 @@ const handler = async (req: Request): Promise<Response> => {
       stationPhone,
       stationManagerName,
     } = data;
+
+    // ─── Input Validation ────────────────────────────────────────────
+    if (!customerName || typeof customerName !== "string" || customerName.trim().length < 2 || customerName.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Ungültiger Name." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!customerEmail || typeof customerEmail !== "string" || !emailRegex.test(customerEmail) || customerEmail.length > 320) {
+      return new Response(
+        JSON.stringify({ error: "Ungültige E-Mail-Adresse." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!stationEmail || typeof stationEmail !== "string" || !emailRegex.test(stationEmail)) {
+      return new Response(
+        JSON.stringify({ error: "Ungültige Stations-E-Mail." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!vehicleType || typeof vehicleType !== "string" || vehicleType.trim().length < 1) {
+      return new Response(
+        JSON.stringify({ error: "Fahrzeugtyp ist erforderlich." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log(
       `Processing purchase inquiry from ${customerEmail} for station ${stationName}`

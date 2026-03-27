@@ -12,6 +12,8 @@
  * - SEKUNDÄRE Conversions: Zwischenschritte im Wizard (für Beobachtung)
  */
 
+import { logger } from '@/lib/logger';
+
 // TypeScript-Deklaration für gtag
 declare global {
   interface Window {
@@ -62,7 +64,7 @@ function safeGtag(...args: unknown[]): void {
     if (typeof window.gtag === 'function') {
       window.gtag(...args);
       if (process.env.NODE_ENV === 'development') {
-        console.log('[GadsTracking] Event gesendet via window.gtag:', args);
+        logger.log('[GadsTracking] Event gesendet via window.gtag:', args);
       }
       return;
     }
@@ -71,7 +73,7 @@ function safeGtag(...args: unknown[]): void {
     if (window.dataLayer) {
       window.dataLayer.push(args);
       if (process.env.NODE_ENV === 'development') {
-        console.log('[GadsTracking] Event gesendet via dataLayer.push:', args);
+        logger.log('[GadsTracking] Event gesendet via dataLayer.push:', args);
       }
       return;
     }
@@ -730,7 +732,7 @@ export async function setEnhancedConversionData(userData: {
     safeGtag('set', 'user_data', enhancedData);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[GadsTracking] Enhanced Conversion Data gesetzt:', Object.keys(enhancedData));
+      logger.log('[GadsTracking] Enhanced Conversion Data gesetzt:', Object.keys(enhancedData));
     }
   } catch (error) {
     console.warn('[GadsTracking] Enhanced Conversion Data Fehler:', error);

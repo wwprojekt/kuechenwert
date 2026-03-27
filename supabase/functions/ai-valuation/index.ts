@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
-import { checkRateLimit, createRateLimitErrorResponse, RATE_LIMITS } from '../_shared/rate-limiter.ts';
+import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 /**
@@ -13,7 +13,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
  * 3. GPT-4 analysiert Muster in den Expertenbewertungen und schätzt den Wert
  * 4. Gibt einen KI-Schätzwert mit Konfidenz zurück
  *
- * Auth: Keine Auth nötig (wird vom Wertrechner-Frontend aufgerufen)
+ * Auth: Rate limited (10 requests per 15 min per IP) to prevent OpenAI cost abuse.
  */
 
 interface ValuationRequest {
@@ -45,8 +45,12 @@ Deno.serve(async (req) => {
     return handleCorsPreflightRequest(req);
   }
 
-  // Rate limiting
-  const rateLimitResult = await checkRateLimit(req, RATE_LIMITS.API_GENERAL);
+  // Rate limiting: Stricter limit to prevent OpenAI API cost abuse
+  const AI_VALUATION_RATE_LIMIT = {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 10,
+  };
+  const rateLimitResult = await checkRateLimit(req, AI_VALUATION_RATE_LIMIT);
   if (!rateLimitResult.allowed) {
     return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
   }

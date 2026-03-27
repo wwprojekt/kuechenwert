@@ -8,11 +8,18 @@ import {
   button,
 } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "admin@caravanwert.de";
+
+// Rate limit: max 5 lead notifications per IP per 15 minutes
+const LEAD_RATE_LIMIT = {
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+};
 
 interface LeadNotificationRequest {
   type: "wertermittlung" | "wertrechner" | "wizard" | "kontakt" | "dealer";
@@ -37,12 +44,22 @@ interface LeadNotificationRequest {
   transactionId?: string;
 }
 
+const VALID_TYPES = ["wertermittlung", "wertrechner", "wizard", "kontakt", "dealer"];
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    // ─── Rate Limiting ───────────────────────────────────────────────
+    const rateLimitResult = await checkRateLimit(req, LEAD_RATE_LIMIT);
+    if (!rateLimitResult.allowed) {
+      return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
+    }
+
     const data: LeadNotificationRequest = await req.json();
     const {
       type,
@@ -54,6 +71,27 @@ const handler = async (req: Request): Promise<Response> => {
       estimatedMin,
       estimatedMax,
     } = data;
+
+    // ─── Input Validation ────────────────────────────────────────────
+    if (!type || !VALID_TYPES.includes(type)) {
+      return new Response(
+        JSON.stringify({ error: "Ungültiger Anfragetyp." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!name || typeof name !== "string" || name.trim().length < 2 || name.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Ungültiger Name." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || typeof email !== "string" || !emailRegex.test(email) || email.length > 320) {
+      return new Response(
+        JSON.stringify({ error: "Ungültige E-Mail-Adresse." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log(`Processing ${type} lead notification for:`, email);
 
@@ -76,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
       wertrechner: "Wertrechner",
       wizard: "Verkaufen-Wizard",
       kontakt: "Kontaktformular",
-      dealer: "H\u00e4ndler-Bewerbung",
+      dealer: "Händler-Bewerbung",
     };
     const sourceLabel = sourceLabels[type] || type;
 
@@ -104,8 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
         ${
           estimatedMin && estimatedMax
             ? detailRow(
-                "Gesch\u00e4tzter Wert",
-                `${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} \u20ac`
+                "Geschätzter Wert",
+                `${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
               )
             : ""
         }
@@ -194,10 +232,10 @@ const handler = async (req: Request): Promise<Response> => {
     // 2. Send confirmation to user
     const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",
-      wertrechner: "Ihre Anfrage \u00fcber den Wertrechner",
+      wertrechner: "Ihre Anfrage über den Wertrechner",
       wizard: "Ihre Verkaufsanfrage bei CaravanWert",
       kontakt: "Ihre Kontaktanfrage bei CaravanWert",
-      dealer: "Ihre H\u00e4ndler-Bewerbung bei CaravanWert",
+      dealer: "Ihre Händler-Bewerbung bei CaravanWert",
     };
     const userSubject = userSubjects[type] || "Ihre Anfrage bei CaravanWert";
 
@@ -205,12 +243,12 @@ const handler = async (req: Request): Promise<Response> => {
       ${paragraph(`Hallo ${name},`)}
       ${paragraph(
         type === "dealer"
-          ? `Vielen Dank f\u00fcr Ihre H\u00e4ndler-Bewerbung bei ${settingsData.site_name}. Wir pr\u00fcfen Ihre Unterlagen und melden uns in K\u00fcrze bei Ihnen.`
+          ? `Vielen Dank für Ihre Händler-Bewerbung bei ${settingsData.site_name}. Wir prüfen Ihre Unterlagen und melden uns in Kürze bei Ihnen.`
           : type === "kontakt"
-          ? `Vielen Dank f\u00fcr Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstm\u00f6glich bei Ihnen melden.`
+          ? `Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.`
           : type === "wizard"
-          ? `Vielen Dank f\u00fcr Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
-          : `Vielen Dank f\u00fcr Ihre Anfrage \u00fcber unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in K\u00fcrze bei Ihnen melden.`
+          ? `Vielen Dank für Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
+          : `Vielen Dank für Ihre Anfrage über unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in Kürze bei Ihnen melden.`
       )}
       ${infoBox(
         "Ihre Anfrage",
@@ -323,7 +361,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ success: true, message: "Notifications sent" }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   } catch (error: unknown) {
@@ -332,7 +370,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Error sending lead notification:", errorMessage);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 };

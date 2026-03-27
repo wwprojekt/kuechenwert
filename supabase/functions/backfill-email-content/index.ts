@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -18,6 +19,12 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+    const authResult = await checkServiceRoleOrAdmin(req, corsHeaders);
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     if (!RESEND_API_KEY) {

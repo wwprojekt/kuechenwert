@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
 import { handleAndLogError } from "@/lib/errorLogService";
+import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 export default function ListingEdit() {
@@ -353,7 +354,7 @@ export default function ListingEdit() {
       setTotalUploadCount(totalFiles);
       setUploadedCount(0);
 
-      console.log(`[PhotoUpload] Starting upload of ${totalFiles} file(s) for motorhome ${id}, user ${user.id}`);
+      logger.log(`[PhotoUpload] Starting upload of ${totalFiles} file(s) for motorhome ${id}, user ${user.id}`);
 
       // Step 1: Validate session is active before attempting upload
       setUploadProgress("Sitzung wird überprüft...");
@@ -365,9 +366,9 @@ export default function ListingEdit() {
         if (refreshError || !refreshData.session) {
           throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an und versuchen Sie es dann nochmal.");
         }
-        console.log('[PhotoUpload] Session refreshed successfully');
+        logger.log('[PhotoUpload] Session refreshed successfully');
       } else {
-        console.log(`[PhotoUpload] Session valid, expires at: ${session.expires_at}`);
+        logger.log(`[PhotoUpload] Session valid, expires at: ${session.expires_at}`);
       }
 
       // Step 2: Verify the motorhome belongs to this user
@@ -383,7 +384,7 @@ export default function ListingEdit() {
         console.error('[PhotoUpload] Motorhome ownership check failed:', motorhomeCheckError);
         throw new Error("Dieses Inserat gehört nicht zu Ihrem Konto. Bitte melden Sie sich erneut an.");
       }
-      console.log(`[PhotoUpload] Motorhome ownership verified: ${motorhomeCheck.id}`);
+      logger.log(`[PhotoUpload] Motorhome ownership verified: ${motorhomeCheck.id}`);
 
       const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
       const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
@@ -392,7 +393,7 @@ export default function ListingEdit() {
       setUploadProgress("Dateien werden überprüft...");
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        console.log(`[PhotoUpload] File ${i + 1}: name=${file.name}, size=${file.size}, type=${file.type || 'unknown'}`);
+        logger.log(`[PhotoUpload] File ${i + 1}: name=${file.name}, size=${file.size}, type=${file.type || 'unknown'}`);
         
         if (file.size === 0) {
           throw new Error(`Die Datei "${file.name}" ist leer (0 Bytes). Bitte wählen Sie eine gültige Datei.`);
@@ -422,7 +423,7 @@ export default function ListingEdit() {
 
         setUploadProgress(`Foto ${i + 1} von ${totalFiles} wird hochgeladen...`);
         setUploadedCount(i);
-        console.log(`[PhotoUpload] Uploading file ${i + 1}/${totalFiles}: ${fileName} (${(file.size / 1024).toFixed(0)} KB)`);
+        logger.log(`[PhotoUpload] Uploading file ${i + 1}/${totalFiles}: ${fileName} (${(file.size / 1024).toFixed(0)} KB)`);
 
         try {
           const { data: uploadData, error: uploadError } = await supabase.storage
@@ -442,7 +443,7 @@ export default function ListingEdit() {
             throw new Error(`Fehler beim Hochladen von "${file.name}": Keine Bestätigung vom Server erhalten.`);
           }
 
-          console.log(`[PhotoUpload] File ${i + 1} uploaded successfully: ${uploadData.path}`);
+          logger.log(`[PhotoUpload] File ${i + 1} uploaded successfully: ${uploadData.path}`);
           uploadedPaths.push(uploadData.path);
 
           const {
@@ -462,7 +463,7 @@ export default function ListingEdit() {
 
       // Step 5: Verify files exist in storage
       setUploadProgress("Upload wird verifiziert...");
-      console.log(`[PhotoUpload] Verifying ${uploadedPaths.length} uploaded files in storage...`);
+      logger.log(`[PhotoUpload] Verifying ${uploadedPaths.length} uploaded files in storage...`);
       
       for (const path of uploadedPaths) {
         const { data: fileData, error: listError } = await supabase.storage
@@ -475,12 +476,12 @@ export default function ListingEdit() {
           console.error(`[PhotoUpload] Verification failed for ${path}:`, listError);
           throw new Error(`Upload-Verifizierung fehlgeschlagen: Die Datei konnte nicht im Speicher gefunden werden. Bitte versuchen Sie es erneut.`);
         }
-        console.log(`[PhotoUpload] Verified file exists: ${path} (${fileData[0]?.metadata?.size || 'unknown'} bytes)`);
+        logger.log(`[PhotoUpload] Verified file exists: ${path} (${fileData[0]?.metadata?.size || 'unknown'} bytes)`);
       }
 
       // Step 6: Insert photo records into database
       setUploadProgress("Fotos werden in der Datenbank gespeichert...");
-      console.log(`[PhotoUpload] All ${totalFiles} files uploaded and verified. Inserting DB records...`);
+      logger.log(`[PhotoUpload] All ${totalFiles} files uploaded and verified. Inserting DB records...`);
 
       // Get current max display order
       const { data: existingPhotos } = await supabase
@@ -499,8 +500,8 @@ export default function ListingEdit() {
         display_order: startOrder + index + 1,
       }));
 
-      console.log(`[PhotoUpload] Inserting ${photoRecords.length} photo records into motorhome_photos...`);
-      console.log(`[PhotoUpload] Records:`, JSON.stringify(photoRecords));
+      logger.log(`[PhotoUpload] Inserting ${photoRecords.length} photo records into motorhome_photos...`);
+      logger.log(`[PhotoUpload] Records:`, JSON.stringify(photoRecords));
 
       let insertedData: any[] | null = null;
 
@@ -519,7 +520,7 @@ export default function ListingEdit() {
           throw new Error('Fotos konnten nicht in der Datenbank gespeichert werden. Möglicherweise fehlt die Berechtigung. Bitte melden Sie sich erneut an.');
         }
         insertedData = data;
-        console.log(`[PhotoUpload] Successfully inserted ${data.length} photo records:`, JSON.stringify(data.map(d => d.id)));
+        logger.log(`[PhotoUpload] Successfully inserted ${data.length} photo records:`, JSON.stringify(data.map(d => d.id)));
       }, 'ListingEdit.uploadPhotos');
 
       // Step 7: Final verification - read back from DB
@@ -534,7 +535,7 @@ export default function ListingEdit() {
       if (verifyError) {
         console.warn('[PhotoUpload] Verification query failed:', verifyError);
       } else {
-        console.log(`[PhotoUpload] Final verification: found ${verifyPhotos?.length || 0} recent photos in DB`);
+        logger.log(`[PhotoUpload] Final verification: found ${verifyPhotos?.length || 0} recent photos in DB`);
       }
 
       setUploadedCount(totalFiles);

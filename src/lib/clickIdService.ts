@@ -19,6 +19,8 @@
  * Referenz: https://support.google.com/google-ads/answer/9744275
  */
 
+import { logger } from '@/lib/logger';
+
 const STORAGE_PREFIX = "caravanwert_";
 const CLICK_ID_EXPIRY_DAYS = 90;
 
@@ -96,21 +98,21 @@ export function captureClickIds(): void {
     if (gclid) {
       storeClickId("gclid", gclid);
       if (process.env.NODE_ENV === "development") {
-        console.log("[ClickIdService] GCLID erfasst:", gclid.substring(0, 10) + "...");
+        logger.log("[ClickIdService] GCLID erfasst:", gclid.substring(0, 10) + "...");
       }
     }
 
     if (gbraid) {
       storeClickId("gbraid", gbraid);
       if (process.env.NODE_ENV === "development") {
-        console.log("[ClickIdService] GBRAID erfasst:", gbraid.substring(0, 10) + "...");
+        logger.log("[ClickIdService] GBRAID erfasst:", gbraid.substring(0, 10) + "...");
       }
     }
 
     if (wbraid) {
       storeClickId("wbraid", wbraid);
       if (process.env.NODE_ENV === "development") {
-        console.log("[ClickIdService] WBRAID erfasst:", wbraid.substring(0, 10) + "...");
+        logger.log("[ClickIdService] WBRAID erfasst:", wbraid.substring(0, 10) + "...");
       }
     }
   } catch {

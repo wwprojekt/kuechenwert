@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     retryCount.current += 1;
-    console.log(`[Auth] Session-Recovery Versuch ${retryCount.current}/${MAX_RETRIES}...`);
+    logger.log(`[Auth] Session-Recovery Versuch ${retryCount.current}/${MAX_RETRIES}...`);
 
     // Kurz warten - ein anderer Tab könnte gerade den Token refreshen
     // und den neuen Token in localStorage schreiben
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: { session: recoveredSession }, error } = await supabase.auth.getSession();
       
       if (recoveredSession && !error) {
-        console.log("[Auth] Session erfolgreich wiederhergestellt");
+        logger.log("[Auth] Session erfolgreich wiederhergestellt");
         retryCount.current = 0;
         setSession(recoveredSession);
         setUser(recoveredSession.user);
@@ -52,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Versuche explizit einen Refresh
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       if (refreshData?.session && !refreshError) {
-        console.log("[Auth] Session durch Refresh wiederhergestellt");
+        logger.log("[Auth] Session durch Refresh wiederhergestellt");
         retryCount.current = 0;
         setSession(refreshData.session);
         setUser(refreshData.session.user);
@@ -70,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
-        console.log("[Auth] Event:", event, "Session:", !!currentSession);
+        logger.log("[Auth] Event:", event, "Session:", !!currentSession);
 
         if (event === "SIGNED_OUT") {
           // Nur sofort ausloggen wenn der User es selbst ausgelöst hat
@@ -85,11 +86,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           // Unerwarteter Logout (z.B. Token-Refresh fehlgeschlagen)
           // Versuche die Session wiederherzustellen
-          console.log("[Auth] Unerwarteter SIGNED_OUT - versuche Recovery...");
+          logger.log("[Auth] Unerwarteter SIGNED_OUT - versuche Recovery...");
           const recovered = await attemptSessionRecovery();
           
           if (!recovered) {
-            console.log("[Auth] Recovery fehlgeschlagen - User wird ausgeloggt");
+            logger.log("[Auth] Recovery fehlgeschlagen - User wird ausgeloggt");
             setSession(null);
             setUser(null);
             setLoading(false);
@@ -116,7 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // wird das storage Event gefeuert und wir können die Session synchronisieren
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && e.key.includes("auth-token")) {
-        console.log("[Auth] localStorage geändert (anderer Tab) - Session synchronisieren");
+        logger.log("[Auth] localStorage geändert (anderer Tab) - Session synchronisieren");
         supabase.auth.getSession().then(({ data: { session: syncedSession } }) => {
           setSession(syncedSession);
           setUser(syncedSession?.user ?? null);

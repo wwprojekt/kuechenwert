@@ -76,7 +76,7 @@ class CommissionCalculatorService {
       
       // Fallback calculation using site settings
       const { data: settings } = await supabase
-        .from('site_settings')
+        .from('public_site_settings')
         .select('commission_rate_percent')
         .single();
 

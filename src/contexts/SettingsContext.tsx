@@ -80,7 +80,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const loadSettings = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('site_settings')
+        .from('public_site_settings')
         .select('*')
         .eq('id', SETTINGS_ID)
         .single();

@@ -44,7 +44,7 @@ const COUNTRIES = [
 
 export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts }: FilterSidebarProps) => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
-  const [yearRange, setYearRange] = useState<[number, number]>([1990, 2026]);
+  const [yearRange, setYearRange] = useState<[number, number]>([1980, 2026]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
   const [brand, setBrand] = useState<string | null>(null);
   const [beds, setBeds] = useState<string | null>(null);
@@ -92,7 +92,7 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts }: Fi
 
   const resetFilters = () => {
     setPriceRange([0, 500000]);
-    setYearRange([1990, 2026]);
+    setYearRange([1980, 2026]);
     setVehicleTypes([]);
     setBrand(null);
     setBeds(null);
@@ -168,7 +168,7 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts }: Fi
           <div className="space-y-3 pt-4 border-t">
             <Label className="text-sm font-semibold">Baujahr</Label>
             <Slider
-              min={1990}
+              min={1980}
               max={2026}
               step={1}
               value={yearRange}

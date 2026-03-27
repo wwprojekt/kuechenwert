@@ -242,22 +242,20 @@ const UserDashboardWrapper = () => {
         {/* Exact match for /dashboard */}
         <Route index element={<DashboardOverview />} />
         
-        {/* User-specific routes */}
+        {/* Seller-specific routes */}
         <Route path="listings" element={<LazyPage Component={MyListings} />} />
         <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
         <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
         
-        {/* Shared routes */}
-        <Route path="bids" element={<LazyPage Component={MyBids} />} />
-        <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
-        <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
-        <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
+        {/* Seller-relevant routes */}
         <Route path="messages" element={<LazyPage Component={MyMessages} />} />
         <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
         <Route path="search-alerts" element={<LazyPage Component={SearchAlerts} />} />
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
         
-        {/* Fallback: show overview for unknown sub-routes */}
+        {/* Fallback: show overview for unknown sub-routes
+            This also catches /bids, /favorites, /kaufchancen, /appointments
+            which are dealer-only routes not relevant for sellers */}
         <Route path="*" element={<DashboardOverview />} />
       </Routes>
     </UserLayoutContent>

@@ -35,8 +35,10 @@ const getRedirectPath = (type: string, redirectTo: string | null): string => {
       return "/";
     case "email_change":
       return "/profil";
+    case "signup":
+      return "/dashboard";
     default:
-      return "/login";
+      return "/dashboard";
   }
 };
 
@@ -144,7 +146,7 @@ const AuthConfirm = () => {
                 {message}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                Sie werden in Kürze weitergeleitet...
+                Sie werden in Kürze zu Ihrem Dashboard weitergeleitet...
               </p>
             </>
           )}

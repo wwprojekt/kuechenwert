@@ -203,8 +203,8 @@ export default function DashboardOverview() {
     const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
 
     if (!auction) {
-      // No auction yet
-      if (mh.status === "draft" || !mh.status) {
+      // No auction yet – motorhome status is 'available' (default), 'pending', or 'sold'
+      if (mh.status === "available" || !mh.status) {
         return {
           step: 1,
           label: "Inserat eingereicht",
@@ -214,13 +214,24 @@ export default function DashboardOverview() {
           borderColor: "border-blue-200 dark:border-blue-800",
         };
       }
+      if (mh.status === "pending") {
+        return {
+          step: 2,
+          label: "In Prüfung",
+          sublabel: "Unser Team bereitet Ihr Inserat vor",
+          color: "text-amber-600",
+          bgColor: "bg-amber-100 dark:bg-amber-900/30",
+          borderColor: "border-amber-200 dark:border-amber-800",
+        };
+      }
+      // status === 'sold' without auction (edge case)
       return {
-        step: 2,
-        label: "In Prüfung",
-        sublabel: "Unser Team bereitet Ihr Inserat vor",
-        color: "text-amber-600",
-        bgColor: "bg-amber-100 dark:bg-amber-900/30",
-        borderColor: "border-amber-200 dark:border-amber-800",
+        step: 6,
+        label: "Verkauft",
+        sublabel: "Ihr Wohnmobil wurde erfolgreich verkauft",
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+        borderColor: "border-emerald-200 dark:border-emerald-800",
       };
     }
 

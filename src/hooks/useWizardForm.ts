@@ -374,9 +374,35 @@ export const useWizardForm = () => {
         }
       }
 
-      // If still no user (guest submission), save as lead only.
-      // Admin will manually review and convert to motorhome after phone call.
+      // If still no user (guest or signup-without-session), save wizard data
+      // so it can be recovered after email confirmation or converted by admin.
       if (!user) {
+        // Build form_data JSON (exclude File objects which can't be serialized)
+        const formDataForStorage = { ...formData };
+        delete (formDataForStorage as Partial<WizardFormData>).photos;
+
+        // Save to wizard_sessions so admin can convert and data is not lost
+        try {
+          await supabase.from('wizard_sessions').insert({
+            user_id: null, // Will be linked after email confirmation
+            anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            customer_name: formData.customerName || null,
+            customer_email: formData.customerEmail || null,
+            customer_phone: formData.customerPhone || null,
+            current_step: 5,
+            max_step_reached: 5,
+            total_steps: 5,
+            step_name: 'completed',
+            form_data: formDataForStorage,
+            status: 'completed',
+            vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
+            completed_at: new Date().toISOString(),
+          });
+          logger.info('Wizard session saved for signup-without-session user');
+        } catch (wizardSessionError) {
+          logger.error('Failed to save wizard session:', wizardSessionError);
+        }
+
         // Send email notification to admin + confirmation to customer
         try {
           const trackingData = getTrackingData();
@@ -410,7 +436,9 @@ export const useWizardForm = () => {
 
         toast({
           title: "Anfrage erfolgreich gesendet!",
-          description: "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen. Sie erhalten in Kürze eine Bestätigung per E-Mail.",
+          description: registerPassword
+            ? "Bitte bestätigen Sie Ihre E-Mail-Adresse. Nach der Bestätigung können Sie sich einloggen und Ihr Inserat im Dashboard verfolgen."
+            : "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.",
         });
         navigate("/verkaufen/danke");
         return true;

@@ -2,11 +2,13 @@ import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText } from "lucide-react";
+import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const VerkaufenDanke = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <PageLayout
@@ -102,15 +104,27 @@ const VerkaufenDanke = () => {
 
             {/* Navigation Buttons - Modern Design */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button
-                size="lg"
-                onClick={() => navigate("/")}
-                className="gradient-hero hover:gradient-hero-hover group"
-              >
-                <Home className="w-5 h-5 mr-2" />
-                Zur Startseite
-                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-              </Button>
+              {user ? (
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/dashboard")}
+                  className="gradient-hero hover:gradient-hero-hover group"
+                >
+                  <LayoutDashboard className="w-5 h-5 mr-2" />
+                  Zum Dashboard
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/")}
+                  className="gradient-hero hover:gradient-hero-hover group"
+                >
+                  <Home className="w-5 h-5 mr-2" />
+                  Zur Startseite
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </Button>
+              )}
               <Button
                 size="lg"
                 variant="outline"

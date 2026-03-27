@@ -9,7 +9,7 @@
  * - recipient_email: (optional override) defaults to lead's email
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import {
   buildEmailLayout,
   paragraph,

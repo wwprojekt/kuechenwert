@@ -6,7 +6,7 @@
  * in production where each Edge Function instance has isolated memory.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
 interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds

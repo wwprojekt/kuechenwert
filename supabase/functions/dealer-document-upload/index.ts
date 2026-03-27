@@ -19,7 +19,7 @@
  *     "ausweis_back"     – Ausweis Rückseite
  * - dealer_application_id: (optional) UUID of the dealer application for legal_documents tracking
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

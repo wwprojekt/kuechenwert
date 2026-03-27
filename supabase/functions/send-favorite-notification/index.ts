@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { buildEmail, heading, paragraph, button, infoBox, amountDisplay } from "../_shared/email-builder.ts";
 
 const corsHeaders = {

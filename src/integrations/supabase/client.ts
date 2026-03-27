@@ -26,5 +26,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // Timeout für Lock-Erwerb auf 5 Sekunden setzen.
+    // Verhindert, dass verwaiste Navigator Locks den Auth-Flow blockieren.
+    // Zusammen mit dem SDK-Update (v2.100+) wird bei Timeout ein sauberer
+    // Steal-Fallback mit Cascade-Schutz ausgeführt.
+    lockAcquireTimeout: 5000,
   }
 });

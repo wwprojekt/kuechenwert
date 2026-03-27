@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';

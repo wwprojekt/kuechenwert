@@ -152,21 +152,27 @@ export default function AdminUsers() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete user roles first
-      const { error: rolesError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
+      // Call admin-delete-user Edge Function to completely remove user
+      // This deletes from auth.users, profiles, user_roles, and dealer_applications
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (rolesError) throw rolesError;
+      if (!token) {
+        throw new Error("Nicht authentifiziert");
+      }
 
-      // Delete profile (auth user will remain but be orphaned)
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
+      const response = await supabase.functions.invoke("admin-delete-user", {
+        body: { userId },
+      });
 
-      if (profileError) throw profileError;
+      if (response.error) {
+        throw new Error(response.error.message || "Benutzer konnte nicht gelöscht werden");
+      }
+
+      const result = response.data;
+      if (result?.error) {
+        throw new Error(result.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });

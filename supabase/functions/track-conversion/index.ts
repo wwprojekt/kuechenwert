@@ -245,8 +245,24 @@ const handler = async (req: Request): Promise<Response> => {
           ? Math.round((estimated_min + estimated_max) / 2) / 100
           : 10.0;
 
-        // Conversion Action Resource Name (Wertrechner Lead)
-        const conversionActionId = "6916783397"; // Wertrechner Lead Conversion Action ID
+        // Conversion Action ID basierend auf Lead-Typ auswählen
+        const conversionActionMap: Record<string, string> = {
+          'bewertung_abgeschlossen': '7544183183',
+          'landing_page_lead': '7545833199',
+          'kontaktformular_gesendet': '7545833202',
+          'contact_form': '7545833202',
+          'wertermittlung_lead': '7545833205',
+          'wertrechner_lead': '7545833208',
+          'wizard_abgeschlossen': '7545833211',
+          'wizard_completed': '7545833211',
+          'terminbuchung': '7545833214',
+          'wizard_gestartet': '7545833217',
+          'wizard_started': '7545833217',
+          'wizard_fahrzeugdaten': '7545833220',
+          'wizard_vehicle_data': '7545833220',
+          'dealer_register': '7545833199',
+        };
+        const conversionActionId = conversionActionMap[lead_type] || '7545833208'; // Fallback: Wertrechner Lead
         const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
 
         // 3. Conversion-Payload erstellen
@@ -307,7 +323,7 @@ const handler = async (req: Request): Promise<Response> => {
         };
 
         // 4. An Google Ads API senden
-        const gadsUrl = `https://googleads.googleapis.com/v18/customers/${customerId}:uploadClickConversions`;
+        const gadsUrl = `https://googleads.googleapis.com/v23/customers/${customerId}:uploadClickConversions`;
 
         const gadsResponse = await fetch(gadsUrl, {
           method: "POST",
@@ -315,6 +331,7 @@ const handler = async (req: Request): Promise<Response> => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${accessToken}`,
             "developer-token": GADS_DEVELOPER_TOKEN,
+            "login-customer-id": "9746508145", // MCC WohnWert Verwaltungskonto
           },
           body: JSON.stringify(gadsPayload),
         });

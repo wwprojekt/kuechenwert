@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap } from "lucide-react";
+import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
@@ -63,7 +63,7 @@ const MotorhomeCard = ({
   beds,
   passengers,
   location,
-  bodyType: _bodyType,
+  bodyType,
   country,
   isAuction = false,
   currentBid,
@@ -219,6 +219,12 @@ const MotorhomeCard = ({
               <Gauge className="h-3.5 w-3.5 text-primary" />
               <span>{mileage.toLocaleString("de-DE")} km</span>
             </div>
+            {bodyType && (
+              <div className="flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5 text-primary" />
+                <span>{bodyType}</span>
+              </div>
+            )}
             {passengers && (
               <div className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5 text-primary" />

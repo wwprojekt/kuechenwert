@@ -5,7 +5,9 @@ import PageHero from "@/components/PageHero";
 import RelatedContent, { kaufenRelatedLinks } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Search, Star, CheckCircle2, Bell } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
 import MotorhomeCard from "@/components/MotorhomeCard";
@@ -29,6 +31,21 @@ interface AuctionWithMotorhome extends AuctionRow {
   };
 }
 
+type SortOption = 'ending_soon' | 'newest' | 'price_asc' | 'price_desc' | 'year_desc' | 'year_asc' | 'mileage_asc' | 'mileage_desc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'ending_soon', label: 'Bald endend' },
+  { value: 'newest', label: 'Neueste zuerst' },
+  { value: 'price_asc', label: 'Preis aufsteigend' },
+  { value: 'price_desc', label: 'Preis absteigend' },
+  { value: 'year_desc', label: 'Baujahr neueste' },
+  { value: 'year_asc', label: 'Baujahr älteste' },
+  { value: 'mileage_asc', label: 'Km niedrigste' },
+  { value: 'mileage_desc', label: 'Km höchste' },
+];
+
+const ITEMS_PER_PAGE = 12;
+
 const Kaufen = () => {
   const { settings } = useSettings();
   const { user } = useAuth();
@@ -40,6 +57,9 @@ const Kaufen = () => {
   const [auctions, setAuctions] = useState<AuctionWithMotorhome[]>([]);
   const [bidCounts, setBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<SortOption>('ending_soon');
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 500000],
     yearRange: [1980, 2026],
@@ -132,6 +152,17 @@ const Kaufen = () => {
     };
   }, [fetchAuctions]);
 
+  // Dynamic brands from available auctions
+  const availableBrands = useMemo(() => {
+    const brandSet = new Set<string>();
+    auctions.forEach((auction) => {
+      if (auction.motorhome?.manufacturer) {
+        brandSet.add(auction.motorhome.manufacturer);
+      }
+    });
+    return Array.from(brandSet).sort();
+  }, [auctions]);
+
   // Apply filters to auctions
   const filteredAuctions = useMemo(() => {
     return auctions.filter((auction) => {
@@ -219,6 +250,87 @@ const Kaufen = () => {
     });
   }, [auctions, filters]);
 
+  // Sort filtered auctions
+  const sortedAuctions = useMemo(() => {
+    const sorted = [...filteredAuctions];
+    switch (sortBy) {
+      case 'ending_soon':
+        sorted.sort((a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime());
+        break;
+      case 'newest':
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'price_asc':
+        sorted.sort((a, b) => (a.current_bid || a.starting_bid || 0) - (b.current_bid || b.starting_bid || 0));
+        break;
+      case 'price_desc':
+        sorted.sort((a, b) => (b.current_bid || b.starting_bid || 0) - (a.current_bid || a.starting_bid || 0));
+        break;
+      case 'year_desc':
+        sorted.sort((a, b) => (b.motorhome?.year || 0) - (a.motorhome?.year || 0));
+        break;
+      case 'year_asc':
+        sorted.sort((a, b) => (a.motorhome?.year || 0) - (b.motorhome?.year || 0));
+        break;
+      case 'mileage_asc':
+        sorted.sort((a, b) => (a.motorhome?.mileage || 0) - (b.motorhome?.mileage || 0));
+        break;
+      case 'mileage_desc':
+        sorted.sort((a, b) => (b.motorhome?.mileage || 0) - (a.motorhome?.mileage || 0));
+        break;
+    }
+    return sorted;
+  }, [filteredAuctions, sortBy]);
+
+  // Paginated auctions
+  const paginatedAuctions = useMemo(() => {
+    return sortedAuctions.slice(0, visibleCount);
+  }, [sortedAuctions, visibleCount]);
+
+  const hasMore = visibleCount < sortedAuctions.length;
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [filters, sortBy]);
+
+  // Check if any filter is active (for the empty state message)
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.priceRange[0] > 0 ||
+      filters.priceRange[1] < 500000 ||
+      filters.yearRange[0] > 1980 ||
+      filters.yearRange[1] < 2026 ||
+      filters.vehicleTypes.length > 0 ||
+      filters.brand !== null ||
+      filters.beds !== null ||
+      filters.searchQuery !== "" ||
+      filters.countries.length > 0 ||
+      filters.mileageMin !== null ||
+      filters.mileageMax !== null ||
+      filters.transmission !== null ||
+      filters.accidentFree !== null ||
+      filters.buyNowOnly
+    );
+  }, [filters]);
+
+  // Count active filters for mobile badge
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 500000) count++;
+    if (filters.yearRange[0] > 1980 || filters.yearRange[1] < 2026) count++;
+    if (filters.vehicleTypes.length > 0) count++;
+    if (filters.brand !== null) count++;
+    if (filters.beds !== null) count++;
+    if (filters.searchQuery !== "") count++;
+    if (filters.countries.length > 0) count++;
+    if (filters.mileageMin !== null || filters.mileageMax !== null) count++;
+    if (filters.transmission !== null) count++;
+    if (filters.accidentFree !== null) count++;
+    if (filters.buyNowOnly) count++;
+    return count;
+  }, [filters]);
+
   const benefits = [
     {
       icon: Shield,
@@ -248,6 +360,17 @@ const Kaufen = () => {
     'Große Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise, 12 Monate Garantie und persönliche Beratung.'
   );
 
+  // Shared filter sidebar component (used in both desktop and mobile)
+  const filterContent = (
+    <FilterSidebar 
+      onFilterChange={(newFilters) => {
+        setFilters(newFilters);
+      }}
+      resultCount={filteredAuctions.length}
+      availableBrands={availableBrands}
+    />
+  );
+
   return (
     <PageLayout
       breadcrumbs={true}
@@ -273,37 +396,84 @@ const Kaufen = () => {
       <section className="py-12 md:py-16">
         <div className="container">
           <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-            {/* Sidebar */}
-            <aside className="lg:sticky lg:top-24 h-fit">
-              <FilterSidebar 
-                onFilterChange={setFilters}
-                resultCount={filteredAuctions.length}
-              />
+            {/* Desktop Sidebar - hidden on mobile */}
+            <aside className="hidden lg:block lg:sticky lg:top-24 h-fit">
+              {filterContent}
             </aside>
 
             {/* Listings Grid */}
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold">
-                    {isLoading ? "L\u00e4dt..." : `${filteredAuctions.length} Auktionen gefunden`}
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Aktive Auktionen</p>
+              {/* Header with sort, filter button (mobile), and save search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  {/* Mobile Filter Button */}
+                  <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm" className="lg:hidden gap-2 relative">
+                        <Filter className="h-4 w-4" />
+                        Filter
+                        {activeFilterCount > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-[340px] sm:w-[380px] overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle className="flex items-center gap-2">
+                          <Filter className="h-5 w-5 text-primary" />
+                          Filter
+                        </SheetTitle>
+                      </SheetHeader>
+                      <div className="mt-4">
+                        {filterContent}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  <div>
+                    <h2 className="text-2xl font-bold">
+                      {isLoading ? "Lädt..." : `${filteredAuctions.length} Auktionen gefunden`}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">Aktive Auktionen</p>
+                  </div>
                 </div>
-                {user && isDealer && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => {
-                      setSaveSearchName('');
-                      setShowSaveSearchDialog(true);
-                    }}
-                  >
-                    <Bell className="h-4 w-4" />
-                    <span className="hidden sm:inline">Suche speichern</span>
-                  </Button>
-                )}
+
+                <div className="flex items-center gap-2">
+                  {/* Sort Dropdown */}
+                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue placeholder="Sortieren" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {SORT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Save Search Button (Dealer only) */}
+                  {user && isDealer && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 h-9"
+                      onClick={() => {
+                        setSaveSearchName('');
+                        setShowSaveSearchDialog(true);
+                      }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      <span className="hidden sm:inline">Suche speichern</span>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Save Search Dialog */}
@@ -319,7 +489,7 @@ const Kaufen = () => {
                       <input
                         type="text"
                         className="w-full px-3 py-2 border rounded-md text-sm"
-                        placeholder="z.B. Kastenwagen unter 50.000\u20ac"
+                        placeholder="z.B. Kastenwagen unter 50.000€"
                         value={saveSearchName}
                         onChange={(e) => setSaveSearchName(e.target.value)}
                       />
@@ -332,8 +502,8 @@ const Kaufen = () => {
                         onChange={(e) => setSaveSearchFrequency(e.target.value)}
                       >
                         <option value="immediate">Sofort</option>
-                        <option value="daily">T\u00e4glich</option>
-                        <option value="weekly">W\u00f6chentlich</option>
+                        <option value="daily">Täglich</option>
+                        <option value="weekly">Wöchentlich</option>
                       </select>
                     </div>
                     <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
@@ -341,7 +511,7 @@ const Kaufen = () => {
                       {filters.brand ? `Marke: ${filters.brand}` : 'Alle Marken'}
                       {filters.vehicleTypes.length > 0 ? ` \u2022 Typ: ${filters.vehicleTypes.join(', ')}` : ''}
                       {filters.priceRange[1] < 500000 ? ` \u2022 Max: \u20ac${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
-                      {filters.yearRange[0] > 1990 ? ` \u2022 Ab ${filters.yearRange[0]}` : ''}
+                      {filters.yearRange[0] > 1980 ? ` \u2022 Ab ${filters.yearRange[0]}` : ''}
                     </div>
                     <div className="flex gap-2 justify-end">
                       <Button
@@ -362,7 +532,7 @@ const Kaufen = () => {
                             if (filters.brand) criteria.manufacturer = filters.brand;
                             if (filters.vehicleTypes.length > 0) criteria.body_type = filters.vehicleTypes[0];
                             if (filters.priceRange[1] < 500000) criteria.max_price = filters.priceRange[1];
-                            if (filters.yearRange[0] > 1990) criteria.min_year = filters.yearRange[0];
+                            if (filters.yearRange[0] > 1980) criteria.min_year = filters.yearRange[0];
                             if (filters.yearRange[1] < 2026) criteria.max_year = filters.yearRange[1];
                             if (filters.beds) criteria.sleeping_places = parseInt(filters.beds);
 
@@ -406,41 +576,94 @@ const Kaufen = () => {
 
               {isLoading ? (
                 <AuctionCardSkeletonGrid count={6} />
-              ) : filteredAuctions.length > 0 ? (
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredAuctions.map((auction) => {
-                    const firstPhoto = auction.motorhome?.photos?.sort((a: any, b: any) => 
-                      a.display_order - b.display_order
-                    )[0]?.url;
-                    
-                    return (
-                      <MotorhomeCard
-                        key={auction.id}
-                        id={auction.id}
-                        title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
-                        manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
-                        model={auction.motorhome?.model || ''}
-                        year={auction.motorhome?.year || 0}
-                        mileage={auction.motorhome?.mileage || 0}
-                        image={firstPhoto || ''}
-                        listingNumber={auction.motorhome?.listing_number}
-                        bodyType={auction.motorhome?.body_type}
-                        country={auction.motorhome?.country}
-                        location={auction.motorhome?.postal_code ? anonymizePostalCode(auction.motorhome.postal_code) : undefined}
-                        isAuction={true}
-                        currentBid={auction.current_bid}
-                        startingBid={auction.starting_bid}
-                        instantPrice={auction.motorhome?.instant_price}
-                        saleChannel={auction.motorhome?.sale_channel}
-                        endTime={auction.end_time}
-                        bidCount={bidCounts[auction.id] || 0}
-                        status={auction.motorhome?.status}
-                        linkTo={`/auktion/${auction.id}`}
-                      />
-                    );
-                  })}
-                </div>
+              ) : paginatedAuctions.length > 0 ? (
+                <>
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {paginatedAuctions.map((auction) => {
+                      const firstPhoto = auction.motorhome?.photos?.sort((a: any, b: any) => 
+                        a.display_order - b.display_order
+                      )[0]?.url;
+                      
+                      return (
+                        <MotorhomeCard
+                          key={auction.id}
+                          id={auction.id}
+                          title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
+                          manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
+                          model={auction.motorhome?.model || ''}
+                          year={auction.motorhome?.year || 0}
+                          mileage={auction.motorhome?.mileage || 0}
+                          image={firstPhoto || ''}
+                          listingNumber={auction.motorhome?.listing_number}
+                          bodyType={auction.motorhome?.body_type}
+                          country={auction.motorhome?.country}
+                          location={auction.motorhome?.postal_code ? anonymizePostalCode(auction.motorhome.postal_code) : undefined}
+                          isAuction={true}
+                          currentBid={auction.current_bid}
+                          startingBid={auction.starting_bid}
+                          instantPrice={auction.motorhome?.instant_price}
+                          saleChannel={auction.motorhome?.sale_channel}
+                          endTime={auction.end_time}
+                          bidCount={bidCounts[auction.id] || 0}
+                          status={auction.motorhome?.status}
+                          linkTo={`/auktion/${auction.id}`}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <div className="flex justify-center mt-8">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
+                        className="gap-2"
+                      >
+                        Weitere {Math.min(ITEMS_PER_PAGE, sortedAuctions.length - visibleCount)} von {sortedAuctions.length} anzeigen
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : hasActiveFilters ? (
+                /* Improved empty state when filters are active */
+                <Card className="p-12">
+                  <div className="text-center">
+                    <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <p className="text-xl font-semibold text-muted-foreground mb-2">
+                      Keine Ergebnisse für Ihre Filterauswahl
+                    </p>
+                    <p className="text-muted-foreground mb-6">
+                      Versuchen Sie, Ihre Filter anzupassen oder zurückzusetzen, um mehr Fahrzeuge zu finden.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => {
+                        setFilters({
+                          priceRange: [0, 500000],
+                          yearRange: [1980, 2026],
+                          vehicleTypes: [],
+                          brand: null,
+                          beds: null,
+                          searchQuery: "",
+                          countries: [],
+                          mileageMin: null,
+                          mileageMax: null,
+                          transmission: null,
+                          accidentFree: null,
+                          buyNowOnly: false,
+                        });
+                      }}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Filter zurücksetzen
+                    </Button>
+                  </div>
+                </Card>
               ) : (
+                /* Empty state when no auctions exist at all */
                 <Card className="p-12">
                   <div className="text-center">
                     <p className="text-xl font-semibold text-muted-foreground mb-2">

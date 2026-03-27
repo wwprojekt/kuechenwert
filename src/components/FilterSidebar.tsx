@@ -29,6 +29,7 @@ interface FilterSidebarProps {
   onFilterChange: (filters: FilterState) => void;
   resultCount: number;
   countryCounts?: Record<string, number>;
+  availableBrands?: string[];
 }
 
 const COUNTRIES = [
@@ -42,7 +43,7 @@ const COUNTRIES = [
   { code: 'ES', name: 'Spanien' },
 ];
 
-export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts }: FilterSidebarProps) => {
+export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, availableBrands }: FilterSidebarProps) => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
   const [yearRange, setYearRange] = useState<[number, number]>([1980, 2026]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
@@ -58,7 +59,8 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts }: Fi
   const [accidentFree, setAccidentFree] = useState<boolean | null>(null);
   const [buyNowOnly, setBuyNowOnly] = useState(false);
 
-  const brands = ["Hymer", "Weinsberg", "Knaus", "Bürstner", "Dethleffs", "Carado", "Fiat", "Pössl", "Adria", "Carthago"];
+  const defaultBrands = ["Hymer", "Weinsberg", "Knaus", "Bürstner", "Dethleffs", "Carado", "Fiat", "Pössl", "Adria", "Carthago"];
+  const brands = availableBrands && availableBrands.length > 0 ? availableBrands : defaultBrands;
 
   const handleVehicleTypeToggle = (type: string) => {
     setVehicleTypes(prev => 

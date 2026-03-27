@@ -162,7 +162,7 @@ const VerkaufenWizard = () => {
 
   return (
     <PageLayout
-      title="Wohnmobil verkaufen"
+      title="Wohnmobil-Verkauf starten – Angebot in 2 Min."
       description="Verkaufen Sie Ihr Wohnmobil schnell und einfach – kostenloses Angebot in 2 Minuten"
       keywords="wohnmobil verkaufen, wohnmobil bewertung, caravan verkaufen"
       canonicalPath="/verkaufen/wizard"

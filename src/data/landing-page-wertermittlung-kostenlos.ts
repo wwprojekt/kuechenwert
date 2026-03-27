@@ -3,7 +3,7 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilWertermittlungKostenlos: LandingPageConfig = {
   slug: "wohnmobil-wertermittlung-kostenlos",
   path: "/wohnmobil-wertermittlung-kostenlos",
-  title: "Kostenlose Wohnmobil-Wertermittlung",
+  title: "Was ist mein Wohnmobil wert? Gratis Bewertung",
   metaDescription:
     "Professionelle Wohnmobil-Wertermittlung kostenlos und unverbindlich. Unsere Experten bewerten Ihr Reisemobil innerhalb von 24 Stunden. Jetzt starten!",
   keywords:

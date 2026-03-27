@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 /**
  * Edge Function: generate-invoice-pdf
@@ -49,27 +50,10 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-  // Auth check: service_role or admin
-  const authHeader = req.headers.get('authorization') ?? '';
-  const isServiceRole = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-  if (!isServiceRole) {
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
-    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some((r: any) => r.role === 'admin');
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
+  // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   try {

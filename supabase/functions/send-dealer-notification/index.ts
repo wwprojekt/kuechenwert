@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph, button, list, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -21,31 +22,10 @@ const handler = async (req: Request): Promise<Response> => {
     return handleCorsPreflightRequest(req);
   }
 
-  // Auth check: must be service_role (internal) or authenticated admin
-  const authHeader = req.headers.get('authorization') ?? '';
-  const isServiceRole = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
-
-  if (!isServiceRole) {
-    // Use service role client to validate user token
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseCheck = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    const { data: { user }, error: userError } = await supabaseCheck.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: roles } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some(r => r.role === 'admin');
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
+  // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   try {

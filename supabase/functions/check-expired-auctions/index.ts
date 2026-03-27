@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 /**
  * Edge Function: check-expired-auctions
@@ -18,45 +19,9 @@ Deno.serve(async (req) => {
 
   try {
     // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
-    const authHeader = req.headers.get('authorization') ?? '';
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const isServiceRole = authHeader.includes(serviceRoleKey);
-
-    if (!isServiceRole) {
-      // Not a service_role call – check if the caller is an authenticated admin
-      const supabaseAuth = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
-
-      if (userError || !user) {
-        return new Response(
-          JSON.stringify({ error: 'Nicht autorisiert: Ungültiger oder fehlender Token' }),
-          {
-            status: 401,
-            headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      // Check admin role
-      const { data: roles } = await supabaseAuth
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-
-      const isAdmin = roles?.some((r) => r.role === 'admin');
-      if (!isAdmin) {
-        return new Response(
-          JSON.stringify({ error: 'Zugriff verweigert: Admin-Rolle erforderlich' }),
-          {
-            status: 403,
-            headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-          }
-        );
-      }
+    const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     // ─── Main logic ────────────────────────────────────────────────

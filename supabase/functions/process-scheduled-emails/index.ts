@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -18,27 +19,10 @@ const handler = async (req: Request): Promise<Response> => {
     });
   }
 
-  // Auth check: must be service_role (cron/internal) or authenticated admin
-  const authHeader = req.headers.get('authorization') ?? '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const isServiceRole = authHeader.includes(serviceRoleKey);
-  if (!isServiceRole) {
-    const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    const { data: roles } = await createClient(SUPABASE_URL, serviceRoleKey)
-      .from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some((r: any) => r.role === 'admin');
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' },
-      });
-    }
+  // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+  const authResult = await checkServiceRoleOrAdmin(req, { 'Content-Type': 'application/json' });
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   try {

@@ -1,37 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
   }
 
-  // Auth check: must be service_role (cron) or authenticated admin
-  const authHeader = req.headers.get('authorization') ?? '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const isServiceRole = authHeader.includes(serviceRoleKey);
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
-  if (!isServiceRole) {
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
-    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-    const isAdmin = roles?.some(r => r.role === 'admin');
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-        status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
-      });
-    }
+  // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   try {

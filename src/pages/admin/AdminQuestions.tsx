@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageCircle, Clock, CheckCircle, Eye, Send, Car, Trash2, Loader2 } from "lucide-react";
+import { MessageCircle, Clock, CheckCircle, Eye, Send, Car, Trash2, Loader2, ExternalLink } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,15 +56,21 @@ interface VehicleQuestion {
   answered_at: string | null;
   created_at: string;
   motorhome?: {
+    id: string;
     manufacturer: string;
     model: string;
+    year: number;
+    body_type: string;
     listing_number: string | null;
+    motorhome_photos?: Array<{ url: string; display_order: number }>;
+    auctions?: Array<{ id: string; status: string }>;
   };
 }
 
 export default function AdminQuestions() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [questions, setQuestions] = useState<VehicleQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<VehicleQuestion | null>(null);
@@ -82,9 +89,14 @@ export default function AdminQuestions() {
         .select(`
           *,
           motorhome:motorhomes (
+            id,
             manufacturer,
             model,
-            listing_number
+            year,
+            body_type,
+            listing_number,
+            motorhome_photos(url, display_order),
+            auctions(id, status)
           )
         `)
         .order("created_at", { ascending: false });
@@ -107,26 +119,65 @@ export default function AdminQuestions() {
     fetchQuestions();
   }, []);
 
+  const getFirstPhoto = (question: VehicleQuestion): string | null => {
+    const photos = question.motorhome?.motorhome_photos;
+    if (!photos || !Array.isArray(photos) || photos.length === 0) return null;
+    const sorted = [...photos].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    return sorted[0]?.url || null;
+  };
+
+  const getAuctionId = (question: VehicleQuestion): string | null => {
+    const auctions = question.motorhome?.auctions;
+    if (!auctions || !Array.isArray(auctions) || auctions.length === 0) return null;
+    return auctions[0]?.id || null;
+  };
+
   const handleAnswerQuestion = async () => {
     if (!selectedQuestion || !answer.trim()) return;
 
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from("vehicle_questions")
-        .update({
-          answer: answer.trim(),
-          answered_by: user?.id,
-          answered_at: new Date().toISOString(),
-        })
-        .eq("id", selectedQuestion.id);
+      // Get current session for auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Keine aktive Sitzung");
 
-      if (error) throw error;
+      const vehicleTitle = selectedQuestion.motorhome
+        ? `${selectedQuestion.motorhome.manufacturer} ${selectedQuestion.motorhome.model}`
+        : "Fahrzeug";
+
+      const listingInfo = selectedQuestion.motorhome?.listing_number
+        ? ` (Inserat #${selectedQuestion.motorhome.listing_number})`
+        : "";
+
+      // Build the email HTML body with the answer and vehicle context
+      const bodyHtml = `
+        <p>Sie haben eine Frage zu dem Fahrzeug <strong>${vehicleTitle}${listingInfo}</strong> gestellt:</p>
+        <blockquote style="border-left: 3px solid #1f8aa2; padding: 12px 16px; margin: 16px 0; background-color: #f8fafc; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; color: #374151; font-style: italic;">${selectedQuestion.question}</p>
+        </blockquote>
+        <p><strong>Unsere Antwort:</strong></p>
+        <p>${answer.trim().replace(/\n/g, '<br>')}</p>
+      `;
+
+      // Send email via send-admin-email edge function
+      const { data: emailData, error: emailError } = await supabase.functions.invoke("send-admin-email", {
+        body: {
+          to: selectedQuestion.questioner_email,
+          subject: `Antwort auf Ihre Frage zum ${vehicleTitle}`,
+          body_html: bodyHtml,
+          recipient_name: selectedQuestion.questioner_name || undefined,
+          reply_to_message_id: selectedQuestion.id,
+          reply_to_message_type: "vehicle_question",
+        },
+      });
+
+      if (emailError) throw emailError;
+      if (emailData?.error) throw new Error(emailData.error);
 
       toast({
         title: "Antwort gesendet",
-        description: "Die Frage wurde erfolgreich beantwortet",
+        description: `Die Antwort wurde per E-Mail an ${selectedQuestion.questioner_email} gesendet`,
       });
 
       setSelectedQuestion(null);
@@ -136,7 +187,7 @@ export default function AdminQuestions() {
       console.error("Error answering question:", error);
       toast({
         title: "Fehler",
-        description: "Antwort konnte nicht gesendet werden",
+        description: "Antwort konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
         variant: "destructive",
       });
     } finally {
@@ -267,83 +318,131 @@ export default function AdminQuestions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQuestions.map((question) => (
-                  <TableRow key={question.id} className={selectedIds.has(question.id) ? "bg-primary/5" : ""}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(question.id)}
-                        onCheckedChange={() => toggleSelection(question.id)}
-                        aria-label="Frage auswählen"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Car className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="font-medium">
-                            {question.motorhome?.manufacturer} {question.motorhome?.model}
-                          </p>
-                          {question.motorhome?.listing_number && (
-                            <p className="text-xs text-muted-foreground font-mono">
-                              #{question.motorhome.listing_number}
-                            </p>
+                {filteredQuestions.map((question) => {
+                  const photo = getFirstPhoto(question);
+                  const auctionId = getAuctionId(question);
+
+                  return (
+                    <TableRow key={question.id} className={selectedIds.has(question.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(question.id)}
+                          onCheckedChange={() => toggleSelection(question.id)}
+                          aria-label="Frage auswählen"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {photo ? (
+                            <img
+                              src={photo}
+                              alt={`${question.motorhome?.manufacturer} ${question.motorhome?.model}`}
+                              className="w-14 h-10 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-14 h-10 bg-muted rounded border flex items-center justify-center">
+                              <Car className="w-5 h-5 text-muted-foreground" />
+                            </div>
                           )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">
+                              {question.motorhome?.manufacturer} {question.motorhome?.model}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {question.motorhome?.year && (
+                                <span>{question.motorhome.year}</span>
+                              )}
+                              {question.motorhome?.listing_number && (
+                                <span className="font-mono">#{question.motorhome.listing_number}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {auctionId && (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0 text-xs text-primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/auctions/${auctionId}`);
+                                  }}
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  Auktion
+                                </Button>
+                              )}
+                              {question.motorhome?.id && (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0 text-xs text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/motorhomes/${question.motorhome!.id}`);
+                                  }}
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  Details
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{question.questioner_name || "Anonym"}</p>
-                        <p className="text-xs text-muted-foreground">{question.questioner_email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[300px]">
-                      <p className="truncate">{question.question}</p>
-                    </TableCell>
-                    <TableCell>
-                      {question.answer ? (
-                        <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
-                          <CheckCircle className="w-3 h-3" />
-                          Beantwortet
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1 text-orange-600 border-orange-600">
-                          <Clock className="w-3 h-3" />
-                          Offen
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(question.created_at), "dd.MM.yyyy HH:mm", {
-                        locale: de,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedQuestion(question);
-                            setAnswer(question.answer || "");
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          {question.answer ? "Ansehen" : "Beantworten"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog([question.id])}
-                          title="Frage löschen"
-                          className="hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{question.questioner_name || "Anonym"}</p>
+                          <p className="text-xs text-muted-foreground">{question.questioner_email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <p className="truncate">{question.question}</p>
+                      </TableCell>
+                      <TableCell>
+                        {question.answer ? (
+                          <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
+                            <CheckCircle className="w-3 h-3" />
+                            Beantwortet
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-orange-600 border-orange-600">
+                            <Clock className="w-3 h-3" />
+                            Offen
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(question.created_at), "dd.MM.yyyy HH:mm", {
+                          locale: de,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedQuestion(question);
+                              setAnswer(question.answer || "");
+                            }}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            {question.answer ? "Ansehen" : "Beantworten"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog([question.id])}
+                            title="Frage löschen"
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -414,13 +513,70 @@ export default function AdminQuestions() {
               <MessageCircle className="w-5 h-5 text-primary" />
               Frage zum Fahrzeug
             </DialogTitle>
-            <DialogDescription>
-              {selectedQuestion?.motorhome?.manufacturer} {selectedQuestion?.motorhome?.model}
-              {selectedQuestion?.motorhome?.listing_number && (
-                <span className="ml-2 font-mono">#{selectedQuestion.motorhome.listing_number}</span>
-              )}
-            </DialogDescription>
           </DialogHeader>
+
+          {/* Vehicle Info Card in Dialog */}
+          {selectedQuestion?.motorhome && (
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+              {(() => {
+                const photo = selectedQuestion ? getFirstPhoto(selectedQuestion) : null;
+                return photo ? (
+                  <img
+                    src={photo}
+                    alt={`${selectedQuestion.motorhome?.manufacturer} ${selectedQuestion.motorhome?.model}`}
+                    className="w-24 h-16 object-cover rounded border flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-24 h-16 bg-muted rounded border flex items-center justify-center flex-shrink-0">
+                    <Car className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                );
+              })()}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-base">
+                  {selectedQuestion.motorhome.manufacturer} {selectedQuestion.motorhome.model}
+                </p>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
+                  {selectedQuestion.motorhome.year && (
+                    <span>Baujahr {selectedQuestion.motorhome.year}</span>
+                  )}
+                  {selectedQuestion.motorhome.body_type && (
+                    <span>{selectedQuestion.motorhome.body_type}</span>
+                  )}
+                  {selectedQuestion.motorhome.listing_number && (
+                    <span className="font-mono">#{selectedQuestion.motorhome.listing_number}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {(() => {
+                    const auctionId = selectedQuestion ? getAuctionId(selectedQuestion) : null;
+                    return auctionId ? (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs"
+                        onClick={() => navigate(`/admin/auctions/${auctionId}`)}
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        Zur Auktion
+                      </Button>
+                    ) : null;
+                  })()}
+                  {selectedQuestion.motorhome.id && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-muted-foreground"
+                      onClick={() => navigate(`/admin/motorhomes/${selectedQuestion.motorhome!.id}`)}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Fahrzeugdetails
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="p-4 bg-muted rounded-lg">
@@ -441,26 +597,45 @@ export default function AdminQuestions() {
               <p className="whitespace-pre-wrap">{selectedQuestion?.question}</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="answer">Ihre Antwort</Label>
-              <Textarea
-                id="answer"
-                placeholder="Geben Sie Ihre Antwort ein..."
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                className="min-h-[150px]"
-              />
-            </div>
+            {selectedQuestion?.answer && selectedQuestion?.answered_at && (
+              <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <p className="font-medium text-green-700 dark:text-green-400 text-sm">
+                    Beantwortet am {format(new Date(selectedQuestion.answered_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                  </p>
+                </div>
+                <p className="whitespace-pre-wrap text-sm">{selectedQuestion.answer}</p>
+              </div>
+            )}
+
+            {!selectedQuestion?.answer && (
+              <div className="space-y-2">
+                <Label htmlFor="answer">Ihre Antwort</Label>
+                <Textarea
+                  id="answer"
+                  placeholder="Geben Sie Ihre Antwort ein..."
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  className="min-h-[150px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Die Antwort wird per E-Mail an {selectedQuestion?.questioner_email} gesendet.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedQuestion(null)}>
-              Abbrechen
+              {selectedQuestion?.answer ? "Schließen" : "Abbrechen"}
             </Button>
-            <Button onClick={handleAnswerQuestion} disabled={isSubmitting || !answer.trim()}>
-              <Send className="w-4 h-4 mr-2" />
-              {isSubmitting ? "Wird gesendet..." : "Antwort senden"}
-            </Button>
+            {!selectedQuestion?.answer && (
+              <Button onClick={handleAnswerQuestion} disabled={isSubmitting || !answer.trim()}>
+                <Send className="w-4 h-4 mr-2" />
+                {isSubmitting ? "Wird gesendet..." : "Antwort per E-Mail senden"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

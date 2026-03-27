@@ -14,7 +14,7 @@ interface SendEmailRequest {
   cc?: string;
   bcc?: string;
   reply_to_message_id?: string;
-  reply_to_message_type?: 'support' | 'contact';
+  reply_to_message_type?: 'support' | 'contact' | 'vehicle_question';
   recipient_name?: string;
   attachments?: Array<{ filename: string; content: string; type?: string }>;
   scheduled_at?: string;
@@ -191,18 +191,29 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error logging email:", insertError);
     }
 
-    // If this is a reply to a support/contact message, update the original
+    // If this is a reply to a support/contact/vehicle_question message, update the original
     if (reply_to_message_id && reply_to_message_type) {
-      const table = reply_to_message_type === 'support' ? 'support_messages' : 'contact_messages';
-      await supabase
-        .from(table)
-        .update({
-          admin_response: body_html.replace(/<[^>]*>/g, ''),
-          responded_at: new Date().toISOString(),
-          responded_by: user.id,
-          status: 'resolved',
-        })
-        .eq('id', reply_to_message_id);
+      if (reply_to_message_type === 'vehicle_question') {
+        await supabase
+          .from('vehicle_questions')
+          .update({
+            answer: body_html.replace(/<[^>]*>/g, ''),
+            answered_at: new Date().toISOString(),
+            answered_by: user.id,
+          })
+          .eq('id', reply_to_message_id);
+      } else {
+        const table = reply_to_message_type === 'support' ? 'support_messages' : 'contact_messages';
+        await supabase
+          .from(table)
+          .update({
+            admin_response: body_html.replace(/<[^>]*>/g, ''),
+            responded_at: new Date().toISOString(),
+            responded_by: user.id,
+            status: 'resolved',
+          })
+          .eq('id', reply_to_message_id);
+      }
     }
 
     return new Response(JSON.stringify({

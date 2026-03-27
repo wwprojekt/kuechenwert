@@ -23,6 +23,31 @@ declare global {
 // Google Ads Tag ID für das CaravanWert-Konto
 const GOOGLE_ADS_ID = 'AW-18033517246';
 
+// ============================================================
+// TRANSACTION ID FÜR DEDUPLIZIERUNG
+// Google Ads dedupliziert Conversions automatisch anhand der transaction_id.
+// Wenn dieselbe transaction_id über mehrere Quellen kommt (gtag, GA4-Import,
+// Google Ads API), wird die Conversion nur einmal gezählt.
+// ============================================================
+
+/**
+ * Generiert eine eindeutige Transaction ID für Conversion-Deduplizierung.
+ * Format: cv_{lead_type}_{timestamp}_{random}
+ * 
+ * Diese ID wird über alle 3 Tracking-Schichten geteilt:
+ * - Schicht 1: Client-Side gtag (transaction_id Parameter)
+ * - Schicht 2b: GA4-Import nach Google Ads (transaction_id im generate_lead Event)
+ * - Schicht 3: Google Ads API (orderId Feld)
+ * 
+ * @param leadType - Der Lead-Typ (z.B. 'wertrechner', 'kontakt')
+ * @returns Eindeutige Transaction ID
+ */
+export function generateTransactionId(leadType: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `cv_${leadType}_${timestamp}_${random}`;
+}
+
 // Google Analytics 4 Measurement ID für das CaravanWert-Konto
 const GA4_MEASUREMENT_ID = 'G-H4BCV8DS0B';
 
@@ -62,11 +87,11 @@ function safeGtag(...args: unknown[]): void {
  * Verwendet 'beacon' als transport_type damit der Request auch bei
  * sofortiger Navigation (z.B. zum Wizard oder zur Danke-Seite) ankommt.
  */
-function sendConversion(label: string, value: number): Promise<void> {
+function sendConversion(label: string, value: number, transactionId?: string): Promise<void> {
   return new Promise<void>((resolve) => {
     // Timeout-Fallback: Nach 1s trotzdem weiter navigieren
     const timeout = setTimeout(resolve, 1000);
-    safeGtag('event', 'conversion', {
+    const eventParams: Record<string, unknown> = {
       send_to: `${GOOGLE_ADS_ID}/${label}`,
       value,
       currency: 'EUR',
@@ -75,7 +100,12 @@ function sendConversion(label: string, value: number): Promise<void> {
         clearTimeout(timeout);
         resolve();
       },
-    });
+    };
+    // Transaction ID für Deduplizierung über alle Quellen
+    if (transactionId) {
+      eventParams.transaction_id = transactionId;
+    }
+    safeGtag('event', 'conversion', eventParams);
   });
 }
 
@@ -144,12 +174,14 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
  * Wird ausgelöst in: LandingLeadForm (alle 6 Landing Pages)
  * Primäre Conversion: Ja (für Gebotsoptimierung)
  */
-export async function trackLandingPageLead(landingPage: string, vehicleInfo?: string): Promise<void> {
+export async function trackLandingPageLead(landingPage: string, vehicleInfo?: string, transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('landing_page');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.LANDING_PAGE_LEAD, 10.0);
+  await sendConversion(CONVERSION_LABELS.LANDING_PAGE_LEAD, 10.0, txId);
 
   // GA4 + Google Ads: generate_lead Event (GA4 empfohlenes Event)
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Lead',
     event_label: `landing_page_lead_${landingPage}`,
     value: 10.0,
@@ -165,12 +197,14 @@ export async function trackLandingPageLead(landingPage: string, vehicleInfo?: st
  * Wird ausgelöst in: Kontakt.tsx
  * Primäre Conversion: Ja
  */
-export async function trackKontaktformularGesendet(): Promise<void> {
+export async function trackKontaktformularGesendet(transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('kontakt');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, 10.0);
+  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, 10.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Lead',
     event_label: 'kontaktformular_gesendet',
     value: 10.0,
@@ -191,12 +225,14 @@ export async function trackKontaktformularGesendet(): Promise<void> {
  * Wird ausgelöst in: Wertermittlung.tsx
  * Primäre Conversion: Ja
  */
-export async function trackWertermittlungLead(vehicleInfo?: string): Promise<void> {
+export async function trackWertermittlungLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('wertermittlung');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, 10.0);
+  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, 10.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertermittlung_lead',
     value: 10.0,
@@ -218,12 +254,14 @@ export async function trackWertermittlungLead(vehicleInfo?: string): Promise<voi
  * Wird ausgelöst in: Wertrechner.tsx
  * Primäre Conversion: Ja
  */
-export async function trackWertrechnerLead(vehicleInfo?: string): Promise<void> {
+export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('wertrechner');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, 10.0);
+  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, 10.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertrechner_lead',
     value: 10.0,
@@ -245,11 +283,13 @@ export async function trackWertrechnerLead(vehicleInfo?: string): Promise<void> 
  * Wird ausgelöst in: AppointmentBookingModal.tsx
  * Primäre Conversion: Ja
  */
-export async function trackTerminbuchung(station?: string): Promise<void> {
+export async function trackTerminbuchung(station?: string, transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('terminbuchung');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, 10.0);
+  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, 10.0, txId);
 
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Lead',
     event_label: 'terminbuchung',
     value: 10.0,
@@ -314,12 +354,14 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
  * Wizard vollständig abgeschlossen (Schritt 5: Kontaktdaten abgesendet)
  * PRIMÄRE CONVERSION: Wizard Abgeschlossen + Bewertung abgeschlossen
  */
-export async function trackWizardCompleted(vehicleInfo: string): Promise<void> {
+export async function trackWizardCompleted(vehicleInfo: string, transactionId?: string): Promise<void> {
+  const txId = transactionId || generateTransactionId('wizard');
   // Google Ads: Primäre Conversion – Wizard Abgeschlossen (mit beacon transport)
-  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 10.0);
+  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 10.0, txId);
 
   // Google Ads: Bestehende Conversion – Bewertung abgeschlossen (mit beacon transport)
-  await sendConversion(CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN, 50.0);
+  // Eigene Transaction ID damit diese Conversion separat dedupliziert wird
+  await sendConversion(CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN, 50.0, `${txId}_bewertung`);
 
   // GA4 Zielgruppe 'Wizard-Abbrecher' verwendet wizard_complete als Ausschluss
   safeGtag('event', 'wizard_complete', {
@@ -331,6 +373,7 @@ export async function trackWizardCompleted(vehicleInfo: string): Promise<void> {
 
   // GA4 + Google Ads: generate_lead Event (höchster Wert)
   safeGtag('event', 'generate_lead', {
+    transaction_id: txId,
     event_category: 'Wizard',
     event_label: 'wizard_completed',
     vehicle_info: vehicleInfo,

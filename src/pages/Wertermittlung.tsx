@@ -33,7 +33,7 @@ import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
-import { trackWertermittlungLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { trackWertermittlungLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 
 const wertermittlungSchema = z.object({
@@ -87,6 +87,9 @@ const Wertermittlung = () => {
       // Trigger notification Edge Function
       try {
         const trackingData = getTrackingData();
+        // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
+        const transactionId = generateTransactionId('wertermittlung');
+        (window as any).__lastTransactionId = transactionId;
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wertermittlung",
@@ -99,6 +102,7 @@ const Wertermittlung = () => {
             gbraid: trackingData.gbraid,
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
+            transactionId,
           },
         });
       } catch {
@@ -110,8 +114,9 @@ const Wertermittlung = () => {
 
       // Google Ads: Enhanced Conversions + Wertermittlung Lead (Primäre Conversion)
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
+      const txId = (window as any).__lastTransactionId || generateTransactionId('wertermittlung');
       await trackWertermittlungLead(
-        `${formData.manufacturer} ${formData.model} ${formData.year}`
+        `${formData.manufacturer} ${formData.model} ${formData.year}`, txId
       );
 
       toast({

@@ -40,6 +40,8 @@ interface ConversionRequest {
   gclid?: string;
   gbraid?: string;
   wbraid?: string;
+  // Transaction ID für Deduplizierung über alle Tracking-Schichten
+  transaction_id?: string;
 }
 
 /**
@@ -93,9 +95,10 @@ const handler = async (req: Request): Promise<Response> => {
       gclid,
       gbraid,
       wbraid,
+      transaction_id,
     } = data;
 
-    console.log(`[track-conversion] Processing ${lead_type} conversion for: ${email || "unknown"}`);
+    console.log(`[track-conversion] Processing ${lead_type} conversion for: ${email || "unknown"} (txId: ${transaction_id || 'none'})`);
     if (gclid) console.log(`[track-conversion] GCLID vorhanden: ${gclid.substring(0, 15)}...`);
     if (gbraid) console.log(`[track-conversion] GBRAID vorhanden`);
     if (wbraid) console.log(`[track-conversion] WBRAID vorhanden`);
@@ -130,6 +133,11 @@ const handler = async (req: Request): Promise<Response> => {
           lead_type,
           engagement_time_msec: "1",
         };
+
+        // Transaction ID für Deduplizierung (Google Ads erkennt doppelte Conversions anhand dieser ID)
+        if (transaction_id) {
+          eventParams.transaction_id = transaction_id;
+        }
 
         if (manufacturer) eventParams.vehicle_manufacturer = manufacturer;
         if (model) eventParams.vehicle_model = model;
@@ -292,6 +300,11 @@ const handler = async (req: Request): Promise<Response> => {
         if (gclid) conversion.gclid = gclid;
         if (gbraid) conversion.gbraid = gbraid;
         if (wbraid) conversion.wbraid = wbraid;
+
+        // Transaction ID (orderId) für Deduplizierung
+        if (transaction_id) {
+          (conversion as any).orderId = transaction_id;
+        }
 
         // Enhanced Conversions: Gehashte Nutzerdaten
         if (email) {

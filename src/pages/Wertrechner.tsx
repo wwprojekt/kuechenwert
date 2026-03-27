@@ -35,7 +35,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
-import { trackWertrechnerLead, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { trackWertrechnerLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 
 const leadSchema = z.object({
@@ -474,6 +474,10 @@ const Wertrechner = () => {
       try {
         // Tracking-Daten (Click-IDs, GA4 Client-ID) für Server-Side Conversion Tracking
         const trackingData = getTrackingData();
+        // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
+        const transactionId = generateTransactionId('wertrechner');
+        // transactionId im Closure speichern für onSuccess
+        (window as any).__lastTransactionId = transactionId;
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wertrechner",
@@ -489,6 +493,8 @@ const Wertrechner = () => {
             gbraid: trackingData.gbraid,
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
+            // Transaction ID für Deduplizierung (Schicht 2 + 3)
+            transactionId,
           },
         });
       } catch {}
@@ -501,7 +507,8 @@ const Wertrechner = () => {
       setStep(6);
       // Google Ads: Enhanced Conversions vor dem Conversion-Event setzen
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      await trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`);
+      const txId = (window as any).__lastTransactionId || generateTransactionId('wertrechner');
+      await trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`, txId);
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertsch\u00e4tzung." });
 
       // KI-Sch\u00e4tzung im Hintergrund abrufen (non-blocking)

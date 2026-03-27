@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
-import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { ensureValidSession, isSessionOrRLSError } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
@@ -380,6 +380,9 @@ export const useWizardForm = () => {
         // Send email notification to admin + confirmation to customer
         try {
           const trackingData = getTrackingData();
+          // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
+          const transactionId = generateTransactionId('wizard');
+          (window as any).__lastTransactionId = transactionId;
           await supabase.functions.invoke("send-lead-notification", {
             body: {
               type: "wizard",
@@ -392,6 +395,7 @@ export const useWizardForm = () => {
               gbraid: trackingData.gbraid,
               wbraid: trackingData.wbraid,
               ga4ClientId: trackingData.ga4ClientId,
+              transactionId,
             },
           });
         } catch (emailError) {
@@ -400,8 +404,9 @@ export const useWizardForm = () => {
         clearDraft();
 
         // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
+        const txId1 = (window as any).__lastTransactionId || generateTransactionId('wizard');
         await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
-        trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`);
+        trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
 
         toast({
           title: "Anfrage erfolgreich gesendet!",
@@ -539,6 +544,7 @@ export const useWizardForm = () => {
           // Try to save as lead instead
           try {
             const trackingData = getTrackingData();
+            const transactionId = generateTransactionId('wizard');
             await supabase.functions.invoke("send-lead-notification", {
               body: {
                 type: "wizard",
@@ -551,6 +557,7 @@ export const useWizardForm = () => {
                 gbraid: trackingData.gbraid,
                 wbraid: trackingData.wbraid,
                 ga4ClientId: trackingData.ga4ClientId,
+                transactionId,
               },
             });
           } catch (emailError) {
@@ -600,6 +607,8 @@ export const useWizardForm = () => {
       // Send notification to admin about new listing
       try {
         const trackingData = getTrackingData();
+        const transactionId = generateTransactionId('wizard');
+        (window as any).__lastTransactionId = transactionId;
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "wizard",
@@ -612,6 +621,7 @@ export const useWizardForm = () => {
             gbraid: trackingData.gbraid,
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
+            transactionId,
           },
         });
       } catch (emailError) {
@@ -621,8 +631,9 @@ export const useWizardForm = () => {
       clearDraft();
 
       // Google Ads: Enhanced Conversions + Wizard abgeschlossen (authentifizierter Pfad)
+      const txId3 = (window as any).__lastTransactionId || generateTransactionId('wizard');
       await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
-      trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`);
+      trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId3);
 
       toast({
         title: "Erfolgreich eingestellt!",

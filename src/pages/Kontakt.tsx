@@ -12,7 +12,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
-import { trackKontaktformularGesendet, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { trackKontaktformularGesendet, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 
 const kontaktSchema = z.object({
@@ -71,6 +71,9 @@ const Kontakt = () => {
       // Send email notification to admin + confirmation to customer
       try {
         const trackingData = getTrackingData();
+        // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
+        const transactionId = generateTransactionId('kontakt');
+        (window as any).__lastTransactionId = transactionId;
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "kontakt",
@@ -83,6 +86,7 @@ const Kontakt = () => {
             gbraid: trackingData.gbraid,
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
+            transactionId,
           },
         });
       } catch (emailError) {
@@ -93,7 +97,8 @@ const Kontakt = () => {
 
       // Google Ads: Enhanced Conversions + Kontaktformular gesendet (Primäre Conversion)
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      await trackKontaktformularGesendet();
+      const txId = (window as any).__lastTransactionId || generateTransactionId('kontakt');
+      await trackKontaktformularGesendet(txId);
 
       toast({
         title: "Nachricht gesendet!",

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
+import { trackUserRegistered, setEnhancedConversionData, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { z } from "zod";
 import {
@@ -207,6 +207,9 @@ const DealerRegister = () => {
       // Send email notification to admin + confirmation to dealer
       try {
         const trackingData = getTrackingData();
+        // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
+        const transactionId = generateTransactionId('dealer');
+        (window as any).__lastTransactionId = transactionId;
         await supabase.functions.invoke("send-lead-notification", {
           body: {
             type: "dealer",
@@ -218,6 +221,7 @@ const DealerRegister = () => {
             gbraid: trackingData.gbraid,
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
+            transactionId,
           },
         });
       } catch (emailError) {
@@ -226,7 +230,8 @@ const DealerRegister = () => {
 
       // Google Ads: Enhanced Conversions + Händler-Antrag eingereicht
       await setEnhancedConversionData({ email: user!.email || '', firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
-      trackUserRegistered('dealer_application');
+      const txId = (window as any).__lastTransactionId || generateTransactionId('dealer');
+      trackUserRegistered('dealer_application', txId);
 
       toast({
         title: "Antrag erfolgreich eingereicht!",

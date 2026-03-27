@@ -33,6 +33,8 @@ interface LeadNotificationRequest {
   gbraid?: string;
   wbraid?: string;
   ga4ClientId?: string;
+  // Transaction ID für Deduplizierung über alle Tracking-Schichten
+  transactionId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -295,6 +297,8 @@ const handler = async (req: Request): Promise<Response> => {
         gbraid: data.gbraid || undefined,
         wbraid: data.wbraid || undefined,
         client_id: data.ga4ClientId || undefined,
+        // Transaction ID für Deduplizierung
+        transaction_id: data.transactionId || undefined,
       };
 
       // Call track-conversion Edge Function via Supabase

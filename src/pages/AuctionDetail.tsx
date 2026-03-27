@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -115,6 +115,32 @@ const AuctionDetail = () => {
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
   const prevHighestBidderRef = useRef<boolean | null>(null);
+  const [neighborAuctions, setNeighborAuctions] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
+
+  // Fetch neighboring auctions for prev/next navigation
+  useEffect(() => {
+    const fetchNeighbors = async () => {
+      if (!id) return;
+      try {
+        // Fetch all active auctions ordered by end_time (same order as /kaufen)
+        const { data, error } = await supabase
+          .from('auctions')
+          .select('id')
+          .eq('status', 'active')
+          .order('end_time', { ascending: true });
+        if (error || !data) return;
+        const idx = data.findIndex((a) => a.id === id);
+        if (idx === -1) return;
+        setNeighborAuctions({
+          prev: idx > 0 ? data[idx - 1].id : null,
+          next: idx < data.length - 1 ? data[idx + 1].id : null,
+        });
+      } catch {
+        // Silently fail – navigation is a convenience feature
+      }
+    };
+    fetchNeighbors();
+  }, [id]);
 
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -705,14 +731,42 @@ const AuctionDetail = () => {
         <div className="container mx-auto px-4 max-w-7xl py-6 relative z-10">
           {/* Simple Header */}
           <div className="flex items-center justify-between mb-6">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/kaufen")}
-              className="hover:bg-primary/10"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Zurück zu Auktionen
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/kaufen")}
+                className="hover:bg-primary/10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Zurück zu Auktionen
+              </Button>
+              {(neighborAuctions.prev || neighborAuctions.next) && (
+                <div className="flex items-center gap-1 ml-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!neighborAuctions.prev}
+                    onClick={() => neighborAuctions.prev && navigate(`/auktion/${neighborAuctions.prev}`)}
+                    className="gap-1"
+                    title="Vorherige Auktion"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Vorherige</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!neighborAuctions.next}
+                    onClick={() => neighborAuctions.next && navigate(`/auktion/${neighborAuctions.next}`)}
+                    className="gap-1"
+                    title="Nächste Auktion"
+                  >
+                    <span className="hidden sm:inline">Nächste</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"

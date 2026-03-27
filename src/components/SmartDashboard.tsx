@@ -48,6 +48,7 @@ const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
 const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
 const DealerSettings = lazyRetry(() => import('@/pages/dealer/DealerSettings'));
 const DealerInstantBuy = lazyRetry(() => import('@/pages/dealer/DealerInstantBuy'));
+const DealerClaims = lazyRetry(() => import('@/pages/dealer/DealerClaims'));
 
 /**
  * Wrap a lazy component in Suspense with a consistent loading fallback
@@ -211,6 +212,7 @@ const DealerDashboardWrapper = () => {
             <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
             <Route path="messages" element={<LazyPage Component={MyMessages} />} />
             <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+            <Route path="claims" element={<LazyPage Component={DealerClaims} />} />
             
             {/* Listing routes */}
             <Route path="listings" element={<LazyPage Component={MyListings} />} />

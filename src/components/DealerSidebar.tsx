@@ -13,6 +13,8 @@ import {
   Settings,
   Lock,
   ShoppingCart,
+  Heart,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,10 +51,12 @@ const menuItems: MenuItem[] = [
   { title: "Sofortkauf", url: "/dashboard/sofortkauf", icon: ShoppingCart },
   { title: "Inventar", url: "/dashboard/inventory", icon: Package },
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
+  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
   { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare },
   { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },
+  { title: "Reklamationen", url: "/dashboard/claims", icon: AlertTriangle },
   { title: "Profil", url: "/dashboard/profile", icon: User, allowWhenLocked: true },
   { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, allowWhenLocked: true },
 ];

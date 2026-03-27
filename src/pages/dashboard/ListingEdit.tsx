@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2, Lock, FileText } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
 import { handleAndLogError } from "@/lib/errorLogService";
 import { logger } from "@/lib/logger";
@@ -41,6 +41,26 @@ export default function ListingEdit() {
     },
     enabled: !!id && !!user,
   });
+
+  // ── Auction status query: check if auction is live ──
+  const { data: auctionData } = useQuery({
+    queryKey: ["motorhomeAuction", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("auctions")
+        .select("id, status")
+        .eq("motorhome_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const isAuctionLive = auctionData?.status === 'active' || auctionData?.status === 'kaufchance';
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ["motorhomePhotos", id],
@@ -192,6 +212,11 @@ export default function ListingEdit() {
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!id || !user) throw new Error("Nicht authentifiziert");
+
+      // Safety check: prevent edits while auction is live
+      if (isAuctionLive) {
+        throw new Error("Bearbeitung gesperrt: Die Auktion ist aktiv. Nutzen Sie die Nachtrag-Funktion.");
+      }
 
       const updateData: any = {
         description: data.description,
@@ -717,13 +742,45 @@ export default function ListingEdit() {
         </div>
       </div>
 
+      {/* Auction Lock Banner */}
+      {isAuctionLive && (
+        <Card className="border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-shrink-0 p-3 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                <Lock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                  Bearbeitung gesperrt
+                </h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  Während die Auktion aktiv ist, können Sie das Inserat nicht bearbeiten.
+                  Sie können jedoch einen öffentlichen Nachtrag hinzufügen, der mit Datum und Uhrzeit
+                  auf der Auktionsseite angezeigt wird.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="border-orange-500 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-shrink-0 w-full sm:w-auto"
+                onClick={() => navigate(`/dashboard/listings/${id}`)}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Nachtrag hinzufügen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <Card className="border-2">
+        <Card className={`border-2 ${isAuctionLive ? 'opacity-60 pointer-events-none select-none' : ''}`}>
           <CardHeader>
-            <CardTitle>Bearbeitbare Informationen</CardTitle>
+            <CardTitle>{isAuctionLive ? 'Inserat (gesperrt)' : 'Bearbeitbare Informationen'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+          <fieldset disabled={isAuctionLive}>
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="basic">Basis</TabsTrigger>
@@ -1258,16 +1315,19 @@ export default function ListingEdit() {
               </TabsContent>
             </Tabs>
 
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-6">
-              <Button type="button" variant="outline" onClick={() => navigate(`/dashboard/listings/${id}`)}>
-                Abbrechen
-              </Button>
-              <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
-                <Save className="w-4 h-4" />
-                {updateMutation.isPending ? "Speichert..." : "Änderungen speichern"}
-              </Button>
-            </div>
+            {/* Submit Button - hidden when auction is live */}
+            {!isAuctionLive && (
+              <div className="flex justify-end gap-3 pt-6">
+                <Button type="button" variant="outline" onClick={() => navigate(`/dashboard/listings/${id}`)}>
+                  Abbrechen
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
+                  <Save className="w-4 h-4" />
+                  {updateMutation.isPending ? "Speichert..." : "Änderungen speichern"}
+                </Button>
+              </div>
+            )}
+          </fieldset>
           </CardContent>
         </Card>
       </form>

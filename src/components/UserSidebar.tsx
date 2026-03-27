@@ -49,10 +49,10 @@ interface MenuItem {
 const baseMenuItems: MenuItem[] = [
   { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard, hideForRoles: [] },
   { title: "Meine Inserate", url: "/dashboard/listings", icon: Car, hideForRoles: ['dealer'] },
-  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: [] },
-  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: [] },
+  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: ['seller'] },
+  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: ['seller'] },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
-  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: [] },
+  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: ['seller'] },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [] },
   { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: ['seller'] },
   { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },

@@ -1,11 +1,13 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -32,14 +34,26 @@ import {
   Camera,
   Radio,
   Shield,
+  Lock,
+  FileText,
+  Send,
+  Plus,
+  MessageSquarePlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { withSessionRetry } from "@/lib/sessionGuard";
+import { useState } from "react";
 
 export default function ListingDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [addendumText, setAddendumText] = useState("");
+  const [showAddendumForm, setShowAddendumForm] = useState(false);
 
   const { data: motorhome, isLoading } = useQuery({
     queryKey: ["motorhomeDetail", id],
@@ -130,6 +144,58 @@ export default function ListingDetail() {
     enabled: !!motorhome?.auction?.[0]?.id,
   });
 
+  // ── Addenda: Nachträge für diese Auktion laden ──
+  const auctionIdForAddenda = motorhome?.auction?.[0]?.id;
+  const { data: addenda = [] } = useQuery({
+    queryKey: ["auctionAddenda", auctionIdForAddenda],
+    queryFn: async () => {
+      if (!auctionIdForAddenda) return [];
+      const { data, error } = await supabase
+        .from("auction_addenda")
+        .select("*")
+        .eq("auction_id", auctionIdForAddenda)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!auctionIdForAddenda,
+  });
+
+  // ── Addendum erstellen ──
+  const addendumMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!auctionIdForAddenda || !user) throw new Error("Nicht authentifiziert");
+      if (!content.trim()) throw new Error("Bitte geben Sie einen Text ein");
+
+      await withSessionRetry(async () => {
+        const { error } = await supabase
+          .from("auction_addenda")
+          .insert({
+            auction_id: auctionIdForAddenda,
+            seller_id: user.id,
+            content: content.trim(),
+          });
+        if (error) throw error;
+      }, 'ListingDetail.addAddendum');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auctionAddenda", auctionIdForAddenda] });
+      setAddendumText("");
+      setShowAddendumForm(false);
+      toast({
+        title: "Nachtrag veröffentlicht",
+        description: "Ihr Nachtrag ist jetzt auf der Auktionsseite sichtbar.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler",
+        description: error.message || "Nachtrag konnte nicht gespeichert werden",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -154,6 +220,7 @@ export default function ListingDetail() {
   }
 
   const auction = motorhome.auction?.[0];
+  const isAuctionLive = auction?.status === 'active' || auction?.status === 'kaufchance';
   const rawPhotos = motorhome.photos;
   const sortedPhotos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
 
@@ -169,21 +236,30 @@ export default function ListingDetail() {
           <ArrowLeft className="w-4 h-4" />
           Zurück zu Inseraten
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {auction?.id && (
             <Link to={`/auktion/${auction.id}`} target="_blank">
               <Button variant="outline" className="gap-2">
                 <Eye className="w-4 h-4" />
-                Öffentliche Ansicht
+                <span className="hidden sm:inline">Öffentliche Ansicht</span>
+                <span className="sm:hidden">Ansicht</span>
               </Button>
             </Link>
           )}
-          <Link to={`/dashboard/listings/${id}/edit`}>
-            <Button className="gap-2">
-              <Edit className="w-4 h-4" />
-              Bearbeiten
+          {isAuctionLive ? (
+            <Button variant="outline" className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-50" disabled>
+              <Lock className="w-4 h-4" />
+              <span className="hidden sm:inline">Bearbeitung gesperrt</span>
+              <span className="sm:hidden">Gesperrt</span>
             </Button>
-          </Link>
+          ) : (
+            <Link to={`/dashboard/listings/${id}/edit`}>
+              <Button className="gap-2">
+                <Edit className="w-4 h-4" />
+                Bearbeiten
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -730,6 +806,96 @@ export default function ListingDetail() {
                 <span className="font-semibold text-lg">
                   €{Number(motorhome.reserve_price).toLocaleString()}
                 </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Nachträge-Sektion (nur bei aktiver Auktion für Verkäufer) */}
+      {isAuctionLive && auction?.id && (
+        <Card className="border-2 border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MessageSquarePlus className="w-5 h-5 text-blue-600" />
+                Nachträge
+              </CardTitle>
+              {!showAddendumForm && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 border-blue-500 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30 w-full sm:w-auto"
+                  onClick={() => setShowAddendumForm(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Nachtrag hinzufügen
+                </Button>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Nachträge werden öffentlich auf der Auktionsseite mit Datum und Uhrzeit angezeigt.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Bestehende Nachträge */}
+            {addenda.length > 0 && (
+              <div className="space-y-3">
+                {addenda.map((item: any) => (
+                  <div key={item.id} className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900">
+                    <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Veröffentlicht am {format(new Date(item.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addenda.length === 0 && !showAddendumForm && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Noch keine Nachträge vorhanden.
+              </p>
+            )}
+
+            {/* Nachtrag-Formular */}
+            {showAddendumForm && (
+              <div className="space-y-3 p-4 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/10">
+                <Label htmlFor="addendum" className="font-semibold">
+                  Neuer Nachtrag
+                </Label>
+                <Textarea
+                  id="addendum"
+                  value={addendumText}
+                  onChange={(e) => setAddendumText(e.target.value)}
+                  placeholder="z.B. Neuer TÜV wurde am 25.03.2026 gemacht. Neue Reifen montiert."
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dieser Text wird öffentlich auf der Auktionsseite angezeigt und kann nicht mehr gelöscht werden.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setShowAddendumForm(false); setAddendumText(""); }}
+                    className="w-full sm:w-auto"
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!addendumText.trim() || addendumMutation.isPending}
+                    onClick={() => addendumMutation.mutate(addendumText)}
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <Send className="w-4 h-4" />
+                    {addendumMutation.isPending ? "Wird veröffentlicht..." : "Nachtrag veröffentlichen"}
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

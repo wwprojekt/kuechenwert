@@ -76,12 +76,15 @@ import {
   ArrowDown,
   Crown,
   Bell,
+  FileText,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -107,6 +110,7 @@ const AuctionDetail = () => {
   const hotbidSoundPlayed = useRef(false);
   const { playNotification, notifyOutbid } = useAudioNotification();
   const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
+  const [addenda, setAddenda] = useState<{id: string; content: string; created_at: string}[]>([]);
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
@@ -218,6 +222,22 @@ const AuctionDetail = () => {
     };
 
     fetchBids();
+  }, [id]);
+
+  // Fetch addenda (Nachträge)
+  useEffect(() => {
+    const fetchAddenda = async () => {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from("auction_addenda")
+        .select("id, content, created_at")
+        .eq("auction_id", id)
+        .order("created_at", { ascending: true });
+      if (!error && data) {
+        setAddenda(data);
+      }
+    };
+    fetchAddenda();
   }, [id]);
 
   // Real-time bid updates with stale update prevention
@@ -943,6 +963,29 @@ const AuctionDetail = () => {
                       <div className="mt-6 p-4 bg-muted/30 rounded-lg">
                         <h3 className="font-semibold mb-2">Beschreibung</h3>
                         <p className="text-muted-foreground whitespace-pre-wrap">{motorhome.description}</p>
+                      </div>
+                    )}
+
+                    {/* Nachträge des Verkäufers */}
+                    {addenda.length > 0 && (
+                      <div className="mt-6 space-y-3">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                          Nachträge des Verkäufers
+                        </h3>
+                        {addenda.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20"
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Nachträglich hinzugefügt am{" "}
+                              {format(new Date(item.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     )}
 

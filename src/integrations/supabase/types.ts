@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      auction_addenda: {
+        Row: {
+          id: string
+          auction_id: string
+          seller_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          auction_id: string
+          seller_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          auction_id?: string
+          seller_id?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_addenda_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_addenda_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_daily_summary: {
         Row: {
           date: string | null

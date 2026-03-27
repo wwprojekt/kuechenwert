@@ -1,14 +1,30 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+/**
+ * Edge Function: log-error
+ *
+ * Logs frontend errors to the error_logs table.
+ * Rate-limited to prevent abuse (max 30 requests per minute per IP/user).
+ */
+
+const LOG_ERROR_RATE_LIMIT = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 30,      // max 30 error logs per minute per client
 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
+  }
+
+  const corsHeaders = getCorsHeaders(req);
+
+  // Rate limiting
+  const rateLimitResult = await checkRateLimit(req, LOG_ERROR_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
   }
 
   try {

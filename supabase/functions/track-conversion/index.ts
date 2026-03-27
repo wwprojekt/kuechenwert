@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
+
+const TRACK_CONVERSION_RATE_LIMIT = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 20,      // max 20 conversion events per minute per client
+};
 
 /**
  * Server-Side Conversion Tracking Edge Function
@@ -78,6 +84,12 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const corsHeaders = getCorsHeaders(req);
+
+  // Rate limiting
+  const rateLimitResult = await checkRateLimit(req, TRACK_CONVERSION_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitErrorResponse(rateLimitResult, corsHeaders);
+  }
 
   try {
     const data: ConversionRequest = await req.json();

@@ -39,6 +39,29 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import DOMPurify from "dompurify";
+
+/**
+ * Sanitize HTML content to prevent XSS attacks.
+ * Allows safe HTML tags commonly used in emails while stripping dangerous elements.
+ */
+const sanitizeHtml = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 'b', 'i', 's', 'del',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'a', 'img', 'blockquote',
+      'code', 'pre', 'hr', 'span', 'div',
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      'sup', 'sub',
+    ],
+    ALLOWED_ATTR: [
+      'href', 'src', 'alt', 'title', 'class', 'target', 'rel',
+      'style', 'width', 'height', 'colspan', 'rowspan',
+    ],
+    ALLOW_DATA_ATTR: false,
+  });
+};
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -592,7 +615,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: messageBody }} className="prose prose-sm max-w-none" />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(messageBody || '') }} className="prose prose-sm max-w-none" />
           </div>
 
           {/* Attachments */}
@@ -769,7 +792,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
               </div>
               <div style={{ padding: '32px 24px', background: '#ffffff' }}>
-                <div dangerouslySetInnerHTML={{ __html: previewHtml }} className="prose prose-sm max-w-none" />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml || '') }} className="prose prose-sm max-w-none" />
               </div>
               <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
                 <p>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
@@ -1389,7 +1412,7 @@ function ComposeTab() {
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
-              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} className="prose prose-sm max-w-none" />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml || '') }} className="prose prose-sm max-w-none" />
               {appendSignature && signature && (
                 <div style={{marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px'}}>
                   {signature.split('\n').map((line: string, i: number) => (
@@ -1686,7 +1709,7 @@ function BroadcastTab() {
               <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
-              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} className="prose prose-sm max-w-none" />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml || '') }} className="prose prose-sm max-w-none" />
             </div>
             {includeUnsubscribe && (
               <div style={{ padding: '12px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'center' as const }}>
@@ -1969,7 +1992,7 @@ function SentTab() {
         </CardHeader>
         <CardContent>
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }} className="prose prose-sm max-w-none" />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html || '') }} className="prose prose-sm max-w-none" />
           </div>
           {selectedEmail.resend_id && (
             <p className="text-xs text-muted-foreground mt-4">Resend-ID: {selectedEmail.resend_id}</p>
@@ -2522,7 +2545,7 @@ function SystemEmailsTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: selectedEmail.body_html || selectedEmail.body_text }} className="prose prose-sm max-w-none" />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html || selectedEmail.body_text || '') }} className="prose prose-sm max-w-none" />
           </div>
           {selectedEmail.resend_id && (
             <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">

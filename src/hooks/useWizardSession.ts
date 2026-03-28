@@ -164,7 +164,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               await supabase.rpc("update_wizard_session_by_anonymous_id", {
                 p_anonymous_id: anonymousId,
                 p_session_id: existingSession.id,
-                p_updates: JSON.stringify(updatePayload),
+                p_updates: updatePayload,
               });
             }
           }
@@ -284,7 +284,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
               p_anonymous_id: anonymousId,
               p_session_id: sessionId,
-              p_updates: JSON.stringify(updatePayload),
+              p_updates: updatePayload,
             });
 
             if (error) {
@@ -352,7 +352,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
               p_anonymous_id: anonymousId,
               p_session_id: sessionId,
-              p_updates: JSON.stringify(updatePayload),
+              p_updates: updatePayload,
             });
 
             if (error) {
@@ -389,10 +389,10 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         await supabase.rpc("update_wizard_session_by_anonymous_id", {
           p_anonymous_id: anonymousId,
           p_session_id: sessionId,
-          p_updates: JSON.stringify({
+          p_updates: {
             status: "completed",
             completed_at: new Date().toISOString(),
-          }),
+          },
         });
       }
     } catch (error) {

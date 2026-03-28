@@ -19,6 +19,10 @@ interface PageLayoutProps {
   noIndex?: boolean;
   structuredData?: object | object[];
   breadcrumbs?: BreadcrumbItem[] | boolean;
+  /** Blendet den Header aus (z.B. im Wizard-Flow) */
+  hideHeader?: boolean;
+  /** Blendet den Footer aus (z.B. im Wizard-Flow) */
+  hideFooter?: boolean;
 }
 
 const PageLayout = ({ 
@@ -30,7 +34,9 @@ const PageLayout = ({
   ogImage,
   noIndex = false,
   structuredData,
-  breadcrumbs
+  breadcrumbs,
+  hideHeader = false,
+  hideFooter = false,
 }: PageLayoutProps) => {
   const { settings } = useSettings();
   const location = useLocation();
@@ -86,7 +92,7 @@ const PageLayout = ({
         )}
       </Helmet>
       <div className="flex flex-col min-h-screen">
-        <Header />
+        {!hideHeader && <Header />}
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           {showBreadcrumbs && (
             <div className="container mx-auto px-4 pt-4">
@@ -95,7 +101,7 @@ const PageLayout = ({
           )}
           {children}
         </main>
-        <Footer />
+        {!hideFooter && <Footer />}
         <ScrollToTop />
       </div>
     </>

@@ -37,7 +37,7 @@ interface BodyTypeInfo {
 
 const WOHNMOBIL_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
   "Teilintegriert": { icon: TeilintegriertIcon, description: "Aufbau auf Fahrzeugbasis" },
-  "Alkoven": { icon: AlkovenIcon, description: "Schlafbereich \u00fcber dem Fahrerhaus" },
+  "Alkoven": { icon: AlkovenIcon, description: "Schlafbereich über dem Fahrerhaus" },
   "Vollintegriert": { icon: VollintegriertIcon, description: "Durchgehende Karosserie" },
   "Kastenwagen": { icon: KastenwagenIcon, description: "Kompakt und wendig" },
   "Campingbus": { icon: CampingbusIcon, description: "Flexibel mit Aufstelldach" },
@@ -46,7 +46,7 @@ const WOHNMOBIL_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
 const WOHNWAGEN_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
   "Wohnwagen": { icon: WohnwagenIcon, description: "Klassischer Wohnwagen" },
   "Faltcaravan": { icon: FaltcaravanIcon, description: "Zusammenfaltbar, leicht" },
-  "Mobilheim": { icon: MobilheimIcon, description: "Station\u00e4res Wohnheim" },
+  "Mobilheim": { icon: MobilheimIcon, description: "Stationäres Wohnheim" },
 };
 
 export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepProps) => {
@@ -75,10 +75,10 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
       <div>
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
           <Car className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          Was m\u00f6chten Sie verkaufen?
+          Was möchten Sie verkaufen?
         </h2>
         <p className="text-sm text-muted-foreground">
-          W\u00e4hlen Sie Ihren Fahrzeugtyp und die Aufbauart
+          Wählen Sie Ihren Fahrzeugtyp und die Aufbauart
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
           <TrendingUp className="w-4 h-4" />
         </div>
         <p className="text-sm text-foreground">
-          <strong>127 H\u00e4ndler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"}
+          <strong>127 Händler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"}
         </p>
       </div>
 
@@ -181,9 +181,9 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
 
       {/* Trust-Footer */}
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-1">
-        <span className="flex items-center gap-1">\u2713 Kostenlos</span>
-        <span className="flex items-center gap-1">\u2713 Unverbindlich</span>
-        <span className="flex items-center gap-1">\u2713 In 2 Min. fertig</span>
+        <span className="flex items-center gap-1">✓ Kostenlos</span>
+        <span className="flex items-center gap-1">✓ Unverbindlich</span>
+        <span className="flex items-center gap-1">✓ In 2 Min. fertig</span>
       </div>
     </div>
   );

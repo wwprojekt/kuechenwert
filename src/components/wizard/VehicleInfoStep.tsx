@@ -39,14 +39,14 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
           Fahrzeugdaten
         </h2>
         <p className="text-muted-foreground">
-          Ein paar Angaben zu Ihrem {vehicleType} &ndash; dauert nur 30 Sekunden
+          Ein paar Angaben zu Ihrem {vehicleType} – dauert nur 30 Sekunden
         </p>
       </div>
 
       {formData.bodyType && (
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center gap-2 text-sm">
-          <span className="text-primary font-medium">&#10003; {vehicleType}</span>
-          <span className="text-muted-foreground">&middot;</span>
+          <span className="text-primary font-medium">✓ {vehicleType}</span>
+          <span className="text-muted-foreground">·</span>
           <span className="text-primary font-medium">{formData.bodyType}</span>
         </div>
       )}
@@ -58,7 +58,7 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
           </Label>
           <Select value={formData.manufacturer} onValueChange={handleManufacturerChange}>
             <SelectTrigger id="manufacturer" className="transition-smooth">
-              <SelectValue placeholder="Hersteller w&auml;hlen" />
+              <SelectValue placeholder="Hersteller wählen" />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
               {currentManufacturers.map((manufacturer) => (
@@ -77,7 +77,7 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
           <Input
             id="model"
             type="text"
-            placeholder={formData.manufacturer ? "z.B. B-Klasse, California, Coral..." : "Bitte zuerst Hersteller w\u00e4hlen"}
+            placeholder={formData.manufacturer ? "z.B. B-Klasse, California, Coral..." : "Bitte zuerst Hersteller wählen"}
             value={formData.model}
             onChange={(e) => updateFormData({ model: e.target.value })}
             className="transition-smooth"
@@ -96,7 +96,7 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
             onValueChange={(value) => updateFormData({ year: parseInt(value) })}
           >
             <SelectTrigger id="year" className="transition-smooth">
-              <SelectValue placeholder="Baujahr w\u00e4hlen" />
+              <SelectValue placeholder="Baujahr wählen" />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
               {yearOptions.map((year) => (
@@ -135,14 +135,14 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
             onValueChange={(value) => updateFormData({ condition: value })}
           >
             <SelectTrigger id="condition" className="transition-smooth">
-              <SelectValue placeholder="Zustand w\u00e4hlen" />
+              <SelectValue placeholder="Zustand wählen" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Neuwertig">Neuwertig</SelectItem>
               <SelectItem value="Sehr gut">Sehr gut</SelectItem>
               <SelectItem value="Gut">Gut</SelectItem>
               <SelectItem value="Befriedigend">Befriedigend</SelectItem>
-              <SelectItem value="Reparaturbed\u00fcrftig">Reparaturbed&uuml;rftig</SelectItem>
+              <SelectItem value="Reparaturbedürftig">Reparaturbedürftig</SelectItem>
             </SelectContent>
           </Select>
         </div>

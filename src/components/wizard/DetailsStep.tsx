@@ -18,7 +18,11 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
     const noDefects = value === "no";
     updateFormData({
       no_known_defects: noDefects,
-      known_defects: noDefects ? undefined : formData.known_defects,
+      // Bei "Mängel vorhanden": known_defects auf leeren String setzen,
+      // damit die Bedingung `known_defects !== undefined` erfüllt ist
+      // und die Karte als aktiv dargestellt wird + Textarea erscheint.
+      // Bei "Keine Mängel": known_defects auf undefined zurücksetzen.
+      known_defects: noDefects ? undefined : (formData.known_defects || ""),
     });
   };
 

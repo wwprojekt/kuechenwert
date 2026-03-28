@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import { Card } from "@/components/ui/card";
+import { SiteLogo } from "@/components/SiteLogo";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Check, Shield, Users } from "lucide-react";
@@ -138,11 +139,33 @@ const VerkaufenWizard = () => {
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < steps.length) {
+      const nextStep = currentStep + 1;
+
+      // Bei Step 3 → 4: Lead SOFORT erfassen (Name + E-Mail sind jetzt vorhanden)
+      if (currentStep === 3 && formData.customerEmail && formData.customerName) {
+        // Lead sofort in quick_leads erfassen
+        await captureOrUpdateLead({
+          name: formData.customerName,
+          email: formData.customerEmail,
+          manufacturer: formData.manufacturer,
+          model: formData.model,
+          bodyType: formData.bodyType,
+          source: 'wizard_quick_contact',
+          pageUrl: window.location.pathname,
+        });
+
+        // Wizard-Session sofort (ohne Debounce) mit Kontaktdaten aktualisieren
+        await updateContactFromAuth({
+          email: formData.customerEmail,
+          firstName: formData.customerName?.split(' ')[0],
+          lastName: formData.customerName?.split(' ').slice(1).join(' '),
+        });
+      }
+
       updateLeadWizardProgress({
-        step: currentStep + 1,
+        step: nextStep,
         formData: formData as unknown as Record<string, unknown>,
       });
-      const nextStep = currentStep + 1;
       const nextStepInfo = steps[nextStep - 1];
       trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
       setCurrentStep(nextStep);
@@ -214,16 +237,29 @@ const VerkaufenWizard = () => {
       keywords="wohnmobil verkaufen, wohnmobil bewertung, caravan verkaufen"
       canonicalPath="/verkaufen/wizard"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/verkaufen/wizard"))}
+      hideHeader
+      hideFooter
     >
-      {/* Kompakter Header - Wizard soll sofort sichtbar sein */}
-      <div className="bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-muted/65 pt-4 pb-2 md:pt-6 md:pb-3">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-lg md:text-2xl font-bold text-foreground">
-            Verkaufen Sie Ihr Wohnmobil
-          </h1>
-          <p className="text-muted-foreground text-xs md:text-sm mt-1">
-            Kostenloses Angebot in nur 2 Minuten – unverbindlich und ohne Registrierungspflicht
-          </p>
+      {/* Kompakter Wizard-Header mit Logo (da globaler Header ausgeblendet) */}
+      <div className="bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-muted/65 pt-3 pb-2 md:pt-4 md:pb-3 border-b border-border/30">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-2">
+            <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <SiteLogo variant="icon-text" />
+            </a>
+            <a href="/verkaufen" className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <ChevronLeft className="w-3 h-3" />
+              Zurück zur Übersicht
+            </a>
+          </div>
+          <div className="text-center">
+            <h1 className="text-base md:text-xl font-bold text-foreground">
+              Verkaufen Sie Ihr Wohnmobil
+            </h1>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Kostenloses Angebot in nur 2 Minuten
+            </p>
+          </div>
         </div>
       </div>
 

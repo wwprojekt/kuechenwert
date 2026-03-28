@@ -11,7 +11,7 @@
  * - Lazy-loaded page components are defined at module level (required by React.lazy)
  */
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { lazyRetry } from '@/lib/lazyRetry';
 import { useNavigate, Link, Routes, Route } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -24,6 +24,8 @@ import { SiteLogo } from '@/components/SiteLogo';
 import { DealerSidebar } from '@/components/DealerSidebar';
 import { UserSidebar } from '@/components/UserSidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import EmailVerificationBanner from '@/components/dashboard/EmailVerificationBanner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import dashboard components (non-lazy for main views)
 import DealerDashboard from '@/pages/dealer/DealerDashboard';
@@ -338,6 +340,19 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+
+  // Check email verification status
+  useEffect(() => {
+    const checkVerification = async () => {
+      if (!user) return;
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setEmailVerified(!!data.user.email_confirmed_at);
+      }
+    };
+    checkVerification();
+  }, [user]);
 
   const userInitials = user?.email
     ?.split("@")[0]
@@ -383,7 +398,11 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
           {/* Main Content Area */}
           <main className="flex-1 p-6 lg:p-8 xl:p-10">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Email Verification Banner */}
+              {emailVerified === false && user?.email && (
+                <EmailVerificationBanner email={user.email} />
+              )}
               {children}
             </div>
           </main>

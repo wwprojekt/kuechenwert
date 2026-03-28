@@ -65,18 +65,21 @@ export const useUserRole = () => {
       }
 
       // Fetch the single role for the user
+      // Use .maybeSingle() instead of .single() to gracefully handle users
+      // who don't have a role entry yet (e.g., just registered, email not confirmed)
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (rolesError) {
         logger.error('Error fetching user role:', rolesError);
         throw rolesError;
       }
 
+      // Default to 'seller' if no role entry exists yet (new/unverified user)
       const role = (rolesData?.role as UserRole) || 'seller';
 
       return {

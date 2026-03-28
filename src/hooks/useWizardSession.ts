@@ -178,6 +178,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               anonymous_id: anonymousId,
               current_step: 1,
               max_step_reached: 1,
+              total_steps: 6,
               status: "in_progress",
               customer_name: urlContact.customerName,
               customer_email: urlContact.customerEmail,

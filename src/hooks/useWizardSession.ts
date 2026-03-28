@@ -104,6 +104,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         let existingSession = null;
 
         if (user) {
+          // Authenticated users can query directly via RLS (user_id = auth.uid())
           const { data } = await supabase
             .from("wizard_sessions")
             .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
@@ -116,16 +117,16 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         }
 
         if (!existingSession) {
-          // Also check by anonymous_id
+          // Anonymous users: Use secure RPC function instead of direct table access
+          // This bypasses RLS safely and only returns the session matching this anonymous_id
           const { data } = await supabase
-            .from("wizard_sessions")
-            .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
-            .eq("anonymous_id", anonymousId)
-            .eq("status", "in_progress")
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          existingSession = data;
+            .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anonymousId });
+          
+          if (data && Array.isArray(data) && data.length > 0) {
+            existingSession = data[0];
+          } else if (data && !Array.isArray(data)) {
+            existingSession = data;
+          }
         }
 
         if (existingSession) {
@@ -151,13 +152,24 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           }
 
           if (Object.keys(updatePayload).length > 0) {
-            await supabase
-              .from("wizard_sessions")
-              .update(updatePayload)
-              .eq("id", existingSession.id);
+            if (user) {
+              // Authenticated users update directly
+              await supabase
+                .from("wizard_sessions")
+                .update(updatePayload)
+                .eq("id", existingSession.id);
+            } else {
+              // Anonymous users update via secure RPC
+              await supabase.rpc("update_wizard_session_by_anonymous_id", {
+                p_anonymous_id: anonymousId,
+                p_session_id: existingSession.id,
+                p_updates: JSON.stringify(updatePayload),
+              });
+            }
           }
         } else {
           // Create new session WITH contact data from URL immediately
+          // INSERT is allowed for anonymous users via the existing INSERT policy
           const { data: newSession, error } = await supabase
             .from("wizard_sessions")
             .insert({
@@ -258,15 +270,32 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             }
           }
 
-          const { error } = await supabase
-            .from("wizard_sessions")
-            .update(updatePayload)
-            .eq("id", sessionId);
+          if (user) {
+            // Authenticated users update directly via RLS
+            const { error } = await supabase
+              .from("wizard_sessions")
+              .update(updatePayload)
+              .eq("id", sessionId);
 
-          if (error) {
-            logger.error("Failed to save wizard progress:", error);
+            if (error) {
+              logger.error("Failed to save wizard progress:", error);
+            } else {
+              lastSavedDataRef.current = fingerprint;
+            }
           } else {
-            lastSavedDataRef.current = fingerprint;
+            // Anonymous users update via secure RPC
+            const anonymousId = getAnonymousId();
+            const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
+              p_anonymous_id: anonymousId,
+              p_session_id: sessionId,
+              p_updates: JSON.stringify(updatePayload),
+            });
+
+            if (error) {
+              logger.error("Failed to save wizard progress:", error);
+            } else {
+              lastSavedDataRef.current = fingerprint;
+            }
           }
         } catch (error) {
           logger.error("Failed to save wizard progress:", error);
@@ -311,13 +340,28 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         }
 
         if (Object.keys(updatePayload).length > 0) {
-          const { error } = await supabase
-            .from("wizard_sessions")
-            .update(updatePayload)
-            .eq("id", sessionId);
+          if (user) {
+            // Authenticated user: direct update via RLS
+            const { error } = await supabase
+              .from("wizard_sessions")
+              .update(updatePayload)
+              .eq("id", sessionId);
 
-          if (error) {
-            logger.error("Failed to update wizard session contact from auth:", error);
+            if (error) {
+              logger.error("Failed to update wizard session contact from auth:", error);
+            }
+          } else {
+            // Anonymous user: update via secure RPC
+            const anonymousId = getAnonymousId();
+            const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
+              p_anonymous_id: anonymousId,
+              p_session_id: sessionId,
+              p_updates: JSON.stringify(updatePayload),
+            });
+
+            if (error) {
+              logger.error("Failed to update wizard session contact from auth:", error);
+            }
           }
         }
       } catch (error) {
@@ -334,20 +378,35 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     if (!sessionId) return;
 
     try {
-      await supabase
-        .from("wizard_sessions")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", sessionId);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase
+          .from("wizard_sessions")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", sessionId);
+      } else {
+        const anonymousId = getAnonymousId();
+        await supabase.rpc("update_wizard_session_by_anonymous_id", {
+          p_anonymous_id: anonymousId,
+          p_session_id: sessionId,
+          p_updates: JSON.stringify({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+          }),
+        });
+      }
     } catch (error) {
       logger.error("Failed to mark wizard session as completed:", error);
     }
   }, [sessionId]);
 
   /**
-   * Load existing session data for resume
+   * Load existing session data for resume.
+   * Uses RPC for anonymous users to avoid RLS restrictions.
    */
   const loadSession = useCallback(async (): Promise<{
     formData: Record<string, unknown>;
@@ -357,13 +416,32 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("wizard_sessions")
-        .select("form_data, current_step, max_step_reached")
-        .eq("id", sessionId)
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (error || !data) return null;
+      let data = null;
+
+      if (user) {
+        // Authenticated users can query directly
+        const result = await supabase
+          .from("wizard_sessions")
+          .select("form_data, current_step, max_step_reached")
+          .eq("id", sessionId)
+          .single();
+        data = result.data;
+      } else {
+        // Anonymous users: use RPC to find their session
+        const anonymousId = getAnonymousId();
+        const result = await supabase
+          .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anonymousId });
+        
+        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+          data = result.data[0];
+        } else if (result.data && !Array.isArray(result.data)) {
+          data = result.data;
+        }
+      }
+
+      if (!data) return null;
 
       return {
         formData: data.form_data as Record<string, unknown>,

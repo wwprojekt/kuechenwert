@@ -51,18 +51,22 @@ export default function DashboardOverview() {
   const isDealer = primaryRole === "dealer";
 
   // ── Realtime: Auto-refresh when admin creates/updates motorhome ──
+  // NOTE: We listen WITHOUT a filter on motorhomes because Supabase Realtime
+  // filters on INSERT events can be unreliable (the filter is applied to the
+  // NEW row, but RLS or timing issues may prevent delivery). Instead we listen
+  // to ALL changes on the table and always invalidate – the React Query cache
+  // will only refetch if the component is mounted.
   useEffect(() => {
     if (!user || isDealer) return;
 
     const channel = supabase
-      .channel("seller-motorhomes-realtime")
+      .channel(`seller-dashboard-realtime-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "motorhomes",
-          filter: `seller_id=eq.${user.id}`,
         },
         () => {
           // Invalidate all seller-relevant queries so data refreshes automatically
@@ -122,6 +126,10 @@ export default function DashboardOverview() {
       return data;
     },
     enabled: !!user && !isDealer,
+    // Keep in sync with sellerTimeline polling
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
+    staleTime: 0,
   });
 
   // ── Seller: Fetch motorhome + auction data for timeline ──────
@@ -185,6 +193,15 @@ export default function DashboardOverview() {
       return enriched;
     },
     enabled: !!user && !isDealer,
+    // Polling fallback: refetch every 30s in case Realtime subscription
+    // doesn't fire (e.g. table not enabled for Realtime in Supabase config,
+    // or RLS blocks the subscription). This ensures the seller sees new
+    // motorhomes within 30 seconds even without Realtime.
+    refetchInterval: 30 * 1000,
+    // Don't poll when the tab is in the background to save resources
+    refetchIntervalInBackground: false,
+    // Override global staleTime so invalidation from Realtime takes effect immediately
+    staleTime: 0,
   });
 
   // ── Dealer stats ──────────────────────────────────────────────
@@ -541,7 +558,7 @@ export default function DashboardOverview() {
                             size="sm"
                             className={`gap-2 w-full sm:w-auto ${
                               (!mh.photos || mh.photos.length === 0)
-                                ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md animate-pulse"
+                                ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg ring-2 ring-amber-300 ring-offset-1"
                                 : "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground"
                             }`}
                           >

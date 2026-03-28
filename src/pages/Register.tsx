@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
+import { trackMetaCompleteRegistration } from "@/lib/metaPixelService";
 import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2, ShieldCheck, MailCheck } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { passwordSchema, emailSchema } from "@/lib/validation";
@@ -83,6 +84,8 @@ const Register = () => {
       // Google Ads: Enhanced Conversions + Registrierung
       await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone });
       trackUserRegistered('email');
+      // Meta Pixel: CompleteRegistration Event
+      trackMetaCompleteRegistration({ content_name: 'Nutzer-Registrierung' });
 
       setRegisteredEmail(validated.email);
       setIsSuccess(true);

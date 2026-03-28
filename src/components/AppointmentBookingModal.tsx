@@ -13,6 +13,7 @@ import { de } from "date-fns/locale";
 import { format } from "date-fns";
 import { Clock, MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { trackTerminbuchung, setEnhancedConversionData } from "@/lib/gadsConversionService";
+import { trackMetaSchedule } from "@/lib/metaPixelService";
 
 interface AppointmentBookingModalProps {
   open: boolean;
@@ -118,6 +119,9 @@ export const AppointmentBookingModal = ({
       }
       const stationName = stations.find(s => s.id === selectedStation)?.name || '';
       await trackTerminbuchung(stationName);
+
+      // Meta Pixel: Schedule Event
+      trackMetaSchedule({ content_name: stationName || 'Ankaufstation-Termin' });
 
       toast.success("Termin erfolgreich gebucht!");
       onOpenChange(false);

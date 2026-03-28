@@ -8,6 +8,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SiteLogo } from "@/components/SiteLogo";
 import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
+import { trackMetaPhoneClick } from "@/lib/metaPixelService";
 import NotificationCenter from "@/components/NotificationCenter";
 import {
   DropdownMenu,
@@ -60,7 +61,7 @@ const Header = () => {
         <div className="container flex items-center justify-between text-sm">
           <div className="flex items-center gap-6">
             {settings?.support_phone && (
-              <a href={`tel:${settings.support_phone.replace(/\s/g, '')}`} onClick={() => trackPhoneClick(settings.support_phone || '', location.pathname)} className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href={`tel:${settings.support_phone.replace(/\s/g, '')}`} onClick={() => { trackPhoneClick(settings.support_phone || '', location.pathname); trackMetaPhoneClick(); }} className="flex items-center gap-2 hover:text-white transition-colors">
                 <Phone className="h-3.5 w-3.5" />
                 <span>{settings.support_phone}</span>
               </a>

@@ -54,6 +54,25 @@
       });
     </script>
 
+    <!-- Meta Pixel Base Code – DSGVO-konform -->
+    <!-- Wird erst aktiviert wenn Marketing-Consent erteilt wird.
+         fbq('consent', 'revoke') verhindert jegliches Tracking bis Consent vorliegt.
+         Die Aktivierung erfolgt über metaPixelService.ts bei consent-updated Event. -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+
+      // DSGVO: Pixel initialisieren aber sofort Consent widerrufen
+      // Damit werden KEINE Daten gesendet bis explizit fbq('consent','grant') aufgerufen wird
+      fbq('consent', 'revoke');
+      fbq('init', '1846623132710484');
+    </script>
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,6 +131,11 @@
   </head>
 
   <body>
+    <!-- Meta Pixel noscript-Fallback (muss im body stehen, nicht im head) -->
+    <noscript>
+      <img height="1" width="1" style="display:none"
+           src="https://www.facebook.com/tr?id=1846623132710484&ev=PageView&noscript=1" />
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

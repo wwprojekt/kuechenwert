@@ -8,6 +8,7 @@ import { SiteLogo } from "@/components/SiteLogo";
 import { CookieSettingsModal } from "@/components/CookieSettingsModal";
 import { useToast } from "@/hooks/use-toast";
 import { trackPhoneClick, trackEmailClick, trackCTAClick } from "@/lib/gadsConversionService";
+import { trackMetaNewsletterSignup, trackMetaPhoneClick } from "@/lib/metaPixelService";
 import { z } from "zod";
 
 const newsletterSchema = z.object({
@@ -40,6 +41,8 @@ const Footer = () => {
 
     // Google Ads: Newsletter-Anmeldung tracken
     trackCTAClick('newsletter_signup', location.pathname, '/newsletter');
+    // Meta Pixel: Newsletter-Anmeldung
+    trackMetaNewsletterSignup();
 
     toast({
       title: "Anmeldung erfolgreich!",
@@ -375,7 +378,7 @@ const Footer = () => {
                   <li>
                     <a 
                       href={`tel:${settings.support_phone.replace(/\s/g, '')}`}
-                      onClick={() => trackPhoneClick(settings.support_phone || '', location.pathname)}
+                      onClick={() => { trackPhoneClick(settings.support_phone || '', location.pathname); trackMetaPhoneClick(); }}
                       className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
                     >
                       <div className="h-9 w-9 rounded-lg bg-slate-800 group-hover:bg-primary flex items-center justify-center flex-shrink-0 transition-colors">

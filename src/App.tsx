@@ -1,10 +1,10 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./components/ErrorBoundary";
@@ -15,6 +15,7 @@ import { usePageTracking } from "./hooks/useAnalytics";
 import { lazyRetry, clearChunkReloadFlag } from "./lib/lazyRetry";
 import { detectAndSetTrafficType } from "./lib/gadsConversionService";
 import { captureClickIds } from "./lib/clickIdService";
+import { initMetaPixelConsentListener, trackMetaPageView } from "./lib/metaPixelService";
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
@@ -138,7 +139,18 @@ function PageTracker() {
   useEffect(() => {
     detectAndSetTrafficType();
     captureClickIds();
+    initMetaPixelConsentListener();
   }, []);
+
+  // Meta Pixel: PageView bei jedem Route-Wechsel tracken
+  const location = useLocation();
+  const previousMetaPath = useRef<string | null>(null);
+  useEffect(() => {
+    if (previousMetaPath.current !== location.pathname) {
+      trackMetaPageView();
+      previousMetaPath.current = location.pathname;
+    }
+  }, [location.pathname]);
 
   return null;
 }

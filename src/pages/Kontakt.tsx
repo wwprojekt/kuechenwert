@@ -14,6 +14,7 @@ import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackKontaktformularGesendet, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
+import { trackMetaContact, trackMetaLead } from "@/lib/metaPixelService";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -99,6 +100,10 @@ const Kontakt = () => {
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       const txId = (window as any).__lastTransactionId || generateTransactionId('kontakt');
       await trackKontaktformularGesendet(txId);
+
+      // Meta Pixel: Contact + Lead Events
+      trackMetaContact();
+      trackMetaLead({ content_name: 'Kontaktformular', content_category: 'Kontakt' });
 
       toast({
         title: "Nachricht gesendet!",

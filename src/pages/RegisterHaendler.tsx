@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
+import { trackMetaCompleteRegistration, trackMetaSubmitApplication } from "@/lib/metaPixelService";
 import { logger } from "@/lib/logger";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -223,6 +224,9 @@ const RegisterHaendler = () => {
       // Google Ads: Enhanced Conversions + Händler-Registrierung
       await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
       trackUserRegistered('dealer_registration');
+      // Meta Pixel: CompleteRegistration + SubmitApplication Events
+      trackMetaCompleteRegistration({ content_name: 'Haendler-Registrierung' });
+      trackMetaSubmitApplication({ content_name: 'Haendler-Bewerbung' });
 
       setRegistrationComplete(true);
       toast({

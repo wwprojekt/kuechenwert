@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { trackWertrechnerLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
+import { trackMetaLead, trackMetaWertrechnerCompleted } from "@/lib/metaPixelService";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -518,6 +519,15 @@ const Wertrechner = () => {
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       const txId = (window as any).__lastTransactionId || generateTransactionId('wertrechner');
       await trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`, txId);
+
+      // Meta Pixel: Lead + WertrechnerCompleted Events
+      trackMetaLead({ content_name: `${formData.manufacturer} ${formData.model}`, content_category: 'Wertrechner' });
+      trackMetaWertrechnerCompleted({
+        vehicle_type: formData.bodyType || 'Wohnmobil',
+        manufacturer: formData.manufacturer || '',
+        estimated_value: result?.estimatedValue || 0,
+      });
+
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
 
       // KI-Schätzung im Hintergrund abrufen (non-blocking)

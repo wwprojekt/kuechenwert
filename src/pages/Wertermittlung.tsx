@@ -35,6 +35,7 @@ import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackWertermittlungLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
+import { trackMetaLead } from "@/lib/metaPixelService";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -118,6 +119,9 @@ const Wertermittlung = () => {
       await trackWertermittlungLead(
         `${formData.manufacturer} ${formData.model} ${formData.year}`, txId
       );
+
+      // Meta Pixel: Lead Event
+      trackMetaLead({ content_name: `${formData.manufacturer} ${formData.model}`, content_category: 'Wertermittlung' });
 
       toast({
         title: "Anfrage gesendet!",

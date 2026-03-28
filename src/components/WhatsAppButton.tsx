@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSettings } from '@/contexts/SettingsContext';
 import { trackWhatsAppClick } from '@/lib/gadsConversionService';
+import { trackMetaWhatsAppClick } from '@/lib/metaPixelService';
 
 export const WhatsAppButton = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,6 +37,7 @@ export const WhatsAppButton = () => {
 
   const handleWhatsAppClick = () => {
     trackWhatsAppClick(location.pathname);
+    trackMetaWhatsAppClick();
     window.open(whatsappUrl, '_blank');
     setIsExpanded(false);
   };

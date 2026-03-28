@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { captureOrUpdateLead } from '@/lib/leadTrackingService';
 import { trackLandingPageLead, setEnhancedConversionFromForm } from '@/lib/gadsConversionService';
+import { trackMetaLead } from '@/lib/metaPixelService';
 import { popularManufacturers } from '@/lib/vehicle-data';
 
 type SaleChannel = 'auction' | 'instant' | 'station' | '';
@@ -151,6 +152,9 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
     // Google Ads: Enhanced Conversions + Lead-Conversion tracken
     await setEnhancedConversionFromForm({ customerEmail, customerName, customerPhone });
     await trackLandingPageLead('homepage_hero', `${manufacturer} ${model} - ${bodyType}`);
+
+    // Meta Pixel: Lead Event
+    trackMetaLead({ content_name: `${manufacturer} ${model}`, content_category: bodyType || 'Wohnmobil' });
 
     // Create URL with prefilled data for the wizard
     const searchParams = new URLSearchParams();

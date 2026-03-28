@@ -18,6 +18,7 @@ import { useWizardForm } from "@/hooks/useWizardForm";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
+import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
 
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
@@ -94,6 +95,8 @@ const VerkaufenWizard = () => {
   useEffect(() => {
     const source = searchParams.get('source') || 'direct';
     trackWizardStarted(source);
+    // Meta Pixel: InitiateCheckout bei Wizard-Start
+    trackMetaInitiateCheckout({ content_name: 'Verkaufs-Wizard', content_category: 'Wohnmobil' });
   }, []);
 
   // Auto-save progress
@@ -168,6 +171,8 @@ const VerkaufenWizard = () => {
       });
       const nextStepInfo = steps[nextStep - 1];
       trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
+      // Meta Pixel: Wizard-Schritt tracken
+      trackMetaWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
       setCurrentStep(nextStep);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -198,6 +203,8 @@ const VerkaufenWizard = () => {
       markLeadWizardCompleted();
       const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
       trackWizardCompleted(vehicleInfo);
+      // Meta Pixel: Lead Event bei Wizard-Abschluss
+      trackMetaLead({ content_name: vehicleInfo, content_category: 'Wohnmobil-Verkauf' });
     }
   };
 

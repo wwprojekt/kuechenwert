@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
+import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
@@ -224,6 +225,15 @@ const AuctionDetail = () => {
       if (data.motorhome) {
         const mh = data.motorhome;
         trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
+        // Meta Pixel: ViewContent Event
+        trackMetaViewContent({
+          content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
+          content_category: mh.body_type || 'Wohnmobil',
+          content_ids: [mh.id],
+          content_type: 'vehicle',
+          value: data.current_bid || data.start_price || 0,
+          currency: 'EUR',
+        });
       }
     };
 

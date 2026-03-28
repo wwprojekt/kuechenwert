@@ -1092,72 +1092,39 @@ const Wertrechner = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Hauptwert-Anzeige */}
-                    {aiEstimate && aiEstimate.confidence >= 75 && aiEstimate.trainingCount >= 20 ? (
-                      <>
-                        {/* KI-Wert als Hauptwert */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
-                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
-                          <div className="flex items-center justify-center gap-2 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                              <TrendingUp className="w-5 h-5 text-teal-700" />
-                            </div>
-                            <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">Expertenbewertung</span>
-                          </div>
+                    {/* Hauptwert-Anzeige: Nur KI-Wert */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
+                      <div className="flex items-center justify-center gap-2 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-teal-700" />
+                        </div>
+                        <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">KI-Wertschätzung</span>
+                      </div>
+                      {aiEstimate ? (
+                        <>
                           <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
                             <AnimatedValue value={Math.round(aiEstimate.value * 0.95)} /> &ndash; <AnimatedValue value={Math.round(aiEstimate.value * 1.05)} />
                           </div>
                           <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
                           <div className="flex items-center justify-center gap-3 text-xs text-teal-600 mt-3">
                             <span className="inline-flex items-center gap-1"><Shield className="w-3 h-3" /> Konfidenz: {aiEstimate.confidence}%</span>
-                            <span>•</span>
-                            <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                            <span>&bull;</span>
+                            <span>Basierend auf {aiEstimate.trainingCount} Vergleichsdaten</span>
                           </div>
                           {aiEstimate.reasoning && (
                             <p className="text-xs text-teal-500 mt-3 italic max-w-md mx-auto">{aiEstimate.reasoning}</p>
                           )}
-                        </div>
-                        {/* Algorithmische Schätzung als Zusatzinfo */}
-                        <div className="bg-muted/30 rounded-lg p-4 text-center">
-                          <p className="text-xs text-muted-foreground mb-1">Algorithmische Schätzung</p>
-                          <p className="text-lg font-semibold text-muted-foreground">
-                            {formatCurrency(estimatedValue.min)} &ndash; {formatCurrency(estimatedValue.max)}
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Algorithmus-Wert als Hauptwert */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
-                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
-                          <div className="flex items-center justify-center gap-2 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                              <Calculator className="w-5 h-5 text-teal-700" />
-                            </div>
-                            <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">Wertschätzung</span>
-                          </div>
+                        </>
+                      ) : (
+                        <>
                           <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
                             <AnimatedValue value={estimatedValue.min} /> &ndash; <AnimatedValue value={estimatedValue.max} />
                           </div>
                           <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
-                        </div>
-
-                        {/* KI-Schätzung als Zusatzinfo wenn verfügbar */}
-                        {aiEstimate && (
-                          <div className="bg-muted/30 rounded-lg p-4 text-center">
-                            <p className="text-xs text-muted-foreground mb-1">KI-gestützte Bewertung</p>
-                            <p className="text-lg font-semibold text-muted-foreground">
-                              {Math.round(aiEstimate.value * 0.95).toLocaleString("de-DE")} € &ndash; {Math.round(aiEstimate.value * 1.05).toLocaleString("de-DE")} €
-                            </p>
-                            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span>Konfidenz: {aiEstimate.confidence}%</span>
-                              <span>•</span>
-                              <span>{aiEstimate.trainingCount} Vergleichsdaten</span>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
 

@@ -1,7 +1,6 @@
 /**
  * Motorhome Showcase Component
  * Displays high-quality motorhome images with trust indicators
- * Note: Replace placeholder images with actual motorhome photos
  */
 
 import { Link } from "react-router-dom";
@@ -11,33 +10,32 @@ import { Button } from "@/components/ui/button";
 import { Star, CheckCircle, Award, Users, ArrowRight } from "lucide-react";
 
 const MotorhomeShowcase = () => {
-  // Placeholder motorhome images - replace with actual images
   const showcaseItems = [
     {
       id: 1,
-      image: "/placeholder.svg", // Replace with: /images/motorhome-1.jpg
-      title: "Premium Wohnmobile",
+      image: "/images/motorhome-integrated.jpg",
+      title: "Integrierte Wohnmobile",
       subtitle: "Bestpreise garantiert",
       badge: "Beliebt",
     },
     {
       id: 2,
-      image: "/placeholder.svg", // Replace with: /images/motorhome-2.jpg
-      title: "Luxus Reisemobile",
+      image: "/images/motorhome-alcove.jpg",
+      title: "Alkoven-Wohnmobile",
       subtitle: "Schneller Verkauf",
       badge: "Top",
     },
     {
       id: 3,
-      image: "/placeholder.svg", // Replace with: /images/motorhome-3.jpg
-      title: "Kastenwagen",
+      image: "/images/motorhome-van.jpg",
+      title: "Campervans & Kastenwagen",
       subtitle: "Hohe Nachfrage",
       badge: "Gefragt",
     },
     {
       id: 4,
-      image: "/placeholder.svg", // Replace with: /images/motorhome-4.jpg
-      title: "Campervans",
+      image: "/images/caravan-touring.jpg",
+      title: "Wohnwagen & Caravans",
       subtitle: "Sofort verkaufen",
       badge: "Neu",
     },
@@ -86,48 +84,44 @@ const MotorhomeShowcase = () => {
         {/* Image Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {showcaseItems.map((item, index) => (
-            <Card
+            <Link
+              to="/verkaufen/wizard"
               key={item.id}
-              className="group relative overflow-hidden rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 aspect-[4/3]"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="block"
             >
-              {/* Placeholder Image Container */}
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400">
-                {/* Replace this div with actual image:
-                <img 
-                  src={item.image} 
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                */}
-                {/* Placeholder visual */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-16 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                    <svg className="w-12 h-12 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
+              <Card
+                className="group relative overflow-hidden rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 aspect-[4/3] cursor-pointer"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                {/* Real Image */}
+                <div className="absolute inset-0">
+                  <img 
+                    src={item.image} 
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
                 </div>
-              </div>
 
-              {/* Badge */}
-              <div className="absolute top-3 left-3 z-10">
-                <Badge className="bg-primary/90 hover:bg-primary text-white text-xs font-semibold shadow-lg">
-                  {item.badge}
-                </Badge>
-              </div>
+                {/* Badge */}
+                <div className="absolute top-3 left-3 z-10">
+                  <Badge className="bg-primary/90 hover:bg-primary text-white text-xs font-semibold shadow-lg">
+                    {item.badge}
+                  </Badge>
+                </div>
 
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-              {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-white/80">{item.subtitle}</p>
-              </div>
-            </Card>
+                {/* Content */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-white/80">{item.subtitle}</p>
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
 
@@ -149,4 +143,3 @@ const MotorhomeShowcase = () => {
 };
 
 export default MotorhomeShowcase;
-

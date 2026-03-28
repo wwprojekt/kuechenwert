@@ -11,11 +11,11 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-fit lg:min-h-[85vh] overflow-hidden">
-      {/* Background Image - Full width */}
+      {/* Background Image - Full width - Emotionales Wohnmobil-Lifestyle-Bild */}
       <div 
         className="absolute inset-0 bg-cover bg-center lg:bg-right"
         style={{
-          backgroundImage: `url('/hero-homepage.webp'), url('/hero-homepage.png')`,
+          backgroundImage: `url('/images/hero-motorhome.jpg')`,
         }}
       />
       
@@ -24,17 +24,17 @@ const Hero = () => {
         className="absolute inset-0"
         style={{
           background: `linear-gradient(to right, 
-            rgba(255,255,255,0.85) 0%, 
-            rgba(255,255,255,0.75) 25%, 
-            rgba(255,255,255,0.50) 40%, 
-            rgba(255,255,255,0.2) 55%, 
-            rgba(255,255,255,0) 70%
+            rgba(255,255,255,0.92) 0%, 
+            rgba(255,255,255,0.85) 25%, 
+            rgba(255,255,255,0.60) 40%, 
+            rgba(255,255,255,0.3) 55%, 
+            rgba(255,255,255,0.05) 70%
           )`,
         }}
       />
       
       {/* Mobile: additional overlay for better readability */}
-      <div className="absolute inset-0 bg-white/60 dark:bg-black/60 lg:hidden" />
+      <div className="absolute inset-0 bg-white/70 dark:bg-black/70 lg:hidden" />
 
       {/* Main Content */}
       <div className="container relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">

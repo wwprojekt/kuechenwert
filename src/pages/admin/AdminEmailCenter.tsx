@@ -145,18 +145,93 @@ interface InboxItem {
   original: AdminEmail | SupportMessage | ContactMessage;
 }
 
-type MailboxFilter = 'all' | 'info' | 'admin' | 'kontakt' | 'rechnung' | 'support' | 'contact' | 'other';
-
-const MAILBOX_TABS: { key: MailboxFilter; label: string; icon?: string; color: string }[] = [
-  { key: 'all', label: 'Alle', color: 'text-foreground' },
-  { key: 'info', label: 'info@', color: 'text-blue-600' },
-  { key: 'admin', label: 'admin@', color: 'text-red-600' },
-  { key: 'kontakt', label: 'kontakt@', color: 'text-green-600' },
-  { key: 'rechnung', label: 'rechnung@', color: 'text-amber-600' },
-  { key: 'support', label: 'Support', color: 'text-purple-600' },
-  { key: 'contact', label: 'Kontaktformular', color: 'text-teal-600' },
-  { key: 'other', label: 'Sonstige', color: 'text-gray-600' },
+// Dynamische Farben-Palette für automatisch erkannte Postfächer
+const MAILBOX_COLOR_PALETTE = [
+  'text-blue-600', 'text-red-600', 'text-green-600', 'text-amber-600',
+  'text-purple-600', 'text-teal-600', 'text-indigo-600', 'text-pink-600',
+  'text-cyan-600', 'text-orange-600', 'text-lime-600', 'text-violet-600',
+  'text-sky-600', 'text-rose-600', 'text-emerald-600', 'text-fuchsia-600',
 ];
+
+// Spezial-Quellen (nicht E-Mail-basiert)
+const SPECIAL_SOURCES: Record<string, { label: string; color: string }> = {
+  'support': { label: 'Support', color: 'text-purple-600' },
+  'contact': { label: 'Kontaktformular', color: 'text-teal-600' },
+};
+
+/** Erzeugt ein lesbares Label aus einer E-Mail-Adresse */
+const emailToLabel = (email: string): string => {
+  const local = email.split('@')[0];
+  return `${local}@`;
+};
+
+/** Gibt den Postfach-Schlüssel für ein Inbox-Item zurück */
+const getItemMailboxKey = (item: InboxItem): string => {
+  if (item.source === 'support') return '__source_support';
+  if (item.source === 'contact') return '__source_contact';
+  return (item.to_email || 'unbekannt').toLowerCase();
+};
+
+interface DynamicMailboxTab {
+  key: string;
+  label: string;
+  color: string;
+  total: number;
+  unread: number;
+}
+
+/** Erstellt dynamische Tabs aus den tatsächlich vorhandenen Inbox-Items */
+const buildDynamicMailboxTabs = (items: InboxItem[]): DynamicMailboxTab[] => {
+  const buckets = new Map<string, { total: number; unread: number }>();
+
+  for (const item of items) {
+    const key = getItemMailboxKey(item);
+    const existing = buckets.get(key) || { total: 0, unread: 0 };
+    existing.total++;
+    if (!item.is_read) existing.unread++;
+    buckets.set(key, existing);
+  }
+
+  // Sortiere: Spezial-Quellen zuletzt, E-Mail-Adressen alphabetisch
+  const emailKeys = [...buckets.keys()].filter(k => !k.startsWith('__source_')).sort();
+  const sourceKeys = [...buckets.keys()].filter(k => k.startsWith('__source_')).sort();
+  const orderedKeys = [...emailKeys, ...sourceKeys];
+
+  let colorIdx = 0;
+  const tabs: DynamicMailboxTab[] = [{
+    key: 'all',
+    label: 'Alle',
+    color: 'text-foreground',
+    total: items.length,
+    unread: items.filter(i => !i.is_read).length,
+  }];
+
+  for (const key of orderedKeys) {
+    const bucket = buckets.get(key)!;
+    if (key.startsWith('__source_')) {
+      const sourceId = key.replace('__source_', '');
+      const special = SPECIAL_SOURCES[sourceId];
+      tabs.push({
+        key,
+        label: special?.label || sourceId,
+        color: special?.color || MAILBOX_COLOR_PALETTE[colorIdx % MAILBOX_COLOR_PALETTE.length],
+        total: bucket.total,
+        unread: bucket.unread,
+      });
+    } else {
+      tabs.push({
+        key,
+        label: emailToLabel(key),
+        color: MAILBOX_COLOR_PALETTE[colorIdx % MAILBOX_COLOR_PALETTE.length],
+        total: bucket.total,
+        unread: bucket.unread,
+      });
+    }
+    colorIdx++;
+  }
+
+  return tabs;
+};
 
 const PAGE_SIZE = 25;
 
@@ -269,7 +344,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [mailboxFilter, setMailboxFilter] = useState<MailboxFilter>('all');
+  const [mailboxFilter, setMailboxFilter] = useState<string>('all');
 
   const fetchInbox = useCallback(async () => {
     setLoading(true);
@@ -548,31 +623,12 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
   };
 
-  // Helper: Bestimme das Postfach eines Items anhand der Empfänger-Adresse
-  const getItemMailbox = (item: InboxItem): MailboxFilter => {
-    if (item.source === 'support') return 'support';
-    if (item.source === 'contact') return 'contact';
-    const to = (item.to_email || '').toLowerCase();
-    if (to.startsWith('info@')) return 'info';
-    if (to.startsWith('admin@')) return 'admin';
-    if (to.startsWith('kontakt@')) return 'kontakt';
-    if (to.startsWith('rechnung@')) return 'rechnung';
-    return 'other';
-  };
-
-  // Ungelesen-Counter pro Postfach berechnen
-  const mailboxCounts = MAILBOX_TABS.reduce((acc, tab) => {
-    if (tab.key === 'all') {
-      acc[tab.key] = items.filter(i => !i.is_read).length;
-    } else {
-      acc[tab.key] = items.filter(i => !i.is_read && getItemMailbox(i) === tab.key).length;
-    }
-    return acc;
-  }, {} as Record<MailboxFilter, number>);
+  // Dynamische Postfach-Tabs aus den tatsächlich vorhandenen Items generieren
+  const dynamicTabs = buildDynamicMailboxTabs(items);
 
   const filteredItems = items.filter(item => {
-    // Postfach-Filter
-    if (mailboxFilter !== 'all' && getItemMailbox(item) !== mailboxFilter) return false;
+    // Postfach-Filter (dynamisch)
+    if (mailboxFilter !== 'all' && getItemMailboxKey(item) !== mailboxFilter) return false;
     // Status-Filter
     if (filter === "unread" && item.is_read) return false;
     if (filter === "starred" && !item.is_starred) return false;
@@ -919,14 +975,11 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           </div>
         </div>
       </CardHeader>
-      {/* Postfach Sub-Tabs */}
+      {/* Postfach Sub-Tabs (dynamisch generiert) */}
       <div className="px-6 pb-3 -mt-2">
         <div className="flex flex-wrap gap-1.5 p-1 bg-muted/40 rounded-lg">
-          {MAILBOX_TABS.map(tab => {
-            const count = mailboxCounts[tab.key] || 0;
+          {dynamicTabs.map(tab => {
             const isActive = mailboxFilter === tab.key;
-            const totalInMailbox = tab.key === 'all' ? items.length : items.filter(i => getItemMailbox(i) === tab.key).length;
-            if (tab.key !== 'all' && totalInMailbox === 0) return null;
             return (
               <button
                 key={tab.key}
@@ -938,16 +991,16 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 }`}
               >
                 <span className={isActive ? tab.color : ''}>{tab.label}</span>
-                {count > 0 && (
+                {tab.unread > 0 && (
                   <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
                     isActive ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'
                   }`}>
-                    {count}
+                    {tab.unread}
                   </span>
                 )}
-                {count === 0 && tab.key !== 'all' && totalInMailbox > 0 && (
+                {tab.unread === 0 && tab.key !== 'all' && tab.total > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-medium bg-muted-foreground/10 text-muted-foreground">
-                    {totalInMailbox}
+                    {tab.total}
                   </span>
                 )}
               </button>
@@ -962,7 +1015,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           <div className="text-center py-8">
             <Inbox className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
             <p className="text-muted-foreground">
-              {mailboxFilter === 'all' ? 'Keine Nachrichten' : `Keine Nachrichten in ${MAILBOX_TABS.find(t => t.key === mailboxFilter)?.label || 'diesem Postfach'}`}
+              {mailboxFilter === 'all' ? 'Keine Nachrichten' : `Keine Nachrichten in ${dynamicTabs.find(t => t.key === mailboxFilter)?.label || 'diesem Postfach'}`}
             </p>
           </div>
         ) : (
@@ -2526,6 +2579,18 @@ const SYSTEM_TYPE_LABELS: Record<string, string> = {
   auction_summary: 'Auktions-Zusammenfassung',
   favorite_notification: 'Favoriten-Benachrichtigung',
   scheduled: 'Geplant',
+  bid_outbid: 'Überboten',
+  bid_confirmed: 'Gebot bestätigt',
+  expert_valuation: 'Expertenbewertung',
+  bid_won: 'Auktion gewonnen',
+  auction_ending: 'Auktion endet bald',
+  new_auction: 'Neue Auktion',
+  lead_notification: 'Lead-Benachrichtigung',
+  contact_confirmation: 'Kontaktbestätigung',
+  password_reset: 'Passwort zurücksetzen',
+  verification: 'Verifizierung',
+  invoice: 'Rechnung',
+  notification: 'Benachrichtigung',
 };
 
 const SYSTEM_TYPE_COLORS: Record<string, string> = {
@@ -2539,6 +2604,18 @@ const SYSTEM_TYPE_COLORS: Record<string, string> = {
   auction_summary: 'text-indigo-600 border-indigo-600',
   favorite_notification: 'text-pink-600 border-pink-600',
   scheduled: 'text-slate-600 border-slate-600',
+  bid_outbid: 'text-red-500 border-red-500',
+  bid_confirmed: 'text-emerald-600 border-emerald-600',
+  expert_valuation: 'text-violet-600 border-violet-600',
+  bid_won: 'text-green-700 border-green-700',
+  auction_ending: 'text-yellow-600 border-yellow-600',
+  new_auction: 'text-sky-600 border-sky-600',
+  lead_notification: 'text-teal-600 border-teal-600',
+  contact_confirmation: 'text-lime-600 border-lime-600',
+  password_reset: 'text-gray-600 border-gray-600',
+  verification: 'text-blue-500 border-blue-500',
+  invoice: 'text-amber-700 border-amber-700',
+  notification: 'text-gray-500 border-gray-500',
 };
 
 function SystemEmailsTab() {

@@ -169,23 +169,17 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             }
           }
         } else {
-          // Create new session WITH contact data from URL immediately
-          // INSERT is allowed for anonymous users via the existing INSERT policy
-          const { data: newSession, error } = await supabase
-            .from("wizard_sessions")
-            .insert({
-              user_id: user?.id || null,
-              anonymous_id: anonymousId,
-              current_step: 1,
-              max_step_reached: 1,
-              total_steps: 6,
-              status: "in_progress",
-              customer_name: urlContact.customerName,
-              customer_email: urlContact.customerEmail,
-              customer_phone: urlContact.customerPhone,
-            })
-            .select("id")
-            .single();
+          // Create new session via SECURITY DEFINER RPC function
+          // This bypasses RLS so anonymous users can create sessions and get the ID back
+          const { data: newSessionId, error } = await supabase
+            .rpc("create_wizard_session", {
+              p_anonymous_id: anonymousId,
+              p_user_id: user?.id || null,
+              p_customer_name: urlContact.customerName || null,
+              p_customer_email: urlContact.customerEmail || null,
+              p_customer_phone: urlContact.customerPhone || null,
+              p_total_steps: 6,
+            });
 
           if (error) {
             logger.error("Failed to create wizard session:", error);
@@ -193,8 +187,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             return;
           }
 
-          if (newSession) {
-            setSessionId(newSession.id);
+          if (newSessionId) {
+            setSessionId(newSessionId);
           }
         }
       } catch (error) {

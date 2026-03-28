@@ -2738,6 +2738,7 @@ export type Database = {
           tuv_badge_url: string | null
           updated_at: string
           whatsapp_number: string | null
+          lead_forward_email: string | null
         }
         Insert: {
           autobid_enabled?: boolean
@@ -2798,6 +2799,7 @@ export type Database = {
           tuv_badge_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null
+          lead_forward_email?: string | null
         }
         Update: {
           autobid_enabled?: boolean
@@ -2858,6 +2860,7 @@ export type Database = {
           tuv_badge_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null
+          lead_forward_email?: string | null
         }
         Relationships: []
       }

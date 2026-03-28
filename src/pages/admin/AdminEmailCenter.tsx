@@ -36,6 +36,7 @@ import {
   Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
   BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
   ChevronLeft, ChevronRight, Unlink, Zap, Bot, CheckSquare,
+  Settings, Save, MailCheck, Bell, Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -165,7 +166,7 @@ export default function AdminEmailCenter() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <Inbox className="w-4 h-4" />
             Posteingang
@@ -199,6 +200,10 @@ export default function AdminEmailCenter() {
             <BarChart3 className="w-4 h-4" />
             Statistiken
           </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Einstellungen
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox">
@@ -221,6 +226,9 @@ export default function AdminEmailCenter() {
         </TabsContent>
         <TabsContent value="stats">
           <StatsTab />
+        </TabsContent>
+        <TabsContent value="settings">
+          <SettingsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -2706,5 +2714,223 @@ function SystemEmailsTab() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Tab 8: Einstellungen ──────────────────────────────────────────────────
+
+function SettingsTab() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  // Lead-Weiterleitung
+  const [leadForwardEmail, setLeadForwardEmail] = useState("");
+
+  // Benachrichtigungen
+  const [notifyNewAuction, setNotifyNewAuction] = useState(true);
+  const [notifyNewBid, setNotifyNewBid] = useState(true);
+  const [notifyNewRegistration, setNotifyNewRegistration] = useState(true);
+
+  // E-Mail-Absender
+  const [fromEmail, setFromEmail] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("id, lead_forward_email, notify_new_auction, notify_new_bid, notify_new_registration, from_email, contact_email")
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setSettingsId(data.id);
+        setLeadForwardEmail(data.lead_forward_email || "");
+        setNotifyNewAuction(data.notify_new_auction ?? true);
+        setNotifyNewBid(data.notify_new_bid ?? true);
+        setNotifyNewRegistration(data.notify_new_registration ?? true);
+        setFromEmail(data.from_email || "");
+        setContactEmail(data.contact_email || "");
+      }
+    } catch (err) {
+      console.error("Fehler beim Laden der Einstellungen:", err);
+      toast.error("Einstellungen konnten nicht geladen werden");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!settingsId) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("site_settings")
+        .update({
+          lead_forward_email: leadForwardEmail.trim() || null,
+          notify_new_auction: notifyNewAuction,
+          notify_new_bid: notifyNewBid,
+          notify_new_registration: notifyNewRegistration,
+          from_email: fromEmail.trim(),
+          contact_email: contactEmail.trim(),
+        })
+        .eq("id", settingsId);
+
+      if (error) throw error;
+      toast.success("Einstellungen erfolgreich gespeichert");
+    } catch (err) {
+      console.error("Fehler beim Speichern:", err);
+      toast.error("Einstellungen konnten nicht gespeichert werden");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          Einstellungen werden geladen...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Lead-Weiterleitung */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MailCheck className="w-5 h-5 text-primary" />
+            Lead-Weiterleitung
+          </CardTitle>
+          <CardDescription>
+            Fahrzeuganfragen, Wizard-Bewertungen und Wertrechner-Anfragen werden an diese E-Mail-Adresse weitergeleitet, anstatt im Posteingang angezeigt zu werden.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="lead-forward-email">Weiterleitungs-E-Mail</Label>
+            <Input
+              id="lead-forward-email"
+              type="email"
+              placeholder="z.B. r.daban@icloud.com"
+              value={leadForwardEmail}
+              onChange={(e) => setLeadForwardEmail(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Alle Lead-Benachrichtigungen werden an diese Adresse gesendet. Leer lassen, um die Standard-Admin-E-Mail zu verwenden.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Admin-Benachrichtigungen */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" />
+            Admin-Benachrichtigungen
+          </CardTitle>
+          <CardDescription>
+            Steuern Sie, bei welchen Ereignissen der Admin per E-Mail benachrichtigt wird.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="font-medium">Neue Auktion erstellt</p>
+              <p className="text-sm text-muted-foreground">Benachrichtigung, wenn ein Verkäufer eine neue Auktion erstellt</p>
+            </div>
+            <Switch
+              checked={notifyNewAuction}
+              onCheckedChange={setNotifyNewAuction}
+            />
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="font-medium">Neues Gebot abgegeben</p>
+              <p className="text-sm text-muted-foreground">Benachrichtigung bei jedem neuen Gebot auf eine Auktion</p>
+            </div>
+            <Switch
+              checked={notifyNewBid}
+              onCheckedChange={setNotifyNewBid}
+            />
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="font-medium">Neue Registrierung</p>
+              <p className="text-sm text-muted-foreground">Benachrichtigung, wenn sich ein neuer Nutzer registriert</p>
+            </div>
+            <Switch
+              checked={notifyNewRegistration}
+              onCheckedChange={setNotifyNewRegistration}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* E-Mail-Konfiguration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            E-Mail-Konfiguration
+          </CardTitle>
+          <CardDescription>
+            Absender- und Kontakt-E-Mail-Adressen für das System.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="from-email">Absender-E-Mail (From)</Label>
+            <Input
+              id="from-email"
+              type="email"
+              placeholder="noreply@caravanwert.de"
+              value={fromEmail}
+              onChange={(e) => setFromEmail(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Diese Adresse wird als Absender für alle System-E-Mails verwendet.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contact-email">Kontakt-E-Mail</Label>
+            <Input
+              id="contact-email"
+              type="email"
+              placeholder="info@caravanwert.de"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Öffentliche Kontakt-E-Mail-Adresse, die auf der Website angezeigt wird.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Speichern-Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving} size="lg">
+          {saving ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Einstellungen speichern
+        </Button>
+      </div>
+    </div>
   );
 }

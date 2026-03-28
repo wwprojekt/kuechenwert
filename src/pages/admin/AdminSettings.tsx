@@ -1254,7 +1254,7 @@ export default function AdminSettings() {
                 KI-Bewertungssystem
               </CardTitle>
               <CardDescription>
-                Konfigurieren Sie die KI-gest\u00fctzte Wohnmobil-Bewertung. Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
+                Konfigurieren Sie die KI-gestützte Wohnmobil-Bewertung. Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1289,11 +1289,11 @@ export default function AdminSettings() {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Ben\u00f6tigt f\u00fcr die KI-Bewertung im Wertrechner. Erhalten Sie einen Key unter{" "}
+                  Benötigt für die KI-Bewertung im Wertrechner. Erhalten Sie einen Key unter{" "}
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     platform.openai.com/api-keys
                   </a>
-                  . Kosten: ca. 0,001\u20ac pro Bewertung.
+                  . Kosten: ca. 0,001€ pro Bewertung.
                 </p>
               </div>
 
@@ -1301,8 +1301,8 @@ export default function AdminSettings() {
                 <h4 className="font-medium text-sm">So funktioniert das KI-System:</h4>
                 <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
                   <li>Ein Nutzer bewertet sein Wohnmobil im <strong>Wertrechner</strong></li>
-                  <li>Der <strong>Algorithmus</strong> berechnet einen Sch\u00e4tzwert basierend auf Marke, Typ, Alter und Zustand</li>
-                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zus\u00e4tzliche Sch\u00e4tzung</li>
+                  <li>Der <strong>Algorithmus</strong> berechnet einen Schätzwert basierend auf Marke, Typ, Alter und Zustand</li>
+                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zusätzliche Schätzung</li>
                   <li>Sie tragen im Admin-Bereich unter <strong>Leads \u2192 Wertrechner</strong> Ihren fundierten Expertenwert ein</li>
                   <li>Die KI <strong>lernt</strong> aus Ihren Expertenwerten und wird mit jeder Bewertung genauer</li>
                 </ol>
@@ -1314,7 +1314,7 @@ export default function AdminSettings() {
                   <div className="text-sm">
                     <p className="font-medium text-amber-800">Hinweis zur Sicherheit</p>
                     <p className="text-amber-700 mt-1">
-                      Der API-Key wird verschl\u00fcsselt in der Datenbank gespeichert und nur serverseitig in Edge Functions verwendet.
+                      Der API-Key wird verschlüsselt in der Datenbank gespeichert und nur serverseitig in Edge Functions verwendet.
                       Er ist niemals im Frontend sichtbar.
                     </p>
                   </div>

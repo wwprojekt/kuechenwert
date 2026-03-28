@@ -990,12 +990,12 @@ export function ConvertToMotorhomeDialog({
                       onOpenChange(false);
                     }}
                   >
-                    Schlie\u00dfen
+                    Schließen
                   </Button>
                 </div>
                 {inviteMutation.isSuccess && (
                   <p className="text-xs text-green-600 mt-2">
-                    Der Kunde erh\u00e4lt eine E-Mail mit einem Aktivierungslink.
+                    Der Kunde erhält eine E-Mail mit einem Aktivierungslink.
                     Nach dem Klick wird er automatisch eingeloggt und sieht sein Fahrzeug im Dashboard.
                   </p>
                 )}

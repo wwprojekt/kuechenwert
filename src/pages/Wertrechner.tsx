@@ -414,6 +414,7 @@ const Wertrechner = () => {
   const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [aiEstimate, setAiEstimate] = useState<{ value: number; confidence: number; reasoning?: string; trainingCount: number } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [mileageDisplay, setMileageDisplay] = useState(() => {
     if (formData.mileage) {
       return parseInt(formData.mileage, 10).toLocaleString("de-DE");
@@ -509,9 +510,10 @@ const Wertrechner = () => {
       await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
       const txId = (window as any).__lastTransactionId || generateTransactionId('wertrechner');
       await trackWertrechnerLead(`${formData.manufacturer} ${formData.model} ${formData.year}`, txId);
-      toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertsch\u00e4tzung." });
+      toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
 
-      // KI-Sch\u00e4tzung im Hintergrund abrufen (non-blocking)
+      // KI-Schätzung im Hintergrund abrufen (non-blocking)
+      setAiLoading(true);
       (async () => {
         try {
           const { data: aiData } = await supabase.functions.invoke("ai-valuation", {
@@ -535,7 +537,9 @@ const Wertrechner = () => {
             });
           }
         } catch {
-          // KI-Sch\u00e4tzung ist optional, Fehler ignorieren
+          // KI-Schätzung ist optional, Fehler ignorieren
+        } finally {
+          setAiLoading(false);
         }
       })();
     },
@@ -1046,120 +1050,145 @@ const Wertrechner = () => {
                   <p className="text-muted-foreground">Basierend auf Ihren Angaben und aktuellen Marktdaten</p>
                 </div>
 
-                {/* KI-Übernahme: Ab Konfidenz >= 75% und >= 20 Trainingsdaten wird KI-Wert zum Hauptwert */}
-                {aiEstimate && aiEstimate.confidence >= 75 && aiEstimate.trainingCount >= 20 ? (
-                  <>
-                    {/* KI-Wert als Hauptwert */}
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-8 text-center border-2 border-purple-300 shadow-lg">
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-purple-700" />
+                {/* Warte auf KI-Ergebnis bevor Wert angezeigt wird */}
+                {aiLoading ? (
+                  <div className="rounded-xl p-10 text-center bg-gradient-to-br from-primary/5 to-primary/10">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+                        <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <TrendingUp className="w-6 h-6 text-primary" />
                         </div>
-                        <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Expertenbewertung</span>
                       </div>
-                      <div className="text-4xl md:text-5xl font-bold text-purple-700 mb-2">
-                        <AnimatedValue value={Math.round(aiEstimate.value * 0.95)} /> - <AnimatedValue value={Math.round(aiEstimate.value * 1.05)} />
+                      <div>
+                        <p className="text-lg font-semibold text-foreground">Wert wird berechnet...</p>
+                        <p className="text-sm text-muted-foreground mt-1">Unsere KI analysiert vergleichbare Fahrzeuge</p>
                       </div>
-                      <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
-                      <div className="flex items-center justify-center gap-3 text-xs text-purple-500 mt-2">
-                        <span>Konfidenz: {aiEstimate.confidence}%</span>
-                        <span>\u2022</span>
-                        <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
-                      </div>
-                      {aiEstimate.reasoning && (
-                        <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
-                      )}
                     </div>
-                    {/* Algorithmus-Wert als Zusatzinfo */}
-                    <div className="bg-muted/30 rounded-lg p-4 text-center">
-                      <p className="text-xs text-muted-foreground mb-1">Algorithmische Sch\u00e4tzung</p>
-                      <p className="text-lg font-semibold text-muted-foreground">
-                        {formatCurrency(estimatedValue.min)} - {formatCurrency(estimatedValue.max)}
-                      </p>
-                    </div>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    {/* Algorithmus-Wert als Hauptwert (Standard) */}
-                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center">
-                      <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                        <AnimatedValue value={estimatedValue.min} /> - <AnimatedValue value={estimatedValue.max} />
-                      </div>
-                      <p className="text-muted-foreground">Gesch\u00e4tzter Marktwert</p>
-                    </div>
-
-                    {/* KI-Sch\u00e4tzung als Zusatzinfo wenn verf\u00fcgbar aber noch nicht \u00fcbernommen */}
-                    {aiEstimate && (
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 text-center border border-purple-200">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center">
-                            <TrendingUp className="w-4 h-4 text-purple-700" />
+                    {/* Hauptwert-Anzeige */}
+                    {aiEstimate && aiEstimate.confidence >= 75 && aiEstimate.trainingCount >= 20 ? (
+                      <>
+                        {/* KI-Wert als Hauptwert */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
+                          <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                              <TrendingUp className="w-5 h-5 text-teal-700" />
+                            </div>
+                            <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">Expertenbewertung</span>
                           </div>
-                          <span className="text-sm font-semibold text-purple-700">KI-gest\u00fctzte Bewertung</span>
+                          <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
+                            <AnimatedValue value={Math.round(aiEstimate.value * 0.95)} /> &ndash; <AnimatedValue value={Math.round(aiEstimate.value * 1.05)} />
+                          </div>
+                          <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
+                          <div className="flex items-center justify-center gap-3 text-xs text-teal-600 mt-3">
+                            <span className="inline-flex items-center gap-1"><Shield className="w-3 h-3" /> Konfidenz: {aiEstimate.confidence}%</span>
+                            <span>•</span>
+                            <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                          </div>
+                          {aiEstimate.reasoning && (
+                            <p className="text-xs text-teal-500 mt-3 italic max-w-md mx-auto">{aiEstimate.reasoning}</p>
+                          )}
                         </div>
-                        <div className="text-3xl font-bold text-purple-700 mb-1">
-                          {aiEstimate.value.toLocaleString("de-DE")} \u20ac
+                        {/* Algorithmische Schätzung als Zusatzinfo */}
+                        <div className="bg-muted/30 rounded-lg p-4 text-center">
+                          <p className="text-xs text-muted-foreground mb-1">Algorithmische Schätzung</p>
+                          <p className="text-lg font-semibold text-muted-foreground">
+                            {formatCurrency(estimatedValue.min)} &ndash; {formatCurrency(estimatedValue.max)}
+                          </p>
                         </div>
-                        <div className="flex items-center justify-center gap-3 text-xs text-purple-500">
-                          <span>Konfidenz: {aiEstimate.confidence}%</span>
-                          <span>\u2022</span>
-                          <span>Basierend auf {aiEstimate.trainingCount} Expertenbewertungen</span>
+                      </>
+                    ) : (
+                      <>
+                        {/* Algorithmus-Wert als Hauptwert */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
+                          <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                              <Calculator className="w-5 h-5 text-teal-700" />
+                            </div>
+                            <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">Wertschätzung</span>
+                          </div>
+                          <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
+                            <AnimatedValue value={estimatedValue.min} /> &ndash; <AnimatedValue value={estimatedValue.max} />
+                          </div>
+                          <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
                         </div>
-                        {aiEstimate.reasoning && (
-                          <p className="text-xs text-purple-400 mt-2 italic">{aiEstimate.reasoning}</p>
+
+                        {/* KI-Schätzung als Zusatzinfo wenn verfügbar */}
+                        {aiEstimate && (
+                          <div className="bg-muted/30 rounded-lg p-4 text-center">
+                            <p className="text-xs text-muted-foreground mb-1">KI-gestützte Bewertung</p>
+                            <p className="text-lg font-semibold text-muted-foreground">
+                              {Math.round(aiEstimate.value * 0.95).toLocaleString("de-DE")} € &ndash; {Math.round(aiEstimate.value * 1.05).toLocaleString("de-DE")} €
+                            </p>
+                            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span>Konfidenz: {aiEstimate.confidence}%</span>
+                              <span>•</span>
+                              <span>{aiEstimate.trainingCount} Vergleichsdaten</span>
+                            </div>
+                          </div>
                         )}
-                      </div>
+                      </>
                     )}
                   </>
                 )}
 
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
-                  <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground">
-                    Dies ist eine erste Sch\u00e4tzung. Der tats\u00e4chliche Wert kann je nach Ausstattung,
-                    Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden
-                    sich bei Ihnen f\u00fcr eine genauere Bewertung.
-                  </p>
-                </div>
+                {!aiLoading && (
+                  <>
+                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
+                      <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-muted-foreground">
+                        Dies ist eine erste Schätzung. Der tatsächliche Wert kann je nach Ausstattung,
+                        Wartungshistorie und individuellen Faktoren variieren. Unsere Experten melden
+                        sich bei Ihnen für eine genauere Bewertung.
+                      </p>
+                    </div>
 
-                <div className="border-t pt-8 text-center space-y-4">
-                  <p className="text-muted-foreground">
-                    Vielen Dank, {formData.name.split(" ")[0]}! Wir melden uns in Kürze bei Ihnen.
-                  </p>
-                  <Link to="/verkaufen">
-                    <Button className="gradient-hero shadow-lg hover:shadow-xl transition-shadow" size="lg">
-                      Jetzt kostenlos verkaufen
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
+                    <div className="border-t pt-8 text-center space-y-4">
+                      <p className="text-muted-foreground">
+                        Vielen Dank, {formData.name.split(" ")[0]}! Wir melden uns in Kürze bei Ihnen.
+                      </p>
+                      <Link to="/verkaufen">
+                        <Button className="gradient-hero shadow-lg hover:shadow-xl transition-shadow" size="lg">
+                          Jetzt kostenlos verkaufen
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
 
-                {/* Summary */}
-                <div className="border-t pt-6">
-                  <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <span className="text-muted-foreground">Typ:</span>
-                    <span className="font-medium">{BODY_TYPES.find((b) => b.value === formData.bodyType)?.label}</span>
-                    {formData.manufacturer && (
-                      <>
-                        <span className="text-muted-foreground">Hersteller:</span>
-                        <span className="font-medium">{formData.manufacturer}</span>
-                      </>
-                    )}
-                    {formData.model && (
-                      <>
-                        <span className="text-muted-foreground">Modell:</span>
-                        <span className="font-medium">{formData.model}</span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground">Baujahr:</span>
-                    <span className="font-medium">{formData.year}</span>
-                    <span className="text-muted-foreground">Kilometerstand:</span>
-                    <span className="font-medium">{parseInt(formData.mileage, 10).toLocaleString("de-DE")} km</span>
-                    <span className="text-muted-foreground">Zustand:</span>
-                    <span className="font-medium">{CONDITIONS.find((c) => c.value === formData.condition)?.label}</span>
-                  </div>
-                </div>
+                    {/* Zusammenfassung */}
+                    <div className="border-t pt-6">
+                      <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <span className="text-muted-foreground">Typ:</span>
+                        <span className="font-medium">{BODY_TYPES.find((b) => b.value === formData.bodyType)?.label}</span>
+                        {formData.manufacturer && (
+                          <>
+                            <span className="text-muted-foreground">Hersteller:</span>
+                            <span className="font-medium">{formData.manufacturer}</span>
+                          </>
+                        )}
+                        {formData.model && (
+                          <>
+                            <span className="text-muted-foreground">Modell:</span>
+                            <span className="font-medium">{formData.model}</span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground">Baujahr:</span>
+                        <span className="font-medium">{formData.year}</span>
+                        <span className="text-muted-foreground">Kilometerstand:</span>
+                        <span className="font-medium">{parseInt(formData.mileage, 10).toLocaleString("de-DE")} km</span>
+                        <span className="text-muted-foreground">Zustand:</span>
+                        <span className="font-medium">{CONDITIONS.find((c) => c.value === formData.condition)?.label}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

@@ -509,9 +509,9 @@ const Kaufen = () => {
                     <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
                       <strong>Aktuelle Filter:</strong>{' '}
                       {filters.brand ? `Marke: ${filters.brand}` : 'Alle Marken'}
-                      {filters.vehicleTypes.length > 0 ? ` \u2022 Typ: ${filters.vehicleTypes.join(', ')}` : ''}
-                      {filters.priceRange[1] < 500000 ? ` \u2022 Max: \u20ac${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
-                      {filters.yearRange[0] > 1980 ? ` \u2022 Ab ${filters.yearRange[0]}` : ''}
+                      {filters.vehicleTypes.length > 0 ? ` • Typ: ${filters.vehicleTypes.join(', ')}` : ''}
+                      {filters.priceRange[1] < 500000 ? ` • Max: €${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
+                      {filters.yearRange[0] > 1980 ? ` • Ab ${filters.yearRange[0]}` : ''}
                     </div>
                     <div className="flex gap-2 justify-end">
                       <Button

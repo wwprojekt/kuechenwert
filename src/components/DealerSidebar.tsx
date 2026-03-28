@@ -54,7 +54,7 @@ const menuItems: MenuItem[] = [
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
   { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
-  { title: "Suchauftr\u00e4ge", url: "/dashboard/search-alerts", icon: Search },
+  { title: "Suchaufträge", url: "/dashboard/search-alerts", icon: Search },
   { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare },
   { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },

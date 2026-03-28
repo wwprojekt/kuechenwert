@@ -147,7 +147,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus H\u00e4ndler-Registrierung importiert",
+            notes: "Aus Händler-Registrierung importiert",
           });
         }
         if (data.trade_license_document_url) {
@@ -158,7 +158,7 @@ export default function AdminDealerDetail() {
             ? (filename.includes("back") ? "ausweis_back" : filename.includes("front") ? "ausweis_front" : "ausweis_back")
             : "trade_license";
           const docName = isAusweis
-            ? (docType === "ausweis_back" ? "Ausweis \u2013 R\u00fcckseite" : "Ausweis \u2013 Vorderseite")
+            ? (docType === "ausweis_back" ? "Ausweis – Rückseite" : "Ausweis – Vorderseite")
             : "Gewerbeschein";
           fallbackDocs.push({
             id: `fallback-trade-license-${data.id}`,
@@ -173,7 +173,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus H\u00e4ndler-Registrierung importiert",
+            notes: "Aus Händler-Registrierung importiert",
           });
         }
         if (data.hrb_document_url) {
@@ -190,7 +190,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus H\u00e4ndler-Registrierung importiert",
+            notes: "Aus Händler-Registrierung importiert",
           });
         }
         effectiveLegalDocs = fallbackDocs;
@@ -691,7 +691,7 @@ export default function AdminDealerDetail() {
                       <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
                         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-200">
                           <AlertTriangle className="w-4 h-4" />
-                          Erforderliche Dokumente f\u00fcr Freischaltung
+                          Erforderliche Dokumente für Freischaltung
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {["gewerbenachweis", "ausweis_front", "ausweis_back"].map((reqType) => {
@@ -761,7 +761,7 @@ export default function AdminDealerDetail() {
                                       {isPostReg && (
                                         <Badge variant="outline" className="text-[10px] border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300">
                                           <UploadIcon className="w-2.5 h-2.5 mr-1" />
-                                          Nachtr\u00e4glich hochgeladen
+                                          Nachträglich hochgeladen
                                         </Badge>
                                       )}
                                     </div>
@@ -771,11 +771,11 @@ export default function AdminDealerDetail() {
                                       )}
                                       <p>Hochgeladen: {formatDate(doc.uploaded_at)}</p>
                                       {doc.file_size && (
-                                        <p>Gr\u00f6\u00dfe: {(doc.file_size / 1024).toFixed(0)} KB</p>
+                                        <p>Größe: {(doc.file_size / 1024).toFixed(0)} KB</p>
                                       )}
                                       {doc.verified_at && (
                                         <p className="text-green-600 dark:text-green-400">
-                                          Gepr\u00fcft am: {formatDate(doc.verified_at)}
+                                          Geprüft am: {formatDate(doc.verified_at)}
                                         </p>
                                       )}
                                     </div>
@@ -812,7 +812,7 @@ export default function AdminDealerDetail() {
                                       variant="ghost"
                                       size="sm"
                                       className="h-8 w-8 p-0"
-                                      title="Hinweis hinzuf\u00fcgen"
+                                      title="Hinweis hinzufügen"
                                       onClick={() => {
                                         setDocNoteDialogId(doc.id);
                                         setDocNote(doc.notes || "");
@@ -859,7 +859,7 @@ export default function AdminDealerDetail() {
                         <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>Keine Dokumente hochgeladen</p>
                         {dealer.status === "pending" && (
-                          <p className="text-sm mt-2 text-amber-600">Der H\u00e4ndler hat noch keine Dokumente eingereicht.</p>
+                          <p className="text-sm mt-2 text-amber-600">Der Händler hat noch keine Dokumente eingereicht.</p>
                         )}
                       </div>
                     )}

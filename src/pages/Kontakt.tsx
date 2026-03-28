@@ -261,7 +261,7 @@ const Kontakt = () => {
                   <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-6">
                     <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-3">Vielen Dank f\u00fcr Ihre Nachricht!</h3>
+                  <h3 className="text-2xl font-bold mb-3">Vielen Dank für Ihre Nachricht!</h3>
                   <p className="text-muted-foreground mb-6">
                     Wir haben Ihre Anfrage erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
                   </p>

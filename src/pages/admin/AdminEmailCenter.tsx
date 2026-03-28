@@ -1299,9 +1299,9 @@ function ComposeTab() {
               id="signature-toggle"
             />
             <Label htmlFor="signature-toggle" className="cursor-pointer flex-1">
-              <span className="font-medium">E-Mail-Signatur anh\u00e4ngen</span>
+              <span className="font-medium">E-Mail-Signatur anhängen</span>
               <p className="text-xs text-muted-foreground">
-                {signature ? 'Signatur wird automatisch an jede E-Mail angeh\u00e4ngt' : 'Noch keine Signatur konfiguriert'}
+                {signature ? 'Signatur wird automatisch an jede E-Mail angehängt' : 'Noch keine Signatur konfiguriert'}
               </p>
             </Label>
             <Button variant="outline" size="sm" onClick={() => setShowSignature(true)}>

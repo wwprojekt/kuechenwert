@@ -1,0 +1,209 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Download, Car, Euro, Calendar, Loader2, FolderOpen } from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import { openPrivateDocument } from "@/lib/storageUtils";
+import { useToast } from "@/hooks/use-toast";
+
+interface PurchaseContract {
+  id: string;
+  contract_number: string;
+  sale_price: number;
+  status: string;
+  contract_url: string | null;
+  storage_path: string | null;
+  buyer_name: string | null;
+  vehicle_description: string | null;
+  created_at: string | null;
+  motorhome_id: string | null;
+}
+
+export default function MyDocuments() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [contracts, setContracts] = useState<PurchaseContract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const loadDocuments = async () => {
+      setLoading(true);
+      try {
+        // Lade Kaufverträge für den Verkäufer
+        const { data, error } = await supabase
+          .from("purchase_contracts")
+          .select("id, contract_number, sale_price, status, contract_url, storage_path, buyer_name, vehicle_description, created_at, motorhome_id")
+          .eq("seller_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setContracts((data as PurchaseContract[]) || []);
+      } catch (error) {
+        console.error("Error loading documents:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, [user]);
+
+  const handleDownload = async (contract: PurchaseContract) => {
+    try {
+      if (contract.storage_path) {
+        await openPrivateDocument(contract.storage_path, "purchase-contracts");
+      } else if (contract.contract_url) {
+        await openPrivateDocument(contract.contract_url, "purchase-contracts");
+      } else {
+        toast({
+          title: "Dokument nicht verfügbar",
+          description: "Der Kaufvertrag ist derzeit nicht zum Download verfügbar. Bitte kontaktieren Sie den Support.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error downloading contract:", error);
+      toast({
+        title: "Fehler beim Download",
+        description: "Der Kaufvertrag konnte nicht heruntergeladen werden.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return (
+          <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
+            Aktiv
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="outline" className="text-red-600 border-red-600 gap-1">
+            Storniert
+          </Badge>
+        );
+      case "amended":
+        return (
+          <Badge variant="outline" className="text-amber-600 border-amber-600 gap-1">
+            Geändert
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold">Meine Dokumente</h1>
+        <p className="text-muted-foreground mt-1">
+          Hier finden Sie Ihre Kaufverträge nach erfolgreichem Verkauf.
+        </p>
+      </div>
+
+      {/* Kaufverträge */}
+      {contracts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FolderOpen className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Noch keine Dokumente</h3>
+            <p className="text-muted-foreground max-w-md">
+              Nach einem erfolgreichen Verkauf wird Ihr Kaufvertrag hier automatisch hinterlegt. 
+              Sie erhalten den Kaufvertrag zusätzlich per E-Mail.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {contracts.map((contract) => (
+            <Card key={contract.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Vertrag-Info */}
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold">Kaufvertrag {contract.contract_number}</h3>
+                        {getStatusBadge(contract.status)}
+                      </div>
+                      
+                      {contract.vehicle_description && (
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Car className="w-3.5 h-3.5" />
+                          <span>{contract.vehicle_description}</span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        {contract.sale_price && (
+                          <div className="flex items-center gap-1">
+                            <Euro className="w-3.5 h-3.5" />
+                            <span>{Number(contract.sale_price).toLocaleString("de-DE")} €</span>
+                          </div>
+                        )}
+                        {contract.created_at && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{format(new Date(contract.created_at), "dd. MMMM yyyy", { locale: de })}</span>
+                          </div>
+                        )}
+                        {contract.buyer_name && (
+                          <span>Käufer: {contract.buyer_name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Download Button */}
+                  <Button
+                    variant="outline"
+                    className="flex-shrink-0 w-full sm:w-auto"
+                    onClick={() => handleDownload(contract)}
+                    disabled={!contract.contract_url && !contract.storage_path}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF herunterladen
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Hinweis */}
+      <Card className="bg-muted/30 border-dashed">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>Hinweis:</strong> Kaufverträge werden automatisch nach Auktionsende erstellt und Ihnen per E-Mail zugesandt. 
+            Hier können Sie Ihre Verträge jederzeit erneut herunterladen.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

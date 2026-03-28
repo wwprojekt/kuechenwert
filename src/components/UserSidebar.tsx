@@ -54,7 +54,8 @@ const baseMenuItems: MenuItem[] = [
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
   { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: ['seller'] },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [] },
-  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: ['seller'] },
+  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, showForRoles: ['dealer'] },
+  { title: "Dokumente", url: "/dashboard/documents", icon: FileText, showForRoles: ['seller'] },
   { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
 ];
 

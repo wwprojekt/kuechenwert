@@ -45,6 +45,7 @@ const MyFavorites = lazyRetry(() => import('@/pages/dashboard/MyFavorites'));
 const MyKaufchancen = lazyRetry(() => import('@/pages/dashboard/MyKaufchancen'));
 const MyMessages = lazyRetry(() => import('@/pages/dashboard/MyMessages'));
 const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
+const MyDocuments = lazyRetry(() => import('@/pages/dashboard/MyDocuments'));
 const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
 const DealerSettings = lazyRetry(() => import('@/pages/dealer/DealerSettings'));
 const DealerInstantBuy = lazyRetry(() => import('@/pages/dealer/DealerInstantBuy'));
@@ -249,7 +250,7 @@ const UserDashboardWrapper = () => {
         
         {/* Seller-relevant routes */}
         <Route path="messages" element={<LazyPage Component={MyMessages} />} />
-        <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
+        <Route path="documents" element={<LazyPage Component={MyDocuments} />} />
         <Route path="search-alerts" element={<LazyPage Component={SearchAlerts} />} />
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
         

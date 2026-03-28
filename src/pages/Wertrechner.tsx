@@ -1143,12 +1143,49 @@ const Wertrechner = () => {
                       <p className="text-muted-foreground">
                         Vielen Dank, {formData.name.split(" ")[0]}! Wir melden uns in Kürze bei Ihnen.
                       </p>
-                      <Link to="/verkaufen">
+                      <p className="text-sm font-medium text-foreground">
+                        Möchten Sie direkt ein verbindliches Angebot erhalten?
+                      </p>
+                      <Link
+                        to={(() => {
+                          // Mapping: Wertrechner bodyType -> Wizard bodyType
+                          const bodyTypeMap: Record<string, string> = {
+                            integriert: "Vollintegriert",
+                            teilintegriert: "Teilintegriert",
+                            alkoven: "Alkoven",
+                            kastenwagen: "Kastenwagen",
+                            campingbus: "Campingbus",
+                          };
+                          // Mapping: Wertrechner condition -> Wizard condition
+                          const conditionMap: Record<string, string> = {
+                            new: "Neuwertig",
+                            excellent: "Sehr gut",
+                            good: "Gut",
+                            fair: "Befriedigend",
+                            poor: "Reparaturbedürftig",
+                          };
+                          const params = new URLSearchParams();
+                          params.set("source", "wertrechner");
+                          if (formData.bodyType) params.set("bodyType", bodyTypeMap[formData.bodyType] || formData.bodyType);
+                          if (formData.manufacturer) params.set("manufacturer", formData.manufacturer);
+                          if (formData.model) params.set("model", formData.model);
+                          if (formData.year) params.set("year", formData.year.toString());
+                          if (formData.mileage) params.set("mileage", formData.mileage.toString());
+                          if (formData.condition) params.set("condition", conditionMap[formData.condition] || formData.condition);
+                          if (formData.name) params.set("customerName", formData.name);
+                          if (formData.email) params.set("customerEmail", formData.email);
+                          if (formData.phone) params.set("customerPhone", formData.phone);
+                          return `/verkaufen/wizard?${params.toString()}`;
+                        })()}
+                      >
                         <Button className="gradient-hero shadow-lg hover:shadow-xl transition-shadow" size="lg">
-                          Jetzt kostenlos verkaufen
+                          Jetzt verbindliches Angebot erhalten
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Ihre Daten werden automatisch übernommen – kein erneutes Ausfüllen nötig
+                      </p>
                     </div>
 
                     {/* Zusammenfassung */}

@@ -6,8 +6,10 @@ import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Check, Shield, Clock, Users } from "lucide-react";
-import { VehicleStep } from "@/components/wizard/VehicleStep";
+import { ChevronLeft, ChevronRight, Check, Shield, Users } from "lucide-react";
+import { VehicleTypeStep } from "@/components/wizard/VehicleTypeStep";
+import { VehicleInfoStep } from "@/components/wizard/VehicleInfoStep";
+import { QuickContactStep } from "@/components/wizard/QuickContactStep";
 import { DetailsStep } from "@/components/wizard/DetailsStep";
 import { EquipmentStep } from "@/components/wizard/EquipmentStep";
 import { PhotosStep } from "@/components/wizard/PhotosStep";
@@ -18,11 +20,12 @@ import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted 
 import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
 
 const steps = [
-  { id: 1, name: "Fahrzeug", description: "Was möchten Sie verkaufen?" },
-  { id: 2, name: "Details", description: "Technische Angaben" },
-  { id: 3, name: "Ausstattung", description: "Optional" },
-  { id: 4, name: "Fotos", description: "Optional" },
-  { id: 5, name: "Kontakt", description: "Angebot erhalten" },
+  { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
+  { id: 2, name: "Fahrzeugdaten", description: "Hersteller, Modell & mehr" },
+  { id: 3, name: "Kontakt", description: "Fortschritt speichern" },
+  { id: 4, name: "Details", description: "Technische Angaben" },
+  { id: 5, name: "Ausstattung", description: "Optional" },
+  { id: 6, name: "Abschluss", description: "Angebot erhalten" },
 ];
 
 const VerkaufenWizard = () => {
@@ -42,11 +45,15 @@ const VerkaufenWizard = () => {
     const customerName = searchParams.get('customerName');
     const customerEmail = searchParams.get('customerEmail');
     const customerPhone = searchParams.get('customerPhone');
+    const year = searchParams.get('year');
+    const mileage = searchParams.get('mileage');
+    const condition = searchParams.get('condition');
+    const source = searchParams.get('source');
     
     const resumeStep = searchParams.get('step');
     if (resumeStep && !hasRestoredRef.current) {
       const stepNum = parseInt(resumeStep, 10);
-      if (stepNum >= 1 && stepNum <= 5) {
+      if (stepNum >= 1 && stepNum <= 6) {
         setCurrentStep(stepNum);
         hasRestoredRef.current = true;
       }
@@ -60,9 +67,26 @@ const VerkaufenWizard = () => {
     if (customerName) updates.customerName = customerName;
     if (customerEmail) updates.customerEmail = customerEmail;
     if (customerPhone) updates.customerPhone = customerPhone;
+    if (year) updates.year = parseInt(year);
+    if (mileage) updates.mileage = parseInt(mileage);
+    if (condition) updates.condition = condition;
     
     if (Object.keys(updates).length > 0) {
       updateFormData(updates);
+    }
+
+    // Wenn Daten vom Wertrechner kommen (bodyType + manufacturer vorhanden),
+    // direkt zu Step 2 springen (Fahrzeugdaten vervollständigen)
+    if (source === 'wertrechner' && bodyType && !hasRestoredRef.current) {
+      // Wenn auch manufacturer, model, year, mileage, condition vorhanden → Step 3
+      if (manufacturer && model && year && mileage && condition) {
+        setCurrentStep(3);
+      } else if (manufacturer) {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(2);
+      }
+      hasRestoredRef.current = true;
     }
   }, [searchParams, updateFormData]);
 
@@ -93,8 +117,23 @@ const VerkaufenWizard = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentStep, formData, steps.length, saveProgress]);
 
+  // Capture lead when user reaches Step 3 (Quick Contact) and provides email
+  useEffect(() => {
+    if (currentStep >= 3 && formData.customerEmail && formData.customerName) {
+      captureOrUpdateLead({
+        name: formData.customerName,
+        email: formData.customerEmail,
+        manufacturer: formData.manufacturer,
+        model: formData.model,
+        bodyType: formData.bodyType,
+        source: 'wizard_quick_contact',
+        pageUrl: window.location.pathname,
+      });
+    }
+  }, [currentStep, formData.customerEmail, formData.customerName]);
+
   // Ungerade Prozentwerte wirken authentischer und weniger konstruiert
-  const progressMap: Record<number, number> = { 1: 17, 2: 39, 3: 58, 4: 76, 5: 100 };
+  const progressMap: Record<number, number> = { 1: 12, 2: 29, 3: 45, 4: 62, 5: 79, 6: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
@@ -120,7 +159,7 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
-    const isValid = await validateStep(5);
+    const isValid = await validateStep(6);
     if (!isValid) return;
 
     // Update contact data in session before submit
@@ -143,14 +182,16 @@ const VerkaufenWizard = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <VehicleStep formData={formData} updateFormData={updateFormData} />;
+        return <VehicleTypeStep formData={formData} updateFormData={updateFormData} />;
       case 2:
-        return <DetailsStep formData={formData} updateFormData={updateFormData} />;
+        return <VehicleInfoStep formData={formData} updateFormData={updateFormData} />;
       case 3:
-        return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
+        return <QuickContactStep formData={formData} updateFormData={updateFormData} />;
       case 4:
-        return <PhotosStep formData={formData} updateFormData={updateFormData} />;
+        return <DetailsStep formData={formData} updateFormData={updateFormData} />;
       case 5:
+        return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
+      case 6:
         return <ContactStep formData={formData} updateFormData={updateFormData} onPasswordChange={(pw) => { registerPasswordRef.current = pw; }} />;
       default:
         return null;
@@ -159,6 +200,13 @@ const VerkaufenWizard = () => {
 
   // Step indicator labels for compact progress bar
   const isLastStep = currentStep === steps.length;
+
+  // Determine button labels based on step
+  const getNextButtonLabel = () => {
+    if (currentStep === 5) return "Weiter (optional)";
+    if (currentStep === 3) return "Weiter";
+    return "Weiter";
+  };
 
   return (
     <PageLayout
@@ -230,7 +278,7 @@ const VerkaufenWizard = () => {
                       onClick={handleNext}
                       className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
                     >
-                      {currentStep === 3 || currentStep === 4 ? "Weiter (optional)" : "Weiter"}
+                      {getNextButtonLabel()}
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                   )}
@@ -267,10 +315,6 @@ const VerkaufenWizard = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Angebot innerhalb von 24 Stunden</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>Über 500 geprüfte Händler</span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -298,12 +342,16 @@ const VerkaufenWizard = () => {
                   </p>
                 </Card>
 
-                {/* Time Estimate */}
-                <Card className="p-4">
+                {/* Positive Verstärkung statt Zeitschätzung */}
+                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      Geschätzte Restzeit: {Math.max(1, (steps.length - currentStep))} Min.
+                    <Check className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                      {currentStep <= 2
+                        ? "Nur noch wenige Angaben bis zum Angebot"
+                        : currentStep <= 4
+                        ? "Fast geschafft – gleich erhalten Sie Ihr Angebot"
+                        : "Letzter Schritt – Ihr Angebot wartet!"}
                     </span>
                   </div>
                 </Card>

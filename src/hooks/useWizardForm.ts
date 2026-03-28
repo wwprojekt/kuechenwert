@@ -13,13 +13,16 @@ import type { Database } from "@/integrations/supabase/types";
 const STORAGE_KEY = "verkaufen_wizard_draft";
 
 export interface WizardFormData {
-  // Step 1: Vehicle
+  // Step 1: Vehicle Type
+  vehicleType: string; // "Wohnmobil" | "Wohnwagen"
+  bodyType: string;
+
+  // Step 2: Vehicle Info
   manufacturer: string;
   model: string;
   year: number | null;
   mileage: number | null;
   condition: string;
-  bodyType: string;
   description: string;
 
   // Step 2: Technical Details
@@ -107,12 +110,13 @@ export interface WizardFormData {
 }
 
 const initialFormData: WizardFormData = {
+  vehicleType: "Wohnmobil",
+  bodyType: "",
   manufacturer: "",
   model: "",
   year: null,
   mileage: null,
   condition: "",
-  bodyType: "",
   description: "",
   
   fuel_type: undefined,
@@ -189,11 +193,22 @@ const initialFormData: WizardFormData = {
 };
 
 // =============================================
-// Validation Schemas for the new 5-step wizard
+// Validation Schemas for the 6-step wizard
 // =============================================
+// Step 1: Vehicle Type (bodyType als Tile-Selection)
+// Step 2: Vehicle Info (manufacturer, model, year, mileage, condition)
+// Step 3: Quick Contact (name + email - Lead-Sicherung)
+// Step 4: Technical Details (fuel_type, transmission, seats, sleeping_places, defects)
+// Step 5: Equipment (optional)
+// Step 6: Final Contact & Sale Channel (saleChannel, phone, description, account)
 
-// Step 1: Vehicle (all required)
+// Step 1: Vehicle Type (Aufbauart als Tile-Selection)
 const step1Schema = z.object({
+  bodyType: z.string().min(1, "Bitte wählen Sie eine Aufbauart"),
+});
+
+// Step 2: Vehicle Info (Hersteller, Modell, Baujahr, KM, Zustand)
+const step2Schema = z.object({
   manufacturer: z.string().min(1, "Hersteller ist erforderlich"),
   model: z.string().min(1, "Modell ist erforderlich"),
   year: z.number({ required_error: "Baujahr ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie ein Baujahr" })
@@ -202,11 +217,16 @@ const step1Schema = z.object({
   mileage: z.number({ required_error: "Kilometerstand ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie den Kilometerstand ein" })
     .min(0, "Kilometerstand darf nicht negativ sein"),
   condition: z.string().min(1, "Zustand ist erforderlich"),
-  bodyType: z.string().min(1, "Aufbauart ist erforderlich"),
 });
 
-// Step 2: Details (fuel_type, transmission, seats, sleeping_places required; defects validated)
-const step2Schema = z.object({
+// Step 3: Quick Contact (Name + E-Mail - Lead-Sicherung)
+const step3Schema = z.object({
+  customerName: z.string().min(1, "Name ist erforderlich"),
+  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+});
+
+// Step 4: Technical Details (fuel_type, transmission, seats, sleeping_places required; defects validated)
+const step4Schema = z.object({
   fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
   transmission: z.string().min(1, "Getriebe ist erforderlich"),
   seats_with_seatbelts: z.number({ required_error: "Sitzplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Sitzplätze" })
@@ -222,14 +242,11 @@ const step2Schema = z.object({
   { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
 );
 
-// Step 3: Equipment (all optional - no validation needed)
-const step3Schema = z.object({});
+// Step 5: Equipment (all optional - no validation needed)
+const step5Schema = z.object({});
 
-// Step 4: Photos (optional - user can skip)
-const step4Schema = z.object({});
-
-// Step 5: Contact & Sale Channel (contact required, sale channel required)
-const step5Schema = z.object({
+// Step 6: Final Contact & Sale Channel (saleChannel + phone required, name+email already captured)
+const step6Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -279,16 +296,26 @@ export const useWizardForm = () => {
       switch (step) {
         case 1:
           step1Schema.parse({
-            manufacturer: formData.manufacturer,
-            model: formData.model,
-            year: formData.year,
-            mileage: formData.mileage,
-            condition: formData.condition,
             bodyType: formData.bodyType,
           });
           break;
         case 2:
           step2Schema.parse({
+            manufacturer: formData.manufacturer,
+            model: formData.model,
+            year: formData.year,
+            mileage: formData.mileage,
+            condition: formData.condition,
+          });
+          break;
+        case 3:
+          step3Schema.parse({
+            customerName: formData.customerName,
+            customerEmail: formData.customerEmail,
+          });
+          break;
+        case 4:
+          step4Schema.parse({
             fuel_type: formData.fuel_type,
             transmission: formData.transmission,
             seats_with_seatbelts: formData.seats_with_seatbelts,
@@ -297,14 +324,11 @@ export const useWizardForm = () => {
             known_defects: formData.known_defects,
           });
           break;
-        case 3:
-          step3Schema.parse({});
-          break;
-        case 4:
-          step4Schema.parse({});
-          break;
         case 5:
-          step5Schema.parse({
+          step5Schema.parse({});
+          break;
+        case 6:
+          step6Schema.parse({
             saleChannel: formData.saleChannel,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
@@ -389,9 +413,9 @@ export const useWizardForm = () => {
             customer_name: formData.customerName || null,
             customer_email: formData.customerEmail || null,
             customer_phone: formData.customerPhone || null,
-            current_step: 5,
-            max_step_reached: 5,
-            total_steps: 5,
+            current_step: 6,
+            max_step_reached: 6,
+            total_steps: 6,
             step_name: 'completed',
             form_data: formDataForStorage,
             status: 'completed',

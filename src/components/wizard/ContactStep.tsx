@@ -1,3 +1,12 @@
+/**
+ * ContactStep - Letzter Step des Wizards (Step 6)
+ * 
+ * Enthält: Verkaufsweg, Telefonnummer, Beschreibung und optionale Konto-Erstellung.
+ * Name und E-Mail werden bereits in Step 3 (QuickContactStep) erfasst.
+ * 
+ * Dadurch ist der Lead bereits gesichert, bevor der Nutzer diesen Step erreicht.
+ */
+
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -28,7 +37,7 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
-        // Prefill aus Auth-Daten
+        // Prefill aus Auth-Daten falls noch nicht gesetzt
         if (user.email && !formData.customerEmail) {
           updateFormData({ customerEmail: user.email });
         }
@@ -36,6 +45,9 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         const lastName = user.user_metadata?.last_name || "";
         if ((firstName || lastName) && !formData.customerName) {
           updateFormData({ customerName: `${firstName} ${lastName}`.trim() });
+        }
+        if (user.phone && !formData.customerPhone) {
+          updateFormData({ customerPhone: user.phone });
         }
       }
     };
@@ -61,10 +73,10 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
           <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          Fast geschafft – Ihre Kontaktdaten
+          Letzter Schritt – Angebot erhalten
         </h2>
         <p className="text-muted-foreground">
-          Damit wir Ihnen Ihr kostenloses Angebot zusenden können
+          Wählen Sie Ihren Verkaufsweg und vervollständigen Sie Ihre Angaben
         </p>
       </div>
 
@@ -215,9 +227,23 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         </div>
       )}
 
-      {/* Kontaktdaten */}
+      {/* Telefonnummer */}
       <div className="space-y-4">
-        <h3 className="text-base font-semibold">Ihre Kontaktdaten</h3>
+        <h3 className="text-base font-semibold">Kontaktdaten vervollständigen</h3>
+
+        {/* Anzeige der bereits erfassten Daten */}
+        {(formData.customerName || formData.customerEmail) && (
+          <div className="bg-muted/50 rounded-lg p-3 flex items-start gap-3">
+            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-muted-foreground">
+              <p>
+                {formData.customerName && <span className="font-medium text-foreground">{formData.customerName}</span>}
+                {formData.customerName && formData.customerEmail && " · "}
+                {formData.customerEmail && <span>{formData.customerEmail}</span>}
+              </p>
+            </div>
+          </div>
+        )}
 
         {user ? (
           <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-3">
@@ -234,6 +260,7 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Name - vorausgefüllt aus Step 3, aber editierbar */}
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="customerName" className="flex items-center gap-2">
               <UserIcon className="w-4 h-4" />

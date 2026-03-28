@@ -23,11 +23,12 @@ function getAnonymousId(): string {
  * Step names for display in admin panel
  */
 const STEP_NAMES: Record<number, string> = {
-  1: "Fahrzeug",
-  2: "Details & Technik",
-  3: "Ausstattung",
-  4: "Fotos",
-  5: "Kontakt & Abschluss",
+  1: "Fahrzeugtyp",
+  2: "Fahrzeugdaten",
+  3: "Kontakt (Quick)",
+  4: "Details & Technik",
+  5: "Ausstattung",
+  6: "Abschluss",
 };
 
 /**

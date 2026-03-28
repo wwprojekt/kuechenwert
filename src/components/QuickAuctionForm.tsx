@@ -1,467 +1,151 @@
 /**
  * Quick Auction Form Component
- * Allows users to quickly start creating an auction from the homepage
- * Updated: Styled with gray input backgrounds for better visual hierarchy
+ * Simplified hero entry: Just vehicle type tiles + CTA → direct to wizard
+ * Optimized for minimum friction and maximum conversion
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Gavel, Plus, Zap, MapPin, User, Mail, Phone, ArrowRight, CheckCircle } from 'lucide-react';
-import { Constants } from '@/integrations/supabase/types';
+import { ArrowRight, CheckCircle, Users, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logger';
-import { captureOrUpdateLead } from '@/lib/leadTrackingService';
-import { trackLandingPageLead, setEnhancedConversionFromForm } from '@/lib/gadsConversionService';
-import { trackMetaLead } from '@/lib/metaPixelService';
-import { popularManufacturers } from '@/lib/vehicle-data';
-
-type SaleChannel = 'auction' | 'instant' | 'station' | '';
+import { TeilintegriertIcon, WohnwagenIcon } from '@/components/wizard/VehicleIcons';
 
 interface QuickAuctionFormProps {
   className?: string;
   variant?: 'hero' | 'compact';
 }
 
-// Custom styled input with strong visual presence
-const GrayInput = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
-  <Input
-    className={cn(
-      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-card dark:focus:bg-card",
-      "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md",
-      "placeholder:text-slate-400 dark:placeholder:text-muted-foreground h-11",
-      className
-    )}
-    {...props}
-  />
-);
-
-// Custom styled select trigger with strong visual presence
-const GraySelectTrigger = ({ className, children, ...props }: React.ComponentProps<typeof SelectTrigger>) => (
-  <SelectTrigger
-    className={cn(
-      "bg-slate-50 dark:bg-secondary border-2 border-slate-200 dark:border-border hover:border-primary/30 focus:border-primary focus:bg-card dark:focus:bg-card",
-      "transition-all duration-200 shadow-sm hover:shadow focus:shadow-md h-11",
-      "[&>span]:text-slate-600 dark:[&>span]:text-slate-300 [&[data-state=open]]:bg-card dark:[&[data-state=open]]:bg-card [&[data-state=open]]:border-primary",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </SelectTrigger>
-);
-
 export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuctionFormProps) => {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [manufacturer, setManufacturer] = useState('');
-  const [model, setModel] = useState('');
-  const [bodyType, setBodyType] = useState('');
-  const [saleChannel, setSaleChannel] = useState<SaleChannel>('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vehicleType, setVehicleType] = useState<'wohnmobil' | 'wohnwagen' | ''>('');
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  // Reset model when manufacturer changes
-  useEffect(() => {
-    setModel('');
-  }, [manufacturer]);
-
-  // Capture lead in database via central tracking service
-  const captureLead = async () => {
-    await captureOrUpdateLead({
-      name: customerName.trim(),
-      email: customerEmail.trim(),
-      phone: customerPhone.trim(),
-      manufacturer,
-      model,
-      bodyType,
-      saleChannel: saleChannel || undefined,
-      source: 'hero_form',
-      pageUrl: window.location.pathname,
-    });
-  };
-
-  // Capture partial lead (vehicle info only) for abandoned form recovery
-  const capturePartialLead = async () => {
-    await captureOrUpdateLead({
-      manufacturer,
-      model,
-      bodyType,
-      source: 'hero_form_partial',
-      pageUrl: window.location.pathname,
-    });
-  };
-
-  const handleNextStep = async () => {
-    const errors: string[] = [];
-    if (!manufacturer) errors.push("Hersteller");
-    if (!model) errors.push("Modell");
-    if (!bodyType) errors.push("Aufbauart");
-
-    if (errors.length > 0) {
-      toast({
-        title: "Pflichtfelder ausfüllen",
-        description: `Bitte füllen Sie aus: ${errors.join(", ")}`,
-        variant: "destructive",
-      });
-      return;
+  const handleStart = () => {
+    const params = new URLSearchParams();
+    if (vehicleType) {
+      params.set('vehicleType', vehicleType);
     }
-
-    // Capture partial lead for follow-up on abandoned forms
-    // WICHTIG: await damit die Lead-ID gespeichert wird bevor Schritt 2 angezeigt wird
-    await capturePartialLead();
-
-    setStep(2);
-  };
-
-  const handleContinue = async () => {
-    // Validate contact fields
-    const errors: string[] = [];
-    if (!customerName.trim()) errors.push("Name");
-    if (!customerEmail.trim()) errors.push("E-Mail");
-    if (!customerPhone.trim()) errors.push("Telefon");
-
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (customerEmail && !emailRegex.test(customerEmail.trim())) {
-      errors.push("Gültige E-Mail-Adresse");
-    }
-
-    if (errors.length > 0) {
-      toast({
-        title: "Pflichtfelder ausfüllen",
-        description: `Bitte füllen Sie aus: ${errors.join(", ")}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    // Capture lead before navigating
-    await captureLead();
-
-    // Google Ads: Enhanced Conversions + Lead-Conversion tracken
-    await setEnhancedConversionFromForm({ customerEmail, customerName, customerPhone });
-    await trackLandingPageLead('homepage_hero', `${manufacturer} ${model} - ${bodyType}`);
-
-    // Meta Pixel: Lead Event
-    trackMetaLead({ content_name: `${manufacturer} ${model}`, content_category: bodyType || 'Wohnmobil' });
-
-    // Create URL with prefilled data for the wizard
-    const searchParams = new URLSearchParams();
-    
-    if (manufacturer) searchParams.set('manufacturer', manufacturer);
-    if (model) searchParams.set('model', model);
-    if (bodyType) searchParams.set('bodyType', bodyType);
-    if (saleChannel) {
-      // Map to wizard sale channel values
-      const channelMap: Record<SaleChannel, string> = {
-        'auction': 'auction',
-        'instant': 'instant_price',
-        'station': 'station',
-        '': ''
-      };
-      searchParams.set('saleChannel', channelMap[saleChannel]);
-    }
-    if (customerName) searchParams.set('customerName', customerName);
-    if (customerEmail) searchParams.set('customerEmail', customerEmail);
-    if (customerPhone) searchParams.set('customerPhone', customerPhone);
-    
-    setIsSubmitting(false);
-    navigate(`/verkaufen/wizard?${searchParams.toString()}`);
-  };
-
-  const bodyTypeOptions = Constants.public.Enums.motorhome_body_type;
-
-  const handleCompactSubmit = async () => {
-    const errors: string[] = [];
-    if (!manufacturer) errors.push("Hersteller");
-    if (!bodyType) errors.push("Aufbauart");
-
-    if (errors.length > 0) {
-      toast({
-        title: "Pflichtfelder ausfüllen",
-        description: `Bitte füllen Sie aus: ${errors.join(", ")}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const searchParams = new URLSearchParams();
-    if (manufacturer) searchParams.set('manufacturer', manufacturer);
-    if (bodyType) searchParams.set('bodyType', bodyType);
-    navigate(`/verkaufen/wizard?${searchParams.toString()}`);
+    navigate(`/verkaufen/wizard${params.toString() ? '?' + params.toString() : ''}`);
   };
 
   if (variant === 'compact') {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <Select value={manufacturer} onValueChange={setManufacturer}>
-          <GraySelectTrigger className="w-40">
-            <SelectValue placeholder="Hersteller" />
-          </GraySelectTrigger>
-          <SelectContent>
-            {popularManufacturers.map((brand) => (
-              <SelectItem key={brand} value={brand}>
-                {brand}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Select value={bodyType} onValueChange={setBodyType}>
-          <GraySelectTrigger className="w-40">
-            <SelectValue placeholder="Aufbauart" />
-          </GraySelectTrigger>
-          <SelectContent>
-            {bodyTypeOptions.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Button onClick={handleCompactSubmit} size="sm">
-          <Plus className="h-4 w-4" />
+        <Button onClick={() => navigate('/verkaufen/wizard?vehicleType=wohnmobil')} size="sm" variant="outline">
+          Wohnmobil verkaufen
+        </Button>
+        <Button onClick={() => navigate('/verkaufen/wizard?vehicleType=wohnwagen')} size="sm" variant="outline">
+          Wohnwagen verkaufen
         </Button>
       </div>
     );
   }
 
-  const saleChannelOptions = [
-    { 
-      id: 'auction' as SaleChannel, 
-      label: 'Auktion', 
-      icon: Gavel,
-      description: 'Höchstgebot'
+  const vehicleTypes = [
+    {
+      id: 'wohnmobil' as const,
+      label: 'Wohnmobil',
+      description: 'Integriert, Teilintegriert, Kastenwagen, Alkoven',
+      icon: TeilintegriertIcon,
     },
-    { 
-      id: 'instant' as SaleChannel, 
-      label: 'Sofortpreis', 
-      icon: Zap,
-      description: 'Festpreis'
-    },
-    { 
-      id: 'station' as SaleChannel, 
-      label: 'Station', 
-      icon: MapPin,
-      description: 'Vor Ort'
+    {
+      id: 'wohnwagen' as const,
+      label: 'Wohnwagen',
+      description: 'Caravan, Faltcaravan, Mobilheim',
+      icon: WohnwagenIcon,
     },
   ];
 
   return (
     <Card className={`p-6 lg:p-8 bg-card/90 dark:bg-card/90 backdrop-blur-md shadow-2xl border-0 rounded-2xl ${className}`}>
       <div className="space-y-5">
-        {/* Header - Left aligned, compact */}
+        {/* Header */}
         <div className="pb-1">
-          <h3 className="font-bold text-xl lg:text-2xl text-foreground">Kostenlos inserieren</h3>
+          <h3 className="font-bold text-xl lg:text-2xl text-foreground">Jetzt verkaufen</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
-            In nur 2 Minuten zum Verkaufsinserat
+            Kostenloses Angebot in nur 2 Minuten
           </p>
         </div>
 
-        {/* Step Indicator */}
-        <div className="flex items-center gap-2">
-          <div className={cn(
-            "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors",
-            "bg-primary text-white"
-          )}>
-            1
+        {/* Social Proof Banner */}
+        <div className="flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-xl px-4 py-2.5">
+          <div className="flex -space-x-2">
+            <div className="w-7 h-7 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center">
+              <Users className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="w-7 h-7 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+            </div>
           </div>
-          <div className={cn(
-            "flex-1 h-1 rounded-full transition-colors",
-            step === 2 ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
-          )} />
-          <div className={cn(
-            "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors",
-            step === 2 ? "bg-primary text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-          )}>
-            2
+          <p className="text-xs text-foreground">
+            <span className="font-bold text-primary">127 Händler</span> suchen aktuell in Ihrer Region
+          </p>
+        </div>
+
+        {/* Vehicle Type Selection - 2 large tiles */}
+        <div className="space-y-2.5">
+          <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+            Was möchten Sie verkaufen?
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {vehicleTypes.map((type) => {
+              const Icon = type.icon;
+              const isSelected = vehicleType === type.id;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => setVehicleType(type.id)}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border-2 transition-all duration-200",
+                    "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
+                    isSelected
+                      ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shadow-sm"
+                  )}
+                >
+                  {isSelected && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="w-5 h-5 text-primary fill-primary/20" />
+                    </div>
+                  )}
+                  <Icon className={cn(
+                    "w-14 h-10 sm:w-16 sm:h-12 mb-2",
+                    isSelected ? "text-primary" : "text-slate-500 dark:text-slate-400"
+                  )} />
+                  <span className={cn(
+                    "text-sm sm:text-base font-bold",
+                    isSelected ? "text-primary" : "text-foreground"
+                  )}>
+                    {type.label}
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground text-center mt-0.5 leading-tight">
+                    {type.description}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {step === 1 ? (
-          <>
-            {/* Step 1: Vehicle Selection */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-                  Hersteller*
-                </label>
-                <Select value={manufacturer} onValueChange={setManufacturer}>
-                  <GraySelectTrigger>
-                    <SelectValue placeholder="Auswählen" />
-                  </GraySelectTrigger>
-                  <SelectContent>
-                    {popularManufacturers.map((brand) => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                  Modell*
-                </label>
-                <GrayInput
-                  type="text"
-                  placeholder={manufacturer ? "z.B. B-Klasse, California..." : "Erst Hersteller wählen"}
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  disabled={!manufacturer}
-                  className={!manufacturer ? "opacity-50 cursor-not-allowed" : ""}
-                  autoComplete="off"
-                />
-              </div>
-              
-              <div className="space-y-1.5 col-span-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                  Aufbauart*
-                </label>
-                <Select value={bodyType} onValueChange={setBodyType}>
-                  <GraySelectTrigger>
-                    <SelectValue placeholder="Aufbauart wählen" />
-                  </GraySelectTrigger>
-                  <SelectContent>
-                    {bodyTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        {/* CTA Button */}
+        <Button
+          onClick={handleStart}
+          className="w-full gradient-hero hover:shadow-glow h-12 text-base font-semibold rounded-xl group"
+          size="lg"
+        >
+          {vehicleType
+            ? `${vehicleType === 'wohnmobil' ? 'Wohnmobil' : 'Wohnwagen'} jetzt bewerten lassen`
+            : 'Kostenloses Angebot erhalten'}
+          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+        </Button>
 
-            {/* Sale Channel Selection - 3 small buttons */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                Verkaufsweg
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {saleChannelOptions.map((option) => {
-                  const Icon = option.icon;
-                  const isSelected = saleChannel === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setSaleChannel(option.id)}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200",
-                        "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
-                        isSelected 
-                          ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20" 
-                          : "border-slate-200 bg-slate-50 shadow-sm"
-                      )}
-                    >
-                      <Icon className={cn(
-                        "h-5 w-5 mb-1",
-                        isSelected ? "text-primary" : "text-slate-500"
-                      )} />
-                      <span className={cn(
-                        "text-xs font-semibold",
-                        isSelected ? "text-primary" : "text-slate-700"
-                      )}>
-                        {option.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Next Step Button */}
-            <Button 
-              onClick={handleNextStep} 
-              className="w-full gradient-hero hover:shadow-glow h-12 text-base font-semibold rounded-xl group"
-              size="lg"
-            >
-              Weiter
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </>
-        ) : (
-          <>
-            {/* Step 2: Contact Details */}
-            <div className="space-y-3">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                Kontaktdaten
-              </label>
-              <div className="space-y-2.5">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <GrayInput
-                    type="text"
-                    placeholder="Ihr Name*"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <GrayInput
-                    type="email"
-                    placeholder="E-Mail-Adresse*"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <GrayInput
-                    type="tel"
-                    placeholder="Telefonnummer*"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {/* Submit Button */}
-            <Button 
-              onClick={handleContinue} 
-              className="w-full gradient-hero hover:shadow-glow h-12 text-base font-semibold rounded-xl group"
-              size="lg"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Wird geladen..." : "Jetzt kostenlos starten"}
-              {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />}
-            </Button>
-
-            {/* Back link */}
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="w-full text-center text-sm text-slate-500 hover:text-primary transition-colors"
-            >
-              ← Zurück zur Fahrzeugauswahl
-            </button>
-          </>
-        )}
-        
         {/* Trust indicators */}
-        <div className="flex items-center justify-center gap-4 text-xs text-slate-500 pt-1">
+        <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
           <span className="flex items-center gap-1">
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            Kostenlos
+            100% kostenlos
           </span>
           <span className="flex items-center gap-1">
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
@@ -469,7 +153,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
           </span>
           <span className="flex items-center gap-1">
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            Sicher
+            In 2 Min. fertig
           </span>
         </div>
       </div>

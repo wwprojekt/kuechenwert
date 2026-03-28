@@ -184,48 +184,56 @@ const LOADING_MESSAGES = [
 
 // Step indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
-  const stepLabels = ["Typ", "Marke", "Details", "Zustand", "Kontakt"];
+  const steps = [
+    { label: "Typ", icon: Truck },
+    { label: "Marke", icon: Star },
+    { label: "Details", icon: Calculator },
+    { label: "Zustand", icon: Shield },
+    { label: "Kontakt", icon: User },
+  ];
+  const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
   return (
-    <div className="flex items-center justify-center gap-0 mb-8">
-      {stepLabels.map((label, i) => {
-        const stepNum = i + 1;
-        const isActive = stepNum === currentStep;
-        const isCompleted = stepNum < currentStep;
-        return (
-          <div key={stepNum} className="flex items-center">
-            <div className="flex flex-col items-center">
+    <div className="mb-8 space-y-3">
+      {/* Progress bar */}
+      <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-teal-400 rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      {/* Step circles */}
+      <div className="flex items-center justify-between">
+        {steps.map((s, i) => {
+          const stepNum = i + 1;
+          const isActive = stepNum === currentStep;
+          const isCompleted = stepNum < currentStep;
+          const Icon = s.icon;
+          return (
+            <div key={stepNum} className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
+                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
                   isCompleted
                     ? "bg-primary text-white shadow-md"
                     : isActive
                     ? "bg-primary text-white shadow-lg ring-4 ring-primary/20 scale-110"
-                    : "bg-muted text-muted-foreground"
+                    : "bg-muted/80 text-muted-foreground"
                 )}
               >
-                {isCompleted ? <Check className="w-4 h-4" /> : stepNum}
+                {isCompleted ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
               </div>
               <span
                 className={cn(
-                  "text-[10px] mt-1.5 font-medium transition-colors hidden sm:block",
-                  isActive ? "text-primary" : isCompleted ? "text-primary/70" : "text-muted-foreground"
+                  "text-[11px] font-medium transition-colors hidden sm:block",
+                  isActive ? "text-primary font-semibold" : isCompleted ? "text-primary/70" : "text-muted-foreground"
                 )}
               >
-                {label}
+                {s.label}
               </span>
             </div>
-            {i < stepLabels.length - 1 && (
-              <div
-                className={cn(
-                  "w-8 sm:w-12 h-0.5 mx-1 transition-colors duration-300",
-                  stepNum < currentStep ? "bg-primary" : "bg-muted"
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -729,7 +737,7 @@ const Wertrechner = () => {
           {/* Step Indicator */}
           {step <= 5 && !showCalculation && <StepIndicator currentStep={step} totalSteps={totalSteps} />}
 
-          <Card className="p-6 sm:p-8 shadow-lg border-0 ring-1 ring-border/50">
+          <Card className="p-6 sm:p-8 shadow-xl border-0 ring-1 ring-border/40 rounded-2xl">
             {/* Summary chips */}
             {step > 1 && step <= 5 && !showCalculation && <SummaryChips />}
 
@@ -739,45 +747,45 @@ const Wertrechner = () => {
             {/* Step 1: Body Type */}
             {!showCalculation && step === 1 && (
               <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">Fahrzeugtyp</h2>
-                  <p className="text-muted-foreground">Welchen Typ Wohnmobil möchten Sie bewerten?</p>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold mb-1">Welcher Fahrzeugtyp?</h2>
+                  <p className="text-muted-foreground">Wählen Sie den Typ Ihres Wohnmobils aus</p>
                 </div>
-                <div className="grid gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {BODY_TYPES.map((type, index) => {
                     const Icon = type.icon;
+                    const isSelected = formData.bodyType === type.value;
                     return (
                       <button
                         key={type.value}
                         onClick={() => handleSelectionWithAutoNext("bodyType", type.value)}
                         className={cn(
-                          "p-4 rounded-xl border text-left transition-all duration-200 flex items-center gap-4 group animate-fade-in",
-                          formData.bodyType === type.value
-                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                            : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
+                          "relative p-5 rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in overflow-hidden",
+                          isSelected
+                            ? "border-primary bg-gradient-to-br from-primary/5 via-primary/10 to-teal-50 shadow-lg ring-1 ring-primary/30"
+                            : "border-border/60 hover:border-primary/40 hover:shadow-md hover:bg-gradient-to-br hover:from-slate-50 hover:to-white"
                         )}
-                        style={{ animationDelay: `${index * 60}ms` }}
+                        style={{ animationDelay: `${index * 80}ms` }}
                       >
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
-                          formData.bodyType === type.value
-                            ? "bg-primary text-white"
-                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                        )}>
-                          <Icon className="w-6 h-6" />
+                        <div className="flex items-start gap-4">
+                          <div className={cn(
+                            "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                            isSelected
+                              ? "bg-primary text-white shadow-md"
+                              : "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary"
+                          )}>
+                            <Icon className="w-7 h-7" />
+                          </div>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <span className="font-bold block text-[15px]">{type.label}</span>
+                            <span className="text-sm text-muted-foreground leading-snug">{type.description}</span>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-semibold block">{type.label}</span>
-                          <span className="text-sm text-muted-foreground">{type.description}</span>
-                        </div>
-                        <div className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0",
-                          formData.bodyType === type.value
-                            ? "bg-primary text-white scale-100"
-                            : "bg-muted scale-0 group-hover:scale-75"
-                        )}>
-                          <Check className="w-4 h-4" />
-                        </div>
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -788,17 +796,17 @@ const Wertrechner = () => {
             {/* Step 2: Manufacturer/Model */}
             {!showCalculation && step === 2 && (
               <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
-                <div>
+                <div className="text-center">
                   <h2 className="text-2xl font-bold mb-1">Hersteller & Modell</h2>
                   <p className="text-muted-foreground">
-                    Optional, verbessert die Genauigkeit der Bewertung.
+                    Optional – verbessert die Genauigkeit Ihrer Bewertung
                   </p>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Manufacturer dropdown */}
                   <div className="animate-fade-in" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
                     <div className="space-y-2">
-                      <Label htmlFor="manufacturer">Hersteller</Label>
+                      <Label htmlFor="manufacturer" className="text-sm font-semibold">Hersteller</Label>
                       <div>
                         <Input
                           id="manufacturer"
@@ -810,19 +818,19 @@ const Wertrechner = () => {
                             setShowManufacturerDropdown(true);
                           }}
                           onFocus={() => setShowManufacturerDropdown(true)}
-                          className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                          className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                           autoFocus
                           autoComplete="off"
                         />
                         {showManufacturerDropdown && filteredManufacturers.length > 0 && (
-                          <div className="w-full mt-1 bg-background border rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                          <div className="w-full mt-1 bg-background border-2 border-slate-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
                             {filteredManufacturers.map((m) => (
                               <button
                                 key={m}
                                 type="button"
                                 className={cn(
-                                  "w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
-                                  formData.manufacturer === m && "bg-primary/10 font-medium text-primary"
+                                  "w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
+                                  formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
                                 )}
                                 onClick={() => {
                                   updateField("manufacturer", m);
@@ -839,15 +847,18 @@ const Wertrechner = () => {
                     </div>
                   </div>
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
-                    <Label htmlFor="model">Modell</Label>
+                    <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
                     <Input
                       id="model"
                       placeholder="z.B. B-Klasse MC, Trend, Ixeo..."
                       value={formData.model}
                       onChange={(e) => updateField("model", e.target.value)}
-                      className="h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Sie können diesen Schritt überspringen, wenn Sie unsicher sind
+                  </p>
                 </div>
               </div>
             )}
@@ -855,22 +866,22 @@ const Wertrechner = () => {
             {/* Step 3: Year/Mileage */}
             {!showCalculation && step === 3 && (
               <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
-                <div>
+                <div className="text-center">
                   <h2 className="text-2xl font-bold mb-1">Baujahr & Kilometerstand</h2>
-                  <p className="text-muted-foreground">Diese Angaben sind entscheidend für die Wertermittlung.</p>
+                  <p className="text-muted-foreground">Diese Angaben sind entscheidend für die Wertermittlung</p>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Year as dropdown */}
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "50ms" }}>
-                    <Label htmlFor="year">Baujahr *</Label>
+                    <Label htmlFor="year" className="text-sm font-semibold">Baujahr *</Label>
                     <select
                       id="year"
                       value={formData.year}
                       onChange={(e) => updateField("year", e.target.value)}
                       className={cn(
-                        "flex h-12 w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary",
-                        "transition-all cursor-pointer appearance-none",
+                        "flex h-12 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-base ring-offset-background",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-white",
+                        "hover:border-primary/30 hover:shadow transition-all cursor-pointer shadow-sm",
                         !formData.year && "text-muted-foreground"
                       )}
                       autoFocus
@@ -883,7 +894,7 @@ const Wertrechner = () => {
                   </div>
                   {/* Mileage with formatting */}
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
-                    <Label htmlFor="mileage">Kilometerstand *</Label>
+                    <Label htmlFor="mileage" className="text-sm font-semibold">Kilometerstand *</Label>
                     <div className="relative">
                       <Input
                         id="mileage"
@@ -892,7 +903,7 @@ const Wertrechner = () => {
                         placeholder="z.B. 45.000"
                         value={mileageDisplay}
                         onChange={handleMileageChange}
-                        className="h-12 text-base pr-12 transition-all focus:ring-2 focus:ring-primary/20"
+                        className="h-12 text-base pr-12 bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                         km
@@ -906,43 +917,54 @@ const Wertrechner = () => {
             {/* Step 4: Condition */}
             {!showCalculation && step === 4 && (
               <div className="space-y-6 animate-fade-in">
-                <div>
+                <div className="text-center">
                   <h2 className="text-2xl font-bold mb-1">Fahrzeugzustand</h2>
                   <p className="text-muted-foreground">Wie würden Sie den Gesamtzustand einschätzen?</p>
                 </div>
-                <div className="grid gap-3">
-                  {CONDITIONS.map((cond, index) => (
-                    <button
-                      key={cond.value}
-                      onClick={() => handleSelectionWithAutoNext("condition", cond.value)}
-                      className={cn(
-                        "p-4 rounded-xl border text-left transition-all duration-200 flex items-center gap-4 group animate-fade-in",
-                        formData.condition === cond.value
-                          ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
-                      )}
-                      style={{ animationDelay: `${index * 60}ms` }}
-                    >
-                      <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl transition-transform",
-                        formData.condition === cond.value && "scale-110"
-                      )}>
-                        {cond.emoji}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-semibold block">{cond.label}</span>
-                        <span className="text-sm text-muted-foreground">{cond.description}</span>
-                      </div>
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0",
-                        formData.condition === cond.value
-                          ? "bg-primary text-white scale-100"
-                          : "bg-muted scale-0 group-hover:scale-75"
-                      )}>
-                        <Check className="w-4 h-4" />
-                      </div>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {CONDITIONS.map((cond, index) => {
+                    const isSelected = formData.condition === cond.value;
+                    const colorMap: Record<string, { bg: string; border: string; iconBg: string }> = {
+                      "new": { bg: "from-emerald-50 to-green-50", border: "border-emerald-300", iconBg: "bg-emerald-100 text-emerald-600" },
+                      "excellent": { bg: "from-blue-50 to-sky-50", border: "border-blue-300", iconBg: "bg-blue-100 text-blue-600" },
+                      "good": { bg: "from-teal-50 to-cyan-50", border: "border-teal-300", iconBg: "bg-teal-100 text-teal-600" },
+                      "fair": { bg: "from-amber-50 to-orange-50", border: "border-amber-300", iconBg: "bg-amber-100 text-amber-600" },
+                      "poor": { bg: "from-red-50 to-rose-50", border: "border-red-300", iconBg: "bg-red-100 text-red-600" },
+                    };
+                    const colors = colorMap[cond.value] || colorMap["good"];
+                    return (
+                      <button
+                        key={cond.value}
+                        onClick={() => handleSelectionWithAutoNext("condition", cond.value)}
+                        className={cn(
+                          "relative p-5 rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in",
+                          isSelected
+                            ? `${colors.border} bg-gradient-to-br ${colors.bg} shadow-lg ring-1 ring-primary/20`
+                            : "border-border/60 hover:border-primary/40 hover:shadow-md hover:bg-gradient-to-br hover:from-slate-50 hover:to-white",
+                          index === CONDITIONS.length - 1 && CONDITIONS.length % 2 !== 0 && "sm:col-span-2"
+                        )}
+                        style={{ animationDelay: `${index * 80}ms` }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl transition-all duration-200",
+                            isSelected ? colors.iconBg : "bg-slate-100"
+                          )}>
+                            {cond.emoji}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold block text-[15px]">{cond.label}</span>
+                            <span className="text-sm text-muted-foreground leading-snug">{cond.description}</span>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -978,10 +1000,10 @@ const Wertrechner = () => {
                   </div>
                 </div>
 
-                <form onSubmit={handleLeadSubmit} className="space-y-4">
+                <form onSubmit={handleLeadSubmit} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold">
+                      <User className="w-4 h-4 text-primary/60" />
                       Name *
                     </Label>
                     <Input
@@ -989,14 +1011,14 @@ const Wertrechner = () => {
                       placeholder="Max Mustermann"
                       value={formData.name}
                       onChange={(e) => updateField("name", e.target.value)}
-                      className="h-12 text-base"
+                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                       autoFocus
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold">
+                      <Mail className="w-4 h-4 text-primary/60" />
                       E-Mail *
                     </Label>
                     <Input
@@ -1005,13 +1027,13 @@ const Wertrechner = () => {
                       placeholder="max@beispiel.de"
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
-                      className="h-12 text-base"
+                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold">
+                      <Phone className="w-4 h-4 text-primary/60" />
                       Telefon *
                     </Label>
                     <Input
@@ -1020,21 +1042,22 @@ const Wertrechner = () => {
                       placeholder="+49 123 456789"
                       value={formData.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
-                      className="h-12 text-base"
+                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                       required
                     />
                   </div>
                   <Button
                     type="submit"
-                    className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
+                    className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-xl"
                     disabled={submitMutation.isPending}
                   >
                     {submitMutation.isPending ? "Wird geladen..." : "Wert jetzt anzeigen"}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Ihre Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.
-                  </p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Ihre Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.</span>
+                  </div>
                 </form>
               </div>
             )}
@@ -1194,16 +1217,16 @@ const Wertrechner = () => {
 
             {/* Navigation */}
             {!showCalculation && step < 5 && (
-              <div className="flex justify-between mt-8 pt-6 border-t">
+              <div className="flex justify-between mt-8 pt-6 border-t border-border/40">
                 {step > 1 ? (
-                  <Button variant="ghost" onClick={prevStep} className="text-muted-foreground hover:text-foreground">
+                  <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
                     <ChevronLeft className="w-4 h-4 mr-1" />
                     Zurück
                   </Button>
                 ) : (
                   <div />
                 )}
-                <Button onClick={nextStep} disabled={!canProceed()} className="gradient-hero px-8">
+                <Button onClick={nextStep} disabled={!canProceed()} className="gradient-hero px-8 rounded-xl h-11 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
                   Weiter
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -1211,8 +1234,8 @@ const Wertrechner = () => {
             )}
 
             {!showCalculation && step === 5 && (
-              <div className="mt-6 pt-4 border-t">
-                <Button variant="ghost" onClick={prevStep} className="w-full text-muted-foreground hover:text-foreground">
+              <div className="mt-6 pt-4 border-t border-border/40">
+                <Button variant="outline" onClick={prevStep} className="w-full text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Zurück zu den Fahrzeugdaten
                 </Button>

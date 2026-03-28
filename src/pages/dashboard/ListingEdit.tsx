@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,12 +17,19 @@ import { handleAndLogError } from "@/lib/errorLogService";
 import { logger } from "@/lib/logger";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment", "photos", "additional"];
+
 export default function ListingEdit() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Allow direct navigation to a specific tab via URL parameter (e.g., ?tab=photos)
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "basic";
 
   const { data: motorhome, isLoading } = useQuery({
     queryKey: ["motorhomeEdit", id],
@@ -781,7 +788,7 @@ export default function ListingEdit() {
           </CardHeader>
           <CardContent className="space-y-6">
           <fieldset disabled={isAuctionLive}>
-            <Tabs defaultValue="basic" className="w-full">
+            <Tabs defaultValue={initialTab} className="w-full">
               <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="basic">Basis</TabsTrigger>
                 <TabsTrigger value="technical">Technik</TabsTrigger>

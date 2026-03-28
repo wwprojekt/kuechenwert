@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -27,10 +27,14 @@ import {
   CircleDot,
   Lock,
   MessageSquarePlus,
+  Pencil,
+  ImagePlus,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { useEffect } from "react";
 
 /**
  * Dashboard Overview – role-aware.
@@ -42,8 +46,50 @@ export default function DashboardOverview() {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { primaryRole } = useUserRole();
+  const queryClient = useQueryClient();
 
   const isDealer = primaryRole === "dealer";
+
+  // ── Realtime: Auto-refresh when admin creates/updates motorhome ──
+  useEffect(() => {
+    if (!user || isDealer) return;
+
+    const channel = supabase
+      .channel("seller-motorhomes-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "motorhomes",
+          filter: `seller_id=eq.${user.id}`,
+        },
+        () => {
+          // Invalidate all seller-relevant queries so data refreshes automatically
+          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["pendingWizardSession", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "motorhome_photos",
+        },
+        () => {
+          // Also refresh when photos are added/removed
+          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isDealer, queryClient]);
 
   // ── Profile (customer number) ─────────────────────────────────
   const { data: profile } = useQuery({
@@ -489,17 +535,43 @@ export default function DashboardOverview() {
                             ` · ${Number(mh.mileage).toLocaleString("de-DE")} km`}
                         </p>
                       </div>
-                      <Link to={detailUrl} className="flex-shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 w-full sm:w-auto"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span className="sm:hidden">Details</span>
-                          <span className="hidden sm:inline">Details ansehen</span>
-                        </Button>
-                      </Link>
+                      <div className="flex flex-wrap gap-2 flex-shrink-0">
+                        <Link to={`/dashboard/listings/${mh.id}/edit?tab=photos`}>
+                          <Button
+                            size="sm"
+                            className={`gap-2 w-full sm:w-auto ${
+                              (!mh.photos || mh.photos.length === 0)
+                                ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md animate-pulse"
+                                : "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground"
+                            }`}
+                          >
+                            <ImagePlus className="w-4 h-4" />
+                            <span className="sm:hidden">Fotos</span>
+                            <span className="hidden sm:inline">Fotos hochladen</span>
+                          </Button>
+                        </Link>
+                        <Link to={`/dashboard/listings/${mh.id}/edit`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 w-full sm:w-auto"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            <span className="sm:hidden">Bearbeiten</span>
+                            <span className="hidden sm:inline">Bearbeiten</span>
+                          </Button>
+                        </Link>
+                        <Link to={detailUrl}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-2 w-full sm:w-auto text-muted-foreground"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">Details</span>
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
 
                     {/* Current status badge */}
@@ -606,6 +678,34 @@ export default function DashboardOverview() {
                     </div>
                   </div>
                 </div>
+
+                {/* Photo missing warning */}
+                {(!mh.photos || mh.photos.length === 0) && (
+                  <div className="border-t border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 sm:px-6 py-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                            Fotos fehlen!
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            Ohne Fotos kann Ihr Wohnmobil nicht an Händler vermittelt werden. Laden Sie jetzt mindestens 4 Fotos hoch.
+                          </p>
+                        </div>
+                      </div>
+                      <Link to={`/dashboard/listings/${mh.id}/edit?tab=photos`} className="flex-shrink-0">
+                        <Button
+                          size="sm"
+                          className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-md"
+                        >
+                          <ImagePlus className="w-4 h-4" />
+                          Jetzt Fotos hochladen
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
 
                 {/* Live auction stats */}
                 {isLive && mh.bidStats && (

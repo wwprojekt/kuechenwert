@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Eye, Edit, Plus } from "lucide-react";
+import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -172,11 +172,29 @@ export default function MyListings() {
                     </div>
                   )}
 
+                  {/* Photo missing warning */}
+                  {(!motorhome.photos || motorhome.photos.length === 0) && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        Fotos fehlen! Ohne Fotos kann Ihr Inserat nicht vermittelt werden.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" className="flex-1">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Details
+                    <Button
+                      className={`flex-1 gap-2 ${(!motorhome.photos || motorhome.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                      variant={(!motorhome.photos || motorhome.photos.length === 0) ? 'default' : 'outline'}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/dashboard/listings/${motorhome.id}/edit?tab=photos`);
+                      }}
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                      Fotos
                     </Button>
                     <Button
                       variant="outline"
@@ -189,6 +207,9 @@ export default function MyListings() {
                     >
                       <Edit className="w-4 h-4 mr-2" />
                       Bearbeiten
+                    </Button>
+                    <Button variant="ghost" className="px-3">
+                      <Eye className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

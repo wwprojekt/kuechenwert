@@ -384,10 +384,17 @@ export function ConvertToMotorhomeDialog({
       return { motorhomeId: motorhome.id, saleChannel: formData.sale_channel };
     },
     onSuccess: (result) => {
+      // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
       queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      // Also invalidate seller-side queries so the customer dashboard updates
+      // (covers the case where admin and seller are on the same browser or
+      //  the seller has the dashboard open – Realtime handles the rest)
+      queryClient.invalidateQueries({ queryKey: ["sellerTimeline"] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingWizardSession"] });
       setConversionResult(result);
     },
     onError: (error: Error) => {

@@ -39,6 +39,7 @@ import {
   Send,
   Plus,
   MessageSquarePlus,
+  ImagePlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -258,12 +259,21 @@ export default function ListingDetail() {
               <span className="sm:hidden">Gesperrt</span>
             </Button>
           ) : (
-            <Link to={`/dashboard/listings/${id}/edit`}>
-              <Button className="gap-2">
-                <Edit className="w-4 h-4" />
-                Bearbeiten
-              </Button>
-            </Link>
+            <>
+              <Link to={`/dashboard/listings/${id}/edit?tab=photos`}>
+                <Button variant="outline" className="gap-2">
+                  <ImagePlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Fotos verwalten</span>
+                  <span className="sm:hidden">Fotos</span>
+                </Button>
+              </Link>
+              <Link to={`/dashboard/listings/${id}/edit`}>
+                <Button className="gap-2">
+                  <Edit className="w-4 h-4" />
+                  Bearbeiten
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </div>

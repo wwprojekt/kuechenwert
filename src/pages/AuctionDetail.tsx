@@ -995,7 +995,18 @@ const AuctionDetail = () => {
                       </div>
                     </div>
 
-
+                    {/* Fahrzeugbeschreibung */}
+                    {motorhome.description && (
+                      <div className="mt-6">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-primary" />
+                          Beschreibung
+                        </h3>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                          {motorhome.description}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Nachträge des Verkäufers */}
                     {addenda.length > 0 && (

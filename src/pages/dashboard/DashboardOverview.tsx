@@ -60,6 +60,24 @@ export default function DashboardOverview() {
     enabled: !!user,
   });
 
+  // ── Seller: Check for pending wizard sessions ────────────────
+  const { data: pendingWizardSession } = useQuery({
+    queryKey: ["pendingWizardSession", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("wizard_sessions")
+        .select("id, status, form_data, created_at, customer_first_name, customer_last_name")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && !isDealer,
+  });
+
   // ── Seller: Fetch motorhome + auction data for timeline ──────
   const { data: sellerData } = useQuery({
     queryKey: ["sellerTimeline", user?.id],
@@ -350,8 +368,42 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* No motorhomes: Empty state */}
-        {motorhomes.length === 0 && (
+        {/* No motorhomes: Check for pending wizard session or show empty state */}
+        {motorhomes.length === 0 && pendingWizardSession && (
+          <Card className="border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex-shrink-0">
+                  <Clock className="w-8 h-8 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-1 text-amber-800 dark:text-amber-200">
+                    Ihr Inserat wird geprüft
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                    Vielen Dank für Ihre Einreichung! Unser Experten-Team prüft Ihre Angaben und bereitet Ihr Inserat
+                    für die Auktion vor. Wir melden uns in Kürze bei Ihnen.
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Eingereicht am {format(new Date(pendingWizardSession.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                    </div>
+                  </div>
+                  {/* Progress indicator */}
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
+                      <div className="h-full w-1/6 bg-amber-500 rounded-full animate-pulse" />
+                    </div>
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap">Schritt 1 von 6</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {motorhomes.length === 0 && !pendingWizardSession && (
           <Card className="border-2 border-dashed border-primary/30">
             <CardContent className="p-8 sm:p-12 text-center">
               <div className="relative mx-auto w-20 h-20 mb-6">

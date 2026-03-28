@@ -135,6 +135,7 @@ interface InboxItem {
   source: 'email' | 'support' | 'contact';
   from_name: string;
   from_email: string;
+  to_email: string;
   subject: string;
   preview: string;
   status: string;
@@ -143,6 +144,19 @@ interface InboxItem {
   created_at: string;
   original: AdminEmail | SupportMessage | ContactMessage;
 }
+
+type MailboxFilter = 'all' | 'info' | 'admin' | 'kontakt' | 'rechnung' | 'support' | 'contact' | 'other';
+
+const MAILBOX_TABS: { key: MailboxFilter; label: string; icon?: string; color: string }[] = [
+  { key: 'all', label: 'Alle', color: 'text-foreground' },
+  { key: 'info', label: 'info@', color: 'text-blue-600' },
+  { key: 'admin', label: 'admin@', color: 'text-red-600' },
+  { key: 'kontakt', label: 'kontakt@', color: 'text-green-600' },
+  { key: 'rechnung', label: 'rechnung@', color: 'text-amber-600' },
+  { key: 'support', label: 'Support', color: 'text-purple-600' },
+  { key: 'contact', label: 'Kontaktformular', color: 'text-teal-600' },
+  { key: 'other', label: 'Sonstige', color: 'text-gray-600' },
+];
 
 const PAGE_SIZE = 25;
 
@@ -255,6 +269,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [mailboxFilter, setMailboxFilter] = useState<MailboxFilter>('all');
 
   const fetchInbox = useCallback(async () => {
     setLoading(true);
@@ -302,6 +317,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'email',
           from_name: e.sender_name || e.sender_email,
           from_email: e.sender_email,
+          to_email: e.recipient_email || '',
           subject: e.subject,
           preview: (e.body_text || '').substring(0, 120),
           status: e.status,
@@ -319,6 +335,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'support',
           from_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unbekannt',
           from_email: profile?.email || '',
+          to_email: 'support@caravanwert.de',
           subject: m.subject,
           preview: (m.message || '').substring(0, 120),
           status: m.status || 'open',
@@ -335,6 +352,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'contact',
           from_name: c.name,
           from_email: c.email,
+          to_email: 'kontakt@caravanwert.de',
           subject: c.subject,
           preview: (c.message || '').substring(0, 120),
           status: c.status || 'open',
@@ -530,7 +548,32 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     }
   };
 
+  // Helper: Bestimme das Postfach eines Items anhand der Empfänger-Adresse
+  const getItemMailbox = (item: InboxItem): MailboxFilter => {
+    if (item.source === 'support') return 'support';
+    if (item.source === 'contact') return 'contact';
+    const to = (item.to_email || '').toLowerCase();
+    if (to.startsWith('info@')) return 'info';
+    if (to.startsWith('admin@')) return 'admin';
+    if (to.startsWith('kontakt@')) return 'kontakt';
+    if (to.startsWith('rechnung@')) return 'rechnung';
+    return 'other';
+  };
+
+  // Ungelesen-Counter pro Postfach berechnen
+  const mailboxCounts = MAILBOX_TABS.reduce((acc, tab) => {
+    if (tab.key === 'all') {
+      acc[tab.key] = items.filter(i => !i.is_read).length;
+    } else {
+      acc[tab.key] = items.filter(i => !i.is_read && getItemMailbox(i) === tab.key).length;
+    }
+    return acc;
+  }, {} as Record<MailboxFilter, number>);
+
   const filteredItems = items.filter(item => {
+    // Postfach-Filter
+    if (mailboxFilter !== 'all' && getItemMailbox(item) !== mailboxFilter) return false;
+    // Status-Filter
     if (filter === "unread" && item.is_read) return false;
     if (filter === "starred" && !item.is_starred) return false;
     if (searchQuery) {
@@ -876,13 +919,51 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           </div>
         </div>
       </CardHeader>
+      {/* Postfach Sub-Tabs */}
+      <div className="px-6 pb-3 -mt-2">
+        <div className="flex flex-wrap gap-1.5 p-1 bg-muted/40 rounded-lg">
+          {MAILBOX_TABS.map(tab => {
+            const count = mailboxCounts[tab.key] || 0;
+            const isActive = mailboxFilter === tab.key;
+            const totalInMailbox = tab.key === 'all' ? items.length : items.filter(i => getItemMailbox(i) === tab.key).length;
+            if (tab.key !== 'all' && totalInMailbox === 0) return null;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => { setMailboxFilter(tab.key); setPage(1); setSelectedIds(new Set()); }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                <span className={isActive ? tab.color : ''}>{tab.label}</span>
+                {count > 0 && (
+                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                    isActive ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                )}
+                {count === 0 && tab.key !== 'all' && totalInMailbox > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-medium bg-muted-foreground/10 text-muted-foreground">
+                    {totalInMailbox}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <CardContent>
         {loading ? (
           <div className="text-center py-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
         ) : paginatedItems.length === 0 ? (
           <div className="text-center py-8">
             <Inbox className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground">Keine Nachrichten</p>
+            <p className="text-muted-foreground">
+              {mailboxFilter === 'all' ? 'Keine Nachrichten' : `Keine Nachrichten in ${MAILBOX_TABS.find(t => t.key === mailboxFilter)?.label || 'diesem Postfach'}`}
+            </p>
           </div>
         ) : (
           <>
@@ -961,6 +1042,11 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                           {item.from_name}
                         </span>
                         {getSourceBadge(item.source)}
+                        {mailboxFilter === 'all' && item.to_email && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                            {item.to_email.split('@')[0]}@
+                          </span>
+                        )}
                       </div>
                       <p className={`text-sm truncate ${!item.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {item.subject}

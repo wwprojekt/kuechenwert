@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
-import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -216,19 +215,19 @@ const VerkaufenWizard = () => {
       canonicalPath="/verkaufen/wizard"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/verkaufen/wizard"))}
     >
-      {/* Hero */}
-      <PageHero size="sm">
-        <div className="text-center animate-fade-in max-w-4xl mx-auto">
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2 md:mb-4">
+      {/* Kompakter Header - Wizard soll sofort sichtbar sein */}
+      <div className="bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-muted/65 pt-4 pb-2 md:pt-6 md:pb-3">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-lg md:text-2xl font-bold text-foreground">
             Verkaufen Sie Ihr Wohnmobil
           </h1>
-          <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-xs md:text-sm mt-1">
             Kostenloses Angebot in nur 2 Minuten – unverbindlich und ohne Registrierungspflicht
           </p>
         </div>
-      </PageHero>
+      </div>
 
-      <div className="min-h-screen py-4 md:py-16 bg-muted/65">
+      <div className="min-h-screen py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator - nur Prozentbalken */}

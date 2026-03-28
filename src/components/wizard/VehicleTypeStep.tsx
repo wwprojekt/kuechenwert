@@ -1,26 +1,52 @@
+/**
+ * VehicleTypeStep - Step 1 des Wizards
+ * 
+ * Zeigt interaktive Kacheln für Fahrzeugtyp (Wohnmobil/Wohnwagen) und Aufbauart.
+ * Aufbauarten werden in einem 2-spaltigen Grid mit realistischen SVG-Silhouetten
+ * der jeweiligen Aufbauart dargestellt.
+ */
+
 import { useMemo } from "react";
+import type { ComponentType, SVGProps } from "react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Car, Caravan, Truck, Bus, CarFront, Users, TrendingUp, Check } from "lucide-react";
+import { Car, Caravan, Users, TrendingUp, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { bodyTypes, wohnwagenBodyTypes, vehicleTypes } from "@/lib/vehicle-data";
+import {
+  TeilintegriertIcon,
+  AlkovenIcon,
+  VollintegriertIcon,
+  KastenwagenIcon,
+  CampingbusIcon,
+  WohnwagenIcon,
+  FaltcaravanIcon,
+  MobilheimIcon,
+} from "./VehicleIcons";
 
 interface VehicleTypeStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
 }
 
-const WOHNMOBIL_BODY_TYPE_INFO: Record<string, { icon: typeof Car; description: string }> = {
-  "Teilintegriert": { icon: Caravan, description: "Aufbau auf Fahrzeugbasis" },
-  "Alkoven": { icon: Truck, description: "Schlafbereich über dem Fahrerhaus" },
-  "Vollintegriert": { icon: Bus, description: "Vollintegriert mit Fahrerhaus" },
-  "Kastenwagen": { icon: CarFront, description: "Kompakt und wendig" },
-  "Campingbus": { icon: CarFront, description: "Flexibel und alltagstauglich" },
+type SvgIconComponent = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
+
+interface BodyTypeInfo {
+  icon: SvgIconComponent;
+  description: string;
+}
+
+const WOHNMOBIL_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
+  "Teilintegriert": { icon: TeilintegriertIcon, description: "Aufbau auf Fahrzeugbasis" },
+  "Alkoven": { icon: AlkovenIcon, description: "Schlafbereich \u00fcber dem Fahrerhaus" },
+  "Vollintegriert": { icon: VollintegriertIcon, description: "Durchgehende Karosserie" },
+  "Kastenwagen": { icon: KastenwagenIcon, description: "Kompakt und wendig" },
+  "Campingbus": { icon: CampingbusIcon, description: "Flexibel mit Aufstelldach" },
 };
 
-const WOHNWAGEN_BODY_TYPE_INFO: Record<string, { icon: typeof Car; description: string }> = {
-  "Wohnwagen": { icon: Caravan, description: "Klassischer Wohnwagen" },
-  "Faltcaravan": { icon: Caravan, description: "Zusammenfaltbar, leicht" },
-  "Mobilheim": { icon: Bus, description: "Stationäres Wohnheim" },
+const WOHNWAGEN_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
+  "Wohnwagen": { icon: WohnwagenIcon, description: "Klassischer Wohnwagen" },
+  "Faltcaravan": { icon: FaltcaravanIcon, description: "Zusammenfaltbar, leicht" },
+  "Mobilheim": { icon: MobilheimIcon, description: "Station\u00e4res Wohnheim" },
 };
 
 export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepProps) => {
@@ -44,28 +70,31 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="mb-4">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
           <Car className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          Was m&ouml;chten Sie verkaufen?
+          Was m\u00f6chten Sie verkaufen?
         </h2>
-        <p className="text-muted-foreground">
-          W&auml;hlen Sie Ihren Fahrzeugtyp und die Aufbauart
+        <p className="text-sm text-muted-foreground">
+          W\u00e4hlen Sie Ihren Fahrzeugtyp und die Aufbauart
         </p>
       </div>
 
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center gap-3">
+      {/* FOMO-Element */}
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2.5">
         <div className="flex items-center gap-1 text-primary">
           <Users className="w-4 h-4" />
           <TrendingUp className="w-4 h-4" />
         </div>
         <p className="text-sm text-foreground">
-          <strong>127 H&auml;ndler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"} in Ihrer Region
+          <strong>127 H\u00e4ndler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"}
         </p>
       </div>
 
-      <div className="space-y-3">
+      {/* Fahrzeugtyp-Auswahl */}
+      <div className="space-y-2">
         <label className="text-sm font-semibold text-foreground">Fahrzeugtyp</label>
         <div className="grid grid-cols-2 gap-3">
           {vehicleTypes.map((type) => {
@@ -77,15 +106,15 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
                 type="button"
                 onClick={() => handleVehicleTypeChange(type.value)}
                 className={cn(
-                  "flex items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all duration-200",
+                  "flex items-center justify-center gap-2.5 p-3 rounded-xl border-2 transition-all duration-200",
                   "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
                   isSelected
                     ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
                     : "border-border bg-background"
                 )}
               >
-                <Icon className={cn("w-6 h-6", isSelected ? "text-primary" : "text-muted-foreground")} />
-                <span className={cn("font-semibold", isSelected ? "text-primary" : "text-foreground")}>
+                <Icon className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("font-semibold text-sm", isSelected ? "text-primary" : "text-foreground")}>
                   {type.label}
                 </span>
               </button>
@@ -94,13 +123,15 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* Aufbauart-Auswahl - 2-spaltig */}
+      <div className="space-y-2">
         <label className="text-sm font-semibold text-foreground">
           Aufbauart <span className="text-red-500">*</span>
         </label>
-        <div className="grid gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {currentBodyTypes.map((type, index) => {
-            const info = currentBodyTypeInfo[type] || { icon: Car, description: "" };
+            const info = currentBodyTypeInfo[type];
+            if (!info) return null;
             const Icon = info.icon;
             const isSelected = formData.bodyType === type;
             return (
@@ -109,7 +140,7 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
                 type="button"
                 onClick={() => updateFormData({ bodyType: type })}
                 className={cn(
-                  "p-4 rounded-xl border-2 text-left transition-all duration-200 flex items-center gap-4 group animate-fade-in",
+                  "p-3 rounded-xl border-2 text-center transition-all duration-200 group animate-fade-in relative",
                   "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
                   isSelected
                     ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
@@ -117,38 +148,42 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
                 )}
                 style={{ animationDelay: `${index * 60}ms` }}
               >
+                {/* Check-Badge oben rechts */}
+                {isSelected && (
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
+                    <Check className="w-3 h-3" />
+                  </div>
+                )}
+
+                {/* SVG-Icon der Aufbauart */}
                 <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
-                  isSelected
-                    ? "bg-primary text-white"
-                    : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                  "w-full flex items-center justify-center mb-2 transition-colors",
+                  isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary"
                 )}>
-                  <Icon className="w-6 h-6" />
+                  <Icon className="w-16 h-10 md:w-20 md:h-12" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-semibold block">{type}</span>
-                  {info.description && (
-                    <span className="text-sm text-muted-foreground">{info.description}</span>
-                  )}
-                </div>
-                <div className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0",
-                  isSelected
-                    ? "bg-primary text-white scale-100"
-                    : "bg-muted scale-0 group-hover:scale-75"
+
+                {/* Label */}
+                <span className={cn(
+                  "font-semibold text-sm block",
+                  isSelected ? "text-primary" : "text-foreground"
                 )}>
-                  <Check className="w-4 h-4" />
-                </div>
+                  {type}
+                </span>
+                <span className="text-xs text-muted-foreground leading-tight block mt-0.5">
+                  {info.description}
+                </span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
-        <span className="flex items-center gap-1">&#10003; Kostenlos</span>
-        <span className="flex items-center gap-1">&#10003; Unverbindlich</span>
-        <span className="flex items-center gap-1">&#10003; In 2 Minuten fertig</span>
+      {/* Trust-Footer */}
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-1">
+        <span className="flex items-center gap-1">\u2713 Kostenlos</span>
+        <span className="flex items-center gap-1">\u2713 Unverbindlich</span>
+        <span className="flex items-center gap-1">\u2713 In 2 Min. fertig</span>
       </div>
     </div>
   );

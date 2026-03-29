@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (body.motorhomeId) {
       const { data: motorhome } = await supabase
         .from("motorhomes")
-        .select("manufacturer, model, year, body_type, mileage, sale_channel")
+        .select("manufacturer, model, year, body_type, mileage, sale_channel, instant_price")
         .eq("id", body.motorhomeId)
         .maybeSingle();
 
@@ -88,11 +88,13 @@ const handler = async (req: Request): Promise<Response> => {
           .filter(Boolean)
           .join(" ");
 
+        const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
         const saleChannelLabel =
-          motorhome.sale_channel === "auction" ? "Händler-Auktion" :
-          motorhome.sale_channel === "instant_price" ? "Sofortpreis" :
           motorhome.sale_channel === "station" ? "Ankaufstation" :
-          motorhome.sale_channel || "–";
+          hasInstantBuy ? "H\u00e4ndler-Auktion + Sofortkauf" :
+          motorhome.sale_channel === "auction" ? "H\u00e4ndler-Auktion" :
+          motorhome.sale_channel === "instant_price" ? "H\u00e4ndler-Auktion + Sofortkauf" :
+          motorhome.sale_channel || "\u2013";
 
         vehicleInfo = infoBox(
           "Ihr Fahrzeug bei CaravanWert",

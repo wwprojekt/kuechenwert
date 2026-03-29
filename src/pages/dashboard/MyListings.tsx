@@ -43,12 +43,16 @@ export default function MyListings() {
     enabled: !!user,
   });
 
-  const getSaleChannelBadge = (channel: string) => {
+  const getSaleChannelBadge = (motorhome: any) => {
+    const channel = motorhome.sale_channel;
+    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
     switch (channel) {
       case "auction":
-        return <Badge className="bg-purple-500">Auktion</Badge>;
+        return hasInstantBuy
+          ? <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>
+          : <Badge className="bg-purple-500">Auktion</Badge>;
       case "instant_price":
-        return <Badge className="bg-blue-500">Sofortpreis</Badge>;
+        return <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>;
       case "station":
         return <Badge className="bg-orange-500">Station</Badge>;
       default:
@@ -117,7 +121,7 @@ export default function MyListings() {
                     </div>
                   )}
                   <div className="absolute top-3 right-3">
-                    {getSaleChannelBadge(motorhome.sale_channel)}
+                    {getSaleChannelBadge(motorhome)}
                   </div>
                 </div>
 
@@ -163,7 +167,7 @@ export default function MyListings() {
                   )}
 
                   {/* Price Info */}
-                  {motorhome.sale_channel === "instant_price" && motorhome.instant_price && (
+                  {motorhome.instant_price && Number(motorhome.instant_price) > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Sofortpreis:</span>
                       <span className="font-semibold text-lg">

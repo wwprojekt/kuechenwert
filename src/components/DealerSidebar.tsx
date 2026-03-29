@@ -49,7 +49,6 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
   { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showBadge: true },
-  { title: "Sofortkauf", url: "/dashboard/sofortkauf", icon: ShoppingCart },
   { title: "Inventar", url: "/dashboard/inventory", icon: Package },
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
   { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },

@@ -422,11 +422,11 @@ export default function ListingDetail() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Verkaufsweg</span>
                     <Badge>
-                      {motorhome.sale_channel === "auction"
-                        ? "Auktion"
-                        : motorhome.sale_channel === "instant_price"
-                        ? "Sofortpreis"
-                        : "Station"}
+                      {motorhome.sale_channel === "station"
+                        ? "Station"
+                        : motorhome.instant_price && Number(motorhome.instant_price) > 0
+                        ? "Auktion + Sofortkauf"
+                        : "Auktion"}
                     </Badge>
                   </div>
                 </div>
@@ -807,7 +807,7 @@ export default function ListingDetail() {
             {motorhome.instant_price && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Sofortpreis</span>
+                  <span className="text-sm text-muted-foreground">Sofortkauf-Preis</span>
                   <span className="font-semibold text-xl">
                     €{Number(motorhome.instant_price).toLocaleString()}
                   </span>

@@ -97,7 +97,6 @@ const CONDITIONS = [
 
 const SALE_CHANNELS = [
   { value: "auction", label: "Händler-Auktion", icon: Gavel, color: "text-blue-600" },
-  { value: "instant_price", label: "Sofortpreis", icon: Zap, color: "text-yellow-600" },
   { value: "station", label: "Ankaufstation", icon: MapPin, color: "text-green-600" },
 ];
 
@@ -127,10 +126,10 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     body_type: String(formData.bodyType || "Kastenwagen"),
     condition: String(formData.condition || "Gut"),
     description: String(formData.description || ""),
-    // Sale
-    sale_channel: String(formData.saleChannel || "auction"),
-    reserve_price: formData.reservePrice ? Number(formData.reservePrice) : null,
-    instant_price: formData.desiredPrice ? Number(formData.desiredPrice) : null,
+    // Sale – instant_price Wizard-Sessions werden jetzt als Auktion mit Sofortkauf angelegt
+    sale_channel: String(formData.saleChannel || "auction") === "instant_price" ? "auction" : String(formData.saleChannel || "auction"),
+    reserve_price: formData.reservePrice ? Number(formData.reservePrice) : (formData.desiredPrice ? Number(formData.desiredPrice) : null),
+    instant_price: formData.desiredPrice ? Number(formData.desiredPrice) : (formData.instantPrice ? Number(formData.instantPrice) : null),
     // Technical
     fuel_type: formData.fuelType ? String(formData.fuelType) : null,
     transmission: formData.transmission ? String(formData.transmission) : null,
@@ -298,7 +297,8 @@ export function ConvertToMotorhomeDialog({
         condition,
         description: formData.description || null,
         sale_channel: formData.sale_channel || "auction",
-        reserve_price: formData.reserve_price || null,
+        // Bei Sofortkauf: reserve_price automatisch auf instant_price setzen
+        reserve_price: formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null),
         instant_price: formData.instant_price || null,
         fuel_type: formData.fuel_type || null,
         transmission: formData.transmission || null,
@@ -353,6 +353,23 @@ export function ConvertToMotorhomeDialog({
         .single();
 
       if (insertError) throw insertError;
+
+      // Automatisch Auktion erstellen wenn sale_channel === 'auction'
+      if ((formData.sale_channel || "auction") === "auction") {
+        const { error: auctionError } = await supabase
+          .from("auctions")
+          .insert({
+            motorhome_id: motorhome.id,
+            starting_bid: 50,
+            reserve_price: formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null),
+            status: "draft",
+          } as any);
+
+        if (auctionError) {
+          logger.error("Auktion konnte nicht erstellt werden:", auctionError);
+          // Nicht abbrechen - Motorhome wurde bereits erstellt
+        }
+      }
 
       // Mark source lead as converted
       const convertNote = `[${new Date().toLocaleDateString("de-DE")}] Als Wohnmobil angelegt (ID: ${motorhome.id})`;
@@ -567,41 +584,69 @@ export function ConvertToMotorhomeDialog({
               </div>
             </div>
 
-            {/* Price fields based on sale channel */}
-            {formData.sale_channel === "instant_price" && (
-              <div className="space-y-2 animate-fade-in">
-                <Label htmlFor="conv-instant-price">Sofortpreis (€) <span className="text-red-500">*</span></Label>
-                <Input
-                  id="conv-instant-price"
-                  type="number"
-                  value={String(formData.instant_price || "")}
-                  onChange={(e) => updateField("instant_price", e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder="z.B. 45000"
-                />
-              </div>
-            )}
+            {/* Price fields for Auktion */}
             {formData.sale_channel === "auction" && (
-              <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <div className="space-y-2">
-                  <Label htmlFor="conv-reserve-price">Mindestpreis (€)</Label>
-                  <Input
-                    id="conv-reserve-price"
-                    type="number"
-                    value={String(formData.reserve_price || "")}
-                    onChange={(e) => updateField("reserve_price", e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="optional"
+              <div className="space-y-4 animate-fade-in">
+                {/* Sofortkauf-Option */}
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-600" />
+                    <Label htmlFor="conv-sofortkauf-toggle" className="cursor-pointer font-medium">
+                      Sofortkauf aktivieren
+                    </Label>
+                  </div>
+                  <Switch
+                    id="conv-sofortkauf-toggle"
+                    checked={!!formData.instant_price}
+                    onCheckedChange={(checked) => {
+                      if (!checked) {
+                        updateField("instant_price", null);
+                      } else {
+                        updateField("instant_price", formData.reserve_price || "");
+                      }
+                    }}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="conv-instant-price-auction">Sofortkauf-Preis (€)</Label>
-                  <Input
-                    id="conv-instant-price-auction"
-                    type="number"
-                    value={String(formData.instant_price || "")}
-                    onChange={(e) => updateField("instant_price", e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="optional"
-                  />
-                </div>
+
+                {/* Sofortkauf-Preis (wenn aktiviert) */}
+                {formData.instant_price !== null && formData.instant_price !== undefined && (
+                  <div className="space-y-2 animate-fade-in">
+                    <Label htmlFor="conv-instant-price">Sofortkauf-Preis (€) <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="conv-instant-price"
+                      type="number"
+                      value={String(formData.instant_price || "")}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value) : null;
+                        updateField("instant_price", val);
+                        // Mindestpreis automatisch auf Sofortkauf-Preis setzen
+                        if (val) updateField("reserve_price", val);
+                      }}
+                      placeholder="z.B. 49000"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Der Mindestpreis wird automatisch auf den Sofortkauf-Preis gesetzt.
+                      Händler können bieten oder direkt zum Sofortkauf-Preis kaufen.
+                    </p>
+                  </div>
+                )}
+
+                {/* Mindestpreis (nur wenn KEIN Sofortkauf) */}
+                {!formData.instant_price && (
+                  <div className="space-y-2 animate-fade-in">
+                    <Label htmlFor="conv-reserve-price">Mindestpreis (€)</Label>
+                    <Input
+                      id="conv-reserve-price"
+                      type="number"
+                      value={String(formData.reserve_price || "")}
+                      onChange={(e) => updateField("reserve_price", e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="optional"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Unter diesem Preis wird nicht verkauft. Lassen Sie das Feld leer für maximale Reichweite.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -240,7 +240,7 @@ const Kaufen = () => {
       // Buy Now filter (Phase 3)
       if (filters.buyNowOnly) {
         const hasInstantPrice = motorhome.instant_price && 
-          motorhome.sale_channel === 'instant_price';
+          Number(motorhome.instant_price) > 0;
         if (!hasInstantPrice) {
           return false;
         }

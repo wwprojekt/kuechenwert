@@ -118,12 +118,16 @@ export default function AdminMotorhomes() {
     },
   });
 
-  const getSaleChannelBadge = (channel: string) => {
+  const getSaleChannelBadge = (motorhome: MotorhomeWithRelations) => {
+    const channel = motorhome.sale_channel;
+    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
     switch (channel) {
       case "auction":
-        return <Badge className="bg-purple-500">Auktion</Badge>;
+        return hasInstantBuy
+          ? <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>
+          : <Badge className="bg-purple-500">Auktion</Badge>;
       case "instant_price":
-        return <Badge className="bg-blue-500">Sofortpreis</Badge>;
+        return <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>;
       case "station":
         return <Badge className="bg-orange-500">Station</Badge>;
       default:
@@ -237,7 +241,7 @@ export default function AdminMotorhomes() {
                   <TableCell>
                     <Badge variant="secondary">{motorhome.condition}</Badge>
                   </TableCell>
-                  <TableCell>{getSaleChannelBadge(motorhome.sale_channel)}</TableCell>
+                  <TableCell>{getSaleChannelBadge(motorhome)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {motorhome.motorhome_photos?.length || 0} Fotos

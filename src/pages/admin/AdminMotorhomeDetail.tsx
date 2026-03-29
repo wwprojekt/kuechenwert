@@ -177,9 +177,10 @@ export default function AdminMotorhomeDetail() {
   };
 
   const getSaleChannelBadge = (channel: string) => {
+    const hasInstantBuy = motorhome?.instant_price && Number(motorhome.instant_price) > 0;
     const channelConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      instant_price: { label: "Sofortpreis", variant: "default" },
-      auction: { label: "Auktion", variant: "secondary" },
+      instant_price: { label: "Auktion + Sofortkauf", variant: "default" },
+      auction: hasInstantBuy ? { label: "Auktion + Sofortkauf", variant: "default" } : { label: "Auktion", variant: "secondary" },
       station: { label: "Station", variant: "outline" },
     };
     return channelConfig[channel] || { label: channel, variant: "outline" };
@@ -221,7 +222,7 @@ export default function AdminMotorhomeDetail() {
               <Edit className="w-4 h-4 mr-2" />
               Bearbeiten
             </Button>
-            {!activeAuction && motorhome.sale_channel === "auction" && (
+            {!activeAuction && (motorhome.sale_channel === "auction" || motorhome.sale_channel === "instant_price") && (
               <Button
                 size="sm"
                 onClick={() => navigate(`/admin/auctions?create=${motorhome.id}`)}

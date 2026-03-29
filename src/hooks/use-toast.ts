@@ -1,6 +1,8 @@
 import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import { logErrorToSupabase } from "@/lib/errorLogService";
+import { getPageTitle } from "@/lib/germanErrors";
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
@@ -143,6 +145,33 @@ function toast({ ...props }: Toast) {
       toast: { ...props, id },
     });
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
+
+  // ── Automatisches Error-Logging für destructive Toasts ──────────────
+  // Jeder Fehler-Toast wird automatisch ins Fehlerprotokoll geschrieben,
+  // auch wenn die aufrufende Komponente handleAndLogError() nicht nutzt.
+  if (props.variant === "destructive") {
+    const errorMessage = typeof props.description === 'string'
+      ? props.description
+      : typeof props.title === 'string'
+        ? props.title
+        : 'Unbekannter Fehler (destructive toast)';
+
+    const titleStr = typeof props.title === 'string' ? props.title : 'Fehler';
+
+    logErrorToSupabase({
+      errorCode: 'TOAST_ERROR',
+      errorMessage: `${titleStr}: ${errorMessage}`,
+      errorCategory: 'unknown',
+      severity: 'medium',
+      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
+      pageTitle: typeof window !== 'undefined' ? getPageTitle(window.location.pathname) : 'Unbekannt',
+      componentName: 'toast-auto-capture',
+      originalError: errorMessage,
+      errorSource: 'caught',
+    }).catch(() => {
+      // Fehler beim Auto-Logging dürfen die App nicht beeinflussen
+    });
+  }
 
   dispatch({
     type: "ADD_TOAST",

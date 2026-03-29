@@ -10,6 +10,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * Admin-only Edge Function to create a user account for a customer.
  * Used when admin converts a wizard session to a motorhome listing.
  *
+ * NOTE: verify_jwt is set to false to avoid 401 errors from expired tokens.
+ * Authentication is handled internally by verifying the caller is an admin.
+ *
  * The user is created with email_confirm: false so they can't log in yet.
  * A separate "send-registration-invite" function sends them a magic link.
  *
@@ -41,6 +44,50 @@ const handler = async (req: Request): Promise<Response> => {
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
 
   try {
+    // ── Internal Auth Check ──────────────────────────────────────────────
+    // Since verify_jwt is false, we manually verify the caller is an admin
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Nicht autorisiert – kein Token vorhanden" }),
+        { status: 401, headers }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Create a client with the user's token to verify their identity
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const { data: { user: callerUser }, error: authError } = await userClient.auth.getUser(token);
+    if (authError || !callerUser) {
+      edgeLogger.warn("Auth failed for admin-create-user:", authError?.message || "No user");
+      return new Response(
+        JSON.stringify({ error: "Nicht autorisiert – ungültiger Token" }),
+        { status: 401, headers }
+      );
+    }
+
+    // Verify the caller is an admin using the service role client
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const { data: roleData } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callerUser.id)
+      .maybeSingle();
+
+    if (!roleData || roleData.role !== "admin") {
+      edgeLogger.warn(`Non-admin user ${callerUser.id} tried to call admin-create-user`);
+      return new Response(
+        JSON.stringify({ error: "Zugriff verweigert – nur für Administratoren" }),
+        { status: 403, headers }
+      );
+    }
+
+    // ── Business Logic ───────────────────────────────────────────────────
     const body: CreateUserRequest = await req.json();
 
     if (!body.email || !body.email.trim()) {
@@ -56,10 +103,8 @@ const handler = async (req: Request): Promise<Response> => {
     const phone = body.phone?.trim() || null;
     const role = body.role || "private";
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     // Check if user already exists by email in profiles table
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile } = await adminClient
       .from("profiles")
       .select("id, email")
       .eq("email", email)
@@ -82,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
     // They will receive a magic link via send-registration-invite to activate their account
     const randomPassword = crypto.randomUUID() + "Aa1!"; // Strong random password (user will use magic link instead)
 
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password: randomPassword,
       email_confirm: false,
@@ -99,7 +144,7 @@ const handler = async (req: Request): Promise<Response> => {
         edgeLogger.info(`Auth user already exists for ${email}, looking up...`);
 
         // Try to find the user in profiles
-        const { data: profileByEmail } = await supabase
+        const { data: profileByEmail } = await adminClient
           .from("profiles")
           .select("id")
           .eq("email", email)
@@ -134,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
     edgeLogger.info(`Created new user ${userId} for ${email}`);
 
     // Create profile entry
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminClient
       .from("profiles")
       .upsert({
         id: userId,
@@ -151,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Assign user role
-    const { error: roleError } = await supabase
+    const { error: roleError } = await adminClient
       .from("user_roles")
       .upsert({
         user_id: userId,

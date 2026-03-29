@@ -45,6 +45,7 @@ import {
   Mail,
 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { handleAndLogError } from "@/lib/errorLogService";
 
 // ============================================================================
 // Types
@@ -398,10 +399,19 @@ export function ConvertToMotorhomeDialog({
       setConversionResult(result);
     },
     onError: (error: Error) => {
-      logger.error("Convert to motorhome failed:", error);
+      const germanMessage = handleAndLogError(error, {
+        componentName: 'ConvertToMotorhomeDialog',
+        category: 'api',
+        severity: 'high',
+        metadata: {
+          sessionId: session?.id,
+          customerEmail: customerEmail,
+          action: 'convert_to_motorhome',
+        },
+      });
       toast({
         title: "Fehler beim Anlegen",
-        description: error.message,
+        description: germanMessage || error.message,
         variant: "destructive",
       });
     },
@@ -433,10 +443,19 @@ export function ConvertToMotorhomeDialog({
       });
     },
     onError: (error: Error) => {
-      logger.error("Send registration invite failed:", error);
+      const germanMessage = handleAndLogError(error, {
+        componentName: 'ConvertToMotorhomeDialog',
+        category: 'api',
+        severity: 'medium',
+        metadata: {
+          sessionId: session?.id,
+          customerEmail: customerEmail,
+          action: 'send_registration_invite',
+        },
+      });
       toast({
         title: "Fehler beim Senden",
-        description: error.message,
+        description: germanMessage || error.message,
         variant: "destructive",
       });
     },

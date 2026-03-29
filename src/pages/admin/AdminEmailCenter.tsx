@@ -36,7 +36,7 @@ import {
   Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
   BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
   ChevronLeft, ChevronRight, Unlink, Zap, Bot, CheckSquare,
-  Settings, Save, MailCheck, Bell, Shield,
+  Settings, Save, MailCheck, Bell, Shield, MousePointerClick,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -2214,8 +2214,12 @@ function SentTab() {
                     </TableCell>
                     <TableCell>{getTypeBadge(e.email_type)}</TableCell>
                     <TableCell>
-                      <Badge variant={e.status === 'sent' || e.status === 'delivered' ? 'outline' : 'destructive'} className={e.status === 'sent' || e.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
-                        {e.status === 'sent' ? 'Gesendet' : e.status === 'delivered' ? 'Zugestellt' : e.status === 'opened' ? 'Geöffnet' : e.status === 'clicked' ? 'Geklickt' : e.status === 'bounced' ? 'Bounced' : e.status === 'failed' ? 'Fehlgeschlagen' : e.status}
+                      <Badge variant={e.status === 'bounced' || e.status === 'failed' ? 'destructive' : 'outline'} className={
+                        e.status === 'sent' || e.status === 'delivered' ? 'text-green-600 border-green-600' :
+                        e.status === 'opened' ? 'text-blue-600 border-blue-600' :
+                        e.status === 'clicked' ? 'text-purple-600 border-purple-600' : ''
+                      }>
+                        {e.status === 'sent' ? 'Gesendet' : e.status === 'delivered' ? 'Zugestellt' : e.status === 'opened' ? 'Geöffnet' : e.status === 'clicked' ? 'Angeklickt' : e.status === 'bounced' ? 'Bounced' : e.status === 'failed' ? 'Fehlgeschlagen' : e.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
@@ -2280,6 +2284,7 @@ function StatsTab() {
     replies: 0,
     delivered: 0,
     opened: 0,
+    clicked: 0,
     bounced: 0,
     failed: 0,
   });
@@ -2342,7 +2347,8 @@ function StatsTab() {
         singleEmails: emails.filter(e => e.email_type === 'single').length,
         replies: emails.filter(e => e.email_type === 'reply').length,
         delivered: emails.filter(e => e.status === 'delivered' || e.status === 'sent').length,
-        opened: emails.filter(e => e.status === 'opened').length,
+        opened: emails.filter(e => e.status === 'opened' || e.status === 'clicked').length,
+        clicked: emails.filter(e => e.status === 'clicked').length,
         bounced: emails.filter(e => e.status === 'bounced').length,
         failed: emails.filter(e => e.status === 'failed').length,
       });
@@ -2495,6 +2501,19 @@ function StatsTab() {
                   {stats.delivered > 0 && (
                     <span className="text-xs text-muted-foreground">
                       ({Math.round((stats.opened / stats.delivered) * 100)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm flex items-center gap-2">
+                  <MousePointerClick className="w-4 h-4 text-purple-600" /> Angeklickt
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-purple-600 border-purple-600">{stats.clicked}</Badge>
+                  {stats.opened > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ({Math.round((stats.clicked / stats.opened) * 100)}%)
                     </span>
                   )}
                 </div>
@@ -2687,6 +2706,8 @@ function SystemEmailsTab() {
         return <Badge variant="outline" className="text-green-700 border-green-700 gap-1"><CheckCircle className="w-3 h-3" />Zugestellt</Badge>;
       case 'opened':
         return <Badge variant="outline" className="text-blue-600 border-blue-600 gap-1"><Eye className="w-3 h-3" />Geöffnet</Badge>;
+      case 'clicked':
+        return <Badge variant="outline" className="text-purple-600 border-purple-600 gap-1"><MousePointerClick className="w-3 h-3" />Angeklickt</Badge>;
       case 'bounced':
         return <Badge variant="outline" className="text-yellow-600 border-yellow-600 gap-1"><AlertCircle className="w-3 h-3" />Bounced</Badge>;
       case 'failed':

@@ -12,7 +12,6 @@ import {
   User,
   Settings,
   Lock,
-  ShoppingCart,
   Heart,
   AlertTriangle,
   Search,

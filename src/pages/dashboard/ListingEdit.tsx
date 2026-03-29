@@ -289,8 +289,9 @@ export default function ListingEdit() {
       // Only include prices if they have values
       if (data.instant_price) {
         updateData.instant_price = Number(data.instant_price);
-      }
-      if (data.reserve_price) {
+        // Bei Sofortkauf: reserve_price automatisch auf instant_price setzen
+        updateData.reserve_price = Number(data.reserve_price) || Number(data.instant_price);
+      } else if (data.reserve_price) {
         updateData.reserve_price = Number(data.reserve_price);
       }
 
@@ -817,14 +818,20 @@ export default function ListingEdit() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="instant_price">Sofortpreis (optional)</Label>
+                    <Label htmlFor="instant_price">Sofortkauf-Preis (optional)</Label>
                     <Input
                       id="instant_price"
                       type="number"
                       value={formData.instant_price}
-                      onChange={(e) => setFormData({ ...formData, instant_price: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, instant_price: val, ...(val ? { reserve_price: val } : {}) });
+                      }}
                       placeholder="z.B. 45000"
                     />
+                    {formData.instant_price && (
+                      <p className="text-xs text-muted-foreground">Der Mindestpreis wird automatisch auf den Sofortkauf-Preis gesetzt.</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -835,6 +842,7 @@ export default function ListingEdit() {
                       value={formData.reserve_price}
                       onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value })}
                       placeholder="z.B. 40000"
+                      disabled={!!formData.instant_price}
                     />
                   </div>
                 </div>

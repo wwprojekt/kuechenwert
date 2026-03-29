@@ -41,7 +41,7 @@ import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
-import { ShoppingCart } from "lucide-react";
+
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -782,22 +782,7 @@ const DealerDashboard = () => {
             </div>
           </div>
 
-          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-green-500 hover:bg-green-50 cursor-pointer'} transition-smooth group`}
-            onClick={isLocked ? undefined : () => window.location.href = '/dashboard/sofortkauf'}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={`font-semibold mb-1 ${isLocked ? '' : 'group-hover:text-green-600'} transition-colors`}>
-                  Sofortkauf-Angebote
-                  {isLocked && <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Fahrzeuge zum Festpreis kaufen
-                </p>
-              </div>
-              <ArrowUpRight className={`h-5 w-5 text-muted-foreground ${isLocked ? '' : 'group-hover:text-green-600'} transition-colors`} />
-            </div>
-          </div>
+
 
           <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer'} transition-smooth group`}
             onClick={isLocked ? undefined : () => window.location.href = '/dashboard/inventory'}

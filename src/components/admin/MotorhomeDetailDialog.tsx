@@ -149,8 +149,20 @@ export function MotorhomeDetailDialog({
                 <InfoItem icon={Calendar} label="Baujahr" value={String(motorhome.year)} />
                 <InfoItem icon={Gauge} label="Kilometerstand" value={`${motorhome.mileage.toLocaleString()} km`} />
                 <InfoItem label="Zustand" value={motorhome.condition} />
-                <InfoItem label="Verkaufsweg" value={motorhome.sale_channel} />
-                <InfoItem label="Preis" value={formatPrice(motorhome.instant_price || motorhome.reserve_price)} />
+                <InfoItem label="Verkaufsweg" value={
+                  motorhome.sale_channel === "auction" && motorhome.instant_price
+                    ? "Händler-Auktion + Sofortkauf"
+                    : motorhome.sale_channel === "auction"
+                    ? "Händler-Auktion"
+                    : motorhome.sale_channel === "station"
+                    ? "Ankaufstation"
+                    : motorhome.sale_channel
+                } />
+                {motorhome.instant_price ? (
+                  <InfoItem label="Sofortkauf-Preis" value={formatPrice(motorhome.instant_price)} />
+                ) : (
+                  <InfoItem label="Mindestpreis" value={formatPrice(motorhome.reserve_price)} />
+                )}
               </div>
               {motorhome.description && (
                 <div className="mt-4">

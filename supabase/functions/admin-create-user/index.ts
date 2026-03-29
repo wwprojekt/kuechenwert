@@ -56,11 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Create a client with the user's token to verify their identity
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
+    // Verify the caller's identity using service_role + token parameter
+    // (same pattern as place-bid, instant-buy – avoids SUPABASE_ANON_KEY dependency)
+    const userClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: { user: callerUser }, error: authError } = await userClient.auth.getUser(token);
     if (authError || !callerUser) {
       edgeLogger.warn("Auth failed for admin-create-user:", authError?.message || "No user");

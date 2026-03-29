@@ -105,11 +105,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const jwt = authHeader.replace('Bearer ', '');
-    // Create a client with the user's JWT to verify their identity
-    const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
-    });
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    // Verify the caller's identity using service_role + token parameter
+    // (same pattern as place-bid, instant-buy – avoids SUPABASE_ANON_KEY dependency)
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !authUser) {
       return new Response(JSON.stringify({ error: 'Ungültiges oder abgelaufenes Token' }), {
         status: 401,

@@ -60,12 +60,12 @@ export async function checkServiceRoleOrAdmin(
   if (token) {
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-      const supabaseAuth = createClient(supabaseUrl, anonKey);
+      // Use service_role key for auth.getUser(token) – avoids SUPABASE_ANON_KEY dependency
+      const supabaseAuth = createClient(supabaseUrl, serviceRoleKey);
       const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
 
       if (!userError && user) {
-        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey || anonKey);
+        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
         const { data: roles } = await supabaseAdmin
           .from('user_roles')
           .select('role')

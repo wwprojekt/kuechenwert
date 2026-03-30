@@ -78,39 +78,40 @@ interface MotorhomeEditDialogProps {
 }
 
 const CONDITIONS = [
-  { value: "new", label: "Neu" },
-  { value: "like_new", label: "Wie neu" },
-  { value: "excellent", label: "Ausgezeichnet" },
-  { value: "good", label: "Gut" },
-  { value: "fair", label: "Befriedigend" },
-  { value: "poor", label: "Renovierungsbedürftig" },
+  { value: "Neuwertig", label: "Neuwertig" },
+  { value: "Sehr gut", label: "Sehr gut" },
+  { value: "Gut", label: "Gut" },
+  { value: "Befriedigend", label: "Befriedigend" },
+  { value: "Reparaturbedürftig", label: "Reparaturbedürftig" },
 ];
 
 const BODY_TYPES = [
-  { value: "integrated", label: "Integriert" },
-  { value: "semi_integrated", label: "Teilintegriert" },
-  { value: "alcove", label: "Alkoven" },
-  { value: "camper_van", label: "Kastenwagen" },
-  { value: "low_profile", label: "Flachboden" },
-  { value: "caravan", label: "Wohnwagen" },
+  { value: "Teilintegriert", label: "Teilintegriert" },
+  { value: "Alkoven", label: "Alkoven" },
+  { value: "Vollintegriert", label: "Vollintegriert" },
+  { value: "Kastenwagen", label: "Kastenwagen" },
+  { value: "Campingbus", label: "Campingbus" },
+  { value: "Wohnwagen", label: "Wohnwagen" },
+  { value: "Faltcaravan", label: "Faltcaravan" },
+  { value: "Mobilheim", label: "Mobilheim" },
 ];
 
 const SALE_CHANNELS = [
+  { value: "instant_price", label: "Sofortpreis" },
   { value: "auction", label: "Händler-Auktion" },
   { value: "station", label: "Ankaufstation" },
 ];
 
 const FUEL_TYPES = [
-  { value: "diesel", label: "Diesel" },
-  { value: "petrol", label: "Benzin" },
-  { value: "electric", label: "Elektro" },
-  { value: "hybrid", label: "Hybrid" },
-  { value: "lpg", label: "LPG" },
+  { value: "Diesel", label: "Diesel" },
+  { value: "Benzin", label: "Benzin" },
+  { value: "Elektro", label: "Elektro" },
+  { value: "Hybrid", label: "Hybrid" },
 ];
 
 const TRANSMISSIONS = [
-  { value: "manual", label: "Schaltgetriebe" },
-  { value: "automatic", label: "Automatik" },
+  { value: "Schaltgetriebe", label: "Schaltgetriebe" },
+  { value: "Automatik", label: "Automatik" },
 ];
 
 export function MotorhomeEditDialog({

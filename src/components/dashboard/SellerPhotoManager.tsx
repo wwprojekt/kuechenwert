@@ -534,7 +534,7 @@ export function SellerPhotoManager({
           <h3 className="text-lg font-semibold">Fotos verwalten</h3>
           <p className="text-sm text-muted-foreground">
             {photos.length} Foto{photos.length !== 1 ? "s" : ""} vorhanden
-            {!disabled && " \u00b7 Ziehen Sie Fotos zum Sortieren"}
+            {!disabled && " · Ziehen Sie Fotos zum Sortieren"}
           </p>
         </div>
         <div className="flex gap-2">

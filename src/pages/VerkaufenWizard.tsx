@@ -29,7 +29,7 @@ const steps = [
   { id: 4, name: "Details", description: "Technische Angaben" },
   { id: 5, name: "Ausstattung", description: "Optional" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
-  { id: 7, name: "Verkaufsweg", description: "Wie m\u00f6chten Sie verkaufen?" },
+  { id: 7, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
   { id: 8, name: "Abschluss", description: "Standort & Konto" },
 ];
 
@@ -439,10 +439,10 @@ const VerkaufenWizard = () => {
                         ? "Nur noch wenige Angaben bis zum Angebot"
                         : currentStep <= 5
                         ? "Fast geschafft – gleich erhalten Sie Ihr Angebot"
-                        : currentStep                         ? "Fotos erh\u00f6hen Ihre Verkaufschancen enorm!"
+                        : currentStep                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7
-                        ? "Fast geschafft \u2013 w\u00e4hlen Sie Ihren Verkaufsweg"
-                        : "Letzter Schritt \u2013 Standort & Konto!"}                 </span>
+                        ? "Fast geschafft – wählen Sie Ihren Verkaufsweg"
+                        : "Letzter Schritt – Standort & Konto!"}                 </span>
                   </div>
                 </Card>
               </div>

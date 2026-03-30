@@ -13,7 +13,7 @@ const VerkaufenDanke = () => {
   return (
     <PageLayout
       title="Fahrzeug erfolgreich eingereicht – CaravanWert"
-      description="Ihr Wohnmobil wurde erfolgreich eingereicht. Pr\u00fcfen Sie Ihre E-Mails f\u00fcr den Aktivierungslink."
+      description="Ihr Wohnmobil wurde erfolgreich eingereicht. Prüfen Sie Ihre E-Mails für den Aktivierungslink."
       keywords="wohnmobil verkaufen, anfrage gesendet, bewertung"
       canonicalPath="/verkaufen/danke"
       noIndex
@@ -27,7 +27,7 @@ const VerkaufenDanke = () => {
             Fahrzeug erfolgreich eingereicht!
           </h1>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Ihr Wohnmobil wurde in unser System aufgenommen. Pr\u00fcfen Sie jetzt Ihr E-Mail-Postfach.
+            Ihr Wohnmobil wurde in unser System aufgenommen. Prüfen Sie jetzt Ihr E-Mail-Postfach.
           </p>
         </div>
       </PageHero>
@@ -45,7 +45,7 @@ const VerkaufenDanke = () => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-amber-800 dark:text-amber-300 mb-2">
-                      Pr\u00fcfen Sie jetzt Ihr E-Mail-Postfach
+                      Prüfen Sie jetzt Ihr E-Mail-Postfach
                     </h2>
                     <p className="text-sm text-amber-700 dark:text-amber-400">
                       Wir haben Ihnen eine E-Mail mit einem <strong>Aktivierungslink</strong> gesendet. 
@@ -53,14 +53,14 @@ const VerkaufenDanke = () => {
                       und Ihr Fahrzeug im Dashboard zu verwalten.
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-                      Keine E-Mail erhalten? Pr\u00fcfen Sie Ihren Spam-Ordner oder kontaktieren Sie uns.
+                      Keine E-Mail erhalten? Prüfen Sie Ihren Spam-Ordner oder kontaktieren Sie uns.
                     </p>
                   </div>
                 </div>
               </Card>
             )}
 
-            {/* Was passiert als n\u00e4chstes */}
+            {/* Was passiert als nächstes */}
             <Card className="p-6 md:p-8 shadow-elegant">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
                 <Clock className="w-6 h-6 text-primary" />
@@ -75,7 +75,7 @@ const VerkaufenDanke = () => {
                     <h3 className="font-semibold text-foreground">Konto aktivieren</h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       {user 
-                        ? "Ihr Konto ist bereits aktiv. Sie k\u00f6nnen Ihr Fahrzeug direkt im Dashboard verwalten."
+                        ? "Ihr Konto ist bereits aktiv. Sie können Ihr Fahrzeug direkt im Dashboard verwalten."
                         : "Klicken Sie auf den Aktivierungslink in Ihrer E-Mail, um Ihr Konto einzurichten und ein Passwort festzulegen."
                       }
                     </p>
@@ -88,7 +88,7 @@ const VerkaufenDanke = () => {
                   <div>
                     <h3 className="font-semibold text-foreground">Fotos hochladen</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Laden Sie Fotos Ihres Wohnmobils hoch, um die Chancen auf einen schnellen Verkauf deutlich zu erh\u00f6hen. 
+                      Laden Sie Fotos Ihres Wohnmobils hoch, um die Chancen auf einen schnellen Verkauf deutlich zu erhöhen. 
                       Inserate mit Fotos erhalten 3x mehr Anfragen.
                     </p>
                   </div>
@@ -98,10 +98,10 @@ const VerkaufenDanke = () => {
                     3
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">H\u00e4ndler-Gebote erhalten</h3>
+                    <h3 className="font-semibold text-foreground">Händler-Gebote erhalten</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Sobald Ihr Inserat live ist, erhalten Sie Gebote von gepr\u00fcften H\u00e4ndlern. 
-                      Sie k\u00f6nnen den gesamten Verkaufsprozess bequem \u00fcber Ihr Dashboard verfolgen.
+                      Sobald Ihr Inserat live ist, erhalten Sie Gebote von geprüften Händlern. 
+                      Sie können den gesamten Verkaufsprozess bequem über Ihr Dashboard verfolgen.
                     </p>
                   </div>
                 </div>
@@ -112,7 +112,7 @@ const VerkaufenDanke = () => {
             <Card className="p-6 md:p-8 bg-primary/5 border-primary/20">
               <h2 className="text-lg font-bold mb-4">Haben Sie Fragen?</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Unser Team steht Ihnen jederzeit zur Verf\u00fcgung.
+                Unser Team steht Ihnen jederzeit zur Verfügung.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <a

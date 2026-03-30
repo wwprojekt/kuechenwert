@@ -1303,7 +1303,7 @@ export default function AdminSettings() {
                   <li>Ein Nutzer bewertet sein Wohnmobil im <strong>Wertrechner</strong></li>
                   <li>Der <strong>Algorithmus</strong> berechnet einen Schätzwert basierend auf Marke, Typ, Alter und Zustand</li>
                   <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zusätzliche Schätzung</li>
-                  <li>Sie tragen im Admin-Bereich unter <strong>Leads \u2192 Wertrechner</strong> Ihren fundierten Expertenwert ein</li>
+                  <li>Sie tragen im Admin-Bereich unter <strong>Leads → Wertrechner</strong> Ihren fundierten Expertenwert ein</li>
                   <li>Die KI <strong>lernt</strong> aus Ihren Expertenwerten und wird mit jeder Bewertung genauer</li>
                 </ol>
               </div>

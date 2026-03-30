@@ -56,7 +56,6 @@ import {
   Upload,
   Trash2,
   GripVertical,
-  Save,
   Image as ImageIcon,
   Star,
   Loader2,
@@ -134,7 +133,7 @@ function SortablePhotoItem({
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-2 left-2 z-10 bg-black/60 text-white rounded-md p-1.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 left-2 z-10 bg-black/60 text-white rounded-md p-1.5 cursor-grab active:cursor-grabbing"
           title="Ziehen zum Sortieren"
         >
           <GripVertical className="w-4 h-4" />
@@ -223,7 +222,7 @@ export function SellerPhotoManager({
       (a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)
     )
   );
-  const [hasOrderChanged, setHasOrderChanged] = useState(false);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [uploadedCount, setUploadedCount] = useState(0);
@@ -234,13 +233,13 @@ export function SellerPhotoManager({
 
   // Sync with parent when initialPhotos change (e.g. after refetch)
   useEffect(() => {
-    if (!hasOrderChanged && !isDragging.current) {
+    if (!isDragging.current) {
       const sorted = [...initialPhotos].sort(
         (a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)
       );
       setPhotos(sorted);
     }
-  }, [initialPhotos, hasOrderChanged]);
+  }, [initialPhotos]);
 
   // dnd-kit sensors (with touch support for mobile)
   const sensors = useSensors(
@@ -266,18 +265,20 @@ export function SellerPhotoManager({
     setPhotos((prev) => {
       const oldIndex = prev.findIndex((p) => p.id === active.id);
       const newIndex = prev.findIndex((p) => p.id === over.id);
-      return arrayMove(prev, oldIndex, newIndex);
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      // Auto-save: trigger save after reorder
+      setTimeout(() => autoSaveOrder(reordered), 0);
+      return reordered;
     });
-    setHasOrderChanged(true);
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Save Order Mutation
+  // Save Order Mutation (auto-save after drag)
   // ---------------------------------------------------------------------------
 
   const saveOrderMutation = useMutation({
-    mutationFn: async () => {
-      const updates = photos.map((photo, index) => ({
+    mutationFn: async (orderedPhotos: Photo[]) => {
+      const updates = orderedPhotos.map((photo, index) => ({
         id: photo.id,
         display_order: index,
         is_primary: index === 0,
@@ -300,7 +301,6 @@ export function SellerPhotoManager({
     },
     onSuccess: () => {
       toast({ title: "Reihenfolge gespeichert", description: "Die Foto-Reihenfolge wurde aktualisiert." });
-      setHasOrderChanged(false);
       queryClient.invalidateQueries({ queryKey });
     },
     onError: (error) => {
@@ -308,6 +308,13 @@ export function SellerPhotoManager({
       toast({ title: "Fehler", description: "Reihenfolge konnte nicht gespeichert werden.", variant: "destructive" });
     },
   });
+
+  const autoSaveOrder = useCallback(
+    (orderedPhotos: Photo[]) => {
+      saveOrderMutation.mutate(orderedPhotos);
+    },
+    [saveOrderMutation]
+  );
 
   // ---------------------------------------------------------------------------
   // Set as Primary (move to first position)
@@ -317,10 +324,12 @@ export function SellerPhotoManager({
     setPhotos((prev) => {
       const index = prev.findIndex((p) => p.id === photo.id);
       if (index <= 0) return prev;
-      return arrayMove(prev, index, 0);
+      const reordered = arrayMove(prev, index, 0);
+      // Auto-save after setting primary
+      setTimeout(() => autoSaveOrder(reordered), 0);
+      return reordered;
     });
-    setHasOrderChanged(true);
-    toast({ title: "Titelbild geändert", description: "Bitte klicken Sie auf \"Reihenfolge speichern\" um die Änderung zu übernehmen." });
+    toast({ title: "Titelbild geändert", description: "Das Titelbild wurde aktualisiert." });
   }, [toast]);
 
   // ---------------------------------------------------------------------------
@@ -542,7 +551,6 @@ export function SellerPhotoManager({
           <h3 className="text-lg font-semibold">Fotos verwalten</h3>
           <p className="text-sm text-muted-foreground">
             {photos.length} Foto{photos.length !== 1 ? "s" : ""} vorhanden
-            {!disabled && " · Ziehen Sie Fotos zum Sortieren"}
           </p>
         </div>
         <div className="flex gap-2">
@@ -577,22 +585,12 @@ export function SellerPhotoManager({
             </label>
           )}
 
-          {/* Save Order Button */}
-          {hasOrderChanged && !disabled && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => saveOrderMutation.mutate()}
-              disabled={saveOrderMutation.isPending}
-              className="gap-2"
-            >
-              {saveOrderMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Reihenfolge speichern
-            </Button>
+              {/* Auto-save indicator */}
+          {saveOrderMutation.isPending && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Speichert...</span>
+            </div>
           )}
         </div>
       </div>
@@ -739,14 +737,7 @@ export function SellerPhotoManager({
         </div>
       )}
 
-      {/* Hint */}
-      {photos.length > 0 && !disabled && (
-        <p className="text-xs text-muted-foreground">
-          Das erste Foto wird automatisch als Titelbild verwendet. Ziehen Sie
-          Fotos per Drag & Drop in die gewünschte Reihenfolge und klicken Sie
-          auf &bdquo;Reihenfolge speichern&ldquo;. Unterstützte Formate: JPEG, PNG, WebP, HEIC.
-        </p>
-      )}
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

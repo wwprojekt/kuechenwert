@@ -364,12 +364,20 @@ export function AdminPhotoManager({
             continue;
           }
 
-          const fileExt = file.name.split(".").pop();
+          // Optimize image before upload (converts to JPEG)
+          let uploadFile: File;
+          let fileExt: string;
+          try {
+            const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
+            uploadFile = optimized.file;
+            fileExt = optimized.format; // Use output format extension (e.g. 'jpeg')
+          } catch (optimizeError) {
+            // Fallback: upload original file if optimization fails (e.g. HEIC on unsupported browsers)
+            logger.warn(`Image optimization failed for ${file.name}, uploading original:`, optimizeError);
+            uploadFile = file;
+            fileExt = file.name.split(".").pop() || 'jpg';
+          }
           const fileName = `${motorhomeId}/${Date.now()}_${i}.${fileExt}`;
-
-          // Optimize image before upload
-          const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
-          const uploadFile = optimized.file;
 
           // Upload to storage
           const { error: uploadError } = await supabase.storage

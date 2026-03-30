@@ -31,7 +31,6 @@ import {
   Bike,
   Warehouse,
   Snowflake,
-  ThermometerSun,
   Tent
 } from "lucide-react";
 
@@ -280,14 +279,9 @@ export function MotorhomeDetailDialog({
                     <Tent className="w-3 h-3" /> Vorzelt
                   </Badge>
                 )}
-                {motorhome.has_roof_ac && (
+                {(motorhome.has_roof_ac || motorhome.has_stand_ac) && (
                   <Badge variant="outline" className="gap-1">
-                    <Snowflake className="w-3 h-3" /> Dachklima
-                  </Badge>
-                )}
-                {motorhome.has_stand_ac && (
-                  <Badge variant="outline" className="gap-1">
-                    <ThermometerSun className="w-3 h-3" /> Standklima
+                    <Snowflake className="w-3 h-3" /> Dachklima/Standklima
                   </Badge>
                 )}
                 {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}

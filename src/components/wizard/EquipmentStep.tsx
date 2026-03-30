@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Settings, Home, Sun, Tent, Droplets, Tv, Camera, ParkingCircle, Battery, Wind, Lock, Shield, Snowflake, ThermometerSun } from "lucide-react";
+import { Settings, Home, Sun, Tent, Droplets, Tv, Camera, ParkingCircle, Battery, Wind, Lock, Shield, Snowflake } from "lucide-react";
 
 interface EquipmentStepProps {
   formData: WizardFormData;
@@ -113,17 +113,10 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
           />
           <FeatureCheckbox
             id="has_roof_ac"
-            label="Dachklima"
+            label="Dachklima/Standklima"
             checked={formData.has_roof_ac}
-            onCheckedChange={(c) => updateFormData({ has_roof_ac: c })}
+            onCheckedChange={(c) => updateFormData({ has_roof_ac: c, has_stand_ac: c })}
             icon={<Snowflake className="w-3.5 h-3.5" />}
-          />
-          <FeatureCheckbox
-            id="has_stand_ac"
-            label="Standklima"
-            checked={formData.has_stand_ac}
-            onCheckedChange={(c) => updateFormData({ has_stand_ac: c })}
-            icon={<ThermometerSun className="w-3.5 h-3.5" />}
           />
         </div>
       </div>

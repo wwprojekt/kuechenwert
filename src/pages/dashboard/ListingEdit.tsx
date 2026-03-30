@@ -707,12 +707,8 @@ export default function ListingEdit() {
                     <label htmlFor="has_awning_tent" className="text-sm font-medium">Vorzelt</label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="has_roof_ac" checked={formData.has_roof_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_roof_ac: checked as boolean })} />
-                    <label htmlFor="has_roof_ac" className="text-sm font-medium">Dachklima</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_stand_ac" checked={formData.has_stand_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_stand_ac: checked as boolean })} />
-                    <label htmlFor="has_stand_ac" className="text-sm font-medium">Standklima</label>
+                    <Checkbox id="has_roof_ac" checked={formData.has_roof_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_roof_ac: checked as boolean, has_stand_ac: checked as boolean })} />
+                    <label htmlFor="has_roof_ac" className="text-sm font-medium">Dachklima/Standklima</label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="has_bike_rack" checked={formData.has_bike_rack} onCheckedChange={(checked) => setFormData({ ...formData, has_bike_rack: checked as boolean })} />

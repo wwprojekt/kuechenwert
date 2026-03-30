@@ -559,19 +559,14 @@ export function MotorhomeEditDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="has_roof_ac">Dachklima</Label>
+                  <Label htmlFor="has_roof_ac">Dachklima/Standklima</Label>
                   <Switch
                     id="has_roof_ac"
                     checked={formData.has_roof_ac || false}
-                    onCheckedChange={(checked) => updateField("has_roof_ac", checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="has_stand_ac">Standklima</Label>
-                  <Switch
-                    id="has_stand_ac"
-                    checked={formData.has_stand_ac || false}
-                    onCheckedChange={(checked) => updateField("has_stand_ac", checked)}
+                    onCheckedChange={(checked) => {
+                      updateField("has_roof_ac", checked);
+                      updateField("has_stand_ac", checked);
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-between">

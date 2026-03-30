@@ -42,6 +42,7 @@ interface LeadNotificationRequest {
   ga4ClientId?: string;
   // Transaction ID für Deduplizierung über alle Tracking-Schichten
   transactionId?: string;
+  skipUserEmail?: boolean;
 }
 
 const VALID_TYPES = ["wertermittlung", "wertrechner", "wizard", "kontakt", "dealer"];
@@ -230,7 +231,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 2. Send confirmation to user
-    const userSubjects: Record<string, string> = {
+    if (!data.skipUserEmail) {
+      const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",
       wertrechner: "Ihre Anfrage über den Wertrechner",
       wizard: "Ihre Verkaufsanfrage bei CaravanWert",
@@ -316,6 +318,7 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (logErr) {
         console.error('Failed to log user email in admin_emails:', logErr);
       }
+    }
     }
 
     // ─── Server-Side Conversion Tracking (non-blocking) ───────────

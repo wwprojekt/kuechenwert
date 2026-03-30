@@ -418,8 +418,9 @@ export const useWizardForm = () => {
         delete (formDataForStorage as Partial<WizardFormData>).photos;
 
         // Save to wizard_sessions so admin can convert and data is not lost
+        let savedSessionId = null;
         try {
-          await supabase.from('wizard_sessions').insert({
+          const { data: sessionData, error: sessionError } = await supabase.from('wizard_sessions').insert({
             user_id: null, // Will be linked after email confirmation
             anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
             customer_name: formData.customerName || null,
@@ -433,10 +434,29 @@ export const useWizardForm = () => {
             status: 'completed',
             vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
             completed_at: new Date().toISOString(),
-          });
+          }).select('id').single();
+          
+          if (sessionError) throw sessionError;
+          savedSessionId = sessionData.id;
           logger.info('Wizard session saved for signup-without-session user');
         } catch (wizardSessionError) {
           logger.error('Failed to save wizard session:', wizardSessionError);
+        }
+
+        // Call auto-convert-wizard edge function
+        if (savedSessionId) {
+          try {
+            const { error: autoConvertError } = await supabase.functions.invoke("auto-convert-wizard", {
+              body: { sessionId: savedSessionId },
+            });
+            if (autoConvertError) {
+              logger.error("Auto-convert failed:", autoConvertError);
+            } else {
+              logger.info("Auto-convert successful");
+            }
+          } catch (convertErr) {
+            logger.error("Failed to invoke auto-convert-wizard:", convertErr);
+          }
         }
 
         // Send email notification to admin + confirmation to customer
@@ -458,6 +478,7 @@ export const useWizardForm = () => {
               wbraid: trackingData.wbraid,
               ga4ClientId: trackingData.ga4ClientId,
               transactionId,
+              skipUserEmail: true, // We skip the standard "we will contact you in 24h" email because they get the registration invite
             },
           });
         } catch (emailError) {
@@ -471,10 +492,8 @@ export const useWizardForm = () => {
         trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
 
         toast({
-          title: "Anfrage erfolgreich gesendet!",
-          description: registerPassword
-            ? "Bitte bestätigen Sie Ihre E-Mail-Adresse. Nach der Bestätigung können Sie sich einloggen und Ihr Inserat im Dashboard verfolgen."
-            : "Wir haben Ihre Daten erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.",
+          title: "Fahrzeug erfolgreich eingereicht!",
+          description: "Sie erhalten in Kürze eine E-Mail mit einem Aktivierungslink. Damit können Sie Ihr Konto aktivieren und Ihr Fahrzeug im Dashboard verwalten.",
         });
         navigate("/verkaufen/danke");
         return true;

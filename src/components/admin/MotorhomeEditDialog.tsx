@@ -108,6 +108,11 @@ const FUEL_TYPES = [
   { value: "lpg", label: "LPG" },
 ];
 
+const TRANSMISSIONS = [
+  { value: "manual", label: "Schaltgetriebe" },
+  { value: "automatic", label: "Automatik" },
+];
+
 export function MotorhomeEditDialog({
   motorhome,
   open,
@@ -403,6 +408,36 @@ export function MotorhomeEditDialog({
                     type="number"
                     value={formData.engine_power_hp || ""}
                     onChange={(e) => updateField("engine_power_hp", parseInt(e.target.value) || null)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Getriebe</Label>
+                  <Select
+                    value={formData.transmission || ""}
+                    onValueChange={(value) => updateField("transmission", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Getriebe wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRANSMISSIONS.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="power_kw">Leistung (kW)</Label>
+                  <Input
+                    id="power_kw"
+                    type="number"
+                    value={formData.power_kw || ""}
+                    onChange={(e) => updateField("power_kw", parseInt(e.target.value) || null)}
                   />
                 </div>
               </div>

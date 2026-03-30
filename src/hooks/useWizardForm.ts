@@ -214,8 +214,8 @@ const step1Schema = z.object({
   bodyType: z.string().min(1, "Bitte wählen Sie eine Aufbauart"),
 });
 
-// Step 2: Vehicle Info (Hersteller, Modell, Baujahr, KM, Zustand)
-const step2Schema = z.object({
+// Step 2: Vehicle Info – Wohnmobil (Hersteller, Modell, Baujahr, KM, Zustand)
+const step2SchemaWohnmobil = z.object({
   manufacturer: z.string().min(1, "Hersteller ist erforderlich"),
   model: z.string().min(1, "Modell ist erforderlich"),
   year: z.number({ required_error: "Baujahr ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie ein Baujahr" })
@@ -223,6 +223,16 @@ const step2Schema = z.object({
     .max(new Date().getFullYear() + 1, `Baujahr darf nicht nach ${new Date().getFullYear() + 1} liegen`),
   mileage: z.number({ required_error: "Kilometerstand ist ein Pflichtfeld", invalid_type_error: "Bitte geben Sie den Kilometerstand ein" })
     .min(0, "Kilometerstand darf nicht negativ sein"),
+  condition: z.string().min(1, "Zustand ist erforderlich"),
+});
+
+// Step 2: Vehicle Info – Wohnwagen (kein Kilometerstand, da kein Motor/Tacho)
+const step2SchemaWohnwagen = z.object({
+  manufacturer: z.string().min(1, "Hersteller ist erforderlich"),
+  model: z.string().min(1, "Modell ist erforderlich"),
+  year: z.number({ required_error: "Baujahr ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie ein Baujahr" })
+    .min(1980, "Baujahr muss nach 1980 sein")
+    .max(new Date().getFullYear() + 1, `Baujahr darf nicht nach ${new Date().getFullYear() + 1} liegen`),
   condition: z.string().min(1, "Zustand ist erforderlich"),
 });
 
@@ -325,13 +335,22 @@ export const useWizardForm = () => {
           });
           break;
         case 2:
-          step2Schema.parse({
-            manufacturer: formData.manufacturer,
-            model: formData.model,
-            year: formData.year,
-            mileage: formData.mileage,
-            condition: formData.condition,
-          });
+          if (formData.vehicleType === "Wohnwagen") {
+            step2SchemaWohnwagen.parse({
+              manufacturer: formData.manufacturer,
+              model: formData.model,
+              year: formData.year,
+              condition: formData.condition,
+            });
+          } else {
+            step2SchemaWohnmobil.parse({
+              manufacturer: formData.manufacturer,
+              model: formData.model,
+              year: formData.year,
+              mileage: formData.mileage,
+              condition: formData.condition,
+            });
+          }
           break;
         case 3:
           step3Schema.parse({
@@ -579,7 +598,7 @@ export const useWizardForm = () => {
         manufacturer: formData.manufacturer,
         model: formData.model,
         year: formData.year!,
-        mileage: formData.mileage!,
+        mileage: isWohnwagen ? 0 : formData.mileage!,
         condition: formData.condition,
         body_type: formData.bodyType,
         description: formData.description || `${formData.manufacturer} ${formData.model} (${formData.year})`,

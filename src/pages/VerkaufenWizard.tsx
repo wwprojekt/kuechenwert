@@ -61,7 +61,18 @@ const VerkaufenWizard = () => {
       }
     }
     
+    const vehicleTypeParam = searchParams.get('vehicleType');
+
     const updates: Partial<typeof formData> = {};
+    // vehicleType von Startseite übernehmen (wohnmobil → Wohnmobil, wohnwagen → Wohnwagen)
+    if (vehicleTypeParam) {
+      const normalized = vehicleTypeParam.toLowerCase();
+      if (normalized === 'wohnwagen') {
+        updates.vehicleType = 'Wohnwagen';
+      } else if (normalized === 'wohnmobil') {
+        updates.vehicleType = 'Wohnmobil';
+      }
+    }
     if (manufacturer) updates.manufacturer = manufacturer;
     if (model) updates.model = model;
     if (bodyType) updates.bodyType = bodyType;

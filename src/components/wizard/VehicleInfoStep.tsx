@@ -108,23 +108,25 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="mileage" className="flex items-center gap-2">
-            <Gauge className="w-4 h-4" />
-            Kilometerstand <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="mileage"
-            type="number"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="z.B. 45000"
-            value={formData.mileage || ""}
-            onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
-            min={0}
-            className="transition-smooth"
-          />
-        </div>
+        {vehicleType !== "Wohnwagen" && (
+          <div className="space-y-2">
+            <Label htmlFor="mileage" className="flex items-center gap-2">
+              <Gauge className="w-4 h-4" />
+              Kilometerstand <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="mileage"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="z.B. 45000"
+              value={formData.mileage || ""}
+              onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
+              min={0}
+              className="transition-smooth"
+            />
+          </div>
+        )}
 
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="condition" className="flex items-center gap-1">

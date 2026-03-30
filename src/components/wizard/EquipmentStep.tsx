@@ -45,6 +45,8 @@ const FeatureCheckbox = ({ id, label, checked, onCheckedChange, icon }: FeatureC
 );
 
 export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) => {
+  const isWohnwagen = formData.vehicleType === "Wohnwagen";
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
@@ -126,66 +128,100 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
         </div>
       </div>
 
-      {/* Basisfahrzeug */}
-      <div className="space-y-3">
-        <h3 className="text-base font-semibold flex items-center gap-2">
-          <Shield className="w-4 h-4 text-primary" />
-          Basisfahrzeug
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <FeatureCheckbox
-            id="has_airbag"
-            label="Airbag"
-            checked={formData.has_airbag}
-            onCheckedChange={(c) => updateFormData({ has_airbag: c })}
-          />
-          <FeatureCheckbox
-            id="has_esp"
-            label="ESP"
-            checked={formData.has_esp}
-            onCheckedChange={(c) => updateFormData({ has_esp: c })}
-          />
-          <FeatureCheckbox
-            id="has_cruise_control"
-            label="Tempomat"
-            checked={formData.has_cruise_control}
-            onCheckedChange={(c) => updateFormData({ has_cruise_control: c })}
-          />
-          <FeatureCheckbox
-            id="has_parking_sensors"
-            label="Parksensoren"
-            checked={formData.has_parking_sensors}
-            onCheckedChange={(c) => updateFormData({ has_parking_sensors: c })}
-            icon={<ParkingCircle className="w-3.5 h-3.5" />}
-          />
-          <FeatureCheckbox
-            id="has_reversing_camera"
-            label="Rückfahrkamera"
-            checked={formData.has_reversing_camera}
-            onCheckedChange={(c) => updateFormData({ has_reversing_camera: c })}
-            icon={<Camera className="w-3.5 h-3.5" />}
-          />
-          <FeatureCheckbox
-            id="has_central_locking"
-            label="Zentralverriegelung"
-            checked={formData.has_central_locking}
-            onCheckedChange={(c) => updateFormData({ has_central_locking: c })}
-            icon={<Lock className="w-3.5 h-3.5" />}
-          />
-          <FeatureCheckbox
-            id="has_swivel_seats"
-            label="Drehsitze"
-            checked={formData.has_swivel_seats}
-            onCheckedChange={(c) => updateFormData({ has_swivel_seats: c })}
-          />
-          <FeatureCheckbox
-            id="has_alarm"
-            label="Alarmanlage"
-            checked={formData.has_alarm}
-            onCheckedChange={(c) => updateFormData({ has_alarm: c })}
-          />
+      {/* Basisfahrzeug - NUR für Wohnmobile */}
+      {!isWohnwagen && (
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary" />
+            Basisfahrzeug
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <FeatureCheckbox
+              id="has_airbag"
+              label="Airbag"
+              checked={formData.has_airbag}
+              onCheckedChange={(c) => updateFormData({ has_airbag: c })}
+            />
+            <FeatureCheckbox
+              id="has_esp"
+              label="ESP"
+              checked={formData.has_esp}
+              onCheckedChange={(c) => updateFormData({ has_esp: c })}
+            />
+            <FeatureCheckbox
+              id="has_cruise_control"
+              label="Tempomat"
+              checked={formData.has_cruise_control}
+              onCheckedChange={(c) => updateFormData({ has_cruise_control: c })}
+            />
+            <FeatureCheckbox
+              id="has_parking_sensors"
+              label="Parksensoren"
+              checked={formData.has_parking_sensors}
+              onCheckedChange={(c) => updateFormData({ has_parking_sensors: c })}
+              icon={<ParkingCircle className="w-3.5 h-3.5" />}
+            />
+            <FeatureCheckbox
+              id="has_reversing_camera"
+              label="Rückfahrkamera"
+              checked={formData.has_reversing_camera}
+              onCheckedChange={(c) => updateFormData({ has_reversing_camera: c })}
+              icon={<Camera className="w-3.5 h-3.5" />}
+            />
+            <FeatureCheckbox
+              id="has_central_locking"
+              label="Zentralverriegelung"
+              checked={formData.has_central_locking}
+              onCheckedChange={(c) => updateFormData({ has_central_locking: c })}
+              icon={<Lock className="w-3.5 h-3.5" />}
+            />
+            <FeatureCheckbox
+              id="has_swivel_seats"
+              label="Drehsitze"
+              checked={formData.has_swivel_seats}
+              onCheckedChange={(c) => updateFormData({ has_swivel_seats: c })}
+            />
+            <FeatureCheckbox
+              id="has_alarm"
+              label="Alarmanlage"
+              checked={formData.has_alarm}
+              onCheckedChange={(c) => updateFormData({ has_alarm: c })}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Sicherheit & Komfort - NUR für Wohnwagen (relevante Auswahl) */}
+      {isWohnwagen && (
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary" />
+            Sicherheit & Komfort
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <FeatureCheckbox
+              id="has_alarm"
+              label="Alarmanlage"
+              checked={formData.has_alarm}
+              onCheckedChange={(c) => updateFormData({ has_alarm: c })}
+            />
+            <FeatureCheckbox
+              id="has_central_locking"
+              label="Zentralverriegelung"
+              checked={formData.has_central_locking}
+              onCheckedChange={(c) => updateFormData({ has_central_locking: c })}
+              icon={<Lock className="w-3.5 h-3.5" />}
+            />
+            <FeatureCheckbox
+              id="has_reversing_camera"
+              label="Rückfahrkamera"
+              checked={formData.has_reversing_camera}
+              onCheckedChange={(c) => updateFormData({ has_reversing_camera: c })}
+              icon={<Camera className="w-3.5 h-3.5" />}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Energie & Außen */}
       <div className="space-y-3">

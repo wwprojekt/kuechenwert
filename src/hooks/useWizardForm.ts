@@ -232,13 +232,25 @@ const step3Schema = z.object({
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
 });
 
-// Step 4: Technical Details (fuel_type, transmission, seats, sleeping_places required; defects validated)
-const step4Schema = z.object({
+// Step 4: Technical Details – Wohnmobil (fuel_type, transmission, seats, sleeping_places required; defects validated)
+const step4SchemaWohnmobil = z.object({
   fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
   transmission: z.string().min(1, "Getriebe ist erforderlich"),
   seats_with_seatbelts: z.number({ required_error: "Sitzplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Sitzplätze" })
     .min(1, "Mindestens 1 Sitzplatz erforderlich")
     .max(9, "Maximal 9 Sitzplätze möglich"),
+  sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
+    .min(1, "Mindestens 1 Schlafplatz erforderlich")
+    .max(9, "Maximal 9 Schlafplätze möglich"),
+  no_known_defects: z.boolean(),
+  known_defects: z.string().optional(),
+}).refine(
+  (data) => data.no_known_defects || (data.known_defects && data.known_defects.trim().length > 0),
+  { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
+);
+
+// Step 4: Technical Details – Wohnwagen (kein Motor, kein Getriebe, keine Sitzplätze)
+const step4SchemaWohnwagen = z.object({
   sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
     .min(1, "Mindestens 1 Schlafplatz erforderlich")
     .max(9, "Maximal 9 Schlafplätze möglich"),
@@ -328,14 +340,22 @@ export const useWizardForm = () => {
           });
           break;
         case 4:
-          step4Schema.parse({
-            fuel_type: formData.fuel_type,
-            transmission: formData.transmission,
-            seats_with_seatbelts: formData.seats_with_seatbelts,
-            sleeping_places: formData.sleeping_places,
-            no_known_defects: formData.no_known_defects,
-            known_defects: formData.known_defects,
-          });
+          if (formData.vehicleType === "Wohnwagen") {
+            step4SchemaWohnwagen.parse({
+              sleeping_places: formData.sleeping_places,
+              no_known_defects: formData.no_known_defects,
+              known_defects: formData.known_defects,
+            });
+          } else {
+            step4SchemaWohnmobil.parse({
+              fuel_type: formData.fuel_type,
+              transmission: formData.transmission,
+              seats_with_seatbelts: formData.seats_with_seatbelts,
+              sleeping_places: formData.sleeping_places,
+              no_known_defects: formData.no_known_defects,
+              known_defects: formData.known_defects,
+            });
+          }
           break;
         case 5:
           step5Schema.parse({});
@@ -550,6 +570,9 @@ export const useWizardForm = () => {
         throw new Error('Fahrzeugdaten sind unvollständig. Bitte prüfen Sie Hersteller, Modell, Baujahr und Zustand.');
       }
 
+      // Wohnwagen haben keinen Motor – Motor-Felder auf null setzen
+      const isWohnwagen = formData.vehicleType === "Wohnwagen";
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const motorhomeInsert: Record<string, any> = {
         seller_id: user.id,
@@ -561,17 +584,17 @@ export const useWizardForm = () => {
         body_type: formData.bodyType,
         description: formData.description || `${formData.manufacturer} ${formData.model} (${formData.year})`,
         
-        fuel_type: formData.fuel_type || null,
-        engine_power_hp: formData.power_ps || null,
-        transmission: formData.transmission || null,
-        emission_class: formData.emission_class || null,
+        fuel_type: isWohnwagen ? null : (formData.fuel_type || null),
+        engine_power_hp: isWohnwagen ? null : (formData.power_ps || null),
+        transmission: isWohnwagen ? null : (formData.transmission || null),
+        emission_class: isWohnwagen ? null : (formData.emission_class || null),
         tuev_valid_until: formData.tuv_valid_until || null,
         first_registration: formData.first_registration || null,
         previous_owners: formData.previous_owners ?? null,
         accident_free: formData.accident_free,
         non_smoker: formData.non_smoker,
         service_history_available: formData.service_history_available,
-        engine_displacement_ccm: formData.engine_displacement_ccm || null,
+        engine_displacement_ccm: isWohnwagen ? null : (formData.engine_displacement_ccm || null),
         main_tires: formData.main_tires || null,
         second_tires: formData.second_tires || null,
         
@@ -580,7 +603,7 @@ export const useWizardForm = () => {
         height_m: formData.height_cm ? formData.height_cm / 100 : null,
         weight_kg: formData.total_weight_kg || null,
         payload_kg: formData.payload_kg || null,
-        seats: formData.seats_with_seatbelts || null,
+        seats: isWohnwagen ? null : (formData.seats_with_seatbelts || null),
         sleeping_places: formData.sleeping_places || null,
         number_of_axles: formData.number_of_axles || null,
         beds_description: formData.beds_description || null,
@@ -594,12 +617,12 @@ export const useWizardForm = () => {
         water_tank_liters: formData.fresh_water_capacity_liters || null,
         grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
         
-        has_airbag: formData.has_airbag,
+        has_airbag: isWohnwagen ? false : formData.has_airbag,
         has_alarm: formData.has_alarm,
-        has_swivel_seats: formData.has_swivel_seats,
-        has_esp: formData.has_esp,
-        has_cruise_control: formData.has_cruise_control,
-        has_parking_sensors: formData.has_parking_sensors,
+        has_swivel_seats: isWohnwagen ? false : formData.has_swivel_seats,
+        has_esp: isWohnwagen ? false : formData.has_esp,
+        has_cruise_control: isWohnwagen ? false : formData.has_cruise_control,
+        has_parking_sensors: isWohnwagen ? false : formData.has_parking_sensors,
         has_backup_camera: formData.has_reversing_camera,
         has_central_locking: formData.has_central_locking,
         has_solar: formData.has_solar,

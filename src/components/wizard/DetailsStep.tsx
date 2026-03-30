@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 // RadioGroup nicht mehr benötigt - Cards mit eigenem State
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon } from "lucide-react";
+import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info } from "lucide-react";
 
 interface DetailsStepProps {
   formData: WizardFormData;
@@ -14,6 +14,8 @@ interface DetailsStepProps {
 }
 
 export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
+  const isWohnwagen = formData.vehicleType === "Wohnwagen";
+
   const handleDefectsToggle = (value: string) => {
     const noDefects = value === "no";
     updateFormData({
@@ -34,101 +36,137 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
           Technische Details
         </h2>
         <p className="text-muted-foreground">
-          Ein paar wichtige Angaben zu Ihrem Fahrzeug – die meisten Felder sind optional
+          Ein paar wichtige Angaben zu Ihrem {isWohnwagen ? "Wohnwagen" : "Fahrzeug"} – die meisten Felder sind optional
         </p>
       </div>
 
-      {/* Wichtigste technische Daten */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Motor & Antrieb</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="fuel_type">
-              Kraftstoffart <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.fuel_type || ""}
-              onValueChange={(value) => updateFormData({ fuel_type: value })}
-            >
-              <SelectTrigger id="fuel_type">
-                <SelectValue placeholder="Wählen Sie..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Diesel">Diesel</SelectItem>
-                <SelectItem value="Benzin">Benzin</SelectItem>
-                <SelectItem value="Elektro">Elektro</SelectItem>
-                <SelectItem value="Hybrid">Hybrid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Motor & Antrieb - NUR für Wohnmobile */}
+      {!isWohnwagen && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Motor & Antrieb</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fuel_type">
+                Kraftstoffart <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.fuel_type || ""}
+                onValueChange={(value) => updateFormData({ fuel_type: value })}
+              >
+                <SelectTrigger id="fuel_type">
+                  <SelectValue placeholder="Wählen Sie..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Diesel">Diesel</SelectItem>
+                  <SelectItem value="Benzin">Benzin</SelectItem>
+                  <SelectItem value="Elektro">Elektro</SelectItem>
+                  <SelectItem value="Hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="transmission">
-              Getriebe <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.transmission || ""}
-              onValueChange={(value) => updateFormData({ transmission: value })}
-            >
-              <SelectTrigger id="transmission">
-                <SelectValue placeholder="Wählen Sie..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Schaltgetriebe">Schaltgetriebe</SelectItem>
-                <SelectItem value="Automatik">Automatik</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="transmission">
+                Getriebe <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.transmission || ""}
+                onValueChange={(value) => updateFormData({ transmission: value })}
+              >
+                <SelectTrigger id="transmission">
+                  <SelectValue placeholder="Wählen Sie..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Schaltgetriebe">Schaltgetriebe</SelectItem>
+                  <SelectItem value="Automatik">Automatik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="power_ps">Leistung (PS) <span className="text-muted-foreground text-xs">(optional)</span></Label>
-            <Input
-              id="power_ps"
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="z.B. 130"
-              value={formData.power_ps || ""}
-              onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}
-              min={0}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="power_ps">Leistung (PS) <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="power_ps"
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="z.B. 130"
+                value={formData.power_ps || ""}
+                onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}
+                min={0}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
-            <Input
-              id="first_registration"
-              type="date"
-              value={formData.first_registration || ""}
-              onChange={(e) => updateFormData({ first_registration: e.target.value })}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="first_registration"
+                type="date"
+                value={formData.first_registration || ""}
+                onChange={(e) => updateFormData({ first_registration: e.target.value })}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Wohnwagen-Hinweis */}
+      {isWohnwagen && (
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">Wohnwagen ohne Motor</p>
+            <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+              Da Wohnwagen keinen eigenen Motor haben, entfallen die Felder für Kraftstoff, Getriebe und Leistung.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Erstzulassung für Wohnwagen (separat, da Motor-Sektion ausgeblendet) */}
+      {isWohnwagen && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Zulassung</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="first_registration"
+                type="date"
+                value={formData.first_registration || ""}
+                onChange={(e) => updateFormData({ first_registration: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Kapazität */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Kapazität</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="seats_with_seatbelts" className="flex items-center gap-2">
-              <UsersIcon className="w-4 h-4" />
-              Sitzplätze mit Gurt <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.seats_with_seatbelts?.toString() || ""}
-              onValueChange={(value) => updateFormData({ seats_with_seatbelts: parseInt(value) })}
-            >
-              <SelectTrigger id="seats_with_seatbelts">
-                <SelectValue placeholder="Anzahl wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                  <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Sitzplätze mit Gurt - NUR für Wohnmobile */}
+          {!isWohnwagen && (
+            <div className="space-y-2">
+              <Label htmlFor="seats_with_seatbelts" className="flex items-center gap-2">
+                <UsersIcon className="w-4 h-4" />
+                Sitzplätze mit Gurt <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.seats_with_seatbelts?.toString() || ""}
+                onValueChange={(value) => updateFormData({ seats_with_seatbelts: parseInt(value) })}
+              >
+                <SelectTrigger id="seats_with_seatbelts">
+                  <SelectValue placeholder="Anzahl wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                    <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="sleeping_places" className="flex items-center gap-2">

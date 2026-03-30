@@ -85,10 +85,10 @@ export interface WizardFormData {
   has_garage: boolean;
   has_tv_sat: boolean;
 
-  // Step 4: Photos
+  // Step 6: Photos
   photos: File[];
 
-  // Step 5: Sale Channel & Contact
+  // Step 7: Sale Channel & Contact
   saleChannel: string;
   instantPrice: number | null;
   reservePrice: number | null;
@@ -97,7 +97,7 @@ export interface WizardFormData {
   license_plate?: string;
   country?: string;
 
-  // Step 5: Contact Data
+  // Step 7: Contact Data
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
@@ -193,14 +193,15 @@ const initialFormData: WizardFormData = {
 };
 
 // =============================================
-// Validation Schemas for the 6-step wizard
+// Validation Schemas for the 7-step wizard
 // =============================================
 // Step 1: Vehicle Type (bodyType als Tile-Selection)
 // Step 2: Vehicle Info (manufacturer, model, year, mileage, condition)
 // Step 3: Quick Contact (name + email - Lead-Sicherung)
 // Step 4: Technical Details (fuel_type, transmission, seats, sleeping_places, defects)
 // Step 5: Equipment (optional)
-// Step 6: Final Contact & Sale Channel (saleChannel, phone, description, account)
+// Step 6: Photos (optional)
+// Step 7: Final Contact & Sale Channel (saleChannel, phone, description, account)
 
 // Step 1: Vehicle Type (Aufbauart als Tile-Selection)
 const step1Schema = z.object({
@@ -245,8 +246,11 @@ const step4Schema = z.object({
 // Step 5: Equipment (all optional - no validation needed)
 const step5Schema = z.object({});
 
-// Step 6: Final Contact & Sale Channel (saleChannel + phone required, name+email already captured)
-const step6Schema = z.object({
+// Step 6: Photos (optional - no validation needed, user can skip)
+const step6Schema = z.object({});
+
+// Step 7: Final Contact & Sale Channel (saleChannel + phone required, name+email already captured)
+const step7Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -328,7 +332,10 @@ export const useWizardForm = () => {
           step5Schema.parse({});
           break;
         case 6:
-          step6Schema.parse({
+          step6Schema.parse({});
+          break;
+        case 7:
+          step7Schema.parse({
             saleChannel: formData.saleChannel,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
@@ -413,9 +420,9 @@ export const useWizardForm = () => {
             customer_name: formData.customerName || null,
             customer_email: formData.customerEmail || null,
             customer_phone: formData.customerPhone || null,
-            current_step: 6,
-            max_step_reached: 6,
-            total_steps: 6,
+            current_step: 7,
+            max_step_reached: 7,
+            total_steps: 7,
             step_name: 'completed',
             form_data: formDataForStorage,
             status: 'completed',

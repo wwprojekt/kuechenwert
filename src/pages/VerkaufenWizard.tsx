@@ -26,7 +26,8 @@ const steps = [
   { id: 3, name: "Kontakt", description: "Fortschritt speichern" },
   { id: 4, name: "Details", description: "Technische Angaben" },
   { id: 5, name: "Ausstattung", description: "Optional" },
-  { id: 6, name: "Abschluss", description: "Angebot erhalten" },
+  { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
+  { id: 7, name: "Abschluss", description: "Angebot erhalten" },
 ];
 
 const VerkaufenWizard = () => {
@@ -136,7 +137,7 @@ const VerkaufenWizard = () => {
   }, [currentStep, formData.customerEmail, formData.customerName]);
 
   // Ungerade Prozentwerte wirken authentischer und weniger konstruiert
-  const progressMap: Record<number, number> = { 1: 12, 2: 29, 3: 45, 4: 62, 5: 79, 6: 100 };
+  const progressMap: Record<number, number> = { 1: 10, 2: 24, 3: 38, 4: 52, 5: 66, 6: 82, 7: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
@@ -186,7 +187,7 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
-    const isValid = await validateStep(6);
+    const isValid = await validateStep(7);
     if (!isValid) return;
 
     // Update contact data in session before submit
@@ -221,6 +222,8 @@ const VerkaufenWizard = () => {
       case 5:
         return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
       case 6:
+        return <PhotosStep formData={formData} updateFormData={updateFormData} />;
+      case 7:
         return <ContactStep formData={formData} updateFormData={updateFormData} onPasswordChange={(pw) => { registerPasswordRef.current = pw; }} />;
       default:
         return null;
@@ -233,6 +236,7 @@ const VerkaufenWizard = () => {
   // Determine button labels based on step
   const getNextButtonLabel = () => {
     if (currentStep === 5) return "Weiter (optional)";
+    if (currentStep === 6) return formData.photos.length > 0 ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}` : "Weiter ohne Fotos";
     if (currentStep === 3) return "Weiter";
     return "Weiter";
   };
@@ -391,8 +395,10 @@ const VerkaufenWizard = () => {
                     <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                       {currentStep <= 2
                         ? "Nur noch wenige Angaben bis zum Angebot"
-                        : currentStep <= 4
+                        : currentStep <= 5
                         ? "Fast geschafft – gleich erhalten Sie Ihr Angebot"
+                        : currentStep === 6
+                        ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : "Letzter Schritt – Ihr Angebot wartet!"}
                     </span>
                   </div>

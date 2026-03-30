@@ -1,5 +1,5 @@
 /**
- * ContactStep - Letzter Step des Wizards (Step 6)
+ * ContactStep - Letzter Step des Wizards (Step 7)
  * 
  * Enthält: Verkaufsweg, Telefonnummer, Beschreibung und optionale Konto-Erstellung.
  * Name und E-Mail werden bereits in Step 3 (QuickContactStep) erfasst.

@@ -8,6 +8,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface AutoConvertRequest {
   sessionId: string;
+  password?: string;
 }
 
 // Helper: Map wizard form_data fields to motorhome DB fields
@@ -128,21 +129,36 @@ const handler = async (req: Request): Promise<Response> => {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      // Check if user exists
-      const { data: existingProfile } = await adminClient
-        .from("profiles")
-        .select("id")
-        .eq("email", customerEmail.trim().toLowerCase())
-        .maybeSingle();
+      // Check if user exists in auth
+      const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
+      const existingAuthUser = authUsers?.users.find(u => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
 
-      if (existingProfile) {
-        sellerId = existingProfile.id;
+      if (existingAuthUser) {
+        sellerId = existingAuthUser.id;
+        
+        // Ensure profile exists
+        await adminClient.from("profiles").upsert({
+          id: sellerId,
+          email: customerEmail.trim().toLowerCase(),
+          first_name: firstName || null,
+          last_name: lastName || null,
+          phone: customerPhone || null,
+          account_type: "private",
+        }, { onConflict: "id" });
+        
+        // Ensure role exists
+        await adminClient.from("user_roles").upsert({
+          user_id: sellerId,
+          role: "seller",
+        }, { onConflict: "user_id" });
+        
       } else {
         // Create user
-        const randomPassword = crypto.randomUUID() + "Aa1!";
+        // Use provided password if available, otherwise generate random
+        const passwordToUse = body.password || (crypto.randomUUID() + "Aa1!");
         const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
           email: customerEmail.trim().toLowerCase(),
-          password: randomPassword,
+          password: passwordToUse,
           email_confirm: false,
           user_metadata: {
             first_name: firstName,
@@ -152,18 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         if (createError) {
-          // Maybe exists in auth but not profile
-          const { data: profileByEmail } = await adminClient
-            .from("profiles")
-            .select("id")
-            .eq("email", customerEmail.trim().toLowerCase())
-            .maybeSingle();
-            
-          if (profileByEmail) {
-            sellerId = profileByEmail.id;
-          } else {
-            throw new Error(`Failed to create user: ${createError.message}`);
-          }
+          throw new Error(`Failed to create user: ${createError.message}`);
         } else {
           sellerId = newUser.user.id;
           isNewUser = true;

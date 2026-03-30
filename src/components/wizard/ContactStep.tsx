@@ -28,7 +28,6 @@ interface ContactStepProps {
 
 export const ContactStep = ({ formData, updateFormData, onPasswordChange }: ContactStepProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [wantAccount, setWantAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -57,13 +56,13 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
   // Passwort an Parent-Komponente weiterleiten wenn sich etwas ändert
   useEffect(() => {
     if (onPasswordChange) {
-      if (wantAccount && password && password === confirmPassword && password.length >= 6) {
+      if (password && password === confirmPassword && password.length >= 6) {
         onPasswordChange(password);
       } else {
         onPasswordChange(undefined);
       }
     }
-  }, [wantAccount, password, confirmPassword, onPasswordChange]);
+  }, [password, confirmPassword, onPasswordChange]);
 
   // Dynamischer FOMO-Counter
   const [dealerCount] = useState(() => Math.floor(Math.random() * 30) + 110);
@@ -308,8 +307,63 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         </div>
       </div>
 
+      {/* Standort des Wohnmobils */}
+      <div className="space-y-4 border-t pt-4">
+        <h3 className="text-base font-semibold flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-primary" />
+          Standort des Wohnmobils
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Wichtig für die Entfernungsanzeige der Händler und den späteren Kaufvertrag.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="street">Straße <span className="text-red-500">*</span></Label>
+            <Input
+              id="street"
+              type="text"
+              placeholder="Musterstraße"
+              value={formData.street || ""}
+              onChange={(e) => updateFormData({ street: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="houseNumber">Hausnummer <span className="text-red-500">*</span></Label>
+            <Input
+              id="houseNumber"
+              type="text"
+              placeholder="12a"
+              value={formData.houseNumber || ""}
+              onChange={(e) => updateFormData({ houseNumber: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="zipCode">PLZ <span className="text-red-500">*</span></Label>
+            <Input
+              id="zipCode"
+              type="text"
+              placeholder="12345"
+              maxLength={5}
+              value={formData.zipCode || ""}
+              onChange={(e) => updateFormData({ zipCode: e.target.value.replace(/\D/g, '') })}
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="city">Ort <span className="text-red-500">*</span></Label>
+            <Input
+              id="city"
+              type="text"
+              placeholder="Musterstadt"
+              value={formData.city || ""}
+              onChange={(e) => updateFormData({ city: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Beschreibung */}
-      <div className="space-y-2">
+      <div className="space-y-2 border-t pt-4">
         <Label htmlFor="description">
           Anmerkungen zum Fahrzeug <span className="text-muted-foreground text-xs">(optional)</span>
         </Label>
@@ -323,56 +377,49 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         />
       </div>
 
-      {/* Optionale Registrierung */}
+      {/* Pflicht-Registrierung */}
       {!user && (
-        <div className="space-y-3 border-t pt-4">
-          <div
-            className="flex items-center space-x-2 cursor-pointer rounded-lg p-2 hover:bg-muted/30 transition-colors"
-            onClick={(e) => { e.preventDefault(); setWantAccount(!wantAccount); }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setWantAccount(!wantAccount); } }}
-          >
-            <Checkbox
-              id="want-account"
-              checked={wantAccount}
-              onCheckedChange={(c) => setWantAccount(c as boolean)}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span className="text-sm cursor-pointer">
-              <strong>Konto erstellen</strong> – Inserat verwalten, Gebote verfolgen, Nachrichten empfangen
-            </span>
-          </div>
+        <div className="space-y-4 border-t pt-4 bg-primary/5 -mx-4 px-4 md:-mx-6 md:px-6 pb-4 rounded-b-xl">
+          <h3 className="text-base font-semibold flex items-center gap-2 pt-2">
+            <Lock className="w-5 h-5 text-primary" />
+            Konto erstellen (Pflicht)
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Legen Sie ein Passwort fest, um Ihr Inserat zu verwalten, Gebote zu verfolgen und Nachrichten zu empfangen.
+          </p>
 
-          {wantAccount && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in pl-6">
-              <div className="space-y-2">
-                <Label htmlFor="reg-password" className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Passwort
-                </Label>
-                <Input
-                  id="reg-password"
-                  type="password"
-                  placeholder="Min. 6 Zeichen"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reg-confirm-password" className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Passwort bestätigen
-                </Label>
-                <Input
-                  id="reg-confirm-password"
-                  type="password"
-                  placeholder="Passwort wiederholen"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="reg-password">
+                Passwort <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="reg-password"
+                type="password"
+                placeholder="Min. 6 Zeichen"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-confirm-password">
+                Passwort bestätigen <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="reg-confirm-password"
+                type="password"
+                placeholder="Passwort wiederholen"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          {password && confirmPassword && password !== confirmPassword && (
+            <p className="text-sm text-red-500">Die Passwörter stimmen nicht überein.</p>
+          )}
+          {password && password.length < 6 && (
+            <p className="text-sm text-red-500">Das Passwort muss mindestens 6 Zeichen lang sein.</p>
           )}
         </div>
       )}

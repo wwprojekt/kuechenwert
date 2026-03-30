@@ -99,6 +99,10 @@ export interface WizardFormData {
   vehicle_identification_number?: string;
   license_plate?: string;
   country?: string;
+  street?: string;
+  houseNumber?: string;
+  zipCode?: string;
+  city?: string;
 
   // Step 7: Contact Data
   customerName?: string;
@@ -188,6 +192,10 @@ const initialFormData: WizardFormData = {
   vehicle_identification_number: undefined,
   license_plate: undefined,
   country: "DE",
+  street: undefined,
+  houseNumber: undefined,
+  zipCode: undefined,
+  city: undefined,
   
   stationId: undefined,
   appointmentDate: undefined,
@@ -286,6 +294,10 @@ const step7Schema = z.object({
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   customerPhone: z.string().min(5, "Bitte geben Sie eine gültige Telefonnummer ein"),
+  street: z.string().min(1, "Straße ist erforderlich"),
+  houseNumber: z.string().min(1, "Hausnummer ist erforderlich"),
+  zipCode: z.string().min(5, "Bitte geben Sie eine gültige PLZ ein").max(5, "PLZ muss 5 Ziffern haben"),
+  city: z.string().min(1, "Ort ist erforderlich"),
 });
 
 export const useWizardForm = () => {
@@ -390,6 +402,10 @@ export const useWizardForm = () => {
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
+            street: formData.street,
+            houseNumber: formData.houseNumber,
+            zipCode: formData.zipCode,
+            city: formData.city,
           });
           break;
       }
@@ -416,6 +432,17 @@ export const useWizardForm = () => {
 
       if (sessionResult.wasRefreshed) {
         logger.info('Wizard submit: Session was proactively refreshed');
+      }
+
+      // Require password if not authenticated
+      if (!user && !registerPassword) {
+        toast({
+          title: "Passwort fehlt",
+          description: "Bitte legen Sie ein Passwort für Ihr Konto fest.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return false;
       }
 
       // If not authenticated and password provided, register the user
@@ -455,8 +482,8 @@ export const useWizardForm = () => {
         }
       }
 
-      // If still no user (guest or signup-without-session), save wizard data
-      // so it can be recovered after email confirmation or converted by admin.
+      // If no active session (because email confirmation is pending), save wizard data
+      // so it can be converted by the edge function automatically.
       if (!user) {
         // Build form_data JSON (exclude File objects which can't be serialized)
         const formDataForStorage = { ...formData };
@@ -492,7 +519,11 @@ export const useWizardForm = () => {
         if (savedSessionId) {
           try {
             const { error: autoConvertError } = await supabase.functions.invoke("auto-convert-wizard", {
-              body: { sessionId: savedSessionId },
+              body: { 
+                sessionId: savedSessionId,
+                // We pass the password so the edge function can set it if it creates the user
+                password: registerPassword 
+              },
             });
             if (autoConvertError) {
               logger.error("Auto-convert failed:", autoConvertError);
@@ -668,6 +699,8 @@ export const useWizardForm = () => {
         vehicle_identification_number: formData.vehicle_identification_number || null,
         license_plate: formData.license_plate || null,
         country: formData.country || 'DE',
+        postal_code: formData.zipCode || null,
+        city: formData.city || null,
       };
 
       const { data: motorhome, error: motorhomeError } = await supabase

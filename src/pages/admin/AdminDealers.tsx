@@ -57,11 +57,13 @@ import {
   MailX,
   Trash2,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
+import { DealerCreateDialog } from "@/components/admin/DealerCreateDialog";
 
 interface DealerProfile {
   id: string;
@@ -111,6 +113,7 @@ export default function AdminDealers() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
   const [searchTerm, setSearchTerm] = useState("");
@@ -428,17 +431,25 @@ export default function AdminDealers() {
             Verwalten Sie Händler-Anträge und aktive Händler
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            logger.log("Manual refresh triggered");
-            queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
-            queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
-          }}
-          disabled={isLoading || isLoadingDealers}
-        >
-          {isLoading || isLoadingDealers ? "Lädt..." : "Aktualisieren"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Händler anlegen
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              logger.log("Manual refresh triggered");
+              queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+              queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
+            }}
+            disabled={isLoading || isLoadingDealers}
+          >
+            {isLoading || isLoadingDealers ? "Lädt..." : "Aktualisieren"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -869,11 +880,17 @@ export default function AdminDealers() {
       {/* Dialog for Editing Dealer */}
       {selectedApplication && (
         <DealerEditDialog
-          isOpen={showEditDialog}
-          onClose={() => setShowEditDialog(false)}
+          open={showEditDialog}
+          onOpenChange={(open) => setShowEditDialog(open)}
           dealer={selectedApplication}
         />
       )}
+
+      {/* Dialog for Creating New Dealer */}
+      <DealerCreateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AutoConvertRequest {
   sessionId: string;
   password?: string;
+  userId?: string;
 }
 
 // Helper: Map wizard form_data fields to motorhome DB fields
@@ -65,6 +66,9 @@ function mapWizardToMotorhome(formData: Record<string, any>) {
     refrigerator_type: formData.refrigerator_type ? String(formData.refrigerator_type) : null,
     main_tires: formData.main_tires ? String(formData.main_tires) : null,
     second_tires: formData.second_tires ? String(formData.second_tires) : null,
+    postal_code: formData.zipCode ? String(formData.zipCode) : null,
+    city: formData.city ? String(formData.city) : null,
+    country: formData.country ? String(formData.country) : "DE",
   };
 }
 
@@ -121,7 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 2. Create or find User
-    let sellerId = session.user_id;
+    // Priority: body.userId > session.user_id > search by email > create new
+    let sellerId = body.userId || session.user_id;
     let isNewUser = false;
 
     if (!sellerId) {
@@ -190,6 +195,31 @@ const handler = async (req: Request): Promise<Response> => {
           }, { onConflict: "user_id" });
         }
       }
+    }
+
+    // 2b. Ensure profile and role exist for the seller (regardless of how we found them)
+    if (sellerId) {
+      const nameParts = customerName.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      
+      // Always ensure profile exists
+      await adminClient.from("profiles").upsert({
+        id: sellerId,
+        email: customerEmail.trim().toLowerCase(),
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: customerPhone || null,
+        account_type: "private",
+      }, { onConflict: "id" });
+
+      // Always ensure role exists
+      await adminClient.from("user_roles").upsert({
+        user_id: sellerId,
+        role: "seller",
+      }, { onConflict: "user_id" });
+
+      edgeLogger.info(`Ensured profile and role for seller ${sellerId}`);
     }
 
     // 3. Create Motorhome

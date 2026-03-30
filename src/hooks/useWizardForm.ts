@@ -477,9 +477,16 @@ export const useWizardForm = () => {
         } else {
           // No active session – treat as guest submission.
           // The user will receive a confirmation email and can log in later.
+          // IMPORTANT: We still capture the signUp user ID so auto-convert can use it
+          // instead of searching/creating a duplicate user.
           logger.info("SignUp returned user but no session (email confirmation pending). Falling back to guest path.");
           user = null;
         }
+
+        // Capture the signUp user ID even without a session – this is critical
+        // to avoid duplicate user creation in auto-convert-wizard.
+        var signUpUserId = signUpData.user?.id || null;
+        logger.info('SignUp user ID captured (no session):', signUpUserId);
       }
 
       // If no active session (because email confirmation is pending), save wizard data
@@ -489,11 +496,14 @@ export const useWizardForm = () => {
         const formDataForStorage = { ...formData };
         delete (formDataForStorage as Partial<WizardFormData>).photos;
 
+        // @ts-ignore – signUpUserId is defined in the signUp block above
+        const capturedUserId = typeof signUpUserId !== 'undefined' ? signUpUserId : null;
+
         // Save to wizard_sessions so admin can convert and data is not lost
         let savedSessionId = null;
         try {
           const { data: sessionData, error: sessionError } = await supabase.from('wizard_sessions').insert({
-            user_id: null, // Will be linked after email confirmation
+            user_id: capturedUserId, // Use the signUp user ID if available
             anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
             customer_name: formData.customerName || null,
             customer_email: formData.customerEmail || null,
@@ -521,6 +531,9 @@ export const useWizardForm = () => {
             const { error: autoConvertError } = await supabase.functions.invoke("auto-convert-wizard", {
               body: { 
                 sessionId: savedSessionId,
+                // Pass the signUp user ID so auto-convert uses the SAME user
+                // instead of searching/creating a potentially different one
+                userId: capturedUserId,
                 // We pass the password so the edge function can set it if it creates the user
                 password: registerPassword 
               },

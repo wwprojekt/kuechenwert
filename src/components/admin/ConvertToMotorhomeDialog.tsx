@@ -117,69 +117,92 @@ const TRANSMISSIONS = [
 // ============================================================================
 
 function mapWizardToMotorhome(formData: Record<string, unknown>) {
+  const isWohnwagen = formData.vehicleType === "Wohnwagen";
+
   return {
-    // Core vehicle
+    // Core vehicle info
     manufacturer: String(formData.manufacturer || ""),
     model: String(formData.model || ""),
     year: Number(formData.year) || new Date().getFullYear(),
-    mileage: Number(formData.mileage) || 0,
+    mileage: isWohnwagen ? 0 : (Number(formData.mileage) || 0),
     body_type: String(formData.bodyType || "Kastenwagen"),
     condition: String(formData.condition || "Gut"),
-    description: String(formData.description || ""),
-    // Sale – instant_price Wizard-Sessions werden jetzt als Auktion mit Sofortkauf angelegt
-    sale_channel: String(formData.saleChannel || "auction") === "instant_price" ? "auction" : String(formData.saleChannel || "auction"),
-    reserve_price: formData.reservePrice ? Number(formData.reservePrice) : (formData.desiredPrice ? Number(formData.desiredPrice) : null),
-    instant_price: formData.desiredPrice ? Number(formData.desiredPrice) : (formData.instantPrice ? Number(formData.instantPrice) : null),
-    // Technical
-    fuel_type: formData.fuelType ? String(formData.fuelType) : null,
-    transmission: formData.transmission ? String(formData.transmission) : null,
-    engine_power_hp: formData.enginePower ? Number(formData.enginePower) : null,
-    engine_displacement_ccm: formData.engine_displacement_ccm ? Number(formData.engine_displacement_ccm) : null,
-    emission_class: formData.emissionClass ? String(formData.emissionClass) : null,
-    // Dimensions
-    length_m: formData.length_m ? Number(formData.length_m) : null,
-    width_m: formData.width_m ? Number(formData.width_m) : null,
-    height_m: formData.height_m ? Number(formData.height_m) : null,
-    weight_kg: formData.weight_kg ? Number(formData.weight_kg) : null,
-    payload_kg: formData.payload_kg ? Number(formData.payload_kg) : null,
-    seats: formData.number_of_seats ? Number(formData.number_of_seats) : null,
-    sleeping_places: formData.number_of_sleeping_places ? Number(formData.number_of_sleeping_places) : null,
-    number_of_axles: formData.number_of_axles ? Number(formData.number_of_axles) : null,
-    // Equipment booleans
-    has_bathroom: Boolean(formData.has_bathroom),
-    has_kitchen: Boolean(formData.has_kitchen),
-    has_shower: Boolean(formData.has_shower),
-    has_toilet: Boolean(formData.has_toilet),
-    has_heating: Boolean(formData.has_heating),
-    has_air_conditioning: Boolean(formData.has_air_conditioning),
-    has_solar: Boolean(formData.has_solar_panel),
-    has_awning: Boolean(formData.has_awning),
-    has_awning_tent: Boolean(formData.has_awning_tent),
-    has_roof_ac: Boolean(formData.has_roof_ac),
-    has_stand_ac: Boolean(formData.has_roof_ac),
-    has_bike_rack: Boolean(formData.has_bike_rack),
-    has_navigation: Boolean(formData.has_navigation),
-    has_backup_camera: Boolean(formData.has_backup_camera),
-    has_cruise_control: Boolean(formData.has_cruise_control),
-    has_garage: Boolean(formData.has_garage),
-    has_alarm: Boolean(formData.has_alarm_system || formData.has_alarm),
-    has_esp: Boolean(formData.has_esp),
-    has_swivel_seats: Boolean(formData.has_swivel_seats),
-    has_satellite: Boolean(formData.has_satellite_system),
-    has_tv: Boolean(formData.has_tv),
-    // Condition details
-    accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,
+    description: String(formData.description || `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''})`),
+
+    // Sale info
+    sale_channel: String(formData.saleChannel || "auction"),
+    reserve_price: formData.reservePrice ? Number(formData.reservePrice) : null,
+    instant_price: formData.instantPrice ? Number(formData.instantPrice) : null,
+
+    // Technical details (wizard uses fuel_type, power_ps, emission_class directly)
+    fuel_type: isWohnwagen ? null : ((formData.fuel_type || formData.fuelType || null) as string | null),
+    transmission: isWohnwagen ? null : ((formData.transmission || null) as string | null),
+    engine_power_hp: isWohnwagen ? null : (formData.power_ps ? Number(formData.power_ps) : (formData.enginePower ? Number(formData.enginePower) : null)),
+    engine_displacement_ccm: isWohnwagen ? null : (formData.engine_displacement_ccm ? Number(formData.engine_displacement_ccm) : null),
+    emission_class: isWohnwagen ? null : ((formData.emission_class || formData.emissionClass || null) as string | null),
     first_registration: formData.first_registration ? String(formData.first_registration) : null,
-    tuev_valid_until: formData.tuev_valid_until ? String(formData.tuev_valid_until) : null,
-    previous_owners: formData.previous_owners ? Number(formData.previous_owners) : null,
-    // Water/Gas
-    water_tank_liters: formData.water_tank_liters ? Number(formData.water_tank_liters) : null,
-    grey_water_capacity_liters: formData.waste_water_tank_liters ? Number(formData.waste_water_tank_liters) : null,
-    gas_system: formData.gas_system ? String(formData.gas_system) : null,
-    refrigerator_type: formData.refrigerator_type ? String(formData.refrigerator_type) : null,
-    // Tires
+    tuev_valid_until: (formData.tuv_valid_until || formData.tuev_valid_until) ? String(formData.tuv_valid_until || formData.tuev_valid_until) : null,
+    previous_owners: formData.previous_owners != null ? Number(formData.previous_owners) : null,
+    accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,
+    non_smoker: formData.non_smoker != null ? Boolean(formData.non_smoker) : null,
+    service_history_available: formData.service_history_available != null ? Boolean(formData.service_history_available) : null,
     main_tires: formData.main_tires ? String(formData.main_tires) : null,
     second_tires: formData.second_tires ? String(formData.second_tires) : null,
+
+    // Dimensions (wizard stores in cm, DB expects meters for length/width/height)
+    length_m: formData.length_cm ? Number(formData.length_cm) / 100 : (formData.length_m ? Number(formData.length_m) : null),
+    width_m: formData.width_cm ? Number(formData.width_cm) / 100 : (formData.width_m ? Number(formData.width_m) : null),
+    height_m: formData.height_cm ? Number(formData.height_cm) / 100 : (formData.height_m ? Number(formData.height_m) : null),
+    weight_kg: formData.total_weight_kg ? Number(formData.total_weight_kg) : (formData.weight_kg ? Number(formData.weight_kg) : null),
+    payload_kg: formData.payload_kg ? Number(formData.payload_kg) : null,
+    number_of_axles: formData.number_of_axles ? Number(formData.number_of_axles) : null,
+    seats: isWohnwagen ? null : (formData.seats_with_seatbelts ? Number(formData.seats_with_seatbelts) : (formData.number_of_seats ? Number(formData.number_of_seats) : null)),
+    sleeping_places: formData.sleeping_places ? Number(formData.sleeping_places) : (formData.number_of_sleeping_places ? Number(formData.number_of_sleeping_places) : null),
+    beds_description: formData.beds_description ? String(formData.beds_description) : null,
+
+    // Interior
+    has_kitchen: Boolean(formData.has_kitchen),
+    heating_type: formData.heating_type ? String(formData.heating_type) : null,
+    air_conditioning: formData.air_conditioning ? String(formData.air_conditioning) : null,
+    has_bathroom: Boolean(formData.has_toilet || formData.has_shower || formData.has_bathroom),
+    has_shower: Boolean(formData.has_shower),
+    has_toilet: Boolean(formData.has_toilet),
+    water_tank_liters: formData.fresh_water_capacity_liters ? Number(formData.fresh_water_capacity_liters) : (formData.water_tank_liters ? Number(formData.water_tank_liters) : null),
+    grey_water_capacity_liters: formData.grey_water_capacity_liters ? Number(formData.grey_water_capacity_liters) : (formData.waste_water_tank_liters ? Number(formData.waste_water_tank_liters) : null),
+
+    // Equipment & Features
+    has_airbag: isWohnwagen ? false : Boolean(formData.has_airbag),
+    has_alarm: Boolean(formData.has_alarm || formData.has_alarm_system),
+    has_swivel_seats: isWohnwagen ? false : Boolean(formData.has_swivel_seats),
+    has_esp: isWohnwagen ? false : Boolean(formData.has_esp),
+    has_cruise_control: isWohnwagen ? false : Boolean(formData.has_cruise_control),
+    has_parking_sensors: isWohnwagen ? false : Boolean(formData.has_parking_sensors),
+    has_backup_camera: Boolean(formData.has_reversing_camera || formData.has_backup_camera),
+    has_central_locking: Boolean(formData.has_central_locking),
+    has_solar: Boolean(formData.has_solar || formData.has_solar_panel),
+    solar_power_watts: formData.solar_power_watts ? Number(formData.solar_power_watts) : null,
+    battery_capacity_ah: formData.battery_capacity_ah ? Number(formData.battery_capacity_ah) : null,
+    has_inverter: Boolean(formData.has_inverter),
+    has_awning: Boolean(formData.has_awning),
+    awning_length_cm: formData.awning_length_cm ? Number(formData.awning_length_cm) : null,
+    has_bike_rack: Boolean(formData.has_bike_rack),
+    has_garage: Boolean(formData.has_garage),
+    has_tv: Boolean(formData.has_tv_sat || formData.has_tv),
+    has_satellite: Boolean(formData.has_tv_sat || formData.has_satellite_system),
+
+    // Defects
+    no_known_defects: formData.no_known_defects != null ? Boolean(formData.no_known_defects) : false,
+    known_defects: formData.known_defects ? String(formData.known_defects) : null,
+
+    // Location
+    postal_code: formData.zipCode ? String(formData.zipCode) : null,
+    city: formData.city ? String(formData.city) : null,
+    country: formData.country ? String(formData.country) : "DE",
+
+    // Additional
+    additional_equipment: formData.additional_equipment ? String(formData.additional_equipment) : null,
+    vehicle_identification_number: formData.vehicle_identification_number ? String(formData.vehicle_identification_number) : null,
+    license_plate: formData.license_plate ? String(formData.license_plate) : null,
   };
 }
 

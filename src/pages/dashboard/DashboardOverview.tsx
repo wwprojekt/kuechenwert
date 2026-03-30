@@ -117,7 +117,7 @@ export default function DashboardOverview() {
       if (!user) return null;
       const { data } = await supabase
         .from("wizard_sessions")
-        .select("id, status, form_data, created_at, customer_first_name, customer_last_name")
+        .select("id, status, form_data, created_at, customer_name")
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("created_at", { ascending: false })

@@ -39,8 +39,8 @@ const VerkaufenWizard = () => {
   const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
-  const registerPasswordRef = useRef<string | undefined>(undefined);
-  const confirmPasswordRef = useRef<string | undefined>(undefined);
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Check if user is already authenticated
@@ -230,7 +230,7 @@ const VerkaufenWizard = () => {
       phone: formData.customerPhone,
     });
 
-    const success = await submitForm(registerPasswordRef.current);
+    const success = await submitForm(registerPassword || undefined);
     if (success) {
       await markCompleted();
       markLeadWizardCompleted();
@@ -261,10 +261,10 @@ const VerkaufenWizard = () => {
         return <AccountLocationStep
           formData={formData}
           updateFormData={updateFormData}
-          registerPassword={registerPasswordRef.current || ""}
-          setRegisterPassword={(pw) => { registerPasswordRef.current = pw; }}
-          confirmPassword={confirmPasswordRef.current || ""}
-          setConfirmPassword={(pw) => { confirmPasswordRef.current = pw; }}
+          registerPassword={registerPassword}
+          setRegisterPassword={setRegisterPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
           isAuthenticated={!!currentUser}
         />;
       default:

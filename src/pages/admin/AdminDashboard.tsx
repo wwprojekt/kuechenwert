@@ -1,279 +1,772 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Gavel, Car, Users, TrendingUp, Clock, UserPlus, Mail, Phone } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Gavel, Car, Users, TrendingUp, Clock, UserPlus, Mail,
+  Phone, AlertCircle, MessageSquare, Building2, FileText,
+  CheckCircle2, Eye, ArrowRight, Bell, Inbox, CalendarClock,
+  RefreshCw, ChevronRight, ExternalLink,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 
-function RecentLeadsCard() {
-  const { data: leads } = useQuery({
-    queryKey: ["recentLeads"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("quick_leads")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data || [];
-    },
-  });
+// ============================================================================
+// Types
+// ============================================================================
 
-  if (!leads || leads.length === 0) return null;
-
-  return (
-    <Card className="p-8 border-2 hover:border-primary/20 transition-smooth">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-cyan-500" />
-          Neueste Leads
-        </h2>
-        <Badge variant="outline">{leads.length} Leads</Badge>
-      </div>
-      <div className="space-y-3">
-        {leads.map((lead) => (
-          <div key={lead.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-sm truncate">
-                  {lead.manufacturer} {lead.model}
-                </p>
-                <Badge variant={lead.source === 'hero_form_partial' ? 'secondary' : 'default'} className="text-xs shrink-0">
-                  {lead.source === 'hero_form_partial' ? 'Teilweise' : 'Vollständig'}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                {lead.name && <span>{lead.name}</span>}
-                {lead.email && (
-                  <span className="flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    {lead.email}
-                  </span>
-                )}
-                {lead.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    {lead.phone}
-                  </span>
-                )}
-              </div>
-            </div>
-            <span className="text-xs text-muted-foreground shrink-0 ml-4">
-              {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
-            </span>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
+interface ActionItem {
+  id: string;
+  type: "wizard" | "lead" | "message" | "dealer" | "question" | "motorhome";
+  title: string;
+  subtitle: string;
+  time: string;
+  link: string;
+  priority: "high" | "medium" | "low";
+  icon: React.ElementType;
+  iconColor: string;
+  badge?: string;
+  badgeColor?: string;
 }
 
-export default function AdminDashboard() {
-  const { data: stats } = useQuery({
-    queryKey: ["adminStats"],
+// ============================================================================
+// Dashboard Stats Hook
+// ============================================================================
+
+function useDashboardStats() {
+  return useQuery({
+    queryKey: ["adminDashboardStats"],
     queryFn: async () => {
-      const [auctionsRes, motorhomesRes, usersRes, bidsRes, leadsRes] = await Promise.all([
-        supabase.from("auctions").select("status", { count: "exact" }),
-        supabase.from("motorhomes").select("*", { count: "exact" }),
-        supabase.from("profiles").select("*", { count: "exact" }),
-        supabase.from("bids").select("amount"),
-        supabase.from("quick_leads").select("*", { count: "exact" }),
+      const [
+        motorhomesRes,
+        auctionsRes,
+        usersRes,
+        leadsRes,
+        wizardRes,
+        valuationRes,
+      ] = await Promise.all([
+        supabase.from("motorhomes").select("*", { count: "exact", head: true }),
+        supabase.from("auctions").select("status"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("quick_leads").select("*", { count: "exact", head: true }),
+        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed"),
+        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }),
       ]);
 
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
-      const totalBids = bidsRes.data?.length || 0;
-      const totalBidValue = bidsRes.data?.reduce((sum, bid) => sum + Number(bid.amount), 0) || 0;
 
       return {
-        totalAuctions: auctionsRes.count || 0,
-        activeAuctions,
         totalMotorhomes: motorhomesRes.count || 0,
+        activeAuctions,
+        totalAuctions: auctionsRes.data?.length || 0,
         totalUsers: usersRes.count || 0,
-        totalBids,
-        totalBidValue,
         totalLeads: leadsRes.count || 0,
+        completedWizards: wizardRes.count || 0,
+        totalValuations: valuationRes.count || 0,
       };
     },
+    refetchInterval: 30000,
   });
+}
 
-  const { data: recentAuctions } = useQuery({
-    queryKey: ["recentAuctions"],
+// ============================================================================
+// Action Items Hook - Sammelt alle offenen Aufgaben
+// ============================================================================
+
+function useActionItems() {
+  return useQuery({
+    queryKey: ["adminActionItems"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("auctions")
-        .select(`
-          *,
-          motorhome:motorhomes (
-            manufacturer,
-            model,
-            year,
-            motorhome_photos(url, display_order)
-          )
-        `)
+      const items: ActionItem[] = [];
+
+      // 1. Neue Wizard-Anfragen (abgeschlossen, noch nicht angesehen)
+      const { data: newWizards } = await supabase
+        .from("wizard_sessions")
+        .select("id, customer_name, customer_email, vehicle_summary, completed_at, is_viewed, status, form_data")
+        .eq("status", "completed")
+        .or("is_viewed.is.null,is_viewed.eq.false")
+        .order("completed_at", { ascending: false })
+        .limit(10);
+
+      if (newWizards) {
+        for (const w of newWizards) {
+          const fd = w.form_data as Record<string, unknown> | null;
+          const vehicle = w.vehicle_summary
+            || (fd ? `${fd.manufacturer || ""} ${fd.model || ""}`.trim() : "")
+            || "Unbekanntes Fahrzeug";
+          items.push({
+            id: `wizard-${w.id}`,
+            type: "wizard",
+            title: `Neue Wizard-Anfrage: ${vehicle}`,
+            subtitle: w.customer_name || w.customer_email || "Unbekannter Kunde",
+            time: w.completed_at || "",
+            link: "/admin/leads",
+            priority: "high",
+            icon: FileText,
+            iconColor: "text-blue-600 bg-blue-100",
+            badge: "Neu",
+            badgeColor: "bg-blue-500",
+          });
+        }
+      }
+
+      // 2. Neue Quick Leads (nicht angesehen)
+      const { data: newLeads } = await supabase
+        .from("quick_leads")
+        .select("id, name, email, phone, manufacturer, model, created_at, is_viewed")
+        .or("is_viewed.is.null,is_viewed.eq.false")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (newLeads) {
+        for (const l of newLeads) {
+          const vehicle = `${l.manufacturer || ""} ${l.model || ""}`.trim() || "Kein Fahrzeug";
+          items.push({
+            id: `lead-${l.id}`,
+            type: "lead",
+            title: `Neuer Lead: ${vehicle}`,
+            subtitle: l.name || l.email || l.phone || "Unbekannt",
+            time: l.created_at || "",
+            link: "/admin/leads",
+            priority: "medium",
+            icon: UserPlus,
+            iconColor: "text-cyan-600 bg-cyan-100",
+            badge: "Lead",
+            badgeColor: "bg-cyan-500",
+          });
+        }
+      }
+
+      // 3. Neue Bewertungsanfragen (nicht angesehen)
+      const { data: newValuations } = await supabase
+        .from("value_assessment_leads")
+        .select("id, name, email, manufacturer, model, year, created_at, is_viewed")
+        .or("is_viewed.is.null,is_viewed.eq.false")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (newValuations) {
+        for (const v of newValuations) {
+          const vehicle = `${v.manufacturer || ""} ${v.model || ""} ${v.year || ""}`.trim() || "Kein Fahrzeug";
+          items.push({
+            id: `valuation-${v.id}`,
+            type: "lead",
+            title: `Bewertungsanfrage: ${vehicle}`,
+            subtitle: v.name || v.email || "Unbekannt",
+            time: v.created_at || "",
+            link: "/admin/leads",
+            priority: "medium",
+            icon: TrendingUp,
+            iconColor: "text-emerald-600 bg-emerald-100",
+            badge: "Bewertung",
+            badgeColor: "bg-emerald-500",
+          });
+        }
+      }
+
+      // 4. Offene Support-Nachrichten
+      const { data: openMessages } = await supabase
+        .from("support_messages")
+        .select("id, subject, message, created_at, status")
+        .or("status.eq.open,status.is.null")
         .order("created_at", { ascending: false })
         .limit(5);
 
-      return data;
+      if (openMessages) {
+        for (const m of openMessages) {
+          items.push({
+            id: `support-${m.id}`,
+            type: "message",
+            title: m.subject || "Support-Nachricht",
+            subtitle: m.message?.substring(0, 80) + (m.message && m.message.length > 80 ? "..." : "") || "",
+            time: m.created_at || "",
+            link: "/admin/messages",
+            priority: "high",
+            icon: MessageSquare,
+            iconColor: "text-orange-600 bg-orange-100",
+            badge: "Support",
+            badgeColor: "bg-orange-500",
+          });
+        }
+      }
+
+      // 5. Neue Kontaktnachrichten
+      const { data: newContacts } = await supabase
+        .from("contact_messages")
+        .select("id, name, email, subject, created_at, status")
+        .eq("status", "new")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (newContacts) {
+        for (const c of newContacts) {
+          items.push({
+            id: `contact-${c.id}`,
+            type: "message",
+            title: c.subject || "Kontaktnachricht",
+            subtitle: `${c.name} (${c.email})`,
+            time: c.created_at || "",
+            link: "/admin/email",
+            priority: "medium",
+            icon: Mail,
+            iconColor: "text-purple-600 bg-purple-100",
+            badge: "Kontakt",
+            badgeColor: "bg-purple-500",
+          });
+        }
+      }
+
+      // 6. Offene Händler-Bewerbungen
+      const { data: pendingDealers } = await supabase
+        .from("dealer_applications")
+        .select("id, company_name, contact_person_name, created_at, status")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (pendingDealers) {
+        for (const d of pendingDealers) {
+          items.push({
+            id: `dealer-${d.id}`,
+            type: "dealer",
+            title: `Händler-Bewerbung: ${d.company_name}`,
+            subtitle: d.contact_person_name || "",
+            time: d.created_at || "",
+            link: "/admin/dealers",
+            priority: "high",
+            icon: Building2,
+            iconColor: "text-amber-600 bg-amber-100",
+            badge: "Händler",
+            badgeColor: "bg-amber-500",
+          });
+        }
+      }
+
+      // 7. Unbeantwortete Fahrzeugfragen
+      const { data: openQuestions } = await supabase
+        .from("vehicle_questions")
+        .select("id, question, questioner_name, questioner_email, created_at, answer")
+        .is("answer", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (openQuestions) {
+        for (const q of openQuestions) {
+          items.push({
+            id: `question-${q.id}`,
+            type: "question",
+            title: q.question?.substring(0, 60) + (q.question && q.question.length > 60 ? "..." : "") || "Fahrzeugfrage",
+            subtitle: q.questioner_name || q.questioner_email || "Unbekannt",
+            time: q.created_at || "",
+            link: "/admin/questions",
+            priority: "medium",
+            icon: MessageSquare,
+            iconColor: "text-indigo-600 bg-indigo-100",
+            badge: "Frage",
+            badgeColor: "bg-indigo-500",
+          });
+        }
+      }
+
+      // Sortieren: Priorität zuerst, dann nach Zeit
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      items.sort((a, b) => {
+        const pDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+        if (pDiff !== 0) return pDiff;
+        return new Date(b.time).getTime() - new Date(a.time).getTime();
+      });
+
+      return items;
     },
+    refetchInterval: 30000,
   });
+}
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Laufend</Badge>;
-      case "sold":
-        return <Badge className="bg-green-500 hover:bg-green-600">Verkauft</Badge>;
-      case "ended":
-        return <Badge className="bg-red-500 hover:bg-red-600">Nicht verkauft</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Abgebrochen</Badge>;
-      case "draft":
-        return <Badge variant="secondary">Entwurf</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+// ============================================================================
+// Recently Changed Motorhomes Hook
+// ============================================================================
 
-  const statCards = [
-    {
-      title: "Aktive Auktionen",
-      value: stats?.activeAuctions || 0,
-      icon: Gavel,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+function useRecentlyChangedMotorhomes() {
+  return useQuery({
+    queryKey: ["adminRecentMotorhomes"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("motorhomes")
+        .select(`
+          id, manufacturer, model, year, status, updated_at, created_at, seller_id,
+          motorhome_photos(url, display_order)
+        `)
+        .order("updated_at", { ascending: false })
+        .limit(8);
+
+      if (!data) return [];
+
+      // Seller-Profile laden
+      const sellerIds = [...new Set(data.map(m => m.seller_id).filter(Boolean))];
+      let profileMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
+
+      if (sellerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email")
+          .in("id", sellerIds);
+
+        if (profiles) {
+          for (const p of profiles) {
+            profileMap[p.id] = p;
+          }
+        }
+      }
+
+      return data.map(m => ({
+        ...m,
+        seller: profileMap[m.seller_id] || null,
+        isRecentlyUpdated: m.updated_at && m.created_at
+          ? new Date(m.updated_at).getTime() - new Date(m.created_at).getTime() > 60000
+          : false,
+      }));
     },
-    {
-      title: "Wohnmobile",
-      value: stats?.totalMotorhomes || 0,
-      icon: Car,
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
+    refetchInterval: 30000,
+  });
+}
+
+// ============================================================================
+// Counts for badges
+// ============================================================================
+
+function useUnreadCounts() {
+  return useQuery({
+    queryKey: ["adminUnreadCounts"],
+    queryFn: async () => {
+      const [
+        supportRes,
+        contactRes,
+        wizardRes,
+        leadsRes,
+        valuationRes,
+        dealerRes,
+        questionsRes,
+      ] = await Promise.all([
+        supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
+        supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
+        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("quick_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
+      ]);
+
+      return {
+        openSupport: supportRes.count || 0,
+        newContacts: contactRes.count || 0,
+        newWizards: wizardRes.count || 0,
+        newLeads: leadsRes.count || 0,
+        newValuations: valuationRes.count || 0,
+        pendingDealers: dealerRes.count || 0,
+        openQuestions: questionsRes.count || 0,
+        totalMessages: (supportRes.count || 0) + (contactRes.count || 0),
+        totalAnfragen: (wizardRes.count || 0) + (leadsRes.count || 0) + (valuationRes.count || 0),
+      };
     },
-    {
-      title: "Benutzer",
-      value: stats?.totalUsers || 0,
-      icon: Users,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
-    },
-    {
-      title: "Gebote",
-      value: stats?.totalBids || 0,
-      icon: TrendingUp,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
-    },
-    {
-      title: "Leads",
-      value: stats?.totalLeads || 0,
-      icon: UserPlus,
-      color: "text-cyan-500",
-      bgColor: "bg-cyan-500/10",
-    },
-  ];
+    refetchInterval: 30000,
+  });
+}
+
+// ============================================================================
+// Helper: Time ago
+// ============================================================================
+
+function timeAgo(dateStr: string | null): string {
+  if (!dateStr) return "";
+  try {
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: de });
+  } catch {
+    return "";
+  }
+}
+
+// ============================================================================
+// Sub-Components
+// ============================================================================
+
+function CountBadge({ count, color = "bg-red-500" }: { count: number; color?: string }) {
+  if (count === 0) return null;
+  return (
+    <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white rounded-full ${color}`}>
+      {count}
+    </span>
+  );
+}
+
+function QuickStatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+  bgColor,
+  link,
+  badge,
+}: {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+  bgColor: string;
+  link: string;
+  badge?: number;
+}) {
+  return (
+    <Link to={link}>
+      <Card className="relative overflow-hidden hover:shadow-md border-2 hover:border-primary/30 transition-all duration-200 cursor-pointer group">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+              <p className="text-2xl font-bold mt-1">{value}</p>
+            </div>
+            <div className={`h-11 w-11 rounded-lg ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+              <Icon className={`w-5 h-5 ${color}`} />
+            </div>
+          </div>
+          {badge !== undefined && badge > 0 && (
+            <div className="absolute top-2 right-2">
+              <CountBadge count={badge} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+// ============================================================================
+// Main Dashboard Component
+// ============================================================================
+
+export default function AdminDashboard() {
+  const { data: stats } = useDashboardStats();
+  const { data: actionItems, isLoading: actionsLoading } = useActionItems();
+  const { data: recentMotorhomes } = useRecentlyChangedMotorhomes();
+  const { data: counts } = useUnreadCounts();
+
+  const totalActionItems = actionItems?.length || 0;
+  const highPriorityItems = actionItems?.filter(i => i.priority === "high").length || 0;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard Übersicht</h1>
-        <p className="text-muted-foreground">
-          Willkommen im Admin-Bereich. Hier sehen Sie die wichtigsten Kennzahlen auf einen Blick.
-        </p>
+    <div className="space-y-6 max-w-[1400px]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Willkommen zurück. Hier ist dein Überblick.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <RefreshCw className="w-3 h-3" />
+          Aktualisiert sich automatisch
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((stat, index) => (
-          <Card key={stat.title} className="relative overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card animate-scale-in" style={{ animationDelay: `${index * 100}ms` }}>
-            <CardContent className="p-8 space-y-6">
+      {/* Alert Banner wenn dringende Aufgaben */}
+      {highPriorityItems > 0 && (
+        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-red-800 dark:text-red-300">
+                {highPriorityItems} dringende {highPriorityItems === 1 ? "Aufgabe" : "Aufgaben"} warten auf dich
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Neue Anfragen, offene Nachrichten oder Händler-Bewerbungen erfordern deine Aufmerksamkeit.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <QuickStatCard
+          title="Anfragen"
+          value={counts?.totalAnfragen || 0}
+          icon={FileText}
+          color="text-blue-600"
+          bgColor="bg-blue-100"
+          link="/admin/leads"
+          badge={counts?.totalAnfragen}
+        />
+        <QuickStatCard
+          title="Nachrichten"
+          value={counts?.totalMessages || 0}
+          icon={Inbox}
+          color="text-orange-600"
+          bgColor="bg-orange-100"
+          link="/admin/email"
+          badge={counts?.totalMessages}
+        />
+        <QuickStatCard
+          title="Wohnmobile"
+          value={stats?.totalMotorhomes || 0}
+          icon={Car}
+          color="text-green-600"
+          bgColor="bg-green-100"
+          link="/admin/motorhomes"
+        />
+        <QuickStatCard
+          title="Auktionen"
+          value={stats?.activeAuctions || 0}
+          icon={Gavel}
+          color="text-purple-600"
+          bgColor="bg-purple-100"
+          link="/admin/auctions"
+        />
+        <QuickStatCard
+          title="Händler"
+          value={counts?.pendingDealers || 0}
+          icon={Building2}
+          color="text-amber-600"
+          bgColor="bg-amber-100"
+          link="/admin/dealers"
+          badge={counts?.pendingDealers}
+        />
+        <QuickStatCard
+          title="Benutzer"
+          value={stats?.totalUsers || 0}
+          icon={Users}
+          color="text-slate-600"
+          bgColor="bg-slate-100"
+          link="/admin/users"
+        />
+      </div>
+
+      {/* Main Content: Action Items + Recent Motorhomes */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left: Action Items (3/5) */}
+        <div className="lg:col-span-3 space-y-4">
+          <Card className="border-2">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-primary" />
+                  Offene Aufgaben
+                  {totalActionItems > 0 && (
+                    <CountBadge count={totalActionItems} color="bg-primary" />
+                  )}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {actionsLoading ? (
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                  Lade Aufgaben...
                 </div>
-                <div className={`h-14 w-14 rounded-lg gradient-hero flex items-center justify-center shadow-lg group-hover:shadow-glow transition-smooth`}>
-                  <stat.icon className="w-7 h-7 text-white" />
+              ) : !actionItems || actionItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
+                  <p className="font-medium text-green-700 dark:text-green-400">Alles erledigt!</p>
+                  <p className="text-sm text-muted-foreground mt-1">Keine offenen Aufgaben vorhanden.</p>
                 </div>
+              ) : (
+                <div className="space-y-1">
+                  {actionItems.slice(0, 15).map((item) => (
+                    <Link key={item.id} to={item.link} className="block">
+                      <div className={`flex items-start gap-3 p-3 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group ${
+                        item.priority === "high" ? "border-l-4 border-l-red-400" : ""
+                      }`}>
+                        <div className={`h-9 w-9 rounded-lg ${item.iconColor} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{item.title}</p>
+                            {item.badge && (
+                              <Badge className={`${item.badgeColor} text-[10px] px-1.5 py-0 h-4 text-white`}>
+                                {item.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                            {timeAgo(item.time)}
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  {actionItems.length > 15 && (
+                    <div className="text-center pt-2">
+                      <p className="text-xs text-muted-foreground">
+                        + {actionItems.length - 15} weitere Aufgaben
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Recently Changed Motorhomes (2/5) */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card className="border-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Car className="w-5 h-5 text-green-600" />
+                  Letzte Wohnmobil-Aktivität
+                </CardTitle>
+                <Link to="/admin/motorhomes">
+                  <Button variant="ghost" size="sm" className="text-xs h-7">
+                    Alle <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {!recentMotorhomes || recentMotorhomes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Keine Wohnmobile vorhanden.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {recentMotorhomes.map((m) => {
+                    const firstPhoto = m.motorhome_photos
+                      ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+                    const sellerName = m.seller
+                      ? `${m.seller.first_name || ""} ${m.seller.last_name || ""}`.trim() || m.seller.email
+                      : "Unbekannt";
+
+                    return (
+                      <Link key={m.id} to={`/admin/motorhomes/${m.id}`} className="block">
+                        <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group">
+                          <div className="w-12 h-9 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                            {firstPhoto ? (
+                              <img
+                                src={firstPhoto}
+                                alt={`${m.manufacturer} ${m.model}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                                <Car className="w-4 h-4 text-primary" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {m.manufacturer} {m.model}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] text-muted-foreground">{sellerName}</span>
+                              {m.isRecentlyUpdated && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-300 text-amber-600">
+                                  Aktualisiert
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                              {m.status === "active" ? "Aktiv" : m.status === "draft" ? "Entwurf" : m.status}
+                            </Badge>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {timeAgo(m.updated_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Schnellzugriff-Karten */}
+          <Card className="border-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ExternalLink className="w-5 h-5 text-slate-500" />
+                Schnellzugriff
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/admin/leads">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <UserPlus className="w-4 h-4 text-cyan-500" />
+                    <div>
+                      <p className="text-xs font-medium">Leads</p>
+                      {(counts?.totalAnfragen || 0) > 0 && (
+                        <p className="text-[10px] text-cyan-600">{counts?.totalAnfragen} neu</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <Link to="/admin/email">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <Mail className="w-4 h-4 text-purple-500" />
+                    <div>
+                      <p className="text-xs font-medium">E-Mails</p>
+                      {(counts?.totalMessages || 0) > 0 && (
+                        <p className="text-[10px] text-purple-600">{counts?.totalMessages} offen</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <Link to="/admin/questions">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <MessageSquare className="w-4 h-4 text-indigo-500" />
+                    <div>
+                      <p className="text-xs font-medium">Fragen</p>
+                      {(counts?.openQuestions || 0) > 0 && (
+                        <p className="text-[10px] text-indigo-600">{counts?.openQuestions} offen</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <Link to="/admin/dealers">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <Building2 className="w-4 h-4 text-amber-500" />
+                    <div>
+                      <p className="text-xs font-medium">Händler</p>
+                      {(counts?.pendingDealers || 0) > 0 && (
+                        <p className="text-[10px] text-amber-600">{counts?.pendingDealers} ausstehend</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <Link to="/admin/appointments">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <CalendarClock className="w-4 h-4 text-teal-500" />
+                    <div>
+                      <p className="text-xs font-medium">Termine</p>
+                    </div>
+                  </div>
+                </Link>
+                <Link to="/admin/analytics">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
+                    <TrendingUp className="w-4 h-4 text-rose-500" />
+                    <div>
+                      <p className="text-xs font-medium">Analytics</p>
+                    </div>
+                  </div>
+                </Link>
               </div>
             </CardContent>
           </Card>
-        ))}
+        </div>
       </div>
-
-      {/* Total Bid Value Card */}
-      <Card className="p-6 gradient-hero text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 mb-1">Gesamtwert aller Gebote</p>
-            <p className="text-4xl font-bold">
-              €{stats?.totalBidValue.toLocaleString() || 0}
-            </p>
-          </div>
-          <TrendingUp className="w-12 h-12 text-white/50" />
-        </div>
-      </Card>
-
-      {/* Recent Leads */}
-      <RecentLeadsCard />
-
-      {/* Recent Auctions */}
-      <Card className="p-8 border-2 hover:border-primary/20 transition-smooth hover-lift">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            Neueste Auktionen
-          </h2>
-          <Link to="/admin/auctions">
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
-              Alle ansehen
-            </Badge>
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {recentAuctions?.map((auction) => {
-            const firstPhoto = auction.motorhome?.motorhome_photos
-              ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
-
-            return (
-              <Link key={auction.id} to={`/admin/auctions/${auction.id}`} className="block">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-smooth cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                      {firstPhoto ? (
-                        <img 
-                          src={firstPhoto}
-                          alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                          <Car className="w-5 h-5 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {auction.motorhome?.manufacturer} {auction.motorhome?.model}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Baujahr {auction.motorhome?.year}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {getStatusBadge(auction.status)}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Aktuell: €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </Card>
     </div>
   );
 }

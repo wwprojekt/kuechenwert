@@ -110,7 +110,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate a magic link for the user
     // This will confirm their email AND log them in
-    const redirectUrl = "https://caravanwert.de/dashboard/listings";
+    // The setup=password parameter triggers a password-setting dialog in the dashboard
+    const redirectUrl = "https://caravanwert.de/dashboard?setup=password";
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
@@ -182,7 +183,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     content += paragraph(
       `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
-      `Nach der ersten Anmeldung k&ouml;nnen Sie unter <em>Profil</em> ein eigenes Passwort festlegen.`
+      `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
+      `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
     );
 
     content += paragraph(

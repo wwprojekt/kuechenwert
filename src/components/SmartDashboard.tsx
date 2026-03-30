@@ -25,6 +25,7 @@ import { DealerSidebar } from '@/components/DealerSidebar';
 import { UserSidebar } from '@/components/UserSidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import EmailVerificationBanner from '@/components/dashboard/EmailVerificationBanner';
+import SetPasswordDialog from '@/components/dashboard/SetPasswordDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 // Import dashboard components (non-lazy for main views)
@@ -341,6 +342,15 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { settings } = useSettings();
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
+  // Check if user arrived via registration magic link and needs to set a password
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('setup') === 'password') {
+      setShowSetPassword(true);
+    }
+  }, []);
+
   // Check email verification status
   useEffect(() => {
     const checkVerification = async () => {
@@ -402,6 +412,8 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
               {emailVerified === false && user?.email && (
                 <EmailVerificationBanner email={user.email} />
               )}
+              {/* Password Setup Dialog for users arriving via registration magic link */}
+              <SetPasswordDialog open={showSetPassword} />
               {children}
             </div>
           </main>

@@ -428,18 +428,21 @@ const DISPOSITION_LABELS: Record<string, string> = {
   wrong_number: "Falsche Nummer",
   no_answer: "Nicht rangegangen",
   considering: "Überlegt sich das",
+  done: "Erledigt",
 };
 
 const DISPOSITION_COLORS: Record<string, string> = {
   wrong_number: "bg-red-100 text-red-700 border-red-200",
   no_answer: "bg-amber-100 text-amber-700 border-amber-200",
   considering: "bg-blue-100 text-blue-700 border-blue-200",
+  done: "bg-green-100 text-green-700 border-green-200",
 };
 
 const DISPOSITION_ICONS: Record<string, React.ElementType> = {
   wrong_number: PhoneOff,
   no_answer: PhoneMissed,
   considering: Clock,
+  done: CheckCircle2,
 };
 
 function DispositionBadge({ disposition }: { disposition: string | null }) {
@@ -507,6 +510,15 @@ function DispositionButtons({ currentDisposition, onSetDisposition, isPending }:
           className={currentDisposition === "considering" ? "bg-blue-600 hover:bg-blue-700" : "text-blue-600 border-blue-200 hover:bg-blue-50"}
         >
           <Clock className="w-4 h-4 mr-1" /> Überlegt sich das
+        </Button>
+        <Button
+          variant={currentDisposition === "done" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("done")}
+          disabled={isPending || currentDisposition === "done"}
+          className={currentDisposition === "done" ? "bg-green-600 hover:bg-green-700" : "text-green-600 border-green-200 hover:bg-green-50"}
+        >
+          <CheckCircle2 className="w-4 h-4 mr-1" /> Erledigt
         </Button>
       </div>
     </Card>
@@ -929,6 +941,7 @@ export default function AdminLeads() {
   const wrongNumberLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "wrong_number"), [dispositionLeads]);
   const noAnswerLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "no_answer"), [dispositionLeads]);
   const consideringLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "considering"), [dispositionLeads]);
+  const doneLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "done"), [dispositionLeads]);
 
   const handleDispositionChange = (item: DispositionItem, newDisposition: string | null) => {
     if (item.type === "wizard") {
@@ -1661,6 +1674,10 @@ export default function AdminLeads() {
               <Clock className="w-4 h-4" />
               Überlegt ({consideringLeads.length})
             </TabsTrigger>
+            <TabsTrigger value="done" className="gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Erledigt ({doneLeads.length})
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -2312,8 +2329,8 @@ export default function AdminLeads() {
         {/* ================================================================ */}
         {/* Disposition Tabs: Falsche Nummer / Nicht rangegangen / Überlegt */}
         {/* ================================================================ */}
-        {(["wrong_number", "no_answer", "considering"] as const).map((dispositionKey) => {
-          const items = dispositionKey === "wrong_number" ? wrongNumberLeads : dispositionKey === "no_answer" ? noAnswerLeads : consideringLeads;
+        {(["wrong_number", "no_answer", "considering", "done"] as const).map((dispositionKey) => {
+          const items = dispositionKey === "wrong_number" ? wrongNumberLeads : dispositionKey === "no_answer" ? noAnswerLeads : dispositionKey === "done" ? doneLeads : consideringLeads;
           const Icon = DISPOSITION_ICONS[dispositionKey];
           const label = DISPOSITION_LABELS[dispositionKey];
           const isWrongNumber = dispositionKey === "wrong_number";

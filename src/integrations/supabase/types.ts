@@ -1271,6 +1271,7 @@ export type Database = {
       dealer_reviews: {
         Row: {
           auction_id: string
+          comment: string | null
           communication_rating: number
           created_at: string | null
           dealer_id: string
@@ -1284,10 +1285,12 @@ export type Database = {
           review_text: string
           reviewer_id: string
           status: string
+          title: string | null
           updated_at: string | null
         }
         Insert: {
           auction_id: string
+          comment?: string | null
           communication_rating: number
           created_at?: string | null
           dealer_id: string
@@ -1301,10 +1304,12 @@ export type Database = {
           review_text: string
           reviewer_id: string
           status?: string
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
           auction_id?: string
+          comment?: string | null
           communication_rating?: number
           created_at?: string | null
           dealer_id?: string
@@ -1318,6 +1323,7 @@ export type Database = {
           review_text?: string
           reviewer_id?: string
           status?: string
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1353,6 +1359,7 @@ export type Database = {
           discount_rate: number
           id: string
           is_active: boolean | null
+          purchase_volume: number | null
           reason: string | null
         }
         Insert: {
@@ -1363,6 +1370,7 @@ export type Database = {
           discount_rate: number
           id?: string
           is_active?: boolean | null
+          purchase_volume?: number | null
           reason?: string | null
         }
         Update: {
@@ -1373,6 +1381,7 @@ export type Database = {
           discount_rate?: number
           id?: string
           is_active?: boolean | null
+          purchase_volume?: number | null
           reason?: string | null
         }
         Relationships: [
@@ -1621,10 +1630,13 @@ export type Database = {
       legal_documents: {
         Row: {
           dealer_application_id: string
+          document_name: string | null
           document_type: string
           document_url: string
           file_size: number | null
+          file_url: string | null
           id: string
+          mime_type: string | null
           notes: string | null
           original_filename: string
           uploaded_at: string | null
@@ -1634,12 +1646,15 @@ export type Database = {
         }
         Insert: {
           dealer_application_id: string
+          document_name?: string | null
           document_type: string
-          document_url: string
+          document_url?: string
           file_size?: number | null
+          file_url?: string | null
           id?: string
+          mime_type?: string | null
           notes?: string | null
-          original_filename: string
+          original_filename?: string
           uploaded_at?: string | null
           verified?: boolean | null
           verified_at?: string | null
@@ -1647,10 +1662,13 @@ export type Database = {
         }
         Update: {
           dealer_application_id?: string
+          document_name?: string | null
           document_type?: string
           document_url?: string
           file_size?: number | null
+          file_url?: string | null
           id?: string
+          mime_type?: string | null
           notes?: string | null
           original_filename?: string
           uploaded_at?: string | null
@@ -1808,6 +1826,7 @@ export type Database = {
           number_of_axles: number | null
           payload_kg: number | null
           postal_code: string | null
+          power_kw: number | null
           previous_owners: number | null
           price: number | null
           refrigerator_type:
@@ -1905,6 +1924,7 @@ export type Database = {
           number_of_axles?: number | null
           payload_kg?: number | null
           postal_code?: string | null
+          power_kw?: number | null
           previous_owners?: number | null
           price?: number | null
           refrigerator_type?:
@@ -2002,6 +2022,7 @@ export type Database = {
           number_of_axles?: number | null
           payload_kg?: number | null
           postal_code?: string | null
+          power_kw?: number | null
           previous_owners?: number | null
           price?: number | null
           refrigerator_type?:
@@ -2184,6 +2205,8 @@ export type Database = {
           is_suspended: boolean | null
           is_verified: boolean | null
           last_name: string | null
+          latitude: number | null
+          longitude: number | null
           phone: string | null
           restricted_at: string | null
           restriction_reason: string | null
@@ -2220,6 +2243,8 @@ export type Database = {
           is_suspended?: boolean | null
           is_verified?: boolean | null
           last_name?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           restricted_at?: string | null
           restriction_reason?: string | null
@@ -2256,6 +2281,8 @@ export type Database = {
           is_suspended?: boolean | null
           is_verified?: boolean | null
           last_name?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           restricted_at?: string | null
           restriction_reason?: string | null
@@ -2271,6 +2298,109 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_inquiries: {
+        Row: {
+          body_type: string | null
+          condition: string | null
+          created_at: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          description: string | null
+          id: string
+          manufacturer: string | null
+          mileage: number | null
+          model: string | null
+          price_expectation: number | null
+          station_id: string
+          vehicle_type: string | null
+          year: number | null
+        }
+        Insert: {
+          body_type?: string | null
+          condition?: string | null
+          created_at?: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          manufacturer?: string | null
+          mileage?: number | null
+          model?: string | null
+          price_expectation?: number | null
+          station_id: string
+          vehicle_type?: string | null
+          year?: number | null
+        }
+        Update: {
+          body_type?: string | null
+          condition?: string | null
+          created_at?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          manufacturer?: string | null
+          mileage?: number | null
+          model?: string | null
+          price_expectation?: number | null
+          station_id?: string
+          vehicle_type?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_inquiries_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_stations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_stations: {
         Row: {
@@ -2334,6 +2464,7 @@ export type Database = {
           email: string | null
           form_data_snapshot: Record<string, unknown> | null
           id: string
+          is_viewed: boolean | null
           last_wizard_step: number | null
           lead_quality: string | null
           manufacturer: string | null
@@ -2362,6 +2493,7 @@ export type Database = {
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
           id?: string
+          is_viewed?: boolean | null
           last_wizard_step?: number | null
           lead_quality?: string | null
           manufacturer?: string | null
@@ -2391,6 +2523,7 @@ export type Database = {
           email?: string | null
           form_data_snapshot?: Record<string, unknown> | null
           id?: string
+          is_viewed?: boolean | null
           last_wizard_step?: number | null
           lead_quality?: string | null
           manufacturer?: string | null
@@ -3137,8 +3270,15 @@ export type Database = {
       }
       value_assessment_leads: {
         Row: {
+          admin_estimated_value: number | null
           admin_notes: string | null
+          admin_valued_at: string | null
+          ai_confidence: number | null
+          ai_estimated_value: number | null
+          algorithm_value_max: number | null
+          algorithm_value_min: number | null
           body_type: string | null
+          brand_tier: string | null
           condition: string | null
           contacted_at: string | null
           created_at: string | null
@@ -3147,6 +3287,7 @@ export type Database = {
           estimated_value_max: number | null
           estimated_value_min: number | null
           id: string
+          is_viewed: boolean | null
           manufacturer: string | null
           message: string | null
           mileage: number | null
@@ -3160,18 +3301,24 @@ export type Database = {
           year: number | null
         }
         Insert: {
+          admin_estimated_value?: number | null
           admin_notes?: string | null
+          admin_valued_at?: string | null
+          ai_confidence?: number | null
+          ai_estimated_value?: number | null
+          algorithm_value_max?: number | null
+          algorithm_value_min?: number | null
           body_type?: string | null
+          brand_tier?: string | null
           condition?: string | null
           contacted_at?: string | null
           created_at?: string | null
           disposition?: string | null
           email: string
           estimated_value_max?: number | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
           estimated_value_min?: number | null
           id?: string
+          is_viewed?: boolean | null
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
@@ -3180,11 +3327,20 @@ export type Database = {
           phone?: string | null
           source: string
           status?: string | null
+          wrong_number_email_count?: number | null
+          wrong_number_email_last_sent?: string | null
           year?: number | null
         }
         Update: {
+          admin_estimated_value?: number | null
           admin_notes?: string | null
+          admin_valued_at?: string | null
+          ai_confidence?: number | null
+          ai_estimated_value?: number | null
+          algorithm_value_max?: number | null
+          algorithm_value_min?: number | null
           body_type?: string | null
+          brand_tier?: string | null
           condition?: string | null
           contacted_at?: string | null
           created_at?: string | null
@@ -3193,6 +3349,7 @@ export type Database = {
           estimated_value_max?: number | null
           estimated_value_min?: number | null
           id?: string
+          is_viewed?: boolean | null
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
@@ -3271,6 +3428,7 @@ export type Database = {
           customer_phone: string | null
           form_data: Json
           id: string
+          is_viewed: boolean | null
           last_activity_at: string | null
           max_step_reached: number
           followup_email_sent_at: string | null
@@ -3298,6 +3456,7 @@ export type Database = {
           customer_phone?: string | null
           form_data?: Json
           id?: string
+          is_viewed?: boolean | null
           last_activity_at?: string | null
           max_step_reached?: number
           followup_email_sent_at?: string | null
@@ -3325,6 +3484,7 @@ export type Database = {
           customer_phone?: string | null
           form_data?: Json
           id?: string
+          is_viewed?: boolean | null
           last_activity_at?: string | null
           max_step_reached?: number
           followup_email_sent_at?: string | null

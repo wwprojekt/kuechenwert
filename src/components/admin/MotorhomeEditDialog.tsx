@@ -79,9 +79,9 @@ interface MotorhomeEditDialogProps {
 
 const CONDITIONS = [
   { value: "Neuwertig", label: "Neuwertig" },
-  { value: "Sehr gut", label: "Sehr gut" },
-  { value: "Gut", label: "Gut" },
-  { value: "Befriedigend", label: "Befriedigend" },
+  { value: "Sehr gepflegt", label: "Sehr gepflegt" },
+  { value: "Gepflegt", label: "Gepflegt" },
+  { value: "Gebrauchsspuren", label: "Gebrauchsspuren" },
   { value: "Reparaturbedürftig", label: "Reparaturbedürftig" },
 ];
 

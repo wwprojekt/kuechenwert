@@ -141,9 +141,9 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Neuwertig">Neuwertig</SelectItem>
-              <SelectItem value="Sehr gut">Sehr gut</SelectItem>
-              <SelectItem value="Gut">Gut</SelectItem>
-              <SelectItem value="Befriedigend">Befriedigend</SelectItem>
+              <SelectItem value="Sehr gepflegt">Sehr gepflegt</SelectItem>
+              <SelectItem value="Gepflegt">Gepflegt</SelectItem>
+              <SelectItem value="Gebrauchsspuren">Gebrauchsspuren</SelectItem>
               <SelectItem value="Reparaturbedürftig">Reparaturbedürftig</SelectItem>
             </SelectContent>
           </Select>

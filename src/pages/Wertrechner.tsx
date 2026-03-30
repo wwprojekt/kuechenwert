@@ -54,11 +54,11 @@ const BODY_TYPES = [
 ];
 
 const CONDITIONS = [
-  { value: "new", label: "Neu / Wie neu", description: "Keine Gebrauchsspuren, neuwertig", emoji: "✨", factor: 1.0 },
-  { value: "excellent", label: "Ausgezeichnet", description: "Minimale Gebrauchsspuren, top gepflegt", emoji: "🌟", factor: 0.92 },
-  { value: "good", label: "Gut", description: "Normale Gebrauchsspuren, gepflegt", emoji: "👍", factor: 0.80 },
-  { value: "fair", label: "Befriedigend", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.65 },
-  { value: "poor", label: "Renovierungsbedürftig", description: "Erhebliche Mängel, Reparaturbedarf", emoji: "🔧", factor: 0.45 },
+  { value: "new", label: "Neuwertig", description: "Keine Gebrauchsspuren, wie aus dem Werk", emoji: "✨", factor: 1.0 },
+  { value: "excellent", label: "Sehr gepflegt", description: "Minimale Gebrauchsspuren, regelmäßig gewartet", emoji: "🌟", factor: 0.92 },
+  { value: "good", label: "Gepflegt", description: "Normale Gebrauchsspuren, voll funktionsfähig", emoji: "👍", factor: 0.80 },
+  { value: "fair", label: "Gebrauchsspuren", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.65 },
+  { value: "poor", label: "Reparaturbedürftig", description: "Mängel vorhanden, Reparaturen nötig", emoji: "🔧", factor: 0.45 },
 ];
 
 const MANUFACTURERS = [
@@ -1169,9 +1169,9 @@ const Wertrechner = () => {
                           // Mapping: Wertrechner condition -> Wizard condition
                           const conditionMap: Record<string, string> = {
                             new: "Neuwertig",
-                            excellent: "Sehr gut",
-                            good: "Gut",
-                            fair: "Befriedigend",
+                            excellent: "Sehr gepflegt",
+                            good: "Gepflegt",
+                            fair: "Gebrauchsspuren",
                             poor: "Reparaturbedürftig",
                           };
                           const params = new URLSearchParams();

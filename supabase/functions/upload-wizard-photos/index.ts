@@ -26,6 +26,8 @@ const ALLOWED_MIME_TYPES = [
   "image/webp",
   "image/heic",
   "image/heif",
+  "image/avif",
+  "image/gif",
 ];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB (same as wizard frontend limit)
 const MAX_PHOTOS = 30;

@@ -560,7 +560,7 @@ export function SellerPhotoManager({
               </Button>
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*"
                 multiple
                 onChange={handleFileInputChange}
                 className="hidden"
@@ -642,7 +642,7 @@ export function SellerPhotoManager({
           )}
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*"
             multiple
             onChange={handleFileInputChange}
             className="hidden"
@@ -717,7 +717,7 @@ export function SellerPhotoManager({
                     )}
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*"
                       multiple
                       onChange={handleFileInputChange}
                       className="hidden"

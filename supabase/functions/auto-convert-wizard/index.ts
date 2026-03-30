@@ -296,7 +296,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (photoUrls.length > 0) {
       const photoRecords = photoUrls.map((url: string, index: number) => ({
         motorhome_id: motorhome.id,
-        photo_url: url,
+        url: url,
         display_order: index,
       }));
 
@@ -330,9 +330,9 @@ const handler = async (req: Request): Promise<Response> => {
 
             await adminClient
               .from("motorhome_photos")
-              .update({ photo_url: newPublicUrl })
+              .update({ url: newPublicUrl })
               .eq("motorhome_id", motorhome.id)
-              .eq("photo_url", url);
+              .eq("url", url);
           }
         }
       } catch (moveError) {

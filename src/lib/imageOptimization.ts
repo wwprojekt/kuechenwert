@@ -321,7 +321,7 @@ class ImageOptimizer {
     }
 
     // Check supported formats
-    const supportedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const supportedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'];
     if (!supportedFormats.includes(file.type)) {
       return { valid: false, error: 'Unsupported image format' };
     }

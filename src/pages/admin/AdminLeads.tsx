@@ -2544,13 +2544,14 @@ export default function AdminLeads() {
                     {Object.entries(STEP_NAMES).map(([stepStr, name]) => {
                       const step = parseInt(stepStr);
                       if (step > selectedSession.total_steps) return null;
-                      const isCompleted = step < selectedSession.current_step;
-                      const isCurrent = step === selectedSession.current_step;
+                      const isSessionCompleted = selectedSession.status === "completed";
+                      const isCompleted = step < selectedSession.current_step || (isSessionCompleted && step === selectedSession.current_step);
+                      const isAbandoned = !isSessionCompleted && step === selectedSession.current_step;
                       return (
                         <div
                           key={step}
                           className={`flex items-center gap-2 p-2 rounded text-sm ${
-                            isCurrent
+                            isAbandoned
                               ? "bg-primary/10 font-medium"
                               : isCompleted
                               ? "text-green-700"
@@ -2559,7 +2560,7 @@ export default function AdminLeads() {
                         >
                           {isCompleted ? (
                             <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          ) : isCurrent ? (
+                          ) : isAbandoned ? (
                             <AlertTriangle className="w-4 h-4 text-orange-500" />
                           ) : (
                             <div className="w-4 h-4 rounded-full border-2 border-muted" />
@@ -2567,7 +2568,7 @@ export default function AdminLeads() {
                           <span>
                             {step}. {name}
                           </span>
-                          {isCurrent && (
+                          {isAbandoned && (
                             <Badge variant="outline" className="ml-auto text-xs">
                               Hier abgebrochen
                             </Badge>

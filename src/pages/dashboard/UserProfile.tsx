@@ -99,9 +99,16 @@ export default function UserProfile() {
     mutationFn: async (data: typeof formData) => {
       if (!user) throw new Error("Not authenticated");
 
+      // Convert empty strings to null for fields with CHECK constraints
+      const cleanedData = {
+        ...data,
+        salutation: data.salutation || null,
+        account_type: data.account_type || null,
+      };
+
       const { error } = await supabase
         .from("profiles")
-        .update(data)
+        .update(cleanedData)
         .eq("id", user.id);
 
       if (error) throw error;

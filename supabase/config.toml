@@ -129,6 +129,9 @@ verify_jwt = true
 verify_jwt = false
 
 # --- Automation ---
+[functions.auto-convert-wizard]
+verify_jwt = false
+
 [functions.process-abandoned-wizards]
 verify_jwt = false
 

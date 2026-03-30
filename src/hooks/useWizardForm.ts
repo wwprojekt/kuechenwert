@@ -508,9 +508,14 @@ export const useWizardForm = () => {
         const capturedUserId = typeof signUpUserId !== 'undefined' ? signUpUserId : null;
 
         // Save to wizard_sessions so admin can convert and data is not lost
-        let savedSessionId = null;
+        // Generate UUID client-side to avoid needing .select('id') after INSERT.
+        // The SELECT RLS policy requires auth.uid() which is null for unconfirmed users,
+        // so .select('id').single() would fail silently and return null.
+        const generatedSessionId = crypto.randomUUID();
+        let savedSessionId: string | null = null;
         try {
-          const { data: sessionData, error: sessionError } = await supabase.from('wizard_sessions').insert({
+          const { error: sessionError } = await supabase.from('wizard_sessions').insert({
+            id: generatedSessionId,
             user_id: capturedUserId, // Use the signUp user ID if available
             anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
             customer_name: formData.customerName || null,
@@ -524,11 +529,11 @@ export const useWizardForm = () => {
             status: 'completed',
             vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
             completed_at: new Date().toISOString(),
-          }).select('id').single();
+          });
           
           if (sessionError) throw sessionError;
-          savedSessionId = sessionData.id;
-          logger.info('Wizard session saved for signup-without-session user');
+          savedSessionId = generatedSessionId;
+          logger.info('Wizard session saved for signup-without-session user, id:', generatedSessionId);
         } catch (wizardSessionError) {
           logger.error('Failed to save wizard session:', wizardSessionError);
         }

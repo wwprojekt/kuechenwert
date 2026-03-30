@@ -708,7 +708,7 @@ export default function AdminLeads() {
       const { data, error } = await supabase
         .from("wizard_sessions")
         .select("*")
-        .order("last_activity_at", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as WizardSession[];
     },

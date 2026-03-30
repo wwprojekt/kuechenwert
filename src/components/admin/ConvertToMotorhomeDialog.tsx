@@ -163,7 +163,7 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     // Interior
     has_kitchen: Boolean(formData.has_kitchen),
     heating_type: formData.heating_type ? String(formData.heating_type) : null,
-    air_conditioning: formData.air_conditioning ? String(formData.air_conditioning) : null,
+    air_conditioning_type: formData.air_conditioning ? String(formData.air_conditioning) : null,
     has_bathroom: Boolean(formData.has_toilet || formData.has_shower || formData.has_bathroom),
     has_shower: Boolean(formData.has_shower),
     has_toilet: Boolean(formData.has_toilet),
@@ -184,15 +184,18 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     battery_capacity_ah: formData.battery_capacity_ah ? Number(formData.battery_capacity_ah) : null,
     has_inverter: Boolean(formData.has_inverter),
     has_awning: Boolean(formData.has_awning),
-    awning_length_cm: formData.awning_length_cm ? Number(formData.awning_length_cm) : null,
+    awning_length_m: formData.awning_length_cm ? Number(formData.awning_length_cm) / 100 : null,
     has_bike_rack: Boolean(formData.has_bike_rack),
     has_garage: Boolean(formData.has_garage),
     has_tv: Boolean(formData.has_tv_sat || formData.has_tv),
     has_satellite: Boolean(formData.has_tv_sat || formData.has_satellite_system),
+    has_awning_tent: Boolean(formData.has_awning_tent),
+    has_roof_ac: Boolean(formData.has_roof_ac),
+    has_stand_ac: Boolean(formData.has_stand_ac),
 
     // Defects
-    no_known_defects: formData.no_known_defects != null ? Boolean(formData.no_known_defects) : false,
-    known_defects: formData.known_defects ? String(formData.known_defects) : null,
+    has_damage: formData.no_known_defects != null ? !Boolean(formData.no_known_defects) : null,
+    damage_summary: formData.known_defects ? String(formData.known_defects) : null,
 
     // Location
     postal_code: formData.zipCode ? String(formData.zipCode) : null,
@@ -355,7 +358,7 @@ export function ConvertToMotorhomeDialog({
         has_awning: formData.has_awning || false,
         has_awning_tent: formData.has_awning_tent || false,
         has_roof_ac: formData.has_roof_ac || false,
-        has_stand_ac: formData.has_roof_ac || false,
+        has_stand_ac: formData.has_stand_ac || false,
         has_bike_rack: formData.has_bike_rack || false,
         has_navigation: formData.has_navigation || false,
         has_backup_camera: formData.has_backup_camera || false,
@@ -377,7 +380,26 @@ export function ConvertToMotorhomeDialog({
         second_tires: formData.second_tires || null,
         postal_code: formData.postal_code ? String(formData.postal_code) : null,
         city: formData.city ? String(formData.city) : null,
+        country: formData.country || null,
         status: "available",
+        // Fields from mapWizardToMotorhome that were previously missing
+        non_smoker: formData.non_smoker ?? null,
+        service_history_available: formData.service_history_available ?? null,
+        beds_description: formData.beds_description || null,
+        heating_type: formData.heating_type || null,
+        air_conditioning_type: formData.air_conditioning_type || null,
+        has_airbag: formData.has_airbag || false,
+        has_parking_sensors: formData.has_parking_sensors || false,
+        has_central_locking: formData.has_central_locking || false,
+        has_inverter: formData.has_inverter || false,
+        solar_power_watts: formData.solar_power_watts || null,
+        battery_capacity_ah: formData.battery_capacity_ah || null,
+        awning_length_m: formData.awning_length_m || null,
+        has_damage: formData.has_damage ?? null,
+        damage_summary: formData.damage_summary || null,
+        additional_equipment: formData.additional_equipment || null,
+        vehicle_identification_number: formData.vehicle_identification_number || null,
+        license_plate: formData.license_plate || null,
       };
 
       // Insert motorhome

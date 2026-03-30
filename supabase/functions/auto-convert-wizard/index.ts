@@ -61,7 +61,7 @@ function mapWizardToMotorhome(formData: Record<string, any>) {
     // Interior
     has_kitchen: Boolean(formData.has_kitchen),
     heating_type: formData.heating_type || null,
-    air_conditioning: formData.air_conditioning || null,
+    air_conditioning_type: formData.air_conditioning || null,
     has_bathroom: Boolean(formData.has_toilet || formData.has_shower || formData.has_bathroom),
     has_shower: Boolean(formData.has_shower),
     has_toilet: Boolean(formData.has_toilet),
@@ -82,15 +82,18 @@ function mapWizardToMotorhome(formData: Record<string, any>) {
     battery_capacity_ah: formData.battery_capacity_ah ? Number(formData.battery_capacity_ah) : null,
     has_inverter: Boolean(formData.has_inverter),
     has_awning: Boolean(formData.has_awning),
-    awning_length_cm: formData.awning_length_cm ? Number(formData.awning_length_cm) : null,
+    awning_length_m: formData.awning_length_cm ? Number(formData.awning_length_cm) / 100 : null,
     has_bike_rack: Boolean(formData.has_bike_rack),
     has_garage: Boolean(formData.has_garage),
     has_tv: Boolean(formData.has_tv_sat || formData.has_tv),
     has_satellite: Boolean(formData.has_tv_sat || formData.has_satellite_system),
+    has_awning_tent: Boolean(formData.has_awning_tent),
+    has_roof_ac: Boolean(formData.has_roof_ac),
+    has_stand_ac: Boolean(formData.has_stand_ac),
 
     // Defects
-    no_known_defects: formData.no_known_defects != null ? Boolean(formData.no_known_defects) : false,
-    known_defects: formData.known_defects || null,
+    has_damage: formData.no_known_defects != null ? !Boolean(formData.no_known_defects) : null,
+    damage_summary: formData.known_defects ? String(formData.known_defects) : null,
 
     // Location
     postal_code: formData.zipCode ? String(formData.zipCode) : null,

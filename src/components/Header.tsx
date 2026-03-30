@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2 } from "lucide-react";
+import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -206,44 +206,98 @@ const Header = () => {
                       Mein Konto
                     </Button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Mein Konto</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Mein Konto</span>
+                      <span className="text-xs text-muted-foreground font-normal truncate max-w-[180px]">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link 
-                      to={isAdmin ? "/admin" : "/dashboard"} 
-                      className="cursor-pointer"
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  {isDealer && (
+                  {isAdmin ? (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to="/dashboard/auctions" className="cursor-pointer">
-                          Auktionen
+                        <Link to="/dashboard" className="cursor-pointer">
+                          <LayoutDashboard className="h-4 w-4 mr-2" />
+                          Übersicht
                         </Link>
                       </DropdownMenuItem>
+                      {!isDealer && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/listings" className="cursor-pointer">
+                            <Car className="h-4 w-4 mr-2" />
+                            Meine Inserate
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isDealer && (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link to="/dashboard/bids" className="cursor-pointer">
+                              <Gavel className="h-4 w-4 mr-2" />
+                              Meine Gebote
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/dashboard/favorites" className="cursor-pointer">
+                              <Heart className="h-4 w-4 mr-2" />
+                              Meine Favoriten
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/dashboard/kaufchancen" className="cursor-pointer">
+                              <Zap className="h-4 w-4 mr-2" />
+                              Kaufchancen
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/dashboard/appointments" className="cursor-pointer">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Meine Termine
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       <DropdownMenuItem asChild>
-                        <Link to="/dashboard/inventory" className="cursor-pointer">
-                          Mein Inventar
+                        <Link to="/dashboard/messages" className="cursor-pointer">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Nachrichten
                         </Link>
                       </DropdownMenuItem>
+                      {isDealer && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/invoices" className="cursor-pointer">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Rechnungen
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {!isDealer && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/documents" className="cursor-pointer">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Dokumente
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard/profile" className="cursor-pointer">
+                          <User className="h-4 w-4 mr-2" />
+                          Profil
+                        </Link>
+                      </DropdownMenuItem>
                     </>
                   )}
-                  {!isDealer && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/verkaufen/wizard" className="cursor-pointer">
-                          Wohnmobil verkaufen
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
                     Abmelden
                   </DropdownMenuItem>
@@ -367,21 +421,87 @@ const Header = () => {
               <div className="h-px bg-border/50" />
               {user ? (
                 <>
-                  <Link 
-                    to={isAdmin ? "/admin" : "/dashboard"} 
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Button variant="outline" size="sm" className="w-full">
-                      <User className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                  {!isDealer && (
-                    <Link to="/verkaufen/wizard" onClick={() => setMobileMenuOpen(false)}>
-                      <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
-                        Wohnmobil verkaufen
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  {isAdmin ? (
+                    <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Admin Dashboard
                       </Button>
                     </Link>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" size="sm" className="w-full justify-start">
+                          <LayoutDashboard className="h-4 w-4 mr-2" />
+                          Übersicht
+                        </Button>
+                      </Link>
+                      {!isDealer && (
+                        <Link to="/dashboard/listings" onClick={() => setMobileMenuOpen(false)}>
+                          <Button variant="ghost" size="sm" className="w-full justify-start">
+                            <Car className="h-4 w-4 mr-2" />
+                            Meine Inserate
+                          </Button>
+                        </Link>
+                      )}
+                      {isDealer && (
+                        <>
+                          <Link to="/dashboard/bids" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="ghost" size="sm" className="w-full justify-start">
+                              <Gavel className="h-4 w-4 mr-2" />
+                              Meine Gebote
+                            </Button>
+                          </Link>
+                          <Link to="/dashboard/favorites" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="ghost" size="sm" className="w-full justify-start">
+                              <Heart className="h-4 w-4 mr-2" />
+                              Meine Favoriten
+                            </Button>
+                          </Link>
+                          <Link to="/dashboard/kaufchancen" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="ghost" size="sm" className="w-full justify-start">
+                              <Zap className="h-4 w-4 mr-2" />
+                              Kaufchancen
+                            </Button>
+                          </Link>
+                          <Link to="/dashboard/appointments" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="ghost" size="sm" className="w-full justify-start">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Meine Termine
+                            </Button>
+                          </Link>
+                        </>
+                      )}
+                      <Link to="/dashboard/messages" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Nachrichten
+                        </Button>
+                      </Link>
+                      {isDealer && (
+                        <Link to="/dashboard/invoices" onClick={() => setMobileMenuOpen(false)}>
+                          <Button variant="ghost" size="sm" className="w-full justify-start">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Rechnungen
+                          </Button>
+                        </Link>
+                      )}
+                      {!isDealer && (
+                        <Link to="/dashboard/documents" onClick={() => setMobileMenuOpen(false)}>
+                          <Button variant="ghost" size="sm" className="w-full justify-start">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Dokumente
+                          </Button>
+                        </Link>
+                      )}
+                      <Link to="/dashboard/profile" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                          <User className="h-4 w-4 mr-2" />
+                          Profil
+                        </Button>
+                      </Link>
+                    </div>
                   )}
                   <Button 
                     variant="outline" 

@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Edit, Trash2, Gavel, Car } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, Gavel, Car, Phone } from "lucide-react";
 import { MotorhomeDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { DeleteMotorhomeDialog } from "@/components/admin/DeleteMotorhomeDialog";
@@ -86,6 +86,7 @@ interface MotorhomeWithRelations {
     first_name: string | null;
     last_name: string | null;
     email: string;
+    phone: string | null;
   } | null;
   motorhome_photos?: Array<{ url: string; display_order: number }>;
 }
@@ -107,7 +108,8 @@ export default function AdminMotorhomes() {
           seller:profiles!left (
             first_name,
             last_name,
-            email
+            email,
+            phone
           ),
           motorhome_photos(url, display_order)
         `)
@@ -234,6 +236,14 @@ export default function AdminMotorhomes() {
                       <p className="text-xs text-muted-foreground">
                         {motorhome.seller?.email}
                       </p>
+                      {motorhome.seller?.phone && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3" />
+                          <a href={`tel:${motorhome.seller.phone}`} className="hover:text-primary transition-colors">
+                            {motorhome.seller.phone}
+                          </a>
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{motorhome.year}</TableCell>

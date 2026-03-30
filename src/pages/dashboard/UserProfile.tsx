@@ -45,11 +45,10 @@ export default function UserProfile() {
     phone: "",
     company_name: "",
     salutation: "",
-    street: "",
-    house_number: "",
-    postal_code: "",
-    city: "",
-    country: "DE",
+    address_street: "",
+    address_zip: "",
+    address_city: "",
+    address_country: "DE",
     account_type: "private",
   });
 
@@ -73,11 +72,10 @@ export default function UserProfile() {
         phone: profile.phone || "",
         company_name: profile.company_name || "",
         salutation: profile.salutation || "",
-        street: profile.street || "",
-        house_number: profile.house_number || "",
-        postal_code: profile.postal_code || "",
-        city: profile.city || "",
-        country: profile.country || "DE",
+        address_street: profile.address_street || "",
+        address_zip: profile.address_zip || "",
+        address_city: profile.address_city || "",
+        address_country: profile.address_country || "DE",
         account_type: profile.account_type || "private",
       });
     }
@@ -115,10 +113,11 @@ export default function UserProfile() {
         description: "Ihre Änderungen wurden gespeichert",
       });
     },
-    onError: (_error) => {
+    onError: (error: Error) => {
+      console.error('Profil-Update Fehler:', error);
       toast({
         title: "Fehler",
-        description: "Profil konnte nicht aktualisiert werden",
+        description: `Profil konnte nicht aktualisiert werden: ${error.message || 'Unbekannter Fehler'}`,
         variant: "destructive",
       });
     },
@@ -250,53 +249,44 @@ export default function UserProfile() {
               Adresse
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="street">Straße</Label>
+                <Label htmlFor="address_street">Straße und Hausnummer</Label>
                 <Input
-                  id="street"
-                  value={formData.street}
-                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                  placeholder="Musterstraße"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="house_number">Hausnummer</Label>
-                <Input
-                  id="house_number"
-                  value={formData.house_number}
-                  onChange={(e) => setFormData({ ...formData, house_number: e.target.value })}
-                  placeholder="123"
+                  id="address_street"
+                  value={formData.address_street}
+                  onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
+                  placeholder="Musterstraße 123"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="postal_code">PLZ</Label>
+                <Label htmlFor="address_zip">PLZ</Label>
                 <Input
-                  id="postal_code"
-                  value={formData.postal_code}
-                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                  id="address_zip"
+                  value={formData.address_zip}
+                  onChange={(e) => setFormData({ ...formData, address_zip: e.target.value })}
                   placeholder="80331"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">Stadt</Label>
+                <Label htmlFor="address_city">Stadt</Label>
                 <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  id="address_city"
+                  value={formData.address_city}
+                  onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
                   placeholder="München"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Land</Label>
+                <Label htmlFor="address_country">Land</Label>
                 <Select
-                  value={formData.country}
-                  onValueChange={(val) => setFormData({ ...formData, country: val })}
+                  value={formData.address_country}
+                  onValueChange={(val) => setFormData({ ...formData, address_country: val })}
                 >
-                  <SelectTrigger id="country">
+                  <SelectTrigger id="address_country">
                     <SelectValue placeholder="Land wählen" />
                   </SelectTrigger>
                   <SelectContent>

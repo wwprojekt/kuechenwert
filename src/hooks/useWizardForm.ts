@@ -859,6 +859,36 @@ export const useWizardForm = () => {
         logger.error("Failed to send wizard lead notification:", emailError);
       }
 
+      // Adresse aus dem Wizard ins Profil übernehmen
+      try {
+        const profileUpdate: Record<string, string | null> = {};
+        if (formData.street || formData.houseNumber) {
+          profileUpdate.address_street = [formData.street, formData.houseNumber].filter(Boolean).join(' ') || null;
+        }
+        if (formData.zipCode) profileUpdate.address_zip = formData.zipCode;
+        if (formData.city) profileUpdate.address_city = formData.city;
+        if (formData.country) profileUpdate.address_country = formData.country;
+        if (formData.customerName) {
+          const nameParts = formData.customerName.trim().split(/\s+/);
+          if (nameParts.length >= 2) {
+            profileUpdate.first_name = nameParts[0];
+            profileUpdate.last_name = nameParts.slice(1).join(' ');
+          } else if (nameParts.length === 1) {
+            profileUpdate.last_name = nameParts[0];
+          }
+        }
+        if (formData.customerPhone) profileUpdate.phone = formData.customerPhone;
+
+        if (Object.keys(profileUpdate).length > 0) {
+          await supabase
+            .from('profiles')
+            .update(profileUpdate)
+            .eq('id', user.id);
+        }
+      } catch (profileError) {
+        logger.warn('Wizard: Profil-Update mit Adresse fehlgeschlagen (nicht kritisch)', profileError);
+      }
+
       clearDraft();
 
       // Google Ads: Enhanced Conversions + Wizard abgeschlossen (authentifizierter Pfad)

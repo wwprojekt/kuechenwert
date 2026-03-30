@@ -154,11 +154,18 @@ export default function AdminUsers() {
     mutationFn: async (userId: string) => {
       // Call admin-delete-user Edge Function to completely remove user
       // This deletes from auth.users, profiles, user_roles, and dealer_applications
+
+      // Ensure session is fresh before calling Edge Function
       const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      let token = sessionData?.session?.access_token;
 
       if (!token) {
-        throw new Error("Nicht authentifiziert");
+        // Try to refresh the session
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.");
+        }
+        token = refreshData.session.access_token;
       }
 
       const response = await supabase.functions.invoke("admin-delete-user", {
@@ -183,10 +190,10 @@ export default function AdminUsers() {
       setShowDeleteDialog(false);
       setSelectedUser(null);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Fehler",
-        description: "Benutzer konnte nicht gelöscht werden.",
+        description: error.message || "Benutzer konnte nicht gelöscht werden.",
         variant: "destructive",
       });
     },

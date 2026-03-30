@@ -43,6 +43,7 @@ import {
   FileText,
   Euro,
   ExternalLink,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ import {
 } from "@/components/admin/AdminDetailLayout";
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { AdminPhotoManager } from "@/components/admin/AdminPhotoManager";
+import { SendOwnerEmailDialog } from "@/components/admin/SendOwnerEmailDialog";
 import { logger } from "@/lib/logger";
 
 export default function AdminMotorhomeDetail() {
@@ -76,6 +78,7 @@ export default function AdminMotorhomeDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   // Fetch motorhome with all related data
   const { data: motorhome, isLoading, error } = useQuery({
@@ -218,6 +221,12 @@ export default function AdminMotorhomeDetail() {
       actions={
         motorhome && (
           <div className="flex gap-2">
+            {motorhome.seller?.email && (
+              <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(true)}>
+                <Send className="w-4 h-4 mr-2" />
+                E-Mail senden
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Bearbeiten
@@ -531,13 +540,22 @@ export default function AdminMotorhomeDetail() {
                     <p className="text-xs text-muted-foreground">
                       Registriert: {formatDate(motorhome.seller.created_at)}
                     </p>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/admin/users/${motorhome.seller?.id}`)}
-                    >
-                      Profil anzeigen
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => navigate(`/admin/users/${motorhome.seller?.id}`)}
+                      >
+                        Profil anzeigen
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => setShowEmailDialog(true)}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        E-Mail
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Kein Verkäufer zugeordnet</p>
@@ -650,6 +668,28 @@ export default function AdminMotorhomeDetail() {
           motorhome={motorhome}
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
+        />
+      )}
+
+      {/* E-Mail Dialog */}
+      {motorhome && motorhome.seller && (
+        <SendOwnerEmailDialog
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          seller={{
+            id: motorhome.seller.id,
+            first_name: motorhome.seller.first_name,
+            last_name: motorhome.seller.last_name,
+            email: motorhome.seller.email,
+            phone: motorhome.seller.phone,
+          }}
+          motorhome={{
+            id: motorhome.id,
+            manufacturer: motorhome.manufacturer,
+            model: motorhome.model,
+            year: motorhome.year,
+            listing_number: motorhome.listing_number,
+          }}
         />
       )}
     </AdminDetailLayout>

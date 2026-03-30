@@ -216,9 +216,9 @@ export function ConvertToMotorhomeDialog({
       setCustomerName(session.customer_name || String(session.form_data?.customerName || ""));
       setCustomerEmail(session.customer_email || String(session.form_data?.customerEmail || ""));
       setCustomerPhone(session.customer_phone || String(session.form_data?.customerPhone || ""));
-      setCustomerStreet("");
-      setCustomerZip("");
-      setCustomerCity("");
+      setCustomerStreet(`${session.form_data?.street || ''} ${session.form_data?.houseNumber || ''}`.trim());
+      setCustomerZip(String(session.form_data?.zipCode || ""));
+      setCustomerCity(String(session.form_data?.city || ""));
       setConversionResult(null); // Reset success state when dialog opens with new session
     }
   }, [session]);

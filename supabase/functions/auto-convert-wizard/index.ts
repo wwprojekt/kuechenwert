@@ -256,6 +256,55 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Failed to create motorhome: ${insertError.message}`);
     }
 
+    // 3b. Transfer photos from wizard_temp to motorhome_photos
+    const photoUrls: string[] = formData.photoUrls || [];
+    if (photoUrls.length > 0) {
+      const photoRecords = photoUrls.map((url: string, index: number) => ({
+        motorhome_id: motorhome.id,
+        photo_url: url,
+        display_order: index,
+      }));
+
+      const { error: photosError } = await adminClient
+        .from("motorhome_photos")
+        .insert(photoRecords);
+
+      if (photosError) {
+        edgeLogger.error("Failed to insert motorhome photos:", photosError.message);
+      } else {
+        edgeLogger.info(`Inserted ${photoRecords.length} photos for motorhome ${motorhome.id}`);
+      }
+
+      // Move photos from wizard_temp/{sessionId}/ to {sellerId}/
+      // This ensures photos are in the correct user folder for future management
+      try {
+        for (const url of photoUrls) {
+          const match = url.match(/wizard_temp\/[^/]+\/(.+)$/);
+          if (match) {
+            const fileName = match[1];
+            const oldPath = `wizard_temp/${body.sessionId}/${fileName}`;
+            const newPath = `${sellerId}/${fileName}`;
+            await adminClient.storage
+              .from("motorhome-photos")
+              .move(oldPath, newPath);
+
+            // Update the photo URL in motorhome_photos
+            const newPublicUrl = adminClient.storage
+              .from("motorhome-photos")
+              .getPublicUrl(newPath).data.publicUrl;
+
+            await adminClient
+              .from("motorhome_photos")
+              .update({ photo_url: newPublicUrl })
+              .eq("motorhome_id", motorhome.id)
+              .eq("photo_url", url);
+          }
+        }
+      } catch (moveError) {
+        edgeLogger.error("Failed to move some photos (non-critical):", moveError);
+      }
+    }
+
     // 4. Create Auction if needed
     if (motorhomePayload.sale_channel === "auction") {
       await adminClient.from("auctions").insert({

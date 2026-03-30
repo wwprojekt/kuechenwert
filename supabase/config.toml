@@ -132,6 +132,9 @@ verify_jwt = false
 [functions.auto-convert-wizard]
 verify_jwt = false
 
+[functions.upload-wizard-photos]
+verify_jwt = false
+
 [functions.process-abandoned-wizards]
 verify_jwt = false
 

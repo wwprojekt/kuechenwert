@@ -538,6 +538,34 @@ export const useWizardForm = () => {
           logger.error('Failed to save wizard session:', wizardSessionError);
         }
 
+        // Upload photos via Edge Function (bypasses Storage RLS)
+        if (savedSessionId && formData.photos.length > 0) {
+          try {
+            const photoFormData = new FormData();
+            photoFormData.append('sessionId', savedSessionId);
+            for (const photo of formData.photos) {
+              photoFormData.append('photos', photo);
+            }
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zcrwqxsyptjwkuxfacvq.supabase.co';
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+            const photoRes = await fetch(`${supabaseUrl}/functions/v1/upload-wizard-photos`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: photoFormData,
+            });
+            if (photoRes.ok) {
+              const photoResult = await photoRes.json();
+              logger.info(`Uploaded ${photoResult.count} wizard photos for session ${savedSessionId}`);
+            } else {
+              logger.error('Failed to upload wizard photos:', await photoRes.text());
+            }
+          } catch (photoUploadError) {
+            logger.error('Error uploading wizard photos:', photoUploadError);
+          }
+        }
+
         // Call auto-convert-wizard edge function
         if (savedSessionId) {
           try {

@@ -30,6 +30,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  */
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'kontakt@caravanwert.de';
 
 // Helper: Send admin notification email directly via Resend
 async function sendAdminEmail(
@@ -49,15 +50,33 @@ async function sendAdminEmail(
       contact_email: 'kontakt@caravanwert.de',
     };
 
-    // Get admin emails from admin_emails table or fall back to contact_email
-    const { data: adminEmails } = await supabase
-      .from('admin_emails')
-      .select('email')
-      .eq('is_active', true);
+    // Get admin emails: find users with admin role, then get their emails
+    const recipients: string[] = [];
+    try {
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
 
-    const recipients: string[] = adminEmails?.map((e: any) => e.email) || [];
+      if (adminRoles && adminRoles.length > 0) {
+        const adminIds = adminRoles.map((r: any) => r.user_id);
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('id', adminIds);
+
+        if (adminProfiles) {
+          for (const p of adminProfiles) {
+            if (p.email) recipients.push(p.email);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching admin emails:', e);
+    }
+
     if (recipients.length === 0) {
-      recipients.push(settingsData.contact_email || 'kontakt@caravanwert.de');
+      recipients.push(ADMIN_EMAIL);
     }
 
     const html = buildEmailLayout(settingsData, subject, content);
@@ -85,7 +104,28 @@ async function sendAdminEmail(
       const errorText = await response.text();
       console.error('Failed to send admin email:', errorText);
     } else {
+      const result = await response.json();
       console.log('Admin notification email sent to:', recipients.join(', '));
+
+      // Log in admin_emails for System tab
+      try {
+        await supabase.from('admin_emails').insert({
+          sender_email: 'info@caravanwert.de',
+          sender_name: `${settingsData.site_name} System`,
+          recipient_email: recipients[0],
+          recipient_name: 'Admin',
+          subject: `[Admin] ${subject}`,
+          body_html: html,
+          body_text: '',
+          email_type: 'auto',
+          direction: 'outbound',
+          status: 'sent',
+          resend_id: result?.id || null,
+          is_read: false,
+        });
+      } catch (logErr) {
+        console.error('Failed to log admin email in admin_emails:', logErr);
+      }
     }
   } catch (error) {
     console.error('Error sending admin email:', error);

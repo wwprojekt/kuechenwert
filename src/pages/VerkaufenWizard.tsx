@@ -55,7 +55,7 @@ const VerkaufenWizard = () => {
     const resumeStep = searchParams.get('step');
     if (resumeStep && !hasRestoredRef.current) {
       const stepNum = parseInt(resumeStep, 10);
-      if (stepNum >= 1 && stepNum <= 6) {
+      if (stepNum >= 1 && stepNum <= 7) {
         setCurrentStep(stepNum);
         hasRestoredRef.current = true;
       }
@@ -91,6 +91,15 @@ const VerkaufenWizard = () => {
       hasRestoredRef.current = true;
     }
   }, [searchParams, updateFormData]);
+
+  // Step-Guard: Wenn Pflichtdaten aus vorherigen Steps fehlen, zurück zum entsprechenden Step
+  // Verhindert, dass Nutzer per URL-Parameter (z.B. ?step=4) Steps überspringen
+  // und dann beim Submit ungültige Daten an die Datenbank senden
+  useEffect(() => {
+    if (currentStep >= 2 && !formData.bodyType) {
+      setCurrentStep(1);
+    }
+  }, [currentStep, formData.bodyType]);
 
   // Google Ads: Wizard-Start tracken
   useEffect(() => {

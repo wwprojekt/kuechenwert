@@ -250,7 +250,10 @@ const step5Schema = z.object({});
 const step6Schema = z.object({});
 
 // Step 7: Final Contact & Sale Channel (saleChannel + phone required, name+email already captured)
+// bodyType und manufacturer werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit
 const step7Schema = z.object({
+  bodyType: z.string().min(1, "Aufbauart fehlt – bitte gehen Sie zurück zu Schritt 1"),
+  manufacturer: z.string().min(1, "Hersteller fehlt – bitte gehen Sie zurück zu Schritt 2"),
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -336,6 +339,8 @@ export const useWizardForm = () => {
           break;
         case 7:
           step7Schema.parse({
+            bodyType: formData.bodyType,
+            manufacturer: formData.manufacturer,
             saleChannel: formData.saleChannel,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
@@ -508,6 +513,16 @@ export const useWizardForm = () => {
           .getPublicUrl(fileName);
 
         photoUrls.push(publicUrl);
+      }
+
+      // Defensive Validierung: Pflichtfelder prüfen bevor DB-Insert versucht wird
+      // Verhindert kryptische DB-Enum-Fehler (z.B. "invalid input value for enum motorhome_body_type: ''")
+      const VALID_BODY_TYPES = ['Teilintegriert', 'Alkoven', 'Vollintegriert', 'Kastenwagen', 'Campingbus', 'Wohnwagen', 'Faltcaravan', 'Mobilheim'];
+      if (!formData.bodyType || !VALID_BODY_TYPES.includes(formData.bodyType)) {
+        throw new Error('Bitte wählen Sie eine gültige Aufbauart aus. Gehen Sie zurück zu Schritt 1.');
+      }
+      if (!formData.manufacturer || !formData.model || !formData.year || !formData.condition) {
+        throw new Error('Fahrzeugdaten sind unvollständig. Bitte prüfen Sie Hersteller, Modell, Baujahr und Zustand.');
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

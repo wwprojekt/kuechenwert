@@ -61,6 +61,9 @@ interface MotorhomeData {
   has_shower: boolean | null;
   has_solar: boolean;
   has_awning: boolean;
+  has_awning_tent: boolean | null;
+  has_roof_ac: boolean | null;
+  has_stand_ac: boolean | null;
   has_tv: boolean | null;
   has_backup_camera: boolean | null;
   additional_equipment: string | null;
@@ -156,6 +159,9 @@ export function MotorhomeEditDialog({
           has_shower: data.has_shower,
           has_solar: data.has_solar,
           has_awning: data.has_awning,
+          has_awning_tent: data.has_awning_tent,
+          has_roof_ac: data.has_roof_ac,
+          has_stand_ac: data.has_stand_ac,
           has_tv: data.has_tv,
           has_backup_camera: data.has_backup_camera,
           additional_equipment: data.additional_equipment,
@@ -542,6 +548,30 @@ export function MotorhomeEditDialog({
                     id="has_awning"
                     checked={formData.has_awning || false}
                     onCheckedChange={(checked) => updateField("has_awning", checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="has_awning_tent">Vorzelt</Label>
+                  <Switch
+                    id="has_awning_tent"
+                    checked={formData.has_awning_tent || false}
+                    onCheckedChange={(checked) => updateField("has_awning_tent", checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="has_roof_ac">Dachklima</Label>
+                  <Switch
+                    id="has_roof_ac"
+                    checked={formData.has_roof_ac || false}
+                    onCheckedChange={(checked) => updateField("has_roof_ac", checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="has_stand_ac">Standklima</Label>
+                  <Switch
+                    id="has_stand_ac"
+                    checked={formData.has_stand_ac || false}
+                    onCheckedChange={(checked) => updateField("has_stand_ac", checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between">

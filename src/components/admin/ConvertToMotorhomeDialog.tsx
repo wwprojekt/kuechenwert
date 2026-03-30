@@ -154,6 +154,9 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     has_air_conditioning: Boolean(formData.has_air_conditioning),
     has_solar: Boolean(formData.has_solar_panel),
     has_awning: Boolean(formData.has_awning),
+    has_awning_tent: Boolean(formData.has_awning_tent),
+    has_roof_ac: Boolean(formData.has_roof_ac),
+    has_stand_ac: Boolean(formData.has_stand_ac),
     has_bike_rack: Boolean(formData.has_bike_rack),
     has_navigation: Boolean(formData.has_navigation),
     has_backup_camera: Boolean(formData.has_backup_camera),
@@ -198,6 +201,9 @@ export function ConvertToMotorhomeDialog({
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerStreet, setCustomerStreet] = useState("");
+  const [customerZip, setCustomerZip] = useState("");
+  const [customerCity, setCustomerCity] = useState("");
 
   // Success state for showing invite button after conversion
   const [conversionResult, setConversionResult] = useState<{ motorhomeId: string; saleChannel: unknown } | null>(null);
@@ -210,6 +216,9 @@ export function ConvertToMotorhomeDialog({
       setCustomerName(session.customer_name || String(session.form_data?.customerName || ""));
       setCustomerEmail(session.customer_email || String(session.form_data?.customerEmail || ""));
       setCustomerPhone(session.customer_phone || String(session.form_data?.customerPhone || ""));
+      setCustomerStreet("");
+      setCustomerZip("");
+      setCustomerCity("");
       setConversionResult(null); // Reset success state when dialog opens with new session
     }
   }, [session]);
@@ -321,6 +330,9 @@ export function ConvertToMotorhomeDialog({
         has_air_conditioning: formData.has_air_conditioning || false,
         has_solar: formData.has_solar || false,
         has_awning: formData.has_awning || false,
+        has_awning_tent: formData.has_awning_tent || false,
+        has_roof_ac: formData.has_roof_ac || false,
+        has_stand_ac: formData.has_stand_ac || false,
         has_bike_rack: formData.has_bike_rack || false,
         has_navigation: formData.has_navigation || false,
         has_backup_camera: formData.has_backup_camera || false,
@@ -367,6 +379,24 @@ export function ConvertToMotorhomeDialog({
 
         if (auctionError) {
           logger.error("Auktion konnte nicht erstellt werden:", auctionError);
+          // Nicht abbrechen - Motorhome wurde bereits erstellt
+        }
+      }
+
+      // Update profile with address if provided
+      if (sellerId && (customerStreet.trim() || customerZip.trim() || customerCity.trim())) {
+        const addressUpdate: Record<string, string> = {};
+        if (customerStreet.trim()) addressUpdate.address_street = customerStreet.trim();
+        if (customerZip.trim()) addressUpdate.address_zip = customerZip.trim();
+        if (customerCity.trim()) addressUpdate.address_city = customerCity.trim();
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update(addressUpdate)
+          .eq("id", sellerId);
+
+        if (profileError) {
+          logger.warn("Adresse konnte nicht gespeichert werden:", profileError.message);
           // Nicht abbrechen - Motorhome wurde bereits erstellt
         }
       }
@@ -543,6 +573,36 @@ export function ConvertToMotorhomeDialog({
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div className="space-y-1">
+                  <Label htmlFor="conv-street" className="text-xs">Straße & Hausnr.</Label>
+                  <Input
+                    id="conv-street"
+                    value={customerStreet}
+                    onChange={(e) => setCustomerStreet(e.target.value)}
+                    placeholder="Musterstraße 1"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="conv-zip" className="text-xs">PLZ</Label>
+                  <Input
+                    id="conv-zip"
+                    value={customerZip}
+                    onChange={(e) => setCustomerZip(e.target.value)}
+                    placeholder="12345"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="conv-city" className="text-xs">Ort</Label>
+                  <Input
+                    id="conv-city"
+                    value={customerCity}
+                    onChange={(e) => setCustomerCity(e.target.value)}
+                    placeholder="Berlin"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Die Adresse wird im Kundenprofil gespeichert und im Kaufvertrag verwendet.</p>
               {session.user_id && (
                 <Badge variant="outline" className="mt-2 text-xs text-green-600">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -989,6 +1049,9 @@ export function ConvertToMotorhomeDialog({
                     { key: "has_air_conditioning", label: "Klimaanlage" },
                     { key: "has_solar", label: "Solaranlage" },
                     { key: "has_awning", label: "Markise" },
+                    { key: "has_awning_tent", label: "Vorzelt" },
+                    { key: "has_roof_ac", label: "Dachklima" },
+                    { key: "has_stand_ac", label: "Standklima" },
                     { key: "has_bike_rack", label: "Fahrradträger" },
                     { key: "has_navigation", label: "Navigation" },
                     { key: "has_backup_camera", label: "Rückfahrkamera" },

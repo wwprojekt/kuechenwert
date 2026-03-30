@@ -1767,6 +1767,7 @@ export type Database = {
           has_airbag: boolean | null
           has_alarm: boolean | null
           has_awning: boolean | null
+          has_awning_tent: boolean | null
           has_backup_camera: boolean | null
           has_bathroom: boolean | null
           has_bike_rack: boolean | null
@@ -1781,9 +1782,11 @@ export type Database = {
           has_markise: boolean | null
           has_navigation: boolean | null
           has_parking_sensors: boolean | null
+          has_roof_ac: boolean | null
           has_satellite: boolean | null
           has_shower: boolean | null
           has_solar: boolean | null
+          has_stand_ac: boolean | null
           has_swivel_seats: boolean | null
           has_toilet: boolean | null
           has_tuev: boolean | null
@@ -1861,6 +1864,7 @@ export type Database = {
           has_airbag?: boolean | null
           has_alarm?: boolean | null
           has_awning?: boolean | null
+          has_awning_tent?: boolean | null
           has_backup_camera?: boolean | null
           has_bathroom?: boolean | null
           has_bike_rack?: boolean | null
@@ -1875,9 +1879,11 @@ export type Database = {
           has_markise?: boolean | null
           has_navigation?: boolean | null
           has_parking_sensors?: boolean | null
+          has_roof_ac?: boolean | null
           has_satellite?: boolean | null
           has_shower?: boolean | null
           has_solar?: boolean | null
+          has_stand_ac?: boolean | null
           has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
           has_tuev?: boolean | null
@@ -1955,6 +1961,7 @@ export type Database = {
           has_airbag?: boolean | null
           has_alarm?: boolean | null
           has_awning?: boolean | null
+          has_awning_tent?: boolean | null
           has_backup_camera?: boolean | null
           has_bathroom?: boolean | null
           has_bike_rack?: boolean | null
@@ -1969,9 +1976,11 @@ export type Database = {
           has_markise?: boolean | null
           has_navigation?: boolean | null
           has_parking_sensors?: boolean | null
+          has_roof_ac?: boolean | null
           has_satellite?: boolean | null
           has_shower?: boolean | null
           has_solar?: boolean | null
+          has_stand_ac?: boolean | null
           has_swivel_seats?: boolean | null
           has_toilet?: boolean | null
           has_tuev?: boolean | null

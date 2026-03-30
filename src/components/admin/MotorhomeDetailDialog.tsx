@@ -29,7 +29,10 @@ import {
   ParkingCircle,
   Lock,
   Bike,
-  Warehouse
+  Warehouse,
+  Snowflake,
+  ThermometerSun,
+  Tent
 } from "lucide-react";
 
 interface MotorhomeWithSeller {
@@ -82,6 +85,9 @@ interface MotorhomeWithSeller {
   has_inverter: boolean | null;
   has_awning: boolean;
   awning_length_m: number | null;
+  has_awning_tent: boolean | null;
+  has_roof_ac: boolean | null;
+  has_stand_ac: boolean | null;
   has_bike_rack: boolean | null;
   has_garage: boolean | null;
   has_tv: boolean | null;
@@ -267,6 +273,21 @@ export function MotorhomeDetailDialog({
                 {motorhome.has_awning && (
                   <Badge variant="outline">
                     Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
+                  </Badge>
+                )}
+                {motorhome.has_awning_tent && (
+                  <Badge variant="outline" className="gap-1">
+                    <Tent className="w-3 h-3" /> Vorzelt
+                  </Badge>
+                )}
+                {motorhome.has_roof_ac && (
+                  <Badge variant="outline" className="gap-1">
+                    <Snowflake className="w-3 h-3" /> Dachklima
+                  </Badge>
+                )}
+                {motorhome.has_stand_ac && (
+                  <Badge variant="outline" className="gap-1">
+                    <ThermometerSun className="w-3 h-3" /> Standklima
                   </Badge>
                 )}
                 {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}

@@ -52,7 +52,10 @@ const Listings = () => {
               const motorhome = auction.motorhome;
               if (!motorhome) return null;
 
-              const primaryPhoto = motorhome.photos?.[0]?.url || '';
+              const sortedPhotos = [...(motorhome.photos || [])].sort(
+                (a: any, b: any) => (a.display_order ?? 999) - (b.display_order ?? 999)
+              );
+              const primaryPhoto = sortedPhotos[0]?.url || '';
               
               return (
                 <MotorhomeCard

@@ -81,6 +81,9 @@ export interface WizardFormData {
   has_inverter: boolean;
   has_awning: boolean;
   awning_length_cm?: number | null;
+  has_awning_tent: boolean;
+  has_roof_ac: boolean;
+  has_stand_ac: boolean;
   has_bike_rack: boolean;
   has_garage: boolean;
   has_tv_sat: boolean;
@@ -170,6 +173,9 @@ const initialFormData: WizardFormData = {
   has_inverter: false,
   has_awning: false,
   awning_length_cm: null,
+  has_awning_tent: false,
+  has_roof_ac: false,
+  has_stand_ac: false,
   has_bike_rack: false,
   has_garage: false,
   has_tv_sat: false,
@@ -602,6 +608,9 @@ export const useWizardForm = () => {
         has_inverter: formData.has_inverter,
         has_awning: formData.has_awning,
         awning_length_m: formData.awning_length_cm ? formData.awning_length_cm / 100 : null,
+        has_awning_tent: formData.has_awning_tent,
+        has_roof_ac: formData.has_roof_ac,
+        has_stand_ac: formData.has_stand_ac,
         has_bike_rack: formData.has_bike_rack,
         has_garage: formData.has_garage,
         has_tv: formData.has_tv_sat,

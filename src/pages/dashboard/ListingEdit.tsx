@@ -11,11 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2, Lock, FileText } from "lucide-react";
+import { ArrowLeft, Save, Lock, FileText } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
-import { handleAndLogError } from "@/lib/errorLogService";
-import { logger } from "@/lib/logger";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { SellerPhotoManager } from "@/components/dashboard/SellerPhotoManager";
+import { useState, useEffect } from "react";
 
 const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment", "photos", "additional"];
 
@@ -135,6 +134,9 @@ export default function ListingEdit() {
     has_inverter: false,
     has_awning: false,
     awning_length_m: "",
+    has_awning_tent: false,
+    has_roof_ac: false,
+    has_stand_ac: false,
     has_bike_rack: false,
     has_garage: false,
     has_tv: false,
@@ -200,6 +202,9 @@ export default function ListingEdit() {
         has_inverter: motorhome.has_inverter ?? false,
         has_awning: motorhome.has_awning ?? false,
         awning_length_m: motorhome.awning_length_m?.toString() || "",
+        has_awning_tent: (motorhome as any).has_awning_tent ?? false,
+        has_roof_ac: (motorhome as any).has_roof_ac ?? false,
+        has_stand_ac: (motorhome as any).has_stand_ac ?? false,
         has_bike_rack: motorhome.has_bike_rack ?? false,
         has_garage: motorhome.has_garage ?? false,
         has_tv: motorhome.has_tv ?? false,
@@ -272,6 +277,9 @@ export default function ListingEdit() {
         has_inverter: data.has_inverter,
         has_awning: data.has_awning,
         awning_length_m: data.awning_length_m ? Number(data.awning_length_m) : null,
+        has_awning_tent: data.has_awning_tent,
+        has_roof_ac: data.has_roof_ac,
+        has_stand_ac: data.has_stand_ac,
         has_bike_rack: data.has_bike_rack,
         has_garage: data.has_garage,
         has_tv: data.has_tv,
@@ -328,384 +336,7 @@ export default function ListingEdit() {
     updateMutation.mutate(formData);
   };
 
-  const deletePhotoMutation = useMutation({
-    mutationFn: async (photoId: string) => {
-      if (!user) throw new Error("Nicht authentifiziert");
-
-      // Get photo URL before deleting
-      const { data: photo } = await supabase
-        .from("motorhome_photos")
-        .select("url")
-        .eq("id", photoId)
-        .single();
-
-      if (photo?.url) {
-        // Extract file path from URL
-        const urlParts = photo.url.split("/");
-        const filePath = urlParts.slice(-2).join("/"); // user_id/filename
-
-        // Delete from storage
-        await supabase.storage.from("motorhome-photos").remove([filePath]);
-      }
-
-      // Delete from database
-      await withSessionRetry(async () => {
-        const { error } = await supabase
-          .from("motorhome_photos")
-          .delete()
-          .eq("id", photoId);
-        if (error) throw error;
-      }, 'ListingEdit.deletePhoto');
-    },
-    onSuccess: () => {
-      refetchPhotos();
-      toast({
-        title: "Foto gelöscht",
-        description: "Das Foto wurde erfolgreich entfernt",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Fehler",
-        description: "Foto konnte nicht gelöscht werden",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const [uploadProgress, setUploadProgress] = useState<string>("");
-  const [uploadedCount, setUploadedCount] = useState<number>(0);
-  const [totalUploadCount, setTotalUploadCount] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
-
-  const uploadPhotosMutation = useMutation({
-    mutationFn: async (files: File[]) => {
-      if (!id || !user) throw new Error("Nicht authentifiziert");
-
-      const totalFiles = files.length;
-      setTotalUploadCount(totalFiles);
-      setUploadedCount(0);
-
-      logger.log(`[PhotoUpload] Starting upload of ${totalFiles} file(s) for motorhome ${id}, user ${user.id}`);
-
-      // Step 1: Validate session is active before attempting upload
-      setUploadProgress("Sitzung wird überprüft...");
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('[PhotoUpload] No active session found');
-        // Try to refresh session
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an und versuchen Sie es dann nochmal.");
-        }
-        logger.log('[PhotoUpload] Session refreshed successfully');
-      } else {
-        logger.log(`[PhotoUpload] Session valid, expires at: ${session.expires_at}`);
-      }
-
-      // Step 2: Verify the motorhome belongs to this user
-      setUploadProgress("Berechtigung wird geprüft...");
-      const { data: motorhomeCheck, error: motorhomeCheckError } = await supabase
-        .from("motorhomes")
-        .select("id, seller_id")
-        .eq("id", id)
-        .eq("seller_id", user.id)
-        .single();
-
-      if (motorhomeCheckError || !motorhomeCheck) {
-        console.error('[PhotoUpload] Motorhome ownership check failed:', motorhomeCheckError);
-        throw new Error("Dieses Inserat gehört nicht zu Ihrem Konto. Bitte melden Sie sich erneut an.");
-      }
-      logger.log(`[PhotoUpload] Motorhome ownership verified: ${motorhomeCheck.id}`);
-
-      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-
-      // Step 3: Validate files before uploading
-      setUploadProgress("Dateien werden überprüft...");
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        logger.log(`[PhotoUpload] File ${i + 1}: name=${file.name}, size=${file.size}, type=${file.type || 'unknown'}`);
-        
-        if (file.size === 0) {
-          throw new Error(`Die Datei "${file.name}" ist leer (0 Bytes). Bitte wählen Sie eine gültige Datei.`);
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`Die Datei "${file.name}" ist zu groß (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximal 100 MB erlaubt.`);
-        }
-        // Be more lenient with type checking - some browsers don't set MIME type for HEIC
-        const fileType = file.type || '';
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-        const isImageByType = ALLOWED_TYPES.includes(fileType) || fileType.startsWith('image/');
-        const isImageByExt = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif', 'bmp', 'tiff', 'tif'].includes(fileExt);
-        
-        if (!isImageByType && !isImageByExt) {
-          throw new Error(`Die Datei "${file.name}" hat ein nicht unterstütztes Format (${fileType || 'unbekannt'}). Erlaubt: JPEG, PNG, WebP, HEIC.`);
-        }
-      }
-
-      // Step 4: Upload files to storage one by one
-      const photoUrls: string[] = [];
-      const uploadedPaths: string[] = [];
-
-      for (let i = 0; i < totalFiles; i++) {
-        const file = files[i];
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || 'jpg';
-        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
-
-        setUploadProgress(`Foto ${i + 1} von ${totalFiles} wird hochgeladen...`);
-        setUploadedCount(i);
-        logger.log(`[PhotoUpload] Uploading file ${i + 1}/${totalFiles}: ${fileName} (${(file.size / 1024).toFixed(0)} KB)`);
-
-        try {
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("motorhome-photos")
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: false,
-            });
-
-          if (uploadError) {
-            console.error(`[PhotoUpload] Storage upload error for file ${i + 1}:`, JSON.stringify(uploadError));
-            throw new Error(`Fehler beim Hochladen von "${file.name}": ${uploadError.message}`);
-          }
-
-          if (!uploadData?.path) {
-            console.error(`[PhotoUpload] Upload returned no path for file ${i + 1}:`, JSON.stringify(uploadData));
-            throw new Error(`Fehler beim Hochladen von "${file.name}": Keine Bestätigung vom Server erhalten.`);
-          }
-
-          logger.log(`[PhotoUpload] File ${i + 1} uploaded successfully: ${uploadData.path}`);
-          uploadedPaths.push(uploadData.path);
-
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from("motorhome-photos").getPublicUrl(fileName);
-
-          photoUrls.push(publicUrl);
-        } catch (err) {
-          // If some files were already uploaded, clean them up
-          if (uploadedPaths.length > 0) {
-            console.warn(`[PhotoUpload] Cleaning up ${uploadedPaths.length} already uploaded files after error`);
-            await supabase.storage.from("motorhome-photos").remove(uploadedPaths);
-          }
-          throw err;
-        }
-      }
-
-      // Step 5: Verify files exist in storage
-      setUploadProgress("Upload wird verifiziert...");
-      logger.log(`[PhotoUpload] Verifying ${uploadedPaths.length} uploaded files in storage...`);
-      
-      for (const path of uploadedPaths) {
-        const { data: fileData, error: listError } = await supabase.storage
-          .from("motorhome-photos")
-          .list(path.split('/').slice(0, -1).join('/'), {
-            search: path.split('/').pop(),
-          });
-        
-        if (listError || !fileData || fileData.length === 0) {
-          console.error(`[PhotoUpload] Verification failed for ${path}:`, listError);
-          throw new Error(`Upload-Verifizierung fehlgeschlagen: Die Datei konnte nicht im Speicher gefunden werden. Bitte versuchen Sie es erneut.`);
-        }
-        logger.log(`[PhotoUpload] Verified file exists: ${path} (${fileData[0]?.metadata?.size || 'unknown'} bytes)`);
-      }
-
-      // Step 6: Insert photo records into database
-      setUploadProgress("Fotos werden in der Datenbank gespeichert...");
-      logger.log(`[PhotoUpload] All ${totalFiles} files uploaded and verified. Inserting DB records...`);
-
-      // Get current max display order
-      const { data: existingPhotos } = await supabase
-        .from("motorhome_photos")
-        .select("display_order")
-        .eq("motorhome_id", id)
-        .order("display_order", { ascending: false })
-        .limit(1);
-
-      const startOrder = existingPhotos?.[0]?.display_order ?? -1;
-
-      // Insert photo records
-      const photoRecords = photoUrls.map((url, index) => ({
-        motorhome_id: id,
-        url: url,
-        display_order: startOrder + index + 1,
-      }));
-
-      logger.log(`[PhotoUpload] Inserting ${photoRecords.length} photo records into motorhome_photos...`);
-      logger.log(`[PhotoUpload] Records:`, JSON.stringify(photoRecords));
-
-      let insertedData: any[] | null = null;
-
-      await withSessionRetry(async () => {
-        const { data, error } = await supabase
-          .from("motorhome_photos")
-          .insert(photoRecords)
-          .select();
-        
-        if (error) {
-          console.error('[PhotoUpload] DB insert error:', JSON.stringify(error));
-          throw error;
-        }
-        if (!data || data.length === 0) {
-          console.error('[PhotoUpload] DB insert returned no data - possible RLS silent rejection');
-          throw new Error('Fotos konnten nicht in der Datenbank gespeichert werden. Möglicherweise fehlt die Berechtigung. Bitte melden Sie sich erneut an.');
-        }
-        insertedData = data;
-        logger.log(`[PhotoUpload] Successfully inserted ${data.length} photo records:`, JSON.stringify(data.map(d => d.id)));
-      }, 'ListingEdit.uploadPhotos');
-
-      // Step 7: Final verification - read back from DB
-      setUploadProgress("Abschließende Überprüfung...");
-      const { data: verifyPhotos, error: verifyError } = await supabase
-        .from("motorhome_photos")
-        .select("id, url")
-        .eq("motorhome_id", id)
-        .order("created_at", { ascending: false })
-        .limit(totalFiles);
-
-      if (verifyError) {
-        console.warn('[PhotoUpload] Verification query failed:', verifyError);
-      } else {
-        logger.log(`[PhotoUpload] Final verification: found ${verifyPhotos?.length || 0} recent photos in DB`);
-      }
-
-      setUploadedCount(totalFiles);
-      setUploadProgress("");
-      return totalFiles;
-    },
-    onSuccess: (count) => {
-      setUploadProgress("");
-      setUploadedCount(0);
-      setTotalUploadCount(0);
-      refetchPhotos();
-      toast({
-        title: "Fotos erfolgreich hochgeladen",
-        description: `${count} Foto(s) wurden erfolgreich hinzugefügt und verifiziert.`,
-      });
-    },
-    onError: (error: Error) => {
-      setUploadProgress("");
-      setUploadedCount(0);
-      setTotalUploadCount(0);
-
-      // Log the error correctly
-      handleAndLogError(error, {
-        componentName: 'ListingEdit.uploadPhotos',
-        category: 'api',
-        severity: 'high',
-        metadata: {
-          motorhomeId: id,
-          userId: user?.id,
-        },
-      });
-
-      console.error('[PhotoUpload] Upload failed:', error.message, error.stack);
-
-      // Show user-friendly error message
-      const message = error.message?.includes('Sitzung') || error.message?.includes('abgelaufen')
-        ? error.message
-        : error.message?.includes('zu groß')
-        ? error.message
-        : error.message?.includes('Format') || error.message?.includes('nicht unterstützt')
-        ? error.message
-        : error.message?.includes('leer')
-        ? error.message
-        : error.message?.includes('gehört nicht')
-        ? error.message
-        : error.message?.includes('Bestätigung')
-        ? error.message
-        : error.message?.includes('Berechtigung')
-        ? error.message
-        : error.message?.includes('Verifizierung')
-        ? error.message
-        : error.message?.includes('Payload too large')
-        ? 'Die Datei ist zu groß. Maximal 100 MB pro Foto erlaubt.'
-        : error.message?.includes('mime')
-        ? 'Das Dateiformat wird nicht unterstützt. Erlaubt: JPEG, PNG, WebP, HEIC.'
-        : error.message?.includes('security') || error.message?.includes('policy')
-        ? 'Keine Berechtigung zum Hochladen. Bitte melden Sie sich erneut an.'
-        : error.message?.includes('Duplicate')
-        ? 'Diese Datei wurde bereits hochgeladen.'
-        : error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')
-        ? 'Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.'
-        : `Fotos konnten nicht hochgeladen werden: ${error.message}`;
-
-      toast({
-        title: "Fehler beim Foto-Upload",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const processFiles = useCallback((fileList: FileList | File[]) => {
-    const files = Array.from(fileList);
-    if (files.length > 0) {
-      // Filter only image files
-      const imageFiles = files.filter(f => {
-        const ext = f.name.split('.').pop()?.toLowerCase() || '';
-        return f.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif', 'bmp'].includes(ext);
-      });
-      
-      if (imageFiles.length === 0) {
-        toast({
-          title: "Keine Bilddateien",
-          description: "Bitte wählen Sie nur Bilddateien aus (JPEG, PNG, WebP, HEIC).",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (imageFiles.length !== files.length) {
-        toast({
-          title: "Hinweis",
-          description: `${files.length - imageFiles.length} Datei(en) wurden übersprungen, da sie keine Bilddateien sind.`,
-        });
-      }
-
-      uploadPhotosMutation.mutate(imageFiles);
-    }
-  }, [uploadPhotosMutation, toast]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFiles(e.target.files);
-      e.target.value = ""; // Reset input
-    }
-  };
-
-  // Drag & Drop handlers
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only set to false if we're leaving the drop zone entirely
-    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files);
-    }
-  }, [processFiles]);
+  // Photo management is now handled by SellerPhotoManager component
 
   if (isLoading) {
     return (
@@ -1072,6 +703,18 @@ export default function ListingEdit() {
                     <label htmlFor="has_awning" className="text-sm font-medium">Markise</label>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <Checkbox id="has_awning_tent" checked={formData.has_awning_tent} onCheckedChange={(checked) => setFormData({ ...formData, has_awning_tent: checked as boolean })} />
+                    <label htmlFor="has_awning_tent" className="text-sm font-medium">Vorzelt</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="has_roof_ac" checked={formData.has_roof_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_roof_ac: checked as boolean })} />
+                    <label htmlFor="has_roof_ac" className="text-sm font-medium">Dachklima</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="has_stand_ac" checked={formData.has_stand_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_stand_ac: checked as boolean })} />
+                    <label htmlFor="has_stand_ac" className="text-sm font-medium">Standklima</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <Checkbox id="has_bike_rack" checked={formData.has_bike_rack} onCheckedChange={(checked) => setFormData({ ...formData, has_bike_rack: checked as boolean })} />
                     <label htmlFor="has_bike_rack" className="text-sm font-medium">Fahrradträger</label>
                   </div>
@@ -1119,195 +762,12 @@ export default function ListingEdit() {
 
               {/* Photos Tab */}
               <TabsContent value="photos" className="space-y-6 mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">Fotos verwalten</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Aktuell: {photos.length} Foto(s)
-                      </p>
-                    </div>
-                    <label htmlFor="photo-upload">
-                      <Button type="button" variant="outline" className="gap-2" asChild disabled={uploadPhotosMutation.isPending}>
-                        <span>
-                          <Upload className="w-4 h-4" />
-                          Fotos hinzufügen
-                        </span>
-                      </Button>
-                      <input
-                        id="photo-upload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleFileChange}
-                        disabled={uploadPhotosMutation.isPending}
-                      />
-                    </label>
-                  </div>
-
-                  {/* Upload Progress */}
-                  {uploadPhotosMutation.isPending && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span className="flex-1">{uploadProgress || "Fotos werden hochgeladen..."}</span>
-                        {totalUploadCount > 0 && (
-                          <span className="font-medium">{uploadedCount}/{totalUploadCount}</span>
-                        )}
-                      </div>
-                      {totalUploadCount > 1 && (
-                        <div className="w-full bg-blue-100 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.max(5, (uploadedCount / totalUploadCount) * 100)}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Upload Error */}
-                  {uploadPhotosMutation.isError && (
-                    <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium">Upload fehlgeschlagen</p>
-                        <p className="mt-1">
-                          {(uploadPhotosMutation.error as Error)?.message || 'Bitte versuchen Sie es erneut.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Upload Success (shown briefly after successful upload) */}
-                  {uploadPhotosMutation.isSuccess && !uploadPhotosMutation.isPending && (
-                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                      <span>Fotos wurden erfolgreich hochgeladen und verifiziert.</span>
-                    </div>
-                  )}
-
-                  {/* Drag & Drop Zone / Photo Grid */}
-                  {photos.length === 0 ? (
-                    <div 
-                      ref={dropZoneRef}
-                      className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-                        isDragging 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-muted-foreground/25 hover:border-primary/50'
-                      }`}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                    >
-                      <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      {isDragging ? (
-                        <p className="text-primary font-medium mb-4">
-                          Lassen Sie die Fotos hier los
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-muted-foreground mb-2">
-                            Keine Fotos vorhanden
-                          </p>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Ziehen Sie Fotos hierher oder klicken Sie auf den Button
-                          </p>
-                        </>
-                      )}
-                      <label htmlFor="photo-upload-empty">
-                        <Button type="button" variant="outline" className="gap-2" asChild disabled={uploadPhotosMutation.isPending}>
-                          <span>
-                            <Upload className="w-4 h-4" />
-                            Erste Fotos hochladen
-                          </span>
-                        </Button>
-                        <input
-                          id="photo-upload-empty"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
-                          multiple
-                          className="hidden"
-                          onChange={handleFileChange}
-                          disabled={uploadPhotosMutation.isPending}
-                        />
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Drag & Drop hint area */}
-                      <div 
-                        ref={dropZoneRef}
-                        className={`border-2 border-dashed rounded-lg p-4 text-center text-sm transition-colors ${
-                          isDragging 
-                            ? 'border-primary bg-primary/5 text-primary' 
-                            : 'border-muted-foreground/20 text-muted-foreground'
-                        }`}
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                      >
-                        {isDragging 
-                          ? 'Lassen Sie die Fotos hier los'
-                          : 'Weitere Fotos hierher ziehen oder oben auf "Fotos hinzufügen" klicken'
-                        }
-                      </div>
-
-                      {/* Photo Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {photos.map((photo) => (
-                          <div
-                            key={photo.id}
-                            className="relative group aspect-square rounded-lg overflow-hidden border-2 bg-muted"
-                          >
-                            <img
-                              src={photo.url}
-                              alt="Motorhome"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                // Show broken image placeholder
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                const parent = (e.target as HTMLImageElement).parentElement;
-                                if (parent) {
-                                  const placeholder = document.createElement('div');
-                                  placeholder.className = 'w-full h-full flex items-center justify-center bg-muted';
-                                  placeholder.innerHTML = '<span class="text-xs text-muted-foreground">Bild nicht verfügbar</span>';
-                                  parent.appendChild(placeholder);
-                                }
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="gap-2"
-                                onClick={() => deletePhotoMutation.mutate(photo.id)}
-                                disabled={deletePhotoMutation.isPending}
-                              >
-                                <X className="w-4 h-4" />
-                                Löschen
-                              </Button>
-                            </div>
-                            {photo.display_order === 0 && (
-                              <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                                Hauptfoto
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">
-                    Tipp: Das erste Foto wird als Hauptbild verwendet. Sie können bis zu
-                    30 Fotos hochladen. Unterstützte Formate: JPEG, PNG, WebP, HEIC.
-                  </p>
-                </div>
+                <SellerPhotoManager
+                  motorhomeId={id!}
+                  photos={photos}
+                  queryKey={["motorhomePhotos", id!]}
+                  disabled={isAuctionLive}
+                />
               </TabsContent>
 
               {/* Additional Tab */}

@@ -152,6 +152,12 @@ const handler = async (req: Request): Promise<Response> => {
     const customerName = session.customer_name || formData.customerName || "";
     const customerPhone = session.customer_phone || formData.customerPhone || "";
 
+    // Extract address from form_data for profile
+    const addressStreet = [formData.street, formData.houseNumber].filter(Boolean).join(' ') || null;
+    const addressZip = formData.zipCode ? String(formData.zipCode) : null;
+    const addressCity = formData.city ? String(formData.city) : null;
+    const addressCountry = formData.country ? String(formData.country) : null;
+
     if (!customerEmail) {
       return new Response(
         JSON.stringify({ error: "No customer email found in session" }),
@@ -184,6 +190,10 @@ const handler = async (req: Request): Promise<Response> => {
           last_name: lastName || null,
           phone: customerPhone || null,
           account_type: "private",
+          address_street: addressStreet,
+          address_zip: addressZip,
+          address_city: addressCity,
+          address_country: addressCountry,
         }, { onConflict: "id" });
         
         // Ensure role exists
@@ -221,6 +231,10 @@ const handler = async (req: Request): Promise<Response> => {
             last_name: lastName || null,
             phone: customerPhone || null,
             account_type: "private",
+            address_street: addressStreet,
+            address_zip: addressZip,
+            address_city: addressCity,
+            address_country: addressCountry,
           }, { onConflict: "id" });
 
           // Assign role
@@ -246,6 +260,10 @@ const handler = async (req: Request): Promise<Response> => {
         last_name: lastName || null,
         phone: customerPhone || null,
         account_type: "private",
+        address_street: addressStreet,
+        address_zip: addressZip,
+        address_city: addressCity,
+        address_country: addressCountry,
       }, { onConflict: "id" });
 
       // Always ensure role exists

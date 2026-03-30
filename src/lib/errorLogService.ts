@@ -473,6 +473,14 @@ export function installGlobalErrorHandlers(): void {
     if (!event.filename || event.filename === '') return;
     // Ignoriere ResizeObserver-Fehler (harmlos)
     if (event.message?.includes('ResizeObserver')) return;
+    // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
+    if (
+      event.message?.includes('Lock broken by another request') ||
+      event.message?.includes('released because another request stole it') ||
+      event.message?.includes('Lock acquisition timed out') ||
+      event.message?.includes('was not released within') ||
+      event.message?.includes('Acquiring an exclusive Navigator LockManager lock')
+    ) return;
 
     const translated = translateError(event.message || 'Uncaught error');
     logErrorToSupabase({
@@ -505,6 +513,17 @@ export function installGlobalErrorHandlers(): void {
 
     // Ignoriere bestimmte harmlose Rejections
     if (message.includes('AbortError') || message.includes('The user aborted')) return;
+
+    // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
+    if (
+      message.includes('Lock broken by another request') ||
+      message.includes('released because another request stole it') ||
+      message.includes('Lock acquisition timed out') ||
+      message.includes('was not released within') ||
+      message.includes('Acquiring an exclusive Navigator LockManager lock') ||
+      message.includes('Acquiring process lock') ||
+      message.includes('isAcquireTimeout')
+    ) return;
 
     const translated = translateError(message);
     logErrorToSupabase({

@@ -15,11 +15,37 @@
  * 3. User signed up but email not confirmed (partial auth state)
  * 4. localStorage corrupted or cleared by browser
  * 5. Network interruption during token refresh
+ * 6. Navigator Lock conflicts between tabs (steal/timeout)
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { logger } from './logger';
+
+/**
+ * Prüft ob ein Fehler ein Navigator Lock-Fehler ist.
+ * Diese Fehler sind harmlos und entstehen durch die Supabase Auth-JS
+ * Session-Synchronisierung zwischen Tabs (Web Locks API).
+ * Sie treten auf wenn mehrere Auth-Operationen gleichzeitig laufen
+ * und der Lock-Timeout (5s) erreicht wird.
+ */
+export function isLockError(error: unknown): boolean {
+  if (!error) return false;
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : (error as { message?: string })?.message || '';
+  return (
+    message.includes('Lock broken by another request') ||
+    message.includes('released because another request stole it') ||
+    message.includes('Lock acquisition timed out') ||
+    message.includes('was not released within') ||
+    message.includes('Acquiring an exclusive Navigator LockManager lock') ||
+    message.includes('Acquiring process lock') ||
+    (error instanceof Error && 'isAcquireTimeout' in error && !!(error as any).isAcquireTimeout)
+  );
+}
 
 /**
  * Check if an error is caused by an expired/invalid session or RLS violation.
@@ -85,6 +111,11 @@ export async function getValidatedUser(): Promise<User | null> {
 
     return refreshData.session.user;
   } catch (err) {
+    // Lock-Fehler sind harmlos - einfach null zurückgeben, der nächste Versuch klappt
+    if (isLockError(err)) {
+      logger.log('getValidatedUser: Lock-Fehler (harmlos, wird ignoriert)');
+      return null;
+    }
     logger.error('Session validation error:', err);
     return null;
   }
@@ -140,6 +171,11 @@ export async function ensureValidSession(): Promise<{
     // No user at all
     return { user: null, wasRefreshed: false, sessionExpired: false };
   } catch (err) {
+    // Lock-Fehler sind harmlos - Session als nicht verfügbar melden, aber nicht als abgelaufen
+    if (isLockError(err)) {
+      logger.log('ensureValidSession: Lock-Fehler (harmlos, wird ignoriert)');
+      return { user: null, wasRefreshed: false, sessionExpired: false };
+    }
     logger.error('ensureValidSession error:', err);
     return { user: null, wasRefreshed: false, sessionExpired: true };
   }
@@ -160,6 +196,13 @@ export async function withSessionRetry<T>(
   try {
     return await operation();
   } catch (error) {
+    // Lock-Fehler: kurz warten und direkt erneut versuchen (ohne Session-Refresh)
+    if (isLockError(error)) {
+      logger.log(`${operationName}: Lock-Fehler erkannt, warte kurz und versuche erneut...`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return await operation();
+    }
+
     if (isSessionOrRLSError(error)) {
       logger.warn(`${operationName}: RLS/session error detected, refreshing session and retrying...`);
 

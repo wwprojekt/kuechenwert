@@ -13,8 +13,10 @@ import { QuickContactStep } from "@/components/wizard/QuickContactStep";
 import { DetailsStep } from "@/components/wizard/DetailsStep";
 import { EquipmentStep } from "@/components/wizard/EquipmentStep";
 import { PhotosStep } from "@/components/wizard/PhotosStep";
-import { ContactStep } from "@/components/wizard/ContactStep";
+import { SaleChannelStep } from "@/components/wizard/SaleChannelStep";
+import { AccountLocationStep } from "@/components/wizard/AccountLocationStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
+import { supabase } from "@/integrations/supabase/client";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
@@ -27,7 +29,8 @@ const steps = [
   { id: 4, name: "Details", description: "Technische Angaben" },
   { id: 5, name: "Ausstattung", description: "Optional" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
-  { id: 7, name: "Abschluss", description: "Angebot erhalten" },
+  { id: 7, name: "Verkaufsweg", description: "Wie m\u00f6chten Sie verkaufen?" },
+  { id: 8, name: "Abschluss", description: "Standort & Konto" },
 ];
 
 const VerkaufenWizard = () => {
@@ -37,6 +40,15 @@ const VerkaufenWizard = () => {
   const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
   const registerPasswordRef = useRef<string | undefined>(undefined);
+  const confirmPasswordRef = useRef<string | undefined>(undefined);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUser(data.user || null);
+    });
+  }, []);
 
   // Prefill form data from URL parameters
   useEffect(() => {
@@ -55,7 +67,7 @@ const VerkaufenWizard = () => {
     const resumeStep = searchParams.get('step');
     if (resumeStep && !hasRestoredRef.current) {
       const stepNum = parseInt(resumeStep, 10);
-      if (stepNum >= 1 && stepNum <= 7) {
+      if (stepNum >= 1 && stepNum <= 8) {
         setCurrentStep(stepNum);
         hasRestoredRef.current = true;
       }
@@ -157,7 +169,7 @@ const VerkaufenWizard = () => {
   }, [currentStep, formData.customerEmail, formData.customerName]);
 
   // Ungerade Prozentwerte wirken authentischer und weniger konstruiert
-  const progressMap: Record<number, number> = { 1: 10, 2: 24, 3: 38, 4: 52, 5: 66, 6: 82, 7: 100 };
+  const progressMap: Record<number, number> = { 1: 8, 2: 20, 3: 33, 4: 45, 5: 57, 6: 69, 7: 82, 8: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
@@ -207,7 +219,7 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
-    const isValid = await validateStep(7);
+    const isValid = await validateStep(8);
     if (!isValid) return;
 
     // Update contact data in session before submit
@@ -244,7 +256,17 @@ const VerkaufenWizard = () => {
       case 6:
         return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 7:
-        return <ContactStep formData={formData} updateFormData={updateFormData} onPasswordChange={(pw) => { registerPasswordRef.current = pw; }} />;
+        return <SaleChannelStep formData={formData} updateFormData={updateFormData} />;
+      case 8:
+        return <AccountLocationStep
+          formData={formData}
+          updateFormData={updateFormData}
+          registerPassword={registerPasswordRef.current || ""}
+          setRegisterPassword={(pw) => { registerPasswordRef.current = pw; }}
+          confirmPassword={confirmPasswordRef.current || ""}
+          setConfirmPassword={(pw) => { confirmPasswordRef.current = pw; }}
+          isAuthenticated={!!currentUser}
+        />;
       default:
         return null;
     }
@@ -385,7 +407,7 @@ const VerkaufenWizard = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Keine Registrierung nötig</span>
+                      <span>Eigenes Dashboard zur Verwaltung</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -417,10 +439,10 @@ const VerkaufenWizard = () => {
                         ? "Nur noch wenige Angaben bis zum Angebot"
                         : currentStep <= 5
                         ? "Fast geschafft – gleich erhalten Sie Ihr Angebot"
-                        : currentStep === 6
-                        ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
-                        : "Letzter Schritt – Ihr Angebot wartet!"}
-                    </span>
+                        : currentStep                         ? "Fotos erh\u00f6hen Ihre Verkaufschancen enorm!"
+                        : currentStep === 7
+                        ? "Fast geschafft \u2013 w\u00e4hlen Sie Ihren Verkaufsweg"
+                        : "Letzter Schritt \u2013 Standort & Konto!"}                 </span>
                   </div>
                 </Card>
               </div>

@@ -285,18 +285,22 @@ const step5Schema = z.object({});
 // Step 6: Photos (optional - no validation needed, user can skip)
 const step6Schema = z.object({});
 
-// Step 7: Final Contact & Sale Channel (saleChannel + phone required, name+email already captured)
-// bodyType und manufacturer werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit
+// Step 7: Sale Channel & Contact (saleChannel + phone required, name+email already captured)
 const step7Schema = z.object({
-  bodyType: z.string().min(1, "Aufbauart fehlt – bitte gehen Sie zurück zu Schritt 1"),
-  manufacturer: z.string().min(1, "Hersteller fehlt – bitte gehen Sie zurück zu Schritt 2"),
-  saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
+  saleChannel: z.string().min(1, "Bitte w\u00e4hlen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
-  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-  customerPhone: z.string().min(5, "Bitte geben Sie eine gültige Telefonnummer ein"),
-  street: z.string().min(1, "Straße ist erforderlich"),
+  customerEmail: z.string().email("Bitte geben Sie eine g\u00fcltige E-Mail-Adresse ein"),
+  customerPhone: z.string().min(5, "Bitte geben Sie eine g\u00fcltige Telefonnummer ein"),
+});
+
+// Step 8: Location & Account (Standort + Passwort - letzter Schritt)
+// bodyType und manufacturer werden hier nochmals gepr\u00fcft als letzte Sicherheitsebene vor dem Submit
+const step8Schema = z.object({
+  bodyType: z.string().min(1, "Aufbauart fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 1"),
+  manufacturer: z.string().min(1, "Hersteller fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 2"),
+  street: z.string().min(1, "Stra\u00dfe ist erforderlich"),
   houseNumber: z.string().min(1, "Hausnummer ist erforderlich"),
-  zipCode: z.string().min(5, "Bitte geben Sie eine gültige PLZ ein").max(5, "PLZ muss 5 Ziffern haben"),
+  zipCode: z.string().min(5, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(5, "PLZ muss 5 Ziffern haben"),
   city: z.string().min(1, "Ort ist erforderlich"),
 });
 
@@ -396,12 +400,16 @@ export const useWizardForm = () => {
           break;
         case 7:
           step7Schema.parse({
-            bodyType: formData.bodyType,
-            manufacturer: formData.manufacturer,
             saleChannel: formData.saleChannel,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
+          });
+          break;
+        case 8:
+          step8Schema.parse({
+            bodyType: formData.bodyType,
+            manufacturer: formData.manufacturer,
             street: formData.street,
             houseNumber: formData.houseNumber,
             zipCode: formData.zipCode,
@@ -508,9 +516,9 @@ export const useWizardForm = () => {
             customer_name: formData.customerName || null,
             customer_email: formData.customerEmail || null,
             customer_phone: formData.customerPhone || null,
-            current_step: 7,
-            max_step_reached: 7,
-            total_steps: 7,
+            current_step: 8,
+            max_step_reached: 8,
+            total_steps: 8,
             step_name: 'completed',
             form_data: formDataForStorage,
             status: 'completed',

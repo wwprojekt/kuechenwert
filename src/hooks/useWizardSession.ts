@@ -29,7 +29,8 @@ const STEP_NAMES: Record<number, string> = {
   4: "Details & Technik",
   5: "Ausstattung",
   6: "Fotos",
-  7: "Abschluss",
+  7: "Verkaufsweg",
+  8: "Standort & Konto",
 };
 
 /**
@@ -179,7 +180,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               p_customer_name: urlContact.customerName || null,
               p_customer_email: urlContact.customerEmail || null,
               p_customer_phone: urlContact.customerPhone || null,
-              p_total_steps: 7,
+              p_total_steps: 8,
             });
 
           if (error) {

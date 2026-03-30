@@ -108,6 +108,7 @@ interface WizardSession {
   wrong_number_email_count: number | null;
   wrong_number_email_last_sent: string | null;
   admin_estimated_value: number | null;
+  is_viewed: boolean;
 }
 
 interface QuickLead {
@@ -139,6 +140,7 @@ interface QuickLead {
   wrong_number_email_count: number | null;
   wrong_number_email_last_sent: string | null;
   admin_estimated_value: number | null;
+  is_viewed: boolean;
 }
 
 interface ValuationLead {
@@ -170,6 +172,7 @@ interface ValuationLead {
   disposition: string | null;
   wrong_number_email_count: number | null;
   wrong_number_email_last_sent: string | null;
+  is_viewed: boolean;
 }
 
 // ============================================================================
@@ -1350,6 +1353,12 @@ export default function AdminLeads() {
     setSelectedSession(enrichedSession);
     setAdminNotes(session.admin_notes || "");
     setDetailDialogOpen(true);
+    // Mark as viewed
+    if (!session.is_viewed) {
+      supabase.from("wizard_sessions").update({ is_viewed: true }).eq("id", session.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+      });
+    }
   };
 
   const openEmailDialog = (session: WizardSession) => {
@@ -1362,6 +1371,12 @@ export default function AdminLeads() {
     setSelectedQuickLead(lead);
     setQuickLeadAdminNotes(lead.admin_notes || lead.notes || "");
     setQuickLeadDetailOpen(true);
+    // Mark as viewed
+    if (!lead.is_viewed) {
+      supabase.from("quick_leads").update({ is_viewed: true }).eq("id", lead.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+      });
+    }
   };
 
   const openValuationDetail = (lead: ValuationLead) => {
@@ -1377,6 +1392,12 @@ export default function AdminLeads() {
     } : null);
     setValuationEmailSent(false);
     setValuationDetailOpen(true);
+    // Mark as viewed
+    if (!lead.is_viewed) {
+      supabase.from("value_assessment_leads").update({ is_viewed: true }).eq("id", lead.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+      });
+    }
   };
 
   const sendExpertValuationEmail = async (leadId: string, recipientEmail?: string) => {
@@ -1604,14 +1625,29 @@ export default function AdminLeads() {
             <TabsTrigger value="wizard_sessions" className="gap-2">
               <Timer className="w-4 h-4" />
               Wizard-Sessions ({wizardSessions.length})
+              {wizardSessions.filter(s => !s.is_viewed).length > 0 && (
+                <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
+                  {wizardSessions.filter(s => !s.is_viewed).length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="quick_leads" className="gap-2">
               <UserPlus className="w-4 h-4" />
               Quick-Leads ({quickLeads.length})
+              {quickLeads.filter(l => !l.is_viewed).length > 0 && (
+                <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
+                  {quickLeads.filter(l => !l.is_viewed).length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="valuation_leads" className="gap-2">
               <Calculator className="w-4 h-4" />
               Wertrechner ({valuationLeads.length})
+              {valuationLeads.filter(l => !l.is_viewed).length > 0 && (
+                <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
+                  {valuationLeads.filter(l => !l.is_viewed).length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="wrong_number" className="gap-2">
               <PhoneOff className="w-4 h-4" />
@@ -1720,7 +1756,7 @@ export default function AdminLeads() {
                   filteredSessions.map((session) => (
                     <TableRow
                       key={session.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${selectedSessionIds.has(session.id) ? "bg-primary/5" : ""}`}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedSessionIds.has(session.id) ? "bg-primary/5" : ""} ${!session.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
                       onClick={() => openDetail(session)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -1732,7 +1768,7 @@ export default function AdminLeads() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-sm">
+                          <p className={`text-sm ${!session.is_viewed ? "font-bold text-foreground" : "font-medium"}`}>
                             {session.customer_name || "Unbekannt"}
                           </p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -1752,7 +1788,7 @@ export default function AdminLeads() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm">
+                        <span className={`text-sm ${!session.is_viewed ? "font-bold" : ""}`}>
                           {session.vehicle_summary || "-"}
                         </span>
                       </TableCell>
@@ -1929,7 +1965,7 @@ export default function AdminLeads() {
                   filteredQuickLeads.map((lead) => (
                     <TableRow
                       key={lead.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""}`}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""} ${!lead.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
                       onClick={() => openQuickLeadDetail(lead)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -1939,7 +1975,7 @@ export default function AdminLeads() {
                           aria-label="Lead auswählen"
                         />
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className={!lead.is_viewed ? "font-bold" : "font-medium"}>
                         {lead.name
                           || (lead.form_data_snapshot?.customerName as string)
                           || (lead.form_data_snapshot?.name as string)
@@ -2119,7 +2155,7 @@ export default function AdminLeads() {
                   </TableRow>
                 ) : (
                   filteredValuationLeads.map((lead) => (
-                    <TableRow key={lead.id} className={`cursor-pointer hover:bg-muted/50 ${selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""}`} onClick={() => openValuationDetail(lead)}>
+                    <TableRow key={lead.id} className={`cursor-pointer hover:bg-muted/50 ${selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""} ${!lead.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`} onClick={() => openValuationDetail(lead)}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedValuationIds.has(lead.id)}
@@ -2127,7 +2163,7 @@ export default function AdminLeads() {
                           aria-label="Lead auswählen"
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{lead.name || "-"}</TableCell>
+                      <TableCell className={!lead.is_viewed ? "font-bold" : "font-medium"}>{lead.name || "-"}</TableCell>
                       <TableCell>
                         <div className="space-y-0.5">
                           {lead.email && (

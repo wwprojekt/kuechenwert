@@ -73,6 +73,7 @@ const Footer = () => {
                   <img 
                     src={settings.tuv_badge_url} 
                     alt="TÜV-Zertifikat" 
+                    loading="lazy"
                     className="h-full w-full object-contain"
                   />
                 </div>

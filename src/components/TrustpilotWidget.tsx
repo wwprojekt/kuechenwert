@@ -45,6 +45,7 @@ const TrustpilotWidget = ({ variant = "compact" }: TrustpilotWidgetProps) => {
           <img 
             src={trustpilotLogo} 
             alt="Trustpilot" 
+            loading="lazy"
             className="h-6 w-auto"
           />
         </div>
@@ -62,6 +63,7 @@ const TrustpilotWidget = ({ variant = "compact" }: TrustpilotWidgetProps) => {
         <img 
           src={trustpilotLogo} 
           alt="Trustpilot" 
+          loading="lazy"
           className="h-8 w-auto"
         />
       </div>

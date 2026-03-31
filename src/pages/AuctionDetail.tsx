@@ -807,7 +807,7 @@ const AuctionDetail = () => {
               {/* Enhanced Photo Gallery */}
               <Card className="overflow-hidden shadow-lg">
                 <div className="relative group">
-                  <div className="relative h-[500px] bg-muted overflow-hidden">
+                  <div className="relative h-[300px] sm:h-[400px] lg:h-[500px] bg-muted overflow-hidden">
                     {photos.length > 0 ? (
                       <>
                         <img

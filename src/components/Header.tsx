@@ -340,10 +340,10 @@ const Header = () => {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t bg-background/95">
-            <div className="container py-4 flex flex-col gap-4">
+            <div className="container py-4 flex flex-col gap-1">
               <Link
                 to="/verkaufen"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/verkaufen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -352,7 +352,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/wertermittlung"
-                className={`text-sm font-medium transition-smooth pl-4 ${
+                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
                   isActive('/wertermittlung') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -361,7 +361,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/wertrechner"
-                className={`text-sm font-medium transition-smooth pl-4 ${
+                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
                   isActive('/wertrechner') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -370,7 +370,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/kaufen"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/kaufen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -379,7 +379,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/preise"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/preise') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -388,7 +388,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/ankaufstationen"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/ankaufstationen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -397,7 +397,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/ratgeber"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/ratgeber') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -406,7 +406,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/kontakt"
-                className={`text-sm font-medium transition-smooth ${
+                className={`text-sm font-medium transition-smooth py-3 ${
                   isActive('/kontakt') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}

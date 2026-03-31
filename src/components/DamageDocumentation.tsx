@@ -249,6 +249,7 @@ export const DamageDocumentation = ({
                   <img
                     src={damage.photo_url}
                     alt={`Schaden: ${damage.damage_description}`}
+                    loading="lazy"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                     onClick={() => window.open(damage.photo_url, '_blank')}
                   />
@@ -395,6 +396,7 @@ export const DamageDocumentation = ({
                     <img
                       src={damage.photo_url}
                       alt={`Schaden: ${damage.damage_description}`}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   </div>

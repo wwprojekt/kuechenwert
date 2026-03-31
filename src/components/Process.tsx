@@ -118,6 +118,7 @@ const Process = () => {
             <img
               src={interiorImage}
               alt="Wohnmobil Innenraum"
+              loading="lazy"
               className="w-full h-auto"
             />
           </div>
@@ -128,6 +129,7 @@ const Process = () => {
             <img
               src={familyImage}
               alt="Zufriedene Kunden"
+              loading="lazy"
               className="w-full h-auto"
             />
           </div>

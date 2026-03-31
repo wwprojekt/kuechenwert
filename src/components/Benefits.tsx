@@ -109,6 +109,7 @@ const Benefits = () => {
               <img
                 src={dealerImage}
                 alt="Professioneller Händler"
+                loading="lazy"
                 className="w-full h-auto"
               />
             </div>
@@ -123,6 +124,7 @@ const Benefits = () => {
                 <img
                   src={handshakeImage}
                   alt="Erfolgreicher Vertragsabschluss"
+                  loading="lazy"
                   className="w-full h-auto"
                 />
               </div>

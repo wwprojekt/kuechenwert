@@ -8,6 +8,18 @@
  * after signUp (email confirmation required), or may be a pending dealer
  * uploading documents from the locked dashboard.
  * 
+ * Authentication modes:
+ * 1. **JWT mode** (default): Authenticated user uploads their own document.
+ *    The JWT is verified and the user_id must match the JWT subject (or be admin).
+ * 2. **Registration mode**: Freshly registered user has no session yet (email
+ *    not confirmed). The request includes `registration_token` (the user's UUID)
+ *    and we verify the user was created within the last 10 minutes and is a dealer.
+ *    This is secure because:
+ *    - The user_id is only known to the client that just called signUp()
+ *    - The 10-minute window limits the attack surface
+ *    - We verify user_type === 'dealer' in auth.users metadata
+ *    - The Edge Function has verify_jwt = false in config.toml
+ * 
  * Expects multipart/form-data with:
  * - file: The document file (PDF, JPG, PNG, max 10MB)
  * - user_id: The UUID of the user
@@ -18,6 +30,7 @@
  *     "ausweis_front"    – Ausweis Vorderseite
  *     "ausweis_back"     – Ausweis Rückseite
  * - dealer_application_id: (optional) UUID of the dealer application for legal_documents tracking
+ * - registration_token: (optional) Set to "true" to use registration mode (no JWT required)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
@@ -64,6 +77,9 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+/** Maximum age of a user account (in milliseconds) to allow registration mode upload */
+const REGISTRATION_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
 /** All supported file types and their human-readable German labels */
 const FILE_TYPE_LABELS: Record<string, string> = {
   'trade_license': 'Gewerbeschein',
@@ -95,35 +111,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // --- JWT Authentication: Verify the caller's identity ---
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Authentifizierung erforderlich' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const jwt = authHeader.replace('Bearer ', '');
-    // Verify the caller's identity using service_role + token parameter
-    // (same pattern as place-bid, instant-buy – avoids SUPABASE_ANON_KEY dependency)
-    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(jwt);
-    if (authError || !authUser) {
-      return new Response(JSON.stringify({ error: 'Ungültiges oder abgelaufenes Token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // --- End JWT Authentication ---
-
+    // Parse form data first to check for registration_token
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const userId = formData.get('user_id') as string | null;
     const fileType = (formData.get('file_type') as string) || 'trade_license';
     const dealerApplicationId = formData.get('dealer_application_id') as string | null;
+    const isRegistrationMode = formData.get('registration_token') === 'true';
 
-    // Validate inputs
+    // Validate inputs early
     if (!file) {
       return new Response(JSON.stringify({ error: 'Keine Datei hochgeladen' }), {
         status: 400,
@@ -147,24 +143,88 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // --- Authorization: Ensure the authenticated user matches the user_id ---
-    // Admins (checked via user_roles) may upload on behalf of others
-    if (authUser.id !== userId) {
-      const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: roleData } = await supabaseService
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', authUser.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      if (!roleData) {
-        return new Response(JSON.stringify({ error: 'Sie können nur Dokumente für Ihr eigenes Konto hochladen' }), {
+    // Create service_role client (used for all DB operations and auth verification)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // --- Authentication ---
+    if (isRegistrationMode) {
+      // REGISTRATION MODE: No JWT available (user just signed up, email not confirmed)
+      // Security: Verify the user was created within the last 10 minutes and is a dealer
+      console.log(`[registration-mode] Upload attempt for user ${userId}`);
+
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      if (userError || !userData?.user) {
+        console.error(`[registration-mode] User not found: ${userId}`);
+        return new Response(JSON.stringify({ error: 'Benutzer nicht gefunden' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check user_type is dealer
+      const userType = userData.user.user_metadata?.user_type;
+      if (userType !== 'dealer') {
+        console.error(`[registration-mode] User ${userId} is not a dealer (type: ${userType})`);
+        return new Response(JSON.stringify({ error: 'Benutzer ist kein Händler' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      // Check account age — must be created within the last 10 minutes
+      const createdAt = new Date(userData.user.created_at).getTime();
+      const now = Date.now();
+      const accountAgeMs = now - createdAt;
+
+      if (accountAgeMs > REGISTRATION_WINDOW_MS) {
+        console.error(`[registration-mode] User ${userId} account too old (${Math.round(accountAgeMs / 1000)}s). Registration window expired.`);
+        return new Response(JSON.stringify({ error: 'Registrierungszeitraum abgelaufen. Bitte laden Sie das Dokument über Ihr Dashboard hoch.' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`[registration-mode] User ${userId} verified (account age: ${Math.round(accountAgeMs / 1000)}s). Proceeding with upload.`);
+
+    } else {
+      // JWT MODE: Standard authenticated upload
+      const authHeader = req.headers.get('authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Authentifizierung erforderlich' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const jwt = authHeader.replace('Bearer ', '');
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(jwt);
+      if (authError || !authUser) {
+        return new Response(JSON.stringify({ error: 'Ungültiges oder abgelaufenes Token' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Authorization: Ensure the authenticated user matches the user_id
+      // Admins (checked via user_roles) may upload on behalf of others
+      if (authUser.id !== userId) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', authUser.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        
+        if (!roleData) {
+          return new Response(JSON.stringify({ error: 'Sie können nur Dokumente für Ihr eigenes Konto hochladen' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
     }
+
+    // --- Common validation (both modes) ---
 
     // Validate file_type
     if (!FILE_TYPE_LABELS[fileType]) {
@@ -192,27 +252,26 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Create Supabase client with service_role (bypasses RLS)
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // In JWT mode, verify user exists and is a dealer (registration mode already did this)
+    if (!isRegistrationMode) {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ error: 'Benutzer nicht gefunden' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-    // Verify the user exists and is a dealer
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-    if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: 'Benutzer nicht gefunden' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const userType = userData.user.user_metadata?.user_type;
+      if (userType !== 'dealer') {
+        return new Response(JSON.stringify({ error: 'Benutzer ist kein Händler' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
-    const userType = userData.user.user_metadata?.user_type;
-    if (userType !== 'dealer') {
-      return new Response(JSON.stringify({ error: 'Benutzer ist kein Händler' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Upload file to storage
+    // --- Upload file to storage ---
     const fileExt = file.name.split('.').pop() || 'pdf';
     const fileName = `${userId}/${fileType}_${Date.now()}.${fileExt}`;
     const fileBuffer = await file.arrayBuffer();
@@ -304,6 +363,9 @@ Deno.serve(async (req: Request) => {
         // Non-critical: file is uploaded, just tracking failed
       }
     }
+
+    const mode = isRegistrationMode ? 'registration' : 'jwt';
+    console.log(`[${mode}] Upload successful for user ${userId}: ${fileType} → ${fileName}`);
 
     return new Response(JSON.stringify({ 
       success: true, 

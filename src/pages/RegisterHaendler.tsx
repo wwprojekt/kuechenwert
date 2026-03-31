@@ -190,8 +190,10 @@ const RegisterHaendler = () => {
       }
 
       // Step 2: Upload document via Edge Function (bypasses RLS)
-      // The Edge Function uses service_role to upload to storage and
-      // update the dealer_application with the document URL.
+      // After signUp with email confirmation, there is NO active session yet,
+      // so supabase.functions.invoke() cannot send a valid JWT.
+      // We use a direct fetch() call with registration_token=true instead.
+      // The Edge Function verifies the user was created within the last 10 minutes.
       if (documentFile) {
         setUploadingDocument(true);
         try {
@@ -199,17 +201,29 @@ const RegisterHaendler = () => {
           uploadFormData.append('file', documentFile);
           uploadFormData.append('user_id', authData.user.id);
           uploadFormData.append('file_type', 'trade_license');
+          uploadFormData.append('registration_token', 'true');
 
-          const { data: uploadResult, error: uploadError } = await supabase.functions.invoke(
-            'dealer-document-upload',
-            { body: uploadFormData }
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+          const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
+
+          const response = await fetch(
+            `${supabaseUrl}/functions/v1/dealer-document-upload`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseAnonKey,
+              },
+              body: uploadFormData,
+            }
           );
 
-          if (uploadError) {
-            logger.error("Document upload error:", uploadError);
+          const uploadResult = await response.json();
+
+          if (!response.ok || !uploadResult.success) {
+            logger.error("Document upload error:", uploadResult.error || response.statusText);
             // Continue without document - not critical for registration
           } else {
-            logger.info("Document uploaded successfully:", uploadResult?.url);
+            logger.info("Document uploaded successfully:", uploadResult.url);
           }
         } catch (uploadErr) {
           logger.error("Document upload failed:", uploadErr);

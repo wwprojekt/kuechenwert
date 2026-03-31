@@ -26,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         id, current_price, start_price, bid_count, end_time, status,
-        motorhomes (manufacturer, model, year, user_id)
+        motorhomes (manufacturer, model, year, seller_id)
       `)
       .eq('status', 'active');
 
@@ -46,12 +46,12 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: '+49 511 51532476',
     };
 
-    // Group auctions by seller (user_id from motorhomes)
+    // Group auctions by seller (seller_id from motorhomes)
     const sellerAuctions: Record<string, any[]> = {};
     for (const auction of auctions) {
       const motorhome = auction.motorhomes as any;
-      if (!motorhome?.user_id) continue;
-      const sellerId = motorhome.user_id;
+      if (!motorhome?.seller_id) continue;
+      const sellerId = motorhome.seller_id;
       if (!sellerAuctions[sellerId]) sellerAuctions[sellerId] = [];
       sellerAuctions[sellerId].push(auction);
     }

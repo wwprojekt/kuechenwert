@@ -3,7 +3,7 @@
  * Handles SEPA direct debit authorization for dealers
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,20 +56,24 @@ export const SepaMandate = ({
   const [mandateText, setMandateText] = useState('');
 
   // Fetch SEPA mandate template
-  useState(() => {
+  useEffect(() => {
     const fetchMandateText = async () => {
-      const { data } = await supabase
-        .from('sepa_mandate_templates')
-        .select('template_text')
-        .eq('is_active', true)
-        .single();
-      
-      if (data) {
-        setMandateText(data.template_text);
+      try {
+        const { data } = await supabase
+          .from('sepa_mandate_templates')
+          .select('template_text')
+          .eq('is_active', true)
+          .single();
+        
+        if (data) {
+          setMandateText(data.template_text);
+        }
+      } catch (error) {
+        logger.error('Error fetching SEPA mandate text:', error);
       }
     };
     fetchMandateText();
-  });
+  }, []);
 
   const validateIBAN = (iban: string): boolean => {
     // Basic IBAN validation for German IBANs

@@ -26,6 +26,7 @@ interface PurchaseStation {
   id: string;
   name: string;
   city: string;
+  address: string;
 }
 
 export const AppointmentBookingModal = ({
@@ -51,7 +52,7 @@ export const AppointmentBookingModal = ({
     try {
       const { data, error } = await supabase
         .from('purchase_stations')
-        .select('id, name, city')
+        .select('id, name, city, address')
         .eq('is_active', true)
         .order('city');
 
@@ -85,7 +86,8 @@ export const AppointmentBookingModal = ({
       const [hours, minutes] = selectedTime.split(':');
       appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const { error } = await supabase
+      // Insert appointment and get the created record back (we need the ID)
+      const { data: appointmentData, error } = await supabase
         .from('appointments')
         .insert({
           motorhome_id: motorhomeId,
@@ -97,16 +99,52 @@ export const AppointmentBookingModal = ({
           payment_status: 'pending',
           status: 'scheduled',
           notes,
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      // Send confirmation email
+      // Fetch user profile for name
+      let userName = 'Kunde';
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          userName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Kunde';
+        }
+      }
+
+      // Fetch motorhome details for the email
+      let motorhomeModel = 'Wohnmobil';
+      const { data: motorhome } = await supabase
+        .from('motorhomes')
+        .select('manufacturer, model, year')
+        .eq('id', motorhomeId)
+        .single();
+      if (motorhome) {
+        motorhomeModel = [motorhome.manufacturer, motorhome.model, motorhome.year].filter(Boolean).join(' ');
+      }
+
+      // Get station details for the email
+      const station = stations.find(s => s.id === selectedStation);
+      const stationName = station?.name || '';
+      const stationAddress = station ? `${station.address}, ${station.city}` : '';
+
+      // Send confirmation email with correct payload matching Edge Function interface
       try {
         await supabase.functions.invoke('send-appointment-confirmation', {
           body: {
-            appointmentId: motorhomeId,
-            userEmail: user?.email,
+            email: user?.email,
+            name: userName,
+            appointmentDate: format(appointmentDateTime, "PPP 'um' HH:mm 'Uhr'", { locale: de }),
+            stationName,
+            stationAddress,
+            motorhomeModel,
+            appointmentId: appointmentData?.id || '',
           },
         });
       } catch (emailError) {
@@ -117,7 +155,6 @@ export const AppointmentBookingModal = ({
       if (user?.email) {
         await setEnhancedConversionData({ email: user.email });
       }
-      const stationName = stations.find(s => s.id === selectedStation)?.name || '';
       await trackTerminbuchung(stationName);
 
       // Meta Pixel: Schedule Event

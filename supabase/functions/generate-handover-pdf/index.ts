@@ -33,24 +33,22 @@ serve(async (req) => {
 
     if (fetchError) throw fetchError;
 
-    // Generate HTML for PDF
+    // Generate HTML for the handover protocol
     const html = generateProtocolHTML(appointment);
 
-    // Generate PDF using jsPDF (simple HTML-based approach)
-    // For production, consider using a proper PDF generation service
-    const pdfData = {
-      appointment_id,
-      generated_at: new Date().toISOString(),
-      html_content: html,
-    };
-
-    // Upload to storage
-    const fileName = `handover_${appointment_id}_${Date.now()}.json`;
+    // Upload as a proper HTML file that can be viewed and printed in the browser
+    // HTML files render correctly in the browser and can be printed to PDF via Ctrl+P
+    const fileName = `handover_${appointment_id}_${Date.now()}.html`;
     
+    // Convert HTML string to Uint8Array for upload
+    const encoder = new TextEncoder();
+    const htmlBytes = encoder.encode(html);
+
     const { error: uploadError } = await supabaseClient.storage
       .from('motorhome-photos')
-      .upload(`protocols/${fileName}`, JSON.stringify(pdfData, null, 2), {
-        contentType: 'application/json',
+      .upload(`protocols/${fileName}`, htmlBytes, {
+        contentType: 'text/html; charset=utf-8',
+        cacheControl: '3600',
       });
 
     if (uploadError) throw uploadError;
@@ -83,7 +81,14 @@ serve(async (req) => {
 });
 
 function generateProtocolHTML(appointment: any): string {
+  const motorhome = appointment.motorhomes || {};
+  const station = appointment.purchase_stations || {};
+  const profile = appointment.profiles || {};
+
   const date = new Date(appointment.appointment_date).toLocaleString('de-DE');
+  const mileage = motorhome.mileage != null
+    ? Number(motorhome.mileage).toLocaleString('de-DE')
+    : '—';
   
   return `
 <!DOCTYPE html>
@@ -91,15 +96,38 @@ function generateProtocolHTML(appointment: any): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Übergabeprotokoll</title>
+  <title>Übergabeprotokoll – ${motorhome.manufacturer || ''} ${motorhome.model || ''}</title>
   <style>
+    @media print {
+      body { margin: 0; padding: 20px; }
+      .no-print { display: none !important; }
+      @page { margin: 1.5cm; }
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       line-height: 1.6;
       color: #333;
       max-width: 800px;
       margin: 0 auto;
       padding: 40px 20px;
+      background: #fff;
+    }
+    .print-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #19753e;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    .print-button:hover {
+      background: #145f32;
     }
     .header {
       text-align: center;
@@ -158,6 +186,8 @@ function generateProtocolHTML(appointment: any): string {
   </style>
 </head>
 <body>
+  <button class="print-button no-print" onclick="window.print()">Als PDF drucken / speichern</button>
+
   <div class="header">
     <div class="logo">CaravanWert</div>
     <h2>Übergabeprotokoll</h2>
@@ -167,24 +197,24 @@ function generateProtocolHTML(appointment: any): string {
     <h1>Fahrzeugdaten</h1>
     <div class="info-row">
       <span class="label">Hersteller:</span>
-      <span class="value">${appointment.motorhomes.manufacturer}</span>
+      <span class="value">${motorhome.manufacturer || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Modell:</span>
-      <span class="value">${appointment.motorhomes.model}</span>
+      <span class="value">${motorhome.model || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Baujahr:</span>
-      <span class="value">${appointment.motorhomes.year}</span>
+      <span class="value">${motorhome.year || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Kilometerstand:</span>
-      <span class="value">${appointment.motorhomes.mileage.toLocaleString('de-DE')} km</span>
+      <span class="value">${mileage} km</span>
     </div>
-    ${appointment.motorhomes.vehicle_identification_number ? `
+    ${motorhome.vehicle_identification_number ? `
     <div class="info-row">
       <span class="label">Fahrzeug-Identifikationsnummer:</span>
-      <span class="value">${appointment.motorhomes.vehicle_identification_number}</span>
+      <span class="value">${motorhome.vehicle_identification_number}</span>
     </div>
     ` : ''}
   </div>
@@ -197,16 +227,16 @@ function generateProtocolHTML(appointment: any): string {
     </div>
     <div class="info-row">
       <span class="label">Ankaufstation:</span>
-      <span class="value">${appointment.purchase_stations.name}</span>
+      <span class="value">${station.name || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Adresse:</span>
-      <span class="value">${appointment.purchase_stations.address}, ${appointment.purchase_stations.city}</span>
+      <span class="value">${station.address || ''}, ${station.city || ''}</span>
     </div>
     ${appointment.payment_amount ? `
     <div class="info-row">
       <span class="label">Kaufpreis:</span>
-      <span class="value">${appointment.payment_amount.toLocaleString('de-DE')} €</span>
+      <span class="value">${Number(appointment.payment_amount).toLocaleString('de-DE')} €</span>
     </div>
     ` : ''}
     ${appointment.payment_method ? `
@@ -217,16 +247,16 @@ function generateProtocolHTML(appointment: any): string {
     ` : ''}
   </div>
 
-  ${appointment.profiles ? `
+  ${profile.email ? `
   <div class="section">
     <h1>Verkäuferdaten</h1>
     <div class="info-row">
       <span class="label">Name:</span>
-      <span class="value">${appointment.profiles.first_name || ''} ${appointment.profiles.last_name || ''}</span>
+      <span class="value">${profile.first_name || ''} ${profile.last_name || ''}</span>
     </div>
     <div class="info-row">
       <span class="label">E-Mail:</span>
-      <span class="value">${appointment.profiles.email}</span>
+      <span class="value">${profile.email}</span>
     </div>
   </div>
   ` : ''}

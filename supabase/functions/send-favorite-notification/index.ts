@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
-import { buildEmail, heading, paragraph, button, infoBox, amountDisplay } from "../_shared/email-builder.ts";
+import { buildEmailLayout, paragraph, button, detailRow, infoBox, greeting } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
@@ -22,6 +22,24 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Load site settings for email branding
+    const { data: settingsData } = await supabase
+      .from("site_settings")
+      .select("*")
+      .single();
+
+    const settings = settingsData || {
+      site_name: "CaravanWert",
+      site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
+      contact_email: "kontakt@caravanwert.de",
+      support_phone: "+49 511 51532476",
+    };
+
+    // Format price for display
+    const formattedPrice = new_price
+      ? Number(new_price).toLocaleString("de-DE", { style: "currency", currency: "EUR" })
+      : "–";
 
     // Get all users who have this motorhome as favorite
     const { data: favorites, error: favError } = await supabase
@@ -69,45 +87,43 @@ Deno.serve(async (req) => {
       if (profile?.email_bounced) continue;
 
       const firstName = profile?.first_name || "Nutzer";
+      const vehicleName = auction_title || "Wohnmobil";
       let subject = "";
-      let body = "";
+      let emailContent = "";
 
       if (event_type === "price_change") {
-        subject = `Preisänderung bei Ihrem Favoriten – ${auction_title || "Wohnmobil"}`;
-        body = [
-          heading(`Neues Gebot auf Ihren Favoriten`),
-          paragraph(`Hallo ${firstName},`),
+        subject = `Preisänderung bei Ihrem Favoriten – ${vehicleName}`;
+        emailContent = [
+          greeting(firstName),
           paragraph(`Bei einem Wohnmobil auf Ihrer Favoritenliste gibt es ein neues Gebot:`),
-          infoBox([
-            { label: "Fahrzeug", value: auction_title || "Wohnmobil" },
-            { label: "Neuer Preis", value: amountDisplay(new_price) },
-          ]),
+          infoBox("Neues Gebot", [
+            detailRow("Fahrzeug", vehicleName),
+            detailRow("Neuer Preis", formattedPrice),
+          ].join("")),
           paragraph(`Wenn Sie dieses Fahrzeug nicht verpassen möchten, geben Sie jetzt Ihr Gebot ab.`),
           button("Jetzt Gebot abgeben", `https://caravanwert.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ending") {
-        subject = `Ihr Favorit endet bald – ${auction_title || "Wohnmobil"}`;
-        body = [
-          heading(`Auktion endet bald!`),
-          paragraph(`Hallo ${firstName},`),
+        subject = `Ihr Favorit endet bald – ${vehicleName}`;
+        emailContent = [
+          greeting(firstName),
           paragraph(`Eine Auktion auf Ihrer Favoritenliste endet in Kürze:`),
-          infoBox([
-            { label: "Fahrzeug", value: auction_title || "Wohnmobil" },
-            { label: "Aktueller Preis", value: amountDisplay(new_price) },
-          ]),
+          infoBox("Auktion endet bald", [
+            detailRow("Fahrzeug", vehicleName),
+            detailRow("Aktueller Preis", formattedPrice),
+          ].join(""), "warning"),
           paragraph(`Verpassen Sie nicht Ihre Chance – geben Sie jetzt Ihr Gebot ab, bevor die Auktion endet.`),
           button("Zur Auktion", `https://caravanwert.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ended") {
-        subject = `Auktion beendet – ${auction_title || "Wohnmobil"}`;
-        body = [
-          heading(`Auktion beendet`),
-          paragraph(`Hallo ${firstName},`),
+        subject = `Auktion beendet – ${vehicleName}`;
+        emailContent = [
+          greeting(firstName),
           paragraph(`Eine Auktion auf Ihrer Favoritenliste wurde beendet:`),
-          infoBox([
-            { label: "Fahrzeug", value: auction_title || "Wohnmobil" },
-            { label: "Endpreis", value: amountDisplay(new_price) },
-          ]),
+          infoBox("Auktion beendet", [
+            detailRow("Fahrzeug", vehicleName),
+            detailRow("Endpreis", formattedPrice),
+          ].join(""), "info"),
           paragraph(`Entdecken Sie weitere spannende Auktionen auf unserer Plattform.`),
           button("Weitere Auktionen entdecken", `https://caravanwert.de/kaufen`),
         ].join("");
@@ -115,7 +131,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const html = buildEmail(body);
+      const html = buildEmailLayout(settings, subject, emailContent);
 
       try {
         const res = await fetch("https://api.resend.com/emails", {

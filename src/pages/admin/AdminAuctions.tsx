@@ -13,7 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2, Loader2, Mail, MapPin, AlertTriangle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2,
+  Loader2, Mail, MapPin, AlertTriangle, FileEdit, Radio,
+  XCircle, CheckCircle2,
+} from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -33,14 +38,12 @@ import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 
-/**
- * Helper: After activating an auction, check if the seller's email is unconfirmed
- * (i.e. account was created by admin via ConvertToMotorhomeDialog).
- * If so, automatically send a registration invite so the customer can access their dashboard.
- */
+// ============================================================================
+// Helper: Send registration invite after activating an auction
+// ============================================================================
+
 async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
   try {
-    // Load motorhome with seller info
     const { data: motorhome, error: mhError } = await supabase
       .from("motorhomes")
       .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name)")
@@ -58,7 +61,6 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
       return;
     }
 
-    // Send registration invite
     const customerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ");
     const { data, error } = await supabase.functions.invoke("send-registration-invite", {
       body: {
@@ -93,9 +95,62 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
     logger.info(`Registration invite sent to ${seller.email} for motorhome ${motorhome.id}`);
   } catch (err: any) {
     logger.error("Error in sendRegistrationInviteIfNeeded:", err);
-    // Non-critical: don't block the auction activation
   }
 }
+
+// ============================================================================
+// Tab definitions
+// ============================================================================
+
+type TabKey = "draft" | "active" | "unsold" | "sold";
+
+interface TabDef {
+  key: TabKey;
+  label: string;
+  icon: React.ElementType;
+  statuses: string[];
+  emptyText: string;
+  color: string;
+}
+
+const TABS: TabDef[] = [
+  {
+    key: "draft",
+    label: "Entwurf",
+    icon: FileEdit,
+    statuses: ["draft"],
+    emptyText: "Keine Entwürfe vorhanden",
+    color: "text-slate-600",
+  },
+  {
+    key: "active",
+    label: "Laufend",
+    icon: Radio,
+    statuses: ["active"],
+    emptyText: "Keine laufenden Auktionen",
+    color: "text-blue-600",
+  },
+  {
+    key: "unsold",
+    label: "Nicht verkauft",
+    icon: XCircle,
+    statuses: ["ended", "cancelled"],
+    emptyText: "Keine nicht verkauften Auktionen",
+    color: "text-red-600",
+  },
+  {
+    key: "sold",
+    label: "Verkauft",
+    icon: CheckCircle2,
+    statuses: ["sold"],
+    emptyText: "Keine verkauften Auktionen",
+    color: "text-green-600",
+  },
+];
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export default function AdminAuctions() {
   const queryClient = useQueryClient();
@@ -103,7 +158,9 @@ export default function AdminAuctions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>("draft");
 
+  // ---- Data Query ----
   const { data: auctions, isLoading } = useQuery({
     queryKey: ["adminAuctions"],
     queryFn: async () => {
@@ -134,13 +191,21 @@ export default function AdminAuctions() {
     },
   });
 
+  // ---- Filter auctions by tab ----
+  function getAuctionsForTab(tab: TabDef) {
+    if (!auctions) return [];
+    return auctions.filter((a) => tab.statuses.includes(a.status));
+  }
+
+  // ---- Count per tab ----
+  function getCountForTab(tab: TabDef): number {
+    if (!auctions) return 0;
+    return auctions.filter((a) => tab.statuses.includes(a.status)).length;
+  }
+
   // ---- Handle ?create=motorhomeId URL parameter ----
-  // When admin clicks "Auktion erstellen" from AdminMotorhomes or AdminMotorhomeDetail,
-  // they navigate to /admin/auctions?create={motorhomeId}
-  // We auto-create a draft auction for that motorhome
   const createAuctionMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
-      // Check if a draft auction already exists for this motorhome
       const { data: existing } = await supabase
         .from("auctions")
         .select("id")
@@ -152,7 +217,6 @@ export default function AdminAuctions() {
         return { id: existing.id, alreadyExists: true };
       }
 
-      // Create new draft auction
       const { data: auction, error } = await supabase
         .from("auctions")
         .insert({
@@ -173,8 +237,8 @@ export default function AdminAuctions() {
       } else {
         toast.success("Auktionsentwurf erfolgreich erstellt");
       }
-      // Clear the create parameter from URL
       setSearchParams({});
+      setActiveTab("draft");
     },
     onError: (error: any) => {
       toast.error(`Fehler beim Erstellen der Auktion: ${error.message}`);
@@ -191,6 +255,7 @@ export default function AdminAuctions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // ---- Export ----
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "auktionen",
     columns: [
@@ -239,6 +304,7 @@ export default function AdminAuctions() {
     ],
   });
 
+  // ---- Mutations ----
   const checkExpiredAuctionsMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('check-expired-auctions', {
@@ -259,9 +325,7 @@ export default function AdminAuctions() {
 
   const deleteAuctionMutation = useMutation({
     mutationFn: async (auctionId: string) => {
-      // First delete related bids
       await supabase.from('bids').delete().eq('auction_id', auctionId);
-      // Then delete the auction
       const { error } = await supabase.from('auctions').delete().eq('id', auctionId);
       if (error) throw error;
     },
@@ -295,7 +359,6 @@ export default function AdminAuctions() {
 
   const activateAuctionMutation = useMutation({
     mutationFn: async (auction: { id: string; motorhome_id: string }) => {
-      // Check if motorhome has a postal_code set
       const { data: mh } = await supabase
         .from('motorhomes')
         .select('postal_code, city')
@@ -306,28 +369,25 @@ export default function AdminAuctions() {
         throw new Error('PLZ_MISSING');
       }
 
-      // Set auction to active with end_time 7 days from now
       const endTime = new Date();
       endTime.setDate(endTime.getDate() + 7);
-      
+
       const { error } = await supabase
         .from('auctions')
-        .update({ 
+        .update({
           status: 'active',
           end_time: endTime.toISOString(),
           start_time: new Date().toISOString()
         })
         .eq('id', auction.id);
-      
-      if (error) throw error;
 
+      if (error) throw error;
       return auction;
     },
     onSuccess: (auction) => {
       toast.success("Auktion erfolgreich aktiviert");
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
 
-      // Automatically send registration invite to seller if their email is unconfirmed
       if (auction.motorhome_id) {
         sendRegistrationInviteIfNeeded(auction.motorhome_id);
       }
@@ -342,6 +402,7 @@ export default function AdminAuctions() {
     },
   });
 
+  // ---- Status Badge ----
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -359,8 +420,264 @@ export default function AdminAuctions() {
     }
   };
 
+  // ---- Render a single auction row ----
+  const renderAuctionRow = (auction: any) => {
+    const firstPhoto = auction.motorhome?.motorhome_photos
+      ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+
+    return (
+      <TableRow
+        key={auction.id}
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={() => navigate(`/admin/auctions/${auction.id}`)}
+      >
+        <TableCell>
+          <div className="w-16 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+            {firstPhoto ? (
+              <img
+                src={firstPhoto}
+                alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Car className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div>
+            <p className="font-medium">
+              {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {auction.motorhome?.year}
+            </p>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div>
+            <p className="text-sm">
+              {auction.motorhome?.seller?.first_name}{" "}
+              {auction.motorhome?.seller?.last_name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {auction.motorhome?.seller?.email}
+            </p>
+          </div>
+        </TableCell>
+        <TableCell>{getStatusBadge(auction.status)}</TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <span className="font-medium">
+              €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline">{auction.bids?.[0]?.count || 0}</Badge>
+        </TableCell>
+        <TableCell>
+          {auction.end_time ? (
+            <div className="flex items-center gap-1 text-sm">
+              <Clock className="w-4 h-4" />
+              {format(new Date(auction.end_time), "dd.MM.yyyy HH:mm", {
+                locale: de,
+              })}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            {/* Bearbeiten - immer sichtbar */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedAuction(auction);
+                setShowEditDialog(true);
+              }}
+              title="Bearbeiten"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+
+            {/* Aktivieren - nur bei Entwurf */}
+            {auction.status === "draft" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Auktion aktivieren">
+                    <Play className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="text-sm text-muted-foreground">
+                        Die Auktion wird für 7 Tage aktiviert und ist dann auf der Startseite sichtbar.
+                        Händler können ab sofort Gebote abgeben.
+                        {!auction.motorhome?.postal_code && (
+                          <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Achtung: Es wurde noch keine PLZ für den Fahrzeugstandort eingetragen. Bitte zuerst über &quot;Bearbeiten&quot; die PLZ eintragen.</span>
+                          </span>
+                        )}
+                        {auction.motorhome?.seller?.email && (
+                          <>
+                            <br /><br />
+                            <span className="flex items-center gap-1.5 text-blue-600">
+                              <Mail className="w-3.5 h-3.5" />
+                              Ein Registrierungslink wird automatisch an <strong>{auction.motorhome.seller.email}</strong> gesendet.
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => activateAuctionMutation.mutate({
+                        id: auction.id,
+                        motorhome_id: auction.motorhome_id,
+                      })}
+                      disabled={activateAuctionMutation.isPending}
+                    >
+                      {activateAuctionMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Aktivieren...</>
+                      ) : (
+                        "Aktivieren"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
+            {/* Löschen - nur bei Entwurf */}
+            {auction.status === "draft" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Entwurf löschen">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Entwurf löschen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Der Auktionsentwurf für "{auction.motorhome?.manufacturer} {auction.motorhome?.model}" wird endgültig gelöscht.
+                      Dieser Vorgang kann nicht rückgängig gemacht werden.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteAuctionMutation.mutate(auction.id)}
+                      disabled={deleteAuctionMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {deleteAuctionMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Löschen...</>
+                      ) : (
+                        "Endgültig löschen"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
+            {/* Schließen - bei Laufend oder Nicht verkauft (ended) */}
+            {(auction.status === "active" || auction.status === "ended") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Auktion manuell schließen">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion manuell schließen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird manuell geschlossen und der Höchstbietende (falls vorhanden) gewinnt.
+                      Dieser Vorgang kann nicht rückgängig gemacht werden.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => closeAuctionMutation.mutate(auction.id)}
+                      disabled={closeAuctionMutation.isPending}
+                    >
+                      Schließen
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  // ---- Render table for a tab ----
+  const renderTable = (tab: TabDef) => {
+    const tabAuctions = getAuctionsForTab(tab);
+
+    return (
+      <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[80px]">Bild</TableHead>
+              <TableHead>Fahrzeug</TableHead>
+              <TableHead>Verkäufer</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Aktuelles Gebot</TableHead>
+              <TableHead>Gebote</TableHead>
+              <TableHead>Endet am</TableHead>
+              <TableHead className="text-right">Aktionen</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Lädt...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : tabAuctions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <tab.icon className={`w-8 h-8 ${tab.color} opacity-50`} />
+                    <p>{tab.emptyText}</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              tabAuctions.map(renderAuctionRow)
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Auktionsverwaltung</h1>
@@ -380,7 +697,7 @@ export default function AdminAuctions() {
             className="gap-2"
           >
             <RotateCw className={`w-4 h-4 ${checkExpiredAuctionsMutation.isPending ? 'animate-spin' : ''}`} />
-            Abgelaufene Auktionen prüfen
+            Abgelaufene prüfen
           </Button>
         </div>
       </div>
@@ -395,237 +712,41 @@ export default function AdminAuctions() {
         </Card>
       )}
 
-      <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Bild</TableHead>
-              <TableHead>Fahrzeug</TableHead>
-              <TableHead>Verkäufer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Aktuelles Gebot</TableHead>
-              <TableHead>Gebote</TableHead>
-              <TableHead>Endet am</TableHead>
-              <TableHead className="text-right">Aktionen</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  Lädt...
-                </TableCell>
-              </TableRow>
-            ) : auctions?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  Keine Auktionen gefunden
-                </TableCell>
-              </TableRow>
-            ) : (
-              auctions?.map((auction) => {
-                const firstPhoto = auction.motorhome?.motorhome_photos
-                  ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
-
-                return (
-                  <TableRow 
-                    key={auction.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/admin/auctions/${auction.id}`)}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+        <TabsList className="grid w-full grid-cols-4 h-auto">
+          {TABS.map((tab) => {
+            const count = getCountForTab(tab);
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="flex items-center gap-2 py-3 data-[state=active]:shadow-sm"
+              >
+                <Icon className={`w-4 h-4 ${activeTab === tab.key ? "" : tab.color}`} />
+                <span>{tab.label}</span>
+                {count > 0 && (
+                  <Badge
+                    variant={activeTab === tab.key ? "secondary" : "outline"}
+                    className="ml-1 text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center"
                   >
-                    <TableCell>
-                      <div className="w-16 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                        {firstPhoto ? (
-                          <img 
-                            src={firstPhoto}
-                            alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Car className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {auction.motorhome?.manufacturer} {auction.motorhome?.model}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {auction.motorhome?.year}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">
-                          {auction.motorhome?.seller?.first_name}{" "}
-                          {auction.motorhome?.seller?.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {auction.motorhome?.seller?.email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(auction.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                        <span className="font-medium">
-                          €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{auction.bids?.[0]?.count || 0}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {auction.end_time ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Clock className="w-4 h-4" />
-                          {format(new Date(auction.end_time), "dd.MM.yyyy HH:mm", {
-                            locale: de,
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedAuction(auction);
-                            setShowEditDialog(true);
-                          }}
-                          title="Bearbeiten"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        {auction.status === "draft" && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Auktion aktivieren">
-                                <Play className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
-                                <AlertDialogDescription asChild>
-                                  <div className="text-sm text-muted-foreground">
-                                  Die Auktion wird für 7 Tage aktiviert und ist dann auf der Startseite sichtbar.
-                                  Händler können ab sofort Gebote abgeben.
-                                  {!auction.motorhome?.postal_code && (
-                                    <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
-                                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                                      <span>Achtung: Es wurde noch keine PLZ für den Fahrzeugstandort eingetragen. Bitte zuerst über &quot;Bearbeiten&quot; die PLZ eintragen.</span>
-                                    </span>
-                                  )}
-                                  {auction.motorhome?.seller?.email && (
-                                    <>
-                                      <br /><br />
-                                      <span className="flex items-center gap-1.5 text-blue-600">
-                                        <Mail className="w-3.5 h-3.5" />
-                                        Ein Registrierungslink wird automatisch an <strong>{auction.motorhome.seller.email}</strong> gesendet.
-                                      </span>
-                                    </>
-                                  )}
-                                  </div>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => activateAuctionMutation.mutate({
-                                    id: auction.id,
-                                    motorhome_id: auction.motorhome_id,
-                                  })}
-                                  disabled={activateAuctionMutation.isPending}
-                                >
-                                  {activateAuctionMutation.isPending ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Aktivieren...</>
-                                  ) : (
-                                    "Aktivieren"
-                                  )}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                        {auction.status === "draft" && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Entwurf löschen">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Entwurf löschen?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Der Auktionsentwurf für "{auction.motorhome?.manufacturer} {auction.motorhome?.model}" wird endgültig gelöscht.
-                                  Dieser Vorgang kann nicht rückgängig gemacht werden.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteAuctionMutation.mutate(auction.id)}
-                                  disabled={deleteAuctionMutation.isPending}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  {deleteAuctionMutation.isPending ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Löschen...</>
-                                  ) : (
-                                    "Endgültig löschen"
-                                  )}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                        {(auction.status === "active" || auction.status === "ended") && (
-                           <AlertDialog>
-                           <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                               <X className="w-4 h-4" />
-                             </Button>
-                           </AlertDialogTrigger>
-                           <AlertDialogContent>
-                             <AlertDialogHeader>
-                               <AlertDialogTitle>Auktion manuell schließen?</AlertDialogTitle>
-                               <AlertDialogDescription>
-                                 Die Auktion wird manuell geschlossen und der Höchstbietende (falls vorhanden) gewinnt.
-                                 Dieser Vorgang kann nicht rückgängig gemacht werden.
-                               </AlertDialogDescription>
-                             </AlertDialogHeader>
-                             <AlertDialogFooter>
-                               <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                               <AlertDialogAction
-                                 onClick={() => closeAuctionMutation.mutate(auction.id)}
-                                 disabled={closeAuctionMutation.isPending}
-                               >
-                                 Schließen
-                               </AlertDialogAction>
-                             </AlertDialogFooter>
-                           </AlertDialogContent>
-                         </AlertDialog>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {TABS.map((tab) => (
+          <TabsContent key={tab.key} value={tab.key} className="mt-4">
+            {renderTable(tab)}
+          </TabsContent>
+        ))}
+      </Tabs>
+
+      {/* Edit Dialog */}
       {selectedAuction && (
         <AuctionEditDialog
           auction={selectedAuction}

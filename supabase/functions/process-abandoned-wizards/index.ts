@@ -28,17 +28,14 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  */
 
 const STEP_NAMES: Record<number, string> = {
-  1: "Fahrzeugdetails",
-  2: "Technische Daten",
-  3: "Abmessungen & Kapazität",
-  4: "Innenausstattung",
-  5: "Ausstattung & Features",
-  6: "Fotos hochladen",
-  7: "Mängel angeben",
-  8: "Verkaufsweg wählen",
-  9: "Termin / Überprüfung",
-  10: "Überprüfung / Anmeldung",
-  11: "Anmeldung & Absenden",
+  1: "Fahrzeugtyp",
+  2: "Fahrzeugdaten",
+  3: "Kontakt",
+  4: "Details & Technik",
+  5: "Ausstattung",
+  6: "Fotos",
+  7: "Verkaufsweg",
+  8: "Standort & Konto",
 };
 
 interface SiteSettings {
@@ -74,7 +71,7 @@ function buildFirstReminderEmail(
 
   const customerName = session.customer_name || "Kunde";
   const currentStep = session.current_step || 1;
-  const totalSteps = session.total_steps || 10;
+  const totalSteps = session.total_steps || 8;
   const progressPercent = Math.round((currentStep / totalSteps) * 100);
   const stepName = STEP_NAMES[currentStep] || `Schritt ${currentStep}`;
   const resumeUrl = `https://caravanwert.de/verkaufen/wizard?step=${currentStep}`;
@@ -177,7 +174,7 @@ function buildFollowupEmail(
 
   const customerName = session.customer_name || "Kunde";
   const currentStep = session.current_step || 1;
-  const totalSteps = session.total_steps || 10;
+  const totalSteps = session.total_steps || 8;
   const resumeUrl = `https://caravanwert.de/verkaufen/wizard?step=${currentStep}`;
 
   let content = "";

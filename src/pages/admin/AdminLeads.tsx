@@ -199,17 +199,14 @@ type DispositionItem = {
 // ============================================================================
 
 const STEP_NAMES: Record<number, string> = {
-  1: "Fahrzeugdetails",
-  2: "Technik",
-  3: "Abmessungen",
-  4: "Innenraum",
+  1: "Fahrzeugtyp",
+  2: "Fahrzeugdaten",
+  3: "Kontakt (Quick)",
+  4: "Details & Technik",
   5: "Ausstattung",
   6: "Fotos",
-  7: "Mängel",
-  8: "Verkaufsweg",
-  9: "Termin/Überprüfung",
-  10: "Überprüfung/Anmeldung",
-  11: "Anmeldung",
+  7: "Verkaufsweg",
+  8: "Standort & Konto",
 };
 
 // ============================================================================

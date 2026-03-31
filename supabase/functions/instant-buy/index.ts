@@ -47,7 +47,24 @@ Deno.serve(async (req) => {
       throw new Error('Nicht autorisiert: Ungültiger Token');
     }
 
-    // 2. Validate request body
+    // 2. Verify dealer role and approved status
+    const { data: buyerProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_type, dealer_status')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !buyerProfile) {
+      console.error('Profile fetch error:', profileError?.message);
+      throw new Error('Benutzerprofil konnte nicht geladen werden');
+    }
+
+    if (buyerProfile.user_type !== 'dealer' || buyerProfile.dealer_status !== 'approved') {
+      console.warn(`Unauthorized instant-buy attempt by user ${user.id} (type: ${buyerProfile.user_type}, status: ${buyerProfile.dealer_status})`);
+      throw new Error('Nur freigeschaltete H\u00e4ndler d\u00fcrfen Sofortk\u00e4ufe t\u00e4tigen');
+    }
+
+    // 3. Validate request body
     const rawBody = await req.json();
     const validation = InstantBuySchema.safeParse(rawBody);
     if (!validation.success) {

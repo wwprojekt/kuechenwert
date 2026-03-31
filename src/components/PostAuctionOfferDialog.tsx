@@ -65,6 +65,43 @@ export function PostAuctionOfferDialog({
     setIsSubmitting(true);
 
     try {
+      // Validate auction is still in kaufchance status and not expired
+      const { data: auction, error: auctionError } = await supabase
+        .from('auctions')
+        .select('status, kaufchance_expires_at')
+        .eq('id', auctionId)
+        .single();
+
+      if (auctionError || !auction) {
+        toast({
+          title: 'Auktion nicht gefunden',
+          description: 'Die Auktion existiert nicht mehr.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (auction.status !== 'kaufchance') {
+        toast({
+          title: 'Kaufchance nicht mehr verfügbar',
+          description: 'Diese Auktion akzeptiert keine Kaufangebote mehr.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (auction.kaufchance_expires_at && new Date(auction.kaufchance_expires_at) < new Date()) {
+        toast({
+          title: 'Kaufchance abgelaufen',
+          description: 'Das Zeitfenster für Kaufangebote ist abgelaufen.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Set offer to expire in 24 hours
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);

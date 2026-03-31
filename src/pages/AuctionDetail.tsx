@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
+import { ensureValidSession } from "@/lib/sessionGuard";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
@@ -430,9 +431,22 @@ const AuctionDetail = () => {
 
      setIsSubmitting(true);
     try {
-      // Refresh session token before instant buy to prevent JWT expiry errors
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
+      // Ensure valid session before instant buy (uses sessionGuard pattern)
+      const { user: validUser, sessionExpired } = await ensureValidSession();
+      if (!validUser || sessionExpired) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/auktion/${id}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get the current session token after validation
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
         toast({
           title: "Sitzung abgelaufen",
           description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -444,11 +458,9 @@ const AuctionDetail = () => {
       }
 
       // Call server-side Edge Function for secure instant buy
-      // Pass the fresh access token explicitly to avoid race conditions
-      // where getSession() might return a stale/null token
       const { data, error } = await supabase.functions.invoke('instant-buy', {
         body: { auctionId: id },
-        headers: { Authorization: `Bearer ${refreshData.session.access_token}` },
+        headers: { Authorization: `Bearer ${currentSession.access_token}` },
       });
 
       if (error) {
@@ -551,9 +563,22 @@ const AuctionDetail = () => {
     setIsSubmitting(true);
 
     try {
-      // Refresh session token before placing bid to prevent JWT expiry errors
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
+      // Ensure valid session before placing bid (uses sessionGuard pattern)
+      const { user: validUser, sessionExpired } = await ensureValidSession();
+      if (!validUser || sessionExpired) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/auktion/${id}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get the current session token after validation
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
         toast({
           title: "Sitzung abgelaufen",
           description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -578,9 +603,7 @@ const AuctionDetail = () => {
         }
       }
 
-      // Place bid via edge function
-      // Pass the fresh access token explicitly to avoid race conditions
-      // where getSession() might return a stale/null token (causing ANON KEY fallback)
+      // Place bid via edge function with validated session token
       const { data, error } = await supabase.functions.invoke('place-bid', {
         body: {
           auctionId: id,
@@ -588,7 +611,7 @@ const AuctionDetail = () => {
           isAutobid: enableAutobid,
           maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
         },
-        headers: { Authorization: `Bearer ${refreshData.session.access_token}` },
+        headers: { Authorization: `Bearer ${currentSession.access_token}` },
       });
 
       if (error) {

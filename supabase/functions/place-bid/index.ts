@@ -69,6 +69,23 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    // ─── Verify dealer role and approved status ──────────────────
+    const { data: bidderProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_type, dealer_status')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !bidderProfile) {
+      console.error('Profile fetch error:', profileError?.message);
+      throw new Error('Benutzerprofil konnte nicht geladen werden');
+    }
+
+    if (bidderProfile.user_type !== 'dealer' || bidderProfile.dealer_status !== 'approved') {
+      console.warn(`Unauthorized bid attempt by user ${user.id} (type: ${bidderProfile.user_type}, status: ${bidderProfile.dealer_status})`);
+      throw new Error('Nur freigeschaltete H\u00e4ndler d\u00fcrfen Gebote abgeben');
+    }
+
     // Parse and validate request body with Zod
     const rawBody = await req.json();
     const validationResult = BidRequestSchema.safeParse(rawBody);

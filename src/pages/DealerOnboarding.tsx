@@ -20,6 +20,7 @@ import PageLayout from '@/components/PageLayout';
 import { SepaMandate } from '@/components/SepaMandate';
 import { LegalDocumentUpload } from '@/components/LegalDocumentUpload';
 import { useSettings } from '@/contexts/SettingsContext';
+import { passwordSchema, emailSchema } from '@/lib/validation';
 
 interface DealerRegistrationForm {
   // Auth data
@@ -98,17 +99,34 @@ export default function DealerOnboarding() {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
   const validateStep = (step: number): boolean => {
     switch (step) {
-      case 1: // Account setup
-        return !!(
-          formData.email &&
-          formData.password &&
-          formData.password === formData.confirmPassword &&
-          formData.first_name &&
-          formData.last_name &&
-          formData.phone
-        );
+      case 1: { // Account setup
+        const errors: string[] = [];
+        
+        if (!formData.email || !formData.password || !formData.confirmPassword || !formData.first_name || !formData.last_name || !formData.phone) {
+          return false;
+        }
+
+        const emailResult = emailSchema.safeParse(formData.email);
+        if (!emailResult.success) {
+          errors.push(emailResult.error.errors[0]?.message || 'Ungültige E-Mail');
+        }
+
+        const passwordResult = passwordSchema.safeParse(formData.password);
+        if (!passwordResult.success) {
+          errors.push(passwordResult.error.errors[0]?.message || 'Ungültiges Passwort');
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          errors.push('Passwörter stimmen nicht überein');
+        }
+
+        setValidationErrors(errors);
+        return errors.length === 0;
+      }
       case 2: // Company info
         return !!(
           formData.company_name &&
@@ -127,11 +145,14 @@ export default function DealerOnboarding() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
+      setValidationErrors([]);
       setCurrentStep(prev => Math.min(prev + 1, 5));
     } else {
       toast({
         title: 'Unvollständige Angaben',
-        description: 'Bitte füllen Sie alle erforderlichen Felder aus',
+        description: validationErrors.length > 0 
+          ? validationErrors[0] 
+          : 'Bitte füllen Sie alle erforderlichen Felder aus',
         variant: 'destructive',
       });
     }
@@ -186,18 +207,29 @@ export default function DealerOnboarding() {
 
       // The dealer_application is created by the handle_new_user database trigger
       // (runs with SECURITY DEFINER, bypassing RLS)
-      // Fetch the created application to get its ID
-      const { data: applicationData, error: applicationError } = await supabase
-        .from('dealer_applications')
-        .select('id')
-        .eq('user_id', authData.user.id)
-        .single();
+      // Fetch the created application to get its ID (with retry for trigger delay)
+      let fetchedApplicationId: string | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: applicationData, error: applicationError } = await supabase
+          .from('dealer_applications')
+          .select('id')
+          .eq('user_id', authData.user.id)
+          .single();
 
-      if (applicationError) {
-        logger.warn('Could not fetch dealer application (may need email confirmation first):', applicationError);
+        if (applicationData?.id) {
+          fetchedApplicationId = applicationData.id;
+          break;
+        }
+
+        if (attempt < 2) {
+          logger.warn(`Dealer application not yet available (attempt ${attempt + 1}/3), retrying in 1s...`, applicationError);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          logger.warn('Could not fetch dealer application after 3 attempts (may need email confirmation first):', applicationError);
+        }
       }
 
-      setDealerApplicationId(applicationData?.id || null);
+      setDealerApplicationId(fetchedApplicationId);
       setCurrentStep(4); // Move to SEPA mandate step
 
       // Google Ads: Enhanced Conversions + Händler-Onboarding Konto erstellt
@@ -320,6 +352,43 @@ export default function DealerOnboarding() {
               
               {currentStep === 5 && dealerApplicationId && (
                 <DocumentUploadStep dealerApplicationId={dealerApplicationId} />
+              )}
+
+              {/* Fallback: Show message when dealerApplicationId is missing on Step 4/5 */}
+              {(currentStep === 4 || currentStep === 5) && !dealerApplicationId && (
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-amber-600 text-lg font-semibold">
+                    Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse
+                  </div>
+                  <p className="text-muted-foreground">
+                    Wir haben Ihnen eine Bestätigungs-E-Mail gesendet. Bitte klicken Sie auf den Link in der E-Mail und laden Sie diese Seite anschließend neu.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                          const { data: appData } = await supabase
+                            .from('dealer_applications')
+                            .select('id')
+                            .eq('user_id', user.id)
+                            .single();
+                          if (appData?.id) {
+                            setDealerApplicationId(appData.id);
+                            toast({ title: 'Erfolgreich!', description: 'Ihre Bewerbung wurde gefunden. Sie können fortfahren.' });
+                          } else {
+                            toast({ title: 'Noch nicht verfügbar', description: 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.', variant: 'destructive' });
+                          }
+                        }
+                      } catch (e) {
+                        logger.error('Retry fetch dealer application:', e);
+                      }
+                    }}
+                  >
+                    Erneut prüfen
+                  </Button>
+                </div>
               )}
             </CardContent>
 

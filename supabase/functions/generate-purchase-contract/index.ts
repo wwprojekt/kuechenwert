@@ -140,6 +140,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ─── Initialize Supabase client ──────────────────────────────
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     const { auctionId, motorhomeId, buyerId, sellerId, salePrice }: ContractRequest = await req.json();
 
     if (!auctionId || !motorhomeId || !buyerId || !sellerId || !salePrice) {

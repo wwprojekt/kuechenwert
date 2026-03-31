@@ -21,7 +21,8 @@ export function lazyRetry<T extends ComponentType<unknown>>(
         (error.message.includes("Failed to fetch dynamically imported module") ||
           error.message.includes("Loading chunk") ||
           error.message.includes("Loading CSS chunk") ||
-          error.message.includes("Importing a module script failed"));
+          error.message.includes("Importing a module script failed") ||
+          error.message.includes("error loading dynamically imported module"));
 
       if (isChunkError) {
         // Only attempt one reload to avoid infinite loops

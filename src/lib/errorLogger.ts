@@ -66,6 +66,13 @@ class ErrorLogger {
   private setupGlobalHandlers(): void {
     // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
+      // Filter out CefSharp bot errors (Microsoft Outlook SafeSearch, security scanners)
+      // These are not real user errors — see: https://trackjs.com/javascript-errors/object-not-found-matching-id-methodname-paramcount/
+      const reasonStr = String(event.reason || '');
+      if (reasonStr.includes('Object Not Found Matching Id')) {
+        return;
+      }
+
       this.logError({
         message: `Unhandled Promise Rejection: ${event.reason}`,
         stack: event.reason?.stack,

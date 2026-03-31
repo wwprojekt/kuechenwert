@@ -278,7 +278,7 @@ export const SearchAlerts = () => {
                   <div className="space-y-2">
                     <Label>Hersteller (optional)</Label>
                     <Select
-                      value={alertForm.criteria.manufacturer || ''}
+                      value={alertForm.criteria.manufacturer || '__all__'}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
                         criteria: { ...alertForm.criteria, manufacturer: value === '__all__' ? undefined : value }
@@ -301,7 +301,7 @@ export const SearchAlerts = () => {
                   <div className="space-y-2">
                     <Label>Aufbauart (optional)</Label>
                     <Select
-                      value={alertForm.criteria.body_type || ''}
+                      value={alertForm.criteria.body_type || '__all__'}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
                         criteria: { ...alertForm.criteria, body_type: value === '__all__' ? undefined : value }
@@ -368,10 +368,10 @@ export const SearchAlerts = () => {
                   <div className="space-y-2">
                     <Label>Schlafplätze (optional)</Label>
                     <Select
-                      value={alertForm.criteria.sleeping_places?.toString() || ''}
+                      value={alertForm.criteria.sleeping_places?.toString() || '__all__'}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
-                        criteria: { ...alertForm.criteria, sleeping_places: value && value !== '__all__' ? parseInt(value) : undefined }
+                        criteria: { ...alertForm.criteria, sleeping_places: value === '__all__' ? undefined : parseInt(value) }
                       })}
                     >
                       <SelectTrigger>

@@ -154,6 +154,7 @@ interface ValuationLead {
   mileage: number | null;
   condition: string | null;
   body_type: string | null;
+  vehicle_type: string | null;
   message: string | null;
   source: string;
   estimated_value_min: number | null;
@@ -224,6 +225,7 @@ const FIELD_LABELS: Record<string, string> = {
   body_type: "Aufbauart",
   mileage: "Kilometerstand",
   vehicleType: "Fahrzeugtyp",
+  vehicle_type: "Fahrzeugtyp",
   // Technik
   fuelType: "Kraftstoff",
   fuel_type: "Kraftstoff",
@@ -2202,9 +2204,9 @@ export default function AdminLeads() {
                           <span className="text-sm">
                             {[lead.manufacturer, lead.model].filter(Boolean).join(" ") || "-"}
                           </span>
-                          {(lead.year || lead.body_type) && (
+                          {(lead.year || lead.body_type || lead.vehicle_type) && (
                             <p className="text-xs text-muted-foreground">
-                              {[lead.body_type, lead.year ? `BJ ${lead.year}` : null, lead.mileage ? `${lead.mileage.toLocaleString("de-DE")} km` : null].filter(Boolean).join(" · ")}
+                              {[lead.vehicle_type, lead.body_type, lead.year ? `BJ ${lead.year}` : null, lead.mileage ? `${lead.mileage.toLocaleString("de-DE")} km` : null].filter(Boolean).join(" · ")}
                             </p>
                           )}
                           {lead.condition && (

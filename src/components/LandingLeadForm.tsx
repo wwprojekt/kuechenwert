@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, CheckCircle, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { vehicleTypes, popularManufacturers, bodyTypes } from "@/lib/vehicle-data";
+import { vehicleTypes, popularManufacturers, wohnwagenManufacturers, bodyTypes, wohnwagenBodyTypes } from "@/lib/vehicle-data";
 import { captureOrUpdateLead } from "@/lib/leadTrackingService";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,9 @@ const BODY_TYPE_MAP: Record<string, string> = {
   "Alkoven": "alkoven",
   "Kastenwagen": "kastenwagen",
   "Campingbus": "campingbus",
+  "Wohnwagen": "wohnwagen",
+  "Faltcaravan": "faltcaravan",
+  "Mobilheim": "mobilheim",
 };
 
 interface LandingLeadFormProps {
@@ -29,6 +32,10 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
   const [vehicleType, setVehicleType] = useState("");
   const [manufacturer, setManufacturer] = useState(defaultManufacturer || "");
   const [bodyType, setBodyType] = useState("");
+
+  const isWohnwagen = vehicleType === "Wohnwagen";
+  const currentManufacturers = isWohnwagen ? wohnwagenManufacturers : popularManufacturers;
+  const currentBodyTypes = isWohnwagen ? wohnwagenBodyTypes : bodyTypes;
 
   const handleStartWertrechner = async () => {
     const errors: string[] = [];
@@ -60,6 +67,7 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
     const params = new URLSearchParams();
     params.set("bodyType", mappedBodyType);
     params.set("manufacturer", manufacturer);
+    params.set("vehicleType", vehicleType);
     params.set("from", "landing");
 
     navigate(`/wertrechner?${params.toString()}`);
@@ -77,7 +85,12 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          <Select value={vehicleType} onValueChange={setVehicleType}>
+          <Select value={vehicleType} onValueChange={(val) => {
+              setVehicleType(val);
+              // Reset Hersteller und Kategorie bei Wechsel der Fahrzeugkategorie
+              setManufacturer("");
+              setBodyType("");
+            }}>
             <SelectTrigger className="h-11 border-2">
               <SelectValue placeholder="Fahrzeugtyp wählen" />
             </SelectTrigger>
@@ -95,7 +108,7 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
               <SelectValue placeholder="Marke wählen" />
             </SelectTrigger>
             <SelectContent>
-              {popularManufacturers.map((m) => (
+              {currentManufacturers.map((m) => (
                 <SelectItem key={m} value={m}>
                   {m}
                 </SelectItem>
@@ -108,7 +121,7 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
               <SelectValue placeholder="Kategorie wählen" />
             </SelectTrigger>
             <SelectContent>
-              {bodyTypes.map((bt) => (
+              {currentBodyTypes.map((bt) => (
                 <SelectItem key={bt} value={bt}>
                   {bt}
                 </SelectItem>

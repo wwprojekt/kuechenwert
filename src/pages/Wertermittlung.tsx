@@ -81,6 +81,7 @@ const Wertermittlung = () => {
         condition: data.condition || null,
         message: data.message || null,
         source: "wertermittlung",
+        vehicle_type: "Wohnmobil",
       } as any);
 
       if (error) throw error;

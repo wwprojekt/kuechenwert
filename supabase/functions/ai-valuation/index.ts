@@ -25,6 +25,7 @@ interface ValuationRequest {
   condition: string;
   algorithmMin: number;
   algorithmMax: number;
+  vehicleType?: string; // "Wohnmobil" oder "Wohnwagen"
 }
 
 interface TrainingDataPoint {
@@ -58,8 +59,10 @@ Deno.serve(async (req) => {
   try {
     const requestData: ValuationRequest = await req.json();
 
-    // Validate required fields
-    if (!requestData.bodyType || !requestData.year || requestData.mileage === undefined || !requestData.condition) {
+    const isWohnwagen = requestData.vehicleType === 'Wohnwagen';
+
+    // Validate required fields (Wohnwagen hat keinen Kilometerstand)
+    if (!requestData.bodyType || !requestData.year || (!isWohnwagen && requestData.mileage === undefined) || !requestData.condition) {
       return new Response(
         JSON.stringify({ success: false, error: 'Fehlende Pflichtfelder' }),
         { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
@@ -139,7 +142,12 @@ Deno.serve(async (req) => {
     const age = currentYear - requestData.year;
     const algoAvg = Math.round((requestData.algorithmMin + requestData.algorithmMax) / 2);
 
-    const prompt = `Du bist ein Experte für Wohnmobil-Bewertungen auf dem deutschen Markt.
+    const vehicleLabel = isWohnwagen ? 'Wohnwagen' : 'Wohnmobil';
+    const mileageInfo = isWohnwagen
+      ? '- Kilometerstand: Nicht relevant (Wohnwagen ohne Motor)'
+      : `- Kilometerstand: ${(requestData.mileage || 0).toLocaleString('de-DE')} km`;
+
+    const prompt = `Du bist ein Experte für ${vehicleLabel}-Bewertungen auf dem deutschen Markt.
 
 Hier sind ${trainingCount} bisherige Bewertungen von unserem Experten. Jede Zeile enthält: Hersteller, Modell, Aufbautyp, Baujahr, Kilometerstand, Zustand, Preisklasse, algorithmischer Schätzwert und der tatsächliche Expertenwert:
 
@@ -148,14 +156,15 @@ ${trainingText}
 Analysiere die Muster in den Expertenbewertungen:
 - Wie weicht der Experte vom Algorithmus ab?
 - Welche Marken/Typen bewertet der Experte höher oder niedriger?
-- Gibt es Muster bei Alter, Kilometerstand oder Zustand?
+- Gibt es Muster bei Alter${isWohnwagen ? '' : ', Kilometerstand'} oder Zustand?
 
-Jetzt bewerte dieses neue Fahrzeug:
+Jetzt bewerte diesen neuen ${vehicleLabel}:
+- Fahrzeugkategorie: ${vehicleLabel}
 - Hersteller: ${requestData.manufacturer || 'Unbekannt'}
 - Modell: ${requestData.model || 'Unbekannt'}
 - Aufbautyp: ${requestData.bodyType}
 - Baujahr: ${requestData.year} (${age} Jahre alt)
-- Kilometerstand: ${requestData.mileage.toLocaleString('de-DE')} km
+${mileageInfo}
 - Zustand: ${requestData.condition}
 - Algorithmischer Schätzwert: ${algoAvg.toLocaleString('de-DE')}€ (${requestData.algorithmMin.toLocaleString('de-DE')}€ - ${requestData.algorithmMax.toLocaleString('de-DE')}€)
 
@@ -178,7 +187,7 @@ Antworte NUR im folgenden JSON-Format, ohne weitere Erklärung:
         messages: [
           {
             role: 'system',
-            content: 'Du bist ein KI-Bewertungsassistent für Wohnmobile. Du lernst aus Expertenbewertungen und gibst präzise Wertschätzungen ab. Antworte immer nur mit validem JSON.'
+            content: `Du bist ein KI-Bewertungsassistent für ${vehicleLabel}. Du lernst aus Expertenbewertungen und gibst präzise Wertschätzungen ab. Antworte immer nur mit validem JSON.`
           },
           { role: 'user', content: prompt }
         ],

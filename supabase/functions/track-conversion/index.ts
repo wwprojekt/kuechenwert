@@ -155,10 +155,9 @@ const handler = async (req: Request): Promise<Response> => {
         if (model) eventParams.vehicle_model = model;
         if (estimated_min) eventParams.estimated_value_min = estimated_min;
         if (estimated_max) eventParams.estimated_value_max = estimated_max;
-        if (estimated_min && estimated_max) {
-          eventParams.value = Math.round((estimated_min + estimated_max) / 2);
-          eventParams.currency = "EUR";
-        }
+        // Fester Conversion Value: 5 EUR pro Lead
+        eventParams.value = 5.0;
+        eventParams.currency = "EUR";
 
         // GA4 Client-ID: Vom Client übernommen oder serverseitig generiert
         const ga4ClientId = client_id || `server.${Date.now()}.${Math.random().toString(36).substring(2, 9)}`;
@@ -261,10 +260,8 @@ const handler = async (req: Request): Promise<Response> => {
 
         // 2. Conversion-Daten vorbereiten
         const conversionDateTime = new Date().toISOString().replace("T", " ").replace("Z", "+00:00");
-        // Werte sind bereits in Euro (z.B. 15000, 20000), nicht in Cent
-        const conversionValue = estimated_min && estimated_max
-          ? Math.round((estimated_min + estimated_max) / 2)
-          : 10.0;
+        // Fester Conversion Value: 5 EUR pro Lead
+        const conversionValue = 5.0;
 
         // Conversion Action ID basierend auf Lead-Typ auswählen
         const conversionActionMap: Record<string, string> = {

@@ -179,14 +179,14 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
 export async function trackLandingPageLead(landingPage: string, vehicleInfo?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('landing_page');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.LANDING_PAGE_LEAD, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.LANDING_PAGE_LEAD, 5.0, txId);
 
   // GA4 + Google Ads: generate_lead Event (GA4 empfohlenes Event)
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: `landing_page_lead_${landingPage}`,
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'landing_page',
     landing_page: landingPage,
@@ -202,14 +202,14 @@ export async function trackLandingPageLead(landingPage: string, vehicleInfo?: st
 export async function trackKontaktformularGesendet(transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('kontakt');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, 5.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'kontaktformular_gesendet',
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'kontaktformular',
   });
@@ -230,14 +230,14 @@ export async function trackKontaktformularGesendet(transactionId?: string): Prom
 export async function trackWertermittlungLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wertermittlung');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, 5.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertermittlung_lead',
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'wertermittlung',
     vehicle_info: vehicleInfo || '',
@@ -259,14 +259,14 @@ export async function trackWertermittlungLead(vehicleInfo?: string, transactionI
 export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wertrechner');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, 5.0, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertrechner_lead',
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'wertrechner',
     vehicle_info: vehicleInfo || '',
@@ -288,13 +288,13 @@ export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?:
 export async function trackTerminbuchung(station?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('terminbuchung');
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, 5.0, txId);
 
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'terminbuchung',
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'terminbuchung',
     station: station || '',
@@ -359,27 +359,27 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
 export async function trackWizardCompleted(vehicleInfo: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wizard');
   // Google Ads: Primäre Conversion – Wizard Abgeschlossen (mit beacon transport)
-  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 10.0, txId);
+  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 5.0, txId);
 
   // Google Ads: Bestehende Conversion – Bewertung abgeschlossen (mit beacon transport)
   // Eigene Transaction ID damit diese Conversion separat dedupliziert wird
-  await sendConversion(CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN, 50.0, `${txId}_bewertung`);
+  await sendConversion(CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN, 5.0, `${txId}_bewertung`);
 
   // GA4 Zielgruppe 'Wizard-Abbrecher' verwendet wizard_complete als Ausschluss
   safeGtag('event', 'wizard_complete', {
     event_category: 'Wizard',
     vehicle_info: vehicleInfo,
-    value: 50.0,
+    value: 5.0,
     currency: 'EUR',
   });
 
-  // GA4 + Google Ads: generate_lead Event (höchster Wert)
+  // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Wizard',
     event_label: 'wizard_completed',
     vehicle_info: vehicleInfo,
-    value: 50.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: 'wizard',
   });
@@ -412,14 +412,14 @@ export function trackLeadContactData(source: string, vehicleInfo?: string): void
   // Löst die Landing Page Lead Conversion aus (als Fallback)
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
   });
 
   safeGtag('event', 'generate_lead', {
     event_category: 'Lead',
     event_label: source,
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
     lead_source: source,
     vehicle_info: vehicleInfo || '',
@@ -432,7 +432,7 @@ export function trackLeadContactData(source: string, vehicleInfo?: string): void
 export function trackBeratungRequested(pagePath: string): void {
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.TERMINBUCHUNG}`,
-    value: 10.0,
+    value: 5.0,
     currency: 'EUR',
   });
 
@@ -455,7 +455,7 @@ export function trackBeratungRequested(pagePath: string): void {
 export function trackUserRegistered(method: string): void {
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
-    value: 30.0,
+    value: 1.0,
     currency: 'EUR',
   });
 
@@ -488,7 +488,7 @@ export function trackAuctionCreated(vehicleInfo: string): void {
   safeGtag('event', 'auction_created', {
     event_category: 'Auction',
     event_label: vehicleInfo,
-    value: 75.0,
+    value: 1.0,
     currency: 'EUR',
   });
 }
@@ -509,7 +509,7 @@ export function trackPhoneClick(phoneNumber: string, pagePath: string): void {
     contact_method: 'phone',
     phone_number: phoneNumber,
     page_path: pagePath,
-    value: 5.0,
+    value: 1.0,
     currency: 'EUR',
   });
 
@@ -526,7 +526,7 @@ export function trackWhatsAppClick(pagePath: string): void {
     event_label: 'whatsapp_click',
     contact_method: 'whatsapp',
     page_path: pagePath,
-    value: 5.0,
+    value: 1.0,
     currency: 'EUR',
   });
 
@@ -543,7 +543,7 @@ export function trackEmailClick(pagePath: string): void {
     event_label: 'email_click',
     contact_method: 'email',
     page_path: pagePath,
-    value: 5.0,
+    value: 1.0,
     currency: 'EUR',
   });
 

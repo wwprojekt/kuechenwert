@@ -57,6 +57,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ─── Initialize Supabase client ──────────────────────────────
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     const { invoiceId }: InvoicePdfRequest = await req.json();
 
     if (!invoiceId) {

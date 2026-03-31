@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { NegotiationThread } from "@/components/NegotiationThread";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
-import { Zap, Car, ExternalLink, Clock, Euro } from "lucide-react";
+import { Zap, Car, ExternalLink, Clock, Euro, CheckCircle, XCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -60,10 +61,12 @@ interface MyOffer {
 
 export default function MyKaufchancen() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [kaufchancen, setKaufchancen] = useState<KaufchanceAuction[]>([]);
   const [myOffers, setMyOffers] = useState<MyOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("browse");
+  const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!user) return;
@@ -353,12 +356,82 @@ export default function MyKaufchancen() {
                             )}
                           </div>
 
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/auktion/${auction?.id}`}>
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Zur Auktion
-                            </Link>
-                          </Button>
+                          <div className="flex flex-col gap-2">
+                            {offer.status === 'countered' && offer.counter_offer_amount && (
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-500 hover:bg-green-600"
+                                  disabled={respondingOfferId === offer.id}
+                                  onClick={async () => {
+                                    setRespondingOfferId(offer.id);
+                                    try {
+                                      const { error } = await supabase
+                                        .from('post_auction_offers')
+                                        .update({
+                                          status: 'accepted',
+                                          updated_at: new Date().toISOString(),
+                                        })
+                                        .eq('id', offer.id)
+                                        .eq('buyer_id', user!.id);
+                                      if (error) throw error;
+                                      toast({
+                                        title: 'Gegenangebot angenommen',
+                                        description: `Sie haben das Gegenangebot von ${offer.counter_offer_amount!.toLocaleString('de-DE')} \u20ac angenommen.`,
+                                      });
+                                      loadData();
+                                    } catch (err) {
+                                      console.error('Error accepting counter offer:', err);
+                                      toast({ title: 'Fehler', description: 'Aktion konnte nicht durchgef\u00fchrt werden.', variant: 'destructive' });
+                                    } finally {
+                                      setRespondingOfferId(null);
+                                    }
+                                  }}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Annehmen ({offer.counter_offer_amount.toLocaleString('de-DE')} \u20ac)
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={respondingOfferId === offer.id}
+                                  onClick={async () => {
+                                    setRespondingOfferId(offer.id);
+                                    try {
+                                      const { error } = await supabase
+                                        .from('post_auction_offers')
+                                        .update({
+                                          status: 'rejected',
+                                          updated_at: new Date().toISOString(),
+                                        })
+                                        .eq('id', offer.id)
+                                        .eq('buyer_id', user!.id);
+                                      if (error) throw error;
+                                      toast({
+                                        title: 'Gegenangebot abgelehnt',
+                                        description: 'Sie haben das Gegenangebot abgelehnt.',
+                                      });
+                                      loadData();
+                                    } catch (err) {
+                                      console.error('Error rejecting counter offer:', err);
+                                      toast({ title: 'Fehler', description: 'Aktion konnte nicht durchgef\u00fchrt werden.', variant: 'destructive' });
+                                    } finally {
+                                      setRespondingOfferId(null);
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Ablehnen
+                                </Button>
+                              </div>
+                            )}
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to={`/auktion/${auction?.id}`}>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Zur Auktion
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </div>

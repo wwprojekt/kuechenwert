@@ -38,6 +38,8 @@ import { z } from "zod";
 import { trackWertrechnerLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaLead, trackMetaWertrechnerCompleted } from "@/lib/metaPixelService";
+import { handleApiError } from "@/lib/errorLogService";
+import { withNetworkRetry } from "@/lib/sessionGuard";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -461,23 +463,27 @@ const Wertrechner = () => {
       const value = calculateValue(data.bodyType, year, mileage, data.condition, data.manufacturer);
       setEstimatedValue(value);
 
-      const { error } = await supabase.from("value_assessment_leads").insert({
-        name: data.name,
-        email: data.email,
-        phone: data.phone || null,
-        manufacturer: data.manufacturer || null,
-        model: data.model || null,
-        year: data.year ? parseInt(data.year, 10) : null,
-        mileage: data.mileage ? parseInt(data.mileage, 10) : null,
-        condition: data.condition || null,
-        body_type: data.bodyType || null,
-        source: "wertrechner",
-        estimated_value_min: value.min,
-        estimated_value_max: value.max,
-        algorithm_value_min: value.min,
-        algorithm_value_max: value.max,
-        brand_tier: value.brandTier,
-      } as any);
+      const { error } = await withNetworkRetry(
+        () => supabase.from("value_assessment_leads").insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone || null,
+          manufacturer: data.manufacturer || null,
+          model: data.model || null,
+          year: data.year ? parseInt(data.year, 10) : null,
+          mileage: data.mileage ? parseInt(data.mileage, 10) : null,
+          condition: data.condition || null,
+          body_type: data.bodyType || null,
+          source: "wertrechner",
+          estimated_value_min: value.min,
+          estimated_value_max: value.max,
+          algorithm_value_min: value.min,
+          algorithm_value_max: value.max,
+          brand_tier: value.brandTier,
+        } as any),
+        2,
+        'Wertrechner INSERT'
+      );
 
       if (error) throw error;
 
@@ -561,10 +567,11 @@ const Wertrechner = () => {
         }
       })();
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      const germanMessage = handleApiError(error, 'Wertrechner');
       toast({
-        title: "Fehler",
-        description: "Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+        title: "Fehler beim Senden",
+        description: germanMessage,
         variant: "destructive",
       });
     },

@@ -89,6 +89,8 @@ import {
   Server,
   MemoryStick,
   ScreenShare,
+  Download,
+  FileText,
 } from "lucide-react";
 
 // Types
@@ -563,6 +565,246 @@ const AdminErrorLogs = () => {
     toast({ title: "Kopiert", description: "In die Zwischenablage kopiert." });
   };
 
+  // ============================================================================
+  // Markdown Export
+  // ============================================================================
+
+  const [isExportingMd, setIsExportingMd] = useState(false);
+
+  const exportMarkdown = async () => {
+    setIsExportingMd(true);
+    try {
+      // Alle Fehler laden (nicht nur die aktuelle Seite) mit aktuellen Filtern
+      let query = supabase
+        .from('error_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5000);
+
+      if (categoryFilter !== 'all') query = query.eq('error_category', categoryFilter);
+      if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
+      if (statusFilter === 'resolved') query = query.eq('is_resolved', true);
+      else if (statusFilter === 'unresolved') query = query.eq('is_resolved', false);
+      if (roleFilter !== 'all') query = query.eq('user_role', roleFilter);
+      if (sourceFilter !== 'all') query = query.eq('error_source', sourceFilter);
+      const timeDate = getTimeFilterDate();
+      if (timeDate) query = query.gte('created_at', timeDate);
+      if (searchQuery.trim()) {
+        query = query.or(
+          `error_message.ilike.%${searchQuery}%,error_code.ilike.%${searchQuery}%,page_path.ilike.%${searchQuery}%,original_error.ilike.%${searchQuery}%,user_email.ilike.%${searchQuery}%,session_id.ilike.%${searchQuery}%`
+        );
+      }
+
+      const { data: allErrors, error } = await query;
+      if (error) throw error;
+      if (!allErrors || allErrors.length === 0) {
+        toast({ title: "Keine Daten", description: "Es gibt keine Fehler zum Exportieren.", variant: "destructive" });
+        return;
+      }
+
+      const severityLabels: Record<string, string> = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch', critical: 'Kritisch' };
+      const categoryLabels: Record<string, string> = { validation: 'Validierung', auth: 'Auth', api: 'API', business: 'Geschäftslogik', system: 'System', ui: 'UI', unknown: 'Unbekannt' };
+      const sourceLabels: Record<string, string> = { caught: 'Gefangen', uncaught: 'Ungefangen', 'unhandled-rejection': 'Promise-Rejection', 'error-boundary': 'ErrorBoundary', global: 'Global' };
+      const roleLabels: Record<string, string> = { customer: 'Kunde', dealer: 'Händler', admin: 'Admin', anonymous: 'Anonym' };
+
+      const now = new Date();
+      const exportDate = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      // Statistiken berechnen
+      const totalExport = allErrors.length;
+      const unresolvedExport = allErrors.filter(e => !e.is_resolved).length;
+      const criticalExport = allErrors.filter(e => e.severity === 'critical' && !e.is_resolved).length;
+      const highExport = allErrors.filter(e => e.severity === 'high' && !e.is_resolved).length;
+
+      // Aktive Filter beschreiben
+      const activeFilters: string[] = [];
+      if (categoryFilter !== 'all') activeFilters.push(`Kategorie: ${categoryLabels[categoryFilter] || categoryFilter}`);
+      if (severityFilter !== 'all') activeFilters.push(`Schweregrad: ${severityLabels[severityFilter] || severityFilter}`);
+      if (statusFilter !== 'all') activeFilters.push(`Status: ${statusFilter === 'resolved' ? 'Gelöst' : 'Ungelöst'}`);
+      if (roleFilter !== 'all') activeFilters.push(`Rolle: ${roleLabels[roleFilter] || roleFilter}`);
+      if (sourceFilter !== 'all') activeFilters.push(`Quelle: ${sourceLabels[sourceFilter] || sourceFilter}`);
+      if (timeFilter !== 'all') {
+        const timeLabels: Record<string, string> = { hour: 'Letzte Stunde', today: 'Heute', week: 'Diese Woche', month: 'Dieser Monat' };
+        activeFilters.push(`Zeitraum: ${timeLabels[timeFilter] || timeFilter}`);
+      }
+      if (searchQuery.trim()) activeFilters.push(`Suche: "${searchQuery}"`);
+
+      let md = `# Fehlerprotokoll - CaravanWert\n\n`;
+      md += `**Exportiert am:** ${exportDate}\n\n`;
+      if (activeFilters.length > 0) {
+        md += `**Aktive Filter:** ${activeFilters.join(' | ')}\n\n`;
+      }
+      md += `## Zusammenfassung\n\n`;
+      md += `| Metrik | Wert |\n`;
+      md += `|--------|------|\n`;
+      md += `| Fehler gesamt | ${totalExport} |\n`;
+      md += `| Ungelöst | ${unresolvedExport} |\n`;
+      md += `| Kritisch (ungelöst) | ${criticalExport} |\n`;
+      md += `| Hoch (ungelöst) | ${highExport} |\n`;
+      md += `| Gelöst | ${totalExport - unresolvedExport} |\n\n`;
+      md += `---\n\n`;
+
+      // Übersichtstabelle
+      md += `## Fehlerübersicht\n\n`;
+      md += `| Nr. | Datum | Schweregrad | Kategorie | Seite | Fehlermeldung | Status |\n`;
+      md += `|-----|-------|-------------|-----------|-------|---------------|--------|\n`;
+      allErrors.forEach((err, i) => {
+        const date = new Date(err.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const sev = severityLabels[err.severity] || err.severity;
+        const cat = categoryLabels[err.error_category] || err.error_category;
+        const msg = (err.error_message || '').replace(/\|/g, '\\|').replace(/\n/g, ' ').substring(0, 80);
+        const status = err.is_resolved ? 'Gelöst' : 'Offen';
+        const page = (err.page_path || '').replace(/\|/g, '\\|');
+        md += `| ${i + 1} | ${date} | ${sev} | ${cat} | ${page} | ${msg} | ${status} |\n`;
+      });
+      md += `\n---\n\n`;
+
+      // Detaillierte Fehler
+      md += `## Detaillierte Fehlerberichte\n\n`;
+      allErrors.forEach((err, i) => {
+        const date = new Date(err.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const sev = severityLabels[err.severity] || err.severity;
+        const cat = categoryLabels[err.error_category] || err.error_category;
+        const src = sourceLabels[err.error_source || ''] || err.error_source || 'Unbekannt';
+        const role = roleLabels[err.user_role || ''] || err.user_role || 'Unbekannt';
+
+        md += `### ${i + 1}. ${err.error_code} — ${sev}\n\n`;
+
+        // Basis-Infos
+        md += `| Feld | Wert |\n`;
+        md += `|------|------|\n`;
+        md += `| **ID** | \`${err.id}\` |\n`;
+        md += `| **Fehlercode** | ${err.error_code} |\n`;
+        md += `| **Schweregrad** | ${sev} |\n`;
+        md += `| **Kategorie** | ${cat} |\n`;
+        md += `| **Quelle** | ${src} |\n`;
+        md += `| **Status** | ${err.is_resolved ? 'Gelöst' : 'Offen'} |\n`;
+        md += `| **Erstmals aufgetreten** | ${err.first_seen_at ? new Date(err.first_seen_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : date} |\n`;
+        md += `| **Zuletzt aufgetreten** | ${err.last_seen_at ? new Date(err.last_seen_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : date} |\n`;
+        md += `| **Vorfälle** | ${err.occurrence_count || 1} |\n`;
+        if (err.error_hash) md += `| **Fehler-Hash** | \`${err.error_hash}\` |\n`;
+        if (err.session_id) md += `| **Session-ID** | \`${err.session_id}\` |\n`;
+        if (err.app_version) md += `| **App-Version** | ${err.app_version} |\n`;
+        if (err.environment) md += `| **Umgebung** | ${err.environment} |\n`;
+        md += `\n`;
+
+        // Fehlermeldung
+        md += `**Angezeigte Fehlermeldung (Deutsch):**\n\n`;
+        md += `> ${(err.error_message || '').replace(/\n/g, '\n> ')}\n\n`;
+
+        if (err.original_error && err.original_error !== err.error_message) {
+          md += `**Original-Fehlermeldung (technisch):**\n\n`;
+          md += `\`\`\`\n${err.original_error}\n\`\`\`\n\n`;
+        }
+
+        // Seiten-Info
+        md += `**Seite & Nutzer:**\n\n`;
+        md += `| Feld | Wert |\n`;
+        md += `|------|------|\n`;
+        md += `| **Seite** | ${err.page_path || '-'} |\n`;
+        if (err.page_title) md += `| **Seitentitel** | ${err.page_title} |\n`;
+        if (err.component_name) md += `| **Komponente** | ${err.component_name} |\n`;
+        md += `| **Nutzer** | ${err.user_email || role} |\n`;
+        md += `| **Rolle** | ${role} |\n`;
+        if (err.page_url) md += `| **Volle URL** | ${err.page_url.replace(/\|/g, '\\|')} |\n`;
+        md += `\n`;
+
+        // Gerät & Netzwerk
+        if (err.device_type || err.browser || err.screen_resolution || err.connection_type) {
+          md += `**Gerät & Netzwerk:**\n\n`;
+          md += `| Feld | Wert |\n`;
+          md += `|------|------|\n`;
+          if (err.device_type) md += `| **Gerät** | ${err.device_type} |\n`;
+          if (err.browser) md += `| **Browser** | ${err.browser} |\n`;
+          if (err.screen_resolution) md += `| **Bildschirm** | ${err.screen_resolution} |\n`;
+          if (err.connection_type) md += `| **Verbindung** | ${err.connection_type} |\n`;
+          if (err.user_agent) md += `| **User-Agent** | ${err.user_agent.replace(/\|/g, '\\|').substring(0, 120)} |\n`;
+          md += `\n`;
+        }
+
+        // Memory
+        if (err.memory_usage && Object.keys(err.memory_usage).length > 0) {
+          md += `**Speicher:**\n\n`;
+          md += `\`\`\`json\n${JSON.stringify(err.memory_usage, null, 2)}\n\`\`\`\n\n`;
+        }
+
+        // HTTP-Status & Request-Info
+        if (err.http_status || (err.request_info && Object.keys(err.request_info).length > 0)) {
+          md += `**Request-Info:**\n\n`;
+          if (err.http_status) md += `- HTTP-Status: ${err.http_status}\n`;
+          if (err.request_info) md += `\`\`\`json\n${JSON.stringify(err.request_info, null, 2)}\n\`\`\`\n`;
+          md += `\n`;
+        }
+
+        // Stack Trace
+        if (err.stack_trace) {
+          md += `**Stack-Trace:**\n\n`;
+          md += `\`\`\`\n${err.stack_trace}\n\`\`\`\n\n`;
+        }
+
+        // Metadata
+        if (err.metadata && Object.keys(err.metadata).length > 0) {
+          md += `**Metadata:**\n\n`;
+          md += `\`\`\`json\n${JSON.stringify(err.metadata, null, 2)}\n\`\`\`\n\n`;
+        }
+
+        // Breadcrumbs
+        if (err.breadcrumbs && err.breadcrumbs.length > 0) {
+          md += `**Breadcrumbs (${err.breadcrumbs.length} Aktionen vor dem Fehler):**\n\n`;
+          md += `| Nr. | Typ | Nachricht | Zeitstempel |\n`;
+          md += `|-----|-----|-----------|-------------|\n`;
+          err.breadcrumbs.forEach((bc, j) => {
+            const ts = bc.timestamp ? new Date(bc.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+            const msg = (bc.message || '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+            md += `| ${j + 1} | ${bc.type || '-'} | ${msg} | ${ts} |\n`;
+          });
+          md += `\n`;
+        }
+
+        // Resolution Info
+        if (err.is_resolved) {
+          md += `**Lösung:**\n\n`;
+          md += `- Gelöst am: ${err.resolved_at ? new Date(err.resolved_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}\n`;
+          if (err.resolved_by) md += `- Gelöst von: ${err.resolved_by}\n`;
+          if (err.admin_notes) md += `- Admin-Notizen: ${err.admin_notes}\n`;
+          md += `\n`;
+        } else if (err.admin_notes) {
+          md += `**Admin-Notizen:** ${err.admin_notes}\n\n`;
+        }
+
+        md += `---\n\n`;
+      });
+
+      // Footer
+      md += `\n*Generiert von CaravanWert Admin — ${exportDate}*\n`;
+
+      // Download
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fehlerprotokoll_${new Date().toISOString().split('T')[0]}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export erfolgreich",
+        description: `${allErrors.length} Fehler als Markdown exportiert.`,
+      });
+    } catch (error) {
+      console.error('Markdown export error:', error);
+      toast({
+        title: "Export fehlgeschlagen",
+        description: "Beim Exportieren ist ein Fehler aufgetreten.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingMd(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const selectedResolved = errors.filter(e => selectedIds.has(e.id) && e.is_resolved).length;
   const selectedUnresolved = errors.filter(e => selectedIds.has(e.id) && !e.is_resolved).length;
@@ -600,6 +842,21 @@ const AdminErrorLogs = () => {
             <RefreshCw className="w-4 h-4 mr-2" />
             Aktualisieren
           </Button>
+          {totalCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportMarkdown}
+              disabled={isExportingMd}
+            >
+              {isExportingMd ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4 mr-2" />
+              )}
+              Export .md
+            </Button>
+          )}
           {totalCount > 0 && (
             <Button
               variant="destructive"

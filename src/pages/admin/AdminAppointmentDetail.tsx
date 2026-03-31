@@ -258,7 +258,7 @@ export default function AdminAppointmentDetail() {
     return statusConfig[status] || { label: status, variant: "outline" };
   };
 
-  const mainPhoto = appointment?.motorhome?.motorhome_photos?.sort(
+  const mainPhoto = [...(appointment?.motorhome?.motorhome_photos || [])].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
   )[0];
 

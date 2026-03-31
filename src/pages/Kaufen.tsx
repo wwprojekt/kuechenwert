@@ -96,16 +96,18 @@ const Kaufen = () => {
 
         setAuctions(auctionData || []);
 
-        // Fetch bid counts for each auction
+        // Fetch bid counts for all auctions in a single query
         if (auctionData && auctionData.length > 0) {
+          const auctionIds = auctionData.map(a => a.id);
+          const { data: bidsData } = await supabase
+            .from("bids")
+            .select("auction_id")
+            .in("auction_id", auctionIds);
           const counts: Record<string, number> = {};
-          for (const auction of auctionData) {
-            const { count } = await supabase
-              .from("bids")
-              .select("*", { count: "exact", head: true })
-              .eq("auction_id", auction.id);
-            counts[auction.id] = count || 0;
-          }
+          auctionIds.forEach(id => { counts[id] = 0; });
+          (bidsData || []).forEach((bid: any) => {
+            counts[bid.auction_id] = (counts[bid.auction_id] || 0) + 1;
+          });
           setBidCounts(counts);
         }
       } catch (error: unknown) {
@@ -583,7 +585,7 @@ const Kaufen = () => {
                 <>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {paginatedAuctions.map((auction) => {
-                      const firstPhoto = auction.motorhome?.photos?.sort((a: any, b: any) => 
+                      const firstPhoto = [...(auction.motorhome?.photos || [])].sort((a: any, b: any) => 
                         a.display_order - b.display_order
                       )[0]?.url;
                       

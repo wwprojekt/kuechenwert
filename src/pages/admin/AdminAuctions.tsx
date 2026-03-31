@@ -422,8 +422,8 @@ export default function AdminAuctions() {
 
   // ---- Render a single auction row ----
   const renderAuctionRow = (auction: any) => {
-    const firstPhoto = auction.motorhome?.motorhome_photos
-      ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+    const firstPhoto = [...(auction.motorhome?.motorhome_photos || [])]
+      .sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
 
     return (
       <TableRow

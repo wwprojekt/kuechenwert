@@ -640,8 +640,8 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-1">
                   {recentMotorhomes.map((m) => {
-                    const firstPhoto = m.motorhome_photos
-                      ?.sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+                    const firstPhoto = [...(m.motorhome_photos || [])]
+                      .sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
                     const sellerName = m.seller
                       ? `${m.seller.first_name || ""} ${m.seller.last_name || ""}`.trim() || m.seller.email
                       : "Unbekannt";

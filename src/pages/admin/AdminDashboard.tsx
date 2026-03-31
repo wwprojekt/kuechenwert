@@ -82,12 +82,13 @@ function useActionItems() {
     queryFn: async () => {
       const items: ActionItem[] = [];
 
-      // 1. Neue Wizard-Anfragen (abgeschlossen, noch nicht angesehen)
+      // 1. Neue Wizard-Anfragen (abgeschlossen, noch nicht angesehen, ohne Disposition)
       const { data: newWizards } = await supabase
         .from("wizard_sessions")
         .select("id, customer_name, customer_email, vehicle_summary, completed_at, is_viewed, status, form_data")
         .eq("status", "completed")
         .or("is_viewed.is.null,is_viewed.eq.false")
+        .is("disposition", null)
         .order("completed_at", { ascending: false })
         .limit(10);
 
@@ -113,11 +114,12 @@ function useActionItems() {
         }
       }
 
-      // 2. Neue Quick Leads (nicht angesehen)
+      // 2. Neue Quick Leads (nicht angesehen, ohne Disposition)
       const { data: newLeads } = await supabase
         .from("quick_leads")
         .select("id, name, email, phone, manufacturer, model, created_at, is_viewed")
         .or("is_viewed.is.null,is_viewed.eq.false")
+        .is("disposition", null)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -140,11 +142,12 @@ function useActionItems() {
         }
       }
 
-      // 3. Neue Bewertungsanfragen (nicht angesehen)
+      // 3. Neue Bewertungsanfragen (nicht angesehen, ohne Disposition)
       const { data: newValuations } = await supabase
         .from("value_assessment_leads")
         .select("id, name, email, manufacturer, model, year, created_at, is_viewed")
         .or("is_viewed.is.null,is_viewed.eq.false")
+        .is("disposition", null)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -352,9 +355,9 @@ function useUnreadCounts() {
       ] = await Promise.all([
         supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
-        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
+        supabase.from("quick_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
+        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
       ]);

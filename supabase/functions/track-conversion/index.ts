@@ -261,8 +261,9 @@ const handler = async (req: Request): Promise<Response> => {
 
         // 2. Conversion-Daten vorbereiten
         const conversionDateTime = new Date().toISOString().replace("T", " ").replace("Z", "+00:00");
+        // Werte sind bereits in Euro (z.B. 15000, 20000), nicht in Cent
         const conversionValue = estimated_min && estimated_max
-          ? Math.round((estimated_min + estimated_max) / 2) / 100
+          ? Math.round((estimated_min + estimated_max) / 2)
           : 10.0;
 
         // Conversion Action ID basierend auf Lead-Typ auswählen

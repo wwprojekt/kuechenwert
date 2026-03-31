@@ -47,6 +47,12 @@ interface PurchaseInquiryRequest {
   stationEmail: string;
   stationPhone: string;
   stationManagerName?: string | null;
+  // Google Ads Tracking-Felder
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  ga4ClientId?: string;
+  transactionId?: string;
 }
 
 // Rate limit: max 5 purchase inquiry notifications per IP per 15 minutes
@@ -327,6 +333,42 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (logErr) {
         console.error("Failed to log customer email:", logErr);
       }
+    }
+
+    // ─── Server-Side Conversion Tracking (non-blocking) ───────────
+    try {
+      const conversionPayload = {
+        event_name: "generate_lead",
+        lead_type: "terminbuchung",
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        manufacturer,
+        model,
+        // Google Ads Click-IDs für direkte Attribution
+        gclid: data.gclid || undefined,
+        gbraid: data.gbraid || undefined,
+        wbraid: data.wbraid || undefined,
+        client_id: data.ga4ClientId || undefined,
+        // Transaction ID für Deduplizierung
+        transaction_id: data.transactionId || undefined,
+      };
+
+      const trackingUrl = `${SUPABASE_URL}/functions/v1/track-conversion`;
+      fetch(trackingUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(conversionPayload),
+      }).then(res => {
+        console.log(`[track-conversion] Ankaufstation triggered: ${res.status}`);
+      }).catch(err => {
+        console.error("[track-conversion] Ankaufstation failed to trigger:", err);
+      });
+    } catch (trackErr) {
+      console.error("[track-conversion] Ankaufstation error:", trackErr);
     }
 
     return new Response(

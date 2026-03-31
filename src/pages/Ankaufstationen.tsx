@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
-import { trackBeratungRequested, setEnhancedConversionFromForm } from "@/lib/gadsConversionService";
+import { trackBeratungRequested, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
+import { getTrackingData } from "@/lib/clickIdService";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -197,6 +198,8 @@ const Ankaufstationen = () => {
       }
 
       // 2. Send email notifications via Edge Function
+      const trackingData = getTrackingData();
+      const txId = generateTransactionId('ankaufstation');
       await supabase.functions.invoke("send-purchase-inquiry-notification", {
         body: {
           customerName: formData.customerName,
@@ -218,6 +221,12 @@ const Ankaufstationen = () => {
           stationEmail: selectedStation.email,
           stationPhone: selectedStation.phone,
           stationManagerName: selectedStation.manager_name,
+          // Google Ads Tracking-Daten
+          gclid: trackingData.gclid,
+          gbraid: trackingData.gbraid,
+          wbraid: trackingData.wbraid,
+          ga4ClientId: trackingData.ga4ClientId,
+          transactionId: txId,
         },
       });
 

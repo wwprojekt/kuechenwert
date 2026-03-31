@@ -7,6 +7,7 @@ import { ArrowRight, CheckCircle, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { vehicleTypes, popularManufacturers, wohnwagenManufacturers, bodyTypes, wohnwagenBodyTypes } from "@/lib/vehicle-data";
 import { captureOrUpdateLead } from "@/lib/leadTrackingService";
+import { trackLandingPageLead } from "@/lib/gadsConversionService";
 import { cn } from "@/lib/utils";
 
 /** Mapping von vehicle-data.ts bodyTypes (Display-Labels) zu Wertrechner BODY_TYPES (interne values) */
@@ -62,6 +63,13 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
 
     // bodyType-Label auf Wertrechner-internen Wert mappen
     const mappedBodyType = BODY_TYPE_MAP[bodyType] || bodyType.toLowerCase();
+
+    // Google Ads: Landing Page Lead Conversion (Sekundär – Micro-Conversion)
+    // Trackt den Einstieg in den Wertrechner-Funnel von einer Google Ads Landing Page
+    await trackLandingPageLead(
+      window.location.pathname,
+      `${manufacturer} ${bodyType}`
+    );
 
     // Zum Wertrechner navigieren mit vorausgefüllten Daten
     const params = new URLSearchParams();

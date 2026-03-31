@@ -29,10 +29,36 @@
       });
 
       // Advanced Consent Mode Einstellungen:
-      // ads_data_redaction=true: Bei denied werden Anzeigen-Klick-IDs (gclid) aus Anfragen entfernt
+      // ads_data_redaction: Wird dynamisch gesetzt – bei denied consent werden Anzeigen-Klick-IDs
+      // (gclid) aus Anfragen entfernt. Bei granted consent wird es auf false gesetzt,
+      // damit Google Ads Click-IDs (gclid, _gcl_aw Cookie) korrekt weitergegeben werden.
       // url_passthrough=true: Anzeigen-Klick-Info wird über URL-Parameter weitergegeben statt Cookies
+      // (wichtig als Fallback wenn Cookies blockiert sind)
       gtag('set', 'ads_data_redaction', true);
       gtag('set', 'url_passthrough', true);
+
+      // Prüfe ob bereits Consent erteilt wurde (z.B. bei Seitenreload nach Cookie-Akzeptanz)
+      // Wenn ja, setze ads_data_redaction sofort auf false damit Click-IDs durchkommen
+      try {
+        var storedConsent = JSON.parse(localStorage.getItem('cookie-consent') || 'null');
+        if (storedConsent && storedConsent.marketing === true) {
+          gtag('set', 'ads_data_redaction', false);
+          gtag('consent', 'update', {
+            'analytics_storage': storedConsent.analytics ? 'granted' : 'denied',
+            'ad_storage': 'granted',
+            'ad_user_data': 'granted',
+            'ad_personalization': 'granted',
+            'functionality_storage': 'granted',
+            'personalization_storage': 'granted'
+          });
+        } else if (storedConsent && storedConsent.analytics === true) {
+          gtag('consent', 'update', {
+            'analytics_storage': 'granted',
+            'functionality_storage': 'granted',
+            'personalization_storage': 'granted'
+          });
+        }
+      } catch(e) {}
     </script>
 
     <!-- Google Tag (gtag.js) – Google Ads + GA4 -->

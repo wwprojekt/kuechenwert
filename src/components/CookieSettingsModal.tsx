@@ -73,6 +73,9 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
 
     // Update Google Analytics consent
     if (typeof window !== 'undefined' && (window as any).gtag) {
+      // WICHTIG: Bei Marketing-Consent ads_data_redaction auf false setzen,
+      // damit Google Ads Click-IDs (gclid, _gcl_aw) korrekt weitergegeben werden.
+      (window as any).gtag('set', 'ads_data_redaction', !finalConsent.marketing);
       (window as any).gtag('consent', 'update', {
         analytics_storage: finalConsent.analytics ? 'granted' : 'denied',
         ad_storage: finalConsent.marketing ? 'granted' : 'denied',

@@ -114,6 +114,12 @@ const CookieBanner = () => {
       // Wir müssen den gespeicherten Consent als 'update' senden,
       // damit wiederkehrende Nutzer korrekt getrackt werden.
       if (typeof window !== 'undefined' && (window as any).gtag) {
+        // WICHTIG: Bei Marketing-Consent ads_data_redaction auf false setzen,
+        // damit Google Ads Click-IDs (gclid, _gcl_aw) korrekt weitergegeben werden.
+        // Ohne dies werden Click-IDs auch bei granted consent blockiert!
+        if (storedConsent.marketing) {
+          (window as any).gtag('set', 'ads_data_redaction', false);
+        }
         (window as any).gtag('consent', 'update', {
           analytics_storage: storedConsent.analytics ? 'granted' : 'denied',
           ad_storage: storedConsent.marketing ? 'granted' : 'denied',
@@ -162,6 +168,10 @@ const CookieBanner = () => {
 
     // Update Google Consent Mode v2 basierend auf tatsächlicher Nutzerwahl
     if (typeof window !== 'undefined' && (window as any).gtag) {
+      // WICHTIG: Bei Marketing-Consent ads_data_redaction auf false setzen,
+      // damit Google Ads Click-IDs (gclid, _gcl_aw) korrekt weitergegeben werden.
+      // Bei denied consent bleibt ads_data_redaction=true (Datenschutz).
+      (window as any).gtag('set', 'ads_data_redaction', !newConsent.marketing);
       (window as any).gtag('consent', 'update', {
         analytics_storage: newConsent.analytics ? 'granted' : 'denied',
         ad_storage: newConsent.marketing ? 'granted' : 'denied',

@@ -19,7 +19,7 @@ import { useWizardForm } from "@/hooks/useWizardForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
-import { trackWizardStarted, trackWizardStep, trackWizardCompleted, trackWizardAbandoned } from "@/lib/gadsConversionService";
+import { trackWizardStarted, trackWizardStep, trackWizardAbandoned } from "@/lib/gadsConversionService";
 import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
 
 const steps = [
@@ -234,9 +234,11 @@ const VerkaufenWizard = () => {
     if (success) {
       await markCompleted();
       markLeadWizardCompleted();
-      const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
-      trackWizardCompleted(vehicleInfo);
+      // Google Ads trackWizardCompleted() wird bereits in useWizardForm.ts aufgerufen
+      // (mit korrekter Transaction ID für Deduplizierung).
+      // Ein zweiter Aufruf hier würde eine Doppel-Conversion mit neuer Transaction ID erzeugen.
       // Meta Pixel: Lead Event bei Wizard-Abschluss
+      const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
       trackMetaLead({ content_name: vehicleInfo, content_category: 'Wohnmobil-Verkauf' });
     }
   };

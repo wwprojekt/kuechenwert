@@ -210,9 +210,17 @@ class SecurityManager {
     const windowStart = now - windowMs;
     
     // Get or create rate limit data
-    const rateLimitData = JSON.parse(
-      localStorage.getItem(`rate_limit_${key}`) || '{"timestamps": []}'
-    );
+    let rateLimitData: { timestamps: number[] };
+    try {
+      rateLimitData = JSON.parse(
+        localStorage.getItem(`rate_limit_${key}`) || '{"timestamps": []}'
+      );
+      if (!Array.isArray(rateLimitData?.timestamps)) {
+        rateLimitData = { timestamps: [] };
+      }
+    } catch {
+      rateLimitData = { timestamps: [] };
+    }
 
     // Filter out old timestamps
     rateLimitData.timestamps = rateLimitData.timestamps.filter(

@@ -244,13 +244,13 @@ export default function MyBids() {
                         €{group.highestBid.toLocaleString()}
                       </span>
                     </div>
-                    {group.bids.some((b: any) => b.is_autobid) && (
+                    {group.bids.some((b: any) => b.is_autobid && b.max_autobid_amount != null) && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground flex items-center gap-1">
                           <Zap className="w-3 h-3" /> Autobid Max:
                         </span>
                         <span className="font-semibold text-primary">
-                          €{Math.max(...group.bids.filter((b: any) => b.is_autobid).map((b: any) => Number(b.max_autobid_amount))).toLocaleString()}
+                          €{Math.max(...group.bids.filter((b: any) => b.is_autobid && b.max_autobid_amount != null).map((b: any) => Number(b.max_autobid_amount))).toLocaleString()}
                         </span>
                       </div>
                     )}

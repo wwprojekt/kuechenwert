@@ -439,7 +439,7 @@ const CommissionCalculatorPreview = () => {
         });
 
       if (error) throw error;
-      setCalculation(data[0]);
+      setCalculation(Array.isArray(data) && data.length > 0 ? data[0] : data);
     } catch (error) {
       logger.error('Test calculation error:', error);
     }

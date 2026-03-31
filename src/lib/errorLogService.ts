@@ -350,6 +350,12 @@ export function handleAndLogError(
   const category = options?.category || translated.category;
   const severity = options?.severity || translated.severity;
 
+  // Duplikat-Marker setzen damit toast-auto-capture diesen Fehler nicht nochmal loggt
+  if (typeof window !== 'undefined') {
+    (window as any).__lastLoggedErrorMessage = translated.message;
+    (window as any).__lastLoggedErrorTime = Date.now();
+  }
+
   // Asynchron in Supabase loggen (blockiert nicht die UI)
   logErrorToSupabase({
     errorCode: translated.code,

@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
-import { ensureValidSession, isSessionOrRLSError } from "@/lib/sessionGuard";
+import { ensureValidSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
@@ -459,18 +459,22 @@ export const useWizardForm = () => {
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
 
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: formData.customerEmail,
-          password: registerPassword,
-          options: {
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-              phone: formData.customerPhone || undefined,
-              role: "private",
+        const { data: signUpData, error: signUpError } = await withNetworkRetry(
+          () => supabase.auth.signUp({
+            email: formData.customerEmail!,
+            password: registerPassword!,
+            options: {
+              data: {
+                first_name: firstName,
+                last_name: lastName,
+                phone: formData.customerPhone || undefined,
+                role: "private",
+              },
             },
-          },
-        });
+          }),
+          2,
+          'wizard-signup'
+        );
 
         if (signUpError) throw signUpError;
 
@@ -514,22 +518,26 @@ export const useWizardForm = () => {
         const generatedSessionId = crypto.randomUUID();
         let savedSessionId: string | null = null;
         try {
-          const { error: sessionError } = await supabase.from('wizard_sessions').insert({
-            id: generatedSessionId,
-            user_id: capturedUserId, // Use the signUp user ID if available
-            anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            customer_name: formData.customerName || null,
-            customer_email: formData.customerEmail || null,
-            customer_phone: formData.customerPhone || null,
-            current_step: 8,
-            max_step_reached: 8,
-            total_steps: 8,
-            step_name: 'completed',
-            form_data: formDataForStorage,
-            status: 'completed',
-            vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
-            completed_at: new Date().toISOString(),
-          });
+          const { error: sessionError } = await withNetworkRetry(
+            () => supabase.from('wizard_sessions').insert({
+              id: generatedSessionId,
+              user_id: capturedUserId, // Use the signUp user ID if available
+              anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              customer_name: formData.customerName || null,
+              customer_email: formData.customerEmail || null,
+              customer_phone: formData.customerPhone || null,
+              current_step: 8,
+              max_step_reached: 8,
+              total_steps: 8,
+              step_name: 'completed',
+              form_data: formDataForStorage,
+              status: 'completed',
+              vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
+              completed_at: new Date().toISOString(),
+            }),
+            2,
+            'wizard-session-insert'
+          );
           
           if (sessionError) throw sessionError;
           savedSessionId = generatedSessionId;
@@ -757,11 +765,15 @@ export const useWizardForm = () => {
         city: formData.city || null,
       };
 
-      const { data: motorhome, error: motorhomeError } = await supabase
-        .from('motorhomes')
-        .insert([motorhomeInsert])
-        .select()
-        .single();
+      const { data: motorhome, error: motorhomeError } = await withNetworkRetry(
+        () => supabase
+          .from('motorhomes')
+          .insert([motorhomeInsert])
+          .select()
+          .single(),
+        2,
+        'motorhomes-insert'
+      );
 
       if (motorhomeError) {
         // If RLS error, the session might have expired between validation and insert.
@@ -905,6 +917,23 @@ export const useWizardForm = () => {
       return true;
     } catch (error: unknown) {
       logger.error("Submission error:", error);
+
+      // Bei Netzwerkfehlern: spezifischere Meldung und Hinweis auf erneuten Versuch
+      if (isNetworkError(error)) {
+        const germanMessage = handleAndLogError(error, {
+          componentName: 'VerkaufenWizard',
+          category: 'api',
+          severity: 'medium', // Netzwerkfehler sind weniger kritisch als echte API-Fehler
+          metadata: { retryHint: true, networkError: true },
+        });
+        toast({
+          title: "Verbindungsproblem",
+          description: "Die Verbindung zum Server wurde unterbrochen. Ihre Daten sind gespeichert \u2013 bitte versuchen Sie es erneut.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       const germanMessage = handleAndLogError(error, {
         componentName: 'VerkaufenWizard',
         category: 'api',

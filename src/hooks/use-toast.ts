@@ -148,7 +148,10 @@ function toast({ ...props }: Toast) {
 
   // ── Automatisches Error-Logging für destructive Toasts ──────────────
   // Jeder Fehler-Toast wird automatisch ins Fehlerprotokoll geschrieben,
-  // auch wenn die aufrufende Komponente handleAndLogError() nicht nutzt.
+  // ABER nur wenn der Fehler nicht bereits über handleAndLogError() geloggt wurde.
+  // Duplikat-Erkennung: Wenn der Toast von einer Komponente kommt die handleAndLogError()
+  // nutzt (z.B. VerkaufenWizard, Login, Kontakt), wird der Fehler bereits dort geloggt.
+  // Der toast-auto-capture ist nur für Toasts gedacht die OHNE handleAndLogError() ausgelöst werden.
   if (props.variant === "destructive") {
     const errorMessage = typeof props.description === 'string'
       ? props.description
@@ -158,19 +161,27 @@ function toast({ ...props }: Toast) {
 
     const titleStr = typeof props.title === 'string' ? props.title : 'Fehler';
 
-    logErrorToSupabase({
-      errorCode: 'TOAST_ERROR',
-      errorMessage: `${titleStr}: ${errorMessage}`,
-      errorCategory: 'unknown',
-      severity: 'medium',
-      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
-      pageTitle: typeof window !== 'undefined' ? getPageTitle(window.location.pathname) : 'Unbekannt',
-      componentName: 'toast-auto-capture',
-      originalError: errorMessage,
-      errorSource: 'caught',
-    }).catch(() => {
-      // Fehler beim Auto-Logging dürfen die App nicht beeinflussen
-    });
+    // Duplikat-Vermeidung: Prüfe ob dieser Fehler kürzlich bereits geloggt wurde.
+    // handleAndLogError() setzt einen Timestamp für die letzte geloggte Fehlermeldung.
+    const lastLoggedError = (window as any).__lastLoggedErrorMessage;
+    const lastLoggedTime = (window as any).__lastLoggedErrorTime || 0;
+    const isDuplicate = lastLoggedError === errorMessage && (Date.now() - lastLoggedTime) < 5000;
+
+    if (!isDuplicate) {
+      logErrorToSupabase({
+        errorCode: 'TOAST_ERROR',
+        errorMessage: `${titleStr}: ${errorMessage}`,
+        errorCategory: 'unknown',
+        severity: 'medium',
+        pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
+        pageTitle: typeof window !== 'undefined' ? getPageTitle(window.location.pathname) : 'Unbekannt',
+        componentName: 'toast-auto-capture',
+        originalError: errorMessage,
+        errorSource: 'caught',
+      }).catch(() => {
+        // Fehler beim Auto-Logging dürfen die App nicht beeinflussen
+      });
+    }
   }
 
   dispatch({

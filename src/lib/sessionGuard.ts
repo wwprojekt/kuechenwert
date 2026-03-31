@@ -23,6 +23,62 @@ import type { User } from '@supabase/supabase-js';
 import { logger } from './logger';
 
 /**
+ * Prüft ob ein Fehler ein Netzwerkfehler ist (z.B. instabile Mobilfunkverbindung).
+ * "Failed to fetch" tritt auf bei: Netzwerkabbruch, DNS-Fehler, Server nicht erreichbar,
+ * CORS-Fehler, oder wenn der Browser den Request abbricht (z.B. Tab im Hintergrund).
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : (error as { message?: string })?.message || '';
+  return (
+    message.includes('Failed to fetch') ||
+    message.includes('NetworkError') ||
+    message.includes('Load failed') ||
+    message.includes('net::ERR_') ||
+    message.includes('fetch failed') ||
+    message.includes('network request failed') ||
+    message.includes('The Internet connection appears to be offline') ||
+    message.includes('A server with the specified hostname could not be found')
+  );
+}
+
+/**
+ * Führt eine Operation mit automatischem Retry bei Netzwerkfehlern aus.
+ * Wartet zwischen Versuchen mit exponentiellem Backoff (500ms, 1000ms, 2000ms).
+ * 
+ * @param operation Die auszuführende async Operation
+ * @param maxRetries Maximale Anzahl an Wiederholungsversuchen (Standard: 2)
+ * @param operationName Name für Logging-Zwecke
+ * @returns Das Ergebnis der Operation
+ */
+export async function withNetworkRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 2,
+  operationName: string = 'operation'
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (isNetworkError(error) && attempt < maxRetries) {
+        const delay = 500 * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms
+        logger.warn(`${operationName}: Netzwerkfehler bei Versuch ${attempt + 1}/${maxRetries + 1}, warte ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Prüft ob ein Fehler ein Navigator Lock-Fehler ist.
  * Diese Fehler sind harmlos und entstehen durch die Supabase Auth-JS
  * Session-Synchronisierung zwischen Tabs (Web Locks API).

@@ -112,7 +112,7 @@ const API_ERROR_MAP: Record<string, string> = {
   'PGRST301': 'Zu viele Ergebnisse. Bitte verfeinern Sie Ihre Suche.',
   
   // Netzwerk-Fehler
-  'Failed to fetch': 'Keine Internetverbindung. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
+  'Failed to fetch': 'Verbindungsproblem. Bitte versuchen Sie es erneut. Falls das Problem bestehen bleibt, prüfen Sie Ihre Internetverbindung.',
   'NetworkError': 'Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.',
   'Load failed': 'Die Anfrage konnte nicht geladen werden. Bitte versuchen Sie es erneut.',
   'AbortError': 'Die Anfrage wurde abgebrochen. Bitte versuchen Sie es erneut.',

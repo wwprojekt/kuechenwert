@@ -281,14 +281,14 @@ export const SearchAlerts = () => {
                       value={alertForm.criteria.manufacturer || ''}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
-                        criteria: { ...alertForm.criteria, manufacturer: value || undefined }
+                        criteria: { ...alertForm.criteria, manufacturer: value === '__all__' ? undefined : value }
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Alle Hersteller" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle Hersteller</SelectItem>
+                        <SelectItem value="__all__">Alle Hersteller</SelectItem>
                         {popularManufacturers.map((brand) => (
                           <SelectItem key={brand} value={brand}>
                             {brand}
@@ -304,14 +304,14 @@ export const SearchAlerts = () => {
                       value={alertForm.criteria.body_type || ''}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
-                        criteria: { ...alertForm.criteria, body_type: value || undefined }
+                        criteria: { ...alertForm.criteria, body_type: value === '__all__' ? undefined : value }
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Alle Aufbauarten" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle Aufbauarten</SelectItem>
+                        <SelectItem value="__all__">Alle Aufbauarten</SelectItem>
                         {Constants.public.Enums.motorhome_body_type.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
@@ -371,14 +371,14 @@ export const SearchAlerts = () => {
                       value={alertForm.criteria.sleeping_places?.toString() || ''}
                       onValueChange={(value) => setAlertForm({
                         ...alertForm,
-                        criteria: { ...alertForm.criteria, sleeping_places: value ? parseInt(value) : undefined }
+                        criteria: { ...alertForm.criteria, sleeping_places: value && value !== '__all__' ? parseInt(value) : undefined }
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Beliebig" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Beliebig</SelectItem>
+                        <SelectItem value="__all__">Beliebig</SelectItem>
                         {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                           <SelectItem key={num} value={num.toString()}>
                             {num} Schlafplätze

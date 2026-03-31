@@ -564,7 +564,7 @@ const Wertrechner = () => {
       trackMetaWertrechnerCompleted({
         vehicle_type: formData.vehicleType || formData.bodyType || 'Wohnmobil',
         manufacturer: formData.manufacturer || '',
-        estimated_value: result?.estimatedValue || 0,
+        estimated_value: (value.min + value.max) / 2,
       });
 
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });

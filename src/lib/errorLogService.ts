@@ -479,6 +479,8 @@ export function installGlobalErrorHandlers(): void {
     if (!event.filename || event.filename === '') return;
     // Ignoriere ResizeObserver-Fehler (harmlos)
     if (event.message?.includes('ResizeObserver')) return;
+    // Ignoriere Browser-Extension-Fehler (LastPass, Bitwarden, 1Password etc.)
+    if (event.message?.includes('Object Not Found Matching Id')) return;
     // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
     if (
       event.message?.includes('Lock broken by another request') ||
@@ -519,6 +521,8 @@ export function installGlobalErrorHandlers(): void {
 
     // Ignoriere bestimmte harmlose Rejections
     if (message.includes('AbortError') || message.includes('The user aborted')) return;
+    // Ignoriere Browser-Extension-Fehler (LastPass, Bitwarden, 1Password etc.)
+    if (message.includes('Object Not Found Matching Id')) return;
 
     // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
     if (
@@ -567,6 +571,8 @@ export function installGlobalErrorHandlers(): void {
     // Nur Error-Objekte und bestimmte Strings loggen
     const errorArg = args.find(a => a instanceof Error) as Error | undefined;
     if (errorArg) {
+      // Ignoriere Browser-Extension-Fehler
+      if (errorArg.message?.includes('Object Not Found Matching Id')) return;
       const translated = translateError(errorArg.message);
       logErrorToSupabase({
         errorCode: 'CONSOLE_ERROR',

@@ -66,9 +66,9 @@ function useSidebarBadges() {
         dealerRes,
         questionsRes,
       ] = await Promise.all([
-        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
+        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),

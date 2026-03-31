@@ -1636,28 +1636,28 @@ export default function AdminLeads() {
           <TabsList>
             <TabsTrigger value="wizard_sessions" className="gap-2">
               <Timer className="w-4 h-4" />
-              Wizard-Sessions ({wizardSessions.length})
-              {wizardSessions.filter(s => !s.is_viewed).length > 0 && (
+              Wizard-Sessions ({wizardSessions.filter(s => !s.disposition).length})
+              {wizardSessions.filter(s => !s.is_viewed && !s.disposition).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {wizardSessions.filter(s => !s.is_viewed).length}
+                  {wizardSessions.filter(s => !s.is_viewed && !s.disposition).length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="quick_leads" className="gap-2">
               <UserPlus className="w-4 h-4" />
-              Quick-Leads ({quickLeads.length})
-              {quickLeads.filter(l => !l.is_viewed).length > 0 && (
+              Quick-Leads ({quickLeads.filter(l => !l.disposition).length})
+              {quickLeads.filter(l => !l.is_viewed && !l.disposition).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {quickLeads.filter(l => !l.is_viewed).length}
+                  {quickLeads.filter(l => !l.is_viewed && !l.disposition).length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="valuation_leads" className="gap-2">
               <Calculator className="w-4 h-4" />
-              Wertrechner ({valuationLeads.length})
-              {valuationLeads.filter(l => !l.is_viewed).length > 0 && (
+              Wertrechner ({valuationLeads.filter(l => !l.disposition).length})
+              {valuationLeads.filter(l => !l.is_viewed && !l.disposition).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {valuationLeads.filter(l => !l.is_viewed).length}
+                  {valuationLeads.filter(l => !l.is_viewed && !l.disposition).length}
                 </Badge>
               )}
             </TabsTrigger>

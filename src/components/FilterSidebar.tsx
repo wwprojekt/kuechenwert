@@ -90,7 +90,8 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
       accidentFree,
       buyNowOnly,
     });
-  }, [priceRange, yearRange, vehicleTypes, brand, beds, searchQuery, countries, mileageMin, mileageMax, transmission, accidentFree, buyNowOnly, onFilterChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceRange, yearRange, vehicleTypes, brand, beds, searchQuery, countries, mileageMin, mileageMax, transmission, accidentFree, buyNowOnly]);
 
   const resetFilters = () => {
     setPriceRange([0, 500000]);

@@ -60,7 +60,7 @@ const Listings = () => {
               return (
                 <MotorhomeCard
                   key={auction.id}
-                  id={auction.id}
+                  id={motorhome.id}
                   title={motorhome.description || `${motorhome.manufacturer} ${motorhome.model}`}
                   manufacturer={motorhome.manufacturer}
                   model={motorhome.model}

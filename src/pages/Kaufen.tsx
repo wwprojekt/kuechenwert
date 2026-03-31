@@ -360,16 +360,19 @@ const Kaufen = () => {
     'Große Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise, 12 Monate Garantie und persönliche Beratung.'
   );
 
+  // Stable callback to prevent FilterSidebar useEffect from re-triggering on every render
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+  }, []);
+
   // Shared filter sidebar component (used in both desktop and mobile)
-  const filterContent = (
+  const filterContent = useMemo(() => (
     <FilterSidebar 
-      onFilterChange={(newFilters) => {
-        setFilters(newFilters);
-      }}
+      onFilterChange={handleFilterChange}
       resultCount={filteredAuctions.length}
       availableBrands={availableBrands}
     />
-  );
+  ), [handleFilterChange, filteredAuctions.length, availableBrands]);
 
   return (
     <PageLayout
@@ -587,7 +590,7 @@ const Kaufen = () => {
                       return (
                         <MotorhomeCard
                           key={auction.id}
-                          id={auction.id}
+                          id={auction.motorhome?.id || auction.motorhome_id}
                           title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
                           manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
                           model={auction.motorhome?.model || ''}
@@ -616,6 +619,7 @@ const Kaufen = () => {
                   {hasMore && (
                     <div className="flex justify-center mt-8">
                       <Button
+                        type="button"
                         variant="outline"
                         size="lg"
                         onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}

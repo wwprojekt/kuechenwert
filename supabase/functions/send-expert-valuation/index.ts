@@ -127,8 +127,11 @@ const handler = async (req: Request): Promise<Response> => {
       : vehicleName;
 
     // Determine vehicle type for CTA text
-    const isCaravan = lead.body_type && ["wohnwagen", "caravan"].some(t =>
-      (lead.body_type || "").toLowerCase().includes(t)
+    // Primary: use vehicle_type column (new leads). Fallback: body_type substring matching (legacy leads)
+    const isCaravan = lead.vehicle_type === "Wohnwagen" || (
+      !lead.vehicle_type && lead.body_type && ["wohnwagen", "caravan", "faltcaravan", "mobilheim"].some(t =>
+        (lead.body_type || "").toLowerCase().includes(t)
+      )
     );
     const vehicleTypeLabel = isCaravan ? "Wohnwagen" : "Wohnmobil";
 
@@ -144,7 +147,8 @@ const handler = async (req: Request): Promise<Response> => {
       lead.model ? detailRow("Modell", lead.model) : "",
       lead.year ? detailRow("Baujahr", String(lead.year)) : "",
       lead.body_type ? detailRow("Aufbauart", lead.body_type) : "",
-      lead.mileage ? detailRow("Kilometerstand", `${lead.mileage.toLocaleString("de-DE")} km`) : "",
+      // Kilometerstand nur bei Wohnmobilen anzeigen (Wohnwagen haben keinen eigenen Tacho)
+      (!isCaravan && lead.mileage) ? detailRow("Kilometerstand", `${lead.mileage.toLocaleString("de-DE")} km`) : "",
       lead.condition ? detailRow("Zustand", lead.condition) : "",
     ].filter(Boolean).join("");
 
@@ -158,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       ${amountDisplay("Fundierte Expertenbewertung", `${expertValueFormatted} &euro;`)}
 
-      ${paragraph(`Dieser Wert basiert auf einer <strong>fundierten Marktanalyse</strong> unserer erfahrenen Fahrzeugexperten unter Ber&uuml;cksichtigung von Marke, Modell, Baujahr, Zustand, Kilometerstand und aktueller Marktlage.`)}
+      ${paragraph(`Dieser Wert basiert auf einer <strong>fundierten Marktanalyse</strong> unserer erfahrenen Fahrzeugexperten unter Ber&uuml;cksichtigung von Marke, Modell, Baujahr, Zustand${isCaravan ? '' : ', Kilometerstand'} und aktueller Marktlage.`)}
 
       ${vehicleDetails ? infoBox("Ihre Fahrzeugdaten", vehicleDetails, "info", settingsData) : ""}
 

@@ -39,6 +39,7 @@ interface TrainingDataPoint {
   algorithm_value_min: number | null;
   algorithm_value_max: number | null;
   admin_estimated_value: number;
+  vehicle_type: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     // 1. Trainingsdaten laden: Alle Leads mit Admin-Expertenwert
     const { data: trainingData, error: dbError } = await supabaseAdmin
       .from('value_assessment_leads')
-      .select('manufacturer, model, body_type, year, mileage, condition, brand_tier, algorithm_value_min, algorithm_value_max, admin_estimated_value')
+      .select('manufacturer, model, body_type, year, mileage, condition, brand_tier, algorithm_value_min, algorithm_value_max, admin_estimated_value, vehicle_type')
       .not('admin_estimated_value', 'is', null)
       .order('admin_valued_at', { ascending: false })
       .limit(200);
@@ -134,7 +135,9 @@ Deno.serve(async (req) => {
       const algoAvg = d.algorithm_value_min && d.algorithm_value_max
         ? Math.round((d.algorithm_value_min + d.algorithm_value_max) / 2)
         : null;
-      return `${i + 1}. ${d.manufacturer || '?'} ${d.model || '?'} | ${d.body_type || '?'} | BJ ${d.year || '?'} | ${d.mileage?.toLocaleString('de-DE') || '?'} km | Zustand: ${d.condition || '?'} | Tier: ${d.brand_tier || '?'} | Algo: ${algoAvg ? algoAvg.toLocaleString('de-DE') + '€' : '?'} | Experte: ${d.admin_estimated_value.toLocaleString('de-DE')}€`;
+      const isTrainingCaravan = d.vehicle_type === 'Wohnwagen' || ['wohnwagen', 'faltcaravan', 'mobilheim'].includes((d.body_type || '').toLowerCase());
+      const mileageText = isTrainingCaravan ? 'k.A.' : `${d.mileage?.toLocaleString('de-DE') || '?'} km`;
+      return `${i + 1}. ${d.vehicle_type || '?'} | ${d.manufacturer || '?'} ${d.model || '?'} | ${d.body_type || '?'} | BJ ${d.year || '?'} | ${mileageText} | Zustand: ${d.condition || '?'} | Tier: ${d.brand_tier || '?'} | Algo: ${algoAvg ? algoAvg.toLocaleString('de-DE') + '€' : '?'} | Experte: ${d.admin_estimated_value.toLocaleString('de-DE')}€`;
     }).join('\n');
 
     // 4. Prompt für GPT-4 erstellen

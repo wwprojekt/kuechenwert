@@ -715,7 +715,10 @@ const Wertrechner = () => {
 
   const handleSelectionWithAutoNext = useCallback((field: string, value: string, shouldAutoNext: boolean = true) => {
     if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current);
-    updateField(field, value);
+    // For vehicleType, the full reset is handled in the setTimeout block below
+    if (field !== "vehicleType") {
+      updateField(field, value);
+    }
     if (shouldAutoNext) {
       autoNextTimerRef.current = setTimeout(() => {
         if (field === "condition") {

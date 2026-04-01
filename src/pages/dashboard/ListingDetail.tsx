@@ -40,12 +40,17 @@ import {
   Plus,
   MessageSquarePlus,
   ImagePlus,
+  Euro,
+  CheckCircle,
+  XCircle,
+  Handshake,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { withSessionRetry } from "@/lib/sessionGuard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -55,6 +60,13 @@ export default function ListingDetail() {
   const queryClient = useQueryClient();
   const [addendumText, setAddendumText] = useState("");
   const [showAddendumForm, setShowAddendumForm] = useState(false);
+
+  // Kaufchance state
+  const [kaufchanceOffers, setKaufchanceOffers] = useState<any[]>([]);
+  const [kaufchanceLoading, setKaufchanceLoading] = useState(false);
+  const [counterOfferAmounts, setCounterOfferAmounts] = useState<Record<string, string>>({});
+  const [counterOfferMessages, setCounterOfferMessages] = useState<Record<string, string>>({});
+  const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
 
   const { data: motorhome, isLoading } = useQuery({
     queryKey: ["motorhomeDetail", id],
@@ -77,7 +89,9 @@ export default function ListingDetail() {
             starting_bid,
             end_time,
             start_time,
-            created_at
+            created_at,
+            kaufchance_expires_at,
+            kaufchance_min_price
           )
         `)
         .eq("id", id)
@@ -102,7 +116,9 @@ export default function ListingDetail() {
             starting_bid,
             end_time,
             start_time,
-            created_at
+            created_at,
+            kaufchance_expires_at,
+            kaufchance_min_price
           )
         `)
         .eq("id", id)
@@ -201,6 +217,119 @@ export default function ListingDetail() {
       });
     },
   });
+
+  // ── Kaufchance: Angebote für den Seller laden ──
+  const loadKaufchanceOffers = async () => {
+    if (!resolvedAuction?.id || resolvedAuction?.status !== 'kaufchance') return;
+    setKaufchanceLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('post_auction_offers')
+        .select(`
+          *,
+          buyer:profiles!post_auction_offers_buyer_id_fkey (
+            first_name,
+            last_name,
+            company_name,
+            customer_number
+          )
+        `)
+        .eq('auction_id', resolvedAuction.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setKaufchanceOffers(data || []);
+    } catch (err) {
+      console.error('Error loading kaufchance offers:', err);
+    } finally {
+      setKaufchanceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadKaufchanceOffers();
+  }, [resolvedAuction?.id, resolvedAuction?.status]);
+
+  const handleSellerAcceptOffer = async (offerId: string) => {
+    setRespondingOfferId(offerId);
+    try {
+      const { data, error } = await supabase.functions.invoke('accept-kaufchance-offer', {
+        body: { offerId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Unbekannter Fehler');
+
+      toast({
+        title: 'Angebot angenommen!',
+        description: 'Der Kaufvertrag wird erstellt. Sie erhalten eine E-Mail mit den Details.',
+      });
+      loadKaufchanceOffers();
+      queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
+    } catch (err: any) {
+      console.error('Error accepting offer:', err);
+      toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
+  const handleSellerRejectOffer = async (offerId: string) => {
+    setRespondingOfferId(offerId);
+    try {
+      const { error } = await supabase
+        .from('post_auction_offers')
+        .update({
+          status: 'rejected',
+          seller_response: 'Angebot abgelehnt',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', offerId);
+      if (error) throw error;
+      toast({ title: 'Angebot abgelehnt' });
+      loadKaufchanceOffers();
+    } catch (err: any) {
+      console.error('Error rejecting offer:', err);
+      toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
+  const handleSellerCounterOffer = async (offerId: string) => {
+    const amountStr = counterOfferAmounts[offerId];
+    const message = counterOfferMessages[offerId] || '';
+    const amount = parseFloat(amountStr);
+
+    if (!amountStr || isNaN(amount) || amount <= 0) {
+      toast({ title: 'Fehler', description: 'Bitte geben Sie einen gültigen Betrag ein.', variant: 'destructive' });
+      return;
+    }
+
+    setRespondingOfferId(offerId);
+    try {
+      const { error } = await supabase
+        .from('post_auction_offers')
+        .update({
+          status: 'countered',
+          counter_offer_amount: amount,
+          seller_response: message || `Gegenangebot: ${amount.toLocaleString('de-DE')} \u20ac`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', offerId);
+      if (error) throw error;
+      toast({
+        title: 'Gegenangebot gesendet',
+        description: `Gegenangebot von ${amount.toLocaleString('de-DE')} \u20ac wurde gesendet.`,
+      });
+      setCounterOfferAmounts(prev => ({ ...prev, [offerId]: '' }));
+      setCounterOfferMessages(prev => ({ ...prev, [offerId]: '' }));
+      loadKaufchanceOffers();
+    } catch (err: any) {
+      console.error('Error sending counter offer:', err);
+      toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -821,6 +950,156 @@ export default function ListingDetail() {
                 <span className="font-semibold text-lg">
                   €{Number(motorhome.reserve_price).toLocaleString()}
                 </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Kaufchancen-Angebote Sektion (nur bei kaufchance-Status) */}
+      {auction?.status === 'kaufchance' && (
+        <Card className="border-2 border-amber-200 dark:border-amber-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Handshake className="w-5 h-5 text-amber-600" />
+              Kaufchancen – Eingehende Angebote
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Die Auktion endete ohne Verkauf. Die Top-Bieter wurden eingeladen, Ihnen ein Angebot zu unterbreiten.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {kaufchanceLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : kaufchanceOffers.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Noch keine Angebote eingegangen. Die eingeladenen Bieter wurden benachrichtigt.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {kaufchanceOffers.map((offer: any) => {
+                  const buyerName = offer.buyer?.company_name
+                    || `${offer.buyer?.first_name || ''} ${offer.buyer?.last_name || ''}`.trim()
+                    || 'Unbekannt';
+                  const custNum = offer.buyer?.customer_number || '';
+
+                  return (
+                    <div key={offer.id} className="p-4 rounded-lg border bg-card">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold">{buyerName}</h4>
+                            {custNum && (
+                              <Badge variant="outline" className="text-xs font-mono">
+                                #{custNum}
+                              </Badge>
+                            )}
+                            {offer.status === 'pending' && (
+                              <Badge variant="outline" className="text-orange-600 border-orange-600">Ausstehend</Badge>
+                            )}
+                            {offer.status === 'accepted' && (
+                              <Badge className="bg-green-500">Angenommen</Badge>
+                            )}
+                            {offer.status === 'rejected' && (
+                              <Badge variant="destructive">Abgelehnt</Badge>
+                            )}
+                            {offer.status === 'countered' && (
+                              <Badge className="bg-blue-500 text-white">Gegenangebot gesendet</Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-4 mb-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Angebot</p>
+                              <p className="font-bold text-lg flex items-center gap-1">
+                                <Euro className="w-4 h-4" />
+                                {Number(offer.offer_amount).toLocaleString('de-DE')} \u20ac
+                              </p>
+                            </div>
+                            {offer.counter_offer_amount && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Ihr Gegenangebot</p>
+                                <p className="font-bold text-lg text-blue-600">
+                                  {Number(offer.counter_offer_amount).toLocaleString('de-DE')} \u20ac
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {offer.message && (
+                            <p className="text-sm text-muted-foreground italic mb-2">
+                              "{offer.message}"
+                            </p>
+                          )}
+
+                          <p className="text-xs text-muted-foreground">
+                            Eingegangen am {format(new Date(offer.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                          </p>
+                        </div>
+
+                        {/* Aktions-Buttons */}
+                        {offer.status === 'pending' && (
+                          <div className="flex flex-col gap-3 min-w-[280px]">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-green-500 hover:bg-green-600 flex-1"
+                                disabled={respondingOfferId === offer.id}
+                                onClick={() => handleSellerAcceptOffer(offer.id)}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Annehmen
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="flex-1"
+                                disabled={respondingOfferId === offer.id}
+                                onClick={() => handleSellerRejectOffer(offer.id)}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Ablehnen
+                              </Button>
+                            </div>
+                            <Separator />
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium">Oder Gegenangebot senden:</p>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="Betrag in \u20ac"
+                                  value={counterOfferAmounts[offer.id] || ''}
+                                  onChange={(e) => setCounterOfferAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                  className="flex-1"
+                                />
+                              </div>
+                              <Textarea
+                                placeholder="Nachricht (optional)"
+                                value={counterOfferMessages[offer.id] || ''}
+                                onChange={(e) => setCounterOfferMessages(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                rows={2}
+                                className="resize-none"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full border-blue-500 text-blue-700 hover:bg-blue-50"
+                                disabled={respondingOfferId === offer.id || !counterOfferAmounts[offer.id]}
+                                onClick={() => handleSellerCounterOffer(offer.id)}
+                              >
+                                <Handshake className="w-4 h-4 mr-1" />
+                                Gegenangebot senden
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>

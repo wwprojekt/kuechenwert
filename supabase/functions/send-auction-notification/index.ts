@@ -10,13 +10,18 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
   yourBid?: string;
   endTime?: string;
   customerNumber?: string;
+  // Kaufchance-specific fields
+  rank?: string;
+  expiresAt?: string;
+  reservePrice?: string;
+  topBiddersCount?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -25,7 +30,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum }: AuctionEmailRequest = await req.json();
+    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
@@ -187,6 +192,57 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>1.</strong> Erneute Auktion mit angepasstem Mindestgebot<br><strong>2.</strong> Direktverkauf an einen unserer Partnerhändler<br><strong>3.</strong> Individuelle Beratung durch unser Expertenteam')}
           ${button('Zum Dashboard', auctionUrl, settingsData)}
           ${paragraph(`Kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+
+      case "kaufchance_invite":
+        subject = `Kaufchance: ${motorhomeModel} – Ihr Angebot ist gefragt!`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Sie haben eine exklusive Kaufchance!</strong>')}
+          ${paragraph('Die Auktion für das folgende Fahrzeug wurde beendet, ohne dass das Mindestgebot erreicht wurde. Als einer der Höchstbieter haben Sie die Möglichkeit, dem Verkäufer ein neues Angebot zu unterbreiten.')}
+          ${infoBox('Fahrzeugdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${yourBid ? detailRow('Ihr höchstes Gebot', yourBid) : ''}
+            ${currentBid ? detailRow('Höchstes Gebot insgesamt', currentBid) : ''}
+            ${rank ? detailRow('Ihre Position', `Platz ${rank} von ${topBiddersCount || '2'} eingeladenen Bietern`) : ''}
+          `, 'info', settingsData)}
+          ${infoBox('Kaufchance-Details', `
+            ${expiresAt ? detailRow('Angebotsfrist', expiresAt) : ''}
+            ${detailRow('Status', 'Offen – Sie können jetzt ein Angebot abgeben')}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>So funktioniert es:</strong>')}
+          ${paragraph('<strong>1.</strong> Klicken Sie auf den Button unten, um zur Auktionsseite zu gelangen<br><strong>2.</strong> Geben Sie Ihr Kaufangebot ab<br><strong>3.</strong> Der Verkäufer kann Ihr Angebot annehmen, ablehnen oder ein Gegenangebot machen<br><strong>4.</strong> Bei Einigung wird der Kaufvertrag automatisch erstellt')}
+          ${button('Jetzt Angebot abgeben', auctionUrl, settingsData)}
+          ${paragraph(`<em>Diese Kaufchance ist zeitlich begrenzt${expiresAt ? ` und läuft am ${expiresAt} ab` : ''}. Handeln Sie schnell!</em>`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+
+      case "seller_kaufchance":
+        subject = `Kaufchance für Ihr Fahrzeug: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Die Auktion für Ihr Fahrzeug wurde beendet. Leider wurde das Mindestgebot nicht erreicht – <strong>aber es gibt gute Neuigkeiten!</strong>')}
+          ${infoBox('Auktionsergebnis', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Höchstes Gebot', currentBid) : ''}
+            ${reservePrice ? detailRow('Ihr Mindestgebot', reservePrice) : ''}
+          `, 'info', settingsData)}
+          ${paragraph(`Wir haben die <strong>${topBiddersCount || '2'} Höchstbieter</strong> eingeladen, Ihnen ein neues Kaufangebot zu unterbreiten. Sie können diese Angebote in Ihrem Dashboard einsehen und darauf reagieren.`)}
+          ${infoBox('Kaufchance-Phase', `
+            ${expiresAt ? detailRow('Angebotsfrist', expiresAt) : ''}
+            ${detailRow('Eingeladene Bieter', topBiddersCount || '2')}
+            ${detailRow('Status', 'Warten auf Angebote')}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Ihre Möglichkeiten:</strong>')}
+          ${paragraph('<strong>1.</strong> Angebote im Dashboard einsehen<br><strong>2.</strong> Angebote annehmen, ablehnen oder Gegenangebote machen<br><strong>3.</strong> Unser Team unterstützt Sie bei der Verhandlung')}
+          ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
           ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;

@@ -115,6 +115,30 @@ const AuctionDetail = () => {
   const { playNotification, notifyOutbid } = useAudioNotification();
   const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
   const [addenda, setAddenda] = useState<{id: string; content: string; created_at: string}[]>([]);
+  const [isInvitedToKaufchance, setIsInvitedToKaufchance] = useState(false);
+
+  // Check if current user is invited to kaufchance
+  useEffect(() => {
+    const checkKaufchanceInvitation = async () => {
+      if (!user || !id) return;
+      try {
+        const { data, error } = await supabase
+          .from('kaufchance_invitations')
+          .select('id')
+          .eq('auction_id', id)
+          .eq('bidder_id', user.id)
+          .maybeSingle();
+        if (!error && data) {
+          setIsInvitedToKaufchance(true);
+        } else {
+          setIsInvitedToKaufchance(false);
+        }
+      } catch {
+        setIsInvitedToKaufchance(false);
+      }
+    };
+    checkKaufchanceInvitation();
+  }, [user, id]);
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
@@ -1773,20 +1797,28 @@ const AuctionDetail = () => {
                           Kaufchance!
                         </h3>
                       </div>
-                      <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
-                        Diese Auktion endete ohne Verkauf. Sie können jetzt ein Direktangebot abgeben!
-                      </p>
                       <KaufchanceBadge expiresAt={(auction as any).kaufchance_expires_at} className="mb-3" />
-                      <PostAuctionOfferDialog
-                        auctionId={auction.id}
-                        currentBid={currentBid}
-                        vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
-                      >
-                        <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-                          <Zap className="w-4 h-4 mr-2" />
-                          Jetzt Angebot abgeben
-                        </Button>
-                      </PostAuctionOfferDialog>
+                      {isInvitedToKaufchance ? (
+                        <>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                            Sie wurden als Top-Bieter eingeladen! Geben Sie jetzt ein Direktangebot ab.
+                          </p>
+                          <PostAuctionOfferDialog
+                            auctionId={auction.id}
+                            currentBid={currentBid}
+                            vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+                          >
+                            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                              <Zap className="w-4 h-4 mr-2" />
+                              Jetzt Angebot abgeben
+                            </Button>
+                          </PostAuctionOfferDialog>
+                        </>
+                      ) : (
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                          Diese Auktion befindet sich in der Kaufchance-Phase. Nur eingeladene Top-Bieter können ein Angebot abgeben.
+                        </p>
+                      )}
                     </div>
                   </div>
                 ) : (

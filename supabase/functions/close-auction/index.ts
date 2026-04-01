@@ -8,7 +8,8 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  * 
  * Closes an auction after it has ended. Determines the outcome:
  * - Sold: Reserve price met → update motorhome, create invoice, generate purchase contract, send emails
- * - Ended: No bids or reserve not met → notify seller
+ * - Kaufchance: Reserve not met but bids exist → invite top-2 bidders for negotiation
+ * - Ended: No bids → notify seller
  * 
  * Invoice flow (when sold):
  * 1. create_auction_invoice RPC → creates invoice + line items
@@ -19,11 +20,21 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  * 4. generate-purchase-contract → generates Kaufvertrag PDF between seller and buyer
  * 5. Send contract to both parties via email
  * 
+ * Kaufchance flow (when reserve not met but bids exist):
+ * 1. Set auction status to 'kaufchance' with 72h expiry
+ * 2. Identify top-2 unique bidders by their highest bid
+ * 3. Create kaufchance_invitations for top-2 bidders
+ * 4. Send invitation emails to top-2 bidders
+ * 5. Notify seller about kaufchance phase
+ * 6. Notify admin about kaufchance
+ * 
  * Notifications:
  * - Winner dealer: notify-auction-winner
  * - Losing dealers: send-auction-notification (type: 'lost')
  * - Seller (sold): send-auction-notification (type: 'seller_sold')
  * - Seller (not sold): send-auction-notification (type: 'seller_not_sold')
+ * - Seller (kaufchance): send-auction-notification (type: 'seller_kaufchance')
+ * - Top-2 bidders (kaufchance): send-auction-notification (type: 'kaufchance_invite')
  * - Admin: summary email with all results and any errors
  * 
  * Auth: service_role (cron/internal) or admin
@@ -132,6 +143,27 @@ async function sendAdminEmail(
   }
 }
 
+// Helper: Get top-N unique bidders by their highest bid
+function getTopBidders(bids: any[], count: number): { bidderId: string; highestBid: number }[] {
+  // Group bids by bidder and find each bidder's highest bid
+  const bidderHighest = new Map<string, number>();
+  
+  for (const bid of bids) {
+    const amount = Number(bid.amount);
+    const current = bidderHighest.get(bid.bidder_id) || 0;
+    if (amount > current) {
+      bidderHighest.set(bid.bidder_id, amount);
+    }
+  }
+  
+  // Sort by highest bid descending and take top N
+  const sorted = Array.from(bidderHighest.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count);
+  
+  return sorted.map(([bidderId, highestBid]) => ({ bidderId, highestBid }));
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -172,9 +204,9 @@ Deno.serve(async (req) => {
     }
 
     // Check if auction is already closed
-    if (auction.status === 'ended' || auction.status === 'sold' || auction.status === 'cancelled') {
+    if (auction.status === 'ended' || auction.status === 'sold' || auction.status === 'cancelled' || auction.status === 'kaufchance') {
       return new Response(
-        JSON.stringify({ message: 'Auction already closed' }),
+        JSON.stringify({ message: 'Auction already closed or in kaufchance phase' }),
         { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
@@ -204,6 +236,7 @@ Deno.serve(async (req) => {
     let newStatus = 'ended';
     let motorhomeStatus = 'available';
     let soldTo: string | null = null;
+    let isKaufchance = false;
 
     if (highestBid) {
       const reserveMet = auction.reserve_price
@@ -216,16 +249,31 @@ Deno.serve(async (req) => {
         soldTo = highestBid.bidder_id;
         console.log('Auction sold to:', soldTo, 'for:', highestBid.amount);
       } else {
-        console.log('Reserve price not met. Highest bid:', highestBid.amount, 'Reserve:', auction.reserve_price);
+        // Reserve not met but bids exist → Kaufchance!
+        newStatus = 'kaufchance';
+        isKaufchance = true;
+        console.log('Reserve price not met. Highest bid:', highestBid.amount, 'Reserve:', auction.reserve_price, '→ Entering Kaufchance phase');
       }
     } else {
       console.log('No bids placed on auction');
     }
 
+    // Calculate kaufchance expiry (72 hours from now)
+    const kaufchanceExpiresAt = isKaufchance 
+      ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // Update auction status
+    const updateData: any = { status: newStatus };
+    if (kaufchanceExpiresAt) {
+      updateData.kaufchance_expires_at = kaufchanceExpiresAt;
+      // Set initial kaufchance_min_price to the reserve_price (admin can adjust later)
+      updateData.kaufchance_min_price = auction.reserve_price;
+    }
+
     const { error: updateAuctionError } = await supabase
       .from('auctions')
-      .update({ status: newStatus })
+      .update(updateData)
       .eq('id', auctionId);
 
     if (updateAuctionError) {
@@ -236,7 +284,171 @@ Deno.serve(async (req) => {
     const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
 
-    // ─── If sold: Update motorhome, create invoice, generate contract, send emails ────
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ─── KAUFCHANCE FLOW ───────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isKaufchance && auction.bids && auction.bids.length > 0) {
+      console.log('Processing Kaufchance flow...');
+      
+      // Get top-2 unique bidders
+      const topBidders = getTopBidders(auction.bids, 2);
+      console.log('Top bidders identified:', topBidders);
+
+      // Create kaufchance_invitations for top-2 bidders
+      for (let i = 0; i < topBidders.length; i++) {
+        const bidder = topBidders[i];
+        const rank = i + 1;
+
+        try {
+          const { error: inviteError } = await supabase
+            .from('kaufchance_invitations')
+            .upsert({
+              auction_id: auctionId,
+              bidder_id: bidder.bidderId,
+              highest_bid: bidder.highestBid,
+              rank: rank,
+              invited_at: new Date().toISOString(),
+            }, {
+              onConflict: 'auction_id,bidder_id',
+            });
+
+          if (inviteError) {
+            console.error(`Error creating invitation for bidder ${bidder.bidderId}:`, inviteError);
+            errors.push(`Einladung für Bieter ${rank} fehlgeschlagen: ${inviteError.message}`);
+          } else {
+            console.log(`Invitation created for bidder ${bidder.bidderId} (rank ${rank})`);
+          }
+        } catch (e: any) {
+          console.error(`Error creating invitation for bidder ${bidder.bidderId}:`, e);
+          errors.push(`Einladung für Bieter ${rank} fehlgeschlagen: ${e.message}`);
+        }
+      }
+
+      // Send invitation emails to top-2 bidders
+      for (let i = 0; i < topBidders.length; i++) {
+        const bidder = topBidders[i];
+        const rank = i + 1;
+
+        try {
+          const { data: bidderProfile } = await supabase
+            .from('profiles')
+            .select('email, first_name, company_name')
+            .eq('id', bidder.bidderId)
+            .single();
+
+          if (bidderProfile?.email) {
+            await supabase.functions.invoke('send-auction-notification', {
+              body: {
+                email: bidderProfile.email,
+                name: bidderProfile.company_name || bidderProfile.first_name || bidderProfile.email.split('@')[0],
+                type: 'kaufchance_invite',
+                motorhomeModel: motorhomeName,
+                auctionUrl,
+                yourBid: `€${bidder.highestBid.toLocaleString()}`,
+                currentBid: `€${Number(highestBid!.amount).toLocaleString()}`,
+                rank: String(rank),
+                expiresAt: new Date(kaufchanceExpiresAt!).toLocaleDateString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              },
+            });
+            console.log(`Kaufchance invitation email sent to bidder ${rank}:`, bidderProfile.email);
+          }
+        } catch (e: any) {
+          console.error(`Error sending kaufchance invitation to bidder ${rank}:`, e);
+          errors.push(`Kaufchance-E-Mail an Bieter ${rank} fehlgeschlagen: ${e.message}`);
+        }
+      }
+
+      // Notify seller about kaufchance phase
+      if (auction.motorhome?.seller_id) {
+        try {
+          const { data: sellerProfile } = await supabase
+            .from('profiles')
+            .select('email, first_name')
+            .eq('id', auction.motorhome.seller_id)
+            .single();
+
+          if (sellerProfile?.email) {
+            await supabase.functions.invoke('send-auction-notification', {
+              body: {
+                email: sellerProfile.email,
+                name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                type: 'seller_kaufchance',
+                motorhomeModel: motorhomeName,
+                auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`,
+                currentBid: `€${Number(highestBid!.amount).toLocaleString()}`,
+                reservePrice: `€${Number(auction.reserve_price).toLocaleString()}`,
+                topBiddersCount: String(topBidders.length),
+                expiresAt: new Date(kaufchanceExpiresAt!).toLocaleDateString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              },
+            });
+            console.log('Kaufchance notification sent to seller:', sellerProfile.email);
+          }
+        } catch (e: any) {
+          console.error('Error sending kaufchance notification to seller:', e);
+          errors.push(`Kaufchance-E-Mail an Verkäufer fehlgeschlagen: ${e.message}`);
+        }
+      }
+
+      // Admin notification for Kaufchance
+      let adminContent = `
+        ${paragraph('<strong>Eine Auktion ist in die Kaufchance-Phase eingetreten.</strong>')}
+        ${infoBox('Auktionsergebnis', `
+          ${detailRow('Status', '🔔 KAUFCHANCE')}
+          ${detailRow('Fahrzeug', motorhomeName)}
+          ${detailRow('Mindestgebot', `€${Number(auction.reserve_price).toLocaleString()}`)}
+          ${detailRow('Höchstes Gebot', `€${Number(highestBid!.amount).toLocaleString()}`)}
+          ${detailRow('Differenz', `€${(Number(auction.reserve_price) - Number(highestBid!.amount)).toLocaleString()}`)}
+          ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
+        `, 'warning')}
+        ${infoBox('Eingeladene Bieter (Top-2)', topBidders.map((b, i) => 
+          `${detailRow(`Platz ${i + 1}`, `€${b.highestBid.toLocaleString()}`)}`
+        ).join(''), 'info')}
+        ${paragraph(`<strong>Kaufchance läuft ab:</strong> ${new Date(kaufchanceExpiresAt!).toLocaleDateString('de-DE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`)}
+        ${paragraph('<strong>Nächste Schritte:</strong><br>• Die Top-2-Bieter wurden eingeladen und können Angebote abgeben<br>• Der Verkäufer wurde informiert<br>• Sie können im Admin-Dashboard die Verhandlung moderieren<br>• Bei Bedarf können Sie das Mindestgebot anpassen')}
+      `;
+
+      if (errors.length > 0) {
+        adminContent += warningBox(`<strong>⚠️ ${errors.length} Fehler aufgetreten:</strong><br>${errors.map(e => `• ${e}`).join('<br>')}`);
+      }
+
+      adminContent += button('Kaufchancen verwalten', `https://caravanwert.de/admin/post-auction-offers`);
+
+      await sendAdminEmail(supabase, `Kaufchance gestartet: ${motorhomeName}`, adminContent);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: newStatus,
+          kaufchance: true,
+          topBidders: topBidders.map((b, i) => ({ rank: i + 1, highestBid: b.highestBid })),
+          expiresAt: kaufchanceExpiresAt,
+          errors: errors.length > 0 ? errors : undefined,
+        }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ─── SOLD FLOW ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
     if (motorhomeStatus === 'sold' && soldTo) {
       // Update motorhome status
       const { error: updateMotorhomeError } = await supabase
@@ -508,7 +720,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── Notify losing bidders ───────────────────────────────────
-    if (highestBid && auction.bids && auction.bids.length > 0) {
+    if (highestBid && auction.bids && auction.bids.length > 0 && newStatus === 'sold') {
       const losingBidderIds = [...new Set(
         auction.bids
           .map((b: any) => b.bidder_id)
@@ -545,7 +757,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── Notify seller about auction end (FIXED: correct templates) ──
-    if (auction.motorhome?.seller_id) {
+    if (auction.motorhome?.seller_id && (newStatus === 'sold' || newStatus === 'ended')) {
       const { data: sellerProfile } = await supabase
         .from('profiles')
         .select('email, first_name')
@@ -568,7 +780,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── ADMIN NOTIFICATION (NOT SOLD) ──────────────────────────────
+    // ─── ADMIN NOTIFICATION (NOT SOLD - no bids) ──────────────────────────────
     if (newStatus === 'ended') {
       let adminContent = `
         ${paragraph('<strong>Eine Auktion ist ohne Verkauf beendet worden.</strong>')}
@@ -579,10 +791,7 @@ Deno.serve(async (req) => {
           ${detailRow('Höchstes Gebot', highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : 'Keine Gebote')}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
         `, 'warning')}
-        ${paragraph(highestBid 
-          ? `Das Mindestgebot von €${Number(auction.reserve_price).toLocaleString()} wurde nicht erreicht. Das höchste Gebot lag bei €${Number(highestBid.amount).toLocaleString()}.`
-          : 'Es wurden keine Gebote auf diese Auktion abgegeben.'
-        )}
+        ${paragraph('Es wurden keine Gebote auf diese Auktion abgegeben.')}
         ${paragraph('<strong>Empfohlene nächste Schritte:</strong><br>• Kontakt mit dem Verkäufer aufnehmen<br>• Mindestgebot anpassen und erneut einstellen<br>• Alternativ Direktverkauf anbieten')}
       `;
       adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);

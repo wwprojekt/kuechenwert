@@ -15,7 +15,7 @@ const Haendler = () => {
     {
       icon: TrendingUp,
       title: "Schneller Umschlag",
-      description: "Verkaufen Sie Ihre Bestandsfahrzeuge schneller durch unser deutschlandweites Netzwerk."
+      description: "Verkaufen Sie Ihre Bestandsfahrzeuge schneller durch unser europaweites Netzwerk."
     },
     {
       icon: Shield,
@@ -74,7 +74,7 @@ const Haendler = () => {
   ];
 
   const stats = [
-    { number: "Bundesweit", label: "Händlernetzwerk" },
+    { number: "Europaweit", label: "Händlernetzwerk" },
     { number: "24h", label: "Durchschn. Reaktionszeit" },
     { number: "TÜV", label: "Zertifiziert" },
     { number: "100%", label: "Kostenlos starten" }
@@ -108,15 +108,15 @@ const Haendler = () => {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Händler-Partnerprogramm',
-    description: 'Werden Sie Teil unseres deutschlandweiten Händlernetzwerks. Schneller Bestandsverkauf, professioneller Marketing-Support und Zugang zu kaufbereiten Kunden.',
+    description: 'Werden Sie Teil unseres europaweiten Händlernetzwerks. Schneller Bestandsverkauf, professioneller Marketing-Support und Zugang zu kaufbereiten Kunden.',
     provider: {
       '@type': 'Organization',
       name: siteName,
       url: 'https://caravanwert.de',
     },
     areaServed: {
-      '@type': 'Country',
-      name: 'Germany',
+      '@type': 'Place',
+      name: 'European Union',
     },
     serviceType: 'B2B Vehicle Trading Platform',
   };
@@ -138,7 +138,7 @@ const Haendler = () => {
               Ihr <span className="gradient-text">Partner</span> für erfolgreichen Wohnmobil-Handel
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Werden Sie Teil unseres deutschlandweiten Händlernetzwerks. Profitieren Sie von schnellem Bestandsverkauf, 
+              Werden Sie Teil unseres europaweiten Händlernetzwerks. Profitieren Sie von schnellem Bestandsverkauf, 
               professionellem Marketing-Support und Zugang zu Tausenden kaufbereiten Kunden.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -354,7 +354,7 @@ const Haendler = () => {
 
             <h3 className="text-2xl font-bold mt-8 mb-4">Welche Voraussetzungen gibt es?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Sie benötigen einen gültigen Gewerbeschein für Kraftfahrzeughandel, nachweisbare Erfahrung im Wohnmobil-Bereich 
+              Sie benötigen einen gültigen Gewerbenachweis für den Fahrzeughandel, nachweisbare Erfahrung im Wohnmobil-Bereich 
               und die Bereitschaft zur vertrauensvollen Zusammenarbeit. Die Mitgliedschaft im Partnerprogramm ist kostenlos - 
               Sie zahlen nur eine erfolgsbasierte Provision bei Verkaufsabschluss.
             </p>

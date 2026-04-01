@@ -43,6 +43,7 @@ import {
   Info,
 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from "@/lib/euCountries";
 
 interface DealerCreateDialogProps {
   open: boolean;
@@ -60,6 +61,7 @@ const initialFormData = {
   company_address: "",
   company_postal_code: "",
   company_city: "",
+  country: DEFAULT_COUNTRY,
   tax_id: "",
   trade_license_number: "",
   contact_person_name: "",
@@ -89,6 +91,12 @@ export function DealerCreateDialog({
   const resetForm = () => {
     setFormData(initialFormData);
     setActiveTab("account");
+  };
+
+  const availableLegalForms = getLegalFormsByCountry(formData.country);
+
+  const handleCountryChange = (countryCode: string) => {
+    setFormData({ ...formData, country: countryCode, legal_form: "" });
   };
 
   const createDealerMutation = useMutation({
@@ -132,6 +140,7 @@ export function DealerCreateDialog({
           company_address: formData.company_address.trim() || "",
           company_postal_code: formData.company_postal_code.trim() || "",
           company_city: formData.company_city.trim() || "",
+          country: formData.country,
           tax_id: formData.tax_id.trim() || "",
           trade_license_number: formData.trade_license_number.trim() || "",
           contact_person_name: formData.contact_person_name.trim(),
@@ -341,6 +350,25 @@ export function DealerCreateDialog({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="create_country">Land</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={handleCountryChange}
+                >
+                  <SelectTrigger id="create_country">
+                    <SelectValue placeholder="Land wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EU_COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="create_company_address">Adresse</Label>
                 <Input
                   id="create_company_address"
@@ -352,10 +380,11 @@ export function DealerCreateDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="create_company_postal_code">PLZ</Label>
+                  <Label htmlFor="create_company_postal_code">Postleitzahl</Label>
                   <Input
                     id="create_company_postal_code"
-                    placeholder="12345"
+                    placeholder="z.B. 10115"
+                    maxLength={10}
                     value={formData.company_postal_code}
                     onChange={(e) => setFormData({ ...formData, company_postal_code: e.target.value })}
                   />
@@ -373,10 +402,10 @@ export function DealerCreateDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="create_tax_id">Steuernummer</Label>
+                  <Label htmlFor="create_tax_id">Steuernummer / USt-IdNr.</Label>
                   <Input
                     id="create_tax_id"
-                    placeholder="12/345/67890"
+                    placeholder="z.B. DE123456789"
                     value={formData.tax_id}
                     onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
                   />
@@ -396,7 +425,7 @@ export function DealerCreateDialog({
                 <Input
                   id="create_website"
                   type="url"
-                  placeholder="https://www.firma.de"
+                  placeholder="https://www.firma.eu"
                   value={formData.website}
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                 />
@@ -415,13 +444,18 @@ export function DealerCreateDialog({
                     <SelectValue placeholder="Rechtsform wählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="einzelunternehmen">Einzelunternehmen</SelectItem>
-                    <SelectItem value="gbr">GbR</SelectItem>
-                    <SelectItem value="ug">UG (haftungsbeschränkt)</SelectItem>
-                    <SelectItem value="gmbh">GmbH</SelectItem>
-                    <SelectItem value="ag">AG</SelectItem>
+                    {availableLegalForms.map((lf) => (
+                      <SelectItem key={lf.value} value={lf.value}>
+                        {lf.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {formData.country !== DEFAULT_COUNTRY && (
+                  <p className="text-xs text-muted-foreground">
+                    Rechtsformen für {EU_COUNTRIES.find(c => c.code === formData.country)?.name || formData.country}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

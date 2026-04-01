@@ -1,6 +1,7 @@
 /**
  * Dealer Onboarding Page
- * Streamlined dealer registration that creates dealer accounts directly
+ * Streamlined dealer registration that creates dealer accounts directly.
+ * 4-Step Wizard: Account → Company → Legal → Documents
  */
 
 import { useState } from 'react';
@@ -15,12 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { trackUserRegistered, setEnhancedConversionData } from '@/lib/gadsConversionService';
-import { Building2, User, FileText, Shield, CheckCircle } from 'lucide-react';
+import { Building2, User, Shield, CheckCircle, ShieldCheck } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
-import { SepaMandate } from '@/components/SepaMandate';
 import { LegalDocumentUpload } from '@/components/LegalDocumentUpload';
 import { useSettings } from '@/contexts/SettingsContext';
 import { passwordSchema, emailSchema } from '@/lib/validation';
+import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from '@/lib/euCountries';
 
 interface DealerRegistrationForm {
   // Auth data
@@ -38,6 +39,7 @@ interface DealerRegistrationForm {
   company_address: string;
   company_postal_code: string;
   company_city: string;
+  country: string;
   legal_form: string;
   hrb_number: string;
   
@@ -52,17 +54,6 @@ interface DealerRegistrationForm {
   accept_terms: boolean;
   accept_privacy: boolean;
 }
-
-const legalForms = [
-  'Einzelunternehmen',
-  'GmbH',
-  'UG',
-  'GbR',
-  'KG',
-  'OHG',
-  'AG',
-  'GmbH & Co. KG',
-];
 
 export default function DealerOnboarding() {
   const { toast } = useToast();
@@ -84,19 +75,27 @@ export default function DealerOnboarding() {
     company_address: '',
     company_postal_code: '',
     company_city: '',
+    country: DEFAULT_COUNTRY,
     legal_form: '',
-
     hrb_number: '',
     contact_person_name: '',
     contact_person_position: '',
     website: '',
-
     accept_terms: false,
     accept_privacy: false,
   });
 
   const updateFormData = (updates: Partial<DealerRegistrationForm>) => {
     setFormData(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleCountryChange = (newCountry: string) => {
+    const newLegalForms = getLegalFormsByCountry(newCountry);
+    const currentFormStillValid = newLegalForms.some(f => f.value === formData.legal_form);
+    updateFormData({
+      country: newCountry,
+      legal_form: currentFormStillValid ? formData.legal_form : '',
+    });
   };
 
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -133,6 +132,7 @@ export default function DealerOnboarding() {
           formData.company_address &&
           formData.company_postal_code &&
           formData.company_city &&
+          formData.country &&
           formData.legal_form &&
           formData.contact_person_name
         );
@@ -146,7 +146,7 @@ export default function DealerOnboarding() {
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setValidationErrors([]);
-      setCurrentStep(prev => Math.min(prev + 1, 5));
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps));
     } else {
       toast({
         title: 'Unvollständige Angaben',
@@ -190,6 +190,7 @@ export default function DealerOnboarding() {
             company_address: formData.company_address,
             company_postal_code: formData.company_postal_code,
             company_city: formData.company_city,
+            country: formData.country,
             contact_person_name: formData.contact_person_name,
             contact_person_position: formData.contact_person_position || null,
             website: formData.website || null,
@@ -230,7 +231,7 @@ export default function DealerOnboarding() {
       }
 
       setDealerApplicationId(fetchedApplicationId);
-      setCurrentStep(4); // Move to SEPA mandate step
+      setCurrentStep(4); // Move to document upload step
 
       // Google Ads: Enhanced Conversions + Händler-Onboarding Konto erstellt
       await setEnhancedConversionData({ email: formData.email, firstName: formData.first_name, lastName: formData.last_name, phone: formData.phone });
@@ -238,7 +239,7 @@ export default function DealerOnboarding() {
 
       toast({
         title: 'Konto erstellt!',
-        description: 'Ihr Händlerkonto wurde erstellt. Vervollständigen Sie nun die Registrierung.',
+        description: 'Ihr Händlerkonto wurde erstellt. Laden Sie nun Ihre Dokumente hoch.',
       });
 
     } catch (error: any) {
@@ -261,12 +262,13 @@ export default function DealerOnboarding() {
     navigate('/');
   };
 
+  const totalSteps = 4;
+
   const steps = [
     { id: 1, title: 'Konto erstellen', description: 'Persönliche Daten' },
     { id: 2, title: 'Unternehmen', description: 'Firmendaten' },
     { id: 3, title: 'Bestätigung', description: 'Nutzungsbedingungen' },
-    { id: 4, title: 'SEPA-Mandat', description: 'Zahlungsautorisation' },
-    { id: 5, title: 'Dokumente', description: 'Nachweise hochladen' },
+    { id: 4, title: 'Dokumente', description: 'Nachweise hochladen' },
   ];
 
   return (
@@ -296,7 +298,7 @@ export default function DealerOnboarding() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary">
-                    {currentStep}/5
+                    {currentStep}/{totalSteps}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {steps[currentStep - 1]?.title}
@@ -308,7 +310,7 @@ export default function DealerOnboarding() {
               <div className="w-full bg-muted rounded-full h-2">
                 <div 
                   className="bg-primary h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${(currentStep / 5) * 100}%` }}
+                  style={{ width: `${(currentStep / totalSteps) * 100}%` }}
                 />
               </div>
             </CardContent>
@@ -321,8 +323,7 @@ export default function DealerOnboarding() {
                 {currentStep === 1 && <User className="h-5 w-5" />}
                 {currentStep === 2 && <Building2 className="h-5 w-5" />}
                 {currentStep === 3 && <Shield className="h-5 w-5" />}
-                {currentStep === 4 && <FileText className="h-5 w-5" />}
-                {currentStep === 5 && <CheckCircle className="h-5 w-5" />}
+                {currentStep === 4 && <CheckCircle className="h-5 w-5" />}
                 {steps[currentStep - 1]?.title}
               </CardTitle>
               <CardDescription>
@@ -336,7 +337,11 @@ export default function DealerOnboarding() {
               )}
               
               {currentStep === 2 && (
-                <CompanyInfoStep formData={formData} updateFormData={updateFormData} />
+                <CompanyInfoStep 
+                  formData={formData} 
+                  updateFormData={updateFormData}
+                  onCountryChange={handleCountryChange}
+                />
               )}
               
               {currentStep === 3 && (
@@ -344,18 +349,11 @@ export default function DealerOnboarding() {
               )}
               
               {currentStep === 4 && dealerApplicationId && (
-                <SepaMandate 
-                  dealerApplicationId={dealerApplicationId}
-                  onMandateComplete={() => setCurrentStep(5)}
-                />
-              )}
-              
-              {currentStep === 5 && dealerApplicationId && (
                 <DocumentUploadStep dealerApplicationId={dealerApplicationId} />
               )}
 
-              {/* Fallback: Show message when dealerApplicationId is missing on Step 4/5 */}
-              {(currentStep === 4 || currentStep === 5) && !dealerApplicationId && (
+              {/* Fallback: Show message when dealerApplicationId is missing on Step 4 */}
+              {currentStep === 4 && !dealerApplicationId && (
                 <div className="text-center py-8 space-y-4">
                   <div className="text-amber-600 text-lg font-semibold">
                     Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse
@@ -415,7 +413,7 @@ export default function DealerOnboarding() {
               </div>
             )}
             
-            {currentStep === 5 && (
+            {currentStep === 4 && dealerApplicationId && (
               <div className="flex justify-end p-6 border-t">
                 <Button onClick={handleComplete}>
                   Registrierung abschließen
@@ -431,158 +429,217 @@ export default function DealerOnboarding() {
 
 // Step Components
 const AccountSetupStep = ({ formData, updateFormData }: any) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div className="space-y-2">
-      <Label htmlFor="email">E-Mail-Adresse *</Label>
-      <Input
-        id="email"
-        type="email"
-        value={formData.email}
-        onChange={(e) => updateFormData({ email: e.target.value })}
-        placeholder="ihre@email.de"
-      />
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="phone">Telefonnummer *</Label>
-      <Input
-        id="phone"
-        type="tel"
-        value={formData.phone}
-        onChange={(e) => updateFormData({ phone: e.target.value })}
-        placeholder="+49 123 456789"
-      />
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="first_name">Vorname *</Label>
-      <Input
-        id="first_name"
-        value={formData.first_name}
-        onChange={(e) => updateFormData({ first_name: e.target.value })}
-        placeholder="Max"
-      />
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="last_name">Nachname *</Label>
-      <Input
-        id="last_name"
-        value={formData.last_name}
-        onChange={(e) => updateFormData({ last_name: e.target.value })}
-        placeholder="Mustermann"
-      />
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="password">Passwort *</Label>
-      <Input
-        id="password"
-        type="password"
-        value={formData.password}
-        onChange={(e) => updateFormData({ password: e.target.value })}
-        placeholder="Mindestens 8 Zeichen"
-      />
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="confirmPassword">Passwort bestätigen *</Label>
-      <Input
-        id="confirmPassword"
-        type="password"
-        value={formData.confirmPassword}
-        onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
-        placeholder="Passwort wiederholen"
-      />
+  <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <Label htmlFor="email">E-Mail-Adresse *</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => updateFormData({ email: e.target.value })}
+          placeholder="ihre@firma.eu"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="phone">Telefonnummer *</Label>
+        <Input
+          id="phone"
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => updateFormData({ phone: e.target.value })}
+          placeholder="+43 / +49 / +31 ..."
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="first_name">Vorname *</Label>
+        <Input
+          id="first_name"
+          value={formData.first_name}
+          onChange={(e) => updateFormData({ first_name: e.target.value })}
+          placeholder="Vorname"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="last_name">Nachname *</Label>
+        <Input
+          id="last_name"
+          value={formData.last_name}
+          onChange={(e) => updateFormData({ last_name: e.target.value })}
+          placeholder="Nachname"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="password">Passwort *</Label>
+        <Input
+          id="password"
+          type="password"
+          value={formData.password}
+          onChange={(e) => updateFormData({ password: e.target.value })}
+          placeholder="Ihr sicheres Passwort"
+        />
+        {/* Passwort-Anforderungen */}
+        <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+          <p className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+            Passwort-Anforderungen
+          </p>
+          <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
+            <li className={formData.password.length >= 8 ? "text-green-600" : ""}>
+              • Mindestens 8 Zeichen
+            </li>
+            <li className={/[A-Z]/.test(formData.password) ? "text-green-600" : ""}>
+              • Mindestens ein Großbuchstabe
+            </li>
+            <li className={/[a-z]/.test(formData.password) ? "text-green-600" : ""}>
+              • Mindestens ein Kleinbuchstabe
+            </li>
+            <li className={/[0-9]/.test(formData.password) ? "text-green-600" : ""}>
+              • Mindestens eine Zahl
+            </li>
+            <li className={/[^A-Za-z0-9]/.test(formData.password) ? "text-green-600" : ""}>
+              • Mindestens ein Sonderzeichen (!@#$%^&* etc.)
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Passwort bestätigen *</Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          value={formData.confirmPassword}
+          onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
+          placeholder="Passwort wiederholen"
+        />
+      </div>
     </div>
   </div>
 );
 
-const CompanyInfoStep = ({ formData, updateFormData }: any) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-2">
-        <Label htmlFor="company_name">Firmenname *</Label>
-        <Input
-          id="company_name"
-          value={formData.company_name}
-          onChange={(e) => updateFormData({ company_name: e.target.value })}
-          placeholder="Mustermann Automobile GmbH"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="legal_form">Rechtsform *</Label>
-        <Select
-          value={formData.legal_form}
-          onValueChange={(value) => updateFormData({ legal_form: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Rechtsform auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {legalForms.map((form) => (
-              <SelectItem key={form} value={form}>
-                {form}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2 md:col-span-2">
-        <Label htmlFor="company_address">Firmenadresse *</Label>
-        <Input
-          id="company_address"
-          value={formData.company_address}
-          onChange={(e) => updateFormData({ company_address: e.target.value })}
-          placeholder="Musterstraße 123"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="company_postal_code">Postleitzahl *</Label>
-        <Input
-          id="company_postal_code"
-          value={formData.company_postal_code}
-          onChange={(e) => updateFormData({ company_postal_code: e.target.value })}
-          placeholder="z.B. 12345"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="company_city">Ort *</Label>
-        <Input
-          id="company_city"
-          value={formData.company_city}
-          onChange={(e) => updateFormData({ company_city: e.target.value })}
-          placeholder="Berlin"
-        />
-      </div>
-      
-      
-      <div className="space-y-2">
-        <Label htmlFor="contact_person_name">Ansprechpartner *</Label>
-        <Input
-          id="contact_person_name"
-          value={formData.contact_person_name}
-          onChange={(e) => updateFormData({ contact_person_name: e.target.value })}
-          placeholder="Max Mustermann"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="contact_person_position">Position (optional)</Label>
-        <Input
-          id="contact_person_position"
-          value={formData.contact_person_position}
-          onChange={(e) => updateFormData({ contact_person_position: e.target.value })}
-          placeholder="Geschäftsführer"
-        />
+const CompanyInfoStep = ({ formData, updateFormData, onCountryChange }: any) => {
+  const availableLegalForms = getLegalFormsByCountry(formData.country);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="company_name">Firmenname *</Label>
+          <Input
+            id="company_name"
+            value={formData.company_name}
+            onChange={(e) => updateFormData({ company_name: e.target.value })}
+            placeholder="Ihr Autohaus"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="country">Land *</Label>
+          <Select
+            value={formData.country}
+            onValueChange={onCountryChange}
+          >
+            <SelectTrigger id="country">
+              <SelectValue placeholder="Land auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {EU_COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="legal_form">Rechtsform *</Label>
+          <Select
+            value={formData.legal_form}
+            onValueChange={(value) => updateFormData({ legal_form: value })}
+          >
+            <SelectTrigger id="legal_form">
+              <SelectValue placeholder="Rechtsform auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLegalForms.map((form) => (
+                <SelectItem key={form.value} value={form.value}>
+                  {form.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="website">Website (optional)</Label>
+          <Input
+            id="website"
+            value={formData.website}
+            onChange={(e) => updateFormData({ website: e.target.value })}
+            placeholder="https://www.ihre-firma.eu"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="company_address">Firmenadresse *</Label>
+          <Input
+            id="company_address"
+            value={formData.company_address}
+            onChange={(e) => updateFormData({ company_address: e.target.value })}
+            placeholder="Straße und Hausnummer"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="company_postal_code">Postleitzahl *</Label>
+          <Input
+            id="company_postal_code"
+            value={formData.company_postal_code}
+            onChange={(e) => updateFormData({ company_postal_code: e.target.value })}
+            placeholder="PLZ"
+            maxLength={10}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="company_city">Ort *</Label>
+          <Input
+            id="company_city"
+            value={formData.company_city}
+            onChange={(e) => updateFormData({ company_city: e.target.value })}
+            placeholder="Ort"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="contact_person_name">Ansprechpartner *</Label>
+          <Input
+            id="contact_person_name"
+            value={formData.contact_person_name}
+            onChange={(e) => updateFormData({ contact_person_name: e.target.value })}
+            placeholder="Vor- und Nachname"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="contact_person_position">Position (optional)</Label>
+          <Input
+            id="contact_person_position"
+            value={formData.contact_person_position}
+            onChange={(e) => updateFormData({ contact_person_position: e.target.value })}
+            placeholder="z.B. Geschäftsführer"
+          />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const LegalAcceptanceStep = ({ formData, updateFormData }: any) => (
   <div className="space-y-6">
@@ -595,7 +652,10 @@ const LegalAcceptanceStep = ({ formData, updateFormData }: any) => (
         />
         <div className="grid gap-1.5 leading-none">
           <Label htmlFor="accept_terms" className="cursor-pointer">
-            Ich akzeptiere die Nutzungsbedingungen *
+            Ich akzeptiere die{' '}
+            <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Nutzungsbedingungen
+            </a>{' '}*
           </Label>
           <p className="text-xs text-muted-foreground">
             Sie müssen den Nutzungsbedingungen zustimmen, um fortzufahren.
@@ -611,7 +671,10 @@ const LegalAcceptanceStep = ({ formData, updateFormData }: any) => (
         />
         <div className="grid gap-1.5 leading-none">
           <Label htmlFor="accept_privacy" className="cursor-pointer">
-            Ich akzeptiere die Datenschutzerklärung *
+            Ich akzeptiere die{' '}
+            <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Datenschutzerklärung
+            </a>{' '}*
           </Label>
           <p className="text-xs text-muted-foreground">
             Ihre Daten werden gemäß unserer Datenschutzerklärung verarbeitet.

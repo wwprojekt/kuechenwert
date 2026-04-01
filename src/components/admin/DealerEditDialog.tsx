@@ -18,6 +18,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -32,6 +39,7 @@ import { openPrivateDocument } from "@/lib/storageUtils";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { EU_COUNTRIES, getLegalFormsByCountry, getCountryName } from "@/lib/euCountries";
 
 interface DealerProfile {
   id: string;
@@ -48,6 +56,7 @@ interface DealerApplication {
   company_address: string;
   company_postal_code: string;
   company_city: string;
+  country?: string | null;
   tax_id: string;
   trade_license_number: string;
   contact_person_name: string;
@@ -59,7 +68,6 @@ interface DealerApplication {
   status: string;
   submitted_at: string;
   reviewed_at: string | null;
-  // New fields
   legal_form?: string | null;
   founded_year?: number | null;
   handelsregister_number?: string | null;
@@ -88,6 +96,7 @@ export function DealerEditDialog({
     company_address: "",
     company_postal_code: "",
     company_city: "",
+    country: "DE",
     tax_id: "",
     trade_license_number: "",
     contact_person_name: "",
@@ -111,6 +120,7 @@ export function DealerEditDialog({
         company_address: dealer.company_address || "",
         company_postal_code: dealer.company_postal_code || "",
         company_city: dealer.company_city || "",
+        country: dealer.country || "DE",
         tax_id: dealer.tax_id || "",
         trade_license_number: dealer.trade_license_number || "",
         contact_person_name: dealer.contact_person_name || "",
@@ -129,6 +139,9 @@ export function DealerEditDialog({
     }
   }, [dealer]);
 
+  // Get legal forms for the currently selected country
+  const availableLegalForms = getLegalFormsByCountry(formData.country);
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!dealer?.id) throw new Error("No dealer ID");
@@ -140,6 +153,7 @@ export function DealerEditDialog({
           company_address: formData.company_address,
           company_postal_code: formData.company_postal_code,
           company_city: formData.company_city,
+          country: formData.country,
           tax_id: formData.tax_id,
           trade_license_number: formData.trade_license_number,
           contact_person_name: formData.contact_person_name,
@@ -180,17 +194,6 @@ export function DealerEditDialog({
 
   const handleSave = () => {
     updateMutation.mutate();
-  };
-
-  const getLegalFormLabel = (value: string) => {
-    const labels: Record<string, string> = {
-      einzelunternehmen: "Einzelunternehmen",
-      gbr: "GbR",
-      ug: "UG (haftungsbeschränkt)",
-      gmbh: "GmbH",
-      ag: "AG",
-    };
-    return labels[value] || value;
   };
 
   const getEmployeeCountLabel = (value: string) => {
@@ -238,6 +241,27 @@ export function DealerEditDialog({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="country">Land</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, country: value, legal_form: "" });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Land wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EU_COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="company_address">Adresse</Label>
                 <Input
                   id="company_address"
@@ -276,7 +300,7 @@ export function DealerEditDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tax_id">Steuernummer</Label>
+                  <Label htmlFor="tax_id">Steuernummer / USt-IdNr.</Label>
                   <Input
                     id="tax_id"
                     value={formData.tax_id}
@@ -286,7 +310,7 @@ export function DealerEditDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="trade_license_number">Gewerbeschein-Nr.</Label>
+                  <Label htmlFor="trade_license_number">Gewerbenachweis-Nr.</Label>
                   <Input
                     id="trade_license_number"
                     value={formData.trade_license_number}
@@ -377,14 +401,23 @@ export function DealerEditDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="legal_form">Rechtsform</Label>
-                  <Input
-                    id="legal_form"
+                  <Select
                     value={formData.legal_form}
-                    onChange={(e) =>
-                      setFormData({ ...formData, legal_form: e.target.value })
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, legal_form: value })
                     }
-                    placeholder="z.B. gmbh, ug, einzelunternehmen"
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Rechtsform wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLegalForms.map((lf) => (
+                        <SelectItem key={lf.value} value={lf.value}>
+                          {lf.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="founded_year">Gründungsjahr</Label>
@@ -479,6 +512,13 @@ export function DealerEditDialog({
                 </div>
 
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Land</span>
+                  <span className="text-sm">
+                    {getCountryName(dealer.country || "DE")}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     Eingereicht am
                   </span>
@@ -510,7 +550,7 @@ export function DealerEditDialog({
                       Rechtsform
                     </span>
                     <span className="text-sm">
-                      {getLegalFormLabel(dealer.legal_form)}
+                      {dealer.legal_form}
                     </span>
                   </div>
                 )}
@@ -553,7 +593,7 @@ export function DealerEditDialog({
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    Gewerbeschein
+                    Gewerbenachweis
                   </Label>
                   <Button
                     variant="outline"

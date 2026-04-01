@@ -40,17 +40,7 @@ import {
 import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { passwordSchema, emailSchema } from "@/lib/validation";
-
-const LEGAL_FORMS = [
-  { value: "Einzelunternehmen", label: "Einzelunternehmen" },
-  { value: "GmbH", label: "GmbH" },
-  { value: "UG", label: "UG (haftungsbeschränkt)" },
-  { value: "GbR", label: "GbR" },
-  { value: "KG", label: "KG" },
-  { value: "OHG", label: "OHG" },
-  { value: "AG", label: "AG" },
-  { value: "GmbH & Co. KG", label: "GmbH & Co. KG" },
-];
+import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from "@/lib/euCountries";
 
 const dealerRegistrationSchema = z.object({
   // Account details
@@ -62,6 +52,7 @@ const dealerRegistrationSchema = z.object({
   companyAddress: z.string().min(5, "Adresse erforderlich"),
   companyPostalCode: z.string().regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Ungültige Postleitzahl"),
   companyCity: z.string().min(2, "Stadt erforderlich"),
+  country: z.string().min(2, "Land erforderlich"),
 
   legalForm: z.string().optional(),
   foundedYear: z.string().regex(/^\d{4}$/, "Ungültiges Jahr (4 Ziffern)").optional().or(z.literal("")),
@@ -110,6 +101,7 @@ const RegisterHaendler = () => {
     companyAddress: "",
     companyPostalCode: "",
     companyCity: "",
+    country: DEFAULT_COUNTRY,
 
     legalForm: "",
     foundedYear: "",
@@ -120,6 +112,20 @@ const RegisterHaendler = () => {
 
     agbAccepted: false as boolean,
   });
+
+  // Dynamic legal forms based on selected country
+  const availableLegalForms = getLegalFormsByCountry(formData.country);
+
+  // Reset legal form when country changes (if current selection is not valid for new country)
+  const handleCountryChange = (newCountry: string) => {
+    const newLegalForms = getLegalFormsByCountry(newCountry);
+    const currentFormStillValid = newLegalForms.some(f => f.value === formData.legalForm);
+    setFormData({
+      ...formData,
+      country: newCountry,
+      legalForm: currentFormStillValid ? formData.legalForm : "",
+    });
+  };
 
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -156,9 +162,6 @@ const RegisterHaendler = () => {
       const redirectUrl = `${window.location.origin}/login`;
 
       // Step 1: Create user account with email confirmation
-      // All dealer data is passed as user_metadata so the handle_new_user
-      // database trigger can create the dealer_application automatically
-      // (the trigger runs with SECURITY DEFINER, bypassing RLS)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.password,
@@ -172,6 +175,7 @@ const RegisterHaendler = () => {
             company_address: validated.companyAddress,
             company_postal_code: validated.companyPostalCode,
             company_city: validated.companyCity,
+            country: validated.country,
             contact_person_name: validated.contactPersonName,
             contact_person_position: validated.contactPersonPosition || null,
             website: validated.website || null,
@@ -190,10 +194,6 @@ const RegisterHaendler = () => {
       }
 
       // Step 2: Upload document via Edge Function (bypasses RLS)
-      // After signUp with email confirmation, there is NO active session yet,
-      // so supabase.functions.invoke() cannot send a valid JWT.
-      // We use a direct fetch() call with registration_token=true instead.
-      // The Edge Function verifies the user was created within the last 10 minutes.
       if (documentFile) {
         setUploadingDocument(true);
         try {
@@ -221,19 +221,15 @@ const RegisterHaendler = () => {
 
           if (!response.ok || !uploadResult.success) {
             logger.error("Document upload error:", uploadResult.error || response.statusText);
-            // Continue without document - not critical for registration
           } else {
             logger.info("Document uploaded successfully:", uploadResult.url);
           }
         } catch (uploadErr) {
           logger.error("Document upload failed:", uploadErr);
-          // Continue - document can be uploaded later
         } finally {
           setUploadingDocument(false);
         }
       }
-
-      // Role and dealer_application are created by the handle_new_user trigger automatically
 
       // Google Ads: Enhanced Conversions + Händler-Registrierung
       await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
@@ -381,7 +377,7 @@ const RegisterHaendler = () => {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="ihre@firma.de"
+                      placeholder="ihre@firma.eu"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -450,7 +446,7 @@ const RegisterHaendler = () => {
                     <Label htmlFor="companyName">Firmenname *</Label>
                     <Input
                       id="companyName"
-                      placeholder="Ihr Autohaus GmbH"
+                      placeholder="Ihr Autohaus"
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     />
@@ -463,18 +459,18 @@ const RegisterHaendler = () => {
                     </Label>
                     <Input
                       id="companyAddress"
-                      placeholder="Musterstraße 123"
+                      placeholder="Straße und Hausnummer"
                       value={formData.companyAddress}
                       onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyPostalCode">Postleitzahl *</Label>
                       <Input
                         id="companyPostalCode"
-                        placeholder="z.B. 12345"
+                        placeholder="PLZ"
                         maxLength={10}
                         value={formData.companyPostalCode}
                         onChange={(e) => setFormData({ ...formData, companyPostalCode: e.target.value })}
@@ -484,17 +480,35 @@ const RegisterHaendler = () => {
                       <Label htmlFor="companyCity">Stadt *</Label>
                       <Input
                         id="companyCity"
-                        placeholder="Berlin"
+                        placeholder="Ort"
                         value={formData.companyCity}
                         onChange={(e) => setFormData({ ...formData, companyCity: e.target.value })}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Land *</Label>
+                      <Select
+                        value={formData.country}
+                        onValueChange={handleCountryChange}
+                      >
+                        <SelectTrigger id="country">
+                          <SelectValue placeholder="Land auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EU_COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="document" className="flex items-center gap-2">
                       <Upload className="w-4 h-4 text-primary" />
-                      Gewerbeschein hochladen (optional)
+                      Gewerbenachweis hochladen (optional)
                     </Label>
                     <input
                       ref={documentInputRef}
@@ -504,6 +518,7 @@ const RegisterHaendler = () => {
                       onChange={handleDocumentUpload}
                       className="hidden"
                     />
+                    
                     <Button
                       type="button"
                       variant="outline"
@@ -538,7 +553,7 @@ const RegisterHaendler = () => {
                           <SelectValue placeholder="Rechtsform auswählen" />
                         </SelectTrigger>
                         <SelectContent>
-                          {LEGAL_FORMS.map((form) => (
+                          {availableLegalForms.map((form) => (
                             <SelectItem key={form.value} value={form.value}>
                               {form.label}
                             </SelectItem>
@@ -577,7 +592,7 @@ const RegisterHaendler = () => {
                       <Label htmlFor="contactPersonName">Name *</Label>
                       <Input
                         id="contactPersonName"
-                        placeholder="Max Mustermann"
+                        placeholder="Vor- und Nachname"
                         value={formData.contactPersonName}
                         onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
                       />
@@ -586,7 +601,7 @@ const RegisterHaendler = () => {
                       <Label htmlFor="contactPersonPosition">Position (optional)</Label>
                       <Input
                         id="contactPersonPosition"
-                        placeholder="Geschäftsführer"
+                        placeholder="z.B. Geschäftsführer"
                         value={formData.contactPersonPosition}
                         onChange={(e) => setFormData({ ...formData, contactPersonPosition: e.target.value })}
                       />
@@ -602,7 +617,7 @@ const RegisterHaendler = () => {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+49 123 456789"
+                        placeholder="+43 / +49 / +31 ..."
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
@@ -615,7 +630,7 @@ const RegisterHaendler = () => {
                       <Input
                         id="website"
                         type="url"
-                        placeholder="https://ihr-autohaus.de"
+                        placeholder="https://www.ihre-firma.eu"
                         value={formData.website}
                         onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                       />

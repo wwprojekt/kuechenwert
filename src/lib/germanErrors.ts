@@ -242,16 +242,20 @@ export function translateError(englishMessage: string): GermanError {
  * Prüft ob ein Text wahrscheinlich bereits auf Deutsch ist
  */
 function isGerman(text: string): boolean {
+  const lowerText = text.toLowerCase();
   const germanIndicators = [
-    'Bitte', 'Fehler', 'erforderlich', 'ungültig', 'mindestens',
-    'maximal', 'nicht', 'Pflicht', 'muss', 'darf', 'Zeichen',
-    'Passwort', 'E-Mail', 'Eingabe', 'überprüfen', 'erneut',
+    'bitte', 'fehler', 'erforderlich', 'ungültig', 'mindestens',
+    'maximal', 'nicht', 'pflicht', 'muss', 'darf', 'zeichen',
+    'passwort', 'e-mail', 'eingabe', 'überprüfen', 'erneut',
     'aufgetreten', 'versuchen', 'wählen', 'geben', 'ist ein',
-    'Hersteller', 'Modell', 'Baujahr', 'Zustand', 'Beschreibung',
-    'Sitzplätze', 'Schlafplätze', 'Fotos', 'Verkaufsweg',
-    'Kilometerstand', 'Aufbauart', 'Mängel', 'Ankaufstation',
+    'hersteller', 'modell', 'baujahr', 'zustand', 'beschreibung',
+    'sitzplätze', 'schlafplätze', 'fotos', 'verkaufsweg',
+    'kilometerstand', 'aufbauart', 'mängel', 'ankaufstation',
+    'plz', 'ziffern', 'postleitzahl', 'firmenname', 'adresse',
+    'telefonnummer', 'stadt', 'marke', 'akzeptieren',
+    'anmelden', 'registrieren', 'straße', 'hausnummer',
   ];
-  return germanIndicators.some(indicator => text.includes(indicator));
+  return germanIndicators.some(indicator => lowerText.includes(indicator));
 }
 
 /**

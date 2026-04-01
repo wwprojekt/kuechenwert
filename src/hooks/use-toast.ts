@@ -167,7 +167,17 @@ function toast({ ...props }: Toast) {
     const lastLoggedTime = (window as any).__lastLoggedErrorTime || 0;
     const isDuplicate = lastLoggedError === errorMessage && (Date.now() - lastLoggedTime) < 5000;
 
-    if (!isDuplicate) {
+    // Validierungsfehler erkennen: Bekannte UI-Hinweise die kein echtes Logging benötigen
+    const validationPrefixes = [
+      'Bitte', 'Unvollständige', 'Ungültig', 'Pflichtfeld',
+      'Sie müssen', 'Passwort', 'Mindestens', 'Maximal',
+    ];
+    const isValidationToast = validationPrefixes.some(prefix => errorMessage.startsWith(prefix))
+      || titleStr === 'Bitte überprüfen Sie Ihre Eingaben'
+      || titleStr === 'Unvollständige Angaben'
+      || titleStr === 'Fehlende Angaben';
+
+    if (!isDuplicate && !isValidationToast) {
       logErrorToSupabase({
         errorCode: 'TOAST_ERROR',
         errorMessage: `${titleStr}: ${errorMessage}`,

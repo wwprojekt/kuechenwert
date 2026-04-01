@@ -98,7 +98,6 @@ const Login = () => {
           severity: 'medium',
           metadata: {
             attempted_email: formData.email,
-            attempted_password: formData.password,
           },
         });
         toast({

@@ -8,6 +8,7 @@ import {
   Car,
   Settings,
   LogOut,
+  BarChart3,
   Home,
   Building2,
   Calendar,
@@ -141,6 +142,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Benutzer", url: "/admin/users", icon: Users },
       { title: "Händler", url: "/admin/dealers", icon: Building2, badgeKey: "dealers" },
+      { title: "Händler-Statistik", url: "/admin/dealer-stats", icon: BarChart3 },
       { title: "Bewertungen", url: "/admin/reviews", icon: Star },
     ],
   },

@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
+import { useToast } from "@/hooks/use-toast";
 import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
@@ -48,13 +49,61 @@ import { de } from "date-fns/locale";
 const DealerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   useSettings(); // Initialize settings context
   const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, refetch: refetchApp } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
   const audioNotifications = useAudioNotification({ enabled: true, volume: 0.8 });
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const audioEnabledRef = useRef(audioEnabled);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "mybids" | "leading" | "outbid" | "nobid">("all");
+
+  // Keep ref in sync with state (needed for Realtime callback closure)
+  useEffect(() => {
+    audioEnabledRef.current = audioEnabled;
+  }, [audioEnabled]);
+
+  // ─── Realtime: Audio-Benachrichtigung bei neuen Geboten ───────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("dashboard-bid-audio")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "bids",
+        },
+        async (payload: any) => {
+          // Eigene Gebote ignorieren (der Händler weiß, dass er geboten hat)
+          if (payload.new.bidder_id === user.id) return;
+
+          // Daten sofort aktualisieren (statt 30s Polling abzuwarten)
+          queryClient.invalidateQueries({ queryKey: ["dealerStats", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["allActiveAuctions", user.id] });
+
+          // Audio abspielen wenn aktiviert
+          if (audioEnabledRef.current) {
+            await audioNotifications.playNotification("bid");
+          }
+
+          // Toast-Benachrichtigung anzeigen
+          toast({
+            title: "Neues Gebot!",
+            description: `€${Number(payload.new.amount).toLocaleString("de-DE")} auf eine Auktion`,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient, toast, audioNotifications]);
 
   // Fetch dealer level
   const { data: dealerLevel } = useQuery({

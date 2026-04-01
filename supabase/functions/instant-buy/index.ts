@@ -48,20 +48,38 @@ Deno.serve(async (req) => {
     }
 
     // 2. Verify dealer role and approved status
-    const { data: buyerProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('user_type, dealer_status')
-      .eq('id', user.id)
-      .single();
+    // Check role from user_roles table (single source of truth)
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (profileError || !buyerProfile) {
-      console.error('Profile fetch error:', profileError?.message);
-      throw new Error('Benutzerprofil konnte nicht geladen werden');
+    if (roleError) {
+      console.error('Role fetch error:', roleError.message);
+      throw new Error('Benutzerrolle konnte nicht geladen werden');
     }
 
-    if (buyerProfile.user_type !== 'dealer' || buyerProfile.dealer_status !== 'approved') {
-      console.warn(`Unauthorized instant-buy attempt by user ${user.id} (type: ${buyerProfile.user_type}, status: ${buyerProfile.dealer_status})`);
-      throw new Error('Nur freigeschaltete H\u00e4ndler d\u00fcrfen Sofortk\u00e4ufe t\u00e4tigen');
+    if (!roleData || roleData.role !== 'dealer') {
+      console.warn(`Unauthorized instant-buy attempt by user ${user.id} (role: ${roleData?.role ?? 'none'})`);
+      throw new Error('Nur freigeschaltete Händler dürfen Sofortkäufe tätigen');
+    }
+
+    // Check dealer approval status from dealer_applications table
+    const { data: dealerApp, error: dealerAppError } = await supabaseAdmin
+      .from('dealer_applications')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (dealerAppError) {
+      console.error('Dealer application fetch error:', dealerAppError.message);
+      throw new Error('Händlerstatus konnte nicht geladen werden');
+    }
+
+    if (!dealerApp || dealerApp.status !== 'approved') {
+      console.warn(`Unauthorized instant-buy attempt by user ${user.id} (dealer status: ${dealerApp?.status ?? 'no application'})`);
+      throw new Error('Nur freigeschaltete Händler dürfen Sofortkäufe tätigen');
     }
 
     // 3. Validate request body

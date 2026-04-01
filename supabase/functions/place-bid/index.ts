@@ -70,20 +70,38 @@ Deno.serve(async (req) => {
     }
 
     // ─── Verify dealer role and approved status ──────────────────
-    const { data: bidderProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('user_type, dealer_status')
-      .eq('id', user.id)
-      .single();
+    // Check role from user_roles table (single source of truth)
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (profileError || !bidderProfile) {
-      console.error('Profile fetch error:', profileError?.message);
-      throw new Error('Benutzerprofil konnte nicht geladen werden');
+    if (roleError) {
+      console.error('Role fetch error:', roleError.message);
+      throw new Error('Benutzerrolle konnte nicht geladen werden');
     }
 
-    if (bidderProfile.user_type !== 'dealer' || bidderProfile.dealer_status !== 'approved') {
-      console.warn(`Unauthorized bid attempt by user ${user.id} (type: ${bidderProfile.user_type}, status: ${bidderProfile.dealer_status})`);
-      throw new Error('Nur freigeschaltete H\u00e4ndler d\u00fcrfen Gebote abgeben');
+    if (!roleData || roleData.role !== 'dealer') {
+      console.warn(`Unauthorized bid attempt by user ${user.id} (role: ${roleData?.role ?? 'none'})`);
+      throw new Error('Nur freigeschaltete Händler dürfen Gebote abgeben');
+    }
+
+    // Check dealer approval status from dealer_applications table
+    const { data: dealerApp, error: dealerAppError } = await supabaseAdmin
+      .from('dealer_applications')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (dealerAppError) {
+      console.error('Dealer application fetch error:', dealerAppError.message);
+      throw new Error('Händlerstatus konnte nicht geladen werden');
+    }
+
+    if (!dealerApp || dealerApp.status !== 'approved') {
+      console.warn(`Unauthorized bid attempt by user ${user.id} (dealer status: ${dealerApp?.status ?? 'no application'})`);
+      throw new Error('Nur freigeschaltete Händler dürfen Gebote abgeben');
     }
 
     // Parse and validate request body with Zod

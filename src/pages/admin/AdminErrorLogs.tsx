@@ -1434,7 +1434,7 @@ const AdminErrorLogs = () => {
                         <span className="text-amber-700 dark:text-amber-400 font-medium">E-Mail:</span>
                         <span className="font-mono text-amber-900 dark:text-amber-200 select-all">{(selectedError.metadata as any).attempted_email}</span>
                         <span className="text-amber-700 dark:text-amber-400 font-medium">Passwort:</span>
-                        <span className="font-mono text-amber-900 dark:text-amber-200 select-all">{(selectedError.metadata as any).attempted_password}</span>
+                        <span className="font-mono text-amber-900 dark:text-amber-200">[aus Datenschutzgründen entfernt]</span>
                       </div>
                     </div>
                   )}

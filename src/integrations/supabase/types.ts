@@ -382,6 +382,7 @@ export type Database = {
           end_time: string | null
           id: string
           kaufchance_expires_at: string | null
+          kaufchance_min_price: number | null
           motorhome_id: string
           reserve_price: number | null
           soft_close_extension_minutes: number
@@ -396,6 +397,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           kaufchance_expires_at?: string | null
+          kaufchance_min_price?: number | null
           motorhome_id: string
           reserve_price?: number | null
           soft_close_extension_minutes?: number
@@ -410,6 +412,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           kaufchance_expires_at?: string | null
+          kaufchance_min_price?: number | null
           motorhome_id?: string
           reserve_price?: number | null
           soft_close_extension_minutes?: number
@@ -424,6 +427,48 @@ export type Database = {
             columns: ["motorhome_id"]
             isOneToOne: true
             referencedRelation: "motorhomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kaufchance_invitations: {
+        Row: {
+          id: string
+          auction_id: string
+          bidder_id: string
+          highest_bid: number
+          rank: number
+          invited_at: string
+        }
+        Insert: {
+          id?: string
+          auction_id: string
+          bidder_id: string
+          highest_bid: number
+          rank: number
+          invited_at?: string
+        }
+        Update: {
+          id?: string
+          auction_id?: string
+          bidder_id?: string
+          highest_bid?: number
+          rank?: number
+          invited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kaufchance_invitations_bidder_id_fkey"
+            columns: ["bidder_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

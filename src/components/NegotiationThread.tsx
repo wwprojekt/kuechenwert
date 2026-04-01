@@ -101,36 +101,43 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
     setIsSubmitting(true);
 
     try {
-      const updateData: any = {
-        seller_response: responseMessage.trim() || null,
-        updated_at: new Date().toISOString(),
-      };
-
       if (actionType === "accept") {
-        updateData.status = "accepted";
-      } else if (actionType === "reject") {
-        updateData.status = "rejected";
-      } else if (actionType === "counter") {
-        const amount = parseFloat(counterAmount);
-        if (isNaN(amount) || amount <= 0) {
-          toast({
-            title: "Ungültiger Betrag",
-            description: "Bitte geben Sie einen gültigen Betrag ein",
-            variant: "destructive",
-          });
-          setIsSubmitting(false);
-          return;
+        // Use the Edge Function for acceptance to trigger full purchase flow
+        const { data: acceptResult, error: acceptError } = await supabase.functions.invoke('accept-kaufchance-offer', {
+          body: { offerId: selectedOffer.id },
+        });
+        if (acceptError) throw acceptError;
+        if (!acceptResult?.success) throw new Error(acceptResult?.error || 'Unbekannter Fehler');
+      } else {
+        const updateData: any = {
+          seller_response: responseMessage.trim() || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (actionType === "reject") {
+          updateData.status = "rejected";
+        } else if (actionType === "counter") {
+          const amount = parseFloat(counterAmount);
+          if (isNaN(amount) || amount <= 0) {
+            toast({
+              title: "Ungültiger Betrag",
+              description: "Bitte geben Sie einen gültigen Betrag ein",
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+          updateData.status = "countered";
+          updateData.counter_offer_amount = amount;
         }
-        updateData.status = "countered";
-        updateData.counter_offer_amount = amount;
+
+        const { error } = await supabase
+          .from("post_auction_offers")
+          .update(updateData)
+          .eq("id", selectedOffer.id);
+
+        if (error) throw error;
       }
-
-      const { error } = await supabase
-        .from("post_auction_offers")
-        .update(updateData)
-        .eq("id", selectedOffer.id);
-
-      if (error) throw error;
 
       toast({
         title: actionType === "accept" 

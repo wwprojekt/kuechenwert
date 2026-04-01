@@ -18,6 +18,7 @@ interface SendEmailRequest {
   recipient_name?: string;
   attachments?: Array<{ filename: string; content: string; type?: string }>;
   scheduled_at?: string;
+  plain_answer?: string; // Die reine Admin-Antwort ohne Kontext-Text (für vehicle_questions)
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -45,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendEmailRequest = await req.json();
-    const { to, subject, body_html, cc, bcc, reply_to_message_id, reply_to_message_type, recipient_name, attachments, scheduled_at } = body;
+    const { to, subject, body_html, cc, bcc, reply_to_message_id, reply_to_message_type, recipient_name, attachments, scheduled_at, plain_answer } = body;
 
     if (!to || !subject || !body_html) {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, body_html' }), { status: 400, headers });
@@ -194,10 +195,12 @@ const handler = async (req: Request): Promise<Response> => {
     // If this is a reply to a support/contact/vehicle_question message, update the original
     if (reply_to_message_id && reply_to_message_type) {
       if (reply_to_message_type === 'vehicle_question') {
+        // Speichere nur die reine Admin-Antwort, nicht den vollen E-Mail-Body mit Kontext
+        const answerText = plain_answer || body_html.replace(/<[^>]*>/g, '');
         await supabase
           .from('vehicle_questions')
           .update({
-            answer: body_html.replace(/<[^>]*>/g, ''),
+            answer: answerText,
             answered_at: new Date().toISOString(),
             answered_by: user.id,
           })

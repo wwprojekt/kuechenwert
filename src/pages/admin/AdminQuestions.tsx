@@ -169,6 +169,7 @@ export default function AdminQuestions() {
           recipient_name: selectedQuestion.questioner_name || undefined,
           reply_to_message_id: selectedQuestion.id,
           reply_to_message_type: "vehicle_question",
+          plain_answer: answer.trim(), // Reine Admin-Antwort ohne E-Mail-Kontext für DB-Speicherung
         },
       });
 

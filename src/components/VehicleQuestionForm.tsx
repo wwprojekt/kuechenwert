@@ -20,6 +20,40 @@ interface VehicleQuestionFormProps {
   vehicleTitle: string;
 }
 
+const RATE_LIMIT_KEY = 'vq_rate_limit';
+const MAX_QUESTIONS_PER_HOUR = 3;
+const COOLDOWN_MS = 60 * 60 * 1000; // 1 Stunde
+
+function checkRateLimit(): boolean {
+  try {
+    const stored = localStorage.getItem(RATE_LIMIT_KEY);
+    if (!stored) return true;
+    const { count, timestamp } = JSON.parse(stored);
+    if (Date.now() - timestamp > COOLDOWN_MS) return true;
+    return count < MAX_QUESTIONS_PER_HOUR;
+  } catch {
+    return true;
+  }
+}
+
+function incrementRateLimit(): void {
+  try {
+    const stored = localStorage.getItem(RATE_LIMIT_KEY);
+    let count = 1;
+    let timestamp = Date.now();
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.timestamp <= COOLDOWN_MS) {
+        count = parsed.count + 1;
+        timestamp = parsed.timestamp;
+      }
+    }
+    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify({ count, timestamp }));
+  } catch {
+    // localStorage nicht verfügbar - ignorieren
+  }
+}
+
 export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuestionFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -32,6 +66,16 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Rate-Limiting: Max 3 Fragen pro Stunde
+    if (!checkRateLimit()) {
+      toast({
+        title: "Bitte warten",
+        description: "Sie haben bereits mehrere Fragen gestellt. Bitte versuchen Sie es später erneut.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       questionSchema.parse({
@@ -61,6 +105,19 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
       });
 
       if (error) throw error;
+
+      // Rate-Limit-Zähler erhöhen
+      incrementRateLimit();
+
+      // Admin-Benachrichtigung über neue Fahrzeugfrage senden (fire-and-forget)
+      supabase.functions.invoke("notify-vehicle-question", {
+        body: {
+          vehicle_title: vehicleTitle,
+          questioner_name: formData.name || user?.email?.split("@")[0] || "Unbekannt",
+          questioner_email: formData.email || user?.email || "",
+          question: formData.question.trim(),
+        },
+      }).catch((err) => console.error("Admin-Benachrichtigung fehlgeschlagen:", err));
 
       toast({
         title: "Frage gesendet",

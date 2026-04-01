@@ -102,6 +102,24 @@ export function PostAuctionOfferDialog({
         return;
       }
 
+      // Verify the user is actually invited to this kaufchance
+      const { data: invitation, error: invError } = await supabase
+        .from('kaufchance_invitations')
+        .select('id')
+        .eq('auction_id', auctionId)
+        .eq('bidder_id', user.id)
+        .maybeSingle();
+
+      if (invError || !invitation) {
+        toast({
+          title: 'Nicht eingeladen',
+          description: 'Sie wurden nicht als Top-Bieter zu dieser Kaufchance eingeladen.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Set offer to expire in 24 hours
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);

@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 /**
  * Edge Function: accept-kaufchance-offer
@@ -31,6 +32,31 @@ Deno.serve(async (req) => {
     return handleCorsPreflightRequest(req);
   }
 
+  // ─── Auth check: must be authenticated user (seller, buyer, or admin) ───
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: 'Nicht autorisiert: Kein Authorization-Header' }),
+      { status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ error: 'Nicht autorisiert: Ungültiger Token' }),
+      { status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`accept-kaufchance-offer called by user: ${user.id}`);
+
   try {
     const { offerId } = await req.json();
 
@@ -40,11 +66,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     const errors: string[] = [];
 
@@ -99,6 +120,27 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: `Auction is no longer in kaufchance phase (status: ${auction.status})` }),
         { status: 409, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ─── Authorization check: only seller, buyer (for counter-offers), or admin can accept ───
+    const isAdmin = await (async () => {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return roleData?.role === 'admin';
+    })();
+    const isSeller = auction.motorhome?.seller_id === user.id;
+    const isBuyer = offer.buyer_id === user.id;
+
+    // Buyer can only accept counter-offers (seller made a counter, buyer accepts)
+    if (!isAdmin && !isSeller && !(isBuyer && offer.status === 'countered')) {
+      console.warn(`Unauthorized accept attempt by user ${user.id} (isAdmin: ${isAdmin}, isSeller: ${isSeller}, isBuyer: ${isBuyer}, offerStatus: ${offer.status})`);
+      return new Response(
+        JSON.stringify({ error: 'Nicht autorisiert: Sie d\u00fcrfen dieses Angebot nicht annehmen' }),
+        { status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 

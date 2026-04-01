@@ -21,6 +21,7 @@ import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
+import { useFavorites } from "@/hooks/useFavorites";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import type { Database } from "@/integrations/supabase/types";
@@ -109,7 +110,7 @@ const AuctionDetail = () => {
   const [enableAutobid, setEnableAutobid] = useState(false);
   const [maxAutobidAmount, setMaxAutobidAmount] = useState("");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [isWatched, setIsWatched] = useState(false);
+  const { isFavorite, toggleFavorite, isLoading: isFavLoading } = useFavorites();
   const hotbidSoundPlayed = useRef(false);
   const { playNotification, notifyOutbid } = useAudioNotification();
   const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
@@ -815,7 +816,8 @@ const AuctionDetail = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
+                disabled={isFavLoading}
+                onClick={async () => {
                   if (!user) {
                     toast({
                       title: "Anmeldung erforderlich",
@@ -825,12 +827,12 @@ const AuctionDetail = () => {
                     navigate(`/login?redirect=/auktion/${id}`);
                     return;
                   }
-                  setIsWatched(!isWatched);
+                  await toggleFavorite(motorhome.id);
                 }}
-                className={`gap-2 ${isWatched ? 'text-red-600 border-red-200' : ''}`}
+                className={`gap-2 ${isFavorite(motorhome.id) ? 'text-red-600 border-red-200' : ''}`}
               >
-                <Heart className={`w-4 h-4 ${isWatched ? 'fill-current' : ''}`} />
-                {isWatched ? 'Beobachtet' : 'Beobachten'}
+                <Heart className={`w-4 h-4 ${isFavorite(motorhome.id) ? 'fill-current' : ''}`} />
+                {isFavorite(motorhome.id) ? 'Beobachtet' : 'Beobachten'}
               </Button>
             </div>
           </div>

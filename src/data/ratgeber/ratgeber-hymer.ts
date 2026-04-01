@@ -390,7 +390,7 @@ export const hymerVersteigern: RatgeberConfig = {
     { question: "Wer bietet auf meinen Hymer?", answer: "Verifizierte Händler und geprüfte Privatkäufer. Jeder Bieter durchläuft eine Identitätsprüfung, um seriöse Gebote zu gewährleisten." },
     { question: "Wie lange läuft die Auktion?", answer: "Standardmäßig 7 Tage. Die Auktion endet zu einem festgelegten Zeitpunkt, was für Last-Minute-Gebote und spannende Endphasen sorgt." },
     { question: "Was kostet die Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
-    { question: "Kann ich die Auktion vorzeitig beenden?", answer: "Ja, Sie können die Auktion jederzeit beenden, wenn Sie ein zufriedenstellendes Gebot erhalten haben. Bis zum Zuschlag haben Sie volle Kontrolle." },
+    { question: "Kann ich die Auktion vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Was passiert, wenn niemand bietet?", answer: "Sollte kein Gebot eingehen, beraten wir Sie zu alternativen Verkaufswegen wie dem Direktankauf. Es entstehen keine Kosten." },
     { question: "Wie wird die Bezahlung abgewickelt?", answer: "Die Bezahlung erfolgt über unser Treuhandsystem. Der Käufer zahlt vor Fahrzeugübergabe, Sie erhalten das Geld nach erfolgreicher Übergabe." },
     { question: "Muss ich Besichtigungen organisieren?", answer: "Nein. Die Auktion basiert auf Ihrer detaillierten Beschreibung und Fotos. Besichtigungen werden erst nach Auktionsende mit dem Höchstbietenden vereinbart." },

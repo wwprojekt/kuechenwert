@@ -43,13 +43,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-appointment-pin]
-verify_jwt = true
+verify_jwt = false
 
 [functions.verify-appointment-pin]
 verify_jwt = false
 
 [functions.complete-handover]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-handover-pdf]
 verify_jwt = false
@@ -123,7 +123,7 @@ verify_jwt = false
 
 # --- Admin ---
 [functions.admin-create-user]
-verify_jwt = true
+verify_jwt = false
 
 [functions.get-recipient-count]
 verify_jwt = false

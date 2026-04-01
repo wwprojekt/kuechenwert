@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
     const expertValueFormatted = lead.admin_estimated_value.toLocaleString("de-DE");
 
     // Build the email subject
-    const subject = `Ihre fundierte Fahrzeugbewertung: ${vehicleWithYear}`;
+    const subject = `Neue Expertenbewertung f\u00fcr Ihr Fahrzeug: ${vehicleWithYear}`;
 
     // Build vehicle details section
     const vehicleDetails = [
@@ -158,11 +158,11 @@ const handler = async (req: Request): Promise<Response> => {
     const emailContent = `
       ${greeting(customerName)}
 
-      ${paragraph(`Vielen Dank f&uuml;r Ihr Interesse an einer professionellen Bewertung Ihres Fahrzeugs <strong>${vehicleWithYear}</strong>. Unser Experten-Team hat Ihr ${vehicleTypeLabel} sorgf&auml;ltig analysiert und bewertet.`)}
+      ${paragraph(`Vielen Dank f&uuml;r Ihr Interesse an einer professionellen Bewertung Ihres Fahrzeugs <strong>${vehicleWithYear}</strong>. Unser Experte hat Ihr ${vehicleTypeLabel} sorgf&auml;ltig gepr&uuml;ft und eine neue Bewertung erstellt.`)}
 
-      ${amountDisplay("Fundierte Expertenbewertung", `${expertValueFormatted} &euro;`)}
+      ${amountDisplay("Expertenbewertung", `${expertValueFormatted} &euro;`)}
 
-      ${paragraph(`Dieser Wert basiert auf einer <strong>fundierten Marktanalyse</strong> unserer erfahrenen Fahrzeugexperten unter Ber&uuml;cksichtigung von Marke, Modell, Baujahr, Zustand${isCaravan ? '' : ', Kilometerstand'} und aktueller Marktlage.`)}
+      ${paragraph(`Dieser Wert basiert auf einer <strong>detaillierten Marktanalyse</strong> unseres Experten unter Ber&uuml;cksichtigung von Marke, Modell, Baujahr, Zustand${isCaravan ? '' : ', Kilometerstand'} und aktueller Marktlage.`)}
 
       ${vehicleDetails ? infoBox("Ihre Fahrzeugdaten", vehicleDetails, "info", settingsData) : ""}
 

@@ -1761,7 +1761,7 @@ const AuctionDetail = () => {
                       {isSubmitting ? "Wird geboten..." : "Gebot abgeben"}
                     </Button>
                     <p className="text-xs text-center text-muted-foreground">
-                      Gebote sind verbindlich. Mindesterhöhung: €100
+                      Gebote sind verbindlich. Mindesterhöhung: €50
                     </p>
                   </div>
                 ) : auction.status === "kaufchance" && (auction as any).kaufchance_expires_at ? (

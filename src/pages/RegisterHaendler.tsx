@@ -60,7 +60,7 @@ const dealerRegistrationSchema = z.object({
   // Company details
   companyName: z.string().min(2, "Firmenname erforderlich"),
   companyAddress: z.string().min(5, "Adresse erforderlich"),
-  companyPostalCode: z.string().regex(/^\d{5}$/, "Ungültige PLZ (5 Ziffern)"),
+  companyPostalCode: z.string().regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Ungültige Postleitzahl"),
   companyCity: z.string().min(2, "Stadt erforderlich"),
 
   legalForm: z.string().optional(),
@@ -471,11 +471,11 @@ const RegisterHaendler = () => {
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="companyPostalCode">PLZ *</Label>
+                      <Label htmlFor="companyPostalCode">Postleitzahl *</Label>
                       <Input
                         id="companyPostalCode"
-                        placeholder="12345"
-                        maxLength={5}
+                        placeholder="z.B. 12345"
+                        maxLength={10}
                         value={formData.companyPostalCode}
                         onChange={(e) => setFormData({ ...formData, companyPostalCode: e.target.value })}
                       />

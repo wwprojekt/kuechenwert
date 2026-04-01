@@ -541,12 +541,12 @@ const CompanyInfoStep = ({ formData, updateFormData }: any) => (
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="company_postal_code">PLZ *</Label>
+        <Label htmlFor="company_postal_code">Postleitzahl *</Label>
         <Input
           id="company_postal_code"
           value={formData.company_postal_code}
           onChange={(e) => updateFormData({ company_postal_code: e.target.value })}
-          placeholder="12345"
+          placeholder="z.B. 12345"
         />
       </div>
       

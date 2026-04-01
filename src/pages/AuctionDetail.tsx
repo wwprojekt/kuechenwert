@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -464,14 +465,22 @@ const AuctionDetail = () => {
       });
 
       if (error) {
-        // Extract actual error message from FunctionsHttpError
+        // Extract actual error message using official Supabase pattern
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
-        if ('context' in error && (error as any).context) {
+        if (error instanceof FunctionsHttpError) {
           try {
-            const ctx = (error as any).context;
-            const body = typeof ctx.json === 'function' ? await ctx.json() : null;
+            const body = await error.context.json();
             if (body?.error) errorMsg = body.error;
-          } catch { /* use default */ }
+          } catch {
+            try {
+              const text = await error.context.text();
+              if (text) errorMsg = text;
+            } catch { /* use default */ }
+          }
+        } else if (error instanceof FunctionsRelayError) {
+          errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
+        } else if (error instanceof FunctionsFetchError) {
+          errorMsg = 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.';
         }
         throw new Error(errorMsg);
       }
@@ -615,20 +624,22 @@ const AuctionDetail = () => {
       });
 
       if (error) {
-        // Try to extract the actual error message from the edge function response
-        // FunctionsHttpError.context is the Response object itself (not context.body)
+        // Extract actual error message using official Supabase pattern
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
-        if ('context' in error && (error as any).context) {
+        if (error instanceof FunctionsHttpError) {
           try {
-            const ctx = (error as any).context;
-            // context is a Response object - use .json() directly
-            const body = typeof ctx.json === 'function' 
-              ? await ctx.json() 
-              : typeof ctx.body?.json === 'function'
-                ? await ctx.body.json()
-                : null;
+            const body = await error.context.json();
             if (body?.error) errorMsg = body.error;
-          } catch { /* use default error message */ }
+          } catch {
+            try {
+              const text = await error.context.text();
+              if (text) errorMsg = text;
+            } catch { /* use default */ }
+          }
+        } else if (error instanceof FunctionsRelayError) {
+          errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
+        } else if (error instanceof FunctionsFetchError) {
+          errorMsg = 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.';
         }
         // Handle expired session specifically
         if (errorMsg === 'Unauthorized' || errorMsg.includes('Unauthorized') || errorMsg.includes('JWT')) {

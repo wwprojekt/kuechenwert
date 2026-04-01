@@ -243,9 +243,9 @@ export function AuctionEditDialog({
       return;
     }
 
-    // Validate PLZ format (German: 5 digits)
-    if (formData.postal_code.trim() && !/^\d{4,5}$/.test(formData.postal_code.trim())) {
-      toast.error("Bitte geben Sie eine gültige PLZ ein (4-5 Ziffern)");
+    // Validate PLZ format (EU-weit: 3-10 alphanumerische Zeichen, Leerzeichen/Bindestriche erlaubt)
+    if (formData.postal_code.trim() && !/^[A-Za-z0-9][A-Za-z0-9\s\-]{1,9}$/.test(formData.postal_code.trim())) {
+      toast.error("Bitte geben Sie eine gültige Postleitzahl ein (3-10 Zeichen)");
       return;
     }
 
@@ -320,7 +320,7 @@ export function AuctionEditDialog({
                     setFormData((prev) => ({ ...prev, postal_code: e.target.value }))
                   }
                   placeholder="z.B. 80331"
-                  maxLength={5}
+                  maxLength={10}
                   className={missingLocation ? "border-destructive" : ""}
                 />
               </div>

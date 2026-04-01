@@ -5,7 +5,7 @@ project_id = "zcrwqxsyptjwkuxfacvq"
 verify_jwt = false
 
 [functions.place-bid]
-verify_jwt = true
+verify_jwt = false
 
 [functions.close-auction]
 verify_jwt = false
@@ -14,7 +14,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.instant-buy]
-verify_jwt = true
+verify_jwt = false
 
 # --- Auction Notifications ---
 [functions.notify-auction-winner]

@@ -253,7 +253,6 @@ const UserDashboardWrapper = () => {
         {/* Seller-relevant routes */}
         <Route path="messages" element={<LazyPage Component={MyMessages} />} />
         <Route path="documents" element={<LazyPage Component={MyDocuments} />} />
-        <Route path="search-alerts" element={<LazyPage Component={SearchAlerts} />} />
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
         
         {/* Fallback: show overview for unknown sub-routes

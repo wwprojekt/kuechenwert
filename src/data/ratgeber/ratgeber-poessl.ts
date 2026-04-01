@@ -217,7 +217,7 @@ export const poesslWertErmitteln: RatgeberConfig = {
       title: "Vorteile unserer Bewertung",
       content: "Kastenwagen-Expertise für Ihren Pössl.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch kastenwagen-erfahrene Bewerter." },
         { title: "Segmentspezifisch", description: "Kastenwagen haben eigene Gesetze. Wir kennen sie genau." }
       ]
@@ -242,7 +242,7 @@ export const poesslWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonale Schwankungen?", answer: "Gering: 3–5% zwischen Sommer und Winter." },
     { question: "Online-Eingabe?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Pössl vs. Carado Vlow?", answer: "Pössl als Kastenwagen-Spezialist 3–6% wertstabiler." }
   ],
   relatedSlugs: ["poessl-wohnmobil-verkaufen", "was-kostet-mein-poessl-wohnmobil", "wie-verkaufe-ich-mein-poessl-wohnmobil", "poessl-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const poesslVersteigern: RatgeberConfig = {
     { question: "Mindestgebot?", answer: "Sie setzen den Mindestpreis. Nicht erreicht = kein Verkauf." },
     { question: "Wer bietet?", answer: "Verifizierte Käufer. Bei Kastenwagen: Camper, Alltagsfahrer, Händler." },
     { question: "Auktionsdauer?", answer: "7 Tage." },
-    { question: "Kosten?", answer: "Einstellen kostenlos. Bei Verkauf faire Gebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei gutem Gebot." },
+    { question: "Kosten?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit." },
     { question: "Empfohlenes Mindestgebot?", answer: "75–85% des Marktwerts. Kastenwagen erzielen oft überraschend hohe Endpreise." },
     { question: "Erfolgsquote bei Kastenwagen?", answer: "Überdurchschnittlich hoch. 7–18 Bieter typisch bei gut präsentierten Pössl." },
     { question: "Technische Probleme?", answer: "Team überwacht alle Auktionen." },

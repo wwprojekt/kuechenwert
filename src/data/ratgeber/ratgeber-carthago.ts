@@ -217,7 +217,7 @@ export const carthagoWertErmitteln: RatgeberConfig = {
       title: "Vorteile unserer Bewertung",
       content: "Spezialisiert auf Premiumfahrzeuge wie Carthago.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen. Auch bei Premiumpreisen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich. Auch bei Premiumpreisen." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch unsere Carthago-Spezialisten." },
         { title: "Nachvollziehbare Preisfindung", description: "Detaillierte Erklärung aller Bewertungsfaktoren. Transparenz auf Premium-Niveau." }
       ]
@@ -241,7 +241,7 @@ export const carthagoWertErmitteln: RatgeberConfig = {
     { question: "Innenausstattung und Wert?", answer: "Bei Carthago entscheidend. Echtholzmöbel und hochwertige Polster in Top-Zustand sind Pflicht für Premiumpreise." },
     { question: "Saisonale Schwankungen?", answer: "Weniger als bei Volumenmarken. 3–5% Aufschlag im Frühjahr, ganzjährig gute Preise." },
     { question: "Wie lange Online-Eingabe?", answer: "5–7 Minuten. Bei Premiumfahrzeugen empfehlen wir detaillierte Angaben für präzisere Bewertung." },
-    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung im Detail." },
+    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung im Detail." },
     { question: "Internationaler Verkauf möglich?", answer: "Ja, Carthago ist europaweit gefragt. Wir unterstützen auch bei internationalem Verkauf." },
     { question: "Wie wirkt sich die Reifenqualität aus?", answer: "Neue Premiumreifen (+800–1.200€ Wert). Abgefahrene Reifen mindern den Gesamteindruck bei Premiumkäufern." }
   ],
@@ -389,8 +389,8 @@ export const carthagoVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot bei Carthago?", answer: "Sie setzen den Mindestpreis. Bei Carthago empfehlen wir 85–90% des Marktwerts. Wird er nicht erreicht, kein Verkauf." },
     { question: "Wer bietet auf meinen Carthago?", answer: "Bonitätsgeprüfte Händler und qualifizierte Privatkäufer mit Erfahrung im Premiumsegment." },
     { question: "Wie lange dauert die Auktion?", answer: "7 Tage mit festem Auktionsende. Bei Premium optional 10 Tage für internationale Bieter." },
-    { question: "Was kostet die Premium-Auktion?", answer: "Einstellen kostenlos. Bei Verkauf faire Vermittlungsgebühr angepasst an die Preisklasse." },
-    { question: "Kann ich vorzeitig verkaufen?", answer: "Ja, bei Sofort-Kaufen-Preis oder zufriedenstellendem Gebot." },
+    { question: "Was kostet die Premium-Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Kann ich vorzeitig verkaufen?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Über den Sofortkauf-Preis können Händler das Fahrzeug jedoch sofort kaufen." },
     { question: "Wie sicher ist die Bezahlung?", answer: "Treuhand-System: Käufer zahlt vor Übergabe ein. Sichere Banküberweisung. Kein Bargeld-Risiko." },
     { question: "Erzielen Carthago gute Auktionspreise?", answer: "Hervorragend. Knappheit und Premiumstatus treiben die Preise. 5–10% über Direktankauf üblich." },
     { question: "Muss ich Besichtigungen machen?", answer: "Nein, Premium-Fotodokumentation reicht. Besichtigung nach Auktionsende vor Kaufabschluss." },

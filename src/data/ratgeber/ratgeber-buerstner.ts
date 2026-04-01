@@ -217,7 +217,7 @@ export const buerstnerWertErmitteln: RatgeberConfig = {
       title: "Vorteile der CaravanWert-Bewertung",
       content: "Profitieren Sie von unserer Expertise mit tausenden Bürstner-Bewertungen.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen. Die Bewertung ist komplett kostenfrei." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich. Die Bewertung ist komplett kostenfrei." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch unsere Bürstner-Experten." },
         { title: "Transparente Preisfindung", description: "Nachvollziehbare Erklärung aller preisbestimmenden Faktoren." }
       ]
@@ -243,7 +243,7 @@ export const buerstnerWertErmitteln: RatgeberConfig = {
     { question: "Innenausstattung und Wert?", answer: "Bei Bürstner besonders wichtig — das wohnliche Interieur ist ein Hauptkaufargument." },
     { question: "Saisonale Schwankungen?", answer: "Ja, im Frühjahr 4–7% höhere Bewertungen als im Herbst/Winter." },
     { question: "Wie lange dauert die Online-Eingabe?", answer: "3–5 Minuten. Bewertung innerhalb von 24 Stunden." },
-    { question: "Was passiert bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." }
+    { question: "Was passiert bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." }
   ],
   relatedSlugs: ["buerstner-wohnmobil-verkaufen", "was-kostet-mein-buerstner-wohnmobil", "wie-verkaufe-ich-mein-buerstner-wohnmobil", "buerstner-wohnmobil-versteigern"]
 };
@@ -389,8 +389,8 @@ export const buerstnerVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis. Wird er nicht erreicht, kein Verkauf, keine Kosten." },
     { question: "Wer bietet auf meinen Bürstner?", answer: "Verifizierte Händler und geprüfte Privatkäufer mit Identitätsprüfung." },
     { question: "Wie lange dauert eine Auktion?", answer: "7 Tage mit festem Auktionsende." },
-    { question: "Was kostet die Auktion?", answer: "Einstellen kostenlos. Bei Verkauf faire Vermittlungsgebühr." },
-    { question: "Kann ich vorzeitig verkaufen?", answer: "Ja, bei zufriedenstellendem Gebot können Sie die Auktion vorzeitig beenden." },
+    { question: "Was kostet die Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Kann ich vorzeitig verkaufen?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Wie hoch das Mindestgebot?", answer: "80–85% des Marktwerts empfohlen. Niedrigerer Einstieg = mehr Bieter." },
     { question: "Erzielen Bürstner gute Auktionspreise?", answer: "Ja, besonders Elegance und Gallery-Modelle. Durchschnittlich 4–10 Bieter." },
     { question: "Was bei technischen Problemen?", answer: "Unser Team überwacht alle Auktionen. Laufzeitverlängerung bei Störungen." },

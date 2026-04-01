@@ -217,7 +217,7 @@ export const rapidoWertErmitteln: RatgeberConfig = {
       title: "Vorteile unserer Bewertung",
       content: "Premium-Expertise für Rapido-Besitzer.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch Premium-erfahrene Bewerter." },
         { title: "Oberklasse-Kontext", description: "Rapido im richtigen Segment eingeordnet." }
       ]
@@ -242,7 +242,7 @@ export const rapidoWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonal?", answer: "Nur 3–5%. Premium weniger saisonabhängig." },
     { question: "Online?", answer: "3–5 Minuten. Ergebnis in 24 Stunden." },
-    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Rapido vs. Concorde?", answer: "Concorde Oberklasse, Rapido gehobene Mittel- bis Oberklasse. Concorde 10–20% teurer." }
   ],
   relatedSlugs: ["rapido-wohnmobil-verkaufen", "was-kostet-mein-rapido-wohnmobil", "wie-verkaufe-ich-mein-rapido-wohnmobil", "rapido-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const rapidoVersteigern: RatgeberConfig = {
     { question: "Mindestgebot Premium?", answer: "Bei Rapido: 80–85% des Marktwerts empfohlen." },
     { question: "Wer bietet?", answer: "Verifizierte, zahlungskräftige Käufer. Premium-Segment." },
     { question: "Dauer?", answer: "7 Tage." },
-    { question: "Kosten?", answer: "Einstellen kostenlos. Bei Verkauf faire Gebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei Premium-Gebot." },
+    { question: "Kosten?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit." },
     { question: "Erzielte Preise?", answer: "Premium-Auktionen erzielen oft 5–15% über Marktpreis." },
     { question: "Typische Bieter?", answer: "3–8 bei Premium. Weniger als Massenmarkt, aber höhere Einzelgebote." },
     { question: "Technische Probleme?", answer: "Team überwacht alle Auktionen." },

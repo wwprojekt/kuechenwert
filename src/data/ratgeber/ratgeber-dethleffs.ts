@@ -217,7 +217,7 @@ export const dethleffsWertErmitteln: RatgeberConfig = {
       title: "Vorteile der CaravanWert-Bewertung",
       content: "Profitieren Sie von unserer Erfahrung mit tausenden Dethleffs-Bewertungen und aktuellen Marktdaten.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen. Die Bewertung ist für Sie komplett kostenfrei." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich. Die Bewertung ist für Sie komplett kostenfrei." },
         { title: "Ergebnis in 24 Stunden", description: "Schnelle Bearbeitung durch unsere Dethleffs-Experten. Online-Eingabe dauert nur 3–5 Minuten." },
         { title: "Nachvollziehbare Preisfindung", description: "Sie erfahren genau, wie sich der Preis zusammensetzt und welche Faktoren wie stark wirken." }
       ]
@@ -240,7 +240,7 @@ export const dethleffsWertErmitteln: RatgeberConfig = {
     { question: "Was ist der Restwert nach 5 Jahren?", answer: "Typischerweise 50–60% des Neupreises bei durchschnittlicher Nutzung und gutem Zustand." },
     { question: "Kann ich die Bewertung für die Versicherung nutzen?", answer: "Als Orientierung ja. Für offizielle Versicherungszwecke empfehlen wir ein zertifiziertes Gutachten." },
     { question: "Wie wirkt sich die Vorbesitzeranzahl aus?", answer: "Ein Vorbesitzer ist ideal. Ab drei Vorbesitzern moderate Preisabschläge, da Käufer intensivere Nutzung vermuten." },
-    { question: "Was passiert, wenn ich mit der Bewertung nicht einverstanden bin?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung." },
+    { question: "Was passiert, wenn ich mit der Bewertung nicht einverstanden bin?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung." },
     { question: "Wie lange dauert die Online-Eingabe?", answer: "3–5 Minuten für die Basisdaten. Die detaillierte Bewertung erhalten Sie innerhalb von 24 Stunden." },
     { question: "Beeinflusst die Innenausstattung den Wert stark?", answer: "Ja, gepflegte Polster und intaktes Mobiliar sind wichtig. Beschädigungen im Innenraum können 2.000–4.000€ kosten." },
     { question: "Gibt es saisonale Schwankungen beim Dethleffs-Wert?", answer: "Ja, im Frühjahr 4–7% höhere Bewertungen als im Herbst/Winter aufgrund der stärkeren Nachfrage." }
@@ -389,8 +389,8 @@ export const dethleffsVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot bei Dethleffs?", answer: "Sie legen vor Auktionsstart einen Mindestpreis fest. Wird dieser nicht erreicht, findet kein Verkauf statt. Kein Risiko für Sie." },
     { question: "Wer bietet auf meinen Dethleffs?", answer: "Verifizierte Händler und geprüfte Privatkäufer. Jeder Bieter ist identitätsgeprüft für seriöse Gebote." },
     { question: "Wie lange dauert eine Auktion?", answer: "Standardmäßig 7 Tage. Das Auktionsende ist festgelegt, was für spannende Schlussgebote sorgt." },
-    { question: "Was kostet die Versteigerung?", answer: "Das Einstellen ist kostenlos. Bei erfolgreichem Verkauf fällt eine faire Vermittlungsgebühr an." },
-    { question: "Kann ich vorzeitig verkaufen?", answer: "Ja, bei einem zufriedenstellenden Gebot können Sie die Auktion vorzeitig beenden und den Zuschlag erteilen." },
+    { question: "Was kostet die Versteigerung?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Kann ich vorzeitig verkaufen?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Wie hoch sollte das Mindestgebot sein?", answer: "80–85% des geschätzten Marktwerts. Zu hohe Mindestgebote schrecken Bieter ab und reduzieren den Wettbewerb." },
     { question: "Erzielen Dethleffs gute Auktionspreise?", answer: "Ja, die Marke ist sehr gefragt. Gut beschriebene Dethleffs ziehen durchschnittlich 5–10 Bieter an." },
     { question: "Was bei technischen Problemen?", answer: "Unser Team überwacht alle Auktionen. Bei Störungen wird die Laufzeit entsprechend verlängert." },

@@ -217,7 +217,7 @@ export const sunlightWertErmitteln: RatgeberConfig = {
       title: "Vorteile unserer Bewertung",
       content: "Profitieren Sie von unserer Sunlight-Expertise.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch erfahrene Bewerter." },
         { title: "Hymer-Group-Kontext", description: "Sunlight im Vergleich zur gesamten Konzernfamilie positioniert." }
       ]
@@ -242,7 +242,7 @@ export const sunlightWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonale Schwankungen?", answer: "5–8% zwischen Frühjahr und Herbst." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten." },
-    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Sunlight vs. Weinsberg?", answer: "Sunlight tendenziell 2–4% höher durch Hymer-Group-Zugehörigkeit und Lifestyle-Image." }
   ],
   relatedSlugs: ["sunlight-wohnmobil-verkaufen", "was-kostet-mein-sunlight-wohnmobil", "wie-verkaufe-ich-mein-sunlight-wohnmobil", "sunlight-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const sunlightVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis. Nicht erreicht = kein Verkauf, keine Kosten." },
     { question: "Wer bietet?", answer: "Verifizierte Händler und Privatkäufer. Viele junge Camping-Einsteiger." },
     { question: "Auktionsdauer?", answer: "7 Tage." },
-    { question: "Kosten?", answer: "Einstellen kostenlos. Bei Verkauf faire Gebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei gutem Gebot möglich." },
+    { question: "Kosten?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit." },
     { question: "Empfohlenes Mindestgebot?", answer: "75–80% des Marktwerts." },
     { question: "Gute Preise bei Sunlight?", answer: "Ja, besonders Cliff. 4–10 Bieter typisch." },
     { question: "Technische Probleme?", answer: "Team überwacht alle Auktionen." },

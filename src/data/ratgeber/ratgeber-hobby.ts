@@ -217,7 +217,7 @@ export const hobbyWertErmitteln: RatgeberConfig = {
       title: "Vorteile der CaravanWert-Bewertung",
       content: "Profitieren Sie von unserer umfangreichen Hobby-Expertise.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung dank großer Hobby-Datenbasis." },
         { title: "Transparente Preisfindung", description: "Nachvollziehbare Erklärung aller preisbildenden Faktoren." }
       ]
@@ -242,7 +242,7 @@ export const hobbyWertErmitteln: RatgeberConfig = {
     { question: "Bewertung für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten empfohlen." },
     { question: "Saisonale Schwankungen bei Hobby?", answer: "Stärker als bei Premiummarken: 5–8% Aufschlag im Frühjahr." },
     { question: "Wie lange Online-Eingabe?", answer: "3–5 Minuten. Bewertung innerhalb von 24 Stunden." },
-    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Hobby vs. Knaus Wertvergleich?", answer: "Ähnliches Segment. Knaus tendenziell 3–5% wertstabiler, Hobby breiter verfügbar." }
   ],
   relatedSlugs: ["hobby-wohnmobil-verkaufen", "was-kostet-mein-hobby-wohnmobil", "wie-verkaufe-ich-mein-hobby-wohnmobil", "hobby-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const hobbyVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis. Wird er nicht erreicht, kein Verkauf, keine Kosten." },
     { question: "Wer bietet auf meinen Hobby?", answer: "Verifizierte Händler und geprüfte Privatkäufer. Viele Einsteiger dabei." },
     { question: "Wie lange dauert die Auktion?", answer: "7 Tage mit festem Auktionsende." },
-    { question: "Was kostet die Auktion?", answer: "Einstellen kostenlos. Bei Verkauf faire Vermittlungsgebühr." },
-    { question: "Kann ich vorzeitig beenden?", answer: "Ja, bei zufriedenstellendem Gebot vorzeitige Beendigung möglich." },
+    { question: "Was kostet die Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Kann ich vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Wie hoch das Mindestgebot?", answer: "75–80% des Marktwerts empfohlen. Bei Hobby breite Käuferbasis." },
     { question: "Erzielen Hobby gute Auktionspreise?", answer: "Ja, die breite Bekanntheit sorgt für 5–12 Bieter bei guter Präsentation." },
     { question: "Was bei technischen Problemen?", answer: "Team überwacht alle Auktionen. Laufzeitverlängerung bei Störungen." },

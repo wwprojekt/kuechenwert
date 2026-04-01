@@ -481,7 +481,7 @@ const Wertermittlung = () => {
             {[
               {
                 q: "Ist die Wertermittlung wirklich kostenlos?",
-                a: "Ja, unsere Wertermittlung ist zu 100% kostenlos und unverbindlich. Sie gehen keinerlei Verpflichtung ein.",
+                a: "Ja, unsere Wertermittlung ist zu 100% kostenlos und unverbindlich. Die Bewertung selbst ist ohne jede Verpflichtung. Erst wenn Sie sich für eine Auktion entscheiden und das Mindestgebot erreicht wird, ist der Verkauf für beide Seiten verbindlich.",
               },
               {
                 q: "Wie genau ist die Bewertung?",

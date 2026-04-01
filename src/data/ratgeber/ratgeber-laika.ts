@@ -242,7 +242,7 @@ export const laikaWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonal?", answer: "5–8% Schwankung." },
     { question: "Online?", answer: "3–5 Minuten." },
-    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Laika vs. Dethleffs?", answer: "Ähnliches Segment in der Hymer Group. Dethleffs in Deutschland bekannter, daher 3–5% höhere Preise." }
   ],
   relatedSlugs: ["laika-wohnmobil-verkaufen", "was-kostet-mein-laika-wohnmobil", "wie-verkaufe-ich-mein-laika-wohnmobil", "laika-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const laikaVersteigern: RatgeberConfig = {
     { question: "Mindestgebot?", answer: "Sie setzen den Preis. Nicht erreicht = kein Verkauf." },
     { question: "Wer bietet?", answer: "Verifizierte Händler und Privatkäufer. Design-Liebhaber und Hymer-Group-Fans." },
     { question: "Dauer?", answer: "7 Tage." },
-    { question: "Kosten?", answer: "Einstellen kostenlos. Bei Verkauf faire Gebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei gutem Gebot." },
+    { question: "Kosten?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit." },
     { question: "Empfohlenes Mindestgebot?", answer: "75–80% des Marktwerts." },
     { question: "Gute Preise bei Laika?", answer: "Ja, besonders Ecovip. 5–10 Bieter typisch." },
     { question: "Technische Probleme?", answer: "Team überwacht." },

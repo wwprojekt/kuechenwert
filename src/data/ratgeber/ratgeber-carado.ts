@@ -217,7 +217,7 @@ export const caradoWertErmitteln: RatgeberConfig = {
       title: "Vorteile unserer Carado-Bewertung",
       content: "Profitieren Sie von unserer Hymer-Group-Expertise.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung dank großer Datenbasis." },
         { title: "Konzernübergreifende Analyse", description: "Carado im Kontext der gesamten Hymer Group bewertet." }
       ]
@@ -242,7 +242,7 @@ export const caradoWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten." },
     { question: "Saisonale Schwankungen?", answer: "5–8% zwischen Frühjahr und Herbst." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Carado vs. Sunlight?", answer: "Ähnliches Segment. Carado leicht höhere Wiederverkaufspreise durch Hymer-Reputation." }
   ],
   relatedSlugs: ["carado-wohnmobil-verkaufen", "was-kostet-mein-carado-wohnmobil", "wie-verkaufe-ich-mein-carado-wohnmobil", "carado-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const caradoVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis. Wird er nicht erreicht, kein Verkauf, keine Kosten." },
     { question: "Wer bietet auf meinen Carado?", answer: "Verifizierte Händler und geprüfte Privatkäufer." },
     { question: "Auktionsdauer?", answer: "7 Tage mit festem Auktionsende." },
-    { question: "Kosten der Auktion?", answer: "Einstellen kostenlos. Bei Verkauf faire Vermittlungsgebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei zufriedenstellendem Gebot möglich." },
+    { question: "Kosten der Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Empfohlenes Mindestgebot?", answer: "75–80% des Marktwerts." },
     { question: "Gute Auktionspreise bei Carado?", answer: "Ja, Hymer-Group-Herkunft stärkt das Bietervertrauen. 5–12 Bieter typisch." },
     { question: "Technische Probleme?", answer: "Team überwacht alle Auktionen." },

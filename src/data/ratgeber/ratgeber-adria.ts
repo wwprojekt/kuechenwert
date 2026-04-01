@@ -217,7 +217,7 @@ export const adriaWertErmitteln: RatgeberConfig = {
       title: "Vorteile der CaravanWert-Bewertung",
       content: "Profitieren Sie von unserer Adria-Expertise.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich." },
         { title: "24-Stunden-Ergebnis", description: "Schnelle Bearbeitung durch erfahrene Bewerter." },
         { title: "Transparente Preisfindung", description: "Alle Bewertungsfaktoren nachvollziehbar erklärt." }
       ]
@@ -242,7 +242,7 @@ export const adriaWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten." },
     { question: "Saisonale Schwankungen?", answer: "4–7% Aufschlag im Frühjahr gegenüber Herbst/Winter." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Adria vs. Hobby Wertvergleich?", answer: "Ähnliches Segment. Adria Supreme tendenziell 3–5% wertstabiler als Hobby Standard." }
   ],
   relatedSlugs: ["adria-wohnmobil-verkaufen", "was-kostet-mein-adria-wohnmobil", "wie-verkaufe-ich-mein-adria-wohnmobil", "adria-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const adriaVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis. Wird er nicht erreicht, kein Verkauf, keine Kosten." },
     { question: "Wer bietet auf meinen Adria?", answer: "Verifizierte Händler und geprüfte Privatkäufer. Auch internationale Bieter." },
     { question: "Auktionsdauer?", answer: "7 Tage mit festem Auktionsende." },
-    { question: "Kosten der Auktion?", answer: "Einstellen kostenlos. Bei Verkauf faire Vermittlungsgebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei zufriedenstellendem Gebot möglich." },
+    { question: "Kosten der Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Empfohlenes Mindestgebot?", answer: "75–80% des Marktwerts. Attraktiver Einstieg = mehr Bieter." },
     { question: "Gute Auktionspreise bei Adria?", answer: "Ja, besonders Twin und Sonic. 4–10 Bieter bei guter Präsentation." },
     { question: "Technische Probleme?", answer: "Team überwacht alle Auktionen. Laufzeitverlängerung bei Störungen." },

@@ -242,7 +242,7 @@ export const concordeWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja. Bei Luxus regelmäßig aktualisieren." },
     { question: "Saisonal?", answer: "Unter 2% bei Luxus." },
     { question: "Dauer?", answer: "3–5 Minuten Eingabe. 24–48 Stunden individuelle Bewertung." },
-    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion erreicht, ist der Verkauf für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Concorde vs. Morelo?", answer: "Concorde exklusiver. Liner über Palace. Beide Luxus, unterschiedliches Preisniveau." }
   ],
   relatedSlugs: ["concorde-wohnmobil-verkaufen", "was-kostet-mein-concorde-wohnmobil", "wie-verkaufe-ich-mein-concorde-wohnmobil", "concorde-wohnmobil-versteigern"]
@@ -389,8 +389,8 @@ export const concordeVersteigern: RatgeberConfig = {
     { question: "Mindestgebot Luxus?", answer: "Bei Concorde: 85–90% des Marktwerts empfohlen." },
     { question: "Wer bietet?", answer: "Verifizierte Luxus-Käufer. Sammler, Liebhaber, Händler." },
     { question: "Dauer?", answer: "7 Tage." },
-    { question: "Kosten?", answer: "Einstellen kostenlos. Bei Verkauf faire Gebühr." },
-    { question: "Vorzeitig beenden?", answer: "Ja, bei Luxus-Gebot." },
+    { question: "Kosten?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Vorzeitig beenden?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit." },
     { question: "Erzielte Preise?", answer: "Luxus-Auktionen erzielen oft 10–20% über Marktpreis bei seltenen Konfigurationen." },
     { question: "Typische Bieter?", answer: "2–5 bei Luxus. Wenige, aber hochwertige Gebote." },
     { question: "Technische Probleme?", answer: "Premium-Support überwacht." },

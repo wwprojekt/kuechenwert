@@ -217,7 +217,7 @@ export const knausWertErmitteln: RatgeberConfig = {
       title: "Ihre Vorteile bei CaravanWert",
       content: "Profitieren Sie von unserer Erfahrung mit tausenden Knaus-Bewertungen.",
       items: [
-        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren, keine Verpflichtungen. Bewertung ist komplett kostenfrei." },
+        { title: "Kostenlos und unverbindlich", description: "Keine Gebühren für Verkäufer. Die Bewertung ist kostenlos und unverbindlich. Bewertung ist komplett kostenfrei." },
         { title: "Ergebnis in 24 Stunden", description: "Schnelle Bearbeitung durch unsere Knaus-Experten." },
         { title: "Transparente Preisfindung", description: "Nachvollziehbare Bewertung mit klarer Erklärung aller Faktoren." }
       ]
@@ -389,8 +389,8 @@ export const knausVersteigern: RatgeberConfig = {
     { question: "Wie funktioniert das Mindestgebot?", answer: "Sie setzen den Mindestpreis fest. Wird er nicht erreicht, kein Verkauf. Kein Risiko." },
     { question: "Wer bietet auf meinen Knaus?", answer: "Verifizierte Händler und geprüfte Privatkäufer mit Identitätsprüfung." },
     { question: "Wie lange läuft die Auktion?", answer: "7 Tage standardmäßig. Festes Auktionsende für spannende Schlussgebote." },
-    { question: "Was kostet die Auktion?", answer: "Einstellen kostenlos. Bei erfolgreichem Verkauf faire Vermittlungsgebühr." },
-    { question: "Kann ich vorzeitig verkaufen?", answer: "Ja, bei zufriedenstellendem Gebot können Sie die Auktion vorzeitig beenden." },
+    { question: "Was kostet die Auktion?", answer: "Für Verkäufer komplett kostenlos — keine Gebühren, keine Provision. Die Vermittlungsgebühr trägt ausschließlich der Käufer/Händler." },
+    { question: "Kann ich vorzeitig verkaufen?", answer: "Nein, eine laufende Auktion kann nicht vorzeitig beendet werden. Sie läuft die volle Laufzeit. Der Sofortkauf-Preis ermöglicht es Händlern jedoch, das Fahrzeug sofort zu kaufen." },
     { question: "Was wenn niemand bietet?", answer: "Keine Kosten. Wir beraten zu Alternativen wie Direktankauf." },
     { question: "Wie wird bezahlt?", answer: "Treuhandsystem: Käufer zahlt vor Übergabe, Sie erhalten Geld nach bestätigter Übergabe." },
     { question: "Muss ich Besichtigungen machen?", answer: "Nein, Auktion basiert auf Fotos und Beschreibung. Besichtigung erst nach Auktionsende." },

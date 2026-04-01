@@ -66,7 +66,7 @@ export const wohnmobilWertermittlungKostenlos: LandingPageConfig = {
     },
   ],
   faqItems: [
-    { question: "Ist die Wertermittlung wirklich zu 100% kostenlos?", answer: "Ja, unsere Wertermittlung ist vollständig kostenlos und unverbindlich. Sie gehen keinerlei Verpflichtung ein. Es gibt keine versteckten Kosten, keine Abonnements und keine Folgegebühren." },
+    { question: "Ist die Wertermittlung wirklich zu 100% kostenlos?", answer: "Ja, unsere Wertermittlung ist vollständig kostenlos und unverbindlich. Die Bewertung selbst ist ohne jede Verpflichtung. Erst wenn Sie sich für eine Auktion entscheiden und das Mindestgebot erreicht wird, ist der Verkauf für beide Seiten verbindlich. Es gibt keine versteckten Kosten und keine Folgegebühren für Verkäufer." },
     { question: "Wie genau ist die Expertenbewertung?", answer: "Unsere professionelle Wertermittlung weicht im Schnitt nur 5-8% vom tatsächlichen Marktwert ab. Das ist deutlich genauer als Online-Rechner, die oft 15-20% Abweichung haben." },
     { question: "Wie lange dauert die Wertermittlung?", answer: "In der Regel erhalten Sie Ihre Bewertung innerhalb von 24 Stunden per E-Mail. Bei komplexen Fahrzeugen kann es bis zu 48 Stunden dauern." },
     { question: "Welche Daten werden für die Bewertung benötigt?", answer: "Wir benötigen: Hersteller, Modell, Baujahr, Kilometerstand, Aufbauart, Zustand und besondere Ausstattung. Optional: Fotos und bekannte Mängel für eine genauere Bewertung." },

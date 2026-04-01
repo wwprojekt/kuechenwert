@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import App from "./App.tsx";
 import "./index.css";
+import "flag-icons/css/flag-icons.min.css";
 
 // Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen
 z.setErrorMap(germanZodErrorMap);

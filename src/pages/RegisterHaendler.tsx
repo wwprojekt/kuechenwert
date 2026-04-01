@@ -41,6 +41,7 @@ import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { passwordSchema, emailSchema } from "@/lib/validation";
 import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from "@/lib/euCountries";
+import { CountryFlag } from "@/components/CountryFlag";
 
 const dealerRegistrationSchema = z.object({
   // Account details
@@ -497,7 +498,10 @@ const RegisterHaendler = () => {
                         <SelectContent>
                           {EU_COUNTRIES.map((c) => (
                             <SelectItem key={c.code} value={c.code}>
-                              {c.name}
+                              <span className="inline-flex items-center gap-2">
+                                <CountryFlag countryCode={c.code} size="sm" />
+                                <span>{c.name}</span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>

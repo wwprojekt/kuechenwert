@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Car, Calendar, Gauge, MapPin, ExternalLink, Trash2 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
-import { getCountryFlag } from "@/lib/geolocation";
+import { CountryFlag } from "@/components/CountryFlag";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -174,9 +174,7 @@ export default function MyFavorites() {
                             {motorhome.manufacturer} {motorhome.model}
                           </h3>
                           {motorhome.country && (
-                            <span title={motorhome.country}>
-                              {getCountryFlag(motorhome.country)}
-                            </span>
+                            <CountryFlag countryCode={motorhome.country} size="sm" />
                           )}
                           {motorhome.listing_number && (
                             <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

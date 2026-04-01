@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
-import { getCountryFlag } from "@/lib/geolocation";
+import { CountryFlag } from "@/components/CountryFlag";
 
 interface MotorhomeCardProps {
   // Core vehicle info
@@ -188,9 +188,7 @@ const MotorhomeCard = ({
               </div>
               <div className="flex items-center gap-1.5">
                 {country && (
-                  <span className="text-sm" title={country}>
-                    {getCountryFlag(country)}
-                  </span>
+                  <CountryFlag countryCode={country} size="sm" />
                 )}
                 {listingNumber && (
                   <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

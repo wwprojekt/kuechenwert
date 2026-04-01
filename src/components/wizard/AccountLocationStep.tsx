@@ -18,7 +18,7 @@ import {
 import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2 } from "lucide-react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { EU_COUNTRIES } from "@/lib/euCountries";
-import { getCountryFlag } from "@/lib/geolocation";
+import { CountryFlag } from "@/components/CountryFlag";
 
 /**
  * PLZ-Konfiguration pro Land:
@@ -150,7 +150,7 @@ export const AccountLocationStep = ({
               {EU_COUNTRIES.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
                   <span className="inline-flex items-center gap-2">
-                    <span>{getCountryFlag(c.code)}</span>
+                    <CountryFlag countryCode={c.code} size="sm" />
                     <span>{c.name}</span>
                   </span>
                 </SelectItem>

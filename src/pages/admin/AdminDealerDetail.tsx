@@ -79,6 +79,7 @@ import {
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
+import { CountryFlag } from "@/components/CountryFlag";
 import { logger } from "@/lib/logger";
 import { openPrivateDocument, downloadPrivateDocument } from "@/lib/storageUtils";
 
@@ -621,6 +622,9 @@ export default function AdminDealerDetail() {
                     <InfoGrid columns={2}>
                       <InfoItem label="Straße" value={dealer.company_address} />
                       <InfoItem label="PLZ / Stadt" value={`${dealer.company_postal_code || ""} ${dealer.company_city || ""}`} />
+                      <InfoItem label="Land" value={
+                        <CountryFlag countryCode={dealer.country || "DE"} showName={true} />
+                      } />
                     </InfoGrid>
 
                     {dealer.business_description && (

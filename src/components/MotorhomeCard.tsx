@@ -6,14 +6,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
-
-// Country code to flag emoji mapping
-const countryFlags: Record<string, string> = {
-  'DE': '🇩🇪', 'AT': '🇦🇹', 'CH': '🇨🇭', 'NL': '🇳🇱',
-  'BE': '🇧🇪', 'FR': '🇫🇷', 'IT': '🇮🇹', 'ES': '🇪🇸',
-  'PL': '🇵🇱', 'CZ': '🇨🇿', 'DK': '🇩🇰', 'SE': '🇸🇪',
-  'GB': '🇬🇧', 'PT': '🇵🇹', 'LU': '🇱🇺', 'HU': '🇭🇺'
-};
+import { getCountryFlag } from "@/lib/geolocation";
 
 interface MotorhomeCardProps {
   // Core vehicle info
@@ -196,7 +189,7 @@ const MotorhomeCard = ({
               <div className="flex items-center gap-1.5">
                 {country && (
                   <span className="text-sm" title={country}>
-                    {countryFlags[country] || country}
+                    {getCountryFlag(country)}
                   </span>
                 )}
                 {listingNumber && (

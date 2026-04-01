@@ -64,6 +64,7 @@ import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
 import { DealerCreateDialog } from "@/components/admin/DealerCreateDialog";
+import { CountryFlag } from "@/components/CountryFlag";
 
 interface DealerProfile {
   id: string;
@@ -100,6 +101,7 @@ interface DealerApplication {
   annual_revenue?: string | null;
   iban?: string | null;
   bic?: string | null;
+  country?: string | null;
   profiles?: DealerProfile;
 }
 
@@ -211,6 +213,7 @@ export default function AdminDealers() {
     filename: "haendler",
     columns: [
       { key: "company_name", label: "Firma" },
+      { key: "country", label: "Land" },
       { key: "contact_person_name", label: "Ansprechpartner" },
       {
         key: "profiles",
@@ -685,6 +688,7 @@ export default function AdminDealers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Firma</TableHead>
+                  <TableHead>Land</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>E-Mail bestätigt</TableHead>
@@ -695,7 +699,7 @@ export default function AdminDealers() {
               <TableBody>
                 {isLoadingDealers ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       Lade Händler...
                     </TableCell>
                   </TableRow>
@@ -705,6 +709,10 @@ export default function AdminDealers() {
                       <TableCell className="font-medium flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />
                         {dealer.company_name}
+                      </TableCell>
+                      <TableCell>
+                        <CountryFlag countryCode={dealer.country} showName={false} />
+                        <span className="ml-1 text-xs text-muted-foreground">{dealer.country || "DE"}</span>
                       </TableCell>
                       <TableCell>{dealer.contact_person_name}</TableCell>
                       <TableCell>{dealer.profiles?.email}</TableCell>

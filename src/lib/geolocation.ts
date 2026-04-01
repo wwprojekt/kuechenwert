@@ -9,7 +9,9 @@ export const countryFlags: Record<string, string> = {
   'PL': '🇵🇱', 'CZ': '🇨🇿', 'DK': '🇩🇰', 'SE': '🇸🇪',
   'GB': '🇬🇧', 'PT': '🇵🇹', 'LU': '🇱🇺', 'HU': '🇭🇺',
   'NO': '🇳🇴', 'FI': '🇫🇮', 'SK': '🇸🇰', 'SI': '🇸🇮',
-  'HR': '🇭🇷', 'RO': '🇷🇴', 'BG': '🇧🇬', 'GR': '🇬🇷'
+  'HR': '🇭🇷', 'RO': '🇷🇴', 'BG': '🇧🇬', 'GR': '🇬🇷',
+  'IE': '🇮🇪', 'EE': '🇪🇪', 'LV': '🇱🇻', 'LT': '🇱🇹',
+  'MT': '🇲🇹', 'CY': '🇨🇾'
 };
 
 // Country code to name mapping (German)
@@ -19,7 +21,9 @@ export const countryNames: Record<string, string> = {
   'PL': 'Polen', 'CZ': 'Tschechien', 'DK': 'Dänemark', 'SE': 'Schweden',
   'GB': 'Großbritannien', 'PT': 'Portugal', 'LU': 'Luxemburg', 'HU': 'Ungarn',
   'NO': 'Norwegen', 'FI': 'Finnland', 'SK': 'Slowakei', 'SI': 'Slowenien',
-  'HR': 'Kroatien', 'RO': 'Rumänien', 'BG': 'Bulgarien', 'GR': 'Griechenland'
+  'HR': 'Kroatien', 'RO': 'Rumänien', 'BG': 'Bulgarien', 'GR': 'Griechenland',
+  'IE': 'Irland', 'EE': 'Estland', 'LV': 'Lettland', 'LT': 'Litauen',
+  'MT': 'Malta', 'CY': 'Zypern'
 };
 
 export interface Coordinates {

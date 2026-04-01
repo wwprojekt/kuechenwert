@@ -1,15 +1,63 @@
 /**
  * AccountLocationStep - Step 8 des Wizards (letzter Schritt)
  * 
- * Enthält: Standort des Wohnmobils (Straße, Hausnummer, PLZ, Ort) + Konto erstellen (Passwort).
+ * Enthält: Standort des Wohnmobils (Land, Straße, Hausnummer, PLZ, Ort) + Konto erstellen (Passwort).
  * Beide Bereiche sind Pflicht.
  */
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2 } from "lucide-react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
+import { EU_COUNTRIES } from "@/lib/euCountries";
+import { getCountryFlag } from "@/lib/geolocation";
+
+/**
+ * PLZ-Konfiguration pro Land:
+ * - maxLength: Maximale Zeichenanzahl
+ * - placeholder: Beispiel-PLZ
+ * - numericOnly: Nur Ziffern erlaubt (false = auch Buchstaben, z.B. GB, IE, MT, NL)
+ */
+const postalCodeConfig: Record<string, { maxLength: number; placeholder: string; numericOnly: boolean }> = {
+  DE: { maxLength: 5, placeholder: "12345", numericOnly: true },
+  AT: { maxLength: 4, placeholder: "1010", numericOnly: true },
+  CH: { maxLength: 4, placeholder: "8001", numericOnly: true },
+  NL: { maxLength: 7, placeholder: "1234 AB", numericOnly: false },
+  BE: { maxLength: 4, placeholder: "1000", numericOnly: true },
+  FR: { maxLength: 5, placeholder: "75001", numericOnly: true },
+  IT: { maxLength: 5, placeholder: "00100", numericOnly: true },
+  ES: { maxLength: 5, placeholder: "28001", numericOnly: true },
+  PT: { maxLength: 8, placeholder: "1000-001", numericOnly: false },
+  PL: { maxLength: 6, placeholder: "00-001", numericOnly: false },
+  CZ: { maxLength: 6, placeholder: "100 00", numericOnly: false },
+  SK: { maxLength: 6, placeholder: "811 01", numericOnly: false },
+  HU: { maxLength: 4, placeholder: "1011", numericOnly: true },
+  RO: { maxLength: 6, placeholder: "010011", numericOnly: true },
+  BG: { maxLength: 4, placeholder: "1000", numericOnly: true },
+  HR: { maxLength: 5, placeholder: "10000", numericOnly: true },
+  SI: { maxLength: 4, placeholder: "1000", numericOnly: true },
+  DK: { maxLength: 4, placeholder: "1000", numericOnly: true },
+  SE: { maxLength: 6, placeholder: "111 22", numericOnly: false },
+  FI: { maxLength: 5, placeholder: "00100", numericOnly: true },
+  IE: { maxLength: 8, placeholder: "D01 F5P2", numericOnly: false },
+  LU: { maxLength: 4, placeholder: "1009", numericOnly: true },
+  GR: { maxLength: 5, placeholder: "10431", numericOnly: true },
+  EE: { maxLength: 5, placeholder: "10111", numericOnly: true },
+  LV: { maxLength: 7, placeholder: "LV-1001", numericOnly: false },
+  LT: { maxLength: 5, placeholder: "01001", numericOnly: true },
+  MT: { maxLength: 7, placeholder: "VLT 1000", numericOnly: false },
+  CY: { maxLength: 4, placeholder: "1000", numericOnly: true },
+};
+
+const defaultPostalConfig = { maxLength: 10, placeholder: "PLZ", numericOnly: false };
 
 interface AccountLocationStepProps {
   formData: WizardFormData;
@@ -33,6 +81,9 @@ export const AccountLocationStep = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const selectedCountry = formData.country || "DE";
+  const postalConfig = postalCodeConfig[selectedCountry] || defaultPostalConfig;
+
   // Passwort-Stärke berechnen
   const getPasswordStrength = (pw: string): { label: string; color: string; width: string } => {
     if (!pw) return { label: "", color: "", width: "0%" };
@@ -50,6 +101,19 @@ export const AccountLocationStep = ({
 
   const passwordStrength = getPasswordStrength(registerPassword);
   const passwordsMatch = registerPassword && confirmPassword && registerPassword === confirmPassword;
+
+  const handleCountryChange = (newCountry: string) => {
+    updateFormData({ country: newCountry, zipCode: "" });
+  };
+
+  const handleZipCodeChange = (value: string) => {
+    let val = value;
+    if (postalConfig.numericOnly) {
+      val = val.replace(/\D/g, "");
+    }
+    val = val.slice(0, postalConfig.maxLength);
+    updateFormData({ zipCode: val });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -72,6 +136,28 @@ export const AccountLocationStep = ({
         <p className="text-sm text-muted-foreground -mt-2">
           Wichtig für die Entfernungsanzeige der Händler und den späteren Kaufvertrag.
         </p>
+
+        {/* Land-Auswahl */}
+        <div className="space-y-2">
+          <Label htmlFor="country">
+            Land <span className="text-red-500">*</span>
+          </Label>
+          <Select value={selectedCountry} onValueChange={handleCountryChange}>
+            <SelectTrigger id="country">
+              <SelectValue placeholder="Land auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {EU_COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  <span className="inline-flex items-center gap-2">
+                    <span>{getCountryFlag(c.code)}</span>
+                    <span>{c.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2 md:col-span-3">
@@ -108,15 +194,11 @@ export const AccountLocationStep = ({
             <Input
               id="zipCode"
               type="text"
-              inputMode="numeric"
-              pattern="[0-9]{5}"
-              maxLength={5}
-              placeholder="12345"
+              inputMode={postalConfig.numericOnly ? "numeric" : "text"}
+              maxLength={postalConfig.maxLength}
+              placeholder={postalConfig.placeholder}
               value={formData.zipCode || ""}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 5);
-                updateFormData({ zipCode: val });
-              }}
+              onChange={(e) => handleZipCodeChange(e.target.value)}
               autoComplete="postal-code"
             />
           </div>

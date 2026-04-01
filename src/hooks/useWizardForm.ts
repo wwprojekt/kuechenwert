@@ -296,12 +296,13 @@ const step7Schema = z.object({
 // Step 8: Location & Account (Standort + Passwort - letzter Schritt)
 // bodyType und manufacturer werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit
 const step8Schema = z.object({
-  bodyType: z.string().min(1, "Aufbauart fehlt – bitte gehen Sie zurück zu Schritt 1"),
-  manufacturer: z.string().min(1, "Hersteller fehlt – bitte gehen Sie zurück zu Schritt 2"),
-  street: z.string().min(1, "Straße ist erforderlich"),
+  bodyType: z.string().min(1, "Aufbauart fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 1"),
+  manufacturer: z.string().min(1, "Hersteller fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 2"),
+  street: z.string().min(1, "Stra\u00dfe ist erforderlich"),
   houseNumber: z.string().min(1, "Hausnummer ist erforderlich"),
-  zipCode: z.string().min(5, "Bitte geben Sie eine gültige PLZ ein").max(5, "PLZ muss 5 Ziffern haben"),
+  zipCode: z.string().min(3, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(10, "PLZ ist zu lang"),
   city: z.string().min(1, "Ort ist erforderlich"),
+  country: z.string().min(2, "Bitte w\u00e4hlen Sie ein Land"),
 });
 
 export const useWizardForm = () => {
@@ -414,6 +415,7 @@ export const useWizardForm = () => {
             houseNumber: formData.houseNumber,
             zipCode: formData.zipCode,
             city: formData.city,
+            country: formData.country || 'DE',
           });
           break;
       }

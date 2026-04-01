@@ -23,7 +23,7 @@ import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
 import { useFavorites } from "@/hooks/useFavorites";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
-import { calculateDistance, formatDistance } from "@/lib/geolocation";
+import { calculateDistance, formatDistance, getCountryFlag } from "@/lib/geolocation";
 import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
@@ -1413,7 +1413,7 @@ const AuctionDetail = () => {
                     return (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span>Standort: {anonymizedPlz}</span>
+                        <span>Standort: {motorhome.country ? `${getCountryFlag(motorhome.country)} ${motorhome.country}-` : ''}{anonymizedPlz}</span>
                         {distanceKm !== null && (
                           <span className="flex items-center gap-1 ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                             <Navigation className="w-3 h-3" />

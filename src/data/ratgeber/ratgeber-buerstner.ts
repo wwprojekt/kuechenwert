@@ -73,11 +73,11 @@ export const buerstnerVerkaufen: RatgeberConfig = {
     { question: "Warum nicht privat verkaufen?", answer: "Privatverkauf birgt Risiken: Sachmängelhaftung, Betrug, langer Zeitaufwand. Bei CaravanWert: sicher, schnell, fair." },
     { question: "Wie ermittelt CaravanWert den Bürstner-Preis?", answer: "Aktuelle Marktdaten, DAT-Bewertung, vergleichbare Verkäufe und Expertise aus tausenden Ankäufen." },
     { question: "Wie lange ist die Bewertung gültig?", answer: "14 Tage bei übereinstimmendem Fahrzeugzustand." },
-    { question: "Was bei Mängeln, die ich nicht kenne?", answer: "Bei Besichtigung wird geprüft. Bei Abweichungen wird das Angebot angepasst — Sie entscheiden frei." },
+    { question: "Was bei Mängeln, die ich nicht kenne?", answer: "Bei Besichtigung wird geprüft. Bei Abweichungen wird das Angebot angepasst — Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." },
     { question: "Wie wirkt sich der Kilometerstand aus?", answer: "Unter 40.000 km: Premiumpreise. 40.000–75.000 km: moderate Abschläge. Über 90.000 km: deutlichere Abzüge." },
     { question: "Gehört Bürstner zur Hymer Group?", answer: "Ja, Bürstner ist Teil der Erwin Hymer Group (THOR Industries). Das sichert Ersatzteilverfügbarkeit und Qualitätsstandards." },
     { question: "Was ist der Unterschied Ixeo Time vs. Ixeo IT?", answer: "Time ist die Einstiegslinie, IT die Premiumvariante. IT erzielt 3.000–5.000€ mehr auf dem Gebrauchtmarkt." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Fahrzeugübergabe und Vertragsunterzeichnung jederzeit kostenlos." },
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Was passiert mit meiner Versicherung?", answer: "Bei Abmeldung erlischt die Versicherung automatisch. Überzahlte Beiträge werden Ihnen erstattet." },
     { question: "Wie wirkt sich das Fahrgestell auf den Preis aus?", answer: "Bürstner auf Fiat Ducato ist Standard. Modelle auf Mercedes Sprinter erzielen Aufpreise von 3.000–5.000€." }
   ],
@@ -243,7 +243,7 @@ export const buerstnerWertErmitteln: RatgeberConfig = {
     { question: "Innenausstattung und Wert?", answer: "Bei Bürstner besonders wichtig — das wohnliche Interieur ist ein Hauptkaufargument." },
     { question: "Saisonale Schwankungen?", answer: "Ja, im Frühjahr 4–7% höhere Bewertungen als im Herbst/Winter." },
     { question: "Wie lange dauert die Online-Eingabe?", answer: "3–5 Minuten. Bewertung innerhalb von 24 Stunden." },
-    { question: "Was passiert bei Nichteinverstanden?", answer: "Unverbindlich. Jederzeit ohne Konsequenzen ablehnen." }
+    { question: "Was passiert bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." }
   ],
   relatedSlugs: ["buerstner-wohnmobil-verkaufen", "was-kostet-mein-buerstner-wohnmobil", "wie-verkaufe-ich-mein-buerstner-wohnmobil", "buerstner-wohnmobil-versteigern"]
 };
@@ -316,13 +316,13 @@ export const buerstnerWieVerkaufe: RatgeberConfig = {
     { question: "Muss ich Mängel offenlegen?", answer: "Ja, alle bekannten Mängel. Verschweigen ist arglistige Täuschung." },
     { question: "Was steigert den Wert effektiv?", answer: "Interieur-Reinigung (ROI 4–6×), Dichtigkeitsprüfung (ROI 4–6×), kleine Reparaturen (ROI 2–3×)." },
     { question: "Was kostet der Verkauf bei CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen oder Gebühren." },
-    { question: "Kann ich stornieren?", answer: "Bis zur Übergabe und Vertragsunterzeichnung jederzeit kostenlos." },
+    { question: "Kann ich stornieren?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie sichere ich mich beim Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll, Übergabefotos." },
     { question: "Wird mein Bürstner abgeholt?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Was brauche ich an Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, letzte HU, Dichtigkeitsnachweise." },
     { question: "Kann ich ins Ausland verkaufen?", answer: "Ja, CaravanWert wickelt auch internationale Verkäufe ab." },
     { question: "Wie lange gilt das Angebot?", answer: "14 Tage bei übereinstimmendem Zustand." },
-    { question: "Was bei versteckten Mängeln?", answer: "Bei Besichtigung wird geprüft, Angebot ggf. angepasst. Sie entscheiden frei." },
+    { question: "Was bei versteckten Mängeln?", answer: "Bei Besichtigung wird geprüft, Angebot ggf. angepasst. Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." },
     { question: "Was ist beim Gallery-Grundriss besonders?", answer: "Das Hubbett-System sollte einwandfrei funktionieren. Defekte Hubmechanik mindert den Wert deutlich." }
   ],
   relatedSlugs: ["buerstner-wohnmobil-verkaufen", "was-kostet-mein-buerstner-wohnmobil", "buerstner-wohnmobil-wert-ermitteln", "buerstner-wohnmobil-versteigern"]

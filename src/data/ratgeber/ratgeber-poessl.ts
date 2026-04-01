@@ -74,7 +74,7 @@ export const poesslVerkaufen: RatgeberConfig = {
     { question: "Kilometerstand bei Kastenwagen?", answer: "Weniger relevant als bei Wohnmobilen. Unter 60.000 km: Top-Preise. Kastenwagen verkraften höhere Laufleistungen." },
     { question: "Was ist ein Summit wert?", answer: "Modelle 2018–2024 zwischen 42.000 und 72.000 Euro je nach Länge und Ausstattung." },
     { question: "Bewertung gültig?", answer: "14 Tage bei übereinstimmendem Zustand." },
-    { question: "Verkauf rückgängig machen?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Standheizung Mehrwert?", answer: "Bei Kastenwagen besonders wertvoll: 1.500–2.500€ Aufpreis." },
     { question: "Regionale Preisunterschiede?", answer: "Kastenwagen sind überall gefragt. Minimal höher in Großstädten wegen Alltagstauglichkeit." },
     { question: "Pössl vs. Knaus Boxstar?", answer: "Ähnliches Segment. Pössl als Spezialist tendenziell 3–5% wertstabiler." },
@@ -242,7 +242,7 @@ export const poesslWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonale Schwankungen?", answer: "Gering: 3–5% zwischen Sommer und Winter." },
     { question: "Online-Eingabe?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Jederzeit ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Pössl vs. Carado Vlow?", answer: "Pössl als Kastenwagen-Spezialist 3–6% wertstabiler." }
   ],
   relatedSlugs: ["poessl-wohnmobil-verkaufen", "was-kostet-mein-poessl-wohnmobil", "wie-verkaufe-ich-mein-poessl-wohnmobil", "poessl-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const poesslWieVerkaufe: RatgeberConfig = {
     { question: "Mängel offenlegen?", answer: "Ja, immer. Pflicht." },
     { question: "Was steigert den Wert?", answer: "Standheizung funktionsfähig (ROI 10×), Reinigung (ROI 5–8×), Dichtigkeitsprüfung." },
     { question: "Kosten?", answer: "Komplett kostenlos." },
-    { question: "Stornierung?", answer: "Bis zur Übergabe jederzeit." },
+    { question: "Stornierung?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Abholung?", answer: "Ja, deutschlandweit kostenlos." },
     { question: "Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, HU." },
     { question: "Angebot gültig?", answer: "14 Tage." },

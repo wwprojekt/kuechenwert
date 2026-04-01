@@ -74,7 +74,7 @@ export const rapidoVerkaufen: RatgeberConfig = {
     { question: "Kilometerstand?", answer: "Unter 40.000 km: Premium-Preise. Rapido-Käufer achten auf niedrige Laufleistung." },
     { question: "Distinction Preis?", answer: "Modelle 2018–2024 zwischen 85.000 und 145.000 Euro." },
     { question: "Bewertung gültig?", answer: "14 Tage." },
-    { question: "Rückgängig?", answer: "Bis Übergabe jederzeit." },
+    { question: "Rückgängig?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Doppelboden Mehrwert?", answer: "Rapidos serienmäßiger Doppelboden ist ein starkes Verkaufsargument und im Preis enthalten." },
     { question: "Regionale Unterschiede?", answer: "Leicht höher in Süddeutschland und Grenzregionen zu Frankreich/Schweiz." },
     { question: "Rapido vs. Carthago?", answer: "Beide Premium. Rapido tendenziell 3–5% wertstabiler bei Vollintegrierten." },
@@ -242,7 +242,7 @@ export const rapidoWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonal?", answer: "Nur 3–5%. Premium weniger saisonabhängig." },
     { question: "Online?", answer: "3–5 Minuten. Ergebnis in 24 Stunden." },
-    { question: "Ablehnen?", answer: "Jederzeit." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Rapido vs. Concorde?", answer: "Concorde Oberklasse, Rapido gehobene Mittel- bis Oberklasse. Concorde 10–20% teurer." }
   ],
   relatedSlugs: ["rapido-wohnmobil-verkaufen", "was-kostet-mein-rapido-wohnmobil", "wie-verkaufe-ich-mein-rapido-wohnmobil", "rapido-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const rapidoWieVerkaufe: RatgeberConfig = {
     { question: "Mängel?", answer: "Immer offenlegen. Premium-Käufer entdecken alles." },
     { question: "Wertsteigerndes?", answer: "Profi-Aufbereitung (ROI 3–5×), Dichtigkeitsprüfung, lückenloses Serviceheft." },
     { question: "Kosten?", answer: "Komplett kostenlos." },
-    { question: "Stornierung?", answer: "Bis Übergabe jederzeit." },
+    { question: "Stornierung?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Abholung?", answer: "Deutschlandweit kostenlos." },
     { question: "Unterlagen?", answer: "Fahrzeugbrief, Schein, Serviceheft, HU, Ausstattungsliste, Kaufrechnung." },
     { question: "Angebot gültig?", answer: "14 Tage." },

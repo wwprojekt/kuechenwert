@@ -76,10 +76,10 @@ export const hymerVerkaufen: RatgeberConfig = {
     { question: "Unterschied Alkoven vs. Teilintegrierter beim Preis?", answer: "Teilintegrierte und vollintegrierte Hymer sind aktuell stärker nachgefragt als Alkoven-Modelle. Campingbusse erzielen aufgrund des Van-Life-Trends besonders gute Preise." },
     { question: "Wie lange ist die Bewertung gültig?", answer: "Unsere Bewertung ist 14 Tage gültig. In diesem Zeitraum garantieren wir den Preis, sofern der Zustand den Angaben entspricht." },
     { question: "Kann ich am Wochenende bewerten lassen?", answer: "Die Online-Bewertung steht rund um die Uhr zur Verfügung. Am Wochenende eingegangene Anfragen werden am nächsten Werktag bearbeitet." },
-    { question: "Was passiert bei Mängeln, die ich nicht angegeben habe?", answer: "Bei der Übergabe prüfen unsere Experten das Fahrzeug. Bei wesentlichen Abweichungen passen wir das Angebot an. Sie entscheiden frei, ob Sie verkaufen." },
+    { question: "Was passiert bei Mängeln, die ich nicht angegeben habe?", answer: "Bei der Übergabe prüfen unsere Experten das Fahrzeug. Bei wesentlichen Abweichungen passen wir das Angebot an. Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." },
     { question: "Erhalte ich für einen Hymer mehr als für andere Marken?", answer: "In den meisten Fällen ja. Hymer gehört zu den Premiummarken mit stärkster Nachfrage auf dem deutschen Gebrauchtmarkt, was höhere Ankaufspreise ermöglicht." },
     { question: "Wie wirkt sich der Kilometerstand aus?", answer: "Hymer mit unter 50.000 km erzielen die besten Preise. Bei höherer Laufleistung sind bei gutem Zustand und lückenloser Wartung noch sehr gute Preise möglich." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Fahrzeugübergabe und Kaufvertragsunterzeichnung können Sie jederzeit ohne Gründe vom Verkauf zurücktreten. Keine Kosten oder Nachteile." }
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." }
   ],
   relatedSlugs: ["was-kostet-mein-hymer-wohnmobil", "hymer-wohnmobil-wert-ermitteln", "wie-verkaufe-ich-mein-hymer-wohnmobil", "hymer-wohnmobil-versteigern"]
 };

@@ -57,7 +57,7 @@ export const wohnwagenVerkaufen: LandingPageConfig = {
       items: [
         { title: "1. Daten eingeben", description: "Tragen Sie Marke, Modell, Baujahr und Zustand Ihres Wohnwagens ein. Das dauert nur 2 Minuten." },
         { title: "2. Bewertung erhalten", description: "Innerhalb von 24 Stunden erhalten Sie eine professionelle Werteinschätzung Ihres Caravans." },
-        { title: "3. Angebote vergleichen", description: "Geprüfte Händler geben verbindliche Gebote ab. Sie wählen das beste Angebot." },
+        { title: "3. Angebote vergleichen", description: "Geprüfte Händler geben verbindliche Gebote ab. Wird Ihr Mindestgebot erreicht, kommt automatisch ein Kaufvertrag mit dem Höchstbietenden zustande." },
         { title: "4. Verkaufen & kassieren", description: "Nach der Übergabe erhalten Sie sofort Ihr Geld — sicher und unkompliziert." },
       ],
       ctaText: "Wohnwagen jetzt einstellen",
@@ -76,7 +76,7 @@ export const wohnwagenVerkaufen: LandingPageConfig = {
     { question: "Wird mein Vorzelt mitbewertet?", answer: "Zubehör wie Vorzelt, Markise, Solaranlage oder Fahrradträger wird in der Regel separat bewertet. Hochwertiges Zubehör kann den Gesamtpreis deutlich steigern." },
     { question: "Wie läuft die Übergabe eines Wohnwagens ab?", answer: "Die Übergabe kann an einer unserer Ankaufstationen oder an einem vereinbarten Ort stattfinden. Der Händler prüft das Fahrzeug vor Ort und die Zahlung wird sofort ausgelöst." },
     { question: "Muss ich den Wohnwagen zum Verkauf abmelden?", answer: "Nein, der Wohnwagen muss nicht vorher abgemeldet werden. Die Ummeldung übernimmt in der Regel der Käufer. Nach der Übergabe sollten Sie das Fahrzeug bei Ihrer Versicherung abmelden." },
-    { question: "Was kostet der Verkauf über CaravanWert?", answer: "Die Bewertung ist kostenlos. Nur bei erfolgreichem Verkauf wird eine Vermittlungsgebühr von 2,9% des Verkaufspreises fällig. Es gibt keine Grundgebühr oder versteckte Kosten." },
+    { question: "Was kostet der Verkauf über CaravanWert?", answer: "Für Verkäufer ist der gesamte Service komplett kostenlos — von der Bewertung bis zum Verkaufsabschluss. Es fallen keine Gebühren, Provisionen oder versteckte Kosten an. Die Vermittlungsprovision wird ausschließlich vom Händler/Käufer getragen." },
     { question: "Welche Dokumente brauche ich für den Wohnwagen-Verkauf?", answer: "Für die Bewertung genügen die Basisdaten. Für den Verkauf benötigen Sie: Fahrzeugbrief (ZB II), Fahrzeugschein (ZB I), HU-Bericht, CoC-Papier (falls vorhanden) und idealerweise das Serviceheft." },
     { question: "Kann ich einen Dauercamper-Wohnwagen verkaufen?", answer: "Ja, auch stationäre Wohnwagen (Dauercamper) werden bewertet und angekauft. Beachten Sie, dass der Standplatz in der Regel nicht mitverkauft wird und separat zu regeln ist." },
     { question: "Wie alt darf mein Wohnwagen sein?", answer: "Es gibt keine Altersbegrenzung. Wir bewerten Wohnwagen aller Baujahre — vom aktuellen Modell bis zum 30 Jahre alten Klassiker. Ältere Modelle in gutem Zustand sind bei Liebhabern sehr gefragt." },

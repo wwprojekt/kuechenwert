@@ -13,15 +13,19 @@ const faqs = [
   },
   {
     question: "Was kostet der Service?",
-    answer: "Das Einstellen Ihres Wohnmobils zur Auktion ist völlig kostenlos. Erst wenn Sie ein Angebot annehmen und der Verkauf zustande kommt, erheben wir eine transparente Vermittlungsgebühr von 2,9% des Verkaufspreises. Diese wird automatisch vom Kaufpreis abgezogen.",
+    answer: "Für Verkäufer ist der gesamte Service komplett kostenlos — von der Bewertung über das Einstellen bis zum Verkaufsabschluss. Es fallen keine Gebühren, Provisionen oder versteckte Kosten an. Die Vermittlungsprovision wird ausschließlich vom Händler/Käufer getragen und ist für diesen transparent auf der Auktionsseite einsehbar.",
   },
   {
     question: "Wie werden die Händler geprüft?",
     answer: "Alle Händler auf unserer Plattform durchlaufen einen strengen KYC/KYB-Prozess. Wir prüfen Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz. Zusätzlich überwachen wir regelmäßig die Zahlungsmoral und Kundenzufriedenheit.",
   },
   {
-    question: "Kann ich mein Angebot ablehnen?",
-    answer: "Ja, absolut! Alle Angebote sind unverbindlich. Sie entscheiden, ob und welches Angebot Sie annehmen möchten. Es gibt keine Verpflichtung zum Verkauf, auch nachdem Sie Ihr Wohnmobil zur Auktion eingestellt haben.",
+    question: "Was passiert, wenn das Mindestgebot erreicht wird?",
+    answer: "Wird Ihr festgelegtes Mindestgebot während der Auktion erreicht oder überschritten, kommt ein verbindlicher Kaufvertrag mit dem Höchstbietenden zustande. Der Verkauf ist dann für beide Seiten verpflichtend. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht. Die Bewertung und das Einstellen Ihres Fahrzeugs bleiben selbstverständlich kostenlos.",
+  },
+  {
+    question: "Sind Gebote und Sofortkäufe verbindlich?",
+    answer: "Ja, jedes Gebot eines Händlers ist rechtlich verbindlich und kann nicht zurückgezogen werden. Ebenso ist die Nutzung der Sofortkauf-Option ein verbindlicher Kaufabschluss. Der Händler ist verpflichtet, das Fahrzeug zum gebotenen Preis bzw. Sofortkaufpreis zu erwerben. Diese Verbindlichkeit schützt Verkäufer und sorgt für einen seriösen Auktionsprozess.",
   },
   {
     question: "Welche Zahlungsmethoden gibt es?",
@@ -29,7 +33,7 @@ const faqs = [
   },
   {
     question: "Was passiert mit meinen Daten?",
-    answer: "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Händler sehen erst dann Ihre Kontaktdaten, wenn Sie ein Angebot annehmen. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
+    answer: "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Händler sehen Ihre Kontaktdaten erst, wenn ein Kaufvertrag zustande kommt. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
   },
   {
     question: "Welche Dokumente benötige ich?",

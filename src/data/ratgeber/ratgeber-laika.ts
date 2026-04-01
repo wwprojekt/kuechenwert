@@ -74,7 +74,7 @@ export const laikaVerkaufen: RatgeberConfig = {
     { question: "Kilometerstand?", answer: "Unter 40.000 km: Top-Preise." },
     { question: "Ecovip Preis?", answer: "Modelle 2018–2024 zwischen 55.000 und 95.000 Euro." },
     { question: "Bewertung gültig?", answer: "14 Tage." },
-    { question: "Rückgängig?", answer: "Bis Übergabe jederzeit." },
+    { question: "Rückgängig?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Cosmo-Wall-System?", answer: "Laikas patentiertes Wandsystem verbessert Isolierung und Stabilität — ein Wertfaktor." },
     { question: "Regionale Unterschiede?", answer: "In Süddeutschland und grenznahen Regionen zu Italien/Österreich leicht höher." },
     { question: "Laika vs. Carado?", answer: "Ähnliches Segment, unterschiedliche Herkunft. Laika mit italienischem Flair, Carado sachlicher." },
@@ -242,7 +242,7 @@ export const laikaWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonal?", answer: "5–8% Schwankung." },
     { question: "Online?", answer: "3–5 Minuten." },
-    { question: "Ablehnen?", answer: "Jederzeit." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Laika vs. Dethleffs?", answer: "Ähnliches Segment in der Hymer Group. Dethleffs in Deutschland bekannter, daher 3–5% höhere Preise." }
   ],
   relatedSlugs: ["laika-wohnmobil-verkaufen", "was-kostet-mein-laika-wohnmobil", "wie-verkaufe-ich-mein-laika-wohnmobil", "laika-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const laikaWieVerkaufe: RatgeberConfig = {
     { question: "Mängel?", answer: "Immer offenlegen." },
     { question: "Wertsteigerndes?", answer: "Reinigung (ROI 5–7×), Dichtigkeitsprüfung (ROI 5–8×)." },
     { question: "Kosten?", answer: "Kostenlos." },
-    { question: "Stornierung?", answer: "Bis Übergabe jederzeit." },
+    { question: "Stornierung?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Abholung?", answer: "Deutschlandweit kostenlos." },
     { question: "Unterlagen?", answer: "Fahrzeugbrief, Schein, Serviceheft, HU." },
     { question: "Angebot gültig?", answer: "14 Tage." },

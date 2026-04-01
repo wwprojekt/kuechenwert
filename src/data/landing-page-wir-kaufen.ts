@@ -46,7 +46,7 @@ export const wirKaufenDeinWohnmobil: LandingPageConfig = {
         "Unser Ankaufprozess ist auf maximale Geschwindigkeit und Einfachheit ausgelegt. Von der Anfrage bis zum Geld in maximal 48 Stunden.",
       items: [
         { title: "1. Online-Formular ausfüllen", description: "Geben Sie die wichtigsten Daten zu Ihrem Wohnmobil ein. Optional: Fotos hochladen für ein genaueres Angebot. Dauer: 2-5 Minuten." },
-        { title: "2. Angebot erhalten & annehmen", description: "Innerhalb von 24 Stunden erhalten Sie ein verbindliches Kaufangebot per E-Mail. Sie entscheiden, ob Sie es annehmen." },
+        { title: "2. Angebot erhalten", description: "Innerhalb von 24 Stunden erhalten Sie ein verbindliches Kaufangebot per E-Mail. Bei Auktionen kommt der Kaufvertrag automatisch zustande, sobald Ihr Mindestgebot erreicht wird." },
         { title: "3. Übergabe & Sofort-Zahlung", description: "Bringen Sie Ihr Fahrzeug zur nächsten Ankaufstation oder wir kommen zu Ihnen. Geld gibt's sofort bei Übergabe." },
       ],
       ctaText: "Jetzt starten",
@@ -94,7 +94,7 @@ export const wirKaufenDeinWohnmobil: LandingPageConfig = {
     { question: "Kommen Sie auch zu mir nach Hause?", answer: "Ja, bei Fahrzeugen ab einem bestimmten Wert oder wenn Sie das Fahrzeug nicht selbst bringen können, bieten wir einen Abhol- und Begutachtungsservice vor Ort an." },
     { question: "Wie lange ist das Angebot gültig?", answer: "Unser Kaufangebot ist in der Regel 7 Tage gültig. Danach empfehlen wir eine Aktualisierung, da sich Marktpreise ändern können." },
     { question: "Kaufen Sie auch Wohnmobile aus dem Ausland?", answer: "Ja, wir kaufen auch Fahrzeuge mit ausländischer Zulassung an. Beachten Sie, dass zusätzliche Dokumente wie CoC-Papiere und ggf. eine Verzollung nötig sein können." },
-    { question: "Was passiert, wenn ich das Angebot ablehne?", answer: "Kein Problem — Sie sind zu nichts verpflichtet. Die Bewertung und das Angebot sind kostenlos. Sie können jederzeit ein neues Angebot anfordern." },
+    { question: "Was passiert, wenn das Mindestgebot nicht erreicht wird?", answer: "Wenn kein Gebot Ihren festgelegten Mindestpreis erreicht, besteht keine Verkaufspflicht. Die Bewertung und das Einstellen sind kostenlos. Sie können jederzeit eine neue Auktion starten." },
     { question: "Kann ich mein Wohnmobil auch trotz laufender Finanzierung verkaufen?", answer: "Ja, wir lösen die Restfinanzierung direkt mit Ihrer Bank ab. Der Differenzbetrag wird Ihnen ausgezahlt. Wir übernehmen die Koordination mit dem Kreditgeber." },
     { question: "Muss ich Reparaturen vor dem Verkauf durchführen?", answer: "Nein, das ist nicht nötig. Wir kaufen Wohnmobile im aktuellen Zustand. Bekannte Mängel werden in der Bewertung berücksichtigt — Sie sparen sich die Reparaturkosten." },
     { question: "Wie unterscheidet sich der Ankaufpreis vom Marktpreis?", answer: "Unser Ankaufpreis berücksichtigt die sofortige Abwicklung und das Risiko, das wir übernehmen. Durch unser Händlernetzwerk können wir dennoch marktnahe Preise bieten." },

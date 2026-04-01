@@ -74,7 +74,7 @@ export const concordeVerkaufen: RatgeberConfig = {
     { question: "Kilometerstand?", answer: "Unter 30.000 km: Luxus-Preise. Concorde-Käufer erwarten niedrige Laufleistung." },
     { question: "Liner Preis?", answer: "Modelle 2016–2024 zwischen 150.000 und 400.000 Euro." },
     { question: "Bewertung gültig?", answer: "14 Tage." },
-    { question: "Rückgängig?", answer: "Bis Übergabe jederzeit." },
+    { question: "Rückgängig?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Individualausstattung?", answer: "Jedes Concorde ist einzigartig. Sonderausstattungen werden einzeln bewertet." },
     { question: "Regionale Unterschiede?", answer: "Concorde wird deutschlandweit und europaweit nachgefragt. Kaum regionale Schwankung." },
     { question: "Concorde vs. Morelo?", answer: "Concorde gilt als exklusiver. Liner über Morelo Palace. Beide Luxusklasse." },
@@ -242,7 +242,7 @@ export const concordeWertErmitteln: RatgeberConfig = {
     { question: "Versicherung?", answer: "Als Orientierung ja. Bei Luxus regelmäßig aktualisieren." },
     { question: "Saisonal?", answer: "Unter 2% bei Luxus." },
     { question: "Dauer?", answer: "3–5 Minuten Eingabe. 24–48 Stunden individuelle Bewertung." },
-    { question: "Ablehnen?", answer: "Jederzeit." },
+    { question: "Ablehnen?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Concorde vs. Morelo?", answer: "Concorde exklusiver. Liner über Palace. Beide Luxus, unterschiedliches Preisniveau." }
   ],
   relatedSlugs: ["concorde-wohnmobil-verkaufen", "was-kostet-mein-concorde-wohnmobil", "wie-verkaufe-ich-mein-concorde-wohnmobil", "concorde-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const concordeWieVerkaufe: RatgeberConfig = {
     { question: "Mängel?", answer: "Immer offenlegen. Luxus-Käufer entdecken alles bei Besichtigung." },
     { question: "Wertsteigerndes?", answer: "Profi-Aufbereitung, Technik-Check, lückenlose Dokumentation." },
     { question: "Kosten?", answer: "Komplett kostenlos." },
-    { question: "Stornierung?", answer: "Bis Übergabe jederzeit." },
+    { question: "Stornierung?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Abholung?", answer: "Deutschlandweit kostenlos." },
     { question: "Unterlagen?", answer: "Fahrzeugbrief, Schein, Serviceheft, Ausstattungsliste, alle Rechnungen, Originalrechnung." },
     { question: "Angebot gültig?", answer: "14 Tage." },

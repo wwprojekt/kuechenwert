@@ -32,7 +32,7 @@ export const QuickContactStep = ({ formData, updateFormData }: QuickContactStepP
           Fortschritt speichern
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Damit wir Ihnen ein unverbindliches Angebot zusenden können, benötigen wir Ihren Namen und Ihre E-Mail-Adresse.
+          Damit wir Ihnen eine kostenlose Bewertung zusenden können, benötigen wir Ihren Namen und Ihre E-Mail-Adresse.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export const QuickContactStep = ({ formData, updateFormData }: QuickContactStepP
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">✓ 100% kostenlos</span>
-          <span className="flex items-center gap-1">✓ Unverbindlich</span>
+          <span className="flex items-center gap-1">✓ Bewertung unverbindlich</span>
           <span className="flex items-center gap-1">✓ Kein Spam</span>
         </div>
       </div>

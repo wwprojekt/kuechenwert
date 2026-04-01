@@ -75,7 +75,7 @@ export const hobbyVerkaufen: RatgeberConfig = {
     { question: "Was ist ein Hobby Siesta wert?", answer: "Alkoven-Modelle 2016–2023 zwischen 32.000 und 58.000 Euro je nach Ausstattung." },
     { question: "Wie lange ist die Bewertung gültig?", answer: "14 Tage bei übereinstimmendem Zustand." },
     { question: "Was bei Mängeln?", answer: "Bei Besichtigung wird geprüft. Bei Abweichungen transparente Anpassung." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Übergabe und Vertragsunterzeichnung jederzeit kostenlos." },
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Was passiert mit meiner Versicherung?", answer: "Bei Abmeldung erlischt sie automatisch. Überzahlte Beiträge werden erstattet." },
     { question: "Lohnt sich eine Reparatur vor dem Verkauf?", answer: "Kleine Reparaturen unter 500€ ja. Große Investitionen selten." },
     { question: "Wie wirkt sich die De Luxe-Variante aus?", answer: "De Luxe erzielt 2.000–4.000€ mehr als Standardausstattung gleichen Modells." },
@@ -242,7 +242,7 @@ export const hobbyWertErmitteln: RatgeberConfig = {
     { question: "Bewertung für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten empfohlen." },
     { question: "Saisonale Schwankungen bei Hobby?", answer: "Stärker als bei Premiummarken: 5–8% Aufschlag im Frühjahr." },
     { question: "Wie lange Online-Eingabe?", answer: "3–5 Minuten. Bewertung innerhalb von 24 Stunden." },
-    { question: "Was bei Nichteinverstanden?", answer: "Unverbindlich. Jederzeit ablehnen." },
+    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Hobby vs. Knaus Wertvergleich?", answer: "Ähnliches Segment. Knaus tendenziell 3–5% wertstabiler, Hobby breiter verfügbar." }
   ],
   relatedSlugs: ["hobby-wohnmobil-verkaufen", "was-kostet-mein-hobby-wohnmobil", "wie-verkaufe-ich-mein-hobby-wohnmobil", "hobby-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const hobbyWieVerkaufe: RatgeberConfig = {
     { question: "Muss ich Mängel offenlegen?", answer: "Ja, alle bekannten Mängel. Verschweigen ist arglistige Täuschung." },
     { question: "Was steigert den Wert effektiv?", answer: "Innenreinigung (ROI 4–6×), Dichtigkeitsprüfung (ROI 5–8×), kleine Reparaturen (ROI 2–3×)." },
     { question: "Kostet der Verkauf bei CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen oder Gebühren." },
-    { question: "Kann ich stornieren?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Kann ich stornieren?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie sichere ich mich beim Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll, Übergabefotos." },
     { question: "Wird mein Hobby abgeholt?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Welche Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, letzte HU." },

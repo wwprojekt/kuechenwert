@@ -75,7 +75,7 @@ export const sunlightVerkaufen: RatgeberConfig = {
     { question: "Was ist ein Sunlight T-Serie wert?", answer: "Teilintegrierte 2017–2024 zwischen 34.000 und 56.000 Euro." },
     { question: "Bewertung gültig wie lange?", answer: "14 Tage bei übereinstimmendem Zustand." },
     { question: "Was bei Mängeln?", answer: "Besichtigung und transparente Preisanpassung." },
-    { question: "Verkauf rückgängig machen?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Adventure-Paket Mehrwert?", answer: "Das Ausstattungspaket bringt 1.500–3.000€ Aufpreis." },
     { question: "Regionale Preisunterschiede?", answer: "Gering. Sunlight wird deutschlandweit gleichmäßig nachgefragt." },
     { question: "Sunlight vs. Carado?", answer: "Beide Hymer-Group-Einstiegsmarken. Ähnliche Wertstabilität, Sunlight punktet bei jüngerer Zielgruppe." },
@@ -242,7 +242,7 @@ export const sunlightWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja." },
     { question: "Saisonale Schwankungen?", answer: "5–8% zwischen Frühjahr und Herbst." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten." },
-    { question: "Bei Nichteinverstanden?", answer: "Jederzeit ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Sunlight vs. Weinsberg?", answer: "Sunlight tendenziell 2–4% höher durch Hymer-Group-Zugehörigkeit und Lifestyle-Image." }
   ],
   relatedSlugs: ["sunlight-wohnmobil-verkaufen", "was-kostet-mein-sunlight-wohnmobil", "wie-verkaufe-ich-mein-sunlight-wohnmobil", "sunlight-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const sunlightWieVerkaufe: RatgeberConfig = {
     { question: "Mängel offenlegen?", answer: "Ja, immer Pflicht." },
     { question: "Was steigert den Wert?", answer: "Reinigung (ROI 5–7×), Dichtigkeitsprüfung (ROI 5–8×)." },
     { question: "Kosten?", answer: "Komplett kostenlos." },
-    { question: "Stornierung?", answer: "Bis zur Übergabe jederzeit." },
+    { question: "Stornierung?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Sicherheit Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss." },
     { question: "Abholung?", answer: "Ja, deutschlandweit kostenlos." },
     { question: "Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, HU." },

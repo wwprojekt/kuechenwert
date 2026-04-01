@@ -12,7 +12,7 @@ const Preise = () => {
     "Verkaufsinserat verlängern für neue Bieterrunde",
     "Online-Nachverhandlung",
     "Fahrzeug versteigern",
-    "Verkauf ablehnen bei Unterschreiten des Mindestverkaufspreises",
+    "Keine Verkaufspflicht wenn Mindestgebot nicht erreicht wird",
     "Vorgefertigter, rechtssicherer Kaufvertrag",
     "Unterstützung bei der Inseraterstellung",
     "Telefonischer Kundensupport",

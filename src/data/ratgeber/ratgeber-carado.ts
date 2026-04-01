@@ -75,7 +75,7 @@ export const caradoVerkaufen: RatgeberConfig = {
     { question: "Was ist ein Carado T-Modell wert?", answer: "Teilintegrierte 2017–2024 zwischen 35.000 und 58.000 Euro." },
     { question: "Bewertung gültig wie lange?", answer: "14 Tage bei übereinstimmendem Zustand." },
     { question: "Was bei Mängeln?", answer: "Besichtigung und transparente Preisanpassung." },
-    { question: "Verkauf rückgängig machen?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Comfort-Paket Mehrwert?", answer: "Das Ausstattungspaket bringt 1.500–3.000€ Aufpreis gegenüber Basismodell." },
     { question: "Regionale Preisunterschiede?", answer: "Gering. Carado wird deutschlandweit gleichmäßig nachgefragt." },
     { question: "Carado vs. Sunlight?", answer: "Beide sind Einstiegsmarken großer Gruppen. Ähnliche Wertstabilität, Carado leicht höher durch Hymer-Reputation." },
@@ -242,7 +242,7 @@ export const caradoWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten." },
     { question: "Saisonale Schwankungen?", answer: "5–8% zwischen Frühjahr und Herbst." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Jederzeit ablehnen. Keine Verpflichtungen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Carado vs. Sunlight?", answer: "Ähnliches Segment. Carado leicht höhere Wiederverkaufspreise durch Hymer-Reputation." }
   ],
   relatedSlugs: ["carado-wohnmobil-verkaufen", "was-kostet-mein-carado-wohnmobil", "wie-verkaufe-ich-mein-carado-wohnmobil", "carado-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const caradoWieVerkaufe: RatgeberConfig = {
     { question: "Mängel offenlegen?", answer: "Ja, immer. Pflicht zur Offenlegung bekannter Mängel." },
     { question: "Was steigert den Wert?", answer: "Reinigung (ROI 5–7×), Dichtigkeitsprüfung (ROI 5–8×), kleine Reparaturen (ROI 2–3×)." },
     { question: "Kosten bei CaravanWert?", answer: "Komplett kostenlos." },
-    { question: "Stornierung möglich?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Stornierung möglich?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Sicherheit beim Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll." },
     { question: "Abholung?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Welche Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, HU." },

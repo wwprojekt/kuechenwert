@@ -75,7 +75,7 @@ export const adriaVerkaufen: RatgeberConfig = {
     { question: "Was ist ein Adria Coral wert?", answer: "Teilintegrierte 2017–2024 zwischen 35.000 und 65.000 Euro. Supreme-Varianten an der Spitze." },
     { question: "Bewertung gültig wie lange?", answer: "14 Tage bei übereinstimmendem Zustand." },
     { question: "Was bei Mängeln?", answer: "Bei Besichtigung geprüft. Bei Abweichungen transparente Anpassung." },
-    { question: "Verkauf rückgängig machen?", answer: "Bis zur Übergabe jederzeit kostenlos möglich." },
+    { question: "Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Was passiert mit meiner Versicherung?", answer: "Erlischt bei Abmeldung automatisch. Überzahlte Beiträge werden erstattet." },
     { question: "Supreme vs. Standard Preisunterschied?", answer: "Supreme-Ausstattung erzielt 2.500–5.000€ mehr als Standardvarianten." },
     { question: "Regionale Preisunterschiede?", answer: "In Süddeutschland und Alpenregion tendenziell leicht höhere Adria-Preise." },
@@ -242,7 +242,7 @@ export const adriaWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten." },
     { question: "Saisonale Schwankungen?", answer: "4–7% Aufschlag im Frühjahr gegenüber Herbst/Winter." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Unverbindlich. Jederzeit ablehnen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Adria vs. Hobby Wertvergleich?", answer: "Ähnliches Segment. Adria Supreme tendenziell 3–5% wertstabiler als Hobby Standard." }
   ],
   relatedSlugs: ["adria-wohnmobil-verkaufen", "was-kostet-mein-adria-wohnmobil", "wie-verkaufe-ich-mein-adria-wohnmobil", "adria-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const adriaWieVerkaufe: RatgeberConfig = {
     { question: "Mängel offenlegen?", answer: "Ja, Pflicht. Verschweigen ist arglistige Täuschung." },
     { question: "Was steigert den Wert?", answer: "Interieur-Reinigung (ROI 4–6×), Dichtigkeitsprüfung (ROI 5–8×), kleine Reparaturen." },
     { question: "Kosten bei CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen." },
-    { question: "Stornierung möglich?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Stornierung möglich?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Sicherheit beim Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll." },
     { question: "Abholung?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Welche Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, HU." },

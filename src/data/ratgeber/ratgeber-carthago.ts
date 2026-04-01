@@ -76,9 +76,9 @@ export const carthagoVerkaufen: RatgeberConfig = {
     { question: "Wie wirkt sich der Kilometerstand aus?", answer: "Unter 30.000 km: Top-Preise. 30.000–60.000 km: leichte Abschläge. Über 80.000 km: moderate Abzüge. Carthago-Qualität hält." },
     { question: "Was ist ein C-Tourer wert?", answer: "Die Einstiegslinie liegt bei 55.000–85.000€ (2017–2024). Bietet viel Carthago-Qualität zu moderaterem Preis." },
     { question: "Muss mein Carthago in perfektem Zustand sein?", answer: "Nein, wir kaufen in jedem Zustand. Aber bei Carthago-Premiumpreisen lohnt sich Pflege besonders." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Übergabe und Vertragsunterzeichnung jederzeit kostenlos." },
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie wirkt sich die Ausstattungslinie aus?", answer: "Premium-Ausstattung erzielt 4.000–8.000€ mehr. Bei Carthago sind die Ausstattungspakete hochwertig und begehrt." },
-    { question: "Was passiert bei Mängeln?", answer: "Bei Besichtigung wird geprüft. Bei Abweichungen transparente Anpassung — Sie entscheiden frei." },
+    { question: "Was passiert bei Mängeln?", answer: "Bei Besichtigung wird geprüft. Bei Abweichungen transparente Anpassung — Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." },
     { question: "Ist der Carthago-Gebrauchtmarkt aktiv?", answer: "Sehr aktiv. Die Nachfrage übersteigt das Angebot regelmäßig. Carthago-Käufer suchen gezielt und zahlen Premiumpreise." }
   ],
   relatedSlugs: ["was-kostet-mein-carthago-wohnmobil", "carthago-wohnmobil-wert-ermitteln", "wie-verkaufe-ich-mein-carthago-wohnmobil", "carthago-wohnmobil-versteigern"]
@@ -241,7 +241,7 @@ export const carthagoWertErmitteln: RatgeberConfig = {
     { question: "Innenausstattung und Wert?", answer: "Bei Carthago entscheidend. Echtholzmöbel und hochwertige Polster in Top-Zustand sind Pflicht für Premiumpreise." },
     { question: "Saisonale Schwankungen?", answer: "Weniger als bei Volumenmarken. 3–5% Aufschlag im Frühjahr, ganzjährig gute Preise." },
     { question: "Wie lange Online-Eingabe?", answer: "5–7 Minuten. Bei Premiumfahrzeugen empfehlen wir detaillierte Angaben für präzisere Bewertung." },
-    { question: "Was bei Nichteinverstanden?", answer: "Unverbindlich. Jederzeit ablehnen. Wir erklären gerne die Preisfindung im Detail." },
+    { question: "Was bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung im Detail." },
     { question: "Internationaler Verkauf möglich?", answer: "Ja, Carthago ist europaweit gefragt. Wir unterstützen auch bei internationalem Verkauf." },
     { question: "Wie wirkt sich die Reifenqualität aus?", answer: "Neue Premiumreifen (+800–1.200€ Wert). Abgefahrene Reifen mindern den Gesamteindruck bei Premiumkäufern." }
   ],
@@ -316,7 +316,7 @@ export const carthagoWieVerkaufe: RatgeberConfig = {
     { question: "Muss ich Mängel offenlegen?", answer: "Ja, bei Premiumpreisen besonders wichtig. Transparenz schafft Vertrauen und schützt vor Rückabwicklung." },
     { question: "Was steigert den Carthago-Wert effektiv?", answer: "Professionelle Aufbereitung (ROI 5–8×), aktuelle Dichtigkeitsprüfung (ROI 6–10×), Servicehistorie aufbereiten." },
     { question: "Was kostet der Verkauf bei CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen auch bei Premiumbeträgen." },
-    { question: "Kann ich stornieren?", answer: "Bis zur Übergabe jederzeit kostenlos. Kein Risiko." },
+    { question: "Kann ich stornieren?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wird mein Carthago abgeholt?", answer: "Ja, kostenloser Premium-Abholservice. Bei Bedarf mit speziellem Transport." },
     { question: "Was brauche ich an Unterlagen?", answer: "Fahrzeugbrief, Serviceheft, Dichtigkeitsnachweise, Originalzubehör-Dokumentation. Je vollständiger, desto besser." },
     { question: "Internationaler Verkauf möglich?", answer: "Ja, Carthago ist europaweit gefragt. Wir unterstützen bei internationalem Verkauf." },

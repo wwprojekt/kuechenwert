@@ -74,11 +74,11 @@ export const knausVerkaufen: RatgeberConfig = {
     { question: "Warum nicht privat verkaufen?", answer: "Risiken beim Privatverkauf: Sachmängelhaftung, Betrug, monatelanges Warten. Bei uns: sicher, schnell, fair." },
     { question: "Wie ermittelt CaravanWert den Preis?", answer: "Aktuelle Marktdaten, DAT-Bewertung, vergleichbare Verkäufe und Erfahrung aus tausenden Ankäufen." },
     { question: "Wie lange ist die Bewertung gültig?", answer: "14 Tage ab Erstellung bei übereinstimmendem Fahrzeugzustand." },
-    { question: "Was bei Mängeln, die ich nicht angegeben habe?", answer: "Bei der Besichtigung prüfen wir das Fahrzeug. Bei Abweichungen wird das Angebot angepasst — Sie entscheiden frei." },
+    { question: "Was bei Mängeln, die ich nicht angegeben habe?", answer: "Bei der Besichtigung prüfen wir das Fahrzeug. Bei Abweichungen wird das Angebot angepasst — Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." },
     { question: "Wie wirkt sich der Kilometerstand aus?", answer: "Unter 40.000 km: Premiumpreise. 40.000–70.000 km: moderate Abschläge. Über 90.000 km: stärkere Abzüge." },
     { question: "Erhalte ich für einen Knaus gute Preise?", answer: "Ja, Knaus gehört zu den nachgefragtesten Marken in Deutschland. Das Preis-Leistungs-Verhältnis überzeugt auch Gebrauchtkäufer." },
     { question: "Kann ich am Wochenende bewerten lassen?", answer: "Online-Bewertung 24/7 verfügbar. Bearbeitung der Anfragen am nächsten Werktag." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Fahrzeugübergabe und Vertragsunterzeichnung jederzeit kostenlos möglich." },
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Was ist ein Knaus Fiat vs. Knaus MAN wert?", answer: "Knaus auf Fiat Ducato ist Standard. Ältere Modelle auf MAN-Basis erzielen leichte Aufpreise aufgrund des robusteren Fahrgestells." }
   ],
   relatedSlugs: ["was-kostet-mein-knaus-wohnmobil", "knaus-wohnmobil-wert-ermitteln", "wie-verkaufe-ich-mein-knaus-wohnmobil", "knaus-wohnmobil-versteigern"]
@@ -317,13 +317,13 @@ export const knausWieVerkaufe: RatgeberConfig = {
     { question: "Muss ich Mängel offenlegen?", answer: "Ja, alle bekannten Mängel. Verschweigen ist arglistige Täuschung." },
     { question: "Wie steigere ich den Wert vor dem Verkauf?", answer: "Reinigung (ROI 3–5×), Dichtigkeitsprüfung (ROI 4–6×), kleine Reparaturen (ROI 2–3×)." },
     { question: "Was kostet der Verkauf über CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen oder versteckte Gebühren." },
-    { question: "Kann ich den Verkauf stornieren?", answer: "Bis zur Übergabe und Vertragsunterzeichnung jederzeit kostenlos." },
+    { question: "Kann ich den Verkauf stornieren?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie sichere ich mich beim Privatverkauf ab?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll, Übergabefotos." },
     { question: "Wird mein Knaus abgeholt?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Was brauche ich an Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, letzte HU, Dichtigkeitsnachweise." },
     { question: "Kann ich ins Ausland verkaufen?", answer: "Ja, mit Mehraufwand. CaravanWert wickelt auch internationale Verkäufe ab." },
     { question: "Wie lange gilt das Angebot?", answer: "14 Tage bei übereinstimmendem Zustand." },
-    { question: "Was passiert bei versteckten Mängeln?", answer: "Bei Besichtigung wird geprüft, Angebot ggf. angepasst. Sie entscheiden frei ob Sie verkaufen." }
+    { question: "Was passiert bei versteckten Mängeln?", answer: "Bei Besichtigung wird geprüft, Angebot ggf. angepasst. Wurde das Mindestgebot bereits erreicht, bleibt der Verkauf verbindlich." }
   ],
   relatedSlugs: ["knaus-wohnmobil-verkaufen", "was-kostet-mein-knaus-wohnmobil", "knaus-wohnmobil-wert-ermitteln", "knaus-wohnmobil-versteigern"]
 };

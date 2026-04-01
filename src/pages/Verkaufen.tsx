@@ -259,7 +259,7 @@ const Verkaufen = () => {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Bereit für den Verkauf?</h2>
             <p className="text-xl mb-8 opacity-95">
-              Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie innerhalb von 24 Stunden ein unverbindliches Angebot.
+              Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie innerhalb von 24 Stunden verbindliche Gebote von geprüften Händlern.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/verkaufen/wizard">

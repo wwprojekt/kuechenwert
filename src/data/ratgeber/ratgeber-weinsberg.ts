@@ -75,7 +75,7 @@ export const weinsbergVerkaufen: RatgeberConfig = {
     { question: "Was ist ein CaraCompact wert?", answer: "Modelle 2017–2024 zwischen 30.000 und 55.000 Euro je nach Variante und Zustand." },
     { question: "Bewertung gültig wie lange?", answer: "14 Tage bei übereinstimmendem Zustand." },
     { question: "Was bei Mängeln?", answer: "Besichtigung und transparente Preisanpassung." },
-    { question: "Verkauf rückgängig machen?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Edition Pepper Mehrwert?", answer: "Die Sonderausstattung bringt 1.500–3.000€ Aufpreis gegenüber der Basisvariante." },
     { question: "Regionale Preisunterschiede?", answer: "Gering. Weinsberg wird deutschlandweit gleichmäßig nachgefragt." },
     { question: "Wie ermittelt CaravanWert den Preis?", answer: "Marktdaten, DAT-Bewertung, vergleichbare Verkäufe und Weinsberg-Expertise." },
@@ -242,7 +242,7 @@ export const weinsbergWertErmitteln: RatgeberConfig = {
     { question: "Für Versicherung?", answer: "Als Orientierung ja. Für offizielle Zwecke Gutachten." },
     { question: "Saisonale Schwankungen?", answer: "Stärker als Premiummarken: 6–9% zwischen Frühjahr und Herbst." },
     { question: "Online-Eingabe Dauer?", answer: "3–5 Minuten. Bewertung in 24 Stunden." },
-    { question: "Bei Nichteinverstanden?", answer: "Jederzeit ablehnen. Keine Verpflichtungen." },
+    { question: "Bei Nichteinverstanden?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen." },
     { question: "Weinsberg vs. Carado Vergleich?", answer: "Ähnliches Segment. Carado tendenziell 2–4% höhere Wiederverkaufspreise als Weinsberg." }
   ],
   relatedSlugs: ["weinsberg-wohnmobil-verkaufen", "was-kostet-mein-weinsberg-wohnmobil", "wie-verkaufe-ich-mein-weinsberg-wohnmobil", "weinsberg-wohnmobil-versteigern"]
@@ -316,7 +316,7 @@ export const weinsbergWieVerkaufe: RatgeberConfig = {
     { question: "Mängel offenlegen?", answer: "Ja, immer. Verschweigen ist arglistige Täuschung." },
     { question: "Was steigert den Wert am meisten?", answer: "Professionelle Reinigung (ROI 5–8×), Dichtigkeitsprüfung (ROI 5–8×), Funktionsprüfung aller Geräte." },
     { question: "Kosten bei CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen oder Gebühren." },
-    { question: "Stornierung möglich?", answer: "Bis zur Übergabe jederzeit kostenlos." },
+    { question: "Stornierung möglich?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Sicherheit beim Privatverkauf?", answer: "Kaufvertrag, Gewährleistungsausschluss, Mängelprotokoll." },
     { question: "Abholung?", answer: "Ja, kostenloser Abholservice deutschlandweit." },
     { question: "Welche Unterlagen?", answer: "Fahrzeugbrief, Fahrzeugschein, Serviceheft, HU." },

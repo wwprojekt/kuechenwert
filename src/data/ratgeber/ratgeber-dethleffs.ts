@@ -77,7 +77,7 @@ export const dethleffsVerkaufen: RatgeberConfig = {
     { question: "Was passiert bei Mängeln, die ich nicht kannte?", answer: "Bei der Fahrzeugbesichtigung prüfen unsere Experten den Zustand. Bei Abweichungen wird das Angebot angepasst — Sie entscheiden dann frei." },
     { question: "Wie wirkt sich der Kilometerstand beim Dethleffs aus?", answer: "Unter 40.000 km: Premiumpreise. 40.000–80.000 km: moderate Abschläge. Über 80.000 km: stärkere Abzüge, aber bei gutem Zustand noch attraktiv." },
     { question: "Ist der Privatverkauf nicht lukrativer?", answer: "Der mögliche Mehrerlös wird oft durch Zeitaufwand, Risiken und Kosten aufgezehrt. Bei CaravanWert verkaufen Sie schnell, sicher und zum fairen Preis." },
-    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Bis zur Fahrzeugübergabe und Kaufvertragsunterzeichnung können Sie jederzeit kostenlos zurücktreten." },
+    { question: "Kann ich den Verkauf rückgängig machen?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie ermittelt CaravanWert den Dethleffs-Preis?", answer: "Aktuelle Marktdaten, DAT-Bewertung, vergleichbare Verkäufe und unsere Erfahrung aus tausenden Ankäufen fließen in die Bewertung ein." },
     { question: "Was muss ich bei einem Dethleffs mit Alkoven beachten?", answer: "Alkoven-Modelle sind bei Familien beliebt. Die Nachfrage ist stabil, aber etwas geringer als bei Teilintegrierten. Guter Zustand des Alkovens ist wichtig." }
   ],
@@ -240,7 +240,7 @@ export const dethleffsWertErmitteln: RatgeberConfig = {
     { question: "Was ist der Restwert nach 5 Jahren?", answer: "Typischerweise 50–60% des Neupreises bei durchschnittlicher Nutzung und gutem Zustand." },
     { question: "Kann ich die Bewertung für die Versicherung nutzen?", answer: "Als Orientierung ja. Für offizielle Versicherungszwecke empfehlen wir ein zertifiziertes Gutachten." },
     { question: "Wie wirkt sich die Vorbesitzeranzahl aus?", answer: "Ein Vorbesitzer ist ideal. Ab drei Vorbesitzern moderate Preisabschläge, da Käufer intensivere Nutzung vermuten." },
-    { question: "Was passiert, wenn ich mit der Bewertung nicht einverstanden bin?", answer: "Die Bewertung ist unverbindlich. Sie können jederzeit ohne Konsequenzen ablehnen. Wir erklären gerne die Preisfindung." },
+    { question: "Was passiert, wenn ich mit der Bewertung nicht einverstanden bin?", answer: "Die Bewertung ist unverbindlich. Wird das Mindestgebot in der Auktion nicht erreicht, können Sie das Höchstgebot frei annehmen oder ablehnen. Wir erklären gerne die Preisfindung." },
     { question: "Wie lange dauert die Online-Eingabe?", answer: "3–5 Minuten für die Basisdaten. Die detaillierte Bewertung erhalten Sie innerhalb von 24 Stunden." },
     { question: "Beeinflusst die Innenausstattung den Wert stark?", answer: "Ja, gepflegte Polster und intaktes Mobiliar sind wichtig. Beschädigungen im Innenraum können 2.000–4.000€ kosten." },
     { question: "Gibt es saisonale Schwankungen beim Dethleffs-Wert?", answer: "Ja, im Frühjahr 4–7% höhere Bewertungen als im Herbst/Winter aufgrund der stärkeren Nachfrage." }
@@ -318,7 +318,7 @@ export const dethleffsWieVerkaufe: RatgeberConfig = {
     { question: "Was steigert den Wert am effektivsten?", answer: "Reinigung (ROI 3–5×), aktuelle Dichtigkeitsprüfung (ROI 4–6×), kleine Reparaturen (ROI 2–3×)." },
     { question: "Wie viel Verhandlungsspielraum einplanen?", answer: "Privatverkauf: 5–10%. Bei CaravanWert kein Verhandeln nötig — fairer Festpreis." },
     { question: "Was kostet der Verkauf über CaravanWert?", answer: "Komplett kostenlos. Keine Provisionen oder versteckte Gebühren. Der Angebotspreis = Ihr Auszahlungsbetrag." },
-    { question: "Kann ich den Verkauf stornieren?", answer: "Bis zur Fahrzeugübergabe und Vertragsunterzeichnung jederzeit kostenlos möglich." },
+    { question: "Kann ich den Verkauf stornieren?", answer: "Die Bewertung ist unverbindlich und kostenlos. Sobald eine Auktion läuft und das Mindestgebot erreicht wird, ist der Verkauf jedoch für beide Seiten verbindlich. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht." },
     { question: "Wie sichere ich mich beim Privatverkauf ab?", answer: "Kaufvertrag mit Gewährleistungsausschluss, Mängel schriftlich dokumentieren, Übergabeprotokoll mit Fotos." },
     { question: "Wird mein Dethleffs abgeholt?", answer: "Ja, kostenloser Abholservice deutschlandweit. Alternativ Übergabe an einer Ankaufstation." },
     { question: "Was brauche ich an Unterlagen?", answer: "Fahrzeugbrief (ZB II), Fahrzeugschein, Serviceheft, Dichtigkeitsnachweise, letzte HU. Garantiepapiere sind ein Plus." },

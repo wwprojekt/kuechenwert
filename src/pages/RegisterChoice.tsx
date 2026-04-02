@@ -53,11 +53,14 @@ const RegisterChoice = () => {
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors duration-300">
                     <User className="w-8 h-8 text-primary" />
                   </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-foreground mb-3">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
                     Privatkunde
                   </h2>
+                  <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full mb-4">
+                    100 % kostenlos
+                  </span>
                   <p className="text-muted-foreground mb-6 leading-relaxed">
-                    Ich möchte mein Wohnmobil oder meinen Caravan verkaufen
+                    Verkaufen Sie Ihr Wohnmobil oder Ihren Caravan – komplett kostenlos und unverbindlich
                   </p>
                   <div className="space-y-2.5 text-left w-full mb-6">
                     <div className="flex items-center gap-2.5 text-sm">
@@ -66,16 +69,20 @@ const RegisterChoice = () => {
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Zugang zu exklusiven Auktionen</span>
+                      <span>Keine Gebühren – auch nicht beim Verkauf</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Direkter Kontakt zu Händlern</span>
+                      <span>Zugang zu exklusiven Händler-Auktionen</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                      <span>Direkter Kontakt zu geprüften Händlern</span>
                     </div>
                   </div>
                   <div className="mt-auto w-full">
                     <div className="w-full h-12 rounded-md gradient-hero flex items-center justify-center text-white font-medium group-hover:gradient-hero-hover shadow-[var(--shadow-glow-sm)] transition-all duration-300">
-                      Als Privatkunde registrieren
+                      Kostenlos registrieren
                       <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
                   </div>

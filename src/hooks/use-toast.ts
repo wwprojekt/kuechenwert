@@ -177,7 +177,24 @@ function toast({ ...props }: Toast) {
       || titleStr === 'Unvollständige Angaben'
       || titleStr === 'Fehlende Angaben';
 
-    if (!isDuplicate && !isValidationToast) {
+    // Business-Events erkennen: Normale Geschäftsvorgänge die kein Fehler-Logging benötigen
+    const businessEventTitles = [
+      'Sie wurden überboten!',
+      'Neues Gebot!',
+      'Auktion beendet',
+      'Anmeldung erforderlich',
+      'Sitzung abgelaufen',
+      'Nicht gefunden',
+    ];
+    const businessEventDescriptions = [
+      'Bieten Sie erneut!',
+      'Bitte melden Sie sich an',
+      'Ihre Sitzung ist abgelaufen',
+    ];
+    const isBusinessEvent = businessEventTitles.some(t => titleStr.includes(t))
+      || businessEventDescriptions.some(d => errorMessage.includes(d));
+
+    if (!isDuplicate && !isValidationToast && !isBusinessEvent) {
       logErrorToSupabase({
         errorCode: 'TOAST_ERROR',
         errorMessage: `${titleStr}: ${errorMessage}`,

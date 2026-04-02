@@ -242,6 +242,22 @@ const AdminErrorLogs = () => {
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
+      // Business-Events ausschließen: Normale Geschäftsvorgänge sind keine echten Fehler
+      // 1. Auktions-Benachrichtigungen (überboten, Gebote, Auktion beendet)
+      query = query.not('error_message', 'ilike', '%Sie wurden überboten%');
+      query = query.not('error_message', 'ilike', '%Neues Gebot%');
+      query = query.not('error_message', 'ilike', '%Bieten Sie erneut%');
+      query = query.not('error_message', 'ilike', '%Gebot fehlgeschlagen%');
+      query = query.not('error_message', 'ilike', '%Gebot muss höher%');
+      query = query.not('error_message', 'ilike', '%Gebot muss mindestens%');
+      query = query.not('error_message', 'ilike', '%Auktion ist nicht mehr aktiv%');
+      query = query.not('error_message', 'ilike', '%Auktion ist bereits beendet%');
+      // 2. Auth-Hinweise (keine echten Fehler, sondern User-Aktionen)
+      query = query.not('error_message', 'ilike', '%Anmeldung erforderlich%');
+      query = query.not('error_message', 'ilike', '%Sitzung abgelaufen%');
+      query = query.not('error_message', 'ilike', '%Bitte melden Sie sich an%');
+      query = query.not('error_message', 'ilike', '%Ihre Sitzung ist abgelaufen%');
+
       // Apply filters
       if (categoryFilter !== 'all') query = query.eq('error_category', categoryFilter);
       if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
@@ -283,19 +299,40 @@ const AdminErrorLogs = () => {
       today.setHours(0, 0, 0, 0);
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+      // Business-Events-Filter: Normale Geschäftsvorgänge aus Statistiken ausschließen
+      const excludeBusinessEvents = (q: any) => {
+        return q
+          // Auktions-Benachrichtigungen
+          .not('error_message', 'ilike', '%Sie wurden überboten%')
+          .not('error_message', 'ilike', '%Neues Gebot%')
+          .not('error_message', 'ilike', '%Bieten Sie erneut%')
+          .not('error_message', 'ilike', '%Gebot fehlgeschlagen%')
+          .not('error_message', 'ilike', '%Gebot muss höher%')
+          .not('error_message', 'ilike', '%Gebot muss mindestens%')
+          .not('error_message', 'ilike', '%Auktion ist nicht mehr aktiv%')
+          .not('error_message', 'ilike', '%Auktion ist bereits beendet%')
+          // Auth-Hinweise
+          .not('error_message', 'ilike', '%Anmeldung erforderlich%')
+          .not('error_message', 'ilike', '%Sitzung abgelaufen%')
+          .not('error_message', 'ilike', '%Bitte melden Sie sich an%')
+          .not('error_message', 'ilike', '%Ihre Sitzung ist abgelaufen%');
+      };
+
       const [totalRes, unresolvedRes, criticalRes, todayRes, weekRes] = await Promise.all([
-        supabase.from('error_logs').select('id', { count: 'exact', head: true }),
-        supabase.from('error_logs').select('id', { count: 'exact', head: true }).eq('is_resolved', false),
-        supabase.from('error_logs').select('id', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
-        supabase.from('error_logs').select('id', { count: 'exact', head: true }).gte('created_at', today.toISOString()),
-        supabase.from('error_logs').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
+        excludeBusinessEvents(supabase.from('error_logs').select('id', { count: 'exact', head: true })),
+        excludeBusinessEvents(supabase.from('error_logs').select('id', { count: 'exact', head: true }).eq('is_resolved', false)),
+        excludeBusinessEvents(supabase.from('error_logs').select('id', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false)),
+        excludeBusinessEvents(supabase.from('error_logs').select('id', { count: 'exact', head: true }).gte('created_at', today.toISOString())),
+        excludeBusinessEvents(supabase.from('error_logs').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString())),
       ]);
 
-      // Category + Source breakdown for unresolved
-      const { data: unresolvedData } = await supabase
-        .from('error_logs')
-        .select('error_category, error_source, occurrence_count')
-        .eq('is_resolved', false);
+      // Category + Source breakdown for unresolved (ohne Business-Events)
+      const { data: unresolvedData } = await excludeBusinessEvents(
+        supabase
+          .from('error_logs')
+          .select('error_category, error_source, occurrence_count')
+          .eq('is_resolved', false)
+      );
 
       const byCategory: Record<string, number> = {};
       const bySource: Record<string, number> = {};

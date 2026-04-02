@@ -60,6 +60,9 @@ import {
   UserPlus,
   FileUp,
   Send,
+  ShieldCheck,
+  FileCheck2,
+  CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -200,6 +203,79 @@ export default function AdminDealers() {
     };
     if (applications || activeDealers) fetchAuthStatus();
   }, [applications, activeDealers]);
+
+  // Fetch legal documents for all dealer applications
+  const { data: legalDocumentsMap } = useQuery({
+    queryKey: ["dealerLegalDocuments", applications, activeDealers],
+    queryFn: async () => {
+      const allAppIds = [
+        ...(applications?.map(a => a.id) || []),
+        ...(activeDealers?.map(d => d.id) || []),
+      ].filter((id, i, arr) => arr.indexOf(id) === i);
+      if (allAppIds.length === 0) return {};
+
+      const { data, error } = await supabase
+        .from("legal_documents")
+        .select("id, dealer_application_id, document_type, status, created_at, file_name")
+        .in("dealer_application_id", allAppIds);
+
+      if (error) {
+        logger.error("Failed to fetch legal documents:", error);
+        return {};
+      }
+
+      // Group by dealer_application_id
+      const map: Record<string, Array<{ document_type: string; status: string; created_at: string; file_name: string | null }>> = {};
+      (data || []).forEach((doc: any) => {
+        if (!map[doc.dealer_application_id]) map[doc.dealer_application_id] = [];
+        map[doc.dealer_application_id].push(doc);
+      });
+      return map;
+    },
+    enabled: !!(applications || activeDealers),
+    staleTime: 30000,
+  });
+
+  // Helper: Render document status icons for a dealer application
+  const renderDocumentStatusIcons = (applicationId: string) => {
+    const docs = legalDocumentsMap?.[applicationId] || [];
+    const docTypes = [
+      { key: "gewerbenachweis", label: "Gewerbenachweis", short: "G" },
+      { key: "ausweis_front", label: "Ausweis Vorderseite", short: "V" },
+      { key: "ausweis_back", label: "Ausweis Rückseite", short: "R" },
+    ];
+
+    const uploadedCount = docTypes.filter(dt => docs.some(d => d.document_type === dt.key)).length;
+
+    return (
+      <div className="flex items-center gap-1">
+        {docTypes.map((dt) => {
+          const doc = docs.find(d => d.document_type === dt.key);
+          const isUploaded = !!doc;
+          const statusColor = doc?.status === "approved" ? "text-green-600" : doc?.status === "rejected" ? "text-red-500" : isUploaded ? "text-amber-500" : "text-gray-300";
+          const bgColor = doc?.status === "approved" ? "bg-green-50 border-green-200" : doc?.status === "rejected" ? "bg-red-50 border-red-200" : isUploaded ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200";
+          const tooltipText = isUploaded
+            ? `${dt.label}: ${doc.status === "approved" ? "Genehmigt" : doc.status === "rejected" ? "Abgelehnt" : "Wird geprüft"}${doc.file_name ? ` (${doc.file_name})` : ""}${doc.created_at ? ` - ${format(new Date(doc.created_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}`
+            : `${dt.label}: Nicht hochgeladen`;
+
+          return (
+            <span
+              key={dt.key}
+              title={tooltipText}
+              className={`inline-flex items-center justify-center w-6 h-6 rounded border text-[10px] font-bold cursor-default ${statusColor} ${bgColor}`}
+            >
+              {dt.short}
+            </span>
+          );
+        })}
+        <span className={`ml-1 text-[10px] font-medium ${
+          uploadedCount === 3 ? "text-green-600" : uploadedCount > 0 ? "text-amber-600" : "text-gray-400"
+        }`}>
+          {uploadedCount}/3
+        </span>
+      </div>
+    );
+  };
 
   // Filter active dealers by search
   const filteredDealers = useMemo(() => {
@@ -622,11 +698,13 @@ export default function AdminDealers() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-col gap-1.5">
+                          {renderDocumentStatusIcons(application.id)}
+                          <div className="flex items-center gap-1">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                            className="h-6 text-[10px] gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
                             disabled={requestingDocUserId === application.id}
                             onClick={() => {
                               const email = application.profiles?.email || authStatusMap[application.user_id]?.email_confirmed_at ? application.profiles?.email : '';
@@ -650,6 +728,7 @@ export default function AdminDealers() {
                               ({application.document_request_sent_count}x)
                             </span>
                           )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(application.status)}</TableCell>
@@ -782,6 +861,7 @@ export default function AdminDealers() {
                   <TableHead>Land</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>Dokumente</TableHead>
                   <TableHead>E-Mail bestätigt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
@@ -790,7 +870,7 @@ export default function AdminDealers() {
               <TableBody>
                 {isLoadingDealers ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       Lade Händler...
                     </TableCell>
                   </TableRow>
@@ -807,6 +887,9 @@ export default function AdminDealers() {
                       </TableCell>
                       <TableCell>{dealer.contact_person_name}</TableCell>
                       <TableCell>{dealer.profiles?.email}</TableCell>
+                      <TableCell>
+                        {renderDocumentStatusIcons(dealer.id)}
+                      </TableCell>
                       <TableCell>
                         {authStatusMap[dealer.user_id]?.email_confirmed_at ? (
                           <Badge className="gap-1 bg-green-500">
@@ -917,7 +1000,7 @@ export default function AdminDealers() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       Keine aktiven Händler gefunden.
                     </TableCell>
                   </TableRow>

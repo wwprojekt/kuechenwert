@@ -216,7 +216,7 @@ export default function AdminDealers() {
 
       const { data, error } = await supabase
         .from("legal_documents")
-        .select("id, dealer_application_id, document_type, status, created_at, file_name")
+        .select("id, dealer_application_id, document_type, verified, uploaded_at, original_filename")
         .in("dealer_application_id", allAppIds);
 
       if (error) {
@@ -225,7 +225,7 @@ export default function AdminDealers() {
       }
 
       // Group by dealer_application_id
-      const map: Record<string, Array<{ document_type: string; status: string; created_at: string; file_name: string | null }>> = {};
+      const map: Record<string, Array<{ document_type: string; verified: boolean | null; uploaded_at: string | null; original_filename: string | null }>> = {};
       (data || []).forEach((doc: any) => {
         if (!map[doc.dealer_application_id]) map[doc.dealer_application_id] = [];
         map[doc.dealer_application_id].push(doc);
@@ -252,10 +252,10 @@ export default function AdminDealers() {
         {docTypes.map((dt) => {
           const doc = docs.find(d => d.document_type === dt.key);
           const isUploaded = !!doc;
-          const statusColor = doc?.status === "approved" ? "text-green-600" : doc?.status === "rejected" ? "text-red-500" : isUploaded ? "text-amber-500" : "text-gray-300";
-          const bgColor = doc?.status === "approved" ? "bg-green-50 border-green-200" : doc?.status === "rejected" ? "bg-red-50 border-red-200" : isUploaded ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200";
+          const statusColor = doc?.verified === true ? "text-green-600" : isUploaded ? "text-amber-500" : "text-gray-300";
+          const bgColor = doc?.verified === true ? "bg-green-50 border-green-200" : isUploaded ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200";
           const tooltipText = isUploaded
-            ? `${dt.label}: ${doc.status === "approved" ? "Genehmigt" : doc.status === "rejected" ? "Abgelehnt" : "Wird geprüft"}${doc.file_name ? ` (${doc.file_name})` : ""}${doc.created_at ? ` - ${format(new Date(doc.created_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}`
+            ? `${dt.label}: ${doc.verified === true ? "Verifiziert" : "Wird geprüft"}${doc.original_filename ? ` (${doc.original_filename})` : ""}${doc.uploaded_at ? ` - ${format(new Date(doc.uploaded_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}`
             : `${dt.label}: Nicht hochgeladen`;
 
           return (

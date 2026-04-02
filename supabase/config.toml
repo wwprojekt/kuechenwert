@@ -160,3 +160,30 @@ verify_jwt = false
 # --- Conversion Tracking ---
 [functions.track-conversion]
 verify_jwt = false
+
+# --- Dealer Communication ---
+[functions.request-dealer-documents]
+verify_jwt = false
+
+[functions.resend-confirmation-email]
+verify_jwt = false
+
+[functions.notify-vehicle-question]
+verify_jwt = false
+
+# --- Kaufchancen ---
+[functions.accept-kaufchance-offer]
+verify_jwt = false
+
+# --- Admin Extended ---
+[functions.admin-delete-user]
+verify_jwt = false
+
+[functions.backfill-email-content]
+verify_jwt = false
+
+[functions.fetch-attachment-url]
+verify_jwt = false
+
+[functions.generate-purchase-contract]
+verify_jwt = false

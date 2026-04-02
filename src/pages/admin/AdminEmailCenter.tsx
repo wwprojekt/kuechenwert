@@ -532,8 +532,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   };
 
   const handleMarkRead = async (item: InboxItem) => {
-    if (item.source === 'email') {
-      await supabase.from('admin_emails').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', item.id);
+    if (item.source === 'email' && !item.is_read) {
+      await supabase.from('admin_emails').update({ is_read: true, read_at: new Date().toISOString(), status: 'read' }).eq('id', item.id);
+      fetchInbox();
     }
   };
 

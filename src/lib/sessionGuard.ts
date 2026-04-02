@@ -5,7 +5,7 @@
  * to prevent RLS errors caused by expired/invalid JWT tokens.
  * 
  * Supabase Token Lifecycle:
- * - Access Token (JWT): 1 hour default, auto-refreshed by client
+ * - Access Token (JWT): 12 hours (configured in Supabase Dashboard), auto-refreshed by client
  * - Refresh Token: 1 week default
  * - autoRefreshToken: true is set in our client config
  * 

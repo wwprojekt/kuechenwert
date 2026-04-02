@@ -222,12 +222,26 @@ const handler = async (req: Request): Promise<Response> => {
     const senderEmail = extractEmailAddress(emailData.from);
     const senderName = extractName(emailData.from);
 
+    // Robust sender name resolution with explicit fallback chain
+    const resolvedSenderName = (() => {
+      if (senderName && senderName.trim()) return senderName.trim();
+      // Will be resolved after profile lookup below
+      return null;
+    })();
+
     // Check if sender is a known user
     const { data: senderProfile } = await supabase
       .from('profiles')
       .select('id, first_name, last_name, company_name')
       .eq('email', senderEmail)
       .maybeSingle();
+
+    // Final sender name with complete fallback chain
+    const finalSenderName: string = resolvedSenderName
+      || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ').trim() : '')
+      || (senderProfile?.company_name?.trim())
+      || (senderEmail ? senderEmail.split('@')[0] : '')
+      || 'Unbekannt';
 
     // Find existing conversation thread
     let threadId: string | null = null;
@@ -339,7 +353,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('admin_emails')
       .insert({
         sender_email: senderEmail,
-        sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null) || senderEmail?.split('@')[0] || 'Unbekannt',
+        sender_name: finalSenderName,
         recipient_email: emailData.to?.[0] || 'info@caravanwert.de',
         recipient_name: 'CaravanWert',
         recipient_id: null,
@@ -361,7 +375,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (insertError) {
-      console.error("Error storing inbound email:", insertError);
+      console.error("Error storing inbound email:", insertError, "Payload:", JSON.stringify({ sender_email: senderEmail, sender_name: finalSenderName, subject: emailData.subject }));
       throw insertError;
     }
 
@@ -385,7 +399,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         body: JSON.stringify({
           sender_email: senderEmail,
-          sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null) || senderEmail?.split('@')[0] || 'Unbekannt',
+          sender_name: finalSenderName,
         }),
       });
       console.log("Auto-response triggered for:", senderEmail);

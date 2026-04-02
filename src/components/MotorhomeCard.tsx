@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -44,6 +44,83 @@ interface MotorhomeCardProps {
   linkTo: string;
 }
 
+// Urgency levels for color-coded countdown
+type UrgencyLevel = 'relaxed' | 'normal' | 'attention' | 'warning' | 'urgent' | 'critical' | 'hotbid' | 'ended';
+
+function getUrgencyLevel(distanceMs: number): UrgencyLevel {
+  if (distanceMs <= 0) return 'ended';
+  if (distanceMs < 5 * 60 * 1000) return 'hotbid';           // < 5 min
+  if (distanceMs < 15 * 60 * 1000) return 'critical';         // 5-15 min
+  if (distanceMs < 60 * 60 * 1000) return 'urgent';           // 15 min - 1h
+  if (distanceMs < 6 * 60 * 60 * 1000) return 'warning';      // 1-6h
+  if (distanceMs < 12 * 60 * 60 * 1000) return 'attention';   // 6-12h
+  if (distanceMs < 24 * 60 * 60 * 1000) return 'normal';      // 12-24h
+  return 'relaxed';                                             // > 24h
+}
+
+// Modern color scheme for each urgency level
+// Uses inline styles for precise color control with backdrop-blur glass effect
+function getTimerStyles(level: UrgencyLevel): { bg: string; text: string; glow: string; dot: string } {
+  switch (level) {
+    case 'relaxed':
+      return {
+        bg: 'rgba(16, 185, 129, 0.85)',    // Emerald 500
+        text: '#ffffff',
+        glow: 'none',
+        dot: 'rgb(16, 185, 129)',
+      };
+    case 'normal':
+      return {
+        bg: 'rgba(34, 197, 94, 0.85)',      // Green 500
+        text: '#ffffff',
+        glow: 'none',
+        dot: 'rgb(34, 197, 94)',
+      };
+    case 'attention':
+      return {
+        bg: 'rgba(245, 158, 11, 0.85)',     // Amber 500
+        text: '#ffffff',
+        glow: 'none',
+        dot: 'rgb(245, 158, 11)',
+      };
+    case 'warning':
+      return {
+        bg: 'rgba(249, 115, 22, 0.85)',     // Orange 500
+        text: '#ffffff',
+        glow: 'none',
+        dot: 'rgb(249, 115, 22)',
+      };
+    case 'urgent':
+      return {
+        bg: 'rgba(239, 68, 68, 0.85)',      // Red 500
+        text: '#ffffff',
+        glow: '0 0 8px rgba(239, 68, 68, 0.3)',
+        dot: 'rgb(239, 68, 68)',
+      };
+    case 'critical':
+      return {
+        bg: 'rgba(220, 38, 38, 0.9)',       // Red 600
+        text: '#ffffff',
+        glow: '0 0 12px rgba(220, 38, 38, 0.4)',
+        dot: 'rgb(220, 38, 38)',
+      };
+    case 'hotbid':
+      return {
+        bg: 'rgba(185, 28, 28, 0.95)',      // Red 700
+        text: '#ffffff',
+        glow: '0 0 16px rgba(185, 28, 28, 0.5)',
+        dot: 'rgb(185, 28, 28)',
+      };
+    case 'ended':
+      return {
+        bg: 'rgba(107, 114, 128, 0.8)',     // Gray 500
+        text: '#ffffff',
+        glow: 'none',
+        dot: 'rgb(107, 114, 128)',
+      };
+  }
+}
+
 const MotorhomeCard = ({
   id,
   title,
@@ -73,6 +150,8 @@ const MotorhomeCard = ({
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isEndingSoon, setIsEndingSoon] = useState(false);
   const [isHotbid, setIsHotbid] = useState(false);
+  const [urgency, setUrgency] = useState<UrgencyLevel>('relaxed');
+  const [seconds, setSeconds] = useState(0);
 
   const displayPrice = isAuction 
     ? (currentBid || startingBid || 0)
@@ -92,22 +171,28 @@ const MotorhomeCard = ({
 
       if (distance < 0) {
         setTimeRemaining("Beendet");
+        setUrgency('ended');
         return;
       }
 
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((distance % (1000 * 60)) / 1000);
 
       setIsEndingSoon(distance < 60 * 60 * 1000);
       setIsHotbid(distance < 5 * 60 * 1000);
+      setUrgency(getUrgencyLevel(distance));
+      setSeconds(secs);
 
       if (days > 0) {
         setTimeRemaining(`${days}T ${hours}h`);
       } else if (hours > 0) {
         setTimeRemaining(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setTimeRemaining(`${minutes}m ${secs}s`);
       } else {
-        setTimeRemaining(`${minutes}m`);
+        setTimeRemaining(`${secs}s`);
       }
     };
 
@@ -115,6 +200,13 @@ const MotorhomeCard = ({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [isAuction, endTime]);
+
+  const timerStyles = useMemo(() => getTimerStyles(urgency), [urgency]);
+
+  // Determine if we should show the blink animation (last 5 minutes)
+  const shouldBlink = urgency === 'hotbid';
+  // Softer pulse for critical (5-15 min)
+  const shouldPulse = urgency === 'critical';
 
   return (
     <Card className={`group overflow-hidden border-2 bg-card hover:border-primary transition-all duration-300 hover-lift flex flex-col h-full ${isEnded && !isSold ? 'opacity-70' : ''} ${isHotbid && !isEnded ? 'border-destructive/50 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : ''}`}>
@@ -150,16 +242,28 @@ const MotorhomeCard = ({
             <FavoriteButton motorhomeId={id} />
           </div>
 
-          {/* Timer for auctions */}
+          {/* Color-coded Timer for auctions */}
           {isAuction && endTime && (
             <div className="absolute bottom-3 right-3 z-10">
-              <Badge 
-                variant="secondary" 
-                className={`glass flex items-center gap-1 ${isEndingSoon ? 'animate-pulse bg-destructive/90 text-destructive-foreground' : ''}`}
+              <div
+                className={`
+                  inline-flex items-center gap-1.5 
+                  px-2.5 py-1 rounded-full
+                  text-[11px] font-semibold tracking-wide
+                  backdrop-blur-md
+                  transition-all duration-500
+                  ${shouldBlink ? 'animate-timer-blink' : ''}
+                  ${shouldPulse ? 'animate-timer-pulse' : ''}
+                `}
+                style={{
+                  backgroundColor: timerStyles.bg,
+                  color: timerStyles.text,
+                  boxShadow: timerStyles.glow,
+                }}
               >
-                <Clock className="w-3 h-3" />
-                {timeRemaining}
-              </Badge>
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                <span>{timeRemaining}</span>
+              </div>
             </div>
           )}
 
@@ -178,6 +282,17 @@ const MotorhomeCard = ({
               </div>
             )}
           </div>
+
+          {/* Subtle urgency indicator bar at bottom of image */}
+          {isAuction && endTime && !isEnded && !isSold && (
+            <div
+              className={`absolute bottom-0 left-0 right-0 h-[3px] transition-all duration-700 ${shouldBlink ? 'animate-timer-blink' : ''} ${shouldPulse ? 'animate-timer-pulse' : ''}`}
+              style={{
+                backgroundColor: timerStyles.dot,
+                opacity: urgency === 'relaxed' ? 0.4 : urgency === 'normal' ? 0.5 : 0.7,
+              }}
+            />
+          )}
         </div>
 
         <div className="p-5 flex flex-col flex-1">

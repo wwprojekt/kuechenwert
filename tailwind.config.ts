@@ -106,6 +106,14 @@ export default {
           "0%": { backgroundPosition: "-1000px 0" },
           "100%": { backgroundPosition: "1000px 0" }
         },
+        "timer-blink": {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.55", transform: "scale(0.97)" }
+        },
+        "timer-pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,6 +125,8 @@ export default {
         "float": "float 6s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "shimmer": "shimmer 3s linear infinite",
+        "timer-blink": "timer-blink 1s ease-in-out infinite",
+        "timer-pulse": "timer-pulse 2.5s ease-in-out infinite",
       },
     },
   },

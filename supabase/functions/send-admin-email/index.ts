@@ -52,6 +52,29 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, body_html' }), { status: 400, headers });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanTo = to.trim();
+    if (!emailRegex.test(cleanTo)) {
+      return new Response(JSON.stringify({ error: `Ungültige E-Mail-Adresse: "${cleanTo}". Bitte verwenden Sie das Format email@beispiel.de` }), { status: 400, headers });
+    }
+
+    // Validate CC emails if provided
+    if (cc) {
+      const invalidCc = cc.split(',').map(e => e.trim()).filter(e => e && !emailRegex.test(e));
+      if (invalidCc.length > 0) {
+        return new Response(JSON.stringify({ error: `Ungültige CC E-Mail-Adresse(n): ${invalidCc.join(', ')}` }), { status: 400, headers });
+      }
+    }
+
+    // Validate BCC emails if provided
+    if (bcc) {
+      const invalidBcc = bcc.split(',').map(e => e.trim()).filter(e => e && !emailRegex.test(e));
+      if (invalidBcc.length > 0) {
+        return new Response(JSON.stringify({ error: `Ungültige BCC E-Mail-Adresse(n): ${invalidBcc.join(', ')}` }), { status: 400, headers });
+      }
+    }
+
     // Parse CC/BCC from comma-separated strings
     const ccList = cc ? cc.split(',').map(e => e.trim()).filter(Boolean) : [];
     const bccList = bcc ? bcc.split(',').map(e => e.trim()).filter(Boolean) : [];
@@ -84,16 +107,16 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({
           sender_email: 'info@caravanwert.de',
           sender_name: settingsData.site_name,
-          recipient_email: to,
-          recipient_name: recipient_name || null,
-          cc: ccList,
-          bcc: bccList,
-          subject,
-          body_html,
-          body_text: body_html.replace(/<[^>]*>/g, ''),
-          email_type: 'single',
-          direction: 'outbound',
-          status: 'scheduled',
+        recipient_email: cleanTo,
+        recipient_name: recipient_name || null,
+        cc: ccList,
+        bcc: bccList,
+        subject,
+        body_html,
+        body_text: body_html.replace(/<[^>]*>/g, ''),
+        email_type: 'single',
+        direction: 'outbound',
+        status: 'scheduled',
           sent_by: user.id,
           is_read: true,
           scheduled_at: scheduledDate.toISOString(),
@@ -117,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build Resend payload
     const resendPayload: any = {
       from: `${settingsData.site_name} <info@caravanwert.de>`,
-      to: [to],
+      to: [cleanTo],
       cc: ccList,
       bcc: bccList,
       subject,
@@ -158,7 +181,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: recipientProfile } = await supabase
       .from('profiles')
       .select('id')
-      .eq('email', to)
+      .eq('email', cleanTo)
       .maybeSingle();
 
     // Log in admin_emails
@@ -167,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         sender_email: 'info@caravanwert.de',
         sender_name: settingsData.site_name,
-        recipient_email: to,
+        recipient_email: cleanTo,
         recipient_name: recipient_name || null,
         recipient_id: recipientProfile?.id || null,
         cc: ccList,

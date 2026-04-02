@@ -15,7 +15,7 @@ const Index = () => {
   const organizationSchema = generateOrganizationSchema(settings);
   const serviceSchema = generateServiceSchema(
     "Wohnmobil-Ankauf & Vermittlung",
-    "Deutschlands führende Plattform für den Verkauf von Wohnmobilen. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation."
+    "Ihre Plattform für den Verkauf von Wohnmobilen. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation."
   );
 
   return (

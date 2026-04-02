@@ -168,7 +168,7 @@ const Kontakt = () => {
     <PageLayout
       breadcrumbs={true}
       title="Kontakt – Beratung & Support"
-      description={`Kontaktieren Sie ${siteName} - Wir sind für Sie da! Telefon, E-Mail oder Kontaktformular. Schnelle Antwort garantiert.`}
+      description={`Kontaktieren Sie ${siteName} - Wir sind für Sie da! Telefon, E-Mail oder Kontaktformular. Wir melden uns schnellstmöglich bei Ihnen.`}
       keywords="kontakt, caravanwert kontakt, wohnmobil ankauf kontakt, beratung wohnmobil"
       canonicalPath="/kontakt"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/kontakt"))}

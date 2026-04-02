@@ -298,7 +298,7 @@ const TrustBadges = () => (
     </div>
     <div className="flex items-center gap-1.5">
       <Lock className="w-4 h-4 text-blue-600" />
-      <span>Datenschutz garantiert</span>
+      <span>DSGVO-konform</span>
     </div>
     <div className="flex items-center gap-1.5">
       <Clock className="w-4 h-4 text-orange-500" />

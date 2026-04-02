@@ -32,7 +32,7 @@ export function SiteLogo({
   // Use settings logo_url or fallback to /logo.png
   const logoUrl = settings?.logo_url || "/logo.png";
   const siteName = settings?.site_name || "CaravanWert";
-  const siteTagline = settings?.site_tagline || "Deutschlands führende Wohnmobil-Handelsplattform";
+  const siteTagline = settings?.site_tagline || "Ihre Plattform für den Wohnmobil-Verkauf";
 
   // Determine icon size based on variant
   const getIconSizeClass = () => {

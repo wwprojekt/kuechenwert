@@ -896,7 +896,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                 textAlign: 'center' as const,
               }}>
                 <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-                <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+                <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
               </div>
               <div style={{ padding: '32px 24px', background: '#ffffff' }}>
                 <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml || '') }} className="prose prose-sm max-w-none" />
@@ -1555,7 +1555,7 @@ function ComposeTab() {
               textAlign: 'center' as const,
             }}>
               <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
@@ -1853,7 +1853,7 @@ function BroadcastTab() {
               textAlign: 'center' as const,
             }}>
               <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Deutschlands führende Wohnmobil-Handelsplattform</p>
+              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml || '') }} className="prose prose-sm max-w-none" />

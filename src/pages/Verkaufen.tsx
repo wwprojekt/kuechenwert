@@ -16,8 +16,8 @@ const Verkaufen = () => {
   const benefits = [
     {
       icon: Euro,
-      title: "Bestpreis-Garantie",
-      description: "Wir garantieren Ihnen den höchsten Ankaufspreis für Ihr Wohnmobil am Markt."
+      title: "Faire Preise",
+      description: "Durch den Wettbewerb mehrerer Händler erzielen Sie einen fairen Marktpreis für Ihr Wohnmobil."
     },
     {
       icon: Clock,
@@ -61,7 +61,7 @@ const Verkaufen = () => {
 
   const whyUs = [
     { icon: Users, text: "Zufriedene Verkäufer bundesweit" },
-    { icon: Award, text: "TÜV-zertifizierter Ankauf" },
+    { icon: Award, text: "Professioneller Ankauf" },
     { icon: HeartHandshake, text: "Persönliche Beratung" },
     { icon: Shield, text: "Geprüfte Sicherheit" }
   ];
@@ -69,14 +69,14 @@ const Verkaufen = () => {
   // Service structured data
   const serviceSchema = generateServiceSchema(
     'Wohnmobil Verkauf Service',
-    'Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation.'
+    'Verkaufen Sie Ihr Wohnmobil schnell, sicher und fair. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation.'
   );
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Wohnmobil verkaufen – Bestpreis in 48 Stunden"
-      description="Verkaufen Sie Ihr Wohnmobil schnell und sicher. Bestpreis-Garantie, kostenlose Bewertung in 24h und sofortige Auszahlung."
+      title="Wohnmobil verkaufen – Schnell & Fair in 48 Stunden"
+      description="Verkaufen Sie Ihr Wohnmobil schnell und sicher. Kostenlose Bewertung in 24h und faire Preise durch Händlerwettbewerb."
       keywords="wohnmobil verkaufen, wohnwagen verkaufen, camper verkaufen, ankauf wohnmobil, wohnmobil ankauf"
       canonicalPath="/verkaufen"
       structuredData={serviceSchema}
@@ -86,10 +86,10 @@ const Verkaufen = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Verkaufen Sie Ihr <span className="gradient-text">Wohnmobil</span> zum Bestpreis
+              Verkaufen Sie Ihr <span className="gradient-text">Wohnmobil</span> schnell & fair
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Schnell, sicher und unkompliziert - starten Sie Ihre kostenlose Auktion und erhalten Sie Gebote in nur 24 Stunden. Profitieren Sie von unserer Bestpreis-Garantie.
+              Schnell, sicher und unkompliziert - starten Sie Ihre kostenlose Auktion und erhalten Sie Gebote in nur 24 Stunden. Profitieren Sie von fairem Händlerwettbewerb.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/verkaufen/wizard">

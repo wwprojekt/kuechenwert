@@ -342,12 +342,12 @@ const Kaufen = () => {
     {
       icon: Star,
       title: "Große Auswahl",
-      description: "Über 500 Wohnmobile und Wohnwagen verschiedener Marken und Preisklassen."
+      description: "Wohnmobile und Wohnwagen verschiedener Marken und Preisklassen."
     },
     {
       icon: CheckCircle2,
-      title: "Garantie inklusive",
-      description: "12 Monate Garantie auf alle Fahrzeuge für Ihre Sicherheit."
+      title: "Geprüfte Qualität",
+      description: "Alle Fahrzeuge werden von unseren Händlern sorgfältig geprüft."
     },
     {
       icon: Search,
@@ -359,7 +359,7 @@ const Kaufen = () => {
   // Service structured data
   const serviceSchema = generateServiceSchema(
     'Wohnmobil Kauf Service',
-    'Große Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise, 12 Monate Garantie und persönliche Beratung.'
+    'Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise und persönliche Beratung.'
   );
 
   // Stable callback to prevent FilterSidebar useEffect from re-triggering on every render
@@ -380,7 +380,7 @@ const Kaufen = () => {
     <PageLayout
       breadcrumbs={true}
       title="Wohnmobil Kaufen"
-      description="Große Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise, 12 Monate Garantie und persönliche Beratung an 6 Standorten in Deutschland."
+      description="Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise und persönliche Beratung."
       keywords="wohnmobil kaufen, wohnwagen kaufen, camper kaufen, gebrauchte wohnmobile, wohnmobil ankaufstationen"
       canonicalPath="/kaufen"
       structuredData={serviceSchema}
@@ -779,7 +779,7 @@ const Kaufen = () => {
             <h3 className="text-2xl font-bold mt-8 mb-4">Gebraucht oder neu kaufen?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
               Gebrauchte Wohnmobile bieten ein ausgezeichnetes Preis-Leistungs-Verhältnis. Alle unsere Fahrzeuge werden gründlich geprüft 
-              und mit 12 Monaten Garantie ausgeliefert. So erhalten Sie Qualität zum fairen Preis mit der Sicherheit eines Neukaufs.
+              So erhalten Sie Qualität zum fairen Preis.
             </p>
 
             <h3 className="text-2xl font-bold mt-8 mb-4">Welche Finanzierungsmöglichkeiten gibt es?</h3>

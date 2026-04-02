@@ -94,7 +94,7 @@ const Process = () => {
         <div className="grid lg:grid-cols-2 gap-12 mb-12">
           <div className="space-y-6 flex flex-col justify-center">
             <h3 className="text-3xl font-extrabold text-foreground">
-              Professionelle Gebote <span className="text-primary">garantiert</span>
+              Professionelle Gebote von <span className="text-primary">geprüften Händlern</span>
             </h3>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Käufer bieten fair und transparent auf Ihr Wohnmobil. Durch hochwertige Fotos und detaillierte Angaben erhalten Sie die besten Gebote.
@@ -135,23 +135,23 @@ const Process = () => {
           </div>
           <div className="space-y-6 flex flex-col justify-center order-1 lg:order-2">
             <h3 className="text-3xl font-extrabold text-foreground">
-              Tausende <span className="text-primary">zufriedene Kunden</span>
+              Persönlicher <span className="text-primary">Service für Sie</span>
             </h3>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Über 1.500 Wohnmobilbesitzer haben bereits erfolgreich über {siteName} verkauft und profitieren von unserem einzigartigen Service.
+              Wir begleiten jeden Verkauf persönlich – von der Bewertung bis zur Übergabe. Unser Ziel ist es, Ihnen den bestmöglichen Service zu bieten.
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">98%</div>
-                <div className="text-xs text-muted-foreground mt-1">Zufriedenheit</div>
+                <div className="text-2xl font-bold text-primary">Persönlich</div>
+                <div className="text-xs text-muted-foreground mt-1">Betreuung</div>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <div className="text-2xl font-bold text-primary">24h</div>
                 <div className="text-xs text-muted-foreground mt-1">Ø Antwortzeit</div>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">4.8★</div>
-                <div className="text-xs text-muted-foreground mt-1">Bewertung</div>
+                <div className="text-2xl font-bold text-primary">100%</div>
+                <div className="text-xs text-muted-foreground mt-1">Kostenlos</div>
               </div>
             </div>
           </div>

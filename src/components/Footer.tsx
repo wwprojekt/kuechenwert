@@ -83,8 +83,8 @@ const Footer = () => {
                 </div>
               )}
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">TÜV-Geprüft</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Zertifizierter Service</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Geprüfter Service</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Verifizierte Händler</p>
               </div>
             </div>
 
@@ -161,7 +161,7 @@ const Footer = () => {
             <div className="space-y-6 md:col-span-2 lg:col-span-6">
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                {settings?.site_description || 'Deutschlands führende Plattform für den An- und Verkauf von Wohnmobilen. Schnell, sicher und fair.'}
+                {settings?.site_description || 'Ihre Plattform für den Wohnmobil-Verkauf. Schnell, transparent und kostenlos für Privatverkäufer.'}
               </p>
               
               {/* Social Links - only show if URLs are configured in settings */}

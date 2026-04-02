@@ -9,7 +9,7 @@ const benefits = [
   {
     icon: Shield,
     title: "100% Sicher",
-    description: "Alle Händler sind geprüft und zertifiziert. Ihre Daten sind bei uns in sicheren Händen.",
+    description: "Alle Händler werden von uns geprüft und verifiziert. Ihre Daten sind bei uns in sicheren Händen.",
   },
   {
     icon: Clock,
@@ -19,7 +19,7 @@ const benefits = [
   {
     icon: TrendingUp,
     title: "Beste Preise",
-    description: "Durch Wettbewerb unter Händlern erzielen Sie den höchstmöglichen Verkaufspreis.",
+    description: "Durch Wettbewerb unter Händlern erzielen Sie einen fairen Verkaufspreis.",
   },
   {
     icon: Users,
@@ -29,7 +29,7 @@ const benefits = [
   {
     icon: Award,
     title: "Geprüfte Händler",
-    description: "Alle Partner durchlaufen ein strenges KYC-Verfahren und sind versichert.",
+    description: "Alle Partner durchlaufen ein Prüfverfahren und weisen ihre Gewerbeberechtigung nach.",
   },
   {
     icon: Lock,
@@ -55,7 +55,7 @@ const Benefits = () => {
             Warum <span className="text-primary">{siteName}</span>?
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200 px-4">
-            Wir kombinieren modernste Technologie mit persönlichem Service, um Ihnen den besten Verkaufspreis für Ihr Wohnmobil zu garantieren.
+            Wir kombinieren modernste Technologie mit persönlichem Service, um Ihnen einen fairen Verkaufspreis für Ihr Wohnmobil zu ermöglichen.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ const Benefits = () => {
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center mb-12 sm:mb-16 lg:mb-20">
           <div className="space-y-4 sm:space-y-6 order-2 lg:order-1">
             <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-foreground">
-              Über 200 <span className="text-primary">geprüfte Händler</span> deutschlandweit
+              Wachsendes Netzwerk <span className="text-primary">geprüfter Händler</span> deutschlandweit
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
               Alle unsere Partnerhändler durchlaufen ein strenges Prüfverfahren. Sie profitieren von professionellem Service und fairen Preisen durch echten Wettbewerb.

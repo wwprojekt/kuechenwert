@@ -16,7 +16,7 @@ const UeberUns = () => {
     {
       icon: Heart,
       title: "Leidenschaft",
-      description: "Wir leben für Wohnmobile und teilen die Begeisterung unserer Kunden für mobile Freiheit."
+      description: "Wir verbinden unsere Erfahrung aus der Immobilienbranche mit der Begeisterung für mobile Freiheit."
     },
     {
       icon: Shield,
@@ -26,7 +26,7 @@ const UeberUns = () => {
     {
       icon: Target,
       title: "Exzellenz",
-      description: "Wir streben nach höchster Qualität in allem, was wir tun - für Ihre Zufriedenheit."
+      description: "Wir streben nach höchster Qualität in allem, was wir tun – für Ihre Zufriedenheit."
     },
     {
       icon: Zap,
@@ -37,59 +37,59 @@ const UeberUns = () => {
 
   const milestones = [
     {
-      year: "2015",
+      year: "2024",
+      title: "Die Idee",
+      description: "Als Betreiber von wohnwert24.de erkennen wir das Potenzial, unsere Expertise in der Lead-Generierung auf den Wohnmobil-Markt zu übertragen."
+    },
+    {
+      year: "Okt 2025",
       title: "Gründung",
-      description: "Start mit einer Vision: Wohnmobil-Ankauf einfach und fair gestalten."
+      description: "CaravanWert geht an den Start – mit dem Ziel, den Wohnmobil-Verkauf transparenter, schneller und fairer zu gestalten."
     },
     {
-      year: "2017",
-      title: "Expansion",
-      description: "Eröffnung von 3 weiteren Standorten in Deutschland."
+      year: "2025",
+      title: "Plattform-Launch",
+      description: "Unsere Online-Plattform mit Auktionssystem, Sofortpreis-Ankauf und Händlernetzwerk geht live."
     },
     {
-      year: "2020",
-      title: "Digitalisierung",
-      description: "Launch unserer Online-Plattform für schnellen und transparenten Wohnmobil-Ankauf."
-    },
-    {
-      year: "2023",
-      title: "Marktführer",
-      description: "Einer der führenden Wohnmobil-Ankäufer in Deutschland."
+      year: "2026",
+      title: "Wachstum",
+      description: "Kontinuierlicher Ausbau unseres Händlernetzwerks und stetige Verbesserung unserer Plattform."
     }
   ];
 
   const team = [
     {
-      name: "Expertise",
-      description: "Über 50 Jahre kombinierte Erfahrung im Wohnmobil-Bereich"
+      name: "Branchenübergreifende Expertise",
+      description: "Erfahrung aus der Immobilienbranche, angewandt auf den Wohnmobil-Markt"
     },
     {
       name: "Kundenservice",
-      description: "Persönliche Betreuung durch geschulte Fachberater"
+      description: "Persönliche Betreuung durch engagierte Ansprechpartner"
     },
     {
       name: "Netzwerk",
-      description: "Starke Partnerschaften mit führenden Herstellern und Händlern"
+      description: "Wachsendes Partnernetzwerk aus geprüften Händlern in ganz Deutschland"
     },
     {
-      name: "Qualität",
-      description: "TÜV-zertifizierte Prozesse für maximale Sicherheit"
+      name: "Digitale Kompetenz",
+      description: "Moderne Plattform mit datenbasierter Fahrzeugbewertung"
     }
   ];
 
   const achievements = [
     { number: "Bundesweit", label: "Verfügbar" },
     { number: "24h", label: "Bewertungszeit" },
-    { number: "TÜV", label: "Zertifiziert" },
+    { number: "Geprüft", label: "Händlernetzwerk" },
     { number: "100%", label: "Kostenlos" }
   ];
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Über uns – Wohnmobil-Experten seit 2015"
-      description={`Erfahren Sie mehr über ${siteName} - Ihr zuverlässiger Partner für Wohnmobil-Ankauf seit 2015. Bundesweit, schnell und fair.`}
-      keywords="über uns, caravanwert, wohnmobil ankauf unternehmen, wohnmobil experten"
+      title="Über uns – Ihr Partner für den Wohnmobil-Verkauf"
+      description={`Erfahren Sie mehr über ${siteName} – Ihre Plattform für den Wohnmobil-Verkauf. Gegründet 2025, bundesweit, schnell und fair.`}
+      keywords="über uns, caravanwert, wohnmobil verkauf plattform, wohnmobil verkaufen"
       canonicalPath="/ueber-uns"
       structuredData={[generateOrganizationSchema(settings), generateBreadcrumbSchema(getBreadcrumbsFromPath("/ueber-uns"))]}
     >
@@ -97,11 +97,11 @@ const UeberUns = () => {
       <PageHero size="lg">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Ihre <span className="gradient-text">Wohnmobil-Experten</span> seit 2015
+            Ihre Plattform für den <span className="gradient-text">Wohnmobil-Verkauf</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-            Bei {siteName} verbinden wir Leidenschaft für Wohnmobile mit professionellem Service. 
-            Vertrauen Sie auf über 8 Jahre Erfahrung und unseren bundesweiten Service.
+            {siteName} verbindet Wohnmobil-Besitzer mit geprüften Händlern – 
+            schnell, transparent und kostenlos. Entstanden aus der Erfahrung der Immobilienbranche.
           </p>
         </div>
       </PageHero>
@@ -130,18 +130,19 @@ const UeberUns = () => {
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Unsere Geschichte</h2>
               <div className="space-y-4 text-muted-foreground leading-relaxed">
                 <p>
-                  {siteName} wurde 2015 aus einer einfachen Idee geboren: Den Wohnmobil-Ankauf transparenter, 
-                  schneller und fairer zu gestalten. Was mit einem kleinen Standort begann, ist heute zu einem 
-                  deutschlandweiten Netzwerk mit 6 Standorten gewachsen.
+                  {siteName} wurde im Oktober 2025 gegründet – aus einer klaren Überzeugung heraus: Der Verkauf 
+                  eines Wohnmobils sollte genauso einfach, transparent und fair sein wie der Verkauf einer Immobilie.
                 </p>
                 <p>
-                  Unsere Gründer, selbst begeisterte Wohnmobil-Enthusiasten, erkannten die Schwierigkeiten beim 
-                  privaten Verkauf und entwickelten einen Service, der beide Seiten zufriedenstellt: Faire Preise 
-                  für Verkäufer und geprüfte Qualität für Käufer.
+                  Als Betreiber von <a href="https://wohnwert24.de" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">wohnwert24.de</a> haben 
+                  wir bereits umfangreiche Erfahrung in der digitalen Vermittlung und Lead-Generierung gesammelt. 
+                  Diese Expertise übertragen wir nun auf den Wohnmobil-Markt: Wir bringen Verkäufer und geprüfte 
+                  Händler zusammen – schnell, sicher und kostenlos für Privatverkäufer.
                 </p>
                 <p>
-                  Heute sind wir stolz darauf, einer der führenden Wohnmobil-Ankäufer in Deutschland zu sein. 
-                  Unser Erfolg basiert auf dem Vertrauen unserer Kunden und unserem Engagement für Qualität und Service.
+                  Unsere Plattform wächst stetig. Wir arbeiten kontinuierlich daran, unser Händlernetzwerk 
+                  auszubauen und unseren Service für Sie zu verbessern. Dabei setzen wir auf modernste 
+                  Technologie und persönlichen Kontakt.
                 </p>
               </div>
             </div>
@@ -150,7 +151,7 @@ const UeberUns = () => {
               <div className="absolute -inset-4 gradient-hero opacity-20 blur-3xl rounded-full" />
               <img 
                 src={dealerProfessional} 
-                alt={`${siteName} Team - Professioneller Wohnmobil-Ankauf`} 
+                alt={`${siteName} – Professioneller Wohnmobil-Verkauf`} 
                 className="relative rounded-2xl shadow-premium hover-lift"
               />
             </div>
@@ -192,7 +193,7 @@ const UeberUns = () => {
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Unsere Meilensteine</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Eine Reise des Wachstums und der kontinuierlichen Verbesserung.
+              Von der Idee zur Plattform – unser Weg im Überblick.
             </p>
           </div>
           
@@ -200,7 +201,7 @@ const UeberUns = () => {
             {milestones.map((milestone, index) => (
               <div key={index} className="flex gap-8 items-start animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                 <div className="flex-shrink-0">
-                  <div className="h-20 w-20 rounded-xl gradient-hero flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  <div className="h-20 w-20 rounded-xl gradient-hero flex items-center justify-center text-white font-bold text-sm shadow-lg">
                     {milestone.year}
                   </div>
                 </div>
@@ -222,16 +223,17 @@ const UeberUns = () => {
               <div className="absolute -inset-4 gradient-hero opacity-20 blur-3xl rounded-full" />
               <img 
                 src={handshakeDeal} 
-                alt="Vertrauensvoller Wohnmobil-Ankauf" 
+                alt="Vertrauensvoller Wohnmobil-Verkauf" 
                 className="relative rounded-2xl shadow-premium hover-lift"
               />
             </div>
             
             <div className="order-1 lg:order-2 animate-fade-in animate-delay-200">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">Unser Team macht den Unterschied</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Was uns auszeichnet</h2>
               <p className="text-lg opacity-90 mb-8 leading-relaxed">
-                Bei {siteName} arbeiten ausschließlich geschulte Fachleute mit echter Leidenschaft für Wohnmobile. 
-                Unser Team vereint technisches Know-how mit ausgeprägtem Serviceverständnis.
+                Bei {siteName} verbinden wir digitale Kompetenz mit persönlichem Service. 
+                Unsere Erfahrung aus der Immobilienbranche hilft uns, auch im Wohnmobil-Markt 
+                die besten Lösungen für Sie zu finden.
               </p>
               
               <div className="space-y-4">
@@ -250,33 +252,33 @@ const UeberUns = () => {
         </div>
       </section>
 
-      {/* Certifications */}
+      {/* What We Offer - replaces fake Certifications */}
       <section className="py-20">
         <div className="container">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Zertifizierungen & Auszeichnungen</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Unser Versprechen</h2>
               <p className="text-lg text-muted-foreground">
-                Qualität, die durch unabhängige Institutionen bestätigt wird.
+                Darauf können Sie sich bei {siteName} verlassen.
               </p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  icon: Award,
-                  title: "TÜV-Zertifiziert",
-                  description: "Geprüfte Qualitäts-standards"
+                  icon: Shield,
+                  title: "Geprüfte Händler",
+                  description: "Alle Partner durchlaufen unseren Verifizierungsprozess"
                 },
                 {
                   icon: Users,
-                  title: "Top-Bewertungen",
-                  description: "98% Kundenzufriedenheit"
+                  title: "Persönlicher Service",
+                  description: "Individuelle Betreuung bei jedem Verkauf"
                 },
                 {
                   icon: TrendingUp,
-                  title: "Branchenführer",
-                  description: "Ausgezeichneter Service"
+                  title: "Faire Preise",
+                  description: "Marktgerechte Bewertung Ihres Fahrzeugs"
                 }
               ].map((cert, index) => (
                 <Card key={index} className="text-center hover-lift-sm animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -298,10 +300,10 @@ const UeberUns = () => {
       <section className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Werden Sie Teil unserer Erfolgsgeschichte</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Lernen Sie uns kennen</h2>
             <p className="text-xl mb-8 opacity-95">
-              Zahlreiche Kunden haben uns bereits vertraut. Lassen Sie uns auch Ihnen beim Verkauf 
-              oder Kauf Ihres Wohnmobils helfen.
+              Überzeugen Sie sich selbst von unserem Service. Wir freuen uns darauf, 
+              Ihnen beim Verkauf Ihres Wohnmobils zu helfen – kostenlos und unverbindlich.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/verkaufen">

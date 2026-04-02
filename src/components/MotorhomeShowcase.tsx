@@ -15,7 +15,7 @@ const MotorhomeShowcase = () => {
       id: 1,
       image: "/images/motorhome-integrated.jpg",
       title: "Integrierte Wohnmobile",
-      subtitle: "Bestpreise garantiert",
+      subtitle: "Faire Preise",
       badge: "Beliebt",
     },
     {
@@ -45,7 +45,7 @@ const MotorhomeShowcase = () => {
     { icon: Users, value: "Bundesweit", label: "Verifizierte Händler" },
     { icon: CheckCircle, value: "48h", label: "Durchschnittl. Verkaufszeit" },
     { icon: Award, value: "100%", label: "Kostenlos & unverbindlich" },
-    { icon: Star, value: "TÜV", label: "Zertifizierter Service" },
+    { icon: Star, value: "Sicher", label: "Geprüfter Service" },
   ];
 
   return (
@@ -128,7 +128,7 @@ const MotorhomeShowcase = () => {
         {/* Bottom CTA */}
         <div className="text-center mt-10 space-y-3">
           <p className="text-muted-foreground">
-            <span className="font-semibold text-foreground">Verkaufen auch Sie Ihr Wohnmobil</span> – unkompliziert und zum Bestpreis!
+            <span className="font-semibold text-foreground">Verkaufen auch Sie Ihr Wohnmobil</span> – unkompliziert und fair!
           </p>
           <Link to="/verkaufen">
             <Button size="lg" className="gradient-hero hover:gradient-hero-hover mt-2">

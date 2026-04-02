@@ -104,7 +104,7 @@ export const kaufenRelatedLinks: RelatedLink[] = [
   },
   {
     title: "Über uns",
-    description: "Erfahren Sie mehr über unsere Qualitätsstandards und Garantien",
+    description: "Erfahren Sie mehr über unsere Qualitätsstandards und unseren Service",
     href: "/ueber-uns",
   },
 ];

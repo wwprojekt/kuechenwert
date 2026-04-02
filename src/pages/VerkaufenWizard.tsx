@@ -405,7 +405,7 @@ const VerkaufenWizard = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Über 500 geprüfte Händler</span>
+                      <span>Geprüfte Händler bundesweit</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />

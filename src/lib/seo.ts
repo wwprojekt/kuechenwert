@@ -39,7 +39,7 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
     '@context': 'https://schema.org',
     '@type': ['Organization', 'LocalBusiness'],
     name: settings?.site_name || 'CaravanWert',
-    description: settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform',
+    description: settings?.site_description || 'Ihre Plattform für den Wohnmobil-Verkauf',
     url: BASE_URL,
     logo: `${BASE_URL}/favicon.png`,
     image: `${BASE_URL}/favicon.png`,

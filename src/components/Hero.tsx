@@ -6,7 +6,7 @@ const Hero = () => {
   const benefits = [
     { icon: Clock, text: "In unter 48 Stunden verkauft" },
     { icon: Shield, text: "100% sicher & seriös" },
-    { icon: TrendingUp, text: "Bestpreis garantiert" },
+    { icon: TrendingUp, text: "Faire Marktpreise" },
   ];
 
   return (
@@ -46,7 +46,7 @@ const Hero = () => {
             <div className="inline-block animate-fade-in">
               <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
                 <Star className="w-4 h-4 mr-2 fill-primary" />
-                Deutschlands #1 Wohnmobil-Ankauf
+                Wohnmobil-Verkauf leicht gemacht
               </span>
             </div>
             

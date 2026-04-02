@@ -203,8 +203,8 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
                 <Award className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">TÜV-Geprüft</p>
-                <p className="text-sm text-muted-foreground">Zertifizierter Service</p>
+                <p className="font-semibold">Geprüfter Service</p>
+                <p className="text-sm text-muted-foreground">Verifizierte Händler</p>
               </div>
             </div>
             <div className="flex flex-col items-center text-center gap-3">

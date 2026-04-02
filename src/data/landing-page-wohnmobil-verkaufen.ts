@@ -3,12 +3,12 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilVerkaufen: LandingPageConfig = {
   slug: "wohnmobil-verkaufen",
   path: "/wohnmobil-verkaufen",
-  title: "Wohnmobil Verkaufen — Bestpreis in 24 Stunden",
+  title: "Wohnmobil Verkaufen — Schnell & Fair in 24 Stunden",
   metaDescription:
-    "Wohnmobil verkaufen leicht gemacht: Kostenlose Bewertung, Bestpreis-Garantie und Auszahlung in 24h. Über 2.400 zufriedene Verkäufer. Jetzt starten!",
+    "Wohnmobil verkaufen leicht gemacht: Kostenlose Bewertung, faire Preise durch Händlerwettbewerb und schnelle Abwicklung. Jetzt starten!",
   keywords:
     "wohnmobil verkaufen, wohnmobil verkaufen privat, gebrauchtes wohnmobil verkaufen, wohnmobil schnell verkaufen, reisemobil verkaufen, camper verkaufen",
-  h1: "Wohnmobil Verkaufen — Bestpreis in 24 Stunden",
+  h1: "Wohnmobil Verkaufen — Schnell & Fair in 24 Stunden",
   heroSubtitle:
     "Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Kostenlose Bewertung, geprüfte Händler und Auszahlung innerhalb von 24 Stunden.",
   primaryCta: { text: "Wohnmobil jetzt bewerten lassen", href: "/verkaufen/wizard" },
@@ -55,7 +55,7 @@ export const wohnmobilVerkaufen: LandingPageConfig = {
     {
       title: "Erfahrungen unserer Verkäufer",
       content:
-        "Über 2.400 Wohnmobilbesitzer haben bereits erfolgreich über unsere Plattform verkauft. Das sagen unsere Kunden über den Verkaufsprozess.",
+        "Wohnmobilbesitzer nutzen unsere Plattform für den schnellen und fairen Verkauf. So funktioniert der Verkaufsprozess.",
       items: [
         { title: "\"Schneller als erwartet\"", description: "\"Ich hatte mein Wohnmobil monatelang privat inseriert — ohne Erfolg. Über CaravanWert war es in 3 Tagen verkauft, zum besseren Preis.\" — Thomas M., München" },
         { title: "\"Kein Stress, kein Risiko\"", description: "\"Die Abwicklung war professionell und unkompliziert. Ich musste mich um nichts kümmern.\" — Sabine K., Hamburg" },

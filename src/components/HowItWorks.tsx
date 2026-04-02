@@ -9,14 +9,14 @@ const channels = [
     description: "Erhalten Sie innerhalb von 24 Stunden ein verbindliches Kaufangebot von professionellen Händlern.",
     benefits: [
       "Schnelle Bewertung",
-      "Garantierter Festpreis",
+      "Verbindliches Angebot",
       "Keine Auktion nötig",
     ],
   },
   {
     iconComponent: Gavel,
     title: "Online-Auktion",
-    description: "Lassen Sie zertifizierte Händler um Ihr Wohnmobil bieten und erzielen Sie den Höchstpreis.",
+    description: "Lassen Sie geprüfte Händler um Ihr Wohnmobil bieten und erzielen Sie einen fairen Preis.",
     benefits: [
       "Maximaler Verkaufspreis",
       "Transparente Gebote",

@@ -15,12 +15,12 @@ const Haendler = () => {
     {
       icon: TrendingUp,
       title: "Schneller Umschlag",
-      description: "Verkaufen Sie Ihre Bestandsfahrzeuge schneller durch unser europaweites Netzwerk."
+      description: "Verkaufen Sie Ihre Bestandsfahrzeuge schneller durch unser wachsendes Händlernetzwerk."
     },
     {
       icon: Shield,
       title: "Sichere Abwicklung",
-      description: "Rechtlich abgesicherte Prozesse und garantierte Zahlungsabwicklung."
+      description: "Rechtlich abgesicherte Prozesse und sichere Zahlungsabwicklung."
     },
     {
       icon: Users,
@@ -74,9 +74,9 @@ const Haendler = () => {
   ];
 
   const stats = [
-    { number: "Europaweit", label: "Händlernetzwerk" },
+    { number: "Bundesweit", label: "Händlernetzwerk" },
     { number: "24h", label: "Durchschn. Reaktionszeit" },
-    { number: "TÜV", label: "Zertifiziert" },
+    { number: "Geprüft", label: "Händler" },
     { number: "100%", label: "Kostenlos starten" }
   ];
 
@@ -108,7 +108,7 @@ const Haendler = () => {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Händler-Partnerprogramm',
-    description: 'Werden Sie Teil unseres europaweiten Händlernetzwerks. Schneller Bestandsverkauf, professioneller Marketing-Support und Zugang zu kaufbereiten Kunden.',
+    description: 'Werden Sie Teil unseres wachsenden Händlernetzwerks. Schneller Bestandsverkauf, professioneller Marketing-Support und Zugang zu kaufbereiten Kunden.',
     provider: {
       '@type': 'Organization',
       name: siteName,
@@ -116,7 +116,7 @@ const Haendler = () => {
     },
     areaServed: {
       '@type': 'Place',
-      name: 'European Union',
+      name: 'Deutschland',
     },
     serviceType: 'B2B Vehicle Trading Platform',
   };
@@ -138,8 +138,8 @@ const Haendler = () => {
               Ihr <span className="gradient-text">Partner</span> für erfolgreichen Wohnmobil-Handel
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Werden Sie Teil unseres europaweiten Händlernetzwerks. Profitieren Sie von schnellem Bestandsverkauf, 
-              professionellem Marketing-Support und Zugang zu Tausenden kaufbereiten Kunden.
+              Werden Sie Teil unseres wachsenden Händlernetzwerks in Deutschland. Profitieren Sie von schnellem Bestandsverkauf, 
+              professionellem Marketing-Support und Zugang zu kaufbereiten Kunden.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/register/haendler">
@@ -284,13 +284,13 @@ const Haendler = () => {
               {[
                 {
                   icon: BarChart3,
-                  title: "Marktführende Position",
-                  description: "Profitieren Sie von unserer starken Marktpräsenz und Reputation."
+                  title: "Wachsende Plattform",
+                  description: "Profitieren Sie von unserer stetig wachsenden Reichweite und Bekanntheit."
                 },
                 {
                   icon: Target,
                   title: "Zielgruppenreichweite",
-                  description: "Zugang zu über 50.000 qualifizierten Interessenten monatlich."
+                  description: "Zugang zu qualifizierten Wohnmobil-Interessenten über unsere Plattform."
                 },
                 {
                   icon: Handshake,

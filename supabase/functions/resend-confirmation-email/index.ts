@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
 
     // Get target user email from request body
     const body = await req.json();
-    const { email, user_id } = body;
+    const { email, user_id, dealer_application_id } = body;
 
     if (!email && !user_id) {
       return new Response(JSON.stringify({ error: 'email or user_id is required' }), {
@@ -121,14 +121,56 @@ Deno.serve(async (req: Request) => {
         console.log('Could not auto-confirm, but magic link was generated:', updateError.message);
       }
 
-      return new Response(JSON.stringify({ 
-        success: true,
-        method: 'admin_confirm',
-        message: `E-Mail-Adresse ${targetEmail} wurde direkt bestätigt (Bestätigungslink konnte nicht gesendet werden).`,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Update confirmation link counter if dealer_application_id provided
+    if (dealer_application_id) {
+      try {
+        const { data: currentApp } = await supabase
+          .from('dealer_applications')
+          .select('confirmation_link_sent_count')
+          .eq('id', dealer_application_id)
+          .single();
+        const currentCount = currentApp?.confirmation_link_sent_count || 0;
+        await supabase
+          .from('dealer_applications')
+          .update({
+            confirmation_link_sent_count: currentCount + 1,
+            confirmation_link_last_sent_at: new Date().toISOString(),
+          })
+          .eq('id', dealer_application_id);
+      } catch (counterErr) {
+        console.log('Could not update confirmation_link_sent_count:', counterErr);
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      method: 'admin_confirm',
+      message: `E-Mail-Adresse ${targetEmail} wurde direkt bestätigt (Bestätigungslink konnte nicht gesendet werden).`,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+    }
+
+    // Update confirmation link counter if dealer_application_id provided
+    if (dealer_application_id) {
+      try {
+        const { data: currentApp } = await supabase
+          .from('dealer_applications')
+          .select('confirmation_link_sent_count')
+          .eq('id', dealer_application_id)
+          .single();
+        const currentCount = currentApp?.confirmation_link_sent_count || 0;
+        await supabase
+          .from('dealer_applications')
+          .update({
+            confirmation_link_sent_count: currentCount + 1,
+            confirmation_link_last_sent_at: new Date().toISOString(),
+          })
+          .eq('id', dealer_application_id);
+      } catch (counterErr) {
+        console.log('Could not update confirmation_link_sent_count:', counterErr);
+      }
     }
 
     return new Response(JSON.stringify({ 

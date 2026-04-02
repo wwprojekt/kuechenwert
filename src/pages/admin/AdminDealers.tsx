@@ -58,6 +58,8 @@ import {
   Trash2,
   AlertTriangle,
   UserPlus,
+  FileUp,
+  Send,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -102,6 +104,10 @@ interface DealerApplication {
   iban?: string | null;
   bic?: string | null;
   country?: string | null;
+  confirmation_link_sent_count?: number;
+  confirmation_link_last_sent_at?: string | null;
+  document_request_sent_count?: number;
+  document_request_last_sent_at?: string | null;
   profiles?: DealerProfile;
 }
 
@@ -121,6 +127,7 @@ export default function AdminDealers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [authStatusMap, setAuthStatusMap] = useState<Record<string, { email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null }>>({});
   const [resendingUserId, setResendingUserId] = useState<string | null>(null);
+  const [requestingDocUserId, setRequestingDocUserId] = useState<string | null>(null);
 
   // Fetch all applications
   const { data: applications, isLoading } = useQuery({
@@ -308,7 +315,7 @@ export default function AdminDealers() {
   // Suspend/Unsuspend dealer mutation
   // Resend confirmation email mutation
   const resendConfirmationMutation = useMutation({
-    mutationFn: async ({ userId }: { userId: string }) => {
+    mutationFn: async ({ userId, dealerApplicationId }: { userId: string; dealerApplicationId?: string }) => {
       setResendingUserId(userId);
       
       // Session explizit refreshen um sicherzustellen dass der JWT gültig ist
@@ -318,7 +325,7 @@ export default function AdminDealers() {
       }
       
       const { data, error } = await supabase.functions.invoke('resend-confirmation-email', {
-        body: { user_id: userId },
+        body: { user_id: userId, dealer_application_id: dealerApplicationId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -330,7 +337,6 @@ export default function AdminDealers() {
         description: data?.message || "Der Bestätigungslink wurde erfolgreich gesendet.",
       });
       setResendingUserId(null);
-      // Refresh auth status
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
     },
@@ -341,6 +347,52 @@ export default function AdminDealers() {
         variant: "destructive",
       });
       setResendingUserId(null);
+    },
+  });
+
+  // Request dealer documents mutation
+  const requestDocumentsMutation = useMutation({
+    mutationFn: async ({ dealerApplicationId, dealerEmail, dealerName, companyName }: {
+      dealerApplicationId: string;
+      dealerEmail: string;
+      dealerName: string;
+      companyName: string;
+    }) => {
+      setRequestingDocUserId(dealerApplicationId);
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        throw new Error('Sitzung abgelaufen. Bitte melden Sie sich erneut an.');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('request-dealer-documents', {
+        body: {
+          dealer_application_id: dealerApplicationId,
+          dealer_email: dealerEmail,
+          dealer_name: dealerName,
+          company_name: companyName,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Dokument-Anforderung gesendet",
+        description: data?.message || "Die E-Mail wurde erfolgreich gesendet.",
+      });
+      setRequestingDocUserId(null);
+      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler beim Senden",
+        description: error.message || "Bitte versuchen Sie es erneut.",
+        variant: "destructive",
+      });
+      setRequestingDocUserId(null);
     },
   });
 
@@ -516,6 +568,7 @@ export default function AdminDealers() {
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>Eingereicht am</TableHead>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>Dokumente</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -523,7 +576,7 @@ export default function AdminDealers() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       Lade Anträge...
                     </TableCell>
                   </TableRow>
@@ -544,22 +597,60 @@ export default function AdminDealers() {
                             <MailCheck className="w-3 h-3" /> Bestätigt
                           </Badge>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
                               <MailX className="w-3 h-3" /> Unbestätigt
                             </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1"
-                              disabled={resendingUserId === application.user_id}
-                              onClick={() => resendConfirmationMutation.mutate({ userId: application.user_id })}
-                            >
-                              <MailCheck className="w-3 h-3" />
-                              {resendingUserId === application.user_id ? "Sende..." : "Link senden"}
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                disabled={resendingUserId === application.user_id}
+                                onClick={() => resendConfirmationMutation.mutate({ userId: application.user_id, dealerApplicationId: application.id })}
+                              >
+                                <MailCheck className="w-3 h-3" />
+                                {resendingUserId === application.user_id ? "Sende..." : "Link senden"}
+                              </Button>
+                              {(application.confirmation_link_sent_count ?? 0) > 0 && (
+                                <span className="text-[10px] text-muted-foreground" title={application.confirmation_link_last_sent_at ? `Zuletzt: ${format(new Date(application.confirmation_link_last_sent_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}>
+                                  ({application.confirmation_link_sent_count}x)
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                            disabled={requestingDocUserId === application.id}
+                            onClick={() => {
+                              const email = application.profiles?.email || authStatusMap[application.user_id]?.email_confirmed_at ? application.profiles?.email : '';
+                              if (!email && !application.profiles?.email) {
+                                toast({ title: "Fehler", description: "Keine E-Mail-Adresse gefunden.", variant: "destructive" });
+                                return;
+                              }
+                              requestDocumentsMutation.mutate({
+                                dealerApplicationId: application.id,
+                                dealerEmail: application.profiles?.email || '',
+                                dealerName: application.contact_person_name,
+                                companyName: application.company_name,
+                              });
+                            }}
+                          >
+                            <FileUp className="w-3 h-3" />
+                            {requestingDocUserId === application.id ? "Sende..." : "Dok. anfordern"}
+                          </Button>
+                          {(application.document_request_sent_count ?? 0) > 0 && (
+                            <span className="text-[10px] text-muted-foreground" title={application.document_request_last_sent_at ? `Zuletzt: ${format(new Date(application.document_request_last_sent_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}>
+                              ({application.document_request_sent_count}x)
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(application.status)}</TableCell>
                       <TableCell className="text-right">
@@ -576,7 +667,7 @@ export default function AdminDealers() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       Keine ausstehenden Anträge gefunden.
                     </TableCell>
                   </TableRow>
@@ -722,20 +813,27 @@ export default function AdminDealers() {
                             <MailCheck className="w-3 h-3" /> Bestätigt
                           </Badge>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="gap-1 text-orange-500 border-orange-300">
                               <MailX className="w-3 h-3" /> Unbestätigt
                             </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1"
-                              disabled={resendingUserId === dealer.user_id}
-                              onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id })}
-                            >
-                              <MailCheck className="w-3 h-3" />
-                              {resendingUserId === dealer.user_id ? "Sende..." : "Link senden"}
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                disabled={resendingUserId === dealer.user_id}
+                                onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id, dealerApplicationId: dealer.id })}
+                              >
+                                <MailCheck className="w-3 h-3" />
+                                {resendingUserId === dealer.user_id ? "Sende..." : "Link senden"}
+                              </Button>
+                              {(dealer.confirmation_link_sent_count ?? 0) > 0 && (
+                                <span className="text-[10px] text-muted-foreground" title={dealer.confirmation_link_last_sent_at ? `Zuletzt: ${format(new Date(dealer.confirmation_link_last_sent_at), "dd.MM.yyyy HH:mm", { locale: de })}` : ""}>
+                                  ({dealer.confirmation_link_sent_count}x)
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </TableCell>
@@ -769,13 +867,34 @@ export default function AdminDealers() {
                             </DropdownMenuItem>
                             {!authStatusMap[dealer.user_id]?.email_confirmed_at && (
                               <DropdownMenuItem
-                                onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id })}
+                                onClick={() => resendConfirmationMutation.mutate({ userId: dealer.user_id, dealerApplicationId: dealer.id })}
                                 disabled={resendingUserId === dealer.user_id}
                               >
                                 <MailCheck className="mr-2 h-4 w-4" />
                                 <span>{resendingUserId === dealer.user_id ? "Sende..." : "Bestätigungslink senden"}</span>
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (!dealer.profiles?.email) {
+                                  toast({ title: "Fehler", description: "Keine E-Mail-Adresse gefunden.", variant: "destructive" });
+                                  return;
+                                }
+                                requestDocumentsMutation.mutate({
+                                  dealerApplicationId: dealer.id,
+                                  dealerEmail: dealer.profiles.email,
+                                  dealerName: dealer.contact_person_name,
+                                  companyName: dealer.company_name,
+                                });
+                              }}
+                              disabled={requestingDocUserId === dealer.id}
+                            >
+                              <FileUp className="mr-2 h-4 w-4" />
+                              <span>
+                                {requestingDocUserId === dealer.id ? "Sende..." : "Dokumente anfordern"}
+                                {(dealer.document_request_sent_count ?? 0) > 0 && ` (${dealer.document_request_sent_count}x)`}
+                              </span>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() =>

@@ -24,6 +24,10 @@ export interface DealerApplicationData {
   submitted_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  confirmation_link_sent_count?: number;
+  confirmation_link_last_sent_at?: string;
+  document_request_sent_count?: number;
+  document_request_last_sent_at?: string;
   profiles?: {
     first_name?: string;
     last_name?: string;

@@ -14,16 +14,18 @@
  * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE_NAME = `caravanwert-static-${CACHE_VERSION}`;
 const ASSETS_CACHE_NAME = `caravanwert-assets-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `caravanwert-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE_NAME = `caravanwert-images-${CACHE_VERSION}`;
 
-// Only truly immutable files that rarely change
+// Only truly immutable files that rarely change.
+// IMPORTANT: Do NOT precache '/' or '/index.html' here!
+// The SPA shell changes with every deployment (new chunk hashes in <script> tags).
+// Precaching it would serve a stale version with old chunk references.
+// Navigation requests use Network-First via handleNavigation() instead.
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
@@ -466,4 +468,4 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   );
 });
 
-console.log('Service Worker: Loaded (v2 – Network-First for build assets)');
+console.log('Service Worker: Loaded (v3 – No precache for index.html, Network-First for build assets)');

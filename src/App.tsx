@@ -43,7 +43,6 @@ const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
 const UeberUns = lazyRetry(() => import("./pages/UeberUns"));
 const Kontakt = lazyRetry(() => import("./pages/Kontakt"));
 const Haendler = lazyRetry(() => import("./pages/Haendler"));
-const DealerRegister = lazyRetry(() => import("./pages/DealerRegister"));
 const DealerOnboarding = lazyRetry(() => import("./pages/DealerOnboarding"));
 const Ankaufstationen = lazyRetry(() => import("./pages/Ankaufstationen"));
 const Wertermittlung = lazyRetry(() => import("./pages/Wertermittlung"));
@@ -221,7 +220,6 @@ const App = () => (
               <Route path="/ueber-uns" element={<UeberUns />} />
               <Route path="/kontakt" element={<Kontakt />} />
               <Route path="/haendler" element={<Haendler />} />
-              <Route path="/dealer-register" element={<ProtectedRoute><DealerRegister /></ProtectedRoute>} />
               <Route path="/dealer-onboarding" element={<DealerOnboarding />} />
               
               <Route path="/impressum" element={<Impressum />} />

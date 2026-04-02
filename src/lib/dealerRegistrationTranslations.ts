@@ -1,0 +1,961 @@
+/**
+ * Dealer Registration Translations
+ * 
+ * Provides localized strings for the dealer registration form based on the selected country.
+ * Each country maps to its primary language. For multilingual countries (BE, CH, LU, CY, MT),
+ * the most commonly used business language is chosen.
+ * 
+ * Country → Language mapping:
+ * DE → German, AT → German, CH → German, NL → Dutch, BE → Dutch,
+ * FR → French, LU → French, IT → Italian, ES → Spanish, PT → Portuguese,
+ * PL → Polish, CZ → Czech, SK → Slovak, HU → Hungarian, RO → Romanian,
+ * BG → Bulgarian, HR → Croatian, SI → Slovenian, DK → Danish, SE → Swedish,
+ * FI → Finnish, IE → English, GR → Greek, EE → Estonian, LV → Latvian,
+ * LT → Lithuanian, MT → English, CY → English
+ */
+
+export type TranslationKey =
+  // Section headings
+  | 'sectionCredentials'
+  | 'sectionCompanyInfo'
+  | 'sectionContactPerson'
+  // Labels
+  | 'labelEmail'
+  | 'labelPassword'
+  | 'labelPasswordConfirm'
+  | 'labelCompanyName'
+  | 'labelCompanyAddress'
+  | 'labelPostalCode'
+  | 'labelCity'
+  | 'labelCountry'
+  | 'labelDocument'
+  | 'labelLegalForm'
+  | 'labelFoundedYear'
+  | 'labelContactName'
+  | 'labelContactPosition'
+  | 'labelPhone'
+  | 'labelWebsite'
+  | 'labelAgb'
+  // Placeholders
+  | 'placeholderEmail'
+  | 'placeholderPassword'
+  | 'placeholderPasswordConfirm'
+  | 'placeholderCompanyName'
+  | 'placeholderAddress'
+  | 'placeholderPostalCode'
+  | 'placeholderCity'
+  | 'placeholderCountry'
+  | 'placeholderLegalForm'
+  | 'placeholderFoundedYear'
+  | 'placeholderContactName'
+  | 'placeholderContactPosition'
+  | 'placeholderPhone'
+  | 'placeholderWebsite'
+  // Password requirements
+  | 'passwordRequirements'
+  | 'passwordMinLength'
+  | 'passwordUppercase'
+  | 'passwordLowercase'
+  | 'passwordNumber'
+  | 'passwordSpecialChar'
+  // Validation errors
+  | 'errorEmailRequired'
+  | 'errorEmailInvalid'
+  | 'errorEmailTooLong'
+  | 'errorPasswordMin'
+  | 'errorPasswordUppercase'
+  | 'errorPasswordLowercase'
+  | 'errorPasswordNumber'
+  | 'errorPasswordSpecialChar'
+  | 'errorPasswordConfirmRequired'
+  | 'errorPasswordsMismatch'
+  | 'errorCompanyNameRequired'
+  | 'errorAddressRequired'
+  | 'errorPostalCodeInvalid'
+  | 'errorCityRequired'
+  | 'errorCountryRequired'
+  | 'errorFoundedYearInvalid'
+  | 'errorFoundedYearRange'
+  | 'errorContactNameRequired'
+  | 'errorPhoneInvalid'
+  | 'errorUrlInvalid'
+  | 'errorAgbRequired'
+  // File upload
+  | 'fileSelectButton'
+  | 'fileTypeHint'
+  | 'errorFileTooLarge'
+  | 'errorFileTooLargeDesc'
+  | 'errorFileTypeInvalid'
+  | 'errorFileTypeInvalidDesc'
+  // Toast messages
+  | 'toastValidationErrorTitle'
+  | 'toastRegistrationFailedTitle'
+  | 'toastRegistrationSuccessTitle'
+  | 'toastRegistrationSuccessDesc'
+  // Buttons
+  | 'buttonRegister'
+  | 'buttonRegistering'
+  | 'buttonUploadingDocument'
+  // Info texts
+  | 'infoEmailConfirmation'
+  | 'formOnlyForDealers'
+  | 'alreadyRegistered'
+  | 'loginLink'
+  | 'privateCustomer'
+  | 'privateRegistrationLink'
+  // Page header
+  | 'pageTitle'
+  | 'pageSubtitle'
+  | 'pageBadge'
+  // Benefits
+  | 'benefitExclusiveTitle'
+  | 'benefitExclusiveDesc'
+  | 'benefitNetworkTitle'
+  | 'benefitNetworkDesc'
+  | 'benefitDirectTitle'
+  | 'benefitDirectDesc'
+  // Success screen
+  | 'successTitle'
+  | 'successMessage'
+  | 'successAlertMessage'
+  | 'successLoginButton'
+  | 'successHomeButton'
+  // Error: user could not be created
+  | 'errorUserCreationFailed';
+
+type Translations = Record<TranslationKey, string>;
+
+const de: Translations = {
+  // Section headings
+  sectionCredentials: 'Zugangsdaten',
+  sectionCompanyInfo: 'Unternehmensinformationen',
+  sectionContactPerson: 'Ansprechpartner',
+  // Labels
+  labelEmail: 'E-Mail-Adresse *',
+  labelPassword: 'Passwort *',
+  labelPasswordConfirm: 'Passwort bestätigen *',
+  labelCompanyName: 'Firmenname *',
+  labelCompanyAddress: 'Firmenadresse *',
+  labelPostalCode: 'Postleitzahl *',
+  labelCity: 'Stadt *',
+  labelCountry: 'Land *',
+  labelDocument: 'Gewerbenachweis hochladen (optional)',
+  labelLegalForm: 'Rechtsform',
+  labelFoundedYear: 'Gründungsjahr',
+  labelContactName: 'Name *',
+  labelContactPosition: 'Position (optional)',
+  labelPhone: 'Telefon *',
+  labelWebsite: 'Website (optional)',
+  labelAgb: 'Ich akzeptiere die',
+  // Placeholders
+  placeholderEmail: 'ihre@firma.eu',
+  placeholderPassword: 'Ihr sicheres Passwort',
+  placeholderPasswordConfirm: 'Passwort wiederholen',
+  placeholderCompanyName: 'Ihr Autohaus',
+  placeholderAddress: 'Straße und Hausnummer',
+  placeholderPostalCode: 'PLZ',
+  placeholderCity: 'Ort',
+  placeholderCountry: 'Land auswählen',
+  placeholderLegalForm: 'Rechtsform auswählen',
+  placeholderFoundedYear: 'z.B. 2010',
+  placeholderContactName: 'Vor- und Nachname',
+  placeholderContactPosition: 'z.B. Geschäftsführer',
+  placeholderPhone: '+49 123 456789',
+  placeholderWebsite: 'https://www.ihre-firma.eu',
+  // Password requirements
+  passwordRequirements: 'Passwort-Anforderungen',
+  passwordMinLength: 'Mindestens 8 Zeichen',
+  passwordUppercase: 'Mindestens ein Großbuchstabe',
+  passwordLowercase: 'Mindestens ein Kleinbuchstabe',
+  passwordNumber: 'Mindestens eine Zahl',
+  passwordSpecialChar: 'Mindestens ein Sonderzeichen (!@#$%^&* etc.)',
+  // Validation errors
+  errorEmailRequired: 'E-Mail-Adresse erforderlich',
+  errorEmailInvalid: 'Ungültige E-Mail-Adresse',
+  errorEmailTooLong: 'E-Mail-Adresse zu lang',
+  errorPasswordMin: 'Passwort muss mindestens 8 Zeichen lang sein',
+  errorPasswordUppercase: 'Mindestens ein Großbuchstabe erforderlich',
+  errorPasswordLowercase: 'Mindestens ein Kleinbuchstabe erforderlich',
+  errorPasswordNumber: 'Mindestens eine Zahl erforderlich',
+  errorPasswordSpecialChar: 'Mindestens ein Sonderzeichen erforderlich (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Passwort-Bestätigung erforderlich',
+  errorPasswordsMismatch: 'Passwörter stimmen nicht überein',
+  errorCompanyNameRequired: 'Firmenname erforderlich',
+  errorAddressRequired: 'Adresse erforderlich',
+  errorPostalCodeInvalid: 'Ungültige Postleitzahl',
+  errorCityRequired: 'Stadt erforderlich',
+  errorCountryRequired: 'Land erforderlich',
+  errorFoundedYearInvalid: 'Ungültiges Jahr (4 Ziffern)',
+  errorFoundedYearRange: `Gründungsjahr muss zwischen 1900 und ${new Date().getFullYear()} liegen`,
+  errorContactNameRequired: 'Name erforderlich',
+  errorPhoneInvalid: 'Ungültige Telefonnummer',
+  errorUrlInvalid: 'Ungültige URL',
+  errorAgbRequired: 'Sie müssen die AGB und Datenschutzbestimmungen akzeptieren',
+  // File upload
+  fileSelectButton: 'Datei auswählen',
+  fileTypeHint: 'PDF, JPG oder PNG (max. 10 MB)',
+  errorFileTooLarge: 'Datei zu groß',
+  errorFileTooLargeDesc: 'Die Datei darf maximal 10 MB groß sein',
+  errorFileTypeInvalid: 'Ungültiger Dateityp',
+  errorFileTypeInvalidDesc: 'Nur PDF, JPG und PNG Dateien sind erlaubt',
+  // Toast messages
+  toastValidationErrorTitle: 'Bitte überprüfen Sie Ihre Eingaben',
+  toastRegistrationFailedTitle: 'Registrierung fehlgeschlagen',
+  toastRegistrationSuccessTitle: 'Registrierung erfolgreich!',
+  toastRegistrationSuccessDesc: 'Bitte bestätigen Sie Ihre E-Mail-Adresse.',
+  // Buttons
+  buttonRegister: 'Als Händler registrieren',
+  buttonRegistering: 'Wird registriert...',
+  buttonUploadingDocument: 'Dokument wird hochgeladen...',
+  // Info texts
+  infoEmailConfirmation: 'Nach der Registrierung erhalten Sie eine E-Mail zur Bestätigung Ihrer Adresse. Nach der Bestätigung können Sie sich sofort als Händler anmelden.',
+  formOnlyForDealers: 'Dieses Formular ist ausschließlich für gewerbliche Händler bestimmt.',
+  alreadyRegistered: 'Bereits registriert?',
+  loginLink: 'Zum Händler-Login',
+  privateCustomer: 'Privatkunde?',
+  privateRegistrationLink: 'Zur Privatkunden-Registrierung',
+  // Page header
+  pageTitle: 'Als Händler registrieren',
+  pageSubtitle: 'Werden Sie Teil unseres Händlernetzwerks und profitieren Sie von exklusiven Auktionen',
+  pageBadge: 'Händler-Registrierung',
+  // Benefits
+  benefitExclusiveTitle: 'Exklusiver Zugang',
+  benefitExclusiveDesc: 'Zugriff auf Händler-Auktionen',
+  benefitNetworkTitle: 'B2B Netzwerk',
+  benefitNetworkDesc: 'Kontakte zu anderen Händlern',
+  benefitDirectTitle: 'Direkte Registrierung',
+  benefitDirectDesc: 'Sofortiger Zugang nach E-Mail-Bestätigung',
+  // Success screen
+  successTitle: 'Registrierung erfolgreich!',
+  successMessage: 'Wir haben Ihnen eine Bestätigungs-E-Mail gesendet. Bitte klicken Sie auf den Link in der E-Mail, um Ihr Konto zu aktivieren.',
+  successAlertMessage: 'Nach der E-Mail-Bestätigung können Sie sich einloggen und den Status Ihres Händlerantrags einsehen. Ihr Antrag wird von unserem Team geprüft und innerhalb von 1-3 Werktagen bearbeitet.',
+  successLoginButton: 'Zum Händler-Login',
+  successHomeButton: 'Zurück zur Startseite',
+  // Error
+  errorUserCreationFailed: 'Benutzer konnte nicht erstellt werden',
+};
+
+const en: Translations = {
+  sectionCredentials: 'Login Details',
+  sectionCompanyInfo: 'Company Information',
+  sectionContactPerson: 'Contact Person',
+  labelEmail: 'Email Address *',
+  labelPassword: 'Password *',
+  labelPasswordConfirm: 'Confirm Password *',
+  labelCompanyName: 'Company Name *',
+  labelCompanyAddress: 'Company Address *',
+  labelPostalCode: 'Postal Code *',
+  labelCity: 'City *',
+  labelCountry: 'Country *',
+  labelDocument: 'Upload trade licence (optional)',
+  labelLegalForm: 'Legal Form',
+  labelFoundedYear: 'Year Founded',
+  labelContactName: 'Name *',
+  labelContactPosition: 'Position (optional)',
+  labelPhone: 'Phone *',
+  labelWebsite: 'Website (optional)',
+  labelAgb: 'I accept the',
+  placeholderEmail: 'your@company.eu',
+  placeholderPassword: 'Your secure password',
+  placeholderPasswordConfirm: 'Repeat password',
+  placeholderCompanyName: 'Your dealership',
+  placeholderAddress: 'Street and house number',
+  placeholderPostalCode: 'Postal code',
+  placeholderCity: 'City',
+  placeholderCountry: 'Select country',
+  placeholderLegalForm: 'Select legal form',
+  placeholderFoundedYear: 'e.g. 2010',
+  placeholderContactName: 'First and last name',
+  placeholderContactPosition: 'e.g. Managing Director',
+  placeholderPhone: '+44 123 456789',
+  placeholderWebsite: 'https://www.your-company.eu',
+  passwordRequirements: 'Password requirements',
+  passwordMinLength: 'At least 8 characters',
+  passwordUppercase: 'At least one uppercase letter',
+  passwordLowercase: 'At least one lowercase letter',
+  passwordNumber: 'At least one number',
+  passwordSpecialChar: 'At least one special character (!@#$%^&* etc.)',
+  errorEmailRequired: 'Email address required',
+  errorEmailInvalid: 'Invalid email address',
+  errorEmailTooLong: 'Email address too long',
+  errorPasswordMin: 'Password must be at least 8 characters long',
+  errorPasswordUppercase: 'At least one uppercase letter required',
+  errorPasswordLowercase: 'At least one lowercase letter required',
+  errorPasswordNumber: 'At least one number required',
+  errorPasswordSpecialChar: 'At least one special character required (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Password confirmation required',
+  errorPasswordsMismatch: 'Passwords do not match',
+  errorCompanyNameRequired: 'Company name required',
+  errorAddressRequired: 'Address required',
+  errorPostalCodeInvalid: 'Invalid postal code',
+  errorCityRequired: 'City required',
+  errorCountryRequired: 'Country required',
+  errorFoundedYearInvalid: 'Invalid year (4 digits)',
+  errorFoundedYearRange: `Year founded must be between 1900 and ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Name required',
+  errorPhoneInvalid: 'Invalid phone number',
+  errorUrlInvalid: 'Invalid URL',
+  errorAgbRequired: 'You must accept the terms and conditions and privacy policy',
+  fileSelectButton: 'Select file',
+  fileTypeHint: 'PDF, JPG or PNG (max. 10 MB)',
+  errorFileTooLarge: 'File too large',
+  errorFileTooLargeDesc: 'The file must not exceed 10 MB',
+  errorFileTypeInvalid: 'Invalid file type',
+  errorFileTypeInvalidDesc: 'Only PDF, JPG and PNG files are allowed',
+  toastValidationErrorTitle: 'Please check your entries',
+  toastRegistrationFailedTitle: 'Registration failed',
+  toastRegistrationSuccessTitle: 'Registration successful!',
+  toastRegistrationSuccessDesc: 'Please confirm your email address.',
+  buttonRegister: 'Register as Dealer',
+  buttonRegistering: 'Registering...',
+  buttonUploadingDocument: 'Uploading document...',
+  infoEmailConfirmation: 'After registration you will receive an email to confirm your address. After confirmation you can immediately log in as a dealer.',
+  formOnlyForDealers: 'This form is exclusively for commercial dealers.',
+  alreadyRegistered: 'Already registered?',
+  loginLink: 'Go to Dealer Login',
+  privateCustomer: 'Private customer?',
+  privateRegistrationLink: 'Go to Private Registration',
+  pageTitle: 'Register as Dealer',
+  pageSubtitle: 'Become part of our dealer network and benefit from exclusive auctions',
+  pageBadge: 'Dealer Registration',
+  benefitExclusiveTitle: 'Exclusive Access',
+  benefitExclusiveDesc: 'Access to dealer auctions',
+  benefitNetworkTitle: 'B2B Network',
+  benefitNetworkDesc: 'Connections with other dealers',
+  benefitDirectTitle: 'Direct Registration',
+  benefitDirectDesc: 'Immediate access after email confirmation',
+  successTitle: 'Registration successful!',
+  successMessage: 'We have sent you a confirmation email. Please click the link in the email to activate your account.',
+  successAlertMessage: 'After email confirmation you can log in and view the status of your dealer application. Your application will be reviewed by our team and processed within 1-3 business days.',
+  successLoginButton: 'Go to Dealer Login',
+  successHomeButton: 'Back to Homepage',
+  errorUserCreationFailed: 'User could not be created',
+};
+
+const nl: Translations = {
+  sectionCredentials: 'Inloggegevens',
+  sectionCompanyInfo: 'Bedrijfsinformatie',
+  sectionContactPerson: 'Contactpersoon',
+  labelEmail: 'E-mailadres *',
+  labelPassword: 'Wachtwoord *',
+  labelPasswordConfirm: 'Wachtwoord bevestigen *',
+  labelCompanyName: 'Bedrijfsnaam *',
+  labelCompanyAddress: 'Bedrijfsadres *',
+  labelPostalCode: 'Postcode *',
+  labelCity: 'Plaats *',
+  labelCountry: 'Land *',
+  labelDocument: 'Handelsregisteruittreksel uploaden (optioneel)',
+  labelLegalForm: 'Rechtsvorm',
+  labelFoundedYear: 'Oprichtingsjaar',
+  labelContactName: 'Naam *',
+  labelContactPosition: 'Functie (optioneel)',
+  labelPhone: 'Telefoon *',
+  labelWebsite: 'Website (optioneel)',
+  labelAgb: 'Ik accepteer de',
+  placeholderEmail: 'uw@bedrijf.nl',
+  placeholderPassword: 'Uw veilige wachtwoord',
+  placeholderPasswordConfirm: 'Wachtwoord herhalen',
+  placeholderCompanyName: 'Uw autobedrijf',
+  placeholderAddress: 'Straat en huisnummer',
+  placeholderPostalCode: 'Postcode',
+  placeholderCity: 'Plaats',
+  placeholderCountry: 'Land selecteren',
+  placeholderLegalForm: 'Rechtsvorm selecteren',
+  placeholderFoundedYear: 'bijv. 2010',
+  placeholderContactName: 'Voor- en achternaam',
+  placeholderContactPosition: 'bijv. Directeur',
+  placeholderPhone: '+31 6 12345678',
+  placeholderWebsite: 'https://www.uw-bedrijf.nl',
+  passwordRequirements: 'Wachtwoordvereisten',
+  passwordMinLength: 'Minimaal 8 tekens',
+  passwordUppercase: 'Minimaal één hoofdletter',
+  passwordLowercase: 'Minimaal één kleine letter',
+  passwordNumber: 'Minimaal één cijfer',
+  passwordSpecialChar: 'Minimaal één speciaal teken (!@#$%^&* etc.)',
+  errorEmailRequired: 'E-mailadres vereist',
+  errorEmailInvalid: 'Ongeldig e-mailadres',
+  errorEmailTooLong: 'E-mailadres te lang',
+  errorPasswordMin: 'Wachtwoord moet minimaal 8 tekens bevatten',
+  errorPasswordUppercase: 'Minimaal één hoofdletter vereist',
+  errorPasswordLowercase: 'Minimaal één kleine letter vereist',
+  errorPasswordNumber: 'Minimaal één cijfer vereist',
+  errorPasswordSpecialChar: 'Minimaal één speciaal teken vereist (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Wachtwoordbevestiging vereist',
+  errorPasswordsMismatch: 'Wachtwoorden komen niet overeen',
+  errorCompanyNameRequired: 'Bedrijfsnaam vereist',
+  errorAddressRequired: 'Adres vereist',
+  errorPostalCodeInvalid: 'Ongeldige postcode',
+  errorCityRequired: 'Plaats vereist',
+  errorCountryRequired: 'Land vereist',
+  errorFoundedYearInvalid: 'Ongeldig jaar (4 cijfers)',
+  errorFoundedYearRange: `Oprichtingsjaar moet tussen 1900 en ${new Date().getFullYear()} liggen`,
+  errorContactNameRequired: 'Naam vereist',
+  errorPhoneInvalid: 'Ongeldig telefoonnummer',
+  errorUrlInvalid: 'Ongeldige URL',
+  errorAgbRequired: 'U moet de algemene voorwaarden en het privacybeleid accepteren',
+  fileSelectButton: 'Bestand selecteren',
+  fileTypeHint: 'PDF, JPG of PNG (max. 10 MB)',
+  errorFileTooLarge: 'Bestand te groot',
+  errorFileTooLargeDesc: 'Het bestand mag maximaal 10 MB groot zijn',
+  errorFileTypeInvalid: 'Ongeldig bestandstype',
+  errorFileTypeInvalidDesc: 'Alleen PDF, JPG en PNG bestanden zijn toegestaan',
+  toastValidationErrorTitle: 'Controleer uw invoer',
+  toastRegistrationFailedTitle: 'Registratie mislukt',
+  toastRegistrationSuccessTitle: 'Registratie geslaagd!',
+  toastRegistrationSuccessDesc: 'Bevestig alstublieft uw e-mailadres.',
+  buttonRegister: 'Registreren als dealer',
+  buttonRegistering: 'Bezig met registreren...',
+  buttonUploadingDocument: 'Document wordt geüpload...',
+  infoEmailConfirmation: 'Na registratie ontvangt u een e-mail om uw adres te bevestigen. Na bevestiging kunt u direct inloggen als dealer.',
+  formOnlyForDealers: 'Dit formulier is uitsluitend bestemd voor commerciële dealers.',
+  alreadyRegistered: 'Al geregistreerd?',
+  loginLink: 'Naar Dealer Login',
+  privateCustomer: 'Particulier?',
+  privateRegistrationLink: 'Naar particuliere registratie',
+  pageTitle: 'Registreren als dealer',
+  pageSubtitle: 'Word onderdeel van ons dealernetwerk en profiteer van exclusieve veilingen',
+  pageBadge: 'Dealer Registratie',
+  benefitExclusiveTitle: 'Exclusieve toegang',
+  benefitExclusiveDesc: 'Toegang tot dealerveilingen',
+  benefitNetworkTitle: 'B2B Netwerk',
+  benefitNetworkDesc: 'Contacten met andere dealers',
+  benefitDirectTitle: 'Directe registratie',
+  benefitDirectDesc: 'Direct toegang na e-mailbevestiging',
+  successTitle: 'Registratie geslaagd!',
+  successMessage: 'We hebben u een bevestigingsmail gestuurd. Klik op de link in de e-mail om uw account te activeren.',
+  successAlertMessage: 'Na e-mailbevestiging kunt u inloggen en de status van uw dealeraanvraag bekijken. Uw aanvraag wordt door ons team beoordeeld en binnen 1-3 werkdagen verwerkt.',
+  successLoginButton: 'Naar Dealer Login',
+  successHomeButton: 'Terug naar startpagina',
+  errorUserCreationFailed: 'Gebruiker kon niet worden aangemaakt',
+};
+
+const fr: Translations = {
+  sectionCredentials: 'Identifiants',
+  sectionCompanyInfo: "Informations sur l'entreprise",
+  sectionContactPerson: 'Personne de contact',
+  labelEmail: 'Adresse e-mail *',
+  labelPassword: 'Mot de passe *',
+  labelPasswordConfirm: 'Confirmer le mot de passe *',
+  labelCompanyName: "Nom de l'entreprise *",
+  labelCompanyAddress: "Adresse de l'entreprise *",
+  labelPostalCode: 'Code postal *',
+  labelCity: 'Ville *',
+  labelCountry: 'Pays *',
+  labelDocument: "Télécharger l'extrait Kbis (optionnel)",
+  labelLegalForm: 'Forme juridique',
+  labelFoundedYear: 'Année de création',
+  labelContactName: 'Nom *',
+  labelContactPosition: 'Fonction (optionnel)',
+  labelPhone: 'Téléphone *',
+  labelWebsite: 'Site web (optionnel)',
+  labelAgb: "J'accepte les",
+  placeholderEmail: 'votre@entreprise.fr',
+  placeholderPassword: 'Votre mot de passe sécurisé',
+  placeholderPasswordConfirm: 'Répéter le mot de passe',
+  placeholderCompanyName: 'Votre concession',
+  placeholderAddress: 'Rue et numéro',
+  placeholderPostalCode: 'Code postal',
+  placeholderCity: 'Ville',
+  placeholderCountry: 'Sélectionner un pays',
+  placeholderLegalForm: 'Sélectionner la forme juridique',
+  placeholderFoundedYear: 'ex. 2010',
+  placeholderContactName: 'Prénom et nom',
+  placeholderContactPosition: 'ex. Directeur général',
+  placeholderPhone: '+33 1 23 45 67 89',
+  placeholderWebsite: 'https://www.votre-entreprise.fr',
+  passwordRequirements: 'Exigences du mot de passe',
+  passwordMinLength: 'Au moins 8 caractères',
+  passwordUppercase: 'Au moins une lettre majuscule',
+  passwordLowercase: 'Au moins une lettre minuscule',
+  passwordNumber: 'Au moins un chiffre',
+  passwordSpecialChar: 'Au moins un caractère spécial (!@#$%^&* etc.)',
+  errorEmailRequired: 'Adresse e-mail requise',
+  errorEmailInvalid: 'Adresse e-mail invalide',
+  errorEmailTooLong: 'Adresse e-mail trop longue',
+  errorPasswordMin: 'Le mot de passe doit contenir au moins 8 caractères',
+  errorPasswordUppercase: 'Au moins une lettre majuscule requise',
+  errorPasswordLowercase: 'Au moins une lettre minuscule requise',
+  errorPasswordNumber: 'Au moins un chiffre requis',
+  errorPasswordSpecialChar: 'Au moins un caractère spécial requis (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Confirmation du mot de passe requise',
+  errorPasswordsMismatch: 'Les mots de passe ne correspondent pas',
+  errorCompanyNameRequired: "Nom de l'entreprise requis",
+  errorAddressRequired: 'Adresse requise',
+  errorPostalCodeInvalid: 'Code postal invalide',
+  errorCityRequired: 'Ville requise',
+  errorCountryRequired: 'Pays requis',
+  errorFoundedYearInvalid: 'Année invalide (4 chiffres)',
+  errorFoundedYearRange: `L'année de création doit être comprise entre 1900 et ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Nom requis',
+  errorPhoneInvalid: 'Numéro de téléphone invalide',
+  errorUrlInvalid: 'URL invalide',
+  errorAgbRequired: 'Vous devez accepter les conditions générales et la politique de confidentialité',
+  fileSelectButton: 'Sélectionner un fichier',
+  fileTypeHint: 'PDF, JPG ou PNG (max. 10 Mo)',
+  errorFileTooLarge: 'Fichier trop volumineux',
+  errorFileTooLargeDesc: 'Le fichier ne doit pas dépasser 10 Mo',
+  errorFileTypeInvalid: 'Type de fichier invalide',
+  errorFileTypeInvalidDesc: 'Seuls les fichiers PDF, JPG et PNG sont autorisés',
+  toastValidationErrorTitle: 'Veuillez vérifier vos saisies',
+  toastRegistrationFailedTitle: "L'inscription a échoué",
+  toastRegistrationSuccessTitle: 'Inscription réussie !',
+  toastRegistrationSuccessDesc: 'Veuillez confirmer votre adresse e-mail.',
+  buttonRegister: "S'inscrire en tant que concessionnaire",
+  buttonRegistering: 'Inscription en cours...',
+  buttonUploadingDocument: 'Téléchargement du document...',
+  infoEmailConfirmation: "Après l'inscription, vous recevrez un e-mail pour confirmer votre adresse. Après confirmation, vous pourrez immédiatement vous connecter en tant que concessionnaire.",
+  formOnlyForDealers: 'Ce formulaire est exclusivement réservé aux concessionnaires professionnels.',
+  alreadyRegistered: 'Déjà inscrit ?',
+  loginLink: 'Vers la connexion concessionnaire',
+  privateCustomer: 'Client particulier ?',
+  privateRegistrationLink: "Vers l'inscription particulier",
+  pageTitle: "S'inscrire en tant que concessionnaire",
+  pageSubtitle: 'Rejoignez notre réseau de concessionnaires et profitez de ventes aux enchères exclusives',
+  pageBadge: 'Inscription Concessionnaire',
+  benefitExclusiveTitle: 'Accès exclusif',
+  benefitExclusiveDesc: 'Accès aux enchères concessionnaires',
+  benefitNetworkTitle: 'Réseau B2B',
+  benefitNetworkDesc: "Contacts avec d'autres concessionnaires",
+  benefitDirectTitle: 'Inscription directe',
+  benefitDirectDesc: "Accès immédiat après confirmation par e-mail",
+  successTitle: 'Inscription réussie !',
+  successMessage: 'Nous vous avons envoyé un e-mail de confirmation. Veuillez cliquer sur le lien dans l\'e-mail pour activer votre compte.',
+  successAlertMessage: "Après la confirmation par e-mail, vous pourrez vous connecter et consulter le statut de votre demande. Votre demande sera examinée par notre équipe et traitée dans un délai de 1 à 3 jours ouvrables.",
+  successLoginButton: 'Vers la connexion concessionnaire',
+  successHomeButton: "Retour à la page d'accueil",
+  errorUserCreationFailed: "L'utilisateur n'a pas pu être créé",
+};
+
+const it: Translations = {
+  sectionCredentials: 'Dati di accesso',
+  sectionCompanyInfo: "Informazioni sull'azienda",
+  sectionContactPerson: 'Persona di contatto',
+  labelEmail: 'Indirizzo e-mail *',
+  labelPassword: 'Password *',
+  labelPasswordConfirm: 'Conferma password *',
+  labelCompanyName: "Nome dell'azienda *",
+  labelCompanyAddress: "Indirizzo dell'azienda *",
+  labelPostalCode: 'CAP *',
+  labelCity: 'Città *',
+  labelCountry: 'Paese *',
+  labelDocument: 'Carica visura camerale (opzionale)',
+  labelLegalForm: 'Forma giuridica',
+  labelFoundedYear: 'Anno di fondazione',
+  labelContactName: 'Nome *',
+  labelContactPosition: 'Posizione (opzionale)',
+  labelPhone: 'Telefono *',
+  labelWebsite: 'Sito web (opzionale)',
+  labelAgb: 'Accetto i',
+  placeholderEmail: 'vostro@azienda.it',
+  placeholderPassword: 'La vostra password sicura',
+  placeholderPasswordConfirm: 'Ripetere la password',
+  placeholderCompanyName: 'La vostra concessionaria',
+  placeholderAddress: 'Via e numero civico',
+  placeholderPostalCode: 'CAP',
+  placeholderCity: 'Città',
+  placeholderCountry: 'Seleziona paese',
+  placeholderLegalForm: 'Seleziona forma giuridica',
+  placeholderFoundedYear: 'es. 2010',
+  placeholderContactName: 'Nome e cognome',
+  placeholderContactPosition: 'es. Amministratore delegato',
+  placeholderPhone: '+39 02 1234567',
+  placeholderWebsite: 'https://www.vostra-azienda.it',
+  passwordRequirements: 'Requisiti della password',
+  passwordMinLength: 'Almeno 8 caratteri',
+  passwordUppercase: 'Almeno una lettera maiuscola',
+  passwordLowercase: 'Almeno una lettera minuscola',
+  passwordNumber: 'Almeno un numero',
+  passwordSpecialChar: 'Almeno un carattere speciale (!@#$%^&* etc.)',
+  errorEmailRequired: 'Indirizzo e-mail richiesto',
+  errorEmailInvalid: 'Indirizzo e-mail non valido',
+  errorEmailTooLong: 'Indirizzo e-mail troppo lungo',
+  errorPasswordMin: 'La password deve contenere almeno 8 caratteri',
+  errorPasswordUppercase: 'Almeno una lettera maiuscola richiesta',
+  errorPasswordLowercase: 'Almeno una lettera minuscola richiesta',
+  errorPasswordNumber: 'Almeno un numero richiesto',
+  errorPasswordSpecialChar: 'Almeno un carattere speciale richiesto (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Conferma della password richiesta',
+  errorPasswordsMismatch: 'Le password non corrispondono',
+  errorCompanyNameRequired: "Nome dell'azienda richiesto",
+  errorAddressRequired: 'Indirizzo richiesto',
+  errorPostalCodeInvalid: 'CAP non valido',
+  errorCityRequired: 'Città richiesta',
+  errorCountryRequired: 'Paese richiesto',
+  errorFoundedYearInvalid: 'Anno non valido (4 cifre)',
+  errorFoundedYearRange: `L'anno di fondazione deve essere compreso tra 1900 e ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Nome richiesto',
+  errorPhoneInvalid: 'Numero di telefono non valido',
+  errorUrlInvalid: 'URL non valido',
+  errorAgbRequired: 'È necessario accettare i termini e le condizioni e la politica sulla privacy',
+  fileSelectButton: 'Seleziona file',
+  fileTypeHint: 'PDF, JPG o PNG (max. 10 MB)',
+  errorFileTooLarge: 'File troppo grande',
+  errorFileTooLargeDesc: 'Il file non deve superare i 10 MB',
+  errorFileTypeInvalid: 'Tipo di file non valido',
+  errorFileTypeInvalidDesc: 'Sono consentiti solo file PDF, JPG e PNG',
+  toastValidationErrorTitle: 'Verificare i dati inseriti',
+  toastRegistrationFailedTitle: 'Registrazione fallita',
+  toastRegistrationSuccessTitle: 'Registrazione riuscita!',
+  toastRegistrationSuccessDesc: 'Confermare il proprio indirizzo e-mail.',
+  buttonRegister: 'Registrati come concessionario',
+  buttonRegistering: 'Registrazione in corso...',
+  buttonUploadingDocument: 'Caricamento documento...',
+  infoEmailConfirmation: "Dopo la registrazione riceverete un'e-mail per confermare il vostro indirizzo. Dopo la conferma potrete accedere immediatamente come concessionario.",
+  formOnlyForDealers: 'Questo modulo è riservato esclusivamente ai concessionari professionali.',
+  alreadyRegistered: 'Già registrato?',
+  loginLink: 'Vai al login concessionario',
+  privateCustomer: 'Cliente privato?',
+  privateRegistrationLink: 'Vai alla registrazione privata',
+  pageTitle: 'Registrati come concessionario',
+  pageSubtitle: 'Entra a far parte della nostra rete di concessionari e approfitta di aste esclusive',
+  pageBadge: 'Registrazione Concessionario',
+  benefitExclusiveTitle: 'Accesso esclusivo',
+  benefitExclusiveDesc: 'Accesso alle aste per concessionari',
+  benefitNetworkTitle: 'Rete B2B',
+  benefitNetworkDesc: 'Contatti con altri concessionari',
+  benefitDirectTitle: 'Registrazione diretta',
+  benefitDirectDesc: 'Accesso immediato dopo la conferma via e-mail',
+  successTitle: 'Registrazione riuscita!',
+  successMessage: "Vi abbiamo inviato un'e-mail di conferma. Cliccate sul link nell'e-mail per attivare il vostro account.",
+  successAlertMessage: "Dopo la conferma via e-mail potrete accedere e visualizzare lo stato della vostra domanda. La vostra domanda verrà esaminata dal nostro team ed elaborata entro 1-3 giorni lavorativi.",
+  successLoginButton: 'Vai al login concessionario',
+  successHomeButton: 'Torna alla pagina iniziale',
+  errorUserCreationFailed: "L'utente non ha potuto essere creato",
+};
+
+const es: Translations = {
+  sectionCredentials: 'Datos de acceso',
+  sectionCompanyInfo: 'Información de la empresa',
+  sectionContactPerson: 'Persona de contacto',
+  labelEmail: 'Correo electrónico *',
+  labelPassword: 'Contraseña *',
+  labelPasswordConfirm: 'Confirmar contraseña *',
+  labelCompanyName: 'Nombre de la empresa *',
+  labelCompanyAddress: 'Dirección de la empresa *',
+  labelPostalCode: 'Código postal *',
+  labelCity: 'Ciudad *',
+  labelCountry: 'País *',
+  labelDocument: 'Subir registro mercantil (opcional)',
+  labelLegalForm: 'Forma jurídica',
+  labelFoundedYear: 'Año de fundación',
+  labelContactName: 'Nombre *',
+  labelContactPosition: 'Cargo (opcional)',
+  labelPhone: 'Teléfono *',
+  labelWebsite: 'Sitio web (opcional)',
+  labelAgb: 'Acepto los',
+  placeholderEmail: 'su@empresa.es',
+  placeholderPassword: 'Su contraseña segura',
+  placeholderPasswordConfirm: 'Repetir contraseña',
+  placeholderCompanyName: 'Su concesionario',
+  placeholderAddress: 'Calle y número',
+  placeholderPostalCode: 'Código postal',
+  placeholderCity: 'Ciudad',
+  placeholderCountry: 'Seleccionar país',
+  placeholderLegalForm: 'Seleccionar forma jurídica',
+  placeholderFoundedYear: 'ej. 2010',
+  placeholderContactName: 'Nombre y apellidos',
+  placeholderContactPosition: 'ej. Director general',
+  placeholderPhone: '+34 912 345 678',
+  placeholderWebsite: 'https://www.su-empresa.es',
+  passwordRequirements: 'Requisitos de la contraseña',
+  passwordMinLength: 'Al menos 8 caracteres',
+  passwordUppercase: 'Al menos una letra mayúscula',
+  passwordLowercase: 'Al menos una letra minúscula',
+  passwordNumber: 'Al menos un número',
+  passwordSpecialChar: 'Al menos un carácter especial (!@#$%^&* etc.)',
+  errorEmailRequired: 'Correo electrónico requerido',
+  errorEmailInvalid: 'Correo electrónico no válido',
+  errorEmailTooLong: 'Correo electrónico demasiado largo',
+  errorPasswordMin: 'La contraseña debe tener al menos 8 caracteres',
+  errorPasswordUppercase: 'Se requiere al menos una letra mayúscula',
+  errorPasswordLowercase: 'Se requiere al menos una letra minúscula',
+  errorPasswordNumber: 'Se requiere al menos un número',
+  errorPasswordSpecialChar: 'Se requiere al menos un carácter especial (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Confirmación de contraseña requerida',
+  errorPasswordsMismatch: 'Las contraseñas no coinciden',
+  errorCompanyNameRequired: 'Nombre de la empresa requerido',
+  errorAddressRequired: 'Dirección requerida',
+  errorPostalCodeInvalid: 'Código postal no válido',
+  errorCityRequired: 'Ciudad requerida',
+  errorCountryRequired: 'País requerido',
+  errorFoundedYearInvalid: 'Año no válido (4 dígitos)',
+  errorFoundedYearRange: `El año de fundación debe estar entre 1900 y ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Nombre requerido',
+  errorPhoneInvalid: 'Número de teléfono no válido',
+  errorUrlInvalid: 'URL no válida',
+  errorAgbRequired: 'Debe aceptar los términos y condiciones y la política de privacidad',
+  fileSelectButton: 'Seleccionar archivo',
+  fileTypeHint: 'PDF, JPG o PNG (máx. 10 MB)',
+  errorFileTooLarge: 'Archivo demasiado grande',
+  errorFileTooLargeDesc: 'El archivo no debe superar los 10 MB',
+  errorFileTypeInvalid: 'Tipo de archivo no válido',
+  errorFileTypeInvalidDesc: 'Solo se permiten archivos PDF, JPG y PNG',
+  toastValidationErrorTitle: 'Revise sus datos',
+  toastRegistrationFailedTitle: 'Registro fallido',
+  toastRegistrationSuccessTitle: '¡Registro exitoso!',
+  toastRegistrationSuccessDesc: 'Confirme su dirección de correo electrónico.',
+  buttonRegister: 'Registrarse como concesionario',
+  buttonRegistering: 'Registrando...',
+  buttonUploadingDocument: 'Subiendo documento...',
+  infoEmailConfirmation: 'Después del registro recibirá un correo electrónico para confirmar su dirección. Tras la confirmación podrá iniciar sesión inmediatamente como concesionario.',
+  formOnlyForDealers: 'Este formulario es exclusivamente para concesionarios profesionales.',
+  alreadyRegistered: '¿Ya registrado?',
+  loginLink: 'Ir al inicio de sesión',
+  privateCustomer: '¿Cliente particular?',
+  privateRegistrationLink: 'Ir al registro particular',
+  pageTitle: 'Registrarse como concesionario',
+  pageSubtitle: 'Forme parte de nuestra red de concesionarios y benefíciese de subastas exclusivas',
+  pageBadge: 'Registro de Concesionario',
+  benefitExclusiveTitle: 'Acceso exclusivo',
+  benefitExclusiveDesc: 'Acceso a subastas para concesionarios',
+  benefitNetworkTitle: 'Red B2B',
+  benefitNetworkDesc: 'Contactos con otros concesionarios',
+  benefitDirectTitle: 'Registro directo',
+  benefitDirectDesc: 'Acceso inmediato tras confirmación por correo',
+  successTitle: '¡Registro exitoso!',
+  successMessage: 'Le hemos enviado un correo de confirmación. Haga clic en el enlace del correo para activar su cuenta.',
+  successAlertMessage: 'Tras la confirmación por correo podrá iniciar sesión y ver el estado de su solicitud. Su solicitud será revisada por nuestro equipo y procesada en 1-3 días laborables.',
+  successLoginButton: 'Ir al inicio de sesión',
+  successHomeButton: 'Volver a la página principal',
+  errorUserCreationFailed: 'No se pudo crear el usuario',
+};
+
+const pt: Translations = {
+  sectionCredentials: 'Dados de acesso',
+  sectionCompanyInfo: 'Informações da empresa',
+  sectionContactPerson: 'Pessoa de contacto',
+  labelEmail: 'Endereço de e-mail *',
+  labelPassword: 'Palavra-passe *',
+  labelPasswordConfirm: 'Confirmar palavra-passe *',
+  labelCompanyName: 'Nome da empresa *',
+  labelCompanyAddress: 'Morada da empresa *',
+  labelPostalCode: 'Código postal *',
+  labelCity: 'Cidade *',
+  labelCountry: 'País *',
+  labelDocument: 'Carregar certidão comercial (opcional)',
+  labelLegalForm: 'Forma jurídica',
+  labelFoundedYear: 'Ano de fundação',
+  labelContactName: 'Nome *',
+  labelContactPosition: 'Cargo (opcional)',
+  labelPhone: 'Telefone *',
+  labelWebsite: 'Website (opcional)',
+  labelAgb: 'Aceito os',
+  placeholderEmail: 'seu@empresa.pt',
+  placeholderPassword: 'A sua palavra-passe segura',
+  placeholderPasswordConfirm: 'Repetir palavra-passe',
+  placeholderCompanyName: 'O seu stand',
+  placeholderAddress: 'Rua e número',
+  placeholderPostalCode: 'Código postal',
+  placeholderCity: 'Cidade',
+  placeholderCountry: 'Selecionar país',
+  placeholderLegalForm: 'Selecionar forma jurídica',
+  placeholderFoundedYear: 'ex. 2010',
+  placeholderContactName: 'Nome e apelido',
+  placeholderContactPosition: 'ex. Diretor geral',
+  placeholderPhone: '+351 21 123 4567',
+  placeholderWebsite: 'https://www.sua-empresa.pt',
+  passwordRequirements: 'Requisitos da palavra-passe',
+  passwordMinLength: 'Pelo menos 8 caracteres',
+  passwordUppercase: 'Pelo menos uma letra maiúscula',
+  passwordLowercase: 'Pelo menos uma letra minúscula',
+  passwordNumber: 'Pelo menos um número',
+  passwordSpecialChar: 'Pelo menos um caractere especial (!@#$%^&* etc.)',
+  errorEmailRequired: 'Endereço de e-mail obrigatório',
+  errorEmailInvalid: 'Endereço de e-mail inválido',
+  errorEmailTooLong: 'Endereço de e-mail demasiado longo',
+  errorPasswordMin: 'A palavra-passe deve ter pelo menos 8 caracteres',
+  errorPasswordUppercase: 'Pelo menos uma letra maiúscula obrigatória',
+  errorPasswordLowercase: 'Pelo menos uma letra minúscula obrigatória',
+  errorPasswordNumber: 'Pelo menos um número obrigatório',
+  errorPasswordSpecialChar: 'Pelo menos um caractere especial obrigatório (!@#$%^&* etc.)',
+  errorPasswordConfirmRequired: 'Confirmação da palavra-passe obrigatória',
+  errorPasswordsMismatch: 'As palavras-passe não coincidem',
+  errorCompanyNameRequired: 'Nome da empresa obrigatório',
+  errorAddressRequired: 'Morada obrigatória',
+  errorPostalCodeInvalid: 'Código postal inválido',
+  errorCityRequired: 'Cidade obrigatória',
+  errorCountryRequired: 'País obrigatório',
+  errorFoundedYearInvalid: 'Ano inválido (4 dígitos)',
+  errorFoundedYearRange: `O ano de fundação deve estar entre 1900 e ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Nome obrigatório',
+  errorPhoneInvalid: 'Número de telefone inválido',
+  errorUrlInvalid: 'URL inválido',
+  errorAgbRequired: 'Deve aceitar os termos e condições e a política de privacidade',
+  fileSelectButton: 'Selecionar ficheiro',
+  fileTypeHint: 'PDF, JPG ou PNG (máx. 10 MB)',
+  errorFileTooLarge: 'Ficheiro demasiado grande',
+  errorFileTooLargeDesc: 'O ficheiro não pode exceder 10 MB',
+  errorFileTypeInvalid: 'Tipo de ficheiro inválido',
+  errorFileTypeInvalidDesc: 'Apenas são permitidos ficheiros PDF, JPG e PNG',
+  toastValidationErrorTitle: 'Verifique os seus dados',
+  toastRegistrationFailedTitle: 'Registo falhado',
+  toastRegistrationSuccessTitle: 'Registo bem-sucedido!',
+  toastRegistrationSuccessDesc: 'Confirme o seu endereço de e-mail.',
+  buttonRegister: 'Registar como concessionário',
+  buttonRegistering: 'A registar...',
+  buttonUploadingDocument: 'A carregar documento...',
+  infoEmailConfirmation: 'Após o registo receberá um e-mail para confirmar o seu endereço. Após a confirmação poderá iniciar sessão imediatamente como concessionário.',
+  formOnlyForDealers: 'Este formulário destina-se exclusivamente a concessionários profissionais.',
+  alreadyRegistered: 'Já registado?',
+  loginLink: 'Ir para o login',
+  privateCustomer: 'Cliente particular?',
+  privateRegistrationLink: 'Ir para o registo particular',
+  pageTitle: 'Registar como concessionário',
+  pageSubtitle: 'Faça parte da nossa rede de concessionários e beneficie de leilões exclusivos',
+  pageBadge: 'Registo de Concessionário',
+  benefitExclusiveTitle: 'Acesso exclusivo',
+  benefitExclusiveDesc: 'Acesso a leilões para concessionários',
+  benefitNetworkTitle: 'Rede B2B',
+  benefitNetworkDesc: 'Contactos com outros concessionários',
+  benefitDirectTitle: 'Registo direto',
+  benefitDirectDesc: 'Acesso imediato após confirmação por e-mail',
+  successTitle: 'Registo bem-sucedido!',
+  successMessage: 'Enviámos-lhe um e-mail de confirmação. Clique no link do e-mail para ativar a sua conta.',
+  successAlertMessage: 'Após a confirmação por e-mail poderá iniciar sessão e ver o estado da sua candidatura. A sua candidatura será analisada pela nossa equipa e processada em 1-3 dias úteis.',
+  successLoginButton: 'Ir para o login',
+  successHomeButton: 'Voltar à página inicial',
+  errorUserCreationFailed: 'Não foi possível criar o utilizador',
+};
+
+const pl: Translations = {
+  sectionCredentials: 'Dane logowania',
+  sectionCompanyInfo: 'Informacje o firmie',
+  sectionContactPerson: 'Osoba kontaktowa',
+  labelEmail: 'Adres e-mail *',
+  labelPassword: 'Hasło *',
+  labelPasswordConfirm: 'Potwierdź hasło *',
+  labelCompanyName: 'Nazwa firmy *',
+  labelCompanyAddress: 'Adres firmy *',
+  labelPostalCode: 'Kod pocztowy *',
+  labelCity: 'Miasto *',
+  labelCountry: 'Kraj *',
+  labelDocument: 'Prześlij wyciąg z KRS (opcjonalnie)',
+  labelLegalForm: 'Forma prawna',
+  labelFoundedYear: 'Rok założenia',
+  labelContactName: 'Imię i nazwisko *',
+  labelContactPosition: 'Stanowisko (opcjonalnie)',
+  labelPhone: 'Telefon *',
+  labelWebsite: 'Strona internetowa (opcjonalnie)',
+  labelAgb: 'Akceptuję',
+  placeholderEmail: 'twoj@firma.pl',
+  placeholderPassword: 'Twoje bezpieczne hasło',
+  placeholderPasswordConfirm: 'Powtórz hasło',
+  placeholderCompanyName: 'Twój salon',
+  placeholderAddress: 'Ulica i numer',
+  placeholderPostalCode: 'Kod pocztowy',
+  placeholderCity: 'Miasto',
+  placeholderCountry: 'Wybierz kraj',
+  placeholderLegalForm: 'Wybierz formę prawną',
+  placeholderFoundedYear: 'np. 2010',
+  placeholderContactName: 'Imię i nazwisko',
+  placeholderContactPosition: 'np. Dyrektor zarządzający',
+  placeholderPhone: '+48 12 345 67 89',
+  placeholderWebsite: 'https://www.twoja-firma.pl',
+  passwordRequirements: 'Wymagania dotyczące hasła',
+  passwordMinLength: 'Co najmniej 8 znaków',
+  passwordUppercase: 'Co najmniej jedna wielka litera',
+  passwordLowercase: 'Co najmniej jedna mała litera',
+  passwordNumber: 'Co najmniej jedna cyfra',
+  passwordSpecialChar: 'Co najmniej jeden znak specjalny (!@#$%^&* itp.)',
+  errorEmailRequired: 'Adres e-mail wymagany',
+  errorEmailInvalid: 'Nieprawidłowy adres e-mail',
+  errorEmailTooLong: 'Adres e-mail za długi',
+  errorPasswordMin: 'Hasło musi mieć co najmniej 8 znaków',
+  errorPasswordUppercase: 'Wymagana co najmniej jedna wielka litera',
+  errorPasswordLowercase: 'Wymagana co najmniej jedna mała litera',
+  errorPasswordNumber: 'Wymagana co najmniej jedna cyfra',
+  errorPasswordSpecialChar: 'Wymagany co najmniej jeden znak specjalny (!@#$%^&* itp.)',
+  errorPasswordConfirmRequired: 'Potwierdzenie hasła wymagane',
+  errorPasswordsMismatch: 'Hasła nie są zgodne',
+  errorCompanyNameRequired: 'Nazwa firmy wymagana',
+  errorAddressRequired: 'Adres wymagany',
+  errorPostalCodeInvalid: 'Nieprawidłowy kod pocztowy',
+  errorCityRequired: 'Miasto wymagane',
+  errorCountryRequired: 'Kraj wymagany',
+  errorFoundedYearInvalid: 'Nieprawidłowy rok (4 cyfry)',
+  errorFoundedYearRange: `Rok założenia musi być między 1900 a ${new Date().getFullYear()}`,
+  errorContactNameRequired: 'Imię i nazwisko wymagane',
+  errorPhoneInvalid: 'Nieprawidłowy numer telefonu',
+  errorUrlInvalid: 'Nieprawidłowy URL',
+  errorAgbRequired: 'Musisz zaakceptować regulamin i politykę prywatności',
+  fileSelectButton: 'Wybierz plik',
+  fileTypeHint: 'PDF, JPG lub PNG (maks. 10 MB)',
+  errorFileTooLarge: 'Plik za duży',
+  errorFileTooLargeDesc: 'Plik nie może przekraczać 10 MB',
+  errorFileTypeInvalid: 'Nieprawidłowy typ pliku',
+  errorFileTypeInvalidDesc: 'Dozwolone są tylko pliki PDF, JPG i PNG',
+  toastValidationErrorTitle: 'Sprawdź wprowadzone dane',
+  toastRegistrationFailedTitle: 'Rejestracja nie powiodła się',
+  toastRegistrationSuccessTitle: 'Rejestracja zakończona pomyślnie!',
+  toastRegistrationSuccessDesc: 'Potwierdź swój adres e-mail.',
+  buttonRegister: 'Zarejestruj się jako dealer',
+  buttonRegistering: 'Rejestrowanie...',
+  buttonUploadingDocument: 'Przesyłanie dokumentu...',
+  infoEmailConfirmation: 'Po rejestracji otrzymasz e-mail z potwierdzeniem adresu. Po potwierdzeniu możesz natychmiast zalogować się jako dealer.',
+  formOnlyForDealers: 'Ten formularz jest przeznaczony wyłącznie dla profesjonalnych dealerów.',
+  alreadyRegistered: 'Już zarejestrowany?',
+  loginLink: 'Przejdź do logowania',
+  privateCustomer: 'Klient prywatny?',
+  privateRegistrationLink: 'Przejdź do rejestracji prywatnej',
+  pageTitle: 'Zarejestruj się jako dealer',
+  pageSubtitle: 'Dołącz do naszej sieci dealerów i korzystaj z ekskluzywnych aukcji',
+  pageBadge: 'Rejestracja Dealera',
+  benefitExclusiveTitle: 'Ekskluzywny dostęp',
+  benefitExclusiveDesc: 'Dostęp do aukcji dealerskich',
+  benefitNetworkTitle: 'Sieć B2B',
+  benefitNetworkDesc: 'Kontakty z innymi dealerami',
+  benefitDirectTitle: 'Bezpośrednia rejestracja',
+  benefitDirectDesc: 'Natychmiastowy dostęp po potwierdzeniu e-mailem',
+  successTitle: 'Rejestracja zakończona pomyślnie!',
+  successMessage: 'Wysłaliśmy Ci e-mail z potwierdzeniem. Kliknij link w e-mailu, aby aktywować swoje konto.',
+  successAlertMessage: 'Po potwierdzeniu e-mailem możesz się zalogować i sprawdzić status swojego wniosku. Twój wniosek zostanie rozpatrzony przez nasz zespół w ciągu 1-3 dni roboczych.',
+  successLoginButton: 'Przejdź do logowania',
+  successHomeButton: 'Powrót do strony głównej',
+  errorUserCreationFailed: 'Nie udało się utworzyć użytkownika',
+};
+
+/**
+ * Country code to language code mapping.
+ * For multilingual countries, the primary business language is used.
+ */
+const COUNTRY_TO_LANGUAGE: Record<string, string> = {
+  DE: 'de', AT: 'de', CH: 'de',
+  NL: 'nl', BE: 'nl',
+  FR: 'fr', LU: 'fr',
+  IT: 'it',
+  ES: 'es',
+  PT: 'pt',
+  PL: 'pl',
+  CZ: 'en', SK: 'en', HU: 'en', RO: 'en', BG: 'en',
+  HR: 'en', SI: 'en', DK: 'en', SE: 'en', FI: 'en',
+  IE: 'en', GR: 'en', EE: 'en', LV: 'en', LT: 'en',
+  MT: 'en', CY: 'en',
+};
+
+const LANGUAGE_MAP: Record<string, Translations> = {
+  de, en, nl, fr, it, es, pt, pl,
+};
+
+/**
+ * Get the language code for a given country code.
+ */
+export function getLanguageForCountry(countryCode: string): string {
+  return COUNTRY_TO_LANGUAGE[countryCode] ?? 'en';
+}
+
+/**
+ * Get all translations for a given country code.
+ * Falls back to English if no specific translation exists.
+ */
+export function getTranslations(countryCode: string): Translations {
+  const lang = getLanguageForCountry(countryCode);
+  return LANGUAGE_MAP[lang] ?? en;
+}
+
+/**
+ * Get a single translation string for a given country code and key.
+ */
+export function t(countryCode: string, key: TranslationKey): string {
+  const translations = getTranslations(countryCode);
+  return translations[key];
+}

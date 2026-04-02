@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,44 +39,61 @@ import {
 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { passwordSchema, emailSchema } from "@/lib/validation";
 import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
+import { getTranslations, type TranslationKey } from "@/lib/dealerRegistrationTranslations";
 
-const dealerRegistrationSchema = z.object({
-  // Account details
-  email: emailSchema,
-  password: passwordSchema,
-  passwordConfirm: z.string().min(1, "Passwort-Bestätigung erforderlich"),
-  // Company details
-  companyName: z.string().min(2, "Firmenname erforderlich"),
-  companyAddress: z.string().min(5, "Adresse erforderlich"),
-  companyPostalCode: z.string().regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Ungültige Postleitzahl"),
-  companyCity: z.string().min(2, "Stadt erforderlich"),
-  country: z.string().min(2, "Land erforderlich"),
+/**
+ * Creates a Zod validation schema that uses translated error messages
+ * based on the currently selected country.
+ */
+function createDealerSchema(countryCode: string) {
+  const tr = getTranslations(countryCode);
 
-  legalForm: z.string().optional(),
-  foundedYear: z.string().regex(/^\d{4}$/, "Ungültiges Jahr (4 Ziffern)").optional().or(z.literal("")),
-  // Contact person
-  contactPersonName: z.string().min(2, "Name erforderlich"),
-  contactPersonPosition: z.string().optional(),
-  phone: z.string().regex(/^[\d\s\-+()]+$/, "Ungültige Telefonnummer"),
-  website: z.string().url("Ungültige URL").optional().or(z.literal("")),
+  const emailSchema = z
+    .string()
+    .min(1, tr.errorEmailRequired)
+    .email(tr.errorEmailInvalid)
+    .max(255, tr.errorEmailTooLong);
 
-  agbAccepted: z.literal(true, { errorMap: () => ({ message: "Sie müssen die AGB und Datenschutzbestimmungen akzeptieren" }) }),
-}).refine((data) => data.password === data.passwordConfirm, {
-  message: "Passwörter stimmen nicht überein",
-  path: ["passwordConfirm"],
-}).refine((data) => {
-  if (data.foundedYear && data.foundedYear !== "") {
-    const year = parseInt(data.foundedYear);
-    return year >= 1900 && year <= new Date().getFullYear();
-  }
-  return true;
-}, {
-  message: `Gründungsjahr muss zwischen 1900 und ${new Date().getFullYear()} liegen`,
-  path: ["foundedYear"],
-});
+  const passwordSchema = z
+    .string()
+    .min(8, tr.errorPasswordMin)
+    .regex(/[A-Z]/, tr.errorPasswordUppercase)
+    .regex(/[a-z]/, tr.errorPasswordLowercase)
+    .regex(/[0-9]/, tr.errorPasswordNumber)
+    .regex(/[^A-Za-z0-9]/, tr.errorPasswordSpecialChar);
+
+  return z.object({
+    email: emailSchema,
+    password: passwordSchema,
+    passwordConfirm: z.string().min(1, tr.errorPasswordConfirmRequired),
+    companyName: z.string().min(2, tr.errorCompanyNameRequired),
+    companyAddress: z.string().min(5, tr.errorAddressRequired),
+    companyPostalCode: z.string().regex(/^[A-Za-z0-9\s\-]{3,10}$/, tr.errorPostalCodeInvalid),
+    companyCity: z.string().min(2, tr.errorCityRequired),
+    country: z.string().min(2, tr.errorCountryRequired),
+    legalForm: z.string().optional(),
+    foundedYear: z.string().regex(/^\d{4}$/, tr.errorFoundedYearInvalid).optional().or(z.literal("")),
+    contactPersonName: z.string().min(2, tr.errorContactNameRequired),
+    contactPersonPosition: z.string().optional(),
+    phone: z.string().regex(/^[\d\s\-+()]+$/, tr.errorPhoneInvalid),
+    website: z.string().url(tr.errorUrlInvalid).optional().or(z.literal("")),
+    agbAccepted: z.literal(true, { errorMap: () => ({ message: tr.errorAgbRequired }) }),
+  }).refine((data) => data.password === data.passwordConfirm, {
+    message: tr.errorPasswordsMismatch,
+    path: ["passwordConfirm"],
+  }).refine((data) => {
+    if (data.foundedYear && data.foundedYear !== "") {
+      const year = parseInt(data.foundedYear);
+      return year >= 1900 && year <= new Date().getFullYear();
+    }
+    return true;
+  }, {
+    message: tr.errorFoundedYearRange,
+    path: ["foundedYear"],
+  });
+}
 
 const RegisterHaendler = () => {
   const navigate = useNavigate();
@@ -103,16 +120,17 @@ const RegisterHaendler = () => {
     companyPostalCode: "",
     companyCity: "",
     country: DEFAULT_COUNTRY,
-
     legalForm: "",
     foundedYear: "",
     contactPersonName: "",
     contactPersonPosition: "",
     phone: "",
     website: "",
-
     agbAccepted: false as boolean,
   });
+
+  // Get translations based on selected country
+  const tr = useMemo(() => getTranslations(formData.country), [formData.country]);
 
   // Dynamic legal forms based on selected country
   const availableLegalForms = getLegalFormsByCountry(formData.country);
@@ -134,8 +152,8 @@ const RegisterHaendler = () => {
 
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: "Datei zu groß",
-        description: "Die Datei darf maximal 10 MB groß sein",
+        title: tr.errorFileTooLarge,
+        description: tr.errorFileTooLargeDesc,
         variant: "destructive",
       });
       return;
@@ -144,8 +162,8 @@ const RegisterHaendler = () => {
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
     if (!allowedTypes.includes(file.type)) {
       toast({
-        title: "Ungültiger Dateityp",
-        description: "Nur PDF, JPG und PNG Dateien sind erlaubt",
+        title: tr.errorFileTypeInvalid,
+        description: tr.errorFileTypeInvalidDesc,
         variant: "destructive",
       });
       return;
@@ -157,6 +175,9 @@ const RegisterHaendler = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Create schema with current country's translations
+    const dealerRegistrationSchema = createDealerSchema(formData.country);
 
     try {
       const validated = dealerRegistrationSchema.parse(formData);
@@ -191,7 +212,7 @@ const RegisterHaendler = () => {
       if (authError) throw authError;
 
       if (!authData.user) {
-        throw new Error("Benutzer konnte nicht erstellt werden");
+        throw new Error(tr.errorUserCreationFailed);
       }
 
       // Step 2: Upload document via Edge Function (bypasses RLS)
@@ -241,21 +262,25 @@ const RegisterHaendler = () => {
 
       setRegistrationComplete(true);
       toast({
-        title: "Registrierung erfolgreich!",
-        description: "Bitte bestätigen Sie Ihre E-Mail-Adresse.",
+        title: tr.toastRegistrationSuccessTitle,
+        description: tr.toastRegistrationSuccessDesc,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        const germanMessage = handleValidationError(error, 'RegisterHaendler');
+        // Show the first validation error in the selected language (already translated via schema)
+        const firstIssue = error.issues[0];
+        const translatedMessage = firstIssue?.message || tr.toastValidationErrorTitle;
+        // Also log via errorLogService for monitoring (always German internally)
+        handleValidationError(error, 'RegisterHaendler');
         toast({
-          title: "Bitte überprüfen Sie Ihre Eingaben",
-          description: germanMessage,
+          title: tr.toastValidationErrorTitle,
+          description: translatedMessage,
           variant: "destructive",
         });
       } else {
         const germanMessage = handleAuthError(error, 'RegisterHaendler');
         toast({
-          title: "Registrierung fehlgeschlagen",
+          title: tr.toastRegistrationFailedTitle,
           description: germanMessage,
           variant: "destructive",
         });
@@ -283,14 +308,14 @@ const RegisterHaendler = () => {
             <div className="mx-auto h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
               <CheckCircle2 className="w-8 h-8 text-green-500" />
             </div>
-            <h1 className="text-2xl font-bold mb-4">Registrierung erfolgreich!</h1>
+            <h1 className="text-2xl font-bold mb-4">{tr.successTitle}</h1>
             <p className="text-muted-foreground mb-6">
-              Wir haben Ihnen eine Bestätigungs-E-Mail gesendet. Bitte klicken Sie auf den Link in der E-Mail, um Ihr Konto zu aktivieren.
+              {tr.successMessage}
             </p>
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Nach der E-Mail-Bestätigung können Sie sich einloggen und den Status Ihres Händlerantrags einsehen. Ihr Antrag wird von unserem Team geprüft und innerhalb von 1-3 Werktagen bearbeitet.
+                {tr.successAlertMessage}
               </AlertDescription>
             </Alert>
             <div className="space-y-3">
@@ -298,7 +323,7 @@ const RegisterHaendler = () => {
                 onClick={() => navigate("/login")}
                 className="w-full gradient-hero hover:gradient-hero-hover"
               >
-                Zum Händler-Login
+                {tr.successLoginButton}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <Button
@@ -306,7 +331,7 @@ const RegisterHaendler = () => {
                 onClick={() => navigate("/")}
                 className="w-full"
               >
-                Zurück zur Startseite
+                {tr.successHomeButton}
               </Button>
             </div>
           </Card>
@@ -338,22 +363,22 @@ const RegisterHaendler = () => {
             </Link>
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
               <Building2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Händler-Registrierung</span>
+              <span className="text-sm font-medium">{tr.pageBadge}</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-              Als Händler registrieren
+              {tr.pageTitle}
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Werden Sie Teil unseres Händlernetzwerks und profitieren Sie von exklusiven Auktionen
+              {tr.pageSubtitle}
             </p>
           </div>
 
           {/* Benefits */}
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             {[
-              { icon: CheckCircle2, title: "Exklusiver Zugang", desc: "Zugriff auf Händler-Auktionen" },
-              { icon: Building2, title: "B2B Netzwerk", desc: "Kontakte zu anderen Händlern" },
-              { icon: CheckCircle2, title: "Direkte Registrierung", desc: "Sofortiger Zugang nach E-Mail-Bestätigung" },
+              { icon: CheckCircle2, title: tr.benefitExclusiveTitle, desc: tr.benefitExclusiveDesc },
+              { icon: Building2, title: tr.benefitNetworkTitle, desc: tr.benefitNetworkDesc },
+              { icon: CheckCircle2, title: tr.benefitDirectTitle, desc: tr.benefitDirectDesc },
             ].map((benefit, idx) => (
               <Card key={idx} className="p-4 text-center animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
                 <benefit.icon className="w-8 h-8 text-primary mx-auto mb-2" />
@@ -370,15 +395,15 @@ const RegisterHaendler = () => {
               <div>
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Mail className="w-5 h-5 text-primary" />
-                  Zugangsdaten
+                  {tr.sectionCredentials}
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-Mail-Adresse *</Label>
+                    <Label htmlFor="email">{tr.labelEmail}</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="ihre@firma.eu"
+                      placeholder={tr.placeholderEmail}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -386,36 +411,36 @@ const RegisterHaendler = () => {
                   <div className="space-y-2">
                     <Label htmlFor="password" className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-primary" />
-                      Passwort *
+                      {tr.labelPassword}
                     </Label>
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Ihr sicheres Passwort"
+                      placeholder={tr.placeholderPassword}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     />
-                    {/* Passwort-Anforderungen */}
+                    {/* Password requirements */}
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
                       <p className="text-xs font-medium flex items-center gap-1.5 text-muted-foreground">
                         <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                        Passwort-Anforderungen
+                        {tr.passwordRequirements}
                       </p>
                       <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
                         <li className={formData.password.length >= 8 ? "text-green-600" : ""}>
-                          • Mindestens 8 Zeichen
+                          • {tr.passwordMinLength}
                         </li>
                         <li className={/[A-Z]/.test(formData.password) ? "text-green-600" : ""}>
-                          • Mindestens ein Großbuchstabe
+                          • {tr.passwordUppercase}
                         </li>
                         <li className={/[a-z]/.test(formData.password) ? "text-green-600" : ""}>
-                          • Mindestens ein Kleinbuchstabe
+                          • {tr.passwordLowercase}
                         </li>
                         <li className={/[0-9]/.test(formData.password) ? "text-green-600" : ""}>
-                          • Mindestens eine Zahl
+                          • {tr.passwordNumber}
                         </li>
                         <li className={/[^A-Za-z0-9]/.test(formData.password) ? "text-green-600" : ""}>
-                          • Mindestens ein Sonderzeichen (!@#$%^&* etc.)
+                          • {tr.passwordSpecialChar}
                         </li>
                       </ul>
                     </div>
@@ -423,12 +448,12 @@ const RegisterHaendler = () => {
                   <div className="space-y-2">
                     <Label htmlFor="passwordConfirm" className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-primary" />
-                      Passwort bestätigen *
+                      {tr.labelPasswordConfirm}
                     </Label>
                     <Input
                       id="passwordConfirm"
                       type="password"
-                      placeholder="Passwort wiederholen"
+                      placeholder={tr.placeholderPasswordConfirm}
                       value={formData.passwordConfirm}
                       onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
                     />
@@ -440,14 +465,14 @@ const RegisterHaendler = () => {
               <div>
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-primary" />
-                  Unternehmensinformationen
+                  {tr.sectionCompanyInfo}
                 </h2>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Firmenname *</Label>
+                    <Label htmlFor="companyName">{tr.labelCompanyName}</Label>
                     <Input
                       id="companyName"
-                      placeholder="Ihr Autohaus"
+                      placeholder={tr.placeholderCompanyName}
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     />
@@ -456,11 +481,11 @@ const RegisterHaendler = () => {
                   <div className="space-y-2">
                     <Label htmlFor="companyAddress" className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-primary" />
-                      Firmenadresse *
+                      {tr.labelCompanyAddress}
                     </Label>
                     <Input
                       id="companyAddress"
-                      placeholder="Straße und Hausnummer"
+                      placeholder={tr.placeholderAddress}
                       value={formData.companyAddress}
                       onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
                     />
@@ -468,32 +493,32 @@ const RegisterHaendler = () => {
 
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="companyPostalCode">Postleitzahl *</Label>
+                      <Label htmlFor="companyPostalCode">{tr.labelPostalCode}</Label>
                       <Input
                         id="companyPostalCode"
-                        placeholder="PLZ"
+                        placeholder={tr.placeholderPostalCode}
                         maxLength={10}
                         value={formData.companyPostalCode}
                         onChange={(e) => setFormData({ ...formData, companyPostalCode: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="companyCity">Stadt *</Label>
+                      <Label htmlFor="companyCity">{tr.labelCity}</Label>
                       <Input
                         id="companyCity"
-                        placeholder="Ort"
+                        placeholder={tr.placeholderCity}
                         value={formData.companyCity}
                         onChange={(e) => setFormData({ ...formData, companyCity: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="country">Land *</Label>
+                      <Label htmlFor="country">{tr.labelCountry}</Label>
                       <Select
                         value={formData.country}
                         onValueChange={handleCountryChange}
                       >
                         <SelectTrigger id="country">
-                          <SelectValue placeholder="Land auswählen" />
+                          <SelectValue placeholder={tr.placeholderCountry} />
                         </SelectTrigger>
                         <SelectContent>
                           {EU_COUNTRIES.map((c) => (
@@ -512,7 +537,7 @@ const RegisterHaendler = () => {
                   <div className="space-y-2">
                     <Label htmlFor="document" className="flex items-center gap-2">
                       <Upload className="w-4 h-4 text-primary" />
-                      Gewerbenachweis hochladen (optional)
+                      {tr.labelDocument}
                     </Label>
                     <input
                       ref={documentInputRef}
@@ -530,7 +555,7 @@ const RegisterHaendler = () => {
                       className="w-full justify-start gap-2"
                     >
                       <Upload className="w-4 h-4" />
-                      Datei auswählen
+                      {tr.fileSelectButton}
                     </Button>
                     {documentFile && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -539,7 +564,7 @@ const RegisterHaendler = () => {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      PDF, JPG oder PNG (max. 10 MB)
+                      {tr.fileTypeHint}
                     </p>
                   </div>
 
@@ -547,14 +572,14 @@ const RegisterHaendler = () => {
                     <div className="space-y-2">
                       <Label htmlFor="legalForm" className="flex items-center gap-2">
                         <Scale className="w-4 h-4 text-primary" />
-                        Rechtsform
+                        {tr.labelLegalForm}
                       </Label>
                       <Select
                         value={formData.legalForm}
                         onValueChange={(value) => setFormData({ ...formData, legalForm: value })}
                       >
                         <SelectTrigger id="legalForm">
-                          <SelectValue placeholder="Rechtsform auswählen" />
+                          <SelectValue placeholder={tr.placeholderLegalForm} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableLegalForms.map((form) => (
@@ -568,12 +593,12 @@ const RegisterHaendler = () => {
                     <div className="space-y-2">
                       <Label htmlFor="foundedYear" className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-primary" />
-                        Gründungsjahr
+                        {tr.labelFoundedYear}
                       </Label>
                       <Input
                         id="foundedYear"
                         type="number"
-                        placeholder="z.B. 2010"
+                        placeholder={tr.placeholderFoundedYear}
                         min={1900}
                         max={new Date().getFullYear()}
                         value={formData.foundedYear}
@@ -588,24 +613,24 @@ const RegisterHaendler = () => {
               <div>
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-primary" />
-                  Ansprechpartner
+                  {tr.sectionContactPerson}
                 </h2>
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contactPersonName">Name *</Label>
+                      <Label htmlFor="contactPersonName">{tr.labelContactName}</Label>
                       <Input
                         id="contactPersonName"
-                        placeholder="Vor- und Nachname"
+                        placeholder={tr.placeholderContactName}
                         value={formData.contactPersonName}
                         onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contactPersonPosition">Position (optional)</Label>
+                      <Label htmlFor="contactPersonPosition">{tr.labelContactPosition}</Label>
                       <Input
                         id="contactPersonPosition"
-                        placeholder="z.B. Geschäftsführer"
+                        placeholder={tr.placeholderContactPosition}
                         value={formData.contactPersonPosition}
                         onChange={(e) => setFormData({ ...formData, contactPersonPosition: e.target.value })}
                       />
@@ -616,12 +641,12 @@ const RegisterHaendler = () => {
                     <div className="space-y-2">
                       <Label htmlFor="phone" className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-primary" />
-                        Telefon *
+                        {tr.labelPhone}
                       </Label>
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+43 / +49 / +31 ..."
+                        placeholder={tr.placeholderPhone}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
@@ -629,12 +654,12 @@ const RegisterHaendler = () => {
                     <div className="space-y-2">
                       <Label htmlFor="website" className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-primary" />
-                        Website (optional)
+                        {tr.labelWebsite}
                       </Label>
                       <Input
                         id="website"
                         type="url"
-                        placeholder="https://www.ihre-firma.eu"
+                        placeholder={tr.placeholderWebsite}
                         value={formData.website}
                         onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                       />
@@ -649,8 +674,7 @@ const RegisterHaendler = () => {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Nach der Registrierung erhalten Sie eine E-Mail zur Bestätigung Ihrer Adresse. 
-                  Nach der Bestätigung können Sie sich sofort als Händler anmelden.
+                  {tr.infoEmailConfirmation}
                 </AlertDescription>
               </Alert>
 
@@ -665,13 +689,13 @@ const RegisterHaendler = () => {
                   className="mt-1"
                 />
                 <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
-                  Ich akzeptiere die{" "}
+                  {tr.labelAgb}{" "}
                   <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     AGB
                   </a>{" "}
-                  und{" "}
+                  &{" "}
                   <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    Datenschutzbestimmungen
+                    Datenschutz
                   </a>{" "}
                   *
                 </Label>
@@ -684,30 +708,30 @@ const RegisterHaendler = () => {
                 disabled={isLoading || uploadingDocument}
               >
                 {uploadingDocument
-                  ? "Dokument wird hochgeladen..."
+                  ? tr.buttonUploadingDocument
                   : isLoading
-                  ? "Wird registriert..."
-                  : "Als Händler registrieren"}
+                  ? tr.buttonRegistering
+                  : tr.buttonRegister}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                Dieses Formular ist ausschließlich für gewerbliche Händler bestimmt.
+                {tr.formOnlyForDealers}
               </p>
             </form>
 
             <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-muted-foreground">
-                Bereits registriert?{" "}
+                {tr.alreadyRegistered}{" "}
                 <Link to="/login" className="text-primary hover:underline font-medium">
-                  Zum Händler-Login
+                  {tr.loginLink}
                 </Link>
               </p>
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
-                Privatkunde?{" "}
+                {tr.privateCustomer}{" "}
                 <Link to="/register/privat" className="text-primary hover:underline font-medium">
-                  Zur Privatkunden-Registrierung
+                  {tr.privateRegistrationLink}
                 </Link>
               </p>
             </div>

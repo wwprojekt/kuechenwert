@@ -339,7 +339,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('admin_emails')
       .insert({
         sender_email: senderEmail,
-        sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null),
+        sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null) || senderEmail?.split('@')[0] || 'Unbekannt',
         recipient_email: emailData.to?.[0] || 'info@caravanwert.de',
         recipient_name: 'CaravanWert',
         recipient_id: null,
@@ -385,7 +385,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         body: JSON.stringify({
           sender_email: senderEmail,
-          sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null),
+          sender_name: senderName || (senderProfile ? [senderProfile.first_name, senderProfile.last_name].filter(Boolean).join(' ') : null) || senderEmail?.split('@')[0] || 'Unbekannt',
         }),
       });
       console.log("Auto-response triggered for:", senderEmail);

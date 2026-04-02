@@ -706,7 +706,7 @@ const RegisterHaendler = () => {
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
                 Privatkunde?{" "}
-                <Link to="/register" className="text-primary hover:underline font-medium">
+                <Link to="/register/privat" className="text-primary hover:underline font-medium">
                   Zur Privatkunden-Registrierung
                 </Link>
               </p>

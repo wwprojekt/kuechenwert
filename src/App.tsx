@@ -26,6 +26,7 @@ import Index from "./pages/Index";
 // Auth pages
 const Login = lazyRetry(() => import("./pages/Login"));
 const LoginHaendler = lazyRetry(() => import("./pages/LoginHaendler"));
+const RegisterChoice = lazyRetry(() => import("./pages/RegisterChoice"));
 const Register = lazyRetry(() => import("./pages/Register"));
 const RegisterHaendler = lazyRetry(() => import("./pages/RegisterHaendler"));
 const ForgotPassword = lazyRetry(() => import("./pages/ForgotPassword"));
@@ -197,7 +198,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/login/haendler" element={<LoginHaendler />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/register" element={<RegisterChoice />} />
+              <Route path="/register/privat" element={<Register />} />
               <Route path="/register/haendler" element={<RegisterHaendler />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />

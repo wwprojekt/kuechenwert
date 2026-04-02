@@ -115,7 +115,7 @@ const Register = () => {
       title="Registrieren"
       description="Erstellen Sie ein Konto bei CaravanWert"
       keywords="registrieren, konto erstellen, wohnmobil verkaufen"
-      canonicalPath="/register"
+      canonicalPath="/register/privat"
       noIndex={true}
     >
       <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">

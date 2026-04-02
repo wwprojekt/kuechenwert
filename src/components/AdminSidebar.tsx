@@ -66,6 +66,7 @@ function useSidebarBadges() {
         contactRes,
         dealerRes,
         questionsRes,
+        unreadEmailsRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
@@ -74,6 +75,7 @@ function useSidebarBadges() {
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
+        supabase.from("admin_emails").select("*", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
       ]);
 
       return {
@@ -83,6 +85,7 @@ function useSidebarBadges() {
         contacts: contactRes.count || 0,
         dealers: dealerRes.count || 0,
         questions: questionsRes.count || 0,
+        unreadEmails: unreadEmailsRes.count || 0,
       };
     },
     refetchInterval: 30000,
@@ -130,7 +133,7 @@ const menuGroups: MenuGroup[] = [
     icon: Inbox,
     defaultOpen: true,
     items: [
-      { title: "E-Mail-Center", url: "/admin/email", icon: Mail, badgeKey: "contacts" },
+      { title: "E-Mail-Center", url: "/admin/email", icon: Mail, badgeKey: "unreadEmails" },
       { title: "Support-Nachrichten", url: "/admin/messages", icon: MessageSquare, badgeKey: "support" },
       { title: "Fahrzeugfragen", url: "/admin/questions", icon: MessageCircle, badgeKey: "questions" },
     ],

@@ -13,7 +13,6 @@ import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-li
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "admin@caravanwert.de";
 
 // Rate limit: max 5 lead notifications per IP per 15 minutes
 const LEAD_RATE_LIMIT = {
@@ -119,118 +118,11 @@ const handler = async (req: Request): Promise<Response> => {
     };
     const sourceLabel = sourceLabels[type] || type;
 
-    // 1. Send notification to admin
-    const adminSubject = `Neue Anfrage: ${sourceLabel} von ${name}`;
-    const adminContent = `
-      ${paragraph(`Eine neue ${sourceLabel}-Anfrage ist eingegangen.`)}
-      ${infoBox(
-        "Kontaktdaten",
-        `
-        ${detailRow("Name", name)}
-        ${detailRow("E-Mail", email)}
-        ${phone ? detailRow("Telefon", phone) : ""}
-      `,
-        "info",
-        settingsData
-      )}
-      ${
-        manufacturer || model
-          ? infoBox(
-              "Fahrzeugdaten",
-              `
-        ${manufacturer ? detailRow("Hersteller", manufacturer) : ""}
-        ${model ? detailRow("Modell", model) : ""}
-        ${
-          estimatedMin && estimatedMax
-            ? detailRow(
-                "Geschätzter Wert",
-                `${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
-              )
-            : ""
-        }
-      `,
-              "default",
-              settingsData
-            )
-          : ""
-      }
-      ${
-        data.subject || data.messageText
-          ? infoBox(
-              "Nachricht",
-              `
-        ${data.subject ? detailRow("Betreff", data.subject) : ""}
-        ${data.messageText ? paragraph(data.messageText) : ""}
-      `,
-              "default",
-              settingsData
-            )
-          : ""
-      }
-      ${
-        data.companyName
-          ? infoBox(
-              "Firmendetails",
-              `${detailRow("Firma", data.companyName)}`,
-              "default",
-              settingsData
-            )
-          : ""
-      }
-      ${paragraph(
-        `<a href="mailto:${email}">Jetzt antworten</a> | <a href="https://caravanwert.de/admin/leads">Alle Anfragen</a>`
-      )}
-    `;
+    // Admin-Email-Benachrichtigung entfernt:
+    // Der Admin sieht alle Leadanfragen direkt im Dashboard unter "Leads & Anfragen".
+    // Eine zusätzliche Email-Benachrichtigung ist nicht nötig.
 
-    const adminHtml = buildEmailLayout(
-      settingsData,
-      adminSubject,
-      adminContent
-    );
-
-    // Send admin email
-    const adminEmailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
-        to: [ADMIN_EMAIL],
-        subject: adminSubject,
-        html: adminHtml,
-      }),
-    });
-
-    if (!adminEmailResponse.ok) {
-      const error = await adminEmailResponse.text();
-      console.error("Admin email failed:", error);
-    } else {
-      console.log("Admin notification sent successfully");
-      const adminResult = await adminEmailResponse.json();
-      // Log admin notification in admin_emails
-      try {
-        await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
-          sender_name: settingsData.site_name,
-          recipient_email: ADMIN_EMAIL,
-          recipient_name: 'Admin',
-          subject: adminSubject,
-          body_html: adminHtml,
-          body_text: '',
-          email_type: `lead_admin_${type}`,
-          direction: 'outbound',
-          status: 'sent',
-          resend_id: adminResult?.id || null,
-          is_read: true,
-        });
-      } catch (logErr) {
-        console.error('Failed to log admin email in admin_emails:', logErr);
-      }
-    }
-
-    // 2. Send confirmation to user
+    // Send confirmation to user
     if (!data.skipUserEmail) {
       const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",

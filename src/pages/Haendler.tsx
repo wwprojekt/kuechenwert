@@ -74,7 +74,7 @@ const Haendler = () => {
   ];
 
   const stats = [
-    { number: "Bundesweit", label: "Händlernetzwerk" },
+    { number: "Europaweit", label: "Händlernetzwerk" },
     { number: "24h", label: "Durchschn. Reaktionszeit" },
     { number: "Geprüft", label: "Händler" },
     { number: "100%", label: "Kostenlos starten" }
@@ -290,7 +290,7 @@ const Haendler = () => {
                 {
                   icon: Target,
                   title: "Zielgruppenreichweite",
-                  description: "Zugang zu qualifizierten Wohnmobil-Interessenten über unsere Plattform."
+                  description: "Zugang zu über 50.000 qualifizierten Wohnmobil-Interessenten monatlich über unsere Plattform."
                 },
                 {
                   icon: Handshake,

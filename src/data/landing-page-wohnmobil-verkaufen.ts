@@ -55,7 +55,7 @@ export const wohnmobilVerkaufen: LandingPageConfig = {
     {
       title: "Erfahrungen unserer Verkäufer",
       content:
-        "Wohnmobilbesitzer nutzen unsere Plattform für den schnellen und fairen Verkauf. So funktioniert der Verkaufsprozess.",
+        "Über 2.400 Wohnmobilbesitzer haben bereits erfolgreich über unsere Plattform verkauft. Das sagen unsere Kunden über den Verkaufsprozess.",
       items: [
         { title: "\"Schneller als erwartet\"", description: "\"Ich hatte mein Wohnmobil monatelang privat inseriert — ohne Erfolg. Über CaravanWert war es in 3 Tagen verkauft, zum besseren Preis.\" — Thomas M., München" },
         { title: "\"Kein Stress, kein Risiko\"", description: "\"Die Abwicklung war professionell und unkompliziert. Ich musste mich um nichts kümmern.\" — Sabine K., Hamburg" },

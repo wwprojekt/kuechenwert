@@ -2,7 +2,7 @@
  * SaleChannelStep - Step 7 des Wizards
  * 
  * Enthält: Verkaufsweg-Auswahl, Mindestpreis, Kontaktdaten (Name, E-Mail, Telefon), Anmerkungen.
- * Name und E-Mail werden bereits in Step 3 (QuickContactStep) erfasst und hier vorausgefüllt.
+ * Name und E-Mail werden bereits in Step 5 (QuickContactStep) erfasst und hier vorausgefüllt.
  */
 
 import { useState } from "react";
@@ -201,7 +201,7 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Name - vorausgefüllt aus Step 3, aber editierbar */}
+          {/* Name - vorausgefüllt aus Step 5, aber editierbar */}
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="customerName" className="flex items-center gap-2">
               <UserIcon className="w-4 h-4" />

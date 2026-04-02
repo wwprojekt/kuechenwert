@@ -25,9 +25,9 @@ import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
   { id: 2, name: "Fahrzeugdaten", description: "Hersteller, Modell & mehr" },
-  { id: 3, name: "Kontakt", description: "Fortschritt speichern" },
-  { id: 4, name: "Details", description: "Technische Angaben" },
-  { id: 5, name: "Ausstattung", description: "Optional" },
+  { id: 3, name: "Details", description: "Technische Angaben" },
+  { id: 4, name: "Ausstattung", description: "Optional" },
+  { id: 5, name: "Kontakt", description: "Fortschritt speichern" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
   { id: 7, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
   { id: 8, name: "Abschluss", description: "Standort & Konto" },
@@ -103,7 +103,7 @@ const VerkaufenWizard = () => {
     // Wenn Daten vom Wertrechner kommen (bodyType + manufacturer vorhanden),
     // direkt zu Step 2 springen (Fahrzeugdaten vervollständigen)
     if (source === 'wertrechner' && bodyType && !hasRestoredRef.current) {
-      // Wenn auch manufacturer, model, year, mileage, condition vorhanden → Step 3
+      // Wenn auch manufacturer, model, year, mileage, condition vorhanden → Step 3 (Details & Technik)
       if (manufacturer && model && year && mileage && condition) {
         setCurrentStep(3);
       } else if (manufacturer) {
@@ -153,9 +153,9 @@ const VerkaufenWizard = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentStep, formData, steps.length, saveProgress]);
 
-  // Capture lead when user reaches Step 3 (Quick Contact) and provides email
+  // Capture lead when user reaches Step 5 (Quick Contact) and provides email
   useEffect(() => {
-    if (currentStep >= 3 && formData.customerEmail && formData.customerName) {
+    if (currentStep >= 5 && formData.customerEmail && formData.customerName) {
       captureOrUpdateLead({
         name: formData.customerName,
         email: formData.customerEmail,
@@ -177,8 +177,8 @@ const VerkaufenWizard = () => {
     if (isValid && currentStep < steps.length) {
       const nextStep = currentStep + 1;
 
-      // Bei Step 3 → 4: Lead SOFORT erfassen (Name + E-Mail sind jetzt vorhanden)
-      if (currentStep === 3 && formData.customerEmail && formData.customerName) {
+      // Bei Step 5 → 6: Lead SOFORT erfassen (Name + E-Mail sind jetzt vorhanden)
+      if (currentStep === 5 && formData.customerEmail && formData.customerName) {
         // Lead sofort in quick_leads erfassen
         await captureOrUpdateLead({
           name: formData.customerName,
@@ -250,11 +250,11 @@ const VerkaufenWizard = () => {
       case 2:
         return <VehicleInfoStep formData={formData} updateFormData={updateFormData} />;
       case 3:
-        return <QuickContactStep formData={formData} updateFormData={updateFormData} />;
-      case 4:
         return <DetailsStep formData={formData} updateFormData={updateFormData} />;
-      case 5:
+      case 4:
         return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
+      case 5:
+        return <QuickContactStep formData={formData} updateFormData={updateFormData} />;
       case 6:
         return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 7:
@@ -279,9 +279,8 @@ const VerkaufenWizard = () => {
 
   // Determine button labels based on step
   const getNextButtonLabel = () => {
-    if (currentStep === 5) return "Weiter (optional)";
+    if (currentStep === 4) return "Weiter (optional)";
     if (currentStep === 6) return formData.photos.length > 0 ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}` : "Weiter ohne Fotos";
-    if (currentStep === 3) return "Weiter";
     return "Weiter";
   };
 
@@ -439,9 +438,12 @@ const VerkaufenWizard = () => {
                     <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                       {currentStep <= 2
                         ? "Nur noch wenige Angaben bis zum Angebot"
-                        : currentStep <= 5
-                        ? "Fast geschafft – gleich erhalten Sie Ihr Angebot"
-                        : currentStep                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
+                        : currentStep <= 4
+                        ? "Gleich können Sie Ihren Fortschritt speichern"
+                        : currentStep === 5
+                        ? "Fast geschafft – speichern Sie Ihren Fortschritt"
+                        : currentStep === 6
+                        ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7
                         ? "Fast geschafft – wählen Sie Ihren Verkaufsweg"
                         : "Letzter Schritt – Standort & Konto!"}                 </span>

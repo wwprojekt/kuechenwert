@@ -56,7 +56,7 @@ export interface WizardFormData {
   known_defects?: string;
   no_known_defects: boolean;
 
-  // Step 3: Interior Features (merged into Equipment)
+  // Step 4: Interior Features (merged into Equipment)
   has_kitchen: boolean;
   heating_type?: string;
   air_conditioning: string;
@@ -66,7 +66,7 @@ export interface WizardFormData {
   fresh_water_capacity_liters?: number | null;
   grey_water_capacity_liters?: number | null;
 
-  // Step 3: Equipment & Features
+  // Step 4: Equipment & Features
   has_airbag: boolean;
   has_alarm: boolean;
   has_swivel_seats: boolean;
@@ -207,15 +207,16 @@ const initialFormData: WizardFormData = {
 };
 
 // =============================================
-// Validation Schemas for the 7-step wizard
+// Validation Schemas for the 8-step wizard
 // =============================================
 // Step 1: Vehicle Type (bodyType als Tile-Selection)
 // Step 2: Vehicle Info (manufacturer, model, year, mileage, condition)
-// Step 3: Quick Contact (name + email - Lead-Sicherung)
-// Step 4: Technical Details (fuel_type, transmission, seats, sleeping_places, defects)
-// Step 5: Equipment (optional)
+// Step 3: Technical Details (fuel_type, transmission, seats, sleeping_places, defects)
+// Step 4: Equipment (optional)
+// Step 5: Quick Contact (name + email - Lead-Sicherung)
 // Step 6: Photos (optional)
 // Step 7: Final Contact & Sale Channel (saleChannel, phone, description, account)
+// Step 8: Location & Account (address, password)
 
 // Step 1: Vehicle Type (Aufbauart als Tile-Selection)
 const step1Schema = z.object({
@@ -244,13 +245,7 @@ const step2SchemaWohnwagen = z.object({
   condition: z.string().min(1, "Zustand ist erforderlich"),
 });
 
-// Step 3: Quick Contact (Name + E-Mail - Lead-Sicherung)
-const step3Schema = z.object({
-  customerName: z.string().min(1, "Name ist erforderlich"),
-  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-});
-
-// Step 4: Technical Details – Wohnmobil (fuel_type, transmission, seats, sleeping_places required; defects validated)
+// Step 3: Technical Details – Wohnmobil (fuel_type, transmission, seats, sleeping_places required; defects validated))
 const step4SchemaWohnmobil = z.object({
   fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
   transmission: z.string().min(1, "Getriebe ist erforderlich"),
@@ -267,7 +262,7 @@ const step4SchemaWohnmobil = z.object({
   { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
 );
 
-// Step 4: Technical Details – Wohnwagen (kein Motor, kein Getriebe, keine Sitzplätze)
+// Step 3: Technical Details – Wohnwagen (kein Motor, kein Getriebe, keine Sitzplätze)
 const step4SchemaWohnwagen = z.object({
   sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
     .min(1, "Mindestens 1 Schlafplatz erforderlich")
@@ -279,8 +274,14 @@ const step4SchemaWohnwagen = z.object({
   { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
 );
 
-// Step 5: Equipment (all optional - no validation needed)
+// Step 4: Equipment (all optional - no validation needed)
 const step5Schema = z.object({});
+
+// Step 5: Quick Contact (name + email - Lead-Sicherung)
+const step3Schema = z.object({
+  customerName: z.string().min(1, "Name ist erforderlich"),
+  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+});
 
 // Step 6: Photos (optional - no validation needed, user can skip)
 const step6Schema = z.object({});
@@ -370,12 +371,6 @@ export const useWizardForm = () => {
           }
           break;
         case 3:
-          step3Schema.parse({
-            customerName: formData.customerName,
-            customerEmail: formData.customerEmail,
-          });
-          break;
-        case 4:
           if (formData.vehicleType === "Wohnwagen") {
             step4SchemaWohnwagen.parse({
               sleeping_places: formData.sleeping_places,
@@ -393,8 +388,14 @@ export const useWizardForm = () => {
             });
           }
           break;
-        case 5:
+        case 4:
           step5Schema.parse({});
+          break;
+        case 5:
+          step3Schema.parse({
+            customerName: formData.customerName,
+            customerEmail: formData.customerEmail,
+          });
           break;
         case 6:
           step6Schema.parse({});

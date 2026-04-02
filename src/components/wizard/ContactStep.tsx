@@ -2,7 +2,7 @@
  * ContactStep - Letzter Step des Wizards (Step 7)
  * 
  * Enthält: Verkaufsweg, Telefonnummer, Beschreibung und optionale Konto-Erstellung.
- * Name und E-Mail werden bereits in Step 3 (QuickContactStep) erfasst.
+ * Name und E-Mail werden bereits in Step 5 (QuickContactStep) erfasst.
  * 
  * Dadurch ist der Lead bereits gesichert, bevor der Nutzer diesen Step erreicht.
  */
@@ -258,7 +258,7 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
         ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Name - vorausgefüllt aus Step 3, aber editierbar */}
+          {/* Name - vorausgefüllt aus Step 5, aber editierbar */}
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="customerName" className="flex items-center gap-2">
               <UserIcon className="w-4 h-4" />

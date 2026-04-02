@@ -1,9 +1,9 @@
 /**
- * QuickContactStep - Step 3 des Wizards (NEU)
+ * QuickContactStep - Step 5 des Wizards
  * 
- * Erfasst Name und E-Mail-Adresse FRÜH im Prozess, direkt nach den
- * Fahrzeug-Basisdaten. So wird der Lead gesichert, bevor der Nutzer
- * bei den aufwendigeren Schritten (Fotos, Ausstattung) abspringt.
+ * Erfasst Name und E-Mail-Adresse NACH den Fahrzeugdetails und der Ausstattung.
+ * Der Nutzer hat bereits viel Zeit investiert (Sunk-Cost-Effekt), was die
+ * Bereitschaft zur Kontaktdaten-Eingabe deutlich erhöht.
  * 
  * Psychologisches Prinzip: "Wir speichern Ihren Fortschritt" gibt dem
  * Nutzer einen Grund, seine E-Mail einzugeben, ohne dass es sich wie

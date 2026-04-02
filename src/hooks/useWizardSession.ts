@@ -25,9 +25,9 @@ function getAnonymousId(): string {
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeugtyp",
   2: "Fahrzeugdaten",
-  3: "Kontakt (Quick)",
-  4: "Details & Technik",
-  5: "Ausstattung",
+  3: "Details & Technik",
+  4: "Ausstattung",
+  5: "Kontakt",
   6: "Fotos",
   7: "Verkaufsweg",
   8: "Standort & Konto",

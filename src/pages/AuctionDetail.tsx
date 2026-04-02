@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -82,6 +82,8 @@ import {
   Crown,
   Bell,
   FileText,
+  Lock,
+  Building2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -1640,7 +1642,7 @@ const AuctionDetail = () => {
 
                 <Separator />
 
-                {/* Instant Buy Section */}
+                {/* Instant Buy Section - only for dealers */}
                 {motorhome.instant_price && 
                  Number(motorhome.instant_price) > 0 &&
                  motorhome.status !== 'sold' && (
@@ -1655,17 +1657,25 @@ const AuctionDetail = () => {
                         </div>
                         <Zap className="w-8 h-8 text-primary" />
                       </div>
-                      <Button
-                        onClick={handleInstantBuy}
-                        disabled={isSubmitting || auction.status !== 'active'}
-                        className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
-                      >
-                        <Zap className="w-5 h-5 mr-2" />
-                        {isSubmitting ? "Wird gekauft..." : "Jetzt kaufen"}
-                      </Button>
-                      <p className="text-xs text-center text-muted-foreground">
-                        Sofort kaufen und Auktion beenden
-                      </p>
+                      {(primaryRole === 'dealer' || isAdmin) ? (
+                        <>
+                          <Button
+                            onClick={handleInstantBuy}
+                            disabled={isSubmitting || auction.status !== 'active'}
+                            className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
+                          >
+                            <Zap className="w-5 h-5 mr-2" />
+                            {isSubmitting ? "Wird gekauft..." : "Jetzt kaufen"}
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground">
+                            Sofort kaufen und Auktion beenden
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-center text-muted-foreground">
+                          Nur freigeschaltete Händler können kaufen
+                        </p>
+                      )}
                     </div>
                     <Separator />
                   </>
@@ -1684,7 +1694,8 @@ const AuctionDetail = () => {
                     )}
                   </div>
                 ) : auction.status === "active" && timeRemaining !== "Beendet" ? (
-                  <div className="space-y-4">
+                  (primaryRole === 'dealer' || isAdmin) ? (
+                    <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">
                         Ihr Gebot (Mindestens €{(currentBid + 50).toLocaleString()})
@@ -1789,6 +1800,41 @@ const AuctionDetail = () => {
                       Gebote sind verbindlich. Mindesterhöhung: €50
                     </p>
                   </div>
+                  ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 border-2 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg text-center">
+                      <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400 mx-auto mb-3" />
+                      <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                        Bieten nur für Händler
+                      </h3>
+                      <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
+                        Nur freigeschaltete Händler können Gebote abgeben. Registrieren Sie sich jetzt als Händler, um an Auktionen teilzunehmen.
+                      </p>
+                      {!user ? (
+                        <div className="space-y-2">
+                          <Link to={`/login?redirect=/auktion/${id}`}>
+                            <Button className="w-full" variant="default">
+                              Anmelden
+                            </Button>
+                          </Link>
+                          <Link to="/register/haendler">
+                            <Button className="w-full" variant="outline">
+                              <Building2 className="w-4 h-4 mr-2" />
+                              Als Händler registrieren
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <Link to="/register/haendler">
+                          <Button className="w-full" variant="default">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Jetzt als Händler registrieren
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  )
                 ) : auction.status === "kaufchance" && (auction as any).kaufchance_expires_at ? (
                   <div className="space-y-4">
                     <div className="p-4 border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-lg">

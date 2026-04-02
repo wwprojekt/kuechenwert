@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, paragraph, button, list, warningBox } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -23,34 +24,13 @@ const handler = async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    // Auth check: must be authenticated admin
-    const authHeader = req.headers.get('authorization') ?? '';
-    const token = authHeader.replace('Bearer ', '');
+    // Auth check: must be service_role or authenticated admin
+    const authResult = await checkServiceRoleOrAdmin(req, corsHeaders);
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const { data: { user: adminUser }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !adminUser) {
-      return new Response(JSON.stringify({ error: 'Nicht authentifiziert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify admin role
-    const { data: roleCheck } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', adminUser.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (!roleCheck) {
-      return new Response(JSON.stringify({ error: 'Admin-Zugriff erforderlich' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const { dealer_application_id, dealer_email, dealer_name, company_name, missing_documents }: RequestBody = await req.json();
 

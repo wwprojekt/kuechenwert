@@ -634,7 +634,8 @@ export default function AdminAuctions() {
 
     return (
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">Bild</TableHead>
@@ -671,6 +672,7 @@ export default function AdminAuctions() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
     );
   };

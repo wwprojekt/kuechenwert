@@ -475,50 +475,50 @@ export function MotorhomeEditDialog({
 
         <ScrollArea className="h-[65vh] pr-4">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto">
-              <TabsTrigger value="basic" className="text-xs">Basis</TabsTrigger>
-              <TabsTrigger value="prices" className="text-xs">Preise</TabsTrigger>
-              <TabsTrigger value="technical" className="text-xs">Technik</TabsTrigger>
-              <TabsTrigger value="dimensions" className="text-xs">Maße</TabsTrigger>
-              <TabsTrigger value="living" className="text-xs">Wohnbereich</TabsTrigger>
-              <TabsTrigger value="equipment" className="text-xs">Ausstattung</TabsTrigger>
-              <TabsTrigger value="other" className="text-xs">Sonstiges</TabsTrigger>
+            <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 lg:grid-cols-7 h-auto flex-nowrap">
+              <TabsTrigger value="basic" className="text-xs whitespace-nowrap">Basis</TabsTrigger>
+              <TabsTrigger value="prices" className="text-xs whitespace-nowrap">Preise</TabsTrigger>
+              <TabsTrigger value="technical" className="text-xs whitespace-nowrap">Technik</TabsTrigger>
+              <TabsTrigger value="dimensions" className="text-xs whitespace-nowrap">Maße</TabsTrigger>
+              <TabsTrigger value="living" className="text-xs whitespace-nowrap">Wohnbereich</TabsTrigger>
+              <TabsTrigger value="equipment" className="text-xs whitespace-nowrap">Ausstattung</TabsTrigger>
+              <TabsTrigger value="other" className="text-xs whitespace-nowrap">Sonstiges</TabsTrigger>
             </TabsList>
 
             {/* ===== BASIS TAB ===== */}
             <TabsContent value="basic" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("manufacturer", "Hersteller")}
                 {renderTextInput("model", "Modell")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("year", "Baujahr")}
                 {renderDateInput("first_registration", "Erstzulassung")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("mileage", "Kilometerstand")}
                 {renderNumberInput("previous_owners", "Vorbesitzer")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("condition", "Zustand", CONDITIONS, "Zustand wählen")}
                 {renderSelect("body_type", "Aufbauart", BODY_TYPES, "Aufbauart wählen")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("status", "Status", STATUSES, "Status wählen")}
                 {renderTextInput("listing_number", "Inseratsnummer")}
               </div>
 
               {/* Standort */}
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Standort</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("postal_code", "PLZ", "z.B. 80331", 5)}
                 {renderTextInput("city", "Stadt", "z.B. München")}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("country", "Land", "z.B. Deutschland")}
                 {renderTextInput("location", "Standort (Detail)", "z.B. Halle 3")}
               </div>
@@ -526,17 +526,17 @@ export function MotorhomeEditDialog({
 
             {/* ===== PREISE & VERKAUF TAB ===== */}
             <TabsContent value="prices" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("price", "Verkaufspreis (€)")}
                 {renderNumberInput("instant_price", "Sofortpreis (€)")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("reserve_price", "Mindestpreis (€)")}
                 {renderSelect("sale_channel", "Verkaufsweg", SALE_CHANNELS, "Verkaufsweg wählen")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("sale_type", "Verkaufsart")}
                 {renderDateInput("available_from", "Verfügbar ab")}
               </div>
@@ -544,7 +544,7 @@ export function MotorhomeEditDialog({
 
             {/* ===== TECHNIK TAB ===== */}
             <TabsContent value="technical" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("fuel_type", "Kraftstoff", FUEL_TYPES, "Kraftstoff wählen")}
                 {renderSelect("transmission", "Getriebe", TRANSMISSIONS, "Getriebe wählen")}
               </div>
@@ -555,23 +555,23 @@ export function MotorhomeEditDialog({
                 {renderNumberInput("engine_displacement_ccm", "Hubraum (ccm)")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("emission_class", "Schadstoffklasse", EMISSION_CLASSES, "Klasse wählen")}
                 {renderNumberInput("fuel_tank_capacity_liters", "Tankinhalt (Liter)")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("number_of_axles", "Achsen")}
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Reifen</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("main_tires", "Hauptreifen", "z.B. 225/75 R16")}
                 {renderTextInput("second_tires", "Zweitreifen", "z.B. 225/75 R16")}
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Fahrzeugdaten</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderTextInput("vehicle_identification_number", "Fahrgestellnummer (VIN)")}
                 {renderTextInput("license_plate", "Kennzeichen")}
               </div>
@@ -579,7 +579,7 @@ export function MotorhomeEditDialog({
               <h4 className="font-medium text-sm text-muted-foreground pt-2">TÜV</h4>
               <div className="space-y-4">
                 {renderSwitch("has_tuev", "TÜV vorhanden")}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {renderDateInput("tuev_valid_until", "TÜV gültig bis")}
                   {renderDateInput("last_tuev_date", "Letzter TÜV")}
                 </div>
@@ -614,12 +614,12 @@ export function MotorhomeEditDialog({
                 {renderNumberInput("height_m", "Höhe (cm)")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("weight_kg", "Gesamtgewicht (kg)")}
                 {renderNumberInput("payload_kg", "Zuladung (kg)")}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("sleeping_places", "Schlafplätze")}
                 {renderNumberInput("seats", "Sitzplätze mit Gurt")}
               </div>
@@ -628,19 +628,19 @@ export function MotorhomeEditDialog({
             {/* ===== WOHNBEREICH TAB ===== */}
             <TabsContent value="living" className="space-y-4 mt-4">
               <h4 className="font-medium text-sm text-muted-foreground">Wasser & Tanks</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("water_tank_liters", "Frischwassertank (Liter)")}
                 {renderNumberInput("grey_water_capacity_liters", "Grauwassertank (Liter)")}
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Energie</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("battery_capacity_ah", "Batteriekapazität (Ah)")}
                 {renderNumberInput("solar_power_watts", "Solarleistung (Watt)")}
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Heizung & Klima</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("heating_type", "Heizungsart", HEATING_TYPES, "Heizungsart wählen")}
                 {renderSelect("air_conditioning_type", "Klimaanlage", AC_TYPES, "Klimaanlage wählen")}
               </div>
@@ -649,13 +649,13 @@ export function MotorhomeEditDialog({
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Küche & Kühlung</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderSelect("refrigerator_type", "Kühlschrankart", REFRIGERATOR_TYPES, "Kühlschrankart wählen")}
                 {renderTextInput("gas_system", "Gasanlage", "z.B. 2x 11kg Flaschen")}
               </div>
 
               <h4 className="font-medium text-sm text-muted-foreground pt-2">Schlafen & Markise</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("awning_length_m", "Markisenlänge (m)", undefined, "0.1")}
               </div>
               <div className="space-y-2">

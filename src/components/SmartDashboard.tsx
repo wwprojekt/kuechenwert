@@ -290,17 +290,17 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
         <DealerSidebar />
         <div className="flex-1 flex flex-col">
           {/* Modern Header */}
-          <header className="h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
-            <div className="h-full px-6 lg:px-8 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
+          <header className="h-14 sm:h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
+            <div className="h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 flex-1">
                 <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-colors" />
                 <SiteLogo variant="icon-text-compact" linkTo="/" className="hidden sm:flex" />
               </div>
 
               {/* User Section */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
-                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" />
                 </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
@@ -322,7 +322,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-6 lg:p-8 xl:p-10">
+          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>
@@ -373,17 +373,17 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
         <UserSidebar />
         <div className="flex-1 flex flex-col">
           {/* Modern Header */}
-          <header className="h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
-            <div className="h-full px-6 lg:px-8 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
+          <header className="h-14 sm:h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
+            <div className="h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 flex-1">
                 <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-colors" />
                 <SiteLogo variant="icon-text-compact" linkTo="/" className="hidden sm:flex" />
               </div>
 
               {/* User Section */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
-                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" />
                 </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
@@ -405,7 +405,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-6 lg:p-8 xl:p-10">
+          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Email Verification Banner */}
               {emailVerified === false && user?.email && (

@@ -239,4 +239,13 @@ html, body, #root {
   .animate-delay-500 {
     animation-delay: 0.5s;
   }
+
+  /* Hide scrollbar for horizontal scroll containers on mobile */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

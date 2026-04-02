@@ -446,7 +446,8 @@ export default function AdminMotorhomes() {
   // ---- Render Table ----
   const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => (
     <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
-      <Table>
+      <div className="overflow-x-auto">
+      <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-[60px]">Bild</TableHead>
@@ -630,6 +631,7 @@ export default function AdminMotorhomes() {
           )}
         </TableBody>
       </Table>
+      </div>
     </Card>
   );
 

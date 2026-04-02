@@ -255,43 +255,46 @@ export default function AdminEmailCenter() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="inbox" className="flex items-center gap-2">
-            <Inbox className="w-4 h-4" />
-            Posteingang
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-8 h-auto flex-nowrap">
+          <TabsTrigger value="inbox" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <Inbox className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Posteingang</span>
+            <span className="sm:hidden">Eingang</span>
             {inboxCount > 0 && (
               <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
                 {inboxCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="compose" className="flex items-center gap-2">
-            <Send className="w-4 h-4" />
+          <TabsTrigger value="compose" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <Send className="w-4 h-4 flex-shrink-0" />
             Verfassen
           </TabsTrigger>
-          <TabsTrigger value="broadcast" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
+          <TabsTrigger value="broadcast" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <Users className="w-4 h-4 flex-shrink-0" />
             Rundmail
           </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
+          <TabsTrigger value="templates" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <FileText className="w-4 h-4 flex-shrink-0" />
             Vorlagen
           </TabsTrigger>
-          <TabsTrigger value="sent" className="flex items-center gap-2">
-            <History className="w-4 h-4" />
+          <TabsTrigger value="sent" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <History className="w-4 h-4 flex-shrink-0" />
             Gesendet
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <Zap className="w-4 h-4" />
+          <TabsTrigger value="system" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <Zap className="w-4 h-4 flex-shrink-0" />
             System
           </TabsTrigger>
-          <TabsTrigger value="stats" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Statistiken
+          <TabsTrigger value="stats" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <BarChart3 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Statistiken</span>
+            <span className="sm:hidden">Stats</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Einstellungen
+          <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Einstellungen</span>
+            <span className="sm:hidden">Einst.</span>
           </TabsTrigger>
         </TabsList>
 

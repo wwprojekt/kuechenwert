@@ -31,6 +31,58 @@ import { SiteLogo } from "@/components/SiteLogo";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+
+// ============================================================================
+// User Badge Counts Hook
+// ============================================================================
+
+function useUserBadges() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['userSidebarBadges', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const [
+        messagesRes,
+        appointmentsRes,
+      ] = await Promise.all([
+        // Support-Nachrichten mit Admin-Antwort (offene Konversationen)
+        supabase.from('support_messages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
+        // Anstehende Termine
+        supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('seller_id', user.id).eq('status', 'scheduled').gte('appointment_date', new Date().toISOString().split('T')[0]),
+      ]);
+
+      return {
+        messages: messagesRes.count ?? 0,
+        appointments: appointmentsRes.count ?? 0,
+      };
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+}
+
+// ============================================================================
+// Badge Component
+// ============================================================================
+
+function UserBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full leading-none">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+// ============================================================================
+// Types & Menu Items
+// ============================================================================
 
 /**
  * Menu items with role-based visibility.
@@ -44,6 +96,7 @@ interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
   hideForRoles: string[];
   showForRoles?: string[];
+  badgeKey?: string;
 }
 
 const baseMenuItems: MenuItem[] = [
@@ -52,8 +105,8 @@ const baseMenuItems: MenuItem[] = [
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: ['seller'] },
   { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: ['seller'] },
   { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
-  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: ['seller'] },
-  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [] },
+  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: ['seller'], badgeKey: "appointments" },
+  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [], badgeKey: "messages" },
   { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, showForRoles: ['dealer'] },
   { title: "Dokumente", url: "/dashboard/documents", icon: FileText, showForRoles: ['seller'] },
   { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
@@ -65,13 +118,23 @@ const baseMenuItems: MenuItem[] = [
  */
 const ROLES_WITH_NEW_LISTING = ['seller'];
 
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export function UserSidebar() {
   const { state } = useSidebar();
   const { signOut } = useAuth();
   const { primaryRole } = useUserRole();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
+  const { data: badges } = useUserBadges();
   
+  const badgeCounts: Record<string, number> = {
+    messages: badges?.messages || 0,
+    appointments: badges?.appointments || 0,
+  };
+
   // Filter menu items based on user role
   const menuItems = baseMenuItems.filter(item => {
     const role = primaryRole || '';
@@ -145,42 +208,64 @@ export function UserSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1 px-2">
-              {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/dashboard"}
-                      className={({ isActive }) =>
-                        `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                          isActive
-                            ? "bg-gradient-to-r from-primary/10 to-primary/5 text-primary font-medium shadow-sm"
-                            : "hover:bg-muted/50 text-foreground/70 hover:text-foreground"
-                        }`
-                      }
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          {isActive && (
-                            <span className="absolute left-0 w-1 h-8 bg-gradient-to-b from-primary to-primary/50 rounded-r-full" />
-                          )}
-                          <item.icon 
-                            className={`w-5 h-5 transition-transform group-hover:scale-110 ${
-                              isActive ? "text-primary" : ""
-                            }`} 
-                          />
-                          {!collapsed && (
-                            <span className="text-sm">
-                              {item.title}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item, index) => {
+                const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/dashboard"}
+                        className={({ isActive }) =>
+                          `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                            isActive
+                              ? "bg-gradient-to-r from-primary/10 to-primary/5 text-primary font-medium shadow-sm"
+                              : "hover:bg-muted/50 text-foreground/70 hover:text-foreground"
+                          }`
+                        }
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        {({ isActive }) => (
+                          <>
+                            {isActive && (
+                              <span className="absolute left-0 w-1 h-8 bg-gradient-to-b from-primary to-primary/50 rounded-r-full" />
+                            )}
+                            {collapsed ? (
+                              <div className="relative">
+                                <item.icon 
+                                  className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                                    isActive ? "text-primary" : ""
+                                  }`} 
+                                />
+                                {badgeCount > 0 && (
+                                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                                    {badgeCount > 9 ? "9+" : badgeCount}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                <item.icon 
+                                  className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                                    isActive ? "text-primary" : ""
+                                  }`} 
+                                />
+                                <span className="flex-1 text-sm">
+                                  {item.title}
+                                </span>
+                                {badgeCount > 0 && (
+                                  <UserBadge count={badgeCount} />
+                                )}
+                              </>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

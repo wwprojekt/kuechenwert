@@ -67,6 +67,10 @@ function useSidebarBadges() {
         dealerRes,
         questionsRes,
         unreadEmailsRes,
+        reviewsRes,
+        claimsRes,
+        appointmentsRes,
+        offersRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
@@ -76,6 +80,14 @@ function useSidebarBadges() {
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
         supabase.from("admin_emails").select("*", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
+        // Neue Bewertungen die noch moderiert werden müssen
+        supabase.from("dealer_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        // Offene Reklamationen (eingereicht oder in Prüfung)
+        supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
+        // Anstehende Termine (heute und morgen)
+        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split('T')[0]),
+        // Neue Nachauktions-Angebote die noch nicht bearbeitet wurden
+        supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).eq("status", "pending"),
       ]);
 
       return {
@@ -86,6 +98,10 @@ function useSidebarBadges() {
         dealers: dealerRes.count || 0,
         questions: questionsRes.count || 0,
         unreadEmails: unreadEmailsRes.count || 0,
+        reviews: reviewsRes.count || 0,
+        claims: claimsRes.count || 0,
+        appointments: appointmentsRes.count || 0,
+        offers: offersRes.count || 0,
       };
     },
     refetchInterval: 30000,
@@ -125,7 +141,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
       { title: "Wohnmobile", url: "/admin/motorhomes", icon: Car },
       { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
-      { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon },
+      { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon, badgeKey: "offers" },
     ],
   },
   {
@@ -146,7 +162,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Benutzer", url: "/admin/users", icon: Users },
       { title: "Händler", url: "/admin/dealers", icon: Building2, badgeKey: "dealers" },
       { title: "Händler-Statistik", url: "/admin/dealer-stats", icon: BarChart3 },
-      { title: "Bewertungen", url: "/admin/reviews", icon: Star },
+      { title: "Bewertungen", url: "/admin/reviews", icon: Star, badgeKey: "reviews" },
     ],
   },
   {
@@ -165,9 +181,9 @@ const menuGroups: MenuGroup[] = [
     defaultOpen: false,
     items: [
       { title: "Ankaufstationen", url: "/admin/stations", icon: Building2 },
-      { title: "Termine", url: "/admin/appointments", icon: Calendar },
+      { title: "Termine", url: "/admin/appointments", icon: Calendar, badgeKey: "appointments" },
       { title: "Übergabe", url: "/admin/handover", icon: HandshakeIcon },
-      { title: "Reklamationen", url: "/admin/claims", icon: FileWarning },
+      { title: "Reklamationen", url: "/admin/claims", icon: FileWarning, badgeKey: "claims" },
     ],
   },
   {
@@ -319,6 +335,11 @@ export function AdminSidebar() {
     contacts: badges?.contacts || 0,
     dealers: badges?.dealers || 0,
     questions: badges?.questions || 0,
+    unreadEmails: badges?.unreadEmails || 0,
+    reviews: badges?.reviews || 0,
+    claims: badges?.claims || 0,
+    appointments: badges?.appointments || 0,
+    offers: badges?.offers || 0,
   };
 
   const handleSignOut = async () => {

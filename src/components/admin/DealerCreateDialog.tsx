@@ -200,6 +200,8 @@ export function DealerCreateDialog({
             body: {
               email: formData.email.trim(),
               customerName: formData.contact_person_name.trim() || formData.firstName.trim() || undefined,
+              inviteType: "dealer",
+              companyName: formData.company_name.trim() || undefined,
             },
           });
         } catch (inviteError) {

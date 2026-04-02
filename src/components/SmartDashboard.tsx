@@ -272,6 +272,15 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { settings } = useSettings();
   const { isPendingDealer, isRejectedDealer } = useDealerPending();
 
+  // Check if user arrived via registration magic link and needs to set a password
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('setup') === 'password') {
+      setShowSetPassword(true);
+    }
+  }, []);
+
   const userInitials = user?.email
     ?.split("@")[0]
     .substring(0, 2)
@@ -324,6 +333,8 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
           {/* Main Content Area */}
           <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10">
             <div className="max-w-7xl mx-auto">
+              {/* Password Setup Dialog for dealers arriving via registration magic link */}
+              <SetPasswordDialog open={showSetPassword} />
               {children}
             </div>
           </main>

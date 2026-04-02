@@ -17,17 +17,23 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
- * Send a registration invite email to a customer whose motorhome was
+ * Send a registration invite email to a user whose account was
  * manually created by an admin. The email contains a magic link that:
  * 1. Confirms the user's email address
  * 2. Logs them in automatically
- * 3. Redirects them to their dashboard where they see their motorhome
+ * 3. Redirects them to their dashboard where they can set a password
+ *
+ * Supports two invite types:
+ * - "seller" (default): For customers whose motorhome was created by admin
+ * - "dealer": For dealers created via the admin Händlerverwaltung
  *
  * Body: {
- *   email: string (required) - Customer email
- *   customerName?: string - Customer name for greeting
- *   motorhomeId?: string - Motorhome ID for vehicle info in email
- *   sessionId?: string - Wizard session ID to track invite sent
+ *   email: string (required) - Recipient email
+ *   customerName?: string - Recipient name for greeting
+ *   motorhomeId?: string - Motorhome ID for vehicle info in email (seller only)
+ *   sessionId?: string - Wizard session ID to track invite sent (seller only)
+ *   inviteType?: "seller" | "dealer" - Type of invite (default: "seller")
+ *   companyName?: string - Company name for dealer invites
  * }
  */
 
@@ -36,6 +42,8 @@ interface InviteRequest {
   customerName?: string;
   motorhomeId?: string;
   sessionId?: string;
+  inviteType?: "seller" | "dealer";
+  companyName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -57,6 +65,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const email = body.email.trim().toLowerCase();
     const customerName = body.customerName?.trim() || "";
+    const inviteType = body.inviteType || "seller";
+    const companyName = body.companyName?.trim() || "";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -73,10 +83,10 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "+49 511 51532476",
     };
 
-    // Load motorhome info if provided
+    // Load motorhome info if provided (seller invites only)
     let vehicleInfo = "";
     let vehicleName = "Ihr Wohnmobil";
-    if (body.motorhomeId) {
+    if (inviteType === "seller" && body.motorhomeId) {
       const { data: motorhome } = await supabase
         .from("motorhomes")
         .select("manufacturer, model, year, body_type, mileage, sale_channel, instant_price")
@@ -146,54 +156,102 @@ const handler = async (req: Request): Promise<Response> => {
     // We keep this as-is because Supabase handles the redirect after verification
     const registrationLink = magicLink;
 
-    edgeLogger.info(`Generated registration link for ${email}`);
+    edgeLogger.info(`Generated registration link for ${email} (type: ${inviteType})`);
 
-    // Build the email content
+    // Build the email content based on invite type
     let content = "";
+    let subject = "";
 
-    content += greeting(customerName || undefined);
+    if (inviteType === "dealer") {
+      // ===== DEALER INVITE EMAIL =====
+      content += greeting(customerName || undefined);
 
-    content += paragraph(
-      `vielen Dank f&uuml;r Ihr Interesse an <strong>${settingsData.site_name}</strong>! ` +
-      `Wir haben Ihr Fahrzeug erfolgreich in unser System aufgenommen und alles f&uuml;r Sie vorbereitet.`
-    );
+      content += paragraph(
+        `willkommen bei <strong>${settingsData.site_name}</strong> &ndash; Deutschlands f&uuml;hrender Wohnmobil-Handelsplattform! ` +
+        `Ihr H&auml;ndlerkonto${companyName ? ` f&uuml;r <strong>${companyName}</strong>` : ""} wurde erfolgreich eingerichtet.`
+      );
 
-    if (vehicleInfo) {
-      content += vehicleInfo;
+      content += paragraph(
+        `Aktivieren Sie jetzt Ihr Konto, um sofort auf exklusive H&auml;ndler-Auktionen, ` +
+        `Sofortkauf-Angebote und Ihr pers&ouml;nliches H&auml;ndler-Dashboard zuzugreifen:`
+      );
+
+      content += button("Jetzt H&auml;ndlerkonto aktivieren", registrationLink, settingsData);
+
+      content += infoBox(
+        "Ihre Vorteile als H&auml;ndler",
+        list([
+          "<strong>H&auml;ndler-Auktionen</strong> &ndash; Bieten Sie auf gepr&uuml;fte Wohnmobile und Caravans",
+          "<strong>Sofortkauf</strong> &ndash; Fahrzeuge direkt zum Festpreis erwerben",
+          "<strong>Inventar-Verwaltung</strong> &ndash; Ihren Fahrzeugbestand zentral verwalten",
+          "<strong>Nachrichten</strong> &ndash; Direkter Kontakt mit Verk&auml;ufern",
+          "<strong>Rechnungen &amp; Dokumente</strong> &ndash; Alle Unterlagen an einem Ort",
+        ]),
+        "info",
+        settingsData
+      );
+
+      content += paragraph(
+        `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr H&auml;ndler-Dashboard. ` +
+        `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
+        `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
+      );
+
+      content += paragraph(
+        `Bei Fragen stehen wir Ihnen jederzeit gerne zur Verf&uuml;gung unter ` +
+        `<strong>${settingsData.support_phone}</strong> oder per E-Mail an ` +
+        `<a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a>.`
+      );
+
+      subject = `${companyName || "Ihr H\u00e4ndlerkonto"} \u2013 Willkommen bei ${settingsData.site_name}`;
+
+    } else {
+      // ===== SELLER INVITE EMAIL (original) =====
+      content += greeting(customerName || undefined);
+
+      content += paragraph(
+        `vielen Dank f&uuml;r Ihr Interesse an <strong>${settingsData.site_name}</strong>! ` +
+        `Wir haben Ihr Fahrzeug erfolgreich in unser System aufgenommen und alles f&uuml;r Sie vorbereitet.`
+      );
+
+      if (vehicleInfo) {
+        content += vehicleInfo;
+      }
+
+      content += paragraph(
+        `Um Ihr Fahrzeug zu verwalten, den Verkaufsstatus zu verfolgen und mit H&auml;ndlern in Kontakt zu treten, ` +
+        `aktivieren Sie jetzt Ihr pers&ouml;nliches Konto mit einem Klick:`
+      );
+
+      content += button("Jetzt Konto aktivieren &amp; Fahrzeug verwalten", registrationLink, settingsData);
+
+      content += infoBox(
+        "Das erwartet Sie in Ihrem Dashboard",
+        list([
+          "<strong>Fahrzeug-&Uuml;bersicht</strong> &ndash; Alle Details zu Ihrem Inserat auf einen Blick",
+          "<strong>Auktions-Status</strong> &ndash; Verfolgen Sie Gebote und den Verkaufsfortschritt in Echtzeit",
+          "<strong>Nachrichten</strong> &ndash; Direkter Kontakt mit interessierten H&auml;ndlern",
+          "<strong>Dokumente</strong> &ndash; Rechnungen und Vertr&auml;ge sicher verwalten",
+        ]),
+        "info",
+        settingsData
+      );
+
+      content += paragraph(
+        `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
+        `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
+        `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
+      );
+
+      content += paragraph(
+        `Bei Fragen stehen wir Ihnen jederzeit gerne zur Verf&uuml;gung unter ` +
+        `<strong>${settingsData.support_phone}</strong> oder per E-Mail an ` +
+        `<a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a>.`
+      );
+
+      subject = `${vehicleName} \u2013 Ihr Konto bei ${settingsData.site_name} aktivieren`;
     }
 
-    content += paragraph(
-      `Um Ihr Fahrzeug zu verwalten, den Verkaufsstatus zu verfolgen und mit H&auml;ndlern in Kontakt zu treten, ` +
-      `aktivieren Sie jetzt Ihr pers&ouml;nliches Konto mit einem Klick:`
-    );
-
-    content += button("Jetzt Konto aktivieren &amp; Fahrzeug verwalten", registrationLink, settingsData);
-
-    content += infoBox(
-      "Das erwartet Sie in Ihrem Dashboard",
-      list([
-        "<strong>Fahrzeug-&Uuml;bersicht</strong> &ndash; Alle Details zu Ihrem Inserat auf einen Blick",
-        "<strong>Auktions-Status</strong> &ndash; Verfolgen Sie Gebote und den Verkaufsfortschritt in Echtzeit",
-        "<strong>Nachrichten</strong> &ndash; Direkter Kontakt mit interessierten H&auml;ndlern",
-        "<strong>Dokumente</strong> &ndash; Rechnungen und Vertr&auml;ge sicher verwalten",
-      ]),
-      "info",
-      settingsData
-    );
-
-    content += paragraph(
-      `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
-      `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
-      `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
-    );
-
-    content += paragraph(
-      `Bei Fragen stehen wir Ihnen jederzeit gerne zur Verf&uuml;gung unter ` +
-      `<strong>${settingsData.support_phone}</strong> oder per E-Mail an ` +
-      `<a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a>.`
-    );
-
-    const subject = `${vehicleName} – Ihr Konto bei ${settingsData.site_name} aktivieren`;
     const emailHtml = buildEmailLayout(settingsData, subject, content);
 
     // Send email via Resend
@@ -222,7 +280,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const resendResult = await resendRes.json();
-    edgeLogger.info(`Registration invite sent to ${email}, resend_id: ${resendResult.id}`);
+    edgeLogger.info(`Registration invite sent to ${email} (type: ${inviteType}), resend_id: ${resendResult.id}`);
 
     // Log in admin_emails table
     const { data: recipientProfile } = await supabase
@@ -240,15 +298,15 @@ const handler = async (req: Request): Promise<Response> => {
       subject,
       body_html: content,
       body_text: content.replace(/<[^>]*>/g, ""),
-      email_type: "registration_invite",
+      email_type: inviteType === "dealer" ? "dealer_registration_invite" : "registration_invite",
       direction: "outbound",
       status: "sent",
       resend_id: resendResult.id,
       is_read: true,
     });
 
-    // Update wizard session if sessionId provided (APPEND to existing notes, don't overwrite)
-    if (body.sessionId) {
+    // Update wizard session if sessionId provided (seller invites only, APPEND to existing notes)
+    if (inviteType === "seller" && body.sessionId) {
       const { data: existingSession } = await supabase
         .from("wizard_sessions")
         .select("admin_notes")

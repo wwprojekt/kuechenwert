@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
-import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation } from "lucide-react";
+import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
@@ -41,6 +48,7 @@ const DealerAuctions = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<'ending_soon' | 'price_asc' | 'price_desc' | 'newest' | 'bids'>('ending_soon');
   const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
 
   // Fetch dealer's postal code for distance calculation
@@ -136,6 +144,24 @@ const DealerAuctions = () => {
     return matchesSearch;
   });
 
+  const sortedAuctions = useMemo(() => {
+    const sorted = [...filteredAuctions];
+    switch (sortBy) {
+      case 'ending_soon':
+        return sorted.sort((a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime());
+      case 'price_asc':
+        return sorted.sort((a, b) => (a.current_bid || a.starting_bid) - (b.current_bid || b.starting_bid));
+      case 'price_desc':
+        return sorted.sort((a, b) => (b.current_bid || b.starting_bid) - (a.current_bid || a.starting_bid));
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime());
+      case 'bids':
+        return sorted.sort((a, b) => (Array.isArray(b.bids) ? b.bids.length : 0) - (Array.isArray(a.bids) ? a.bids.length : 0));
+      default:
+        return sorted;
+    }
+  }, [filteredAuctions, sortBy]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -161,8 +187,8 @@ const DealerAuctions = () => {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="relative">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Suchen Sie nach Hersteller oder Modell..."
@@ -171,7 +197,21 @@ const DealerAuctions = () => {
                 className="pl-10"
               />
             </div>
-            {/* Status filter removed - dealers only see active auctions */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="Sortieren" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ending_soon">Endet bald</SelectItem>
+                <SelectItem value="price_desc">Höchstes Gebot</SelectItem>
+                <SelectItem value="price_asc">Niedrigstes Gebot</SelectItem>
+                <SelectItem value="bids">Meiste Gebote</SelectItem>
+                <SelectItem value="newest">Neueste zuerst</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -195,7 +235,7 @@ const DealerAuctions = () => {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredAuctions.map((auction) => {
+          {sortedAuctions.map((auction) => {
             const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
             const firstPhoto = safePhotos.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const userBid = getUserHighestBid(auction);

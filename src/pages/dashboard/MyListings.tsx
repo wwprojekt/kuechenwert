@@ -1,10 +1,18 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle } from "lucide-react";
+import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -12,6 +20,7 @@ import { de } from "date-fns/locale";
 export default function MyListings() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'bid_desc' | 'bid_asc'>('newest');
 
   const { data: motorhomes, isLoading } = useQuery({
     queryKey: ["myListings", user?.id],
@@ -98,8 +107,43 @@ export default function MyListings() {
           </div>
         </Card>
       ) : (
+        <>
+        <div className="flex justify-end">
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="w-[200px]">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Sortieren" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Neueste zuerst</SelectItem>
+              <SelectItem value="oldest">Älteste zuerst</SelectItem>
+              <SelectItem value="name">Name A-Z</SelectItem>
+              <SelectItem value="bid_desc">Höchstes Gebot</SelectItem>
+              <SelectItem value="bid_asc">Niedrigstes Gebot</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {motorhomes.map((motorhome) => {
+          {[...motorhomes].sort((a, b) => {
+            switch (sortBy) {
+              case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+              case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+              case 'name': return `${a.manufacturer} ${a.model}`.localeCompare(`${b.manufacturer} ${b.model}`);
+              case 'bid_desc': {
+                const aAuction = Array.isArray(a.auction) ? a.auction[0] : a.auction;
+                const bAuction = Array.isArray(b.auction) ? b.auction[0] : b.auction;
+                return Number(bAuction?.current_bid || 0) - Number(aAuction?.current_bid || 0);
+              }
+              case 'bid_asc': {
+                const aAuction = Array.isArray(a.auction) ? a.auction[0] : a.auction;
+                const bAuction = Array.isArray(b.auction) ? b.auction[0] : b.auction;
+                return Number(aAuction?.current_bid || 0) - Number(bAuction?.current_bid || 0);
+              }
+              default: return 0;
+            }
+          }).map((motorhome) => {
             const firstPhoto = motorhome.photos
               ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const auction = Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction;
@@ -222,6 +266,7 @@ export default function MyListings() {
             );
           })}
         </div>
+        </>
       )}
     </div>
   );

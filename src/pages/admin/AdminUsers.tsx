@@ -54,6 +54,8 @@ import {
   XCircle,
   Eye,
 } from "lucide-react";
+import { useTableSort } from "@/hooks/useTableSort";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +89,15 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { sortField, sortDirection, handleSort, sortData } = useTableSort<UserWithRoles>('created_at', 'desc');
+
+  const userSortAccessors: Record<string, (u: UserWithRoles) => unknown> = {
+    name: (u) => `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase(),
+    email: (u) => (u.email || '').toLowerCase(),
+    company_name: (u) => (u.company_name || '').toLowerCase(),
+    created_at: (u) => u.created_at || '',
+  };
 
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "benutzer",
@@ -227,6 +238,8 @@ export default function AdminUsers() {
     });
   }, [users, searchTerm, roleFilter, statusFilter]);
 
+  const sortedUsers = useMemo(() => sortData(filteredUsers, userSortAccessors), [filteredUsers, sortData]);
+
   const getRoleBadges = (roles: UserRole[]) => {
     if (!roles || roles.length === 0)
       return <Badge variant="outline">Keine Rolle</Badge>;
@@ -336,12 +349,12 @@ export default function AdminUsers() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Kontakt</TableHead>
-              <TableHead>Firma</TableHead>
+              <SortableTableHead field="name" label="Name" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <SortableTableHead field="email" label="Kontakt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <TableHead>Rollen</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Registriert am</TableHead>
+              <SortableTableHead field="created_at" label="Registriert am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
@@ -359,7 +372,7 @@ export default function AdminUsers() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers?.map((user) => (
+              sortedUsers?.map((user) => (
                 <TableRow
                   key={user.id}
                   className={user.is_suspended ? "opacity-60" : ""}

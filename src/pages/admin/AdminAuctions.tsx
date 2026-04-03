@@ -19,6 +19,8 @@ import {
   Loader2, Mail, MapPin, AlertTriangle, FileEdit, Radio,
   XCircle, CheckCircle2,
 } from "lucide-react";
+import { useTableSort } from "@/hooks/useTableSort";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -159,6 +161,18 @@ export default function AdminAuctions() {
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("draft");
+
+  // ---- Sortierung ----
+  const { sortField, sortDirection, handleSort, sortData } = useTableSort('end_time', 'asc');
+
+  const sortAccessors: Record<string, (a: any) => unknown> = {
+    vehicle: (a) => `${a.motorhome?.manufacturer || ''} ${a.motorhome?.model || ''}`.trim().toLowerCase(),
+    seller: (a) => `${a.motorhome?.seller?.first_name || ''} ${a.motorhome?.seller?.last_name || ''}`.trim().toLowerCase(),
+    current_bid: (a) => Number(a.current_bid || a.starting_bid || 0),
+    bids_count: (a) => Number(a.bids?.[0]?.count || 0),
+    end_time: (a) => a.end_time || '',
+    created_at: (a) => a.created_at || '',
+  };
 
   // ---- Data Query ----
   const { data: auctions, isLoading } = useQuery({
@@ -630,7 +644,7 @@ export default function AdminAuctions() {
 
   // ---- Render table for a tab ----
   const renderTable = (tab: TabDef) => {
-    const tabAuctions = getAuctionsForTab(tab);
+    const tabAuctions = sortData(getAuctionsForTab(tab), sortAccessors);
 
     return (
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
@@ -639,12 +653,12 @@ export default function AdminAuctions() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">Bild</TableHead>
-              <TableHead>Fahrzeug</TableHead>
-              <TableHead>Verkäufer</TableHead>
+              <SortableTableHead field="vehicle" label="Fahrzeug" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <SortableTableHead field="seller" label="Verkäufer" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <TableHead>Status</TableHead>
-              <TableHead>Aktuelles Gebot</TableHead>
-              <TableHead>Gebote</TableHead>
-              <TableHead>Endet am</TableHead>
+              <SortableTableHead field="current_bid" label="Aktuelles Gebot" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <SortableTableHead field="bids_count" label="Gebote" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <SortableTableHead field="end_time" label="Endet am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>

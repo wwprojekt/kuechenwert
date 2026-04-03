@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Search, Calendar, Euro, Eye } from "lucide-react";
+import { Package, Search, Calendar, Euro, Eye, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -27,6 +34,7 @@ const DealerInventory = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'name'>('newest');
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -91,6 +99,18 @@ const DealerInventory = () => {
     `${item.manufacturer} ${item.model}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedInventory = useMemo(() => {
+    const sorted = [...filteredInventory];
+    switch (sortBy) {
+      case 'newest': return sorted.sort((a, b) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime());
+      case 'oldest': return sorted.sort((a, b) => new Date(a.purchased_at).getTime() - new Date(b.purchased_at).getTime());
+      case 'price_asc': return sorted.sort((a, b) => a.purchase_price - b.purchase_price);
+      case 'price_desc': return sorted.sort((a, b) => b.purchase_price - a.purchase_price);
+      case 'name': return sorted.sort((a, b) => `${a.manufacturer} ${a.model}`.localeCompare(`${b.manufacturer} ${b.model}`));
+      default: return sorted;
+    }
+  }, [filteredInventory, sortBy]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -113,17 +133,34 @@ const DealerInventory = () => {
         </Badge>
       </div>
 
-      {/* Search */}
+      {/* Search & Sort */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Suchen Sie nach Hersteller oder Modell..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="relative md:col-span-2">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Suchen Sie nach Hersteller oder Modell..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="Sortieren" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Neueste zuerst</SelectItem>
+                <SelectItem value="oldest">Älteste zuerst</SelectItem>
+                <SelectItem value="price_desc">Preis absteigend</SelectItem>
+                <SelectItem value="price_asc">Preis aufsteigend</SelectItem>
+                <SelectItem value="name">Name A-Z</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -150,7 +187,7 @@ const DealerInventory = () => {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredInventory.map((item) => {
+          {sortedInventory.map((item) => {
             const itemPhotos = Array.isArray(item.photos) ? item.photos : item.photos ? [item.photos] : [];
             const firstPhoto = itemPhotos.sort((a: any, b: any) => 
               a.display_order - b.display_order

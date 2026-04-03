@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Gavel, Eye, TrendingUp, Zap, Trophy, AlertCircle, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Gavel, Eye, TrendingUp, Zap, Trophy, AlertCircle, Clock, CheckCircle, XCircle, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -16,6 +23,7 @@ type FilterType = "all" | "active" | "won" | "lost";
 export default function MyBids() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<FilterType>("all");
+  const [sortBy, setSortBy] = useState<'ending_soon' | 'bid_desc' | 'bid_asc' | 'my_bid_desc' | 'newest'>('ending_soon');
 
   const { data: bids, isLoading } = useQuery({
     queryKey: ["myBids", user?.id],
@@ -84,6 +92,18 @@ export default function MyBids() {
     return true;
   }) : [];
 
+  const sortedBids = useMemo(() => {
+    const sorted = [...filteredBids];
+    switch (sortBy) {
+      case 'ending_soon': return sorted.sort((a: any, b: any) => new Date(a.auction.end_time).getTime() - new Date(b.auction.end_time).getTime());
+      case 'bid_desc': return sorted.sort((a: any, b: any) => Number(b.auction.current_bid) - Number(a.auction.current_bid));
+      case 'bid_asc': return sorted.sort((a: any, b: any) => Number(a.auction.current_bid) - Number(b.auction.current_bid));
+      case 'my_bid_desc': return sorted.sort((a: any, b: any) => b.highestBid - a.highestBid);
+      case 'newest': return sorted.sort((a: any, b: any) => new Date(b.bids[0]?.created_at || 0).getTime() - new Date(a.bids[0]?.created_at || 0).getTime());
+      default: return sorted;
+    }
+  }, [filteredBids, sortBy]);
+
   // Count for tabs
   const counts = {
     all: Object.keys(groupedBids || {}).length,
@@ -102,23 +122,40 @@ export default function MyBids() {
           </p>
         </div>
         
-        {/* Filter Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full md:w-auto">
-          <TabsList className="grid grid-cols-4 w-full md:w-auto">
-            <TabsTrigger value="all" className="text-xs md:text-sm">
-              Alle ({counts.all})
-            </TabsTrigger>
-            <TabsTrigger value="active" className="text-xs md:text-sm">
-              Aktiv ({counts.active})
-            </TabsTrigger>
-            <TabsTrigger value="won" className="text-xs md:text-sm">
-              Gewonnen ({counts.won})
-            </TabsTrigger>
-            <TabsTrigger value="lost" className="text-xs md:text-sm">
-              Verloren ({counts.lost})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          {/* Filter Tabs */}
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full md:w-auto">
+            <TabsList className="grid grid-cols-4 w-full md:w-auto">
+              <TabsTrigger value="all" className="text-xs md:text-sm">
+                Alle ({counts.all})
+              </TabsTrigger>
+              <TabsTrigger value="active" className="text-xs md:text-sm">
+                Aktiv ({counts.active})
+              </TabsTrigger>
+              <TabsTrigger value="won" className="text-xs md:text-sm">
+                Gewonnen ({counts.won})
+              </TabsTrigger>
+              <TabsTrigger value="lost" className="text-xs md:text-sm">
+                Verloren ({counts.lost})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="w-full md:w-[200px]">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Sortieren" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ending_soon">Endet bald</SelectItem>
+              <SelectItem value="bid_desc">Höchstes Gebot</SelectItem>
+              <SelectItem value="bid_asc">Niedrigstes Gebot</SelectItem>
+              <SelectItem value="my_bid_desc">Mein höchstes Gebot</SelectItem>
+              <SelectItem value="newest">Neuestes Gebot</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -158,7 +195,7 @@ export default function MyBids() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredBids.map((group: any) => {
+          {sortedBids.map((group: any) => {
             const motorhome = group.auction?.motorhome;
             const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
             const firstPhoto = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;

@@ -64,6 +64,8 @@ import {
   FileCheck2,
   CreditCard,
 } from "lucide-react";
+import { useTableSort } from "@/hooks/useTableSort";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -127,6 +129,18 @@ export default function AdminDealers() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
+
+  // ---- Sortierung ----
+  const { sortField, sortDirection, handleSort, sortData } = useTableSort('created_at', 'desc');
+
+  const dealerSortAccessors: Record<string, (d: any) => unknown> = {
+    company_name: (d) => (d.company_name || '').toLowerCase(),
+    contact_person: (d) => (d.contact_person_name || `${d.profiles?.first_name || ''} ${d.profiles?.last_name || ''}`).toLowerCase(),
+    country: (d) => (d.country || '').toLowerCase(),
+    email: (d) => (d.profiles?.email || '').toLowerCase(),
+    created_at: (d) => d.created_at || '',
+    rejected_at: (d) => d.rejected_at || d.updated_at || '',
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [authStatusMap, setAuthStatusMap] = useState<Record<string, { email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null }>>({});
   const [resendingUserId, setResendingUserId] = useState<string | null>(null);
@@ -291,6 +305,10 @@ export default function AdminDealers() {
         dealer.profiles?.email?.toLowerCase().includes(searchLower)
     );
   }, [activeDealers, searchTerm]);
+
+  const sortedFilteredDealers = useMemo(() => sortData(filteredDealers, dealerSortAccessors), [filteredDealers, sortData]);
+  const sortedPending = useMemo(() => sortData(pendingApplications, dealerSortAccessors), [pendingApplications, sortData]);
+  const sortedRejected = useMemo(() => sortData(rejectedApplications, dealerSortAccessors), [rejectedApplications, sortData]);
 
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "haendler",
@@ -640,10 +658,10 @@ export default function AdminDealers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Firma</TableHead>
-                  <TableHead>Ansprechpartner</TableHead>
-                  <TableHead>Eingereicht am</TableHead>
-                  <TableHead>E-Mail</TableHead>
+                  <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="contact_person" label="Ansprechpartner" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="created_at" label="Eingereicht am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="email" label="E-Mail" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <TableHead>Dokumente</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
@@ -657,7 +675,7 @@ export default function AdminDealers() {
                     </TableCell>
                   </TableRow>
                 ) : pendingApplications.length > 0 ? (
-                  pendingApplications.map((application: DealerApplication) => (
+                  sortedPending.map((application: DealerApplication) => (
                     <TableRow key={application.id}>
                       <TableCell className="font-medium flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -762,17 +780,17 @@ export default function AdminDealers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Firma</TableHead>
-                  <TableHead>Ansprechpartner</TableHead>
-                  <TableHead>Eingereicht am</TableHead>
+                  <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="contact_person" label="Ansprechpartner" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="created_at" label="Eingereicht am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <TableHead>Ablehnungsgrund</TableHead>
-                  <TableHead>Abgelehnt am</TableHead>
+                  <SortableTableHead field="rejected_at" label="Abgelehnt am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rejectedApplications.length > 0 ? (
-                  rejectedApplications.map((application: DealerApplication) => (
+                  sortedRejected.map((application: DealerApplication) => (
                     <TableRow key={application.id} className="bg-red-50/50">
                       <TableCell className="font-medium flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -857,10 +875,10 @@ export default function AdminDealers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Firma</TableHead>
-                  <TableHead>Land</TableHead>
-                  <TableHead>Ansprechpartner</TableHead>
-                  <TableHead>E-Mail</TableHead>
+                  <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="country" label="Land" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="contact_person" label="Ansprechpartner" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="email" label="E-Mail" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <TableHead>Dokumente</TableHead>
                   <TableHead>E-Mail bestätigt</TableHead>
                   <TableHead>Status</TableHead>
@@ -875,7 +893,7 @@ export default function AdminDealers() {
                     </TableCell>
                   </TableRow>
                 ) : filteredDealers.length > 0 ? (
-                  filteredDealers.map((dealer: DealerApplication) => (
+                  sortedFilteredDealers.map((dealer: DealerApplication) => (
                     <TableRow key={dealer.id}>
                       <TableCell className="font-medium flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />

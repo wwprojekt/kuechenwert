@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, Hash } from "lucide-react";
+import { useTableSort } from "@/hooks/useTableSort";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -48,6 +50,18 @@ export default function MyInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [customerNumber, setCustomerNumber] = useState<string | null>(null);
+
+  const { sortField, sortDirection, handleSort, sortData } = useTableSort<Invoice>('invoice_date', 'desc');
+
+  const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
+    invoice_number: (i) => i.invoice_number || '',
+    vehicle: (i) => `${i.auction?.motorhome?.manufacturer || ''} ${i.auction?.motorhome?.model || ''}`.toLowerCase(),
+    invoice_date: (i) => i.invoice_date || '',
+    due_date: (i) => i.due_date || '',
+    gross_amount: (i) => i.gross_amount || 0,
+  };
+
+  const sortedInvoices = useMemo(() => sortData(invoices, invoiceSortAccessors), [invoices, sortData]);
 
   useEffect(() => {
     if (!user) return;
@@ -240,18 +254,18 @@ export default function MyInvoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Rechnungsnr.</TableHead>
-                  <TableHead>Fahrzeug</TableHead>
-                  <TableHead>Datum</TableHead>
-                  <TableHead>Fällig</TableHead>
-                  <TableHead className="text-right">Betrag</TableHead>
+                  <SortableTableHead field="invoice_number" label="Rechnungsnr." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="vehicle" label="Fahrzeug" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="invoice_date" label="Datum" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="due_date" label="Fällig" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="gross_amount" label="Betrag" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="text-right" />
                   <TableHead>Zahlung</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => {
+                {sortedInvoices.map((invoice) => {
                   const amountPaid = invoice.amount_paid || 0;
                   const remaining = invoice.gross_amount - amountPaid;
                   const paymentProgress = (amountPaid / invoice.gross_amount) * 100;

@@ -549,38 +549,14 @@ export const useWizardForm = () => {
           logger.error('Failed to save wizard session:', wizardSessionError);
         }
 
-        // Upload photos via Edge Function (bypasses Storage RLS)
-        if (savedSessionId && formData.photos.length > 0) {
-          try {
-            const photoFormData = new FormData();
-            photoFormData.append('sessionId', savedSessionId);
-            for (const photo of formData.photos) {
-              photoFormData.append('photos', photo);
-            }
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zcrwqxsyptjwkuxfacvq.supabase.co';
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-            const photoRes = await fetch(`${supabaseUrl}/functions/v1/upload-wizard-photos`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-              },
-              body: photoFormData,
-            });
-            if (photoRes.ok) {
-              const photoResult = await photoRes.json();
-              logger.info(`Uploaded ${photoResult.count} wizard photos for session ${savedSessionId}`);
-            } else {
-              logger.error('Failed to upload wizard photos:', await photoRes.text());
-            }
-          } catch (photoUploadError) {
-            logger.error('Error uploading wizard photos:', photoUploadError);
-          }
-        }
-
-        // ===== FIRE-AND-FORGET: Edge Functions im Hintergrund ausführen =====
-        // Die Weiterleitung erfolgt SOFORT nach wizard_sessions + Photos.
-        // auto-convert-wizard und send-lead-notification laufen asynchron im Hintergrund.
-        // Das verhindert die 2-3 Minuten Wartezeit auf "Wird gesendet...".
+        // ===== SOFORTIGE WEITERLEITUNG =====
+        // Alle nachfolgenden Operationen (Photo-Upload, Edge Functions) laufen
+        // fire-and-forget im Hintergrund. Die wizard_session ist bereits in der DB
+        // gespeichert, daher gehen keine Daten verloren.
+        //
+        // ROOT CAUSE der 2-3 Min Wartezeit: Der Photo-Upload (await fetch()) blockierte
+        // die Navigation. iPhone-Fotos sind 3-8 MB pro Stück, bei 5-10 Fotos = 25-80 MB
+        // Upload über mobiles Netz = 2-3 Minuten. Jetzt fire-and-forget.
 
         // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
         // Tracking wird VOR der Navigation ausgeführt (schnell, client-seitig)
@@ -599,6 +575,33 @@ export const useWizardForm = () => {
 
         // --- Background tasks (fire-and-forget, nicht blockierend) ---
         if (savedSessionId) {
+          // 0. Photo-Upload im Hintergrund (Hauptursache der 2-3 Min Wartezeit)
+          if (formData.photos.length > 0) {
+            const photoFormData = new FormData();
+            photoFormData.append('sessionId', savedSessionId);
+            for (const photo of formData.photos) {
+              photoFormData.append('photos', photo);
+            }
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zcrwqxsyptjwkuxfacvq.supabase.co';
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+            fetch(`${supabaseUrl}/functions/v1/upload-wizard-photos`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: photoFormData,
+            }).then(async (photoRes) => {
+              if (photoRes.ok) {
+                const photoResult = await photoRes.json();
+                logger.info(`Uploaded ${photoResult.count} wizard photos for session ${savedSessionId} (background)`);
+              } else {
+                logger.error('Failed to upload wizard photos (background):', await photoRes.text());
+              }
+            }).catch((photoUploadError) => {
+              logger.error('Error uploading wizard photos (background):', photoUploadError);
+            });
+          }
+
           // 1. auto-convert-wizard: Erstellt Profil, Motorhome, sendet Aktivierungs-E-Mail
           supabase.functions.invoke("auto-convert-wizard", {
             body: {
@@ -655,24 +658,28 @@ export const useWizardForm = () => {
         logger.warn('ensure_profile_exists RPC failed, proceeding anyway:', profileError);
       }
 
-      // Upload photos
+      // Upload photos (parallel statt sequentiell für bessere Performance)
       const photoUrls: string[] = [];
-      for (let i = 0; i < formData.photos.length; i++) {
-        const file = formData.photos[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('motorhome-photos')
-          .upload(fileName, file);
+      if (formData.photos.length > 0) {
+        const uploadPromises = formData.photos.map(async (file, i) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('motorhome-photos')
+            .upload(fileName, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('motorhome-photos')
-          .getPublicUrl(fileName);
+          const { data: { publicUrl } } = supabase.storage
+            .from('motorhome-photos')
+            .getPublicUrl(fileName);
 
-        photoUrls.push(publicUrl);
+          return publicUrl;
+        });
+
+        const results = await Promise.all(uploadPromises);
+        photoUrls.push(...results);
       }
 
       // Defensive Validierung: Pflichtfelder prüfen bevor DB-Insert versucht wird

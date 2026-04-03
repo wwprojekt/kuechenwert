@@ -2,7 +2,7 @@ import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText, LayoutDashboard, Inbox } from "lucide-react";
+import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText, LayoutDashboard, Inbox, ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -60,6 +60,24 @@ const VerkaufenDanke = () => {
               </Card>
             )}
 
+            {/* Foto-Upload-Hinweis - Info-Banner */}
+            <Card className="p-4 md:p-5 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                  <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                    Ihre Fotos werden verarbeitet
+                  </h3>
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    Falls Sie Fotos hochgeladen haben, werden diese im Hintergrund verarbeitet und Ihrem Inserat zugeordnet. 
+                    Sie können diese Seite bedenkenlos verlassen.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             {/* Was passiert als nächstes */}
             <Card className="p-6 md:p-8 shadow-elegant">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
@@ -86,9 +104,9 @@ const VerkaufenDanke = () => {
                     2
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Fotos hochladen</h3>
+                    <h3 className="font-semibold text-foreground">Inserat vervollständigen</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Laden Sie Fotos Ihres Wohnmobils hoch, um die Chancen auf einen schnellen Verkauf deutlich zu erhöhen. 
+                      Im Dashboard können Sie weitere Fotos hinzufügen, Details ergänzen und Ihr Inserat optimieren. 
                       Inserate mit Fotos erhalten 3x mehr Anfragen.
                     </p>
                   </div>

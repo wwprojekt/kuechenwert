@@ -307,8 +307,6 @@ export default function AdminDealers() {
   }, [activeDealers, searchTerm]);
 
   const sortedFilteredDealers = useMemo(() => sortData(filteredDealers, dealerSortAccessors), [filteredDealers, sortData]);
-  const sortedPending = useMemo(() => sortData(pendingApplications, dealerSortAccessors), [pendingApplications, sortData]);
-  const sortedRejected = useMemo(() => sortData(rejectedApplications, dealerSortAccessors), [rejectedApplications, sortData]);
 
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "haendler",
@@ -568,6 +566,9 @@ export default function AdminDealers() {
   const approvedApplications = useMemo(() => {
     return applications?.filter((a: DealerApplication) => a.status === "approved") || [];
   }, [applications]);
+
+  const sortedPending = useMemo(() => sortData(pendingApplications, dealerSortAccessors), [pendingApplications, sortData]);
+  const sortedRejected = useMemo(() => sortData(rejectedApplications, dealerSortAccessors), [rejectedApplications, sortData]);
 
   return (
     <div className="space-y-6">

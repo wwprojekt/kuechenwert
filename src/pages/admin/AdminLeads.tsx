@@ -754,14 +754,20 @@ export default function AdminLeads() {
 
   // ---- Statistics ----
 
+  // Aktive Sessions (ohne Disposition) für Funnel und Statistiken
+  const activeSessions = useMemo(() => 
+    wizardSessions.filter(s => !s.disposition), 
+    [wizardSessions]
+  );
+
   const stats = useMemo(() => {
-    const inProgress = wizardSessions.filter((s) => s.status === "in_progress").length;
-    const abandoned = wizardSessions.filter((s) => s.status === "abandoned").length;
-    const completed = wizardSessions.filter((s) => s.status === "completed").length;
-    const total = wizardSessions.length;
+    const inProgress = activeSessions.filter((s) => s.status === "in_progress").length;
+    const abandoned = activeSessions.filter((s) => s.status === "abandoned").length;
+    const completed = activeSessions.filter((s) => s.status === "completed").length;
+    const total = activeSessions.length;
     const conversionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    const abandonedSessions = wizardSessions.filter((s) => s.status === "abandoned");
+    const abandonedSessions = activeSessions.filter((s) => s.status === "abandoned");
     const avgAbandonStep =
       abandonedSessions.length > 0
         ? Math.round(
@@ -770,11 +776,11 @@ export default function AdminLeads() {
           )
         : 0;
 
-    const actionableLeads = wizardSessions.filter(
+    const actionableLeads = activeSessions.filter(
       (s) => s.status !== "completed" && (s.customer_email || s.customer_phone)
     ).length;
 
-    const notContacted = wizardSessions.filter(
+    const notContacted = activeSessions.filter(
       (s) =>
         s.status !== "completed" &&
         !s.resume_email_sent_at &&
@@ -791,10 +797,10 @@ export default function AdminLeads() {
       avgAbandonStep,
       actionableLeads,
       notContacted,
-      quickLeadsTotal: quickLeads.length,
-      valuationLeadsTotal: valuationLeads.length,
+      quickLeadsTotal: quickLeads.filter(l => !l.disposition).length,
+      valuationLeadsTotal: valuationLeads.filter(l => !l.disposition).length,
     };
-  }, [wizardSessions, quickLeads, valuationLeads]);
+  }, [activeSessions, quickLeads, valuationLeads]);
 
   // ---- Filtering ----
 
@@ -1606,12 +1612,12 @@ export default function AdminLeads() {
         <div className="space-y-2">
           {Object.entries(STEP_NAMES).map(([stepStr, name]) => {
             const step = parseInt(stepStr);
-            const reachedCount = wizardSessions.filter(
+            const reachedCount = activeSessions.filter(
               (s) => s.max_step_reached >= step
             ).length;
             const percentage =
-              wizardSessions.length > 0
-                ? Math.round((reachedCount / wizardSessions.length) * 100)
+              activeSessions.length > 0
+                ? Math.round((reachedCount / activeSessions.length) * 100)
                 : 0;
             return (
               <div key={step} className="flex items-center gap-3">

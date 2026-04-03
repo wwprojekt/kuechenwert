@@ -10,6 +10,7 @@ interface AutoConvertRequest {
   sessionId: string;
   password?: string;
   userId?: string;
+  hasPassword?: boolean;
 }
 
 // Helper: Map wizard form_data fields to motorhome DB fields
@@ -381,8 +382,23 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", body.sessionId);
 
-    // 6. Send Registration Invite (only if new user or explicitly requested)
-    // We always send it so they get the magic link to login and see their dashboard
+    // 6. Handle Email Confirmation & Send Registration Invite
+    // If the user already set a password in the wizard (hasPassword=true),
+    // we confirm their email via admin API to suppress the Supabase auto-confirmation email.
+    // This prevents the user from receiving TWO emails (Supabase confirmation + our custom invite).
+    if (body.hasPassword && sellerId) {
+      try {
+        await adminClient.auth.admin.updateUserById(sellerId, {
+          email_confirm: true,
+        });
+        edgeLogger.info(`Email confirmed via admin API for user ${sellerId} (has password from wizard)`);
+      } catch (confirmErr) {
+        edgeLogger.error("Failed to confirm email via admin API:", confirmErr);
+      }
+    }
+
+    // Send our custom registration invite email
+    // When hasPassword=true, the redirect goes to /dashboard (no password setup needed)
     const inviteRes = await fetch(`${SUPABASE_URL}/functions/v1/send-registration-invite`, {
       method: "POST",
       headers: {
@@ -394,6 +410,7 @@ const handler = async (req: Request): Promise<Response> => {
         customerName: customerName,
         motorhomeId: motorhome.id,
         sessionId: body.sessionId,
+        hasPassword: body.hasPassword || false,
       }),
     });
 

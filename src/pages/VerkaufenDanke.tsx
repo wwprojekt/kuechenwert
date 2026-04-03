@@ -48,9 +48,9 @@ const VerkaufenDanke = () => {
                       Prüfen Sie jetzt Ihr E-Mail-Postfach
                     </h2>
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                      Wir haben Ihnen eine E-Mail mit einem <strong>Aktivierungslink</strong> gesendet. 
-                      Klicken Sie auf den Link, um Ihr Konto zu aktivieren, ein Passwort festzulegen 
-                      und Ihr Fahrzeug im Dashboard zu verwalten.
+                      Wir senden Ihnen in Kürze eine E-Mail mit einem <strong>Aktivierungslink</strong>. 
+                      Klicken Sie auf den Link, um direkt in Ihr Dashboard zu gelangen 
+                      und Ihr Fahrzeug zu verwalten.
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
                       Keine E-Mail erhalten? Prüfen Sie Ihren Spam-Ordner oder kontaktieren Sie uns.
@@ -76,7 +76,7 @@ const VerkaufenDanke = () => {
                     <p className="text-sm text-muted-foreground mt-1">
                       {user 
                         ? "Ihr Konto ist bereits aktiv. Sie können Ihr Fahrzeug direkt im Dashboard verwalten."
-                        : "Klicken Sie auf den Aktivierungslink in Ihrer E-Mail, um Ihr Konto einzurichten und ein Passwort festzulegen."
+                        : "Klicken Sie auf den Aktivierungslink in Ihrer E-Mail, um direkt in Ihr Dashboard zu gelangen. Sie können sich danach jederzeit mit Ihrer E-Mail und dem gewählten Passwort einloggen."
                       }
                     </p>
                   </div>

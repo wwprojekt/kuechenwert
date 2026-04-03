@@ -577,36 +577,46 @@ export const useWizardForm = () => {
           }
         }
 
-        // Call auto-convert-wizard edge function
-        if (savedSessionId) {
-          try {
-            const { error: autoConvertError } = await supabase.functions.invoke("auto-convert-wizard", {
-              body: { 
-                sessionId: savedSessionId,
-                // Pass the signUp user ID so auto-convert uses the SAME user
-                // instead of searching/creating a potentially different one
-                userId: capturedUserId,
-                // We pass the password so the edge function can set it if it creates the user
-                password: registerPassword 
-              },
-            });
-            if (autoConvertError) {
-              logger.error("Auto-convert failed:", autoConvertError);
-            } else {
-              logger.info("Auto-convert successful");
-            }
-          } catch (convertErr) {
-            logger.error("Failed to invoke auto-convert-wizard:", convertErr);
-          }
-        }
+        // ===== FIRE-AND-FORGET: Edge Functions im Hintergrund ausführen =====
+        // Die Weiterleitung erfolgt SOFORT nach wizard_sessions + Photos.
+        // auto-convert-wizard und send-lead-notification laufen asynchron im Hintergrund.
+        // Das verhindert die 2-3 Minuten Wartezeit auf "Wird gesendet...".
 
-        // Send email notification to admin + confirmation to customer
-        try {
+        // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
+        // Tracking wird VOR der Navigation ausgeführt (schnell, client-seitig)
+        const txId1 = generateTransactionId('wizard');
+        (window as any).__lastTransactionId = txId1;
+        setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone }).catch(() => {});
+        trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
+
+        clearDraft();
+
+        toast({
+          title: "Fahrzeug erfolgreich eingereicht!",
+          description: "Sie erhalten in Kürze eine E-Mail zur Kontoaktivierung. Prüfen Sie Ihr Postfach.",
+        });
+        navigate("/verkaufen/danke");
+
+        // --- Background tasks (fire-and-forget, nicht blockierend) ---
+        if (savedSessionId) {
+          // 1. auto-convert-wizard: Erstellt Profil, Motorhome, sendet Aktivierungs-E-Mail
+          supabase.functions.invoke("auto-convert-wizard", {
+            body: {
+              sessionId: savedSessionId,
+              userId: capturedUserId,
+              password: registerPassword,
+              // Signal: User hat bereits ein Passwort im Wizard gesetzt
+              hasPassword: true,
+            },
+          }).then(() => {
+            logger.info("Auto-convert successful (background)");
+          }).catch((convertErr) => {
+            logger.error("Auto-convert failed (background):", convertErr);
+          });
+
+          // 2. send-lead-notification: Admin-Benachrichtigung + Conversion-Tracking
           const trackingData = getTrackingData();
-          // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
-          const transactionId = generateTransactionId('wizard');
-          (window as any).__lastTransactionId = transactionId;
-          await supabase.functions.invoke("send-lead-notification", {
+          supabase.functions.invoke("send-lead-notification", {
             body: {
               type: "wizard",
               name: formData.customerName || "Unbekannt",
@@ -619,25 +629,14 @@ export const useWizardForm = () => {
               gbraid: trackingData.gbraid,
               wbraid: trackingData.wbraid,
               ga4ClientId: trackingData.ga4ClientId,
-              transactionId,
-              skipUserEmail: true, // We skip the standard "we will contact you in 24h" email because they get the registration invite
+              transactionId: txId1,
+              skipUserEmail: true,
             },
+          }).catch((emailError) => {
+            logger.error("Failed to send wizard lead notification (background):", emailError);
           });
-        } catch (emailError) {
-          logger.error("Failed to send wizard lead notification:", emailError);
         }
-        clearDraft();
 
-        // Google Ads: Enhanced Conversions + Wizard abgeschlossen (Guest-Pfad)
-        const txId1 = (window as any).__lastTransactionId || generateTransactionId('wizard');
-        await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
-        trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
-
-        toast({
-          title: "Fahrzeug erfolgreich eingereicht!",
-          description: "Sie erhalten in Kürze eine E-Mail mit einem Aktivierungslink. Damit können Sie Ihr Konto aktivieren und Ihr Fahrzeug im Dashboard verwalten.",
-        });
-        navigate("/verkaufen/danke");
         return true;
       }
 
@@ -852,30 +851,28 @@ export const useWizardForm = () => {
         if (auctionError) throw auctionError;
       }
 
-      // Send notification to admin about new listing
-      try {
-        const trackingData = getTrackingData();
-        const transactionId = generateTransactionId('wizard');
-        (window as any).__lastTransactionId = transactionId;
-        await supabase.functions.invoke("send-lead-notification", {
-          body: {
-            type: "wizard",
-            name: formData.customerName || user.email || "Registrierter Nutzer",
-            email: formData.customerEmail || user.email || "",
-            phone: formData.customerPhone || undefined,
-            manufacturer: formData.manufacturer || undefined,
-            model: formData.model || undefined,
-            country: formData.country || "DE",
-            gclid: trackingData.gclid,
-            gbraid: trackingData.gbraid,
-            wbraid: trackingData.wbraid,
-            ga4ClientId: trackingData.ga4ClientId,
-            transactionId,
-          },
-        });
-      } catch (emailError) {
-        logger.error("Failed to send wizard lead notification:", emailError);
-      }
+      // Send notification to admin about new listing (fire-and-forget)
+      const trackingData = getTrackingData();
+      const transactionId = generateTransactionId('wizard');
+      (window as any).__lastTransactionId = transactionId;
+      supabase.functions.invoke("send-lead-notification", {
+        body: {
+          type: "wizard",
+          name: formData.customerName || user.email || "Registrierter Nutzer",
+          email: formData.customerEmail || user.email || "",
+          phone: formData.customerPhone || undefined,
+          manufacturer: formData.manufacturer || undefined,
+          model: formData.model || undefined,
+          country: formData.country || "DE",
+          gclid: trackingData.gclid,
+          gbraid: trackingData.gbraid,
+          wbraid: trackingData.wbraid,
+          ga4ClientId: trackingData.ga4ClientId,
+          transactionId,
+        },
+      }).catch((emailError) => {
+        logger.error("Failed to send wizard lead notification (background):", emailError);
+      });
 
       // Adresse aus dem Wizard ins Profil übernehmen
       try {

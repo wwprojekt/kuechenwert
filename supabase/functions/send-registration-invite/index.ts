@@ -44,6 +44,7 @@ interface InviteRequest {
   sessionId?: string;
   inviteType?: "seller" | "dealer";
   companyName?: string;
+  hasPassword?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -120,8 +121,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate a magic link for the user
     // This will confirm their email AND log them in
-    // The setup=password parameter triggers a password-setting dialog in the dashboard
-    const redirectUrl = "https://caravanwert.de/dashboard?setup=password";
+    // If the user already set a password in the wizard, redirect directly to dashboard
+    // Otherwise, the setup=password parameter triggers a password-setting dialog
+    const hasPassword = body.hasPassword || false;
+    const redirectUrl = hasPassword
+      ? "https://caravanwert.de/dashboard"
+      : "https://caravanwert.de/dashboard?setup=password";
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
@@ -206,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
       subject = `${companyName || "Ihr H\u00e4ndlerkonto"} \u2013 Willkommen bei ${settingsData.site_name}`;
 
     } else {
-      // ===== SELLER INVITE EMAIL (original) =====
+      // ===== SELLER INVITE EMAIL =====
       content += greeting(customerName || undefined);
 
       content += paragraph(
@@ -237,11 +242,19 @@ const handler = async (req: Request): Promise<Response> => {
         settingsData
       );
 
-      content += paragraph(
-        `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
-        `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
-        `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
-      );
+      // Adapt the "Wichtig" paragraph based on whether user already has a password
+      if (hasPassword) {
+        content += paragraph(
+          `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
+          `Sie k&ouml;nnen sich k&uuml;nftig jederzeit mit Ihrer E-Mail-Adresse und dem im Wizard gew&auml;hlten Passwort einloggen.`
+        );
+      } else {
+        content += paragraph(
+          `<strong>Wichtig:</strong> Dieser Link ist einmalig und f&uuml;hrt Sie direkt in Ihr Dashboard. ` +
+          `Bei der ersten Anmeldung werden Sie aufgefordert, ein pers&ouml;nliches Passwort festzulegen, ` +
+          `mit dem Sie sich k&uuml;nftig jederzeit einloggen k&ouml;nnen.`
+        );
+      }
 
       content += paragraph(
         `Bei Fragen stehen wir Ihnen jederzeit gerne zur Verf&uuml;gung unter ` +

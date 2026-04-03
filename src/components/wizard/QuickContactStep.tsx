@@ -5,9 +5,8 @@
  * Der Nutzer hat bereits viel Zeit investiert (Sunk-Cost-Effekt), was die
  * Bereitschaft zur Kontaktdaten-Eingabe deutlich erhöht.
  * 
- * Psychologisches Prinzip: "Wir speichern Ihren Fortschritt" gibt dem
- * Nutzer einen Grund, seine E-Mail einzugeben, ohne dass es sich wie
- * ein Verkaufsprozess anfühlt.
+ * Für registrierte Nutzer: Zeigt vorausgefüllte Profildaten zur Bestätigung.
+ * Für anonyme Nutzer: "Fortschritt speichern" als Motivation zur Dateneingabe.
  */
 
 import { Label } from "@/components/ui/label";
@@ -18,23 +17,49 @@ import { Mail, User, Shield, Save, CheckCircle2 } from "lucide-react";
 interface QuickContactStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  isAuthenticated?: boolean;
 }
 
-export const QuickContactStep = ({ formData, updateFormData }: QuickContactStepProps) => {
+export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = false }: QuickContactStepProps) => {
+  // Prüfen ob Felder bereits vorausgefüllt sind (z.B. aus Profil)
+  const hasPrefilled = !!(formData.customerName && formData.customerEmail);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header mit Motivation */}
       <div className="text-center mb-6">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-4">
-          <Save className="w-7 h-7 text-primary" />
+          {isAuthenticated && hasPrefilled ? (
+            <CheckCircle2 className="w-7 h-7 text-primary" />
+          ) : (
+            <Save className="w-7 h-7 text-primary" />
+          )}
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-          Fortschritt speichern
+          {isAuthenticated && hasPrefilled ? "Kontaktdaten bestätigen" : "Fortschritt speichern"}
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Damit wir Ihnen eine kostenlose Bewertung zusenden können, benötigen wir Ihren Namen und Ihre E-Mail-Adresse.
+          {isAuthenticated && hasPrefilled
+            ? "Ihre Daten wurden aus Ihrem Profil übernommen. Bitte prüfen Sie die Angaben und passen Sie diese bei Bedarf an."
+            : "Damit wir Ihnen eine kostenlose Bewertung zusenden können, benötigen wir Ihren Namen und Ihre E-Mail-Adresse."
+          }
         </p>
       </div>
+
+      {/* Hinweis für eingeloggte Nutzer mit vorausgefüllten Daten */}
+      {isAuthenticated && hasPrefilled && (
+        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-semibold text-green-800 dark:text-green-200">
+              Aus Ihrem Profil übernommen
+            </span>
+          </div>
+          <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+            Sie sind angemeldet. Ihre Kontaktdaten wurden automatisch eingetragen. Sie können diese hier noch ändern.
+          </p>
+        </div>
+      )}
 
       {/* Zusammenfassung der bisherigen Angaben */}
       {formData.manufacturer && (
@@ -66,7 +91,7 @@ export const QuickContactStep = ({ formData, updateFormData }: QuickContactStepP
             onChange={(e) => updateFormData({ customerName: e.target.value })}
             className="h-12 text-base"
             autoComplete="name"
-            autoFocus
+            autoFocus={!hasPrefilled}
           />
         </div>
 

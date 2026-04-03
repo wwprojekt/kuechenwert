@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { logger } from "@/lib/logger";
 import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
@@ -43,11 +44,77 @@ const VerkaufenWizard = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Check if user is already authenticated
+  // Check if user is already authenticated and prefill profile data
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUser(data.user || null);
-    });
+    const loadUserAndProfile = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user || null;
+      setCurrentUser(user);
+
+      if (!user) return;
+
+      // Load profile data for prefill (only if form fields are still empty)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, phone, address_street, address_zip, address_city, address_country')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile) return;
+
+        const updates: Partial<typeof formData> = {};
+
+        // Name: nur vorausfüllen wenn noch leer
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+        if (fullName && !formData.customerName) {
+          updates.customerName = fullName;
+        }
+
+        // E-Mail: aus Auth-User (immer vorhanden)
+        if (user.email && !formData.customerEmail) {
+          updates.customerEmail = user.email;
+        }
+
+        // Telefon: aus Profil
+        if (profile.phone && !formData.customerPhone) {
+          updates.customerPhone = profile.phone;
+        }
+
+        // Adresse: address_street enthält "Straße Hausnummer" kombiniert
+        if (profile.address_street && !formData.street) {
+          const streetParts = profile.address_street.trim();
+          // Hausnummer ist typischerweise das letzte Element (z.B. "Musterstraße 12a")
+          const match = streetParts.match(/^(.+?)\s+(\d+\S*)$/);
+          if (match) {
+            updates.street = match[1];
+            updates.houseNumber = match[2];
+          } else {
+            // Kein klares Muster: gesamten String als Straße verwenden
+            updates.street = streetParts;
+          }
+        }
+
+        if (profile.address_zip && !formData.zipCode) {
+          updates.zipCode = profile.address_zip;
+        }
+        if (profile.address_city && !formData.city) {
+          updates.city = profile.address_city;
+        }
+        if (profile.address_country && !formData.country) {
+          updates.country = profile.address_country;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          updateFormData(updates);
+          logger.info('Wizard: Profildaten vorausgefüllt', { fields: Object.keys(updates) });
+        }
+      } catch (err) {
+        logger.warn('Wizard: Profil-Prefill fehlgeschlagen (nicht kritisch)', err);
+      }
+    };
+
+    loadUserAndProfile();
   }, []);
 
   // Prefill form data from URL parameters
@@ -254,7 +321,7 @@ const VerkaufenWizard = () => {
       case 4:
         return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
       case 5:
-        return <QuickContactStep formData={formData} updateFormData={updateFormData} />;
+        return <QuickContactStep formData={formData} updateFormData={updateFormData} isAuthenticated={!!currentUser} />;
       case 6:
         return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 7:
@@ -439,9 +506,9 @@ const VerkaufenWizard = () => {
                       {currentStep <= 2
                         ? "Nur noch wenige Angaben bis zum Angebot"
                         : currentStep <= 4
-                        ? "Gleich können Sie Ihren Fortschritt speichern"
+                        ? (currentUser ? "Ihre Profildaten wurden automatisch übernommen" : "Gleich können Sie Ihren Fortschritt speichern")
                         : currentStep === 5
-                        ? "Fast geschafft – speichern Sie Ihren Fortschritt"
+                        ? (currentUser ? "Bitte bestätigen Sie Ihre Kontaktdaten" : "Fast geschafft – speichern Sie Ihren Fortschritt")
                         : currentStep === 6
                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7

@@ -83,14 +83,12 @@ interface UseWizardSessionReturn {
   saveProgress: (currentStep: number, formData: WizardFormData, totalSteps: number) => Promise<void>;
   markCompleted: () => Promise<void>;
   updateContactFromAuth: (authData: { email?: string; firstName?: string; lastName?: string; phone?: string }) => Promise<void>;
-  loadSession: () => Promise<{ formData: Record<string, unknown>; currentStep: number } | null>;
-  isLoading: boolean;
 }
 
 export const useWizardSession = (): UseWizardSessionReturn => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
   const maxStepRef = useRef(1);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDataRef = useRef<string>("");
@@ -402,56 +400,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     }
   }, [sessionId]);
 
-  /**
-   * Load existing session data for resume.
-   * Uses RPC for anonymous users to avoid RLS restrictions.
-   */
-  const loadSession = useCallback(async (): Promise<{
-    formData: Record<string, unknown>;
-    currentStep: number;
-  } | null> => {
-    if (!sessionId) return null;
 
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      let data = null;
-
-      if (user) {
-        // Authenticated users can query directly
-        const result = await supabase
-          .from("wizard_sessions")
-          .select("form_data, current_step, max_step_reached")
-          .eq("id", sessionId)
-          .single();
-        data = result.data;
-      } else {
-        // Anonymous users: use RPC to find their session
-        const anonymousId = getAnonymousId();
-        const result = await supabase
-          .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anonymousId });
-        
-        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-          data = result.data[0];
-        } else if (result.data && !Array.isArray(result.data)) {
-          data = result.data;
-        }
-      }
-
-      if (!data) return null;
-
-      return {
-        formData: data.form_data as Record<string, unknown>,
-        currentStep: data.current_step,
-      };
-    } catch (error) {
-      logger.error("Failed to load wizard session:", error);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sessionId]);
 
   return {
     sessionId,
@@ -459,7 +408,6 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     saveProgress,
     markCompleted,
     updateContactFromAuth,
-    loadSession,
-    isLoading,
+
   };
 };

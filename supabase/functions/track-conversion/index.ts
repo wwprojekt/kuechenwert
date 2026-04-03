@@ -19,9 +19,9 @@ const TRACK_CONVERSION_RATE_LIMIT = {
  * stellt sicher, dass 100% der Conversions erfasst werden.
  * 
  * Architektur:
- * - Client-Side Enhanced Conversions (wenn Cookies akzeptiert) → Primär
- * - Server-Side GA4 Measurement Protocol (diese Funktion) → Fallback/Ergänzung
- * - GCLID wird an GA4 gesendet → GA4 leitet an Google Ads weiter (über Verknüpfung)
+ * - Client-Side Enhanced Conversions (wenn Cookies akzeptiert) -> Primär
+ * - Server-Side GA4 Measurement Protocol (diese Funktion) -> Fallback/Ergänzung
+ * - GCLID wird an GA4 gesendet -> GA4 leitet an Google Ads weiter (über Verknüpfung)
  * 
  * Erforderliche Supabase Secrets:
  * - GA4_API_SECRET: Measurement Protocol API Secret
@@ -48,6 +48,8 @@ interface ConversionRequest {
   wbraid?: string;
   // Transaction ID für Deduplizierung über alle Tracking-Schichten
   transaction_id?: string;
+  // Land des Nutzers für internationale Telefon-Normalisierung
+  country_code?: string;
 }
 
 /**
@@ -65,17 +67,87 @@ async function sha256Hash(value: string): Promise<string> {
 
 /**
  * Normalisiert eine Telefonnummer ins E.164-Format.
- * Deutsche Nummern (beginnend mit 0) werden mit +49 versehen.
+ * Unterstützt internationale Nummern:
+ * - Nummern die bereits mit "+" beginnen werden beibehalten
+ * - Nummern die mit "00" beginnen werden zu "+" konvertiert
+ * - Nummern die mit "0" beginnen werden basierend auf dem countryCode normalisiert
+ * - Fallback: +49 (Deutschland) wenn kein countryCode angegeben
  */
-function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+function normalizePhone(phone: string, countryCode?: string): string {
+  // Entferne Leerzeichen, Bindestriche, Klammern
+  let cleaned = phone.replace(/[\s\-\(\)\/]/g, "");
+
+  // Nummer beginnt bereits mit "+" -> internationales Format, beibehalten
+  if (cleaned.startsWith("+")) {
+    return cleaned;
+  }
+
+  // Nummer beginnt mit "00" -> internationales Format ohne "+"
+  if (cleaned.startsWith("00")) {
+    return "+" + cleaned.substring(2);
+  }
+
+  // Nummer beginnt mit "0" -> nationale Nummer, Ländervorwahl hinzufügen
   if (cleaned.startsWith("0")) {
-    cleaned = "+49" + cleaned.substring(1);
+    // Mapping von ISO-Ländercodes zu Telefonvorwahlen
+    const countryPhonePrefix: Record<string, string> = {
+      "DE": "49", "AT": "43", "CH": "41", "NL": "31", "BE": "32",
+      "FR": "33", "IT": "39", "ES": "34", "PT": "351", "PL": "48",
+      "CZ": "420", "SK": "421", "HU": "36", "RO": "40", "BG": "359",
+      "HR": "385", "SI": "386", "GR": "30", "DK": "45", "SE": "46",
+      "FI": "358", "IE": "353", "LU": "352", "EE": "372", "LV": "371",
+      "LT": "370", "MT": "356", "CY": "357",
+    };
+
+    const prefix = countryPhonePrefix[countryCode?.toUpperCase() || "DE"] || "49";
+    return "+" + prefix + cleaned.substring(1);
   }
-  if (!cleaned.startsWith("+")) {
-    cleaned = "+" + cleaned;
-  }
-  return cleaned;
+
+  // Keine führende 0 und kein "+" -> "+" voranstellen als Fallback
+  return "+" + cleaned;
+}
+
+/**
+ * Validiert eine GCLID auf grundlegende Korrektheit.
+ * Ungültige GCLIDs werden abgelehnt, bevor sie an Google gesendet werden.
+ * 
+ * Gültige GCLIDs:
+ * - Bestehen aus alphanumerischen Zeichen, Bindestrichen und Unterstrichen
+ * - Sind mindestens 30 Zeichen lang
+ * - Sind maximal 200 Zeichen lang
+ */
+function isValidGclid(gclid: string): boolean {
+  if (!gclid || typeof gclid !== "string") return false;
+  const trimmed = gclid.trim();
+  if (trimmed.length < 30 || trimmed.length > 200) return false;
+  // GCLIDs bestehen aus Base64-ähnlichen Zeichen
+  if (!/^[a-zA-Z0-9_\-]+$/.test(trimmed)) return false;
+  return true;
+}
+
+/**
+ * Ermittelt den ISO-Ländercode basierend auf der Telefonnummer.
+ * Wird als Fallback verwendet, wenn kein country_code mitgesendet wird.
+ */
+function detectCountryFromPhone(phone: string): string {
+  const cleaned = phone.replace(/[\s\-\(\)\/]/g, "");
+  if (cleaned.startsWith("+49") || cleaned.startsWith("0049")) return "DE";
+  if (cleaned.startsWith("+43") || cleaned.startsWith("0043")) return "AT";
+  if (cleaned.startsWith("+41") || cleaned.startsWith("0041")) return "CH";
+  if (cleaned.startsWith("+31") || cleaned.startsWith("0031")) return "NL";
+  if (cleaned.startsWith("+32") || cleaned.startsWith("0032")) return "BE";
+  if (cleaned.startsWith("+33") || cleaned.startsWith("0033")) return "FR";
+  if (cleaned.startsWith("+39") || cleaned.startsWith("0039")) return "IT";
+  if (cleaned.startsWith("+34") || cleaned.startsWith("0034")) return "ES";
+  if (cleaned.startsWith("+351")) return "PT";
+  if (cleaned.startsWith("+48") || cleaned.startsWith("0048")) return "PL";
+  if (cleaned.startsWith("+45")) return "DK";
+  if (cleaned.startsWith("+46")) return "SE";
+  if (cleaned.startsWith("+358")) return "FI";
+  if (cleaned.startsWith("+353")) return "IE";
+  if (cleaned.startsWith("+352")) return "LU";
+  // Fallback: Deutschland
+  return "DE";
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -104,20 +176,30 @@ const handler = async (req: Request): Promise<Response> => {
       estimated_min,
       estimated_max,
       client_id,
-      gclid,
+      gclid: rawGclid,
       gbraid,
       wbraid,
       transaction_id,
+      country_code,
     } = data;
 
-    console.log(`[track-conversion] Processing ${lead_type} conversion for: ${email || "unknown"} (txId: ${transaction_id || 'none'})`);
+    // GCLID-Validierung: Nur gültige GCLIDs verwenden
+    const gclid = rawGclid && isValidGclid(rawGclid) ? rawGclid.trim() : undefined;
+    if (rawGclid && !gclid) {
+      console.warn(`[track-conversion] Ungültige GCLID verworfen: "${rawGclid?.substring(0, 20)}..." (Länge: ${rawGclid?.length})`);
+    }
+
+    // Ländercode ermitteln: Explizit mitgesendet > aus Telefonnummer abgeleitet > Fallback DE
+    const resolvedCountryCode = country_code || (phone ? detectCountryFromPhone(phone) : "DE");
+
+    console.log(`[track-conversion] Processing ${lead_type} conversion for: ${email || "unknown"} (txId: ${transaction_id || 'none'}, country: ${resolvedCountryCode})`);
     if (gclid) console.log(`[track-conversion] GCLID vorhanden: ${gclid.substring(0, 15)}...`);
     if (gbraid) console.log(`[track-conversion] GBRAID vorhanden`);
     if (wbraid) console.log(`[track-conversion] WBRAID vorhanden`);
 
     const results: Record<string, unknown> = {};
 
-    // ─── GA4 Measurement Protocol ───────────────────────────────────
+    // --- GA4 Measurement Protocol ---
     if (GA4_API_SECRET) {
       try {
         // Enhanced Conversions: Gehashte Nutzerdaten für bessere Attribution
@@ -127,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
           userData.sha256_email_address = [await sha256Hash(email)];
         }
         if (phone) {
-          const normalizedPhone = normalizePhone(phone);
+          const normalizedPhone = normalizePhone(phone, resolvedCountryCode);
           userData.sha256_phone_number = [await sha256Hash(normalizedPhone)];
         }
         if (name) {
@@ -224,7 +306,7 @@ const handler = async (req: Request): Promise<Response> => {
       results.ga4 = { skipped: true, reason: "GA4_API_SECRET not configured" };
     }
 
-    // ─── Google Ads Offline Conversion Upload (wenn konfiguriert) ────
+    // --- Google Ads Offline Conversion Upload (wenn konfiguriert) ---
     // Diese Sektion wird aktiviert sobald die Google Ads API Credentials
     // als Supabase Secrets konfiguriert sind (GADS_CUSTOMER_ID, GADS_DEVELOPER_TOKEN,
     // GADS_OAUTH_CLIENT_ID, GADS_OAUTH_CLIENT_SECRET, GADS_OAUTH_REFRESH_TOKEN)
@@ -264,7 +346,17 @@ const handler = async (req: Request): Promise<Response> => {
         const conversionValue = 5.0;
 
         // Conversion Action ID basierend auf Lead-Typ auswählen
+        // WICHTIG: Die Keys müssen exakt den `type`-Werten entsprechen, die vom Frontend
+        // über send-lead-notification als `lead_type` weitergegeben werden.
+        // Frontend sendet: "kontakt", "wertermittlung", "wertrechner", "wizard"
+        // Zusätzlich werden die langen Varianten als Aliase beibehalten.
         const conversionActionMap: Record<string, string> = {
+          // === Primäre Keys (exakt wie vom Frontend gesendet) ===
+          'kontakt': '7545833202',           // Kontaktformular gesendet
+          'wertermittlung': '7545833205',     // Wertermittlung Lead
+          'wertrechner': '7545833208',        // Wertrechner Lead
+          'wizard': '7545833211',             // Wizard Abgeschlossen
+          // === Aliase (für Abwärtskompatibilität und direkte API-Aufrufe) ===
           'bewertung_abgeschlossen': '7544183183',
           'landing_page_lead': '7545833199',
           'kontaktformular_gesendet': '7545833202',
@@ -280,108 +372,119 @@ const handler = async (req: Request): Promise<Response> => {
           'wizard_vehicle_data': '7545833220',
           'dealer_register': '7545833199',
         };
-        const conversionActionId = conversionActionMap[lead_type] || '7545833208'; // Fallback: Wertrechner Lead
-        const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
 
-        // 3. Conversion-Payload erstellen
-        interface ConversionPayload {
-          conversions: Array<{
-            conversionAction: string;
-            conversionDateTime: string;
-            conversionValue: number;
-            currencyCode: string;
-            userIdentifiers: Array<Record<string, unknown>>;
-            gclid?: string;
-            gbraid?: string;
-            wbraid?: string;
-          }>;
-          partialFailure: boolean;
-        }
+        const conversionActionId = conversionActionMap[lead_type];
+        if (!conversionActionId) {
+          console.warn(`[track-conversion] WARNUNG: Unbekannter lead_type "${lead_type}" - kein Mapping gefunden. Conversion wird NICHT an Google Ads gesendet.`);
+          results.gads = {
+            skipped: true,
+            reason: `Unbekannter lead_type: "${lead_type}". Kein Mapping in conversionActionMap gefunden.`,
+          };
+        } else {
+          const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
 
-        const conversion: ConversionPayload["conversions"][0] = {
-          conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
-          conversionDateTime,
-          conversionValue,
-          currencyCode: "EUR",
-          userIdentifiers: [],
-        };
+          // 3. Conversion-Payload aufbauen
+          interface ConversionPayload {
+            conversions: Array<{
+              conversionAction: string;
+              conversionDateTime: string;
+              conversionValue: number;
+              currencyCode: string;
+              userIdentifiers: Array<Record<string, unknown>>;
+              gclid?: string;
+              gbraid?: string;
+              wbraid?: string;
+            }>;
+            partialFailure: boolean;
+          }
 
-        // Click-IDs für Attribution
-        if (gclid) conversion.gclid = gclid;
-        if (gbraid) conversion.gbraid = gbraid;
-        if (wbraid) conversion.wbraid = wbraid;
+          const conversion: ConversionPayload["conversions"][0] = {
+            conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
+            conversionDateTime,
+            conversionValue,
+            currencyCode: "EUR",
+            userIdentifiers: [],
+          };
 
-        // Transaction ID (orderId) für Deduplizierung
-        if (transaction_id) {
-          (conversion as any).orderId = transaction_id;
-        }
+          // Click-IDs für Attribution
+          if (gclid) conversion.gclid = gclid;
+          if (gbraid) conversion.gbraid = gbraid;
+          if (wbraid) conversion.wbraid = wbraid;
 
-        // Enhanced Conversions: Gehashte Nutzerdaten
-        if (email) {
-          conversion.userIdentifiers.push({
-            hashedEmail: await sha256Hash(email),
-          });
-        }
-        if (phone) {
-          conversion.userIdentifiers.push({
-            hashedPhoneNumber: await sha256Hash(normalizePhone(phone)),
-          });
-        }
-        if (name) {
-          const parts = name.trim().split(/\s+/);
-          if (parts.length >= 2) {
+          // Transaction ID (orderId) für Deduplizierung
+          if (transaction_id) {
+            (conversion as any).orderId = transaction_id;
+          }
+
+          // Enhanced Conversions: Gehashte Nutzerdaten
+          if (email) {
             conversion.userIdentifiers.push({
-              addressInfo: {
-                hashedFirstName: await sha256Hash(parts[0]),
-                hashedLastName: await sha256Hash(parts.slice(1).join(" ")),
-                countryCode: "DE",
-              },
+              hashedEmail: await sha256Hash(email),
             });
           }
-        }
+          if (phone) {
+            conversion.userIdentifiers.push({
+              hashedPhoneNumber: await sha256Hash(normalizePhone(phone, resolvedCountryCode)),
+            });
+          }
+          if (name) {
+            const parts = name.trim().split(/\s+/);
+            if (parts.length >= 2) {
+              conversion.userIdentifiers.push({
+                addressInfo: {
+                  hashedFirstName: await sha256Hash(parts[0]),
+                  hashedLastName: await sha256Hash(parts.slice(1).join(" ")),
+                  countryCode: resolvedCountryCode,
+                },
+              });
+            }
+          }
 
-        const gadsPayload: ConversionPayload = {
-          conversions: [conversion],
-          partialFailure: true,
-        };
+          const gadsPayload: ConversionPayload = {
+            conversions: [conversion],
+            partialFailure: true,
+          };
 
-        // 4. An Google Ads API senden
-        const gadsUrl = `https://googleads.googleapis.com/v23/customers/${customerId}:uploadClickConversions`;
+          // 4. An Google Ads API senden
+          const gadsUrl = `https://googleads.googleapis.com/v23/customers/${customerId}:uploadClickConversions`;
 
-        const gadsResponse = await fetch(gadsUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-            "developer-token": GADS_DEVELOPER_TOKEN,
-            "login-customer-id": "9746508145", // MCC WohnWert Verwaltungskonto
-          },
-          body: JSON.stringify(gadsPayload),
-        });
+          const gadsResponse = await fetch(gadsUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`,
+              "developer-token": GADS_DEVELOPER_TOKEN,
+              "login-customer-id": "9746508145", // MCC WohnWert Verwaltungskonto
+            },
+            body: JSON.stringify(gadsPayload),
+          });
 
-        const gadsResult = await gadsResponse.json();
+          const gadsResult = await gadsResponse.json();
 
-        results.gads = {
-          status: gadsResponse.status,
-          ok: gadsResponse.ok,
-          hasGclid: !!gclid,
-          result: gadsResult,
-        };
+          results.gads = {
+            status: gadsResponse.status,
+            ok: gadsResponse.ok,
+            hasGclid: !!gclid,
+            conversionActionId,
+            leadType: lead_type,
+            result: gadsResult,
+          };
 
-        console.log(`[track-conversion] Google Ads API: ${gadsResponse.status} (GCLID: ${!!gclid})`);
-        if (!gadsResponse.ok) {
-          console.error("[track-conversion] Google Ads API Fehler:", JSON.stringify(gadsResult));
+          console.log(`[track-conversion] Google Ads API: ${gadsResponse.status} (lead_type: ${lead_type}, actionId: ${conversionActionId}, GCLID: ${!!gclid})`);
+          if (!gadsResponse.ok) {
+            console.error("[track-conversion] Google Ads API Fehler:", JSON.stringify(gadsResult));
+          }
         }
       } catch (gadsError) {
         console.error("[track-conversion] Google Ads API error:", gadsError);
         results.gads = { error: String(gadsError) };
       }
     } else {
-      // Google Ads API nicht konfiguriert – das ist OK, GA4 Measurement Protocol
-      // leitet Conversions über die GA4↔Google Ads Verknüpfung weiter
+      // Google Ads API nicht konfiguriert - das ist OK, GA4 Measurement Protocol
+      // leitet Conversions über die GA4<->Google Ads Verknüpfung weiter
       results.gads = {
         skipped: true,
-        reason: "Google Ads API Credentials nicht konfiguriert. Conversions werden über GA4→Google Ads Verknüpfung weitergeleitet.",
+        reason: "Google Ads API Credentials nicht konfiguriert. Conversions werden über GA4->Google Ads Verknüpfung weitergeleitet.",
       };
     }
 

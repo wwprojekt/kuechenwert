@@ -24,6 +24,28 @@ import { logger } from '@/lib/logger';
 const STORAGE_PREFIX = "caravanwert_";
 const CLICK_ID_EXPIRY_DAYS = 90;
 
+/**
+ * Validiert eine GCLID auf grundlegende Korrektheit.
+ * Ungültige GCLIDs (zu kurz, ungültige Zeichen) werden nicht gespeichert,
+ * um "GCLID kann nicht geparst werden" Fehler in Google Ads zu vermeiden.
+ * 
+ * Gültige GCLIDs:
+ * - Bestehen aus alphanumerischen Zeichen, Bindestrichen und Unterstrichen
+ * - Sind mindestens 30 Zeichen lang
+ * - Sind maximal 200 Zeichen lang
+ */
+function isValidClickId(value: string, type: 'gclid' | 'gbraid' | 'wbraid'): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  // GCLIDs sind typischerweise 50-100+ Zeichen lang
+  if (type === 'gclid' && (trimmed.length < 30 || trimmed.length > 200)) return false;
+  // GBRAID/WBRAID können kürzer sein
+  if ((type === 'gbraid' || type === 'wbraid') && (trimmed.length < 10 || trimmed.length > 200)) return false;
+  // Nur alphanumerische Zeichen, Bindestriche und Unterstriche erlaubt
+  if (!/^[a-zA-Z0-9_\-]+$/.test(trimmed)) return false;
+  return true;
+}
+
 interface StoredClickId {
   value: string;
   timestamp: number;
@@ -96,23 +118,35 @@ export function captureClickIds(): void {
     const wbraid = params.get("wbraid");
 
     if (gclid) {
-      storeClickId("gclid", gclid);
-      if (process.env.NODE_ENV === "development") {
-        logger.log("[ClickIdService] GCLID erfasst:", gclid.substring(0, 10) + "...");
+      if (isValidClickId(gclid, 'gclid')) {
+        storeClickId("gclid", gclid);
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[ClickIdService] GCLID erfasst:", gclid.substring(0, 10) + "...");
+        }
+      } else {
+        logger.log("[ClickIdService] Ungültige GCLID verworfen (Länge:", gclid.length + ")");
       }
     }
 
     if (gbraid) {
-      storeClickId("gbraid", gbraid);
-      if (process.env.NODE_ENV === "development") {
-        logger.log("[ClickIdService] GBRAID erfasst:", gbraid.substring(0, 10) + "...");
+      if (isValidClickId(gbraid, 'gbraid')) {
+        storeClickId("gbraid", gbraid);
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[ClickIdService] GBRAID erfasst:", gbraid.substring(0, 10) + "...");
+        }
+      } else {
+        logger.log("[ClickIdService] Ungültiger GBRAID verworfen (Länge:", gbraid.length + ")");
       }
     }
 
     if (wbraid) {
-      storeClickId("wbraid", wbraid);
-      if (process.env.NODE_ENV === "development") {
-        logger.log("[ClickIdService] WBRAID erfasst:", wbraid.substring(0, 10) + "...");
+      if (isValidClickId(wbraid, 'wbraid')) {
+        storeClickId("wbraid", wbraid);
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[ClickIdService] WBRAID erfasst:", wbraid.substring(0, 10) + "...");
+        }
+      } else {
+        logger.log("[ClickIdService] Ungültiger WBRAID verworfen (Länge:", wbraid.length + ")");
       }
     }
   } catch {

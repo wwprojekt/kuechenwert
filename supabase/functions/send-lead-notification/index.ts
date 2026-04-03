@@ -232,6 +232,8 @@ const handler = async (req: Request): Promise<Response> => {
         client_id: data.ga4ClientId || undefined,
         // Transaction ID für Deduplizierung
         transaction_id: data.transactionId || undefined,
+        // Land des Nutzers für internationale Telefon-Normalisierung
+        country_code: (data as any).country || (data as any).country_code || undefined,
       };
 
       // Call track-conversion Edge Function via Supabase

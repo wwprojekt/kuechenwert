@@ -222,7 +222,11 @@ export function MotorhomeEditDialog({
 
   useEffect(() => {
     if (motorhome) {
-      setFormData(motorhome);
+      setFormData({
+        ...motorhome,
+        tuev_valid_until: motorhome.tuev_valid_until ? String(motorhome.tuev_valid_until).substring(0, 7) : null,
+        last_tuev_date: motorhome.last_tuev_date ? String(motorhome.last_tuev_date).substring(0, 7) : null,
+      });
     }
   }, [motorhome]);
 
@@ -260,8 +264,8 @@ export function MotorhomeEditDialog({
           vehicle_identification_number: data.vehicle_identification_number,
           license_plate: data.license_plate,
           has_tuev: data.has_tuev,
-          tuev_valid_until: data.tuev_valid_until,
-          last_tuev_date: data.last_tuev_date,
+          tuev_valid_until: data.tuev_valid_until ? `${data.tuev_valid_until}-01` : null,
+          last_tuev_date: data.last_tuev_date ? `${data.last_tuev_date}-01` : null,
           number_of_axles: data.number_of_axles,
           fuel_tank_capacity_liters: data.fuel_tank_capacity_liters,
           main_tires: data.main_tires,
@@ -451,6 +455,22 @@ export function MotorhomeEditDialog({
     </div>
   );
 
+  // Helper for month-only input fields (TÜV)
+  const renderMonthInput = (
+    field: keyof MotorhomeData,
+    label: string
+  ) => (
+    <div className="space-y-2">
+      <Label htmlFor={field}>{label}</Label>
+      <Input
+        id={field}
+        type="month"
+        value={(formData[field] as string) || ""}
+        onChange={(e) => updateField(field, e.target.value || null as any)}
+      />
+    </div>
+  );
+
   // Helper for switch fields
   const renderSwitch = (
     field: keyof MotorhomeData,
@@ -580,8 +600,8 @@ export function MotorhomeEditDialog({
               <div className="space-y-4">
                 {renderSwitch("has_tuev", "TÜV vorhanden")}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {renderDateInput("tuev_valid_until", "TÜV gültig bis")}
-                  {renderDateInput("last_tuev_date", "Letzter TÜV")}
+                  {renderMonthInput("tuev_valid_until", "TÜV gültig bis")}
+                  {renderMonthInput("last_tuev_date", "Letzter TÜV")}
                 </div>
               </div>
 

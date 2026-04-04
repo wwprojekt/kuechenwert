@@ -165,8 +165,8 @@ export default function ListingEdit() {
         transmission: motorhome.transmission || "",
         emission_class: motorhome.emission_class || "",
         first_registration: motorhome.first_registration || "",
-        last_tuev_date: motorhome.last_tuev_date || "",
-        tuev_valid_until: motorhome.tuev_valid_until || "",
+        last_tuev_date: motorhome.last_tuev_date ? motorhome.last_tuev_date.substring(0, 7) : "",
+        tuev_valid_until: motorhome.tuev_valid_until ? motorhome.tuev_valid_until.substring(0, 7) : "",
         previous_owners: motorhome.previous_owners?.toString() || "",
         accident_free: motorhome.accident_free ?? true,
         non_smoker: motorhome.non_smoker ?? true,
@@ -240,8 +240,8 @@ export default function ListingEdit() {
         transmission: data.transmission || null,
         emission_class: data.emission_class || null,
         first_registration: data.first_registration || null,
-        last_tuev_date: data.last_tuev_date || null,
-        tuev_valid_until: data.tuev_valid_until || null,
+        last_tuev_date: data.last_tuev_date ? `${data.last_tuev_date}-01` : null,
+        tuev_valid_until: data.tuev_valid_until ? `${data.tuev_valid_until}-01` : null,
         previous_owners: data.previous_owners ? Number(data.previous_owners) : null,
         accident_free: data.accident_free,
         non_smoker: data.non_smoker,
@@ -543,12 +543,12 @@ export default function ListingEdit() {
 
                   <div className="space-y-2">
                     <Label htmlFor="last_tuev_date">Letzte TÜV/HU</Label>
-                    <Input id="last_tuev_date" type="date" value={formData.last_tuev_date} onChange={(e) => setFormData({ ...formData, last_tuev_date: e.target.value })} />
+                    <Input id="last_tuev_date" type="month" value={formData.last_tuev_date} onChange={(e) => setFormData({ ...formData, last_tuev_date: e.target.value })} />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="tuev_valid_until">Nächste TÜV/HU</Label>
-                    <Input id="tuev_valid_until" type="date" value={formData.tuev_valid_until} onChange={(e) => setFormData({ ...formData, tuev_valid_until: e.target.value })} />
+                    <Input id="tuev_valid_until" type="month" value={formData.tuev_valid_until} onChange={(e) => setFormData({ ...formData, tuev_valid_until: e.target.value })} />
                   </div>
 
                   <div className="space-y-2">

@@ -169,6 +169,11 @@ export default function AdminMotorhomeDetail() {
     return format(new Date(date), "dd.MM.yyyy", { locale: de });
   };
 
+  const formatMonthYear = (date: string | null) => {
+    if (!date) return "—";
+    return format(new Date(date), "MM/yyyy", { locale: de });
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       available: { label: "Verfügbar", variant: "default" },
@@ -347,7 +352,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Getriebe" value={motorhome.transmission} />
                       <InfoItem label="Abgasnorm" value={motorhome.emission_class} />
                       <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
-                      <InfoItem label="TÜV bis" value={formatDate(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
+                      <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString()} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">

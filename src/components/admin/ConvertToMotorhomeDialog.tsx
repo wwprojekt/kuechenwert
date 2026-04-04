@@ -141,7 +141,7 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     engine_displacement_ccm: isWohnwagen ? null : (formData.engine_displacement_ccm ? Number(formData.engine_displacement_ccm) : null),
     emission_class: isWohnwagen ? null : ((formData.emission_class || formData.emissionClass || null) as string | null),
     first_registration: formData.first_registration ? String(formData.first_registration) : null,
-    tuev_valid_until: (formData.tuv_valid_until || formData.tuev_valid_until) ? String(formData.tuv_valid_until || formData.tuev_valid_until) : null,
+    tuev_valid_until: (formData.tuv_valid_until || formData.tuev_valid_until) ? String(formData.tuv_valid_until || formData.tuev_valid_until).substring(0, 7) : null,
     previous_owners: formData.previous_owners != null ? Number(formData.previous_owners) : null,
     accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,
     non_smoker: formData.non_smoker != null ? Boolean(formData.non_smoker) : null,
@@ -371,7 +371,7 @@ export function ConvertToMotorhomeDialog({
         has_tv: formData.has_tv || false,
         accident_free: formData.accident_free || null,
         first_registration: formData.first_registration || null,
-        tuev_valid_until: formData.tuev_valid_until || null,
+        tuev_valid_until: formData.tuev_valid_until ? `${formData.tuev_valid_until}-01` : null,
         previous_owners: formData.previous_owners || null,
         water_tank_liters: formData.water_tank_liters || null,
         grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
@@ -907,7 +907,7 @@ export function ConvertToMotorhomeDialog({
                     <Label htmlFor="conv-tuev">TÜV gültig bis</Label>
                     <Input
                       id="conv-tuev"
-                      type="date"
+                      type="month"
                       value={String(formData.tuev_valid_until || "")}
                       onChange={(e) => updateField("tuev_valid_until", e.target.value)}
                     />

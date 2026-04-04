@@ -1397,7 +1397,7 @@ const AuctionDetail = () => {
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {motorhome.tuev_valid_until 
-                              ? `Gültig bis: ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE')}`
+                              ? `Gültig bis: ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
                               : 'Nicht angegeben'
                             }
                           </p>

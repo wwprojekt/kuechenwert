@@ -339,6 +339,50 @@ export function getCountryName(countryCode: string): string {
 }
 
 /**
+ * Country calling codes (ITU-T E.164) for phone number placeholders.
+ * Used to show the correct international dialling prefix when a country
+ * falls back to a generic language translation (e.g. English).
+ */
+export const COUNTRY_PHONE_PREFIXES: Record<string, string> = {
+  DE: '+49 123 456789',
+  AT: '+43 1 234 5678',
+  CH: '+41 44 123 45 67',
+  NL: '+31 6 12345678',
+  BE: '+32 2 123 45 67',
+  FR: '+33 1 23 45 67 89',
+  LU: '+352 621 123 456',
+  IT: '+39 02 1234567',
+  ES: '+34 912 345 678',
+  PT: '+351 21 123 4567',
+  PL: '+48 12 345 67 89',
+  CZ: '+420 123 456 789',
+  SK: '+421 2 1234 5678',
+  HU: '+36 1 234 5678',
+  RO: '+40 21 123 4567',
+  BG: '+359 2 123 4567',
+  HR: '+385 1 234 5678',
+  SI: '+386 1 234 56 78',
+  DK: '+45 12 34 56 78',
+  SE: '+46 8 123 456 78',
+  FI: '+358 9 123 4567',
+  IE: '+353 1 234 5678',
+  GR: '+30 21 0123 4567',
+  EE: '+372 5123 4567',
+  LV: '+371 2123 4567',
+  LT: '+370 5 123 4567',
+  MT: '+356 2123 4567',
+  CY: '+357 22 123456',
+};
+
+/**
+ * Get the phone placeholder for a specific country.
+ * Returns the country-specific prefix example.
+ */
+export function getPhonePlaceholder(countryCode: string): string {
+  return COUNTRY_PHONE_PREFIXES[countryCode] ?? '+' + countryCode + ' ...';
+}
+
+/**
  * Default country code for new registrations.
  */
 export const DEFAULT_COUNTRY = 'DE';

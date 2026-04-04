@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY } from "@/lib/euCountries";
+import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY, getPhonePlaceholder } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getTranslations, type TranslationKey } from "@/lib/dealerRegistrationTranslations";
 
@@ -646,7 +646,7 @@ const RegisterHaendler = () => {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder={tr.placeholderPhone}
+                        placeholder={getPhonePlaceholder(formData.country)}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />

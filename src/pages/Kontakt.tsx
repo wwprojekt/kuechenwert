@@ -15,6 +15,8 @@ import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackKontaktformularGesendet, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaContact, trackMetaLead } from "@/lib/metaPixelService";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -38,6 +40,8 @@ const Kontakt = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,12 +92,15 @@ const Kontakt = () => {
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
             transactionId,
+            turnstileToken,
+            honeypot: honeypotValue,
           },
         });
       } catch (emailError) {
         console.error("Failed to send contact notification:", emailError);
       }
 
+      resetTurnstile();
       setIsSubmitted(true);
 
       // Google Ads: Enhanced Conversions + Kontaktformular gesendet (Primäre Conversion)
@@ -349,6 +356,8 @@ const Kontakt = () => {
                     />
                   </div>
 
+                  <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+                  <div ref={turnstileRef} />
                   <Button type="submit" size="lg" className="w-full gradient-hero hover:gradient-hero-hover" disabled={isLoading}>
                     <Send className="h-5 w-5 mr-2" />
                     {isLoading ? "Wird gesendet..." : "Nachricht senden"}

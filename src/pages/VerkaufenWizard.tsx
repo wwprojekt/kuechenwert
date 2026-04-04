@@ -22,6 +22,8 @@ import { useWizardSession } from "@/hooks/useWizardSession";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { trackWizardStarted, trackWizardStep, trackWizardAbandoned } from "@/lib/gadsConversionService";
 import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
@@ -43,6 +45,8 @@ const VerkaufenWizard = () => {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   // Check if user is already authenticated and prefill profile data
   useEffect(() => {
@@ -297,7 +301,10 @@ const VerkaufenWizard = () => {
       phone: formData.customerPhone,
     });
 
-    const success = await submitForm(registerPassword || undefined);
+    const success = await submitForm(registerPassword || undefined, {
+      turnstileToken,
+      honeypot: honeypotValue,
+    });
     if (success) {
       await markCompleted();
       markLeadWizardCompleted();
@@ -419,15 +426,19 @@ const VerkaufenWizard = () => {
                   </Button>
 
                   {isLastStep ? (
-                    <Button
-                      size="lg"
-                      onClick={handleSubmit}
-                      disabled={isSubmitting}
-                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
-                    >
-                      {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
-                      <Check className="w-4 h-4 ml-2" />
-                    </Button>
+                    <>
+                      <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+                      <div ref={turnstileRef} />
+                      <Button
+                        size="lg"
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
+                      >
+                        {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
+                        <Check className="w-4 h-4 ml-2" />
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       size="lg"

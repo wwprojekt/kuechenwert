@@ -41,6 +41,8 @@ import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaLead, trackMetaWertrechnerCompleted } from "@/lib/metaPixelService";
 import { handleApiError } from "@/lib/errorLogService";
 import { withNetworkRetry } from "@/lib/sessionGuard";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -458,6 +460,8 @@ const Wertrechner = () => {
     return "";
   });
   const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
   const [manufacturerFilter, setManufacturerFilter] = useState(formData.manufacturer || "");
   const manufacturerRef = useRef<HTMLDivElement>(null);
 
@@ -546,6 +550,8 @@ const Wertrechner = () => {
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
             transactionId,
+            turnstileToken,
+            honeypot: honeypotValue,
           },
         });
       } catch {}
@@ -553,6 +559,7 @@ const Wertrechner = () => {
       return value;
     },
     onSuccess: async (value) => {
+      resetTurnstile();
       setLeadSubmitted(true);
       setEstimatedValue(value);
       setStep(7);
@@ -1185,6 +1192,8 @@ const Wertrechner = () => {
                       required
                     />
                   </div>
+                  <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+                  <div ref={turnstileRef} />
                   <Button
                     type="submit"
                     className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-xl"

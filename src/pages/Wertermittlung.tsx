@@ -36,6 +36,8 @@ import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackWertermittlungLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaLead } from "@/lib/metaPixelService";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
 const wertermittlungSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -67,6 +69,8 @@ const Wertermittlung = () => {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -105,6 +109,8 @@ const Wertermittlung = () => {
             wbraid: trackingData.wbraid,
             ga4ClientId: trackingData.ga4ClientId,
             transactionId,
+            turnstileToken,
+            honeypot: honeypotValue,
           },
         });
       } catch {
@@ -112,6 +118,7 @@ const Wertermittlung = () => {
       }
     },
     onSuccess: async () => {
+      resetTurnstile();
       setSubmitted(true);
 
       // Google Ads: Enhanced Conversions + Wertermittlung Lead (Primäre Conversion)
@@ -346,6 +353,8 @@ const Wertermittlung = () => {
                       />
                     </div>
 
+                    <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+                    <div ref={turnstileRef} />
                     <Button
                       type="submit"
                       className="w-full h-12 text-base gradient-hero hover:gradient-hero-hover"

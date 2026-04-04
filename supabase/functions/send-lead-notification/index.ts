@@ -9,6 +9,7 @@ import {
 } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
+import { verifyTurnstileToken, getClientIp } from '../_shared/turnstile.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -42,6 +43,9 @@ interface LeadNotificationRequest {
   // Transaction ID für Deduplizierung über alle Tracking-Schichten
   transactionId?: string;
   skipUserEmail?: boolean;
+  // Bot-Schutz
+  turnstileToken?: string;
+  honeypot?: string;
 }
 
 const VALID_TYPES = ["wertermittlung", "wertrechner", "wizard", "kontakt", "dealer"];
@@ -71,6 +75,27 @@ const handler = async (req: Request): Promise<Response> => {
       estimatedMin,
       estimatedMax,
     } = data;
+
+    // ─── Bot-Schutz: Honeypot ───────────────────────────────────────
+    if (data.honeypot && data.honeypot.length > 0) {
+      console.warn('Honeypot triggered – bot detected:', email);
+      // Fake-Erfolg zurückgeben damit der Bot denkt es hat funktioniert
+      return new Response(
+        JSON.stringify({ success: true, message: "Notifications sent" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // ─── Bot-Schutz: Cloudflare Turnstile ────────────────────────────
+    const clientIp = getClientIp(req);
+    const turnstileResult = await verifyTurnstileToken(data.turnstileToken, clientIp);
+    if (!turnstileResult.valid) {
+      console.warn('Turnstile verification failed:', turnstileResult.error, '– IP:', clientIp);
+      return new Response(
+        JSON.stringify({ error: "Bot-Schutz-Verifizierung fehlgeschlagen. Bitte laden Sie die Seite neu." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ─── Input Validation ────────────────────────────────────────────
     if (!type || !VALID_TYPES.includes(type)) {

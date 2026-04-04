@@ -434,7 +434,7 @@ export const useWizardForm = () => {
     }
   };
 
-  const submitForm = async (registerPassword?: string): Promise<boolean> => {
+  const submitForm = async (registerPassword?: string, botProtection?: { turnstileToken?: string | null; honeypot?: string }): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       // Check if user is already authenticated (with session validation)
@@ -578,6 +578,8 @@ export const useWizardForm = () => {
               ga4ClientId: trackingData.ga4ClientId,
               transactionId: txId1,
               skipUserEmail: true,
+              turnstileToken: botProtection?.turnstileToken || undefined,
+              honeypot: botProtection?.honeypot || undefined,
             },
           }).catch((emailError) => {
             logger.error("Failed to send wizard lead notification (background):", emailError);
@@ -756,6 +758,8 @@ export const useWizardForm = () => {
                 wbraid: trackingData.wbraid,
                 ga4ClientId: trackingData.ga4ClientId,
                 transactionId,
+                turnstileToken: botProtection?.turnstileToken || undefined,
+                honeypot: botProtection?.honeypot || undefined,
               },
             });
           } catch (emailError) {
@@ -820,6 +824,8 @@ export const useWizardForm = () => {
           wbraid: trackingData.wbraid,
           ga4ClientId: trackingData.ga4ClientId,
           transactionId,
+          turnstileToken: botProtection?.turnstileToken || undefined,
+          honeypot: botProtection?.honeypot || undefined,
         },
       }).catch((emailError) => {
         logger.error("Failed to send wizard lead notification (background):", emailError);

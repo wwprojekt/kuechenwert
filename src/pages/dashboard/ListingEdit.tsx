@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -541,15 +542,19 @@ export default function ListingEdit() {
                     <Input id="first_registration" type="date" value={formData.first_registration} onChange={(e) => setFormData({ ...formData, first_registration: e.target.value })} />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="last_tuev_date">Letzte TÜV/HU</Label>
-                    <Input id="last_tuev_date" type="month" value={formData.last_tuev_date} onChange={(e) => setFormData({ ...formData, last_tuev_date: e.target.value })} />
-                  </div>
+                  <MonthYearPicker
+                    id="last_tuev_date"
+                    label="Letzte TÜV/HU"
+                    value={formData.last_tuev_date}
+                    onChange={(val) => setFormData({ ...formData, last_tuev_date: val })}
+                  />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="tuev_valid_until">Nächste TÜV/HU</Label>
-                    <Input id="tuev_valid_until" type="month" value={formData.tuev_valid_until} onChange={(e) => setFormData({ ...formData, tuev_valid_until: e.target.value })} />
-                  </div>
+                  <MonthYearPicker
+                    id="tuev_valid_until"
+                    label="Nächste TÜV/HU"
+                    value={formData.tuev_valid_until}
+                    onChange={(val) => setFormData({ ...formData, tuev_valid_until: val })}
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="previous_owners">Vorbesitzer</Label>

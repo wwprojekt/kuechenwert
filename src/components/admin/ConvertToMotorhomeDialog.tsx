@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -904,12 +905,11 @@ export function ConvertToMotorhomeDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="conv-tuev">TÜV gültig bis</Label>
-                    <Input
+                    <MonthYearPicker
                       id="conv-tuev"
-                      type="month"
+                      label="TÜV gültig bis"
                       value={String(formData.tuev_valid_until || "")}
-                      onChange={(e) => updateField("tuev_valid_until", e.target.value)}
+                      onChange={(val) => updateField("tuev_valid_until", val)}
                     />
                   </div>
                 </div>

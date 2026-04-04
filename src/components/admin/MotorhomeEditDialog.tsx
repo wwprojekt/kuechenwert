@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -455,20 +456,17 @@ export function MotorhomeEditDialog({
     </div>
   );
 
-  // Helper for month-only input fields (TÜV)
+  // Helper for month-only input fields (TÜV) - uses MonthYearPicker for cross-browser compatibility
   const renderMonthInput = (
     field: keyof MotorhomeData,
     label: string
   ) => (
-    <div className="space-y-2">
-      <Label htmlFor={field}>{label}</Label>
-      <Input
-        id={field}
-        type="month"
-        value={(formData[field] as string) || ""}
-        onChange={(e) => updateField(field, e.target.value || null as any)}
-      />
-    </div>
+    <MonthYearPicker
+      id={field}
+      label={label}
+      value={(formData[field] as string) || ""}
+      onChange={(val) => updateField(field, val || null as any)}
+    />
   );
 
   // Helper for switch fields

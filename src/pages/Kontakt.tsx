@@ -62,6 +62,13 @@ const Kontakt = () => {
       return;
     }
 
+    // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
+    if (isHoneypotBot) {
+      setIsSubmitted(true);
+      setIsLoading(false);
+      return; // Fake-Erfolg
+    }
+
     try {
       const { error } = await supabase.from("contact_messages").insert({
         name: formData.name.trim(),

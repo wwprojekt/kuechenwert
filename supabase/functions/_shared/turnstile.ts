@@ -35,10 +35,12 @@ export async function verifyTurnstileToken(
     return { valid: true };
   }
 
-  // Wenn kein Token vorhanden ist, ablehnen
+  // Wenn kein Token vorhanden ist: Graceful Degradation
+  // Echte Nutzer mit AdBlocker oder langsamer Verbindung haben möglicherweise kein Token.
+  // Nur bei VORHANDENEM aber UNGÜLTIGEM Token blockieren (= Bot der ein Fake-Token sendet).
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    console.warn('Turnstile: No token provided');
-    return { valid: false, error: 'Kein Turnstile-Token vorhanden' };
+    console.warn('Turnstile: No token provided (AdBlocker or slow connection?) - allowing request');
+    return { valid: true };
   }
 
   try {

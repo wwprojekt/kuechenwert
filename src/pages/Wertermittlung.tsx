@@ -74,6 +74,11 @@ const Wertermittlung = () => {
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
+      if (isHoneypotBot) {
+        return; // Fake-Erfolg
+      }
+
       const { error } = await supabase.from("value_assessment_leads").insert({
         name: data.name,
         email: data.email,

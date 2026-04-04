@@ -437,6 +437,13 @@ export const useWizardForm = () => {
   const submitForm = async (registerPassword?: string, botProtection?: { turnstileToken?: string | null; honeypot?: string }): Promise<boolean> => {
     setIsSubmitting(true);
     try {
+      // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
+      if (botProtection?.honeypot && botProtection.honeypot.length > 0) {
+        logger.info('Bot detected via honeypot, silently aborting');
+        setIsSubmitting(false);
+        return true; // Fake-Erfolg
+      }
+
       // Check if user is already authenticated (with session validation)
       const sessionResult = await ensureValidSession();
       let user = sessionResult.user;

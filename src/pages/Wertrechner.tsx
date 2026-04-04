@@ -501,6 +501,12 @@ const Wertrechner = () => {
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
+      if (isHoneypotBot) {
+        // Fake-Erfolg: Bot denkt es hat funktioniert
+        return { min: 10000, max: 20000, brandTier: 'standard' as const };
+      }
+
       const year = parseInt(data.year, 10);
       const mileage = isWohnwagen ? 0 : parseInt(data.mileage, 10);
       const value = calculateValue(data.bodyType, year, mileage, data.condition, data.manufacturer, data.vehicleType);

@@ -456,53 +456,13 @@ export const useWizardForm = () => {
         return false;
       }
 
-      // If not authenticated and password provided, register the user
-      if (!user && registerPassword && formData.customerEmail) {
-        const nameParts = (formData.customerName || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
-
-        const { data: signUpData, error: signUpError } = await withNetworkRetry(
-          () => supabase.auth.signUp({
-            email: formData.customerEmail!,
-            password: registerPassword!,
-            options: {
-              data: {
-                first_name: firstName,
-                last_name: lastName,
-                phone: formData.customerPhone || undefined,
-                role: "private",
-              },
-            },
-          }),
-          2,
-          'wizard-signup'
-        );
-
-        if (signUpError) throw signUpError;
-
-        // After signUp, verify we have an active session.
-        // If mailer_autoconfirm is disabled or the email already exists,
-        // Supabase may return a user object without creating a session.
-        // In that case auth.uid() would be null and RLS would block inserts.
-        if (signUpData.session) {
-          user = signUpData.user;
-          // Google Ads: Registrierung im Wizard
-          trackUserRegistered('wizard_signup');
-        } else {
-          // No active session – treat as guest submission.
-          // The user will receive a confirmation email and can log in later.
-          // IMPORTANT: We still capture the signUp user ID so auto-convert can use it
-          // instead of searching/creating a duplicate user.
-          logger.info("SignUp returned user but no session (email confirmation pending). Falling back to guest path.");
-          user = null;
-        }
-
-        // Capture the signUp user ID even without a session – this is critical
-        // to avoid duplicate user creation in auto-convert-wizard.
-        var signUpUserId = signUpData.user?.id || null;
-        logger.info('SignUp user ID captured (no session):', signUpUserId);
-      }
+      // User-Erstellung wurde in die Edge Function auto-convert-wizard verlagert.
+      // WARUM: supabase.auth.signUp() sendet IMMER eine Standard-Bestätigungs-E-Mail
+      // wenn "Confirm email" in Supabase Auth Settings aktiviert ist.
+      // Das führte zu DOPPELTEN E-Mails (Supabase-Standard + unsere Custom-E-Mail).
+      // Jetzt erstellt auto-convert-wizard den User per admin.createUser() mit
+      // email_confirm: true, was KEINE automatische E-Mail sendet.
+      // Das Passwort wird sicher über den Edge Function Request-Body übergeben.
 
       // If no active session (because email confirmation is pending), save wizard data
       // so it can be converted by the edge function automatically.
@@ -511,8 +471,9 @@ export const useWizardForm = () => {
         const formDataForStorage = { ...formData };
         delete (formDataForStorage as Partial<WizardFormData>).photos;
 
-        // @ts-ignore – signUpUserId is defined in the signUp block above
-        const capturedUserId = typeof signUpUserId !== 'undefined' ? signUpUserId : null;
+        // User wird jetzt in auto-convert-wizard per admin.createUser() erstellt.
+        // Daher gibt es hier keine user_id - sie wird von der Edge Function nachträglich gesetzt.
+        const capturedUserId = null;
 
         // Save to wizard_sessions so admin can convert and data is not lost
         // Generate UUID client-side to avoid needing .select('id') after INSERT.
@@ -589,7 +550,7 @@ export const useWizardForm = () => {
           supabase.functions.invoke("auto-convert-wizard", {
             body: {
               sessionId: savedSessionId,
-              userId: capturedUserId,
+              userId: null,  // User wird in auto-convert-wizard erstellt
               password: registerPassword,
               // Signal: User hat bereits ein Passwort im Wizard gesetzt
               hasPassword: true,

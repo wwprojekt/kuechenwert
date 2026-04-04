@@ -204,13 +204,15 @@ const handler = async (req: Request): Promise<Response> => {
         }, { onConflict: "user_id" });
         
       } else {
-        // Create user
+        // Create user via Admin API (NOT via signUp()!)
+        // email_confirm: true → Supabase sendet KEINE automatische Bestätigungs-E-Mail
+        // Unsere Custom-Aktivierungs-E-Mail (send-registration-invite) wird später gesendet.
         // Use provided password if available, otherwise generate random
         const passwordToUse = body.password || (crypto.randomUUID() + "Aa1!");
         const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
           email: customerEmail.trim().toLowerCase(),
           password: passwordToUse,
-          email_confirm: false,
+          email_confirm: true,
           user_metadata: {
             first_name: firstName,
             last_name: lastName,
@@ -382,22 +384,10 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", body.sessionId);
 
-    // 6. Handle Email Confirmation & Send Registration Invite
-    // If the user already set a password in the wizard (hasPassword=true),
-    // we confirm their email via admin API to suppress the Supabase auto-confirmation email.
-    // This prevents the user from receiving TWO emails (Supabase confirmation + our custom invite).
-    if (body.hasPassword && sellerId) {
-      try {
-        await adminClient.auth.admin.updateUserById(sellerId, {
-          email_confirm: true,
-        });
-        edgeLogger.info(`Email confirmed via admin API for user ${sellerId} (has password from wizard)`);
-      } catch (confirmErr) {
-        edgeLogger.error("Failed to confirm email via admin API:", confirmErr);
-      }
-    }
-
-    // Send our custom registration invite email
+    // 6. Send Registration Invite Email
+    // User wurde bereits mit email_confirm: true erstellt (Zeile 215),
+    // daher sendet Supabase KEINE automatische Bestätigungs-E-Mail.
+    // Wir senden nur unsere Custom-Aktivierungs-E-Mail.
     // When hasPassword=true, the redirect goes to /dashboard (no password setup needed)
     const inviteRes = await fetch(`${SUPABASE_URL}/functions/v1/send-registration-invite`, {
       method: "POST",

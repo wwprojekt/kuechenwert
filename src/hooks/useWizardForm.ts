@@ -571,37 +571,20 @@ export const useWizardForm = () => {
           title: "Fahrzeug erfolgreich eingereicht!",
           description: "Sie erhalten in Kürze eine E-Mail zur Kontoaktivierung. Prüfen Sie Ihr Postfach.",
         });
+        // Fotos und sessionId über window-Objekt an die Danke-Seite übergeben.
+        // WARUM? File-Objekte sind nicht über history.state serialisierbar.
+        // WARUM NICHT fire-and-forget? navigate() bricht laufende fetch()-Requests ab.
+        // Die Danke-Seite liest diese Daten und startet den Upload dort.
+        if (formData.photos.length > 0 && savedSessionId) {
+          (window as any).__pendingWizardPhotos = {
+            photos: formData.photos,
+            sessionId: savedSessionId,
+          };
+        }
         navigate("/verkaufen/danke");
 
         // --- Background tasks (fire-and-forget, nicht blockierend) ---
         if (savedSessionId) {
-          // 0. Photo-Upload im Hintergrund (Hauptursache der 2-3 Min Wartezeit)
-          if (formData.photos.length > 0) {
-            const photoFormData = new FormData();
-            photoFormData.append('sessionId', savedSessionId);
-            for (const photo of formData.photos) {
-              photoFormData.append('photos', photo);
-            }
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zcrwqxsyptjwkuxfacvq.supabase.co';
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-            fetch(`${supabaseUrl}/functions/v1/upload-wizard-photos`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-              },
-              body: photoFormData,
-            }).then(async (photoRes) => {
-              if (photoRes.ok) {
-                const photoResult = await photoRes.json();
-                logger.info(`Uploaded ${photoResult.count} wizard photos for session ${savedSessionId} (background)`);
-              } else {
-                logger.error('Failed to upload wizard photos (background):', await photoRes.text());
-              }
-            }).catch((photoUploadError) => {
-              logger.error('Error uploading wizard photos (background):', photoUploadError);
-            });
-          }
-
           // 1. auto-convert-wizard: Erstellt Profil, Motorhome, sendet Aktivierungs-E-Mail
           supabase.functions.invoke("auto-convert-wizard", {
             body: {

@@ -2,13 +2,93 @@ import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText, LayoutDashboard, Inbox, ImageIcon } from "lucide-react";
+import { CheckCircle2, Clock, Phone, Mail, ArrowRight, Home, FileText, LayoutDashboard, Inbox, ImageIcon, Loader2, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
+
+type PhotoUploadState = "idle" | "uploading" | "success" | "error";
+
+interface PendingWizardPhotos {
+  photos: File[];
+  sessionId: string;
+}
 
 const VerkaufenDanke = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const [uploadState, setUploadState] = useState<PhotoUploadState>("idle");
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [totalPhotos, setTotalPhotos] = useState(0);
+  const uploadStarted = useRef(false);
+
+  // Photo-Upload auf der Danke-Seite starten.
+  // File-Objekte werden über window.__pendingWizardPhotos übergeben,
+  // weil sie nicht über React Router state (history.pushState) serialisierbar sind.
+  // fire-and-forget fetch() im Wizard wird durch navigate() abgebrochen,
+  // deshalb muss der Upload HIER stattfinden.
+  useEffect(() => {
+    if (uploadStarted.current) return;
+
+    const pending = (window as any).__pendingWizardPhotos as PendingWizardPhotos | undefined;
+    if (!pending || !pending.photos || pending.photos.length === 0 || !pending.sessionId) {
+      return;
+    }
+
+    uploadStarted.current = true;
+    const { photos, sessionId } = pending;
+    setTotalPhotos(photos.length);
+    setUploadState("uploading");
+
+    // Sofort aus window entfernen, damit kein Doppel-Upload bei Re-Render passiert
+    delete (window as any).__pendingWizardPhotos;
+
+    const uploadPhotos = async () => {
+      try {
+        const photoFormData = new FormData();
+        photoFormData.append("sessionId", sessionId);
+        for (const photo of photos) {
+          photoFormData.append("photos", photo);
+        }
+
+        const supabaseUrl =
+          import.meta.env.VITE_SUPABASE_URL ||
+          "https://zcrwqxsyptjwkuxfacvq.supabase.co";
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/upload-wizard-photos`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            body: photoFormData,
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          setUploadedCount(result.count || photos.length);
+          setUploadState("success");
+          logger.info(
+            `Uploaded ${result.count} wizard photos for session ${sessionId} (Danke-Seite)`
+          );
+        } else {
+          const errorText = await response.text();
+          logger.error("Failed to upload wizard photos (Danke-Seite):", errorText);
+          setUploadState("error");
+        }
+      } catch (error) {
+        logger.error("Error uploading wizard photos (Danke-Seite):", error);
+        setUploadState("error");
+      }
+    };
+
+    uploadPhotos();
+  }, []);
 
   return (
     <PageLayout
@@ -60,23 +140,82 @@ const VerkaufenDanke = () => {
               </Card>
             )}
 
-            {/* Foto-Upload-Hinweis - Info-Banner */}
-            <Card className="p-4 md:p-5 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                  <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            {/* Foto-Upload-Status - dynamisch basierend auf Upload-State */}
+            {uploadState === "uploading" && (
+              <Card className="p-4 md:p-5 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                      Fotos werden hochgeladen...
+                    </h3>
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                      {totalPhotos} {totalPhotos === 1 ? "Foto wird" : "Fotos werden"} gerade hochgeladen. 
+                      Bitte lassen Sie diese Seite geöffnet, bis der Upload abgeschlossen ist.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
-                    Ihre Fotos werden verarbeitet
-                  </h3>
-                  <p className="text-xs text-blue-700 dark:text-blue-400">
-                    Falls Sie Fotos hochgeladen haben, werden diese im Hintergrund verarbeitet und Ihrem Inserat zugeordnet. 
-                    Sie können diese Seite bedenkenlos verlassen.
-                  </p>
+              </Card>
+            )}
+
+            {uploadState === "success" && (
+              <Card className="p-4 md:p-5 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-green-800 dark:text-green-300 mb-1">
+                      {uploadedCount} {uploadedCount === 1 ? "Foto" : "Fotos"} erfolgreich hochgeladen
+                    </h3>
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      Ihre Fotos wurden Ihrem Inserat zugeordnet. Sie können diese Seite jetzt verlassen.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )}
+
+            {uploadState === "error" && (
+              <Card className="p-4 md:p-5 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
+                      Foto-Upload fehlgeschlagen
+                    </h3>
+                    <p className="text-xs text-red-700 dark:text-red-400">
+                      Beim Hochladen Ihrer Fotos ist ein Fehler aufgetreten. 
+                      Keine Sorge – Sie können die Fotos später in Ihrem Dashboard erneut hochladen.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Kein Upload nötig - idle state (keine Fotos übergeben) */}
+            {uploadState === "idle" && (
+              <Card className="p-4 md:p-5 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                      Fotos hinzufügen
+                    </h3>
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                      Sie können jederzeit in Ihrem Dashboard Fotos zu Ihrem Inserat hinzufügen. 
+                      Inserate mit Fotos erhalten 3x mehr Anfragen.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* Was passiert als nächstes */}
             <Card className="p-6 md:p-8 shadow-elegant">

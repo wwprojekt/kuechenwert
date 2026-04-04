@@ -11,7 +11,17 @@
  * - photos: One or more image files
  * - sessionId: The wizard session UUID (used as folder name)
  * 
- * Returns: JSON array of uploaded photo URLs
+ * RACE CONDITION HANDLING:
+ * auto-convert-wizard and this function run concurrently.
+ * auto-convert-wizard creates the motorhome in ~2s, but photo upload takes 30s-3min.
+ * So auto-convert-wizard is almost always done BEFORE photos are uploaded.
+ * 
+ * Solution: After uploading photos, this function checks if the wizard_session
+ * has already been converted (status='converted'). If so, it looks up the
+ * motorhome_id from the admin_notes and creates motorhome_photos records directly.
+ * This way, photos are correctly assigned regardless of execution order.
+ * 
+ * Returns: JSON with uploaded photo URLs and count
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
@@ -71,7 +81,7 @@ Deno.serve(async (req: Request) => {
     // Verify the wizard session exists
     const { data: session, error: sessionError } = await adminClient
       .from("wizard_sessions")
-      .select("id")
+      .select("id, status, user_id, admin_notes")
       .eq("id", sessionId)
       .single();
 
@@ -148,7 +158,7 @@ Deno.serve(async (req: Request) => {
     if (uploadedUrls.length > 0) {
       const { data: currentSession } = await adminClient
         .from("wizard_sessions")
-        .select("form_data")
+        .select("form_data, status, admin_notes, user_id")
         .eq("id", sessionId)
         .single();
 
@@ -162,6 +172,86 @@ Deno.serve(async (req: Request) => {
           .from("wizard_sessions")
           .update({ form_data: updatedFormData })
           .eq("id", sessionId);
+
+        // ===== RACE CONDITION FIX =====
+        // auto-convert-wizard runs concurrently and is usually done in ~2s.
+        // By the time photos are uploaded (30s-3min), the session is already
+        // "converted" and a motorhome exists. But auto-convert couldn't assign
+        // photos because they weren't uploaded yet.
+        //
+        // Solution: If the session is already converted, we assign photos
+        // to the motorhome directly here.
+        if (currentSession.status === "converted" && currentSession.admin_notes) {
+          // Extract motorhome ID from admin_notes
+          // Format: "[DD.MM.YYYY, HH:MM] Automatisch als Wohnmobil angelegt (ID: <uuid>)"
+          const motorhomeIdMatch = currentSession.admin_notes.match(/\(ID:\s*([a-f0-9-]+)\)/i);
+          
+          if (motorhomeIdMatch) {
+            const motorhomeId = motorhomeIdMatch[1];
+            console.log(`Session already converted. Assigning ${uploadedUrls.length} photos to motorhome ${motorhomeId}`);
+
+            // Check if motorhome_photos already exist for this motorhome
+            const { data: existingPhotos } = await adminClient
+              .from("motorhome_photos")
+              .select("id")
+              .eq("motorhome_id", motorhomeId);
+
+            const startOrder = existingPhotos?.length || 0;
+
+            // Create motorhome_photos records
+            const photoRecords = uploadedUrls.map((url: string, index: number) => ({
+              motorhome_id: motorhomeId,
+              url: url,
+              display_order: startOrder + index,
+            }));
+
+            const { error: photosInsertError } = await adminClient
+              .from("motorhome_photos")
+              .insert(photoRecords);
+
+            if (photosInsertError) {
+              console.error("Failed to insert motorhome photos:", photosInsertError.message);
+            } else {
+              console.log(`Successfully assigned ${photoRecords.length} photos to motorhome ${motorhomeId}`);
+            }
+
+            // Move photos from wizard_temp/{sessionId}/ to {sellerId}/
+            const sellerId = currentSession.user_id;
+            if (sellerId) {
+              try {
+                for (const url of uploadedUrls) {
+                  const match = url.match(/wizard_temp\/[^/]+\/(.+)$/);
+                  if (match) {
+                    const fileName = match[1];
+                    const oldPath = `wizard_temp/${sessionId}/${fileName}`;
+                    const newPath = `${sellerId}/${fileName}`;
+                    await adminClient.storage
+                      .from("motorhome-photos")
+                      .move(oldPath, newPath);
+
+                    // Update the photo URL in motorhome_photos
+                    const newPublicUrl = adminClient.storage
+                      .from("motorhome-photos")
+                      .getPublicUrl(newPath).data.publicUrl;
+
+                    await adminClient
+                      .from("motorhome_photos")
+                      .update({ url: newPublicUrl })
+                      .eq("motorhome_id", motorhomeId)
+                      .eq("url", url);
+                  }
+                }
+                console.log(`Moved photos from wizard_temp/${sessionId}/ to ${sellerId}/`);
+              } catch (moveError) {
+                console.error("Failed to move some photos (non-critical):", moveError);
+              }
+            }
+          } else {
+            console.warn("Session is converted but could not extract motorhome ID from admin_notes");
+          }
+        } else {
+          console.log(`Session status: ${currentSession.status}. Photos saved to wizard_temp, auto-convert-wizard will assign them later.`);
+        }
       }
     }
 

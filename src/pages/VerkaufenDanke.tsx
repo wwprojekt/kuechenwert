@@ -90,6 +90,23 @@ const VerkaufenDanke = () => {
     uploadPhotos();
   }, []);
 
+  // beforeunload-Warning: Warnt den User wenn er die Seite verlassen will
+  // während Fotos noch hochgeladen werden
+  useEffect(() => {
+    if (uploadState !== "uploading") return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Moderner Browsers ignorieren custom messages, zeigen aber den Standard-Dialog
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [uploadState]);
+
+  const isUploading = uploadState === "uploading";
+
   return (
     <PageLayout
       title="Fahrzeug erfolgreich eingereicht – CaravanWert"
@@ -289,13 +306,14 @@ const VerkaufenDanke = () => {
               </div>
             </Card>
 
-            {/* Navigation Buttons - Modern Design */}
+            {/* Navigation Buttons - deaktiviert während Upload */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               {user ? (
                 <Button
                   size="lg"
                   onClick={() => navigate("/dashboard")}
-                  className="gradient-hero hover:gradient-hero-hover group"
+                  disabled={isUploading}
+                  className="gradient-hero hover:gradient-hero-hover group disabled:opacity-50"
                 >
                   <LayoutDashboard className="w-5 h-5 mr-2" />
                   Zum Dashboard
@@ -305,7 +323,8 @@ const VerkaufenDanke = () => {
                 <Button
                   size="lg"
                   onClick={() => navigate("/")}
-                  className="gradient-hero hover:gradient-hero-hover group"
+                  disabled={isUploading}
+                  className="gradient-hero hover:gradient-hero-hover group disabled:opacity-50"
                 >
                   <Home className="w-5 h-5 mr-2" />
                   Zur Startseite
@@ -316,7 +335,8 @@ const VerkaufenDanke = () => {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/ratgeber")}
-                className="group"
+                disabled={isUploading}
+                className="group disabled:opacity-50"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Ratgeber lesen

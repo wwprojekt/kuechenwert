@@ -460,7 +460,7 @@ const Wertrechner = () => {
     return "";
   });
   const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
   const [manufacturerFilter, setManufacturerFilter] = useState(formData.manufacturer || "");
   const manufacturerRef = useRef<HTMLDivElement>(null);
@@ -1199,7 +1199,7 @@ const Wertrechner = () => {
                     />
                   </div>
                   <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-                  <div ref={turnstileRef} />
+                  <div ref={turnstileCallbackRef} />
                   <Button
                     type="submit"
                     className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-xl"

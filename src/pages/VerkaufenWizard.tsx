@@ -45,7 +45,7 @@ const VerkaufenWizard = () => {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   // Check if user is already authenticated and prefill profile data
@@ -428,7 +428,7 @@ const VerkaufenWizard = () => {
                   {isLastStep ? (
                     <>
                       <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-                      <div ref={turnstileRef} />
+                      <div ref={turnstileCallbackRef} />
                       <Button
                         size="lg"
                         onClick={handleSubmit}

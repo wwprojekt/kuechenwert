@@ -40,7 +40,7 @@ const Kontakt = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -364,7 +364,7 @@ const Kontakt = () => {
                   </div>
 
                   <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-                  <div ref={turnstileRef} />
+                  <div ref={turnstileCallbackRef} />
                   <Button type="submit" size="lg" className="w-full gradient-hero hover:gradient-hero-hover" disabled={isLoading}>
                     <Send className="h-5 w-5 mr-2" />
                     {isLoading ? "Wird gesendet..." : "Nachricht senden"}

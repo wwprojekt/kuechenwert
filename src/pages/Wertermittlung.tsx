@@ -69,7 +69,7 @@ const Wertermittlung = () => {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileRef } = useTurnstile();
+  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
 
   const submitMutation = useMutation({
@@ -359,7 +359,7 @@ const Wertermittlung = () => {
                     </div>
 
                     <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-                    <div ref={turnstileRef} />
+                    <div ref={turnstileCallbackRef} />
                     <Button
                       type="submit"
                       className="w-full h-12 text-base gradient-hero hover:gradient-hero-hover"

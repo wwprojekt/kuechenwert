@@ -77,6 +77,8 @@ import {
   PhoneOff,
   PhoneMissed,
   Undo2,
+  Pencil,
+  Save,
 } from "lucide-react";
 
 // ============================================================================
@@ -651,6 +653,17 @@ export default function AdminLeads() {
   const [expertValue, setExpertValue] = useState("");
   const [expertNotes, setExpertNotes] = useState("");
   const [valuationAdminNotes, setValuationAdminNotes] = useState("");
+  // Edit vehicle data in valuation detail
+  const [editingVehicleData, setEditingVehicleData] = useState(false);
+  const [editVehicleForm, setEditVehicleForm] = useState<{
+    manufacturer: string;
+    model: string;
+    year: string;
+    body_type: string;
+    vehicle_type: string;
+    mileage: string;
+    condition: string;
+  }>({ manufacturer: "", model: "", year: "", body_type: "", vehicle_type: "", mileage: "", condition: "" });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ value: number; confidence: number; reasoning: string; trainingCount: number } | null>(null);
   // Send expert valuation email
@@ -1240,10 +1253,41 @@ export default function AdminLeads() {
     onError: (error: Error) => {
       toast({ title: "Fehler beim Speichern", description: error.message, variant: "destructive" });
     },
+   });
+
+  // ---- Save edited vehicle data ----
+  const saveVehicleData = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { manufacturer: string | null; model: string | null; year: number | null; body_type: string | null; vehicle_type: string | null; mileage: number | null; condition: string | null } }) => {
+      const { error } = await supabase
+        .from("value_assessment_leads")
+        .update(data as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Fahrzeugdaten aktualisiert", description: "Die Fahrzeugdaten wurden erfolgreich gespeichert." });
+      queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
+      setEditingVehicleData(false);
+      // Update selectedValuation locally so the dialog reflects changes immediately
+      if (selectedValuation) {
+        setSelectedValuation({
+          ...selectedValuation,
+          manufacturer: editVehicleForm.manufacturer || null,
+          model: editVehicleForm.model || null,
+          year: editVehicleForm.year ? Number(editVehicleForm.year) : null,
+          body_type: editVehicleForm.body_type || null,
+          vehicle_type: editVehicleForm.vehicle_type || null,
+          mileage: editVehicleForm.mileage ? Number(editVehicleForm.mileage) : null,
+          condition: editVehicleForm.condition || null,
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Fehler beim Speichern", description: error.message, variant: "destructive" });
+    },
   });
 
   // ---- Disposition Mutations ----
-
   const updateWizardDisposition = useMutation({
     mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
       const { error } = await supabase
@@ -1409,6 +1453,7 @@ export default function AdminLeads() {
       trainingCount: 0,
     } : null);
     setValuationEmailSent(false);
+    setEditingVehicleData(false);
     setValuationDetailOpen(true);
     // Mark as viewed
     if (!lead.is_viewed) {
@@ -3219,22 +3264,173 @@ export default function AdminLeads() {
                   </div>
                 </Card>
 
-                {/* Fahrzeugdaten */}
+                {/* Fahrzeugdaten - bearbeitbar */}
                 <Card className="p-4">
-                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
-                    <Car className="w-4 h-4" /> Fahrzeugdaten
-                  </h3>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Hersteller</span><span className="font-medium">{selectedValuation.manufacturer || "-"}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Modell</span><span className="font-medium">{selectedValuation.model || "-"}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{selectedValuation.year || "-"}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Aufbautyp</span><span className="font-medium">{selectedValuation.body_type || "-"}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Kilometerstand</span><span className="font-medium">{selectedValuation.mileage ? `${selectedValuation.mileage.toLocaleString("de-DE")} km` : "-"}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Zustand</span><span className="font-medium">{selectedValuation.condition || "-"}</span></div>
-                    {selectedValuation.brand_tier && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Preisklasse</span><Badge variant="outline" className="text-xs">{selectedValuation.brand_tier}</Badge></div>
+                  <h3 className="font-semibold mb-2 flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <Car className="w-4 h-4" /> Fahrzeugdaten
+                    </span>
+                    {!editingVehicleData ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => {
+                          setEditVehicleForm({
+                            manufacturer: selectedValuation.manufacturer || "",
+                            model: selectedValuation.model || "",
+                            year: selectedValuation.year ? String(selectedValuation.year) : "",
+                            body_type: selectedValuation.body_type || "",
+                            vehicle_type: selectedValuation.vehicle_type || "",
+                            mileage: selectedValuation.mileage ? String(selectedValuation.mileage) : "",
+                            condition: selectedValuation.condition || "",
+                          });
+                          setEditingVehicleData(true);
+                        }}
+                      >
+                        <Pencil className="w-3 h-3 mr-1" /> Bearbeiten
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setEditingVehicleData(false)}
+                        >
+                          Abbrechen
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          disabled={saveVehicleData.isPending}
+                          onClick={() => {
+                            saveVehicleData.mutate({
+                              id: selectedValuation.id,
+                              data: {
+                                manufacturer: editVehicleForm.manufacturer || null,
+                                model: editVehicleForm.model || null,
+                                year: editVehicleForm.year ? Number(editVehicleForm.year) : null,
+                                body_type: editVehicleForm.body_type || null,
+                                vehicle_type: editVehicleForm.vehicle_type || null,
+                                mileage: editVehicleForm.mileage ? Number(editVehicleForm.mileage) : null,
+                                condition: editVehicleForm.condition || null,
+                              },
+                            });
+                          }}
+                        >
+                          {saveVehicleData.isPending ? (
+                            <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Speichern...</>
+                          ) : (
+                            <><Save className="w-3 h-3 mr-1" /> Speichern</>
+                          )}
+                        </Button>
+                      </div>
                     )}
-                  </div>
+                  </h3>
+
+                  {editingVehicleData ? (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Hersteller</label>
+                        <Input
+                          value={editVehicleForm.manufacturer}
+                          onChange={(e) => setEditVehicleForm(prev => ({ ...prev, manufacturer: e.target.value }))}
+                          placeholder="z.B. Hymer"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Modell</label>
+                        <Input
+                          value={editVehicleForm.model}
+                          onChange={(e) => setEditVehicleForm(prev => ({ ...prev, model: e.target.value }))}
+                          placeholder="z.B. B-Klasse MC 580"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Baujahr</label>
+                        <Input
+                          type="number"
+                          value={editVehicleForm.year}
+                          onChange={(e) => setEditVehicleForm(prev => ({ ...prev, year: e.target.value }))}
+                          placeholder="z.B. 2020"
+                          className="h-8 text-sm"
+                          min={1970}
+                          max={new Date().getFullYear() + 1}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Fahrzeugtyp</label>
+                        <Select value={editVehicleForm.vehicle_type} onValueChange={(v) => setEditVehicleForm(prev => ({ ...prev, vehicle_type: v }))}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Auswählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Wohnmobil">Wohnmobil</SelectItem>
+                            <SelectItem value="Wohnwagen">Wohnwagen</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Aufbautyp</label>
+                        <Select value={editVehicleForm.body_type} onValueChange={(v) => setEditVehicleForm(prev => ({ ...prev, body_type: v }))}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Auswählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Teilintegriert">Teilintegriert</SelectItem>
+                            <SelectItem value="Alkoven">Alkoven</SelectItem>
+                            <SelectItem value="Vollintegriert">Vollintegriert</SelectItem>
+                            <SelectItem value="Kastenwagen">Kastenwagen</SelectItem>
+                            <SelectItem value="Campingbus">Campingbus</SelectItem>
+                            <SelectItem value="Wohnwagen">Wohnwagen</SelectItem>
+                            <SelectItem value="Faltcaravan">Faltcaravan</SelectItem>
+                            <SelectItem value="Mobilheim">Mobilheim</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Kilometerstand</label>
+                        <Input
+                          type="number"
+                          value={editVehicleForm.mileage}
+                          onChange={(e) => setEditVehicleForm(prev => ({ ...prev, mileage: e.target.value }))}
+                          placeholder="z.B. 45000"
+                          className="h-8 text-sm"
+                          min={0}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-muted-foreground mb-1 block">Zustand</label>
+                        <Select value={editVehicleForm.condition} onValueChange={(v) => setEditVehicleForm(prev => ({ ...prev, condition: v }))}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Auswählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Neuwertig">Neuwertig</SelectItem>
+                            <SelectItem value="Sehr gut">Sehr gut</SelectItem>
+                            <SelectItem value="Gut">Gut</SelectItem>
+                            <SelectItem value="Befriedigend">Befriedigend</SelectItem>
+                            <SelectItem value="Reparaturbedürftig">Reparaturbedürftig</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Hersteller</span><span className="font-medium">{selectedValuation.manufacturer || "-"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Modell</span><span className="font-medium">{selectedValuation.model || "-"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{selectedValuation.year || "-"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Aufbautyp</span><span className="font-medium">{selectedValuation.body_type || "-"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Kilometerstand</span><span className="font-medium">{selectedValuation.mileage ? `${selectedValuation.mileage.toLocaleString("de-DE")} km` : "-"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Zustand</span><span className="font-medium">{selectedValuation.condition || "-"}</span></div>
+                      {selectedValuation.brand_tier && (
+                        <div className="flex justify-between"><span className="text-muted-foreground">Preisklasse</span><Badge variant="outline" className="text-xs">{selectedValuation.brand_tier}</Badge></div>
+                      )}
+                    </div>
+                  )}
                   {selectedValuation.message && (
                     <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
                       <p className="text-xs text-muted-foreground mb-1">Nachricht des Kunden:</p>

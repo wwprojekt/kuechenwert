@@ -691,11 +691,11 @@ const RegisterHaendler = () => {
                 <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
                   {tr.labelAgb}{" "}
                   <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    AGB
+                    {tr.labelAgbLink}
                   </a>{" "}
                   &{" "}
                   <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    Datenschutz
+                    {tr.labelPrivacyLink}
                   </a>{" "}
                   *
                 </Label>

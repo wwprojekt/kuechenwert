@@ -7,6 +7,10 @@
  *
  * The query is only enabled when the user's role is 'seller' (pending dealers
  * start as sellers and get promoted to 'dealer' after admin approval).
+ *
+ * Also exposes the dealer's country code so that downstream components
+ * (PendingDealerBanner, PendingDealerDocumentUpload) can display
+ * localised text matching the dealer's registration language.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +31,8 @@ export interface DealerApplication {
   reviewed_at?: string;
   rejection_reason?: string;
   legal_form?: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. "DE", "FR", "NL") */
+  country?: string;
 }
 
 export function useDealerPending() {
@@ -39,7 +45,7 @@ export function useDealerPending() {
       if (!user) return null;
       const { data } = await supabase
         .from('dealer_applications')
-        .select('id, status, company_name, company_address, company_city, company_postal_code, contact_person_name, phone, submitted_at, reviewed_at, rejection_reason, legal_form')
+        .select('id, status, company_name, company_address, company_city, company_postal_code, contact_person_name, phone, submitted_at, reviewed_at, rejection_reason, legal_form, country')
         .eq('user_id', user.id)
         .in('status', ['pending', 'rejected'])
         .maybeSingle();
@@ -53,6 +59,12 @@ export function useDealerPending() {
   const isRejectedDealer = !!application && application.status === 'rejected';
   const hasDealerApplication = !!application;
 
+  // Resolve country: dealer_applications.country → user_metadata.country → "DE"
+  const dealerCountry: string =
+    application?.country ||
+    (user?.user_metadata?.country as string | undefined) ||
+    'DE';
+
   return {
     /** The dealer application record (pending or rejected) */
     application,
@@ -64,6 +76,8 @@ export function useDealerPending() {
     isRejectedDealer,
     /** True if user has any non-approved dealer application */
     hasDealerApplication,
+    /** ISO country code of the dealer (resolved from application → user_metadata → "DE") */
+    dealerCountry,
     /** Refetch the application status */
     refetch,
   };

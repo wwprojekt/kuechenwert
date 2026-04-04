@@ -52,7 +52,7 @@ const DealerDashboard = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   useSettings(); // Initialize settings context
-  const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, refetch: refetchApp } = useDealerPending();
+  const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, dealerCountry, refetch: refetchApp } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
   const audioNotifications = useAudioNotification({ enabled: true, volume: 0.8 });
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -393,12 +393,14 @@ const DealerDashboard = () => {
           <PendingDealerBanner
             application={application}
             onRefresh={() => refetchApp()}
+            countryCode={dealerCountry}
           />
 
           {/* Document Upload for pending/rejected dealers */}
           {(isPendingDealer || isRejectedDealer) && (
             <PendingDealerDocumentUpload
               dealerApplicationId={application.id}
+              countryCode={dealerCountry}
             />
           )}
         </>

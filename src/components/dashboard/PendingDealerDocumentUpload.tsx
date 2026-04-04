@@ -3,7 +3,7 @@
  *
  * Shown in the dealer dashboard when the dealer application is still pending
  * or has been rejected. Allows the dealer to upload:
- *   1. Gewerbenachweis (trade/business license)
+ *   1. Gewerbenachweis / Trade licence (country-specific label)
  *   2. Ausweis Vorderseite (ID front)
  *   3. Ausweis Rückseite (ID back)
  *
@@ -13,6 +13,8 @@
  *
  * The component also queries existing legal_documents for the application
  * so the dealer can see what has already been uploaded and its verification status.
+ *
+ * Fully localised based on the dealer's country code.
  */
 
 import { useState, useRef, useCallback } from "react";
@@ -45,6 +47,11 @@ import {
   RefreshCw,
   FileWarning,
 } from "lucide-react";
+import {
+  getPendingDealerTranslations,
+  type PendingDealerTranslations,
+} from "@/lib/pendingDealerTranslations";
+import { getLanguageForCountry } from "@/lib/dealerRegistrationTranslations";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -53,7 +60,7 @@ import {
 interface DocumentSlot {
   /** Key used as `file_type` / `document_type` in DB */
   type: string;
-  /** Human-readable label */
+  /** Human-readable label (resolved from translations) */
   label: string;
   /** Short description shown below the label */
   description: string;
@@ -80,38 +87,40 @@ interface LegalDocument {
 
 interface PendingDealerDocumentUploadProps {
   dealerApplicationId: string;
+  /** ISO country code for localisation (e.g. "DE", "FR", "NL") */
+  countryCode?: string;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const DOCUMENT_SLOTS: DocumentSlot[] = [
-  {
-    type: "gewerbenachweis",
-    label: "Gewerbenachweis",
-    description:
-      "Gewerbeanmeldung, Gewerbeummeldung oder aktueller Gewerbeschein",
-    icon: FileText,
-    required: true,
-  },
-  {
-    type: "ausweis_front",
-    label: "Ausweis – Vorderseite",
-    description:
-      "Personalausweis oder Reisepass (Vorderseite) des Geschäftsführers",
-    icon: CreditCard,
-    required: true,
-  },
-  {
-    type: "ausweis_back",
-    label: "Ausweis – Rückseite",
-    description:
-      "Personalausweis oder Reisepass (Rückseite) des Geschäftsführers",
-    icon: CreditCard,
-    required: true,
-  },
-];
+/** Build document slots with translated labels */
+function buildDocumentSlots(tr: PendingDealerTranslations): DocumentSlot[] {
+  return [
+    {
+      type: "gewerbenachweis",
+      label: tr.docTradeLicenseLabel,
+      description: tr.docTradeLicenseDesc,
+      icon: FileText,
+      required: true,
+    },
+    {
+      type: "ausweis_front",
+      label: tr.docIdFrontLabel,
+      description: tr.docIdFrontDesc,
+      icon: CreditCard,
+      required: true,
+    },
+    {
+      type: "ausweis_back",
+      label: tr.docIdBackLabel,
+      description: tr.docIdBackDesc,
+      icon: CreditCard,
+      required: true,
+    },
+  ];
+}
 
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -123,9 +132,6 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-// SUPABASE_ANON_KEY no longer needed – we use the user's JWT token instead
-const _UNUSED_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -133,9 +139,26 @@ const _UNUSED_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ||
 
 export default function PendingDealerDocumentUpload({
   dealerApplicationId,
+  countryCode = "DE",
 }: PendingDealerDocumentUploadProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const tr = getPendingDealerTranslations(countryCode);
+  const documentSlots = buildDocumentSlots(tr);
+
+  // Resolve locale string for date formatting
+  const lang = getLanguageForCountry(countryCode);
+  const localeMap: Record<string, string> = {
+    de: "de-DE",
+    en: "en-GB",
+    nl: "nl-NL",
+    fr: "fr-FR",
+    it: "it-IT",
+    es: "es-ES",
+    pt: "pt-PT",
+    pl: "pl-PL",
+  };
+  const dateLocale = localeMap[lang] ?? "en-GB";
 
   // Upload state per slot
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
@@ -178,7 +201,7 @@ export default function PendingDealerDocumentUpload({
   );
 
   /** Count how many required slots have been uploaded */
-  const requiredSlots = DOCUMENT_SLOTS.filter((s) => s.required);
+  const requiredSlots = documentSlots.filter((s) => s.required);
   const uploadedRequired = requiredSlots.filter((s) => getDocForSlot(s.type));
   const completionPct =
     requiredSlots.length > 0
@@ -192,13 +215,13 @@ export default function PendingDealerDocumentUpload({
 
     // Validate MIME
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      toast.error("Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG");
+      toast.error(tr.docInvalidType);
       return;
     }
 
     // Validate size
     if (file.size > MAX_FILE_SIZE) {
-      toast.error("Datei zu groß. Maximal 10 MB erlaubt.");
+      toast.error(tr.docFileTooLarge);
       return;
     }
 
@@ -216,10 +239,12 @@ export default function PendingDealerDocumentUpload({
       setUploadProgress(30);
 
       // Get the user's JWT token for authenticated upload
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
-        throw new Error("Nicht angemeldet. Bitte laden Sie die Seite neu.");
+        throw new Error(tr.docNotLoggedIn);
       }
 
       // Call the edge function with user JWT
@@ -239,14 +264,14 @@ export default function PendingDealerDocumentUpload({
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Upload fehlgeschlagen");
+        throw new Error(result.error || tr.docUploadFailed);
       }
 
       setUploadProgress(100);
 
-      toast.success(
-        `${DOCUMENT_SLOTS.find((s) => s.type === slotType)?.label || "Dokument"} erfolgreich hochgeladen`
-      );
+      const slotLabel =
+        documentSlots.find((s) => s.type === slotType)?.label || "Dokument";
+      toast.success(`${slotLabel} ${tr.docUploadSuccess}`);
 
       // Refresh document list
       await refetchDocs();
@@ -255,7 +280,7 @@ export default function PendingDealerDocumentUpload({
       });
     } catch (error: any) {
       logger.error("Document upload error:", error);
-      toast.error(error.message || "Upload fehlgeschlagen");
+      toast.error(error.message || tr.docUploadFailed);
     } finally {
       setUploadingSlot(null);
       setUploadProgress(0);
@@ -276,11 +301,11 @@ export default function PendingDealerDocumentUpload({
 
       if (error) throw error;
 
-      toast.success("Dokument gelöscht");
+      toast.success(tr.docDeleted);
       await refetchDocs();
     } catch (error: any) {
       logger.error("Error deleting document:", error);
-      toast.error("Dokument konnte nicht gelöscht werden");
+      toast.error(tr.docDeleteFailed);
     }
   };
 
@@ -295,20 +320,15 @@ export default function PendingDealerDocumentUpload({
               <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <CardTitle className="text-lg">
-                Dokumente für Verifizierung
-              </CardTitle>
-              <CardDescription>
-                Bitte laden Sie die folgenden Dokumente hoch, damit wir Ihren
-                Händlerantrag prüfen können.
-              </CardDescription>
+              <CardTitle className="text-lg">{tr.docTitle}</CardTitle>
+              <CardDescription>{tr.docDescription}</CardDescription>
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => refetchDocs()}
-            title="Status aktualisieren"
+            title={tr.docTitle}
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -318,18 +338,17 @@ export default function PendingDealerDocumentUpload({
         <div className="mt-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              Erforderliche Dokumente
+              {tr.docRequiredDocuments}
             </span>
             <span className="font-medium">
-              {uploadedRequired.length} von {requiredSlots.length}
+              {uploadedRequired.length} {tr.docOf} {requiredSlots.length}
             </span>
           </div>
           <Progress value={completionPct} className="h-2" />
           {completionPct === 100 && (
             <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />
-              Alle erforderlichen Dokumente hochgeladen – wir prüfen Ihren
-              Antrag.
+              {tr.docAllUploaded}
             </p>
           )}
         </div>
@@ -341,7 +360,7 @@ export default function PendingDealerDocumentUpload({
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          DOCUMENT_SLOTS.map((slot) => {
+          documentSlots.map((slot) => {
             const doc = getDocForSlot(slot.type);
             const isUploading = uploadingSlot === slot.type;
             const SlotIcon = slot.icon;
@@ -388,7 +407,7 @@ export default function PendingDealerDocumentUpload({
                           variant="destructive"
                           className="text-[10px] px-1.5 py-0"
                         >
-                          Erforderlich
+                          {tr.docRequired}
                         </Badge>
                       )}
                       {doc && !doc.verified && (
@@ -397,13 +416,13 @@ export default function PendingDealerDocumentUpload({
                           className="text-[10px] px-1.5 py-0"
                         >
                           <Clock className="w-2.5 h-2.5 mr-1" />
-                          Wird geprüft
+                          {tr.docUnderReview}
                         </Badge>
                       )}
                       {doc?.verified && (
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px] px-1.5 py-0">
                           <CheckCircle className="w-2.5 h-2.5 mr-1" />
-                          Verifiziert
+                          {tr.docVerified}
                         </Badge>
                       )}
                     </div>
@@ -417,15 +436,17 @@ export default function PendingDealerDocumentUpload({
                       <div className="text-xs text-muted-foreground space-y-0.5">
                         {doc.original_filename && (
                           <p className="truncate">
-                            <span className="font-medium">Datei:</span>{" "}
+                            <span className="font-medium">{tr.docFile}</span>{" "}
                             {doc.original_filename}
                           </p>
                         )}
                         {doc.uploaded_at && (
                           <p>
-                            <span className="font-medium">Hochgeladen:</span>{" "}
+                            <span className="font-medium">
+                              {tr.docUploadedAt}
+                            </span>{" "}
                             {new Date(doc.uploaded_at).toLocaleDateString(
-                              "de-DE",
+                              dateLocale,
                               {
                                 day: "2-digit",
                                 month: "2-digit",
@@ -438,9 +459,11 @@ export default function PendingDealerDocumentUpload({
                         )}
                         {doc.verified_at && (
                           <p className="text-green-600 dark:text-green-400">
-                            <span className="font-medium">Geprüft am:</span>{" "}
+                            <span className="font-medium">
+                              {tr.docVerifiedAt}
+                            </span>{" "}
                             {new Date(doc.verified_at).toLocaleDateString(
-                              "de-DE",
+                              dateLocale,
                               {
                                 day: "2-digit",
                                 month: "2-digit",
@@ -452,7 +475,9 @@ export default function PendingDealerDocumentUpload({
                         {doc.notes && (
                           <p className="mt-1 p-2 rounded bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                             <FileWarning className="w-3 h-3 inline mr-1" />
-                            <span className="font-medium">Admin-Hinweis:</span>{" "}
+                            <span className="font-medium">
+                              {tr.docAdminNote}
+                            </span>{" "}
                             {doc.notes}
                           </p>
                         )}
@@ -465,8 +490,8 @@ export default function PendingDealerDocumentUpload({
                         <Progress value={uploadProgress} className="h-1.5" />
                         <p className="text-[10px] text-muted-foreground text-center">
                           {uploadProgress < 100
-                            ? "Wird hochgeladen..."
-                            : "Verarbeitung..."}
+                            ? tr.docUploading
+                            : tr.docProcessing}
                         </p>
                       </div>
                     )}
@@ -484,7 +509,7 @@ export default function PendingDealerDocumentUpload({
                             "_blank"
                           )
                         }
-                        title="Dokument ansehen"
+                        title={tr.docFile}
                         className="h-8 w-8 p-0"
                       >
                         <Eye className="w-4 h-4" />
@@ -497,7 +522,7 @@ export default function PendingDealerDocumentUpload({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(doc)}
-                        title="Dokument löschen"
+                        title={tr.docDeleted}
                         className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -533,7 +558,7 @@ export default function PendingDealerDocumentUpload({
                           ) : (
                             <Upload className="w-4 h-4 mr-1" />
                           )}
-                          {doc ? "Ersetzen" : "Hochladen"}
+                          {doc ? tr.docReplace : tr.docUpload}
                         </Button>
                       </>
                     )}
@@ -548,12 +573,7 @@ export default function PendingDealerDocumentUpload({
         <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
           <p className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>
-              Erlaubte Dateiformate: <strong>PDF, JPG, PNG</strong> (max. 10 MB).
-              Ihre Dokumente werden vertraulich behandelt und nur zur
-              Verifizierung Ihres Händlerkontos verwendet. Nach der Prüfung
-              erhalten Sie eine E-Mail-Benachrichtigung.
-            </span>
+            <span>{tr.docInfoBox}</span>
           </p>
         </div>
       </CardContent>

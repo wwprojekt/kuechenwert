@@ -15,10 +15,14 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { DealerApplication } from "@/hooks/useDealerPending";
+import { getPendingDealerTranslations } from "@/lib/pendingDealerTranslations";
+import { getLanguageForCountry } from "@/lib/dealerRegistrationTranslations";
 
 interface PendingDealerBannerProps {
   application: DealerApplication;
   onRefresh?: () => void;
+  /** ISO country code for localisation (e.g. "DE", "FR", "NL") */
+  countryCode?: string;
 }
 
 /**
@@ -27,14 +31,32 @@ interface PendingDealerBannerProps {
  *
  * Informs the user that all dealer features are currently locked and
  * will be unlocked after admin approval.
+ *
+ * Fully localised based on the dealer's country code.
  */
 export default function PendingDealerBanner({
   application,
   onRefresh,
+  countryCode = "DE",
 }: PendingDealerBannerProps) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const isPending = application.status === "pending";
+  const tr = getPendingDealerTranslations(countryCode);
+
+  // Resolve locale string for date formatting (e.g. "de-DE", "fr-FR")
+  const lang = getLanguageForCountry(countryCode);
+  const localeMap: Record<string, string> = {
+    de: "de-DE",
+    en: "en-GB",
+    nl: "nl-NL",
+    fr: "fr-FR",
+    it: "it-IT",
+    es: "es-ES",
+    pt: "pt-PT",
+    pl: "pl-PL",
+  };
+  const dateLocale = localeMap[lang] ?? "en-GB";
 
   return (
     <div
@@ -71,8 +93,8 @@ export default function PendingDealerBanner({
                 }`}
               >
                 {isPending
-                  ? "Ihr Händlerkonto wird geprüft"
-                  : "Ihr Händlerantrag wurde abgelehnt"}
+                  ? tr.bannerPendingTitle
+                  : tr.bannerRejectedTitle}
               </h3>
               <Badge
                 variant="outline"
@@ -82,7 +104,7 @@ export default function PendingDealerBanner({
                     : "bg-red-100/50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300"
                 }`}
               >
-                {isPending ? "In Bearbeitung" : "Abgelehnt"}
+                {isPending ? tr.bannerPendingBadge : tr.bannerRejectedBadge}
               </Badge>
             </div>
 
@@ -94,8 +116,8 @@ export default function PendingDealerBanner({
               }`}
             >
               {isPending
-                ? "Alle Händler-Funktionen werden freigeschaltet, sobald Ihr Antrag genehmigt wurde. Sie können sich bereits im Dashboard umsehen."
-                : "Leider konnte Ihr Antrag nicht genehmigt werden. Bitte kontaktieren Sie uns für weitere Informationen."}
+                ? tr.bannerPendingDescription
+                : tr.bannerRejectedDescription}
             </p>
 
             {/* Rejection reason */}
@@ -106,7 +128,8 @@ export default function PendingDealerBanner({
               >
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Begründung:</strong> {application.rejection_reason}
+                  <strong>{tr.bannerRejectionReason}</strong>{" "}
+                  {application.rejection_reason}
                 </AlertDescription>
               </Alert>
             )}
@@ -120,7 +143,7 @@ export default function PendingDealerBanner({
                   : "text-red-600 dark:text-red-400"
               }`}
             >
-              {expanded ? "Details ausblenden" : "Details anzeigen"}
+              {expanded ? tr.bannerHideDetails : tr.bannerShowDetails}
               {expanded ? (
                 <ChevronUp className="w-3 h-3" />
               ) : (
@@ -132,22 +155,34 @@ export default function PendingDealerBanner({
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Firma:</span>
-                  <span className="font-medium">{application.company_name}</span>
+                  <span className="text-muted-foreground">
+                    {tr.bannerCompany}
+                  </span>
+                  <span className="font-medium">
+                    {application.company_name}
+                  </span>
                 </div>
                 {application.legal_form && (
                   <div className="flex items-center gap-2 text-sm">
                     <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Rechtsform:</span>
-                    <span className="font-medium">{application.legal_form}</span>
+                    <span className="text-muted-foreground">
+                      {tr.bannerLegalForm}
+                    </span>
+                    <span className="font-medium">
+                      {application.legal_form}
+                    </span>
                   </div>
                 )}
                 {application.submitted_at && (
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Eingereicht:</span>
+                    <span className="text-muted-foreground">
+                      {tr.bannerSubmittedAt}
+                    </span>
                     <span className="font-medium">
-                      {new Date(application.submitted_at).toLocaleDateString("de-DE")}
+                      {new Date(application.submitted_at).toLocaleDateString(
+                        dateLocale
+                      )}
                     </span>
                   </div>
                 )}
@@ -167,7 +202,7 @@ export default function PendingDealerBanner({
                     ? "text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
                     : "text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900/50"
                 }`}
-                title="Status aktualisieren"
+                title={tr.bannerRefreshStatus}
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>
@@ -181,7 +216,7 @@ export default function PendingDealerBanner({
                   ? "text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
                   : "text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900/50"
               }`}
-              title="Kontakt aufnehmen"
+              title={tr.bannerContact}
             >
               <Mail className="w-4 h-4" />
             </Button>
@@ -191,12 +226,10 @@ export default function PendingDealerBanner({
 
       {/* Bottom info bar */}
       {isPending && (
-        <div
-          className="px-5 py-2.5 bg-amber-100/50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800"
-        >
+        <div className="px-5 py-2.5 bg-amber-100/50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800">
           <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
             <Clock className="w-3 h-3" />
-            Die Prüfung dauert in der Regel 1-3 Werktage. Sie erhalten eine E-Mail-Benachrichtigung.
+            {tr.bannerProcessingTime}
           </p>
         </div>
       )}

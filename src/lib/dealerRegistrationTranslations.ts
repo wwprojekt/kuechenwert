@@ -36,6 +36,8 @@ export type TranslationKey =
   | 'labelPhone'
   | 'labelWebsite'
   | 'labelAgb'
+  | 'labelAgbLink'
+  | 'labelPrivacyLink'
   // Placeholders
   | 'placeholderEmail'
   | 'placeholderPassword'
@@ -147,6 +149,8 @@ const de: Translations = {
   labelPhone: 'Telefon *',
   labelWebsite: 'Website (optional)',
   labelAgb: 'Ich akzeptiere die',
+  labelAgbLink: 'AGB',
+  labelPrivacyLink: 'Datenschutz',
   // Placeholders
   placeholderEmail: 'ihre@firma.eu',
   placeholderPassword: 'Ihr sicheres Passwort',
@@ -255,6 +259,8 @@ const en: Translations = {
   labelPhone: 'Phone *',
   labelWebsite: 'Website (optional)',
   labelAgb: 'I accept the',
+  labelAgbLink: 'Terms & Conditions',
+  labelPrivacyLink: 'Privacy Policy',
   placeholderEmail: 'your@company.eu',
   placeholderPassword: 'Your secure password',
   placeholderPasswordConfirm: 'Repeat password',
@@ -352,6 +358,8 @@ const nl: Translations = {
   labelPhone: 'Telefoon *',
   labelWebsite: 'Website (optioneel)',
   labelAgb: 'Ik accepteer de',
+  labelAgbLink: 'Algemene Voorwaarden',
+  labelPrivacyLink: 'Privacybeleid',
   placeholderEmail: 'uw@bedrijf.nl',
   placeholderPassword: 'Uw veilige wachtwoord',
   placeholderPasswordConfirm: 'Wachtwoord herhalen',
@@ -449,6 +457,8 @@ const fr: Translations = {
   labelPhone: 'Téléphone *',
   labelWebsite: 'Site web (optionnel)',
   labelAgb: "J'accepte les",
+  labelAgbLink: 'CGV',
+  labelPrivacyLink: 'Politique de confidentialité',
   placeholderEmail: 'votre@entreprise.fr',
   placeholderPassword: 'Votre mot de passe sécurisé',
   placeholderPasswordConfirm: 'Répéter le mot de passe',
@@ -546,6 +556,8 @@ const it: Translations = {
   labelPhone: 'Telefono *',
   labelWebsite: 'Sito web (opzionale)',
   labelAgb: 'Accetto i',
+  labelAgbLink: 'Termini e Condizioni',
+  labelPrivacyLink: 'Informativa sulla Privacy',
   placeholderEmail: 'vostro@azienda.it',
   placeholderPassword: 'La vostra password sicura',
   placeholderPasswordConfirm: 'Ripetere la password',
@@ -643,6 +655,8 @@ const es: Translations = {
   labelPhone: 'Teléfono *',
   labelWebsite: 'Sitio web (opcional)',
   labelAgb: 'Acepto los',
+  labelAgbLink: 'Términos y Condiciones',
+  labelPrivacyLink: 'Política de Privacidad',
   placeholderEmail: 'su@empresa.es',
   placeholderPassword: 'Su contraseña segura',
   placeholderPasswordConfirm: 'Repetir contraseña',
@@ -740,6 +754,8 @@ const pt: Translations = {
   labelPhone: 'Telefone *',
   labelWebsite: 'Website (opcional)',
   labelAgb: 'Aceito os',
+  labelAgbLink: 'Termos e Condições',
+  labelPrivacyLink: 'Política de Privacidade',
   placeholderEmail: 'seu@empresa.pt',
   placeholderPassword: 'A sua palavra-passe segura',
   placeholderPasswordConfirm: 'Repetir palavra-passe',
@@ -837,6 +853,8 @@ const pl: Translations = {
   labelPhone: 'Telefon *',
   labelWebsite: 'Strona internetowa (opcjonalnie)',
   labelAgb: 'Akceptuję',
+  labelAgbLink: 'Regulamin',
+  labelPrivacyLink: 'Politykę Prywatności',
   placeholderEmail: 'twoj@firma.pl',
   placeholderPassword: 'Twoje bezpieczne hasło',
   placeholderPasswordConfirm: 'Powtórz hasło',

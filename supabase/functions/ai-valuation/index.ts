@@ -171,9 +171,13 @@ ${mileageInfo}
 - Zustand: ${requestData.condition}
 - Algorithmischer Schätzwert: ${algoAvg.toLocaleString('de-DE')}€ (${requestData.algorithmMin.toLocaleString('de-DE')}€ - ${requestData.algorithmMax.toLocaleString('de-DE')}€)
 
+WICHTIG: Gib den geschätzten Wert als GANZE ZAHL in Euro an (NICHT in Tausend Euro).
+Beispiel: Ein ${vehicleLabel} im Wert von vierzigtausend Euro = 40000 (NICHT 40).
+Die Expertenwerte oben sind ebenfalls in ganzen Euro angegeben.
+
 Antworte NUR im folgenden JSON-Format, ohne weitere Erklärung:
 {
-  "estimated_value": <Zahl in Euro>,
+  "estimated_value": <Ganzzahl in Euro, z.B. 40000 für 40.000€>,
   "confidence": <Zahl 0-100>,
   "reasoning": "<Kurze Begründung auf Deutsch, max 2 Sätze>"
 }`;
@@ -227,6 +231,24 @@ Antworte NUR im folgenden JSON-Format, ohne weitere Erklärung:
     // Validierung
     if (typeof aiResult.estimated_value !== 'number' || aiResult.estimated_value < 0) {
       throw new Error('Ungültiger KI-Schätzwert');
+    }
+
+    // Plausibilitätsprüfung: Erkennung ob GPT den Wert in Tausend Euro statt Euro zurückgegeben hat
+    // Wenn der KI-Wert < 500€ ist aber der Algorithmus-Durchschnitt > 5.000€, 
+    // hat die KI wahrscheinlich in Tausend Euro geantwortet
+    const algoAvgForCheck = Math.round((requestData.algorithmMin + requestData.algorithmMax) / 2);
+    if (aiResult.estimated_value < 500 && algoAvgForCheck > 5000) {
+      console.log(`AI valuation auto-correction: ${aiResult.estimated_value}€ → ${aiResult.estimated_value * 1000}€ (detected Tausend-Euro response, algo avg: ${algoAvgForCheck}€)`);
+      aiResult.estimated_value = aiResult.estimated_value * 1000;
+    }
+
+    // Zusätzliche Plausibilitätsprüfung: Wert sollte nicht mehr als Faktor 10 vom Algo abweichen
+    if (algoAvgForCheck > 0) {
+      const ratio = aiResult.estimated_value / algoAvgForCheck;
+      if (ratio < 0.01 || ratio > 100) {
+        console.error(`AI valuation implausible: ${aiResult.estimated_value}€ vs algo ${algoAvgForCheck}€ (ratio: ${ratio})`);
+        throw new Error('KI-Schätzwert ist unrealistisch');
+      }
     }
 
     const confidence = Math.min(100, Math.max(0, aiResult.confidence || 50));

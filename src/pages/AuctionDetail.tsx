@@ -97,8 +97,9 @@ const AuctionDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { settings } = useSettings();
-  const { primaryRole } = useUserRole();
+  const { primaryRole, isDealer } = useUserRole();
   const isAdmin = primaryRole === 'admin';
+  const canSeePrices = isDealer || isAdmin;
   const siteName = settings?.site_name || 'CaravanWert';
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -1571,11 +1572,18 @@ const AuctionDetail = () => {
                       </div>
                     )}
                   </div>
-                  <p className={`text-4xl font-bold transition-colors duration-500 ${
-                    isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
-                  }`}>
-                    €{currentBid.toLocaleString()}
-                  </p>
+                  {canSeePrices ? (
+                    <p className={`text-4xl font-bold transition-colors duration-500 ${
+                      isHighestBidder ? 'text-emerald-600' : wasOutbid ? 'text-red-600' : 'text-primary'
+                    }`}>
+                      €{currentBid.toLocaleString()}
+                    </p>
+                  ) : (
+                    <p className="text-lg font-medium text-muted-foreground flex items-center gap-2 mt-1">
+                      <Lock className="w-4 h-4 text-amber-500" />
+                      Nur für Händler sichtbar
+                    </p>
+                  )}
                   
                   {/* User's own bid info */}
                   {hasBid && (
@@ -1590,14 +1598,18 @@ const AuctionDetail = () => {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>Startgebot: €{auction.starting_bid.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <span>{bids.length} Gebote</span>
-                    <span>{bids.length > 0 ? new Set(bids.map(b => b.bidder_id)).size : 0} Bieter</span>
-                  </div>
+                  {canSeePrices && (
+                    <>
+                      <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>Startgebot: €{auction.starting_bid.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span>{bids.length} Gebote</span>
+                        <span>{bids.length > 0 ? new Set(bids.map(b => b.bidder_id)).size : 0} Bieter</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Provision - visible for dealers and admins */}
@@ -1645,7 +1657,7 @@ const AuctionDetail = () => {
                 {/* Instant Buy Section - only for dealers */}
                 {motorhome.instant_price && 
                  Number(motorhome.instant_price) > 0 &&
-                 motorhome.status !== 'sold' && (
+                 motorhome.status !== 'sold' && canSeePrices && (
                   <>
                     <div className="space-y-3 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
                       <div className="flex items-center justify-between">
@@ -1657,25 +1669,17 @@ const AuctionDetail = () => {
                         </div>
                         <Zap className="w-8 h-8 text-primary" />
                       </div>
-                      {(primaryRole === 'dealer' || isAdmin) ? (
-                        <>
-                          <Button
-                            onClick={handleInstantBuy}
-                            disabled={isSubmitting || auction.status !== 'active'}
-                            className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
-                          >
-                            <Zap className="w-5 h-5 mr-2" />
-                            {isSubmitting ? "Wird gekauft..." : "Jetzt kaufen"}
-                          </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            Sofort kaufen und Auktion beenden
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-xs text-center text-muted-foreground">
-                          Nur freigeschaltete Händler können kaufen
-                        </p>
-                      )}
+                      <Button
+                        onClick={handleInstantBuy}
+                        disabled={isSubmitting || auction.status !== 'active'}
+                        className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
+                      >
+                        <Zap className="w-5 h-5 mr-2" />
+                        {isSubmitting ? "Wird gekauft..." : "Jetzt kaufen"}
+                      </Button>
+                      <p className="text-xs text-center text-muted-foreground">
+                        Sofort kaufen und Auktion beenden
+                      </p>
                     </div>
                     <Separator />
                   </>
@@ -1884,10 +1888,43 @@ const AuctionDetail = () => {
                     <Users className="w-5 h-5 text-primary" />
                     Gebotsverlauf
                   </h2>
-                  <Badge variant="outline" className="px-3 py-1">
-                    {bids.length} Gebote
-                  </Badge>
+                  {canSeePrices && (
+                    <Badge variant="outline" className="px-3 py-1">
+                      {bids.length} Gebote
+                    </Badge>
+                  )}
                 </div>
+
+                {!canSeePrices ? (
+                  <div className="text-center py-8">
+                    <Lock className="w-10 h-10 mx-auto text-amber-500/50 mb-3" />
+                    <p className="text-muted-foreground font-medium text-sm">Gebotsverlauf nur für Händler sichtbar</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Melden Sie sich als Händler an, um den Gebotsverlauf zu sehen.
+                    </p>
+                    {!user ? (
+                      <div className="flex gap-2 justify-center mt-4">
+                        <Link to={`/login?redirect=/auktion/${id}`}>
+                          <Button size="sm" variant="default">Anmelden</Button>
+                        </Link>
+                        <Link to="/register/haendler">
+                          <Button size="sm" variant="outline">
+                            <Building2 className="w-4 h-4 mr-1" />
+                            Registrieren
+                          </Button>
+                        </Link>
+                      </div>
+                    ) : (
+                      <Link to="/register/haendler" className="mt-4 inline-block">
+                        <Button size="sm" variant="outline">
+                          <Building2 className="w-4 h-4 mr-1" />
+                          Als Händler registrieren
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <>
 
                 {bids.length > 0 && (
                   <div className={`mb-4 p-3 rounded-lg border transition-all duration-300 ${
@@ -2019,6 +2056,8 @@ const AuctionDetail = () => {
                       </div>
                     </div>
                   </div>
+                )}
+                  </>
                 )}
               </Card>
             </div>

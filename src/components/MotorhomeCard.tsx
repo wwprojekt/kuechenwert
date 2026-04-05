@@ -1,12 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck } from "lucide-react";
+import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CountryFlag } from "@/components/CountryFlag";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface MotorhomeCardProps {
   // Core vehicle info
@@ -147,6 +149,10 @@ const MotorhomeCard = ({
   badge,
   linkTo
 }: MotorhomeCardProps) => {
+  const { user } = useAuth();
+  const { isDealer, isAdmin } = useUserRole();
+  const canSeePrices = isDealer || isAdmin;
+
   const [timeRemaining, setTimeRemaining] = useState("");
   const [isEndingSoon, setIsEndingSoon] = useState(false);
   const [isHotbid, setIsHotbid] = useState(false);
@@ -354,50 +360,72 @@ const MotorhomeCard = ({
           )}
 
           <div className="pt-4 border-t border-border/50 mt-auto">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="text-xs text-muted-foreground">
-                  {isSold ? 'Verkaufspreis' : isAuction ? 'Aktuelles Gebot' : 'Ankaufspreis'}
+            {isAuction && !canSeePrices ? (
+              /* Non-dealer: Show lock message instead of prices */
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 py-2">
+                  <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>Gebote nur für Händler sichtbar</span>
                 </div>
-                <div className="text-xl font-bold text-primary">
-                  {displayPrice.toLocaleString("de-DE")} €
-                </div>
-                {hasInstantSale && !isSold && (
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    Sofort: {instantPrice?.toLocaleString("de-DE")} €
+                <Button 
+                  className="w-full bg-primary hover:bg-primary/90 group" 
+                  size="sm"
+                  variant={isEnded && !isSold ? 'outline' : 'default'}
+                  disabled={isSold}
+                >
+                  {isSold ? 'Verkauft' : isEnded ? 'Details ansehen' : 'Details ansehen'}
+                  {!isSold && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-smooth" />}
+                </Button>
+              </>
+            ) : (
+              /* Dealer/Admin or non-auction: Show prices normally */
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      {isSold ? 'Verkaufspreis' : isAuction ? 'Aktuelles Gebot' : 'Ankaufspreis'}
+                    </div>
+                    <div className="text-xl font-bold text-primary">
+                      {displayPrice.toLocaleString("de-DE")} €
+                    </div>
+                    {hasInstantSale && !isSold && (
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <Zap className="w-3 h-3" />
+                        Sofort: {instantPrice?.toLocaleString("de-DE")} €
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              {isAuction && (
-                <div className="text-right text-xs text-muted-foreground">
-                  <div>{bidCount} Gebote</div>
-                  {startingBid && (
-                    <div className="mt-1">Start: {startingBid.toLocaleString("de-DE")} €</div>
+                  {isAuction && (
+                    <div className="text-right text-xs text-muted-foreground">
+                      <div>{bidCount} Gebote</div>
+                      {startingBid && (
+                        <div className="mt-1">Start: {startingBid.toLocaleString("de-DE")} €</div>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            
-            {/* Commission Display for Auctions */}
-            {isAuction && !isSold && (
-              <div className="mb-3">
-                <CommissionDisplay 
-                  bidAmount={displayPrice} 
-                  variant="compact"
-                />
-              </div>
+                
+                {/* Commission Display for Auctions - only for dealers */}
+                {isAuction && !isSold && canSeePrices && (
+                  <div className="mb-3">
+                    <CommissionDisplay 
+                      bidAmount={displayPrice} 
+                      variant="compact"
+                    />
+                  </div>
+                )}
+                
+                <Button 
+                  className="w-full bg-primary hover:bg-primary/90 group" 
+                  size="sm"
+                  variant={isEnded && !isSold ? 'outline' : 'default'}
+                  disabled={isSold}
+                >
+                  {isSold ? 'Verkauft' : isEnded ? 'Ergebnis ansehen' : isAuction ? 'Ansehen & Bieten' : 'Details ansehen'}
+                  {!isSold && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-smooth" />}
+                </Button>
+              </>
             )}
-            
-            <Button 
-              className="w-full bg-primary hover:bg-primary/90 group" 
-              size="sm"
-              variant={isEnded && !isSold ? 'outline' : 'default'}
-              disabled={isSold}
-            >
-              {isSold ? 'Verkauft' : isEnded ? 'Ergebnis ansehen' : isAuction ? 'Ansehen & Bieten' : 'Details ansehen'}
-              {!isSold && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-smooth" />}
-            </Button>
           </div>
         </div>
       </Link>

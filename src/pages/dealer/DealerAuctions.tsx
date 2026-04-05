@@ -265,22 +265,8 @@ const DealerAuctions = () => {
                       </div>
                     )}
 
-                    {/* Sofortkauf Badge */}
-                    {hasBuyNow && !isExpired && (
-                      <div className="absolute top-2 left-2 z-10">
-                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
-                          <Zap className="h-3 w-3 mr-1" />
-                          Sofortkauf
-                        </Badge>
-                      </div>
-                    )}
-
-                    {/* Favorite Heart + Status Badges */}
-                    <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
-                      {/* Favorite Button – uses existing app-wide useFavorites hook with motorhome_id */}
-                      <FavoriteButton motorhomeId={auction.motorhome.id} />
-
-                      {/* Status Badge */}
+                    {/* Status Badge + Sofortkauf Badge – links oben */}
+                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                       {isExpired ? (
                         <Badge variant="secondary" className="shadow-lg text-xs">Beendet</Badge>
                       ) : leading ? (
@@ -295,6 +281,17 @@ const DealerAuctions = () => {
                       ) : (
                         <Badge variant="secondary" className="shadow-lg text-xs">Aktiv</Badge>
                       )}
+                      {hasBuyNow && !isExpired && (
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Sofortkauf
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Favorite Heart – rechts oben */}
+                    <div className="absolute top-2 right-2">
+                      <FavoriteButton motorhomeId={auction.motorhome.id} />
                     </div>
 
                     {/* Time Left */}

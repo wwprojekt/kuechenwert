@@ -662,27 +662,8 @@ const DealerDashboard = () => {
                           </div>
                         )}
                         
-                        {/* Recommended / Sofortkauf Badge */}
+                        {/* Status Badge + Empfohlen + Sofortkauf – links oben */}
                         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                          {recommended && (
-                            <Badge className="bg-primary text-white shadow-lg text-xs">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Empfohlen
-                            </Badge>
-                          )}
-                          {auction.buy_now_price && auction.buy_now_price > 0 && !isExpired && (
-                            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
-                              <Zap className="h-3 w-3 mr-1" />
-                              Sofortkauf
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Favorite + Status Badge */}
-                        <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
-                          {auction.motorhome?.id && (
-                            <FavoriteButton motorhomeId={auction.motorhome.id} />
-                          )}
                           {isExpired ? (
                             <Badge variant="secondary" className="shadow-lg text-xs">Beendet</Badge>
                           ) : hasBid ? (
@@ -698,6 +679,25 @@ const DealerDashboard = () => {
                             )
                           ) : (
                             <Badge variant="secondary" className="shadow-lg text-xs">Neu</Badge>
+                          )}
+                          {recommended && (
+                            <Badge className="bg-primary text-white shadow-lg text-xs">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Empfohlen
+                            </Badge>
+                          )}
+                          {auction.buy_now_price && auction.buy_now_price > 0 && !isExpired && (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Sofortkauf
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Favorite Heart – rechts oben */}
+                        <div className="absolute top-2 right-2">
+                          {auction.motorhome?.id && (
+                            <FavoriteButton motorhomeId={auction.motorhome.id} />
                           )}
                         </div>
                         

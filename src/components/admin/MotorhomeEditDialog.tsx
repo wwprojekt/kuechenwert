@@ -46,7 +46,6 @@ interface MotorhomeData {
   status: string;
   listing_number: string | null;
   // Preise & Verkauf
-  price: number | null;
   instant_price: number | null;
   reserve_price: number | null;
   sale_channel: string;
@@ -249,7 +248,6 @@ export function MotorhomeEditDialog({
           previous_owners: data.previous_owners,
           status: data.status,
           // Preise & Verkauf
-          price: data.price,
           instant_price: data.instant_price,
           reserve_price: data.reserve_price,
           sale_channel: data.sale_channel,
@@ -545,12 +543,11 @@ export function MotorhomeEditDialog({
             {/* ===== PREISE & VERKAUF TAB ===== */}
             <TabsContent value="prices" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {renderNumberInput("price", "Verkaufspreis (€)")}
                 {renderNumberInput("instant_price", "Sofortpreis (€)")}
+                {renderNumberInput("reserve_price", "Mindestpreis (€)")}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {renderNumberInput("reserve_price", "Mindestpreis (€)")}
                 {renderSelect("sale_channel", "Verkaufsweg", SALE_CHANNELS, "Verkaufsweg wählen")}
               </div>
 

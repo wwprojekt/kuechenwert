@@ -551,6 +551,19 @@ export default function DashboardOverview() {
                           {mh.mileage &&
                             ` · ${Number(mh.mileage).toLocaleString("de-DE")} km`}
                         </p>
+                        {/* Preisinfos für den Verkäufer */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                          {mh.reserve_price && (
+                            <p className="text-sm text-muted-foreground">
+                              Mindestpreis: <span className="font-semibold text-foreground">{Number(mh.reserve_price).toLocaleString("de-DE")} €</span>
+                            </p>
+                          )}
+                          {mh.instant_price && (
+                            <p className="text-sm text-muted-foreground">
+                              Sofortpreis: <span className="font-semibold text-foreground">{Number(mh.instant_price).toLocaleString("de-DE")} €</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2 flex-shrink-0">
                         <Link to={`/dashboard/listings/${mh.id}/edit?tab=photos`}>

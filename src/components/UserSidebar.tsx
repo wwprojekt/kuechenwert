@@ -289,7 +289,7 @@ export function UserSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border/50 p-3">
+      <SidebarFooter className="border-t border-border/50 p-3 sticky bottom-0 bg-sidebar z-10">
         <Button
           variant="ghost"
           className={`w-full ${

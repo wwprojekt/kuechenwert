@@ -15,6 +15,7 @@ import {
   Heart,
   AlertTriangle,
   Search,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Sidebar,
@@ -97,6 +98,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
+  { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true },
   { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showCountBadge: true, badgeKey: "activeAuctions" },
   { title: "Inventar", url: "/dashboard/inventory", icon: Package },
   { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
@@ -241,7 +243,7 @@ export function DealerSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-2">
+      <SidebarFooter className="border-t border-border p-2 sticky bottom-0 bg-sidebar z-10">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3"

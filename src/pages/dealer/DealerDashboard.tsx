@@ -407,30 +407,43 @@ const DealerDashboard = () => {
       )}
 
       {/* Compact Header with Stats */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Gavel className="h-6 w-6 text-primary" />
-            Verfügbare Auktionen
-          </h1>
-          <p className="text-muted-foreground">
-            {recentAuctions?.length || 0} aktive Auktionen verfügbar
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Gavel className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              Verfügbare Auktionen
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {recentAuctions?.length || 0} aktive Auktionen verfügbar
+            </p>
+          </div>
+          {/* Audio Button – auf Handy neben dem Titel */}
+          <Button
+            variant={audioEnabled ? "default" : "outline"}
+            size="sm"
+            className="md:hidden"
+            onClick={() => setAudioEnabled(!audioEnabled)}
+            title={audioEnabled ? "Audio an" : "Audio aus"}
+          >
+            {audioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
         </div>
         
         {/* Quick Stats Row */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
-            <Trophy className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-green-700">{stats?.leadingBids || 0} führend</span>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-green-50 rounded-lg border border-green-200">
+            <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
+            <span className="text-xs md:text-sm font-medium text-green-700">{stats?.leadingBids || 0} führend</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-            <Gavel className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-700">{stats?.activeBids || 0} Gebote</span>
+          <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-blue-50 rounded-lg border border-blue-200">
+            <Gavel className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
+            <span className="text-xs md:text-sm font-medium text-blue-700">{stats?.activeBids || 0} Gebote</span>
           </div>
           <Button
             variant={audioEnabled ? "default" : "outline"}
             size="sm"
+            className="hidden md:flex"
             onClick={() => setAudioEnabled(!audioEnabled)}
             title={audioEnabled ? "Audio an" : "Audio aus"}
           >
@@ -439,9 +452,9 @@ const DealerDashboard = () => {
         </div>
       </div>
 
-      {/* Dealer Level Status Card */}
+      {/* Dealer Level Status Card – auf Handy kompakter */}
       {dealerLevel && (
-        <Card className={`border-2 overflow-hidden ${
+        <Card className={`border-2 overflow-hidden hidden md:block ${
           dealerLevel.level === 'platin' ? 'border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50' :
           dealerLevel.level === 'gold' ? 'border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50' :
           dealerLevel.level === 'silber' ? 'border-slate-300 bg-gradient-to-r from-slate-50 to-gray-50' :
@@ -450,7 +463,7 @@ const DealerDashboard = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-lg ${
+                <div className={`h-12 w-12 md:h-14 md:w-14 rounded-full flex items-center justify-center shadow-lg ${
                   dealerLevel.level === 'platin' ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
                   dealerLevel.level === 'gold' ? 'bg-gradient-to-br from-amber-400 to-yellow-500' :
                   dealerLevel.level === 'silber' ? 'bg-gradient-to-br from-slate-400 to-gray-500' :
@@ -504,29 +517,29 @@ const DealerDashboard = () => {
       {!isLocked && outbidAuctions.length > 0 && (
         <Card className="border-2 border-orange-400 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md animate-scale-in">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-2 md:gap-3 mb-3">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-orange-800 dark:text-orange-300 text-lg">
-                  Achtung: Sie wurden bei {outbidAuctions.length} {outbidAuctions.length === 1 ? 'Auktion' : 'Auktionen'} überboten!
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-orange-800 dark:text-orange-300 text-sm md:text-lg truncate">
+                  {outbidAuctions.length} {outbidAuctions.length === 1 ? 'Auktion' : 'Auktionen'} überboten!
                 </h3>
-                <p className="text-sm text-orange-600 dark:text-orange-400">
+                <p className="text-xs md:text-sm text-orange-600 dark:text-orange-400 hidden md:block">
                   Reagieren Sie jetzt, bevor die Auktionen enden
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="border-orange-400 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-shrink-0"
+                className="border-orange-400 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-shrink-0 text-xs md:text-sm"
                 onClick={() => setFilterStatus('outbid')}
               >
                 Alle anzeigen
               </Button>
             </div>
             <div className="space-y-2">
-              {outbidAuctions.slice(0, 3).map((auction: any) => {
+              {outbidAuctions.slice(0, window.innerWidth < 768 ? 1 : 3).map((auction: any) => {
                 const userBid = auction.bids?.[0];
                 const diff = (auction.current_bid || 0) - (userBid?.amount || 0);
                 const timeLeft = new Date(auction.end_time).getTime() - Date.now();

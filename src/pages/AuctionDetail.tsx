@@ -1412,8 +1412,8 @@ const AuctionDetail = () => {
             </div>
 
             {/* Simplified Right column - Bidding Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
-              <Card className="p-6 sticky top-24 space-y-6">
+            <div className="lg:col-span-1 space-y-6 order-first lg:order-last">
+              <Card className="p-6 lg:sticky lg:top-24 space-y-6">
                 <div>
                   <h1 className="text-2xl font-bold mb-2">
                     {motorhome.manufacturer} {motorhome.model}

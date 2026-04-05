@@ -295,7 +295,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-[100dvh] flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         <DealerSidebar />
         <div className="flex-1 flex flex-col">
           {/* Modern Header */}
@@ -380,7 +380,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-[100dvh] flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         <UserSidebar />
         <div className="flex-1 flex flex-col">
           {/* Modern Header */}

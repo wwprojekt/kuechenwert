@@ -380,7 +380,7 @@ export function AdminSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border p-2">
+      <SidebarFooter className="border-t border-border p-2 sticky bottom-0 bg-sidebar z-10">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"

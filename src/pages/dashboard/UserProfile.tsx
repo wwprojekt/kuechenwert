@@ -347,7 +347,7 @@ export default function UserProfile() {
                   id="company_name"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                  placeholder="Ihre Firma GmbH"
+                  placeholder="z.B. Autohaus Müller GmbH"
                 />
               </div>
             </div>

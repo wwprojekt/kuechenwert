@@ -3,11 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-// Select imports removed - status filter not needed for dealers
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
-import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation, ArrowUpDown } from "lucide-react";
+import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation, ArrowUpDown, Zap, Trophy } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,6 +18,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 interface Auction {
   id: string;
@@ -26,6 +26,7 @@ interface Auction {
   current_bid: number;
   starting_bid: number;
   reserve_price: number;
+  buy_now_price: number | null;
   end_time: string;
   motorhome: {
     id: string;
@@ -89,7 +90,7 @@ const DealerAuctions = () => {
           ),
           bids(bidder_id, amount)
         `)
-        .eq('status', 'active') // Only show active auctions to dealers
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -171,23 +172,24 @@ const DealerAuctions = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Responsive Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Aktive Auktionen</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">Aktive Auktionen</h1>
+          <p className="text-sm text-muted-foreground">
             Entdecken Sie verfügbare Wohnmobile und geben Sie Ihr Gebot ab
           </p>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
+        <Badge variant="secondary" className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 self-start sm:self-auto">
           {filteredAuctions.length} Auktionen
         </Badge>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -218,10 +220,10 @@ const DealerAuctions = () => {
 
       {/* Auctions Grid */}
       {filteredAuctions.length === 0 ? (
-        <Card className="p-12">
+        <Card className="p-8 sm:p-12">
           <div className="text-center">
             <Gavel className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">
               {searchTerm
                 ? 'Keine Auktionen gefunden'
                 : 'Keine aktiven Auktionen'}
@@ -234,106 +236,169 @@ const DealerAuctions = () => {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedAuctions.map((auction) => {
             const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
             const firstPhoto = safePhotos.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
-
             const isExpired = new Date(auction.end_time).getTime() < Date.now();
+            const hasBuyNow = auction.buy_now_price && auction.buy_now_price > 0;
+            const bidCount = Array.isArray(auction.bids) ? auction.bids.length : 0;
 
             return (
-              <Card key={auction.id} className={`overflow-hidden hover-lift ${isExpired ? 'opacity-70' : ''}`}>
-                <div className="aspect-video bg-muted relative overflow-hidden">
-                  {firstPhoto ? (
-                    <img
-                      src={firstPhoto}
-                      alt={`${auction.motorhome.manufacturer} ${auction.motorhome.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      Kein Bild
+              <Link key={auction.id} to={`/auktion/${auction.id}`} className="block group">
+                <Card className={`overflow-hidden hover:shadow-lg transition-all h-full ${
+                  isExpired ? 'opacity-70' : ''
+                } ${leading ? 'ring-2 ring-green-500' : userBid ? 'ring-2 ring-orange-300' : ''}`}>
+                  {/* Photo */}
+                  <div className="relative h-40 sm:h-44 bg-muted overflow-hidden">
+                    {firstPhoto ? (
+                      <img
+                        src={firstPhoto}
+                        alt={`${auction.motorhome.manufacturer} ${auction.motorhome.model}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <Gavel className="h-12 w-12 text-muted-foreground/30" />
+                      </div>
+                    )}
+
+                    {/* Sofortkauf Badge */}
+                    {hasBuyNow && !isExpired && (
+                      <div className="absolute top-2 left-2 z-10">
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Sofortkauf
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Favorite Heart + Status Badges */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
+                      {/* Favorite Button – uses existing app-wide useFavorites hook with motorhome_id */}
+                      <FavoriteButton motorhomeId={auction.motorhome.id} />
+
+                      {/* Status Badge */}
+                      {isExpired ? (
+                        <Badge variant="secondary" className="shadow-lg text-xs">Beendet</Badge>
+                      ) : leading ? (
+                        <Badge className="bg-green-500 text-white shadow-lg text-xs">
+                          <Trophy className="h-3 w-3 mr-1" />
+                          Führend
+                        </Badge>
+                      ) : userBid ? (
+                        <Badge className="bg-orange-500 text-white shadow-lg text-xs">
+                          Überboten
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="shadow-lg text-xs">Aktiv</Badge>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2">
-                    <Badge variant={isExpired ? 'secondary' : auction.status === 'active' ? 'default' : 'secondary'}>
-                      {isExpired ? 'Beendet' : auction.status === 'active' ? 'Aktiv' : 'Entwurf'}
-                    </Badge>
-                    {!isExpired && leading && (
-                      <Badge className="bg-green-600 hover:bg-green-700">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        Führend
+
+                    {/* Time Left */}
+                    <div className="absolute bottom-2 left-2">
+                      <Badge variant="secondary" className="bg-black/70 text-white border-0 text-xs">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {isExpired ? 'Beendet' : getTimeRemaining(auction.end_time)}
                       </Badge>
-                    )}
-                  </div>
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {auction.motorhome.manufacturer} {auction.motorhome.model}
-                  </CardTitle>
-                  <CardDescription>
-                    {auction.motorhome.year} • {auction.motorhome.mileage.toLocaleString('de-DE')} km
-                  </CardDescription>
-                  {auction.motorhome.postal_code && (() => {
-                    const vehicleCoords = getPlzCoordinates(auction.motorhome.postal_code);
-                    const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
-                    const dist = vehicleCoords && dCoords
-                      ? calculateDistance(
-                          { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
-                          { latitude: dCoords.lat, longitude: dCoords.lng }
-                        )
-                      : null;
-                    return (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                        <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        <span>{anonymizePostalCode(auction.motorhome.postal_code)}</span>
-                        {dist !== null && (
-                          <span className="flex items-center gap-0.5 ml-auto text-primary">
-                            <Navigation className="w-3 h-3" />
-                            ca. {formatDistance(dist)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Aktuelles Gebot:</span>
-                      <span className="font-semibold">
-                        €{(auction.current_bid || auction.starting_bid).toLocaleString('de-DE')}
-                      </span>
                     </div>
-                    {userBid && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ihr Gebot:</span>
-                        <span className={`font-semibold ${leading ? 'text-green-600' : 'text-amber-600'}`}>
-                          €{userBid.toLocaleString('de-DE')}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>{isExpired ? 'Beendet' : getTimeRemaining(auction.end_time)}</span>
+
+                    {/* Bid Count */}
+                    <div className="absolute bottom-2 right-2">
+                      <Badge variant="secondary" className="bg-black/70 text-white border-0 text-xs">
+                        {bidCount} {bidCount === 1 ? 'Gebot' : 'Gebote'}
+                      </Badge>
                     </div>
                   </div>
-                  {isExpired ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Auktion beendet
+
+                  {/* Content */}
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="mb-2">
+                      <h3 className="font-semibold text-sm line-clamp-1">
+                        {auction.motorhome.manufacturer} {auction.motorhome.model}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {auction.motorhome.year} • {auction.motorhome.mileage.toLocaleString('de-DE')} km
+                      </p>
+                    </div>
+
+                    {/* Location & Distance */}
+                    {auction.motorhome.postal_code && (() => {
+                      const vehicleCoords = getPlzCoordinates(auction.motorhome.postal_code);
+                      const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
+                      const dist = vehicleCoords && dCoords
+                        ? calculateDistance(
+                            { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
+                            { latitude: dCoords.lat, longitude: dCoords.lng }
+                          )
+                        : null;
+                      return (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                          <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                          <span>{anonymizePostalCode(auction.motorhome.postal_code)}</span>
+                          {dist !== null && (
+                            <span className="flex items-center gap-0.5 ml-auto text-primary">
+                              <Navigation className="w-3 h-3" />
+                              ca. {formatDistance(dist)}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Pricing */}
+                    <div className="flex items-end justify-between mb-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Aktuelles Gebot</p>
+                        <p className="text-lg font-bold text-primary">
+                          €{(auction.current_bid || auction.starting_bid).toLocaleString('de-DE')}
+                        </p>
+                      </div>
+                      {hasBuyNow && (
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Sofort</p>
+                          <p className="text-sm font-semibold text-emerald-600">
+                            €{auction.buy_now_price!.toLocaleString('de-DE')}
+                          </p>
+                        </div>
+                      )}
+                      {!hasBuyNow && userBid && (
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Ihr Gebot</p>
+                          <p className={`text-sm font-semibold ${leading ? 'text-green-600' : 'text-amber-600'}`}>
+                            €{userBid.toLocaleString('de-DE')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <Button 
+                      className="w-full" 
+                      size="sm" 
+                      variant={isExpired || userBid ? "outline" : "default"} 
+                      disabled={isExpired}
+                      tabIndex={-1}
+                    >
+                      {isExpired ? (
+                        <>Auktion beendet</>
+                      ) : userBid ? (
+                        <>
+                          <Gavel className="h-4 w-4 mr-2" />
+                          Gebot erhöhen
+                        </>
+                      ) : (
+                        <>
+                          <Gavel className="h-4 w-4 mr-2" />
+                          Jetzt bieten
+                        </>
+                      )}
                     </Button>
-                  ) : (
-                    <Button variant={userBid ? "outline" : "default"} className="w-full" asChild>
-                      <Link to={`/auktion/${auction.id}`}>
-                        <Gavel className="h-4 w-4 mr-2" />
-                        {userBid ? 'Gebot erhöhen' : 'Jetzt bieten'}
-                      </Link>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>

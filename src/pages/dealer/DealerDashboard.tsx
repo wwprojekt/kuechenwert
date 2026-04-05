@@ -42,6 +42,7 @@ import { useDealerPending } from "@/hooks/useDealerPending";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -661,39 +662,48 @@ const DealerDashboard = () => {
                           </div>
                         )}
                         
-                        {/* Recommended Badge */}
-                        {recommended && (
-                          <div className="absolute top-2 left-2 z-10">
+                        {/* Recommended / Sofortkauf Badge */}
+                        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                          {recommended && (
                             <Badge className="bg-primary text-white shadow-lg text-xs">
                               <Sparkles className="h-3 w-3 mr-1" />
                               Empfohlen
                             </Badge>
-                          </div>
-                        )}
+                          )}
+                          {auction.buy_now_price && auction.buy_now_price > 0 && !isExpired && (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Sofortkauf
+                            </Badge>
+                          )}
+                        </div>
 
-                        {/* Status Badge */}
-                        <div className="absolute top-2 right-2">
+                        {/* Favorite + Status Badge */}
+                        <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
+                          {auction.motorhome?.id && (
+                            <FavoriteButton motorhomeId={auction.motorhome.id} />
+                          )}
                           {isExpired ? (
-                            <Badge variant="secondary" className="shadow-lg">Beendet</Badge>
+                            <Badge variant="secondary" className="shadow-lg text-xs">Beendet</Badge>
                           ) : hasBid ? (
                             isLeading ? (
-                              <Badge className="bg-green-500 text-white shadow-lg">
+                              <Badge className="bg-green-500 text-white shadow-lg text-xs">
                                 <Trophy className="h-3 w-3 mr-1" />
                                 Führend
                               </Badge>
                             ) : (
-                              <Badge className="bg-orange-500 text-white shadow-lg">
+                              <Badge className="bg-orange-500 text-white shadow-lg text-xs">
                                 Überboten
                               </Badge>
                             )
                           ) : (
-                            <Badge variant="secondary" className="shadow-lg">Neu</Badge>
+                            <Badge variant="secondary" className="shadow-lg text-xs">Neu</Badge>
                           )}
                         </div>
                         
                         {/* Time Left */}
                         <div className="absolute bottom-2 left-2">
-                          <Badge variant="secondary" className="bg-black/70 text-white border-0">
+                          <Badge variant="secondary" className="bg-black/70 text-white border-0 text-xs">
                             <Clock className="h-3 w-3 mr-1" />
                             {isExpired ? 'Beendet' : hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`}
                           </Badge>

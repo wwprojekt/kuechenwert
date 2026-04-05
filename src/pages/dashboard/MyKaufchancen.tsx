@@ -238,11 +238,11 @@ export default function MyKaufchancen() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Zap className="w-8 h-8 text-amber-500" />
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+          <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
           Kaufchancen
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen, ein Angebot abzugeben
         </p>
       </div>

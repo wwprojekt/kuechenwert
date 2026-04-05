@@ -116,7 +116,7 @@ export default function MyBids() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Meine Gebote</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-1 sm:mb-2">Meine Gebote</h1>
           <p className="text-muted-foreground">
             Übersicht über alle Ihre Gebote
           </p>
@@ -170,7 +170,7 @@ export default function MyBids() {
             <p className="text-muted-foreground mb-6">
               Stöbern Sie durch aktive Auktionen und geben Sie Ihr erstes Gebot ab
             </p>
-            <Link to="/ankaufstationen">
+            <Link to="/kaufen">
               <Button className="gradient-hero hover:gradient-hero-hover">
                 <Eye className="w-4 h-4 mr-2" />
                 Auktionen ansehen

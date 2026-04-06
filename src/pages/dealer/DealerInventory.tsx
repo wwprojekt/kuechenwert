@@ -56,7 +56,7 @@ const DealerInventory = () => {
           .from('auctions')
           .select('motorhome_id, current_bid')
           .in('motorhome_id', motorhomeIds)
-          .in('status', ['completed', 'closed']);
+          .in('status', ['sold', 'ended']);
         
         auctionPriceMap = (auctionsData || []).reduce((acc, a) => {
           // Use the highest bid as purchase price

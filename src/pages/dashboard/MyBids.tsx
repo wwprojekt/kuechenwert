@@ -87,8 +87,8 @@ export default function MyBids() {
   const filteredBids = groupedBids ? Object.values(groupedBids).filter((group: any) => {
     if (filter === "all") return true;
     if (filter === "active") return group.auction.status === "active";
-    if (filter === "won") return group.auction.status === "completed" && group.isWinning;
-    if (filter === "lost") return group.auction.status === "completed" && !group.isWinning;
+    if (filter === "won") return (group.auction.status === "sold" || group.auction.status === "ended") && group.isWinning;
+    if (filter === "lost") return (group.auction.status === "sold" || group.auction.status === "ended") && !group.isWinning;
     return true;
   }) : [];
 
@@ -108,8 +108,8 @@ export default function MyBids() {
   const counts = {
     all: Object.keys(groupedBids || {}).length,
     active: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "active").length,
-    won: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "completed" && g.isWinning).length,
-    lost: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "completed" && !g.isWinning).length,
+    won: Object.values(groupedBids || {}).filter((g: any) => (g.auction.status === "sold" || g.auction.status === "ended") && g.isWinning).length,
+    lost: Object.values(groupedBids || {}).filter((g: any) => (g.auction.status === "sold" || g.auction.status === "ended") && !g.isWinning).length,
   };
 
   return (

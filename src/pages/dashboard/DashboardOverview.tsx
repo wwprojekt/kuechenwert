@@ -225,9 +225,26 @@ export default function DashboardOverview() {
           .eq("sold_to", user.id),
       ]);
 
+      // Fetch actual purchase prices from auctions (current_bid)
+      const motorhomeIds = inventoryRes.data?.map(m => m.id) || [];
+      let auctionPriceMap: Record<string, number> = {};
+      if (motorhomeIds.length > 0) {
+        const { data: auctionsData } = await supabase
+          .from('auctions')
+          .select('motorhome_id, current_bid')
+          .in('motorhome_id', motorhomeIds)
+          .in('status', ['sold', 'ended']);
+        auctionPriceMap = (auctionsData || []).reduce((acc: Record<string, number>, a: any) => {
+          if (!acc[a.motorhome_id] || Number(a.current_bid) > acc[a.motorhome_id]) {
+            acc[a.motorhome_id] = Number(a.current_bid) || 0;
+          }
+          return acc;
+        }, {});
+      }
+
       const totalSpent =
         inventoryRes.data?.reduce(
-          (sum, m) => sum + Number(m.instant_price || 0),
+          (sum, m) => sum + (auctionPriceMap[m.id] || Number(m.instant_price || 0)),
           0
         ) || 0;
 
@@ -349,24 +366,25 @@ export default function DashboardOverview() {
       };
     }
 
-    if (auction.status === "completed") {
-      if (mh.sold_to) {
-        return {
-          step: 6,
-          label: "Verkauft!",
-          sublabel: "Ihr Fahrzeug wurde erfolgreich verkauft",
-          color: "text-emerald-600",
-          bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-          borderColor: "border-emerald-200 dark:border-emerald-800",
-        };
-      }
+    if (auction.status === "sold") {
+      return {
+        step: 6,
+        label: "Verkauft!",
+        sublabel: "Ihr Fahrzeug wurde erfolgreich verkauft",
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+        borderColor: "border-emerald-200 dark:border-emerald-800",
+      };
+    }
+
+    if (auction.status === "ended") {
       return {
         step: 6,
         label: "Auktion beendet",
-        sublabel: "Reservepreis nicht erreicht",
-        color: "text-gray-600",
-        bgColor: "bg-gray-100 dark:bg-gray-900/30",
-        borderColor: "border-gray-200 dark:border-gray-800",
+        sublabel: mh.sold_to ? "Ihr Fahrzeug wurde erfolgreich verkauft" : "Reservepreis nicht erreicht",
+        color: mh.sold_to ? "text-emerald-600" : "text-gray-600",
+        bgColor: mh.sold_to ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-gray-100 dark:bg-gray-900/30",
+        borderColor: mh.sold_to ? "border-emerald-200 dark:border-emerald-800" : "border-gray-200 dark:border-gray-800",
       };
     }
 
@@ -1109,8 +1127,12 @@ export default function DashboardOverview() {
                         >
                           {auction.status === "active"
                             ? "Aktiv"
-                            : auction.status === "completed"
-                            ? "Abgeschlossen"
+                            : auction.status === "sold"
+                            ? "Verkauft"
+                            : auction.status === "ended"
+                            ? "Beendet"
+                            : auction.status === "kaufchance"
+                            ? "Kaufchance"
                             : auction.status}
                         </Badge>
                         <p className="text-sm font-semibold text-foreground mt-1 sm:mt-2">

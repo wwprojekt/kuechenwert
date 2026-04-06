@@ -98,7 +98,7 @@ export default function ListingDetail() {
         .eq("seller_id", user?.id)
         .maybeSingle();
 
-      if (sellerData) return sellerData;
+      if (sellerData) return { ...sellerData, _isSeller: true };
 
       // If not found as seller, try as buyer (dealer who purchased via auction)
       const { data: buyerData, error: buyerError } = await supabase
@@ -125,7 +125,7 @@ export default function ListingDetail() {
         .eq("sold_to", user?.id)
         .maybeSingle();
 
-      if (buyerData) return buyerData;
+      if (buyerData) return { ...buyerData, _isSeller: false };
 
       // Neither seller nor buyer — throw not found
       throw new Error('Motorhome not found or access denied');
@@ -355,6 +355,7 @@ export default function ListingDetail() {
   }
 
   const auction = resolvedAuction;
+  const isSeller = motorhome?._isSeller === true;
   const isAuctionLive = auction?.status === 'active' || auction?.status === 'kaufchance';
   const rawPhotos = motorhome.photos;
   const sortedPhotos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
@@ -365,11 +366,11 @@ export default function ListingDetail() {
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
-          onClick={() => navigate("/dashboard/listings")}
+          onClick={() => navigate(isSeller ? "/dashboard/listings" : "/dashboard/inventory")}
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          Zurück zu Inseraten
+          {isSeller ? "Zurück zu Inseraten" : "Zurück zum Inventar"}
         </Button>
         <div className="flex gap-2 flex-wrap">
           {auction?.id && (
@@ -381,7 +382,7 @@ export default function ListingDetail() {
               </Button>
             </Link>
           )}
-          {isAuctionLive ? (
+          {isSeller && (isAuctionLive ? (
             <Button variant="outline" className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-50" disabled>
               <Lock className="w-4 h-4" />
               <span className="hidden sm:inline">Bearbeitung gesperrt</span>
@@ -403,7 +404,7 @@ export default function ListingDetail() {
                 </Button>
               </Link>
             </>
-          )}
+          ))}
         </div>
       </div>
 

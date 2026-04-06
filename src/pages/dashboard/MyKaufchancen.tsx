@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
-import { Zap, Car, ExternalLink, Clock, Euro, CheckCircle, XCircle, Trophy } from "lucide-react";
+import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -163,10 +163,11 @@ export default function MyKaufchancen() {
     loadData();
   }, [user]);
 
-  const handleAcceptCounterOffer = async (offer: MyOffer) => {
+  const handleAcceptCounterOffer = async (e: React.MouseEvent, offer: MyOffer) => {
+    e.preventDefault();
+    e.stopPropagation();
     setRespondingOfferId(offer.id);
     try {
-      // Call the accept-kaufchance-offer Edge Function which handles the full sale flow
       const { data, error } = await supabase.functions.invoke('accept-kaufchance-offer', {
         body: { offerId: offer.id },
       });
@@ -195,7 +196,9 @@ export default function MyKaufchancen() {
     }
   };
 
-  const handleRejectCounterOffer = async (offer: MyOffer) => {
+  const handleRejectCounterOffer = async (e: React.MouseEvent, offer: MyOffer) => {
+    e.preventDefault();
+    e.stopPropagation();
     setRespondingOfferId(offer.id);
     try {
       const { error } = await supabase
@@ -223,164 +226,169 @@ export default function MyKaufchancen() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
-        return <Badge className="bg-green-500">Angenommen</Badge>;
+        return <Badge className="bg-green-500 text-[10px] px-1.5 py-0">Angenommen</Badge>;
       case "rejected":
-        return <Badge variant="destructive">Abgelehnt</Badge>;
+        return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Abgelehnt</Badge>;
       case "countered":
-        return <Badge className="bg-blue-500 text-white">Gegenangebot</Badge>;
+        return <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0">Gegenangebot</Badge>;
       case "expired":
-        return <Badge variant="secondary">Abgelaufen</Badge>;
+        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Abgelaufen</Badge>;
       default:
-        return <Badge variant="outline" className="text-orange-600 border-orange-600">Ausstehend</Badge>;
+        return <Badge variant="outline" className="text-orange-600 border-orange-600 text-[10px] px-1.5 py-0">Ausstehend</Badge>;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-          <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+          <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
           Kaufchancen
         </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen, ein Angebot abzugeben
+        <p className="text-sm text-muted-foreground">
+          Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="browse">
+        <TabsList className="h-8">
+          <TabsTrigger value="browse" className="text-xs px-3 py-1">
             Meine Kaufchancen ({kaufchancen.length})
           </TabsTrigger>
-          <TabsTrigger value="my-offers">
+          <TabsTrigger value="my-offers" className="text-xs px-3 py-1">
             Meine Angebote ({myOffers.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="browse" className="space-y-4 mt-4">
+        <TabsContent value="browse" className="space-y-3 mt-3">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
           ) : kaufchancen.length === 0 ? (
-            <Card className="p-12">
+            <Card className="p-8">
               <div className="text-center">
-                <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Keine Kaufchancen verfügbar</h3>
-                <p className="text-muted-foreground mb-4">
+                <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-1">Keine Kaufchancen verfügbar</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   Aktuell sind keine Kaufchancen für Sie verfügbar. Sie werden per E-Mail benachrichtigt, wenn Sie als Top-Bieter eingeladen werden.
                 </p>
-                <Button asChild>
+                <Button size="sm" asChild>
                   <Link to="/kaufen">Aktive Auktionen ansehen</Link>
                 </Button>
               </div>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {kaufchancen.map((auction) => {
                 const motorhome = auction.motorhome;
                 const safePhotos = Array.isArray(motorhome.photos) ? motorhome.photos : motorhome.photos ? [motorhome.photos] : [];
                 const firstPhoto = [...safePhotos].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
-                  <Card key={auction.id} className="overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
-                      {/* Image */}
-                      <div className="relative w-full md:w-48 h-40 md:h-auto flex-shrink-0">
-                        {firstPhoto ? (
-                          <img
-                            src={firstPhoto.url}
-                            alt={`${motorhome.manufacturer} ${motorhome.model}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Car className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        {auction.kaufchance_expires_at && (
-                          <div className="absolute top-2 left-2">
-                            <KaufchanceBadge expiresAt={auction.kaufchance_expires_at} />
-                          </div>
-                        )}
-                      </div>
+                  <Link
+                    key={auction.id}
+                    to={`/auktion/${auction.id}`}
+                    className="block group"
+                  >
+                    <Card className="overflow-hidden border hover:border-primary/40 transition-all duration-200 hover:shadow-md cursor-pointer h-full bg-card">
+                      <div className="flex flex-row h-full">
+                        {/* Thumbnail */}
+                        <div className="relative w-28 sm:w-32 flex-shrink-0">
+                          {firstPhoto ? (
+                            <img
+                              src={firstPhoto.url}
+                              alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <Car className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          {auction.kaufchance_expires_at && (
+                            <div className="absolute top-1.5 left-1.5">
+                              <KaufchanceBadge expiresAt={auction.kaufchance_expires_at} />
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Content */}
-                      <CardContent className="flex-1 p-4">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-lg mb-1">
-                              {motorhome.manufacturer} {motorhome.model}
-                            </h3>
-                            {motorhome.listing_number && (
-                              <p className="text-xs font-mono text-muted-foreground mb-2">
-                                #{motorhome.listing_number}
-                              </p>
-                            )}
-
-                            <div className="flex flex-wrap items-center gap-3 mb-3">
-                              <div className="flex items-center gap-1">
-                                <Euro className="w-4 h-4 text-primary" />
-                                <span className="font-semibold">
-                                  Letztes Gebot: {auction.current_bid?.toLocaleString('de-DE') || 0} €
+                        {/* Info */}
+                        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
+                                {motorhome.manufacturer} {motorhome.model}
+                              </h3>
+                              {motorhome.listing_number && (
+                                <span className="font-mono text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded flex-shrink-0">
+                                  #{motorhome.listing_number}
                                 </span>
-                              </div>
-                              {auction.invitation && (
-                                <div className="flex items-center gap-1">
-                                  <Trophy className="w-4 h-4 text-amber-500" />
-                                  <span className="text-sm text-amber-700 font-medium">
-                                    Platz {auction.invitation.rank} – Ihr Gebot: {auction.invitation.highest_bid.toLocaleString('de-DE')} €
-                                  </span>
-                                </div>
                               )}
                             </div>
-
-                            <p className="text-sm text-muted-foreground">
-                              Sie wurden als Top-Bieter eingeladen. Geben Sie jetzt ein Kaufangebot ab.
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Baujahr {motorhome.year}
                             </p>
                           </div>
 
-                          <div className="flex flex-col gap-2">
+                          {/* Bid info */}
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground flex items-center gap-0.5">
+                                <Euro className="w-3 h-3" /> Letztes Gebot:
+                              </span>
+                              <span className="font-semibold tabular-nums">
+                                {auction.current_bid?.toLocaleString('de-DE') || 0} €
+                              </span>
+                            </div>
+                            {auction.invitation && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground flex items-center gap-0.5">
+                                  <Trophy className="w-3 h-3 text-amber-500" /> Platz {auction.invitation.rank}:
+                                </span>
+                                <span className="font-semibold text-primary tabular-nums">
+                                  {auction.invitation.highest_bid.toLocaleString('de-DE')} €
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action button */}
+                          <div className="mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                             <PostAuctionOfferDialog
                               auctionId={auction.id}
                               currentBid={auction.current_bid || 0}
                               vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
                               onOfferSent={loadData}
                             />
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to={`/auktion/${auction.id}`}>
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Details
-                              </Link>
-                            </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </div>
-                  </Card>
+                      </div>
+                    </Card>
+                  </Link>
                 );
               })}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="my-offers" className="space-y-4 mt-4">
+        <TabsContent value="my-offers" className="space-y-3 mt-3">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
           ) : myOffers.length === 0 ? (
-            <Card className="p-12">
+            <Card className="p-8">
               <div className="text-center">
-                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Keine Angebote</h3>
-                <p className="text-muted-foreground">
+                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-1">Keine Angebote</h3>
+                <p className="text-sm text-muted-foreground">
                   Sie haben noch keine Kaufangebote abgegeben.
                 </p>
               </div>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {myOffers.map((offer) => {
                 const auction = offer.auction;
                 const motorhome = auction?.motorhome;
@@ -388,91 +396,92 @@ export default function MyKaufchancen() {
                 const firstPhoto = [...safePhotos2].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
-                  <Card key={offer.id} className="overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
-                      {/* Image */}
-                      <div className="relative w-full md:w-40 h-32 md:h-auto flex-shrink-0">
-                        {firstPhoto ? (
-                          <img
-                            src={firstPhoto.url}
-                            alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Car className="w-6 h-6 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <CardContent className="flex-1 p-4">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold">
-                                {motorhome?.manufacturer} {motorhome?.model}
-                              </h3>
-                              {getStatusBadge(offer.status)}
+                  <Link
+                    key={offer.id}
+                    to={`/auktion/${auction?.id}`}
+                    className="block group"
+                  >
+                    <Card className="overflow-hidden border hover:border-primary/40 transition-all duration-200 hover:shadow-md cursor-pointer h-full bg-card">
+                      <div className="flex flex-row h-full">
+                        {/* Thumbnail */}
+                        <div className="relative w-28 sm:w-32 flex-shrink-0">
+                          {firstPhoto ? (
+                            <img
+                              src={firstPhoto.url}
+                              alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <Car className="w-6 h-6 text-muted-foreground" />
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {format(new Date(offer.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-                            </p>
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Ihr Angebot</p>
-                                <p className="font-semibold">{offer.offer_amount.toLocaleString('de-DE')} €</p>
-                              </div>
-                              {offer.counter_offer_amount && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Gegenangebot</p>
-                                  <p className="font-semibold text-blue-600">
-                                    {offer.counter_offer_amount.toLocaleString('de-DE')} €
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                            {offer.seller_response && (
-                              <p className="text-sm text-muted-foreground mt-2 italic">
-                                "{offer.seller_response}"
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            {offer.status === 'countered' && offer.counter_offer_amount && (
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  size="sm"
-                                  className="bg-green-500 hover:bg-green-600"
-                                  disabled={respondingOfferId === offer.id}
-                                  onClick={() => handleAcceptCounterOffer(offer)}
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                  Annehmen ({offer.counter_offer_amount.toLocaleString('de-DE')} €)
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  disabled={respondingOfferId === offer.id}
-                                  onClick={() => handleRejectCounterOffer(offer)}
-                                >
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  Ablehnen
-                                </Button>
-                              </div>
-                            )}
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to={`/auktion/${auction?.id}`}>
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Zur Auktion
-                              </Link>
-                            </Button>
+                          )}
+                          <div className="absolute top-1.5 right-1.5">
+                            {getStatusBadge(offer.status)}
                           </div>
                         </div>
-                      </CardContent>
-                    </div>
-                  </Card>
+
+                        {/* Info */}
+                        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                          <div>
+                            <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
+                              {motorhome?.manufacturer} {motorhome?.model}
+                            </h3>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {format(new Date(offer.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </p>
+                          </div>
+
+                          {/* Offer details */}
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Ihr Angebot:</span>
+                              <span className="font-semibold tabular-nums">{offer.offer_amount.toLocaleString('de-DE')} €</span>
+                            </div>
+                            {offer.counter_offer_amount && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Gegenangebot:</span>
+                                <span className="font-semibold text-blue-600 tabular-nums">
+                                  {offer.counter_offer_amount.toLocaleString('de-DE')} €
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Counter-offer actions */}
+                          {offer.status === 'countered' && offer.counter_offer_amount && (
+                            <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40">
+                              <Button
+                                size="sm"
+                                className="flex-1 h-7 text-xs bg-green-500 hover:bg-green-600"
+                                disabled={respondingOfferId === offer.id}
+                                onClick={(e) => handleAcceptCounterOffer(e, offer)}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Annehmen
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="flex-1 h-7 text-xs"
+                                disabled={respondingOfferId === offer.id}
+                                onClick={(e) => handleRejectCounterOffer(e, offer)}
+                              >
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Ablehnen
+                              </Button>
+                            </div>
+                          )}
+
+                          {offer.seller_response && (
+                            <p className="text-[11px] text-muted-foreground mt-1 italic line-clamp-1">
+                              "{offer.seller_response}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
                 );
               })}
             </div>

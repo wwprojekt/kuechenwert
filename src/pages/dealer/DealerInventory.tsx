@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Search, Calendar, Euro, Eye, ArrowUpDown } from "lucide-react";
+import { Package, Search, Calendar, Euro, ArrowUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -120,34 +120,34 @@ const DealerInventory = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Inventar</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold mb-0.5">Inventar</h1>
+          <p className="text-sm text-muted-foreground">
             Verwalten Sie Ihre erworbenen Wohnmobile
           </p>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
+        <Badge variant="secondary" className="text-sm px-3 py-1">
           {inventory.length} Fahrzeuge
         </Badge>
       </div>
 
       {/* Search & Sort */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="pt-4 pb-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Suchen Sie nach Hersteller oder Modell..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <div className="flex items-center gap-2">
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue placeholder="Sortieren" />
@@ -167,26 +167,26 @@ const DealerInventory = () => {
 
       {/* Inventory Grid */}
       {filteredInventory.length === 0 ? (
-        <Card className="p-12">
+        <Card className="p-8">
           <div className="text-center">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
+            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+            <h3 className="text-lg font-semibold mb-1">
               {searchTerm ? 'Keine Ergebnisse gefunden' : 'Kein Inventar vorhanden'}
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-4">
               {searchTerm 
                 ? 'Versuchen Sie einen anderen Suchbegriff' 
                 : 'Gewinnen Sie Auktionen, um Fahrzeuge zu Ihrem Inventar hinzuzufügen'}
             </p>
             {!searchTerm && (
-              <Button asChild>
+              <Button size="sm" asChild>
                 <Link to="/kaufen">Auktionen durchsuchen</Link>
               </Button>
             )}
           </div>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedInventory.map((item) => {
             const itemPhotos = Array.isArray(item.photos) ? item.photos : item.photos ? [item.photos] : [];
             const firstPhoto = itemPhotos.sort((a: any, b: any) => 
@@ -194,52 +194,57 @@ const DealerInventory = () => {
             )[0]?.url;
 
             return (
-              <Card key={item.id} className="overflow-hidden hover-lift">
-                <div className="aspect-video bg-muted relative overflow-hidden">
-                  {firstPhoto ? (
-                    <img
-                      src={firstPhoto}
-                      alt={`${item.manufacturer} ${item.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      Kein Bild
+              <Link
+                key={item.id}
+                to={`/dashboard/inventory/${item.id}`}
+                className="block group"
+              >
+                <Card className="overflow-hidden border hover:border-primary/40 transition-all duration-200 hover:shadow-md cursor-pointer h-full bg-card">
+                  <div className="flex flex-row h-full">
+                    {/* Thumbnail */}
+                    <div className="relative w-28 sm:w-32 flex-shrink-0">
+                      {firstPhoto ? (
+                        <img
+                          src={firstPhoto}
+                          alt={`${item.manufacturer} ${item.model}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Package className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <Badge className="absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0.5">
+                        {item.status === 'sold' ? 'Verkauft' : 'Verfügbar'}
+                      </Badge>
                     </div>
-                  )}
-                  <Badge className="absolute top-3 right-3">
-                    {item.status === 'sold' ? 'Verkauft' : 'Verfügbar'}
-                  </Badge>
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {item.manufacturer} {item.model}
-                  </CardTitle>
-                  <CardDescription>
-                    {item.year} • {item.mileage.toLocaleString('de-DE')} km
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {new Date(item.purchased_at).toLocaleDateString('de-DE')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 font-semibold">
-                      <Euro className="h-4 w-4" />
-                      {item.purchase_price.toLocaleString('de-DE')}
+
+                    {/* Info */}
+                    <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                      <div>
+                        <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
+                          {item.manufacturer} {item.model}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.year} · {item.mileage.toLocaleString('de-DE')} km
+                        </p>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/40">
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(item.purchased_at).toLocaleDateString('de-DE')}
+                        </span>
+                        <span className="text-xs font-semibold flex items-center gap-0.5">
+                          <Euro className="w-3 h-3" />
+                          {item.purchase_price.toLocaleString('de-DE')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link to={`/dashboard/inventory/${item.id}`}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Details ansehen
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+                </Card>
+              </Link>
             );
           })}
         </div>

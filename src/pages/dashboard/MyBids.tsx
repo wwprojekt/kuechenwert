@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link } from "react-router-dom";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 type FilterType = "all" | "active" | "won" | "lost";
@@ -113,37 +113,37 @@ export default function MyBids() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-1 sm:mb-2">Meine Gebote</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-0.5">Meine Gebote</h1>
+          <p className="text-sm text-muted-foreground">
             Übersicht über alle Ihre Gebote
           </p>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           {/* Filter Tabs */}
           <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full md:w-auto">
-            <TabsList className="grid grid-cols-4 w-full md:w-auto">
-              <TabsTrigger value="all" className="text-xs md:text-sm">
+            <TabsList className="grid grid-cols-4 w-full md:w-auto h-8">
+              <TabsTrigger value="all" className="text-xs px-2 py-1">
                 Alle ({counts.all})
               </TabsTrigger>
-              <TabsTrigger value="active" className="text-xs md:text-sm">
+              <TabsTrigger value="active" className="text-xs px-2 py-1">
                 Aktiv ({counts.active})
               </TabsTrigger>
-              <TabsTrigger value="won" className="text-xs md:text-sm">
+              <TabsTrigger value="won" className="text-xs px-2 py-1">
                 Gewonnen ({counts.won})
               </TabsTrigger>
-              <TabsTrigger value="lost" className="text-xs md:text-sm">
+              <TabsTrigger value="lost" className="text-xs px-2 py-1">
                 Verloren ({counts.lost})
               </TabsTrigger>
             </TabsList>
           </Tabs>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+              <div className="flex items-center gap-1.5">
+                <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
                 <SelectValue placeholder="Sortieren" />
               </div>
             </SelectTrigger>
@@ -159,42 +159,42 @@ export default function MyBids() {
       </div>
 
       {isLoading ? (
-        <Card className="p-8">
-          <div className="text-center text-muted-foreground">Lädt...</div>
+        <Card className="p-6">
+          <div className="text-center text-muted-foreground text-sm">Lädt...</div>
         </Card>
       ) : !groupedBids || Object.keys(groupedBids).length === 0 ? (
-        <Card className="p-12">
+        <Card className="p-8">
           <div className="text-center">
-            <Gavel className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold mb-2">Keine Gebote vorhanden</h3>
-            <p className="text-muted-foreground mb-6">
+            <Gavel className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <h3 className="text-lg font-semibold mb-1">Keine Gebote vorhanden</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Stöbern Sie durch aktive Auktionen und geben Sie Ihr erstes Gebot ab
             </p>
             <Link to="/kaufen">
-              <Button className="gradient-hero hover:gradient-hero-hover">
-                <Eye className="w-4 h-4 mr-2" />
+              <Button size="sm" className="gradient-hero hover:gradient-hero-hover">
+                <Eye className="w-3.5 h-3.5 mr-1.5" />
                 Auktionen ansehen
               </Button>
             </Link>
           </div>
         </Card>
       ) : filteredBids.length === 0 ? (
-        <Card className="p-12">
+        <Card className="p-8">
           <div className="text-center">
-            <Gavel className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold mb-2">Keine Gebote in dieser Kategorie</h3>
-            <p className="text-muted-foreground mb-4">
+            <Gavel className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <h3 className="text-lg font-semibold mb-1">Keine Gebote in dieser Kategorie</h3>
+            <p className="text-sm text-muted-foreground mb-3">
               {filter === "active" && "Sie haben keine aktiven Gebote"}
               {filter === "won" && "Sie haben noch keine Auktionen gewonnen"}
               {filter === "lost" && "Sie haben keine verlorenen Auktionen"}
             </p>
-            <Button variant="outline" onClick={() => setFilter("all")}>
+            <Button variant="outline" size="sm" onClick={() => setFilter("all")}>
               Alle Gebote anzeigen
             </Button>
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedBids.map((group: any) => {
             const motorhome = group.auction?.motorhome;
             const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
@@ -204,121 +204,110 @@ export default function MyBids() {
             const timeLeft = new Date(group.auction.end_time).getTime() - Date.now();
             const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
 
+            // Status badge config
+            let statusBadge: { icon: React.ReactNode; label: string; className: string } | null = null;
+            if (isActive && group.isWinning) {
+              statusBadge = { icon: <Trophy className="w-3 h-3" />, label: "Führend", className: "bg-green-500 text-white" };
+            } else if (isActive && !group.isWinning) {
+              statusBadge = { icon: <AlertCircle className="w-3 h-3" />, label: "Überboten", className: "bg-orange-500 text-white" };
+            } else if (!isActive && group.isWinning) {
+              statusBadge = { icon: <CheckCircle className="w-3 h-3" />, label: "Gewonnen", className: "bg-green-600 text-white" };
+            } else if (!isActive && !group.isWinning) {
+              statusBadge = { icon: <XCircle className="w-3 h-3" />, label: "Verloren", className: "bg-gray-500 text-white" };
+            }
+
             return (
-              <Card key={group.auction.id} className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card">
-                {/* Image */}
-                <div className="relative h-48 bg-muted">
-                  {firstPhoto ? (
-                    <img
-                      src={firstPhoto}
-                      alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Gavel className="w-12 h-12 text-muted-foreground" />
+              <Link
+                key={group.auction.id}
+                to={`/auktion/${group.auction.id}`}
+                className="block group"
+              >
+                <Card className="overflow-hidden border hover:border-primary/40 transition-all duration-200 hover:shadow-md cursor-pointer h-full bg-card">
+                  {/* Compact horizontal layout for each card */}
+                  <div className="flex flex-row h-full">
+                    {/* Thumbnail */}
+                    <div className="relative w-28 sm:w-32 flex-shrink-0">
+                      {firstPhoto ? (
+                        <img
+                          src={firstPhoto}
+                          alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Gavel className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      {/* Status badge on image */}
+                      {statusBadge && (
+                        <div className="absolute top-1.5 right-1.5">
+                          <Badge className={`${statusBadge.className} text-[10px] px-1.5 py-0.5 gap-0.5`}>
+                            {statusBadge.icon}
+                            {statusBadge.label}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    {/* Time remaining badge for active auctions */}
-                    {isActive && (
-                      <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {hoursLeft > 24 ? `${Math.floor(hoursLeft / 24)}d` : hoursLeft > 0 ? `${hoursLeft}h` : "Endet bald"}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    {/* Status badges */}
-                    {isActive && group.isWinning && (
-                      <Badge className="bg-green-500 text-white">
-                        <Trophy className="w-3 h-3 mr-1" />
-                        Führend
-                      </Badge>
-                    )}
-                    {isActive && !group.isWinning && (
-                      <Badge variant="destructive" className="bg-orange-500">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Überboten
-                      </Badge>
-                    )}
-                    {!isActive && group.isWinning && (
-                      <Badge className="bg-green-600 text-white">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Gewonnen
-                      </Badge>
-                    )}
-                    {!isActive && !group.isWinning && (
-                      <Badge variant="secondary">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Verloren
-                      </Badge>
-                    )}
-                  </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-4">
-                  <div>
-                    <h3 className="font-bold text-lg line-clamp-1">
-                      {motorhome?.manufacturer} {motorhome?.model}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Baujahr {motorhome?.year}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Aktuelles Gebot:</span>
-                      <span className="font-semibold">
-                        €{Number(group.auction.current_bid).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Ihr höchstes Gebot:</span>
-                      <span className="font-semibold text-primary">
-                        €{group.highestBid.toLocaleString()}
-                      </span>
-                    </div>
-                    {group.bids.some((b: any) => b.is_autobid && b.max_autobid_amount != null) && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Zap className="w-3 h-3" /> Autobid Max:
-                        </span>
-                        <span className="font-semibold text-primary">
-                          €{Math.max(...group.bids.filter((b: any) => b.is_autobid && b.max_autobid_amount != null).map((b: any) => Number(b.max_autobid_amount))).toLocaleString()}
-                        </span>
+                    {/* Info */}
+                    <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                      <div>
+                        <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
+                          {motorhome?.manufacturer} {motorhome?.model}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Baujahr {motorhome?.year}
+                        </p>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Ihre Gebote:</span>
-                      <Badge variant="outline">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        {bidCount}
-                      </Badge>
-                    </div>
-                    {group.auction.end_time && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Endet:</span>
-                        <span className="text-sm">
-                          {format(new Date(group.auction.end_time), "dd.MM.yyyy HH:mm", {
-                            locale: de,
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Action */}
-                  <Link to={`/auktion/${group.auction.id}`}>
-                    <Button className="w-full gradient-hero hover:gradient-hero-hover">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Zur Auktion
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
+                      {/* Bid info - compact grid */}
+                      <div className="mt-2 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Aktuell:</span>
+                          <span className="font-semibold tabular-nums">
+                            {Number(group.auction.current_bid).toLocaleString("de-DE")} €
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Ihr Gebot:</span>
+                          <span className="font-semibold text-primary tabular-nums">
+                            {group.highestBid.toLocaleString("de-DE")} €
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Footer row */}
+                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/40">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5">
+                            <TrendingUp className="w-3 h-3" />
+                            {bidCount}
+                          </span>
+                          {group.bids.some((b: any) => b.is_autobid && b.max_autobid_amount != null) && (
+                            <span className="flex items-center gap-0.5 text-primary">
+                              <Zap className="w-3 h-3" />
+                              Auto
+                            </span>
+                          )}
+                        </div>
+                        {group.auction.end_time && (
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="w-3 h-3" />
+                            {isActive
+                              ? (hoursLeft > 24
+                                  ? `${Math.floor(hoursLeft / 24)}d ${hoursLeft % 24}h`
+                                  : hoursLeft > 0
+                                  ? `${hoursLeft}h`
+                                  : "Endet bald")
+                              : format(new Date(group.auction.end_time), "dd.MM.yy", { locale: de })
+                            }
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
             );
           })}
         </div>

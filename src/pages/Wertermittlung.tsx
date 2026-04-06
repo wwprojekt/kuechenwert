@@ -385,7 +385,7 @@ const Wertermittlung = () => {
           {/* Benefits Section */}
           <div className="space-y-8">
             <div>
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">
                 So funktioniert die Wertermittlung
               </h2>
               <div className="space-y-6">
@@ -488,7 +488,7 @@ const Wertermittlung = () => {
       {/* FAQ Section */}
       <div className="bg-muted/30 py-16">
         <div className="container max-w-4xl">
-          <h2 className="text-3xl font-bold text-center mb-12">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-12">
             Häufige Fragen
           </h2>
           <div className="space-y-6">

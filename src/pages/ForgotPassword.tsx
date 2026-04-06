@@ -93,7 +93,7 @@ const ForgotPassword = () => {
                 className="h-16 w-auto mx-auto"
               />
             </Link>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
               Passwort vergessen?
             </h1>
             <p className="mt-2 text-muted-foreground">

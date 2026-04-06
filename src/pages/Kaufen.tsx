@@ -388,7 +388,7 @@ const Kaufen = () => {
       {/* Hero Section */}
       <PageHero size="sm">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
             Wohnmobile <span className="gradient-text">kaufen</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-6">
@@ -690,7 +690,7 @@ const Kaufen = () => {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Warum bei uns kaufen?</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Warum bei uns kaufen?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Vertrauen Sie auf unsere Expertise und profitieren Sie von zahlreichen Vorteilen beim Fahrzeugkauf.
             </p>
@@ -719,7 +719,7 @@ const Kaufen = () => {
         <div className="container">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">So kaufen Sie bei uns</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">So kaufen Sie bei uns</h2>
               <p className="text-lg text-muted-foreground">
                 Einfach, transparent und sicher - Ihr Weg zum neuen Wohnmobil in 4 Schritten.
               </p>
@@ -767,7 +767,7 @@ const Kaufen = () => {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-3xl font-bold mb-6">Wohnmobil kaufen - Worauf sollten Sie achten?</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Wohnmobil kaufen - Worauf sollten Sie achten?</h2>
             
             <h3 className="text-2xl font-bold mt-8 mb-4">Welches Wohnmobil passt zu mir?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
@@ -802,7 +802,7 @@ const Kaufen = () => {
       <section className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Besuchen Sie uns!</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Besuchen Sie uns!</h2>
             <p className="text-xl mb-8 opacity-95">
               Vereinbaren Sie noch heute einen Termin für eine Probefahrt oder lassen Sie sich persönlich beraten.
             </p>

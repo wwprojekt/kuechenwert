@@ -90,7 +90,7 @@ const FAQPage = () => {
       <section className="py-16 bg-muted/30">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
               Weitere Fragen?
             </h2>
             <p className="text-muted-foreground mb-8">

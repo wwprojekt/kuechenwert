@@ -186,7 +186,7 @@ const Haendler = () => {
       <section className="py-20">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ihre Vorteile als Partner</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Ihre Vorteile als Partner</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Profitieren Sie von unserem umfassenden Service und steigern Sie Ihren Geschäftserfolg.
             </p>
@@ -214,7 +214,7 @@ const Haendler = () => {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Unsere Händler-Services</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Unsere Händler-Services</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Umfassende Dienstleistungen für Ihren Erfolg im Wohnmobil-Handel.
             </p>
@@ -247,7 +247,7 @@ const Haendler = () => {
       <section className="py-20">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">So werden Sie Partner</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">So werden Sie Partner</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               In nur 4 einfachen Schritten zum erfolgreichen {siteName} Partner.
             </p>
@@ -274,7 +274,7 @@ const Haendler = () => {
         <div className="container">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Warum {siteName}?</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Warum {siteName}?</h2>
               <p className="text-lg opacity-90">
                 Wir sind mehr als nur eine Plattform - wir sind Ihr strategischer Partner für Wachstum.
               </p>
@@ -343,7 +343,7 @@ const Haendler = () => {
       <section className="py-20">
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-3xl font-bold mb-6">Händlerpartnerschaft - Gemeinsam zum Erfolg</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Händlerpartnerschaft - Gemeinsam zum Erfolg</h2>
             
             <h3 className="text-2xl font-bold mt-8 mb-4">Für wen ist das Partnerprogramm geeignet?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
@@ -380,7 +380,7 @@ const Haendler = () => {
       <section id="partner-werden" className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Werden Sie noch heute Partner!</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Werden Sie noch heute Partner!</h2>
             <p className="text-xl mb-8 opacity-95">
               Werden Sie Teil unseres wachsenden Händlernetzwerks und profitieren Sie von unserem starken Service.
             </p>

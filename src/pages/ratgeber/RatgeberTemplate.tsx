@@ -98,7 +98,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
         >
           <div className="container max-w-6xl">
             <div className="max-w-3xl mx-auto text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">{section.title}</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">{section.title}</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 {section.content}
               </p>
@@ -154,7 +154,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
         <div className="container max-w-5xl">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-4">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
                 Kostenlose Fahrzeugbewertung
               </h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
@@ -247,7 +247,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
       {/* Final CTA */}
       <section className="py-20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
         <div className="container max-w-3xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">
             Bereit? {config.primaryCta.text}!
           </h2>
           <p className="text-lg text-muted-foreground mb-8">

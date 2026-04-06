@@ -291,7 +291,7 @@ export default function DealerOnboarding() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold">Händler-Registrierung</h1>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Händler-Registrierung</h1>
                   <p className="text-muted-foreground">
                     Werden Sie Teil unseres Händlernetzwerks
                   </p>

@@ -65,7 +65,7 @@ const BlogPost = () => {
         <Header />
         <main className="flex-1 py-20">
           <div className="container text-center">
-            <h1 className="text-3xl font-bold mb-4">Blogpost nicht gefunden</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">Blogpost nicht gefunden</h1>
             <Link to="/blog">
               <Button>Zurück zum Blog</Button>
             </Link>
@@ -177,7 +177,7 @@ const BlogPost = () => {
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
               Möchten Sie Ihr Wohnmobil verkaufen?
             </h2>
             <p className="text-primary-foreground/90 mb-8">

@@ -163,7 +163,7 @@ export const NotificationPreferences = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Benachrichtigungseinstellungen</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Benachrichtigungseinstellungen</h1>
         <p className="text-muted-foreground">
           Verwalten Sie, wie und wann Sie benachrichtigt werden möchten
         </p>

@@ -123,7 +123,7 @@ const Verkaufen = () => {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ihre Vorteile beim Verkauf</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Ihre Vorteile beim Verkauf</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Profitieren Sie von unserem professionellen Service und verkaufen Sie Ihr Wohnmobil mit Vertrauen.
             </p>
@@ -151,7 +151,7 @@ const Verkaufen = () => {
       <section className="py-20">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">So einfach verkaufen Sie Ihr Wohnmobil</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">So einfach verkaufen Sie Ihr Wohnmobil</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               In nur 4 Schritten zum erfolgreichen Verkauf - transparent und ohne versteckte Kosten.
             </p>
@@ -177,7 +177,7 @@ const Verkaufen = () => {
       <section className="py-20 bg-secondary text-secondary-foreground">
         <div className="container">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Warum {siteName}?</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-12 text-center">Warum {siteName}?</h2>
             
             <div className="grid md:grid-cols-2 gap-8 mb-12">
               {whyUs.map((item, index) => (
@@ -221,7 +221,7 @@ const Verkaufen = () => {
       <section className="py-20">
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-3xl font-bold mb-6">Wohnmobil verkaufen - Ihre Fragen, unsere Antworten</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Wohnmobil verkaufen - Ihre Fragen, unsere Antworten</h2>
             
             <h3 className="text-2xl font-bold mt-8 mb-4">Wie bestimmen wir den Wert Ihres Wohnmobils?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
@@ -257,7 +257,7 @@ const Verkaufen = () => {
       <section id="bewertung" className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Bereit für den Verkauf?</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Bereit für den Verkauf?</h2>
             <p className="text-xl mb-8 opacity-95">
               Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie innerhalb von 24 Stunden verbindliche Gebote von geprüften Händlern.
             </p>

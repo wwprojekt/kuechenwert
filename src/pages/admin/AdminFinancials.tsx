@@ -379,7 +379,7 @@ export default function AdminFinancials() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Finanzen & Rechnungen</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Finanzen & Rechnungen</h1>
           <p className="text-muted-foreground">
             Komplette Finanzübersicht mit Rechnungs- und Zahlungsverwaltung
           </p>

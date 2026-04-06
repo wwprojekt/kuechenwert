@@ -410,7 +410,7 @@ export default function ListingDetail() {
       {/* Title & Status */}
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
             {motorhome.manufacturer} {motorhome.model}
           </h1>
           {auction && (
@@ -455,7 +455,7 @@ export default function ListingDetail() {
                 <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
-              <p className="text-3xl font-bold">
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold">
                 €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
               </p>
             </CardContent>
@@ -467,7 +467,7 @@ export default function ListingDetail() {
                 <p className="text-sm text-muted-foreground">Gebote</p>
                 <Users className="w-5 h-5 text-primary" />
               </div>
-              <p className="text-3xl font-bold">{bidStats?.totalBids || 0}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold">{bidStats?.totalBids || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {bidStats?.uniqueBidders || 0} Bieter
               </p>

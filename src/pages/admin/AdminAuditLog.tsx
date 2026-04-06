@@ -185,7 +185,7 @@ export default function AdminAuditLog() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
             <Shield className="w-8 h-8 text-primary" />
             Audit-Log
           </h1>

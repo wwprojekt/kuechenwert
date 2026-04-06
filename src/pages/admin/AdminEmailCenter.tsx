@@ -245,7 +245,7 @@ export default function AdminEmailCenter() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-3">
           <Mail className="w-8 h-8 text-primary" />
           E-Mail-Center
         </h1>

@@ -259,7 +259,7 @@ export default function AdminMessages() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Support-Nachrichten</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Support-Nachrichten</h1>
           <p className="text-muted-foreground">
             Verwalten Sie Benutzeranfragen
           </p>
@@ -306,6 +306,7 @@ export default function AdminMessages() {
               <p className="text-muted-foreground">Keine Nachrichten gefunden</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -397,6 +398,7 @@ export default function AdminMessages() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

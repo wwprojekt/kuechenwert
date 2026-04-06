@@ -406,7 +406,7 @@ export default function DashboardOverview() {
           <div className="relative bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6 sm:p-8 border border-primary/20">
             <div className="flex flex-col gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 flex items-center gap-3">
+                <h1 className="text-2xl sm:text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-1 flex items-center gap-3">
                   <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg flex-shrink-0">
                     <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                   </div>
@@ -889,7 +889,7 @@ export default function DashboardOverview() {
         <div className="relative bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6 sm:p-8 border border-primary/20">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+              <h1 className="text-2xl sm:text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
                 <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg flex-shrink-0">
                   <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                 </div>

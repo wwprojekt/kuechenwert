@@ -207,7 +207,7 @@ export default function AdminBlog() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Blog-Verwaltung</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Blog-Verwaltung</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>

@@ -39,7 +39,7 @@ export default function DealerSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
           <Settings className="w-8 h-8 text-primary" />
           Einstellungen
         </h1>

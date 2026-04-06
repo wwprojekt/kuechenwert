@@ -209,7 +209,7 @@ export default function DealerClaims() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Reklamationen</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Reklamationen</h1>
           <p className="text-muted-foreground">
             Verwalten Sie Ihre Reklamationen und Beschwerden
           </p>

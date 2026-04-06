@@ -375,7 +375,7 @@ export default function ListingEdit() {
             <ArrowLeft className="w-4 h-4" />
             Zurück
           </Button>
-          <h1 className="text-3xl font-bold">Inserat bearbeiten</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Inserat bearbeiten</h1>
           <p className="text-muted-foreground mt-1">
             {motorhome.manufacturer} {motorhome.model}
           </p>

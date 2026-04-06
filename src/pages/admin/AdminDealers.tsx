@@ -574,7 +574,7 @@ export default function AdminDealers() {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">
             Händlerverwaltung
           </h1>
           <p className="text-muted-foreground">

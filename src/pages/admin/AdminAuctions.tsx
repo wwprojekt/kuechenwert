@@ -696,7 +696,7 @@ export default function AdminAuctions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Auktionsverwaltung</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Auktionsverwaltung</h1>
           <p className="text-muted-foreground">
             Verwalten Sie alle Auktionen auf der Plattform
           </p>

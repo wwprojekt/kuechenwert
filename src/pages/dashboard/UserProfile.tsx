@@ -146,7 +146,7 @@ export default function UserProfile() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Mein Profil</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Mein Profil</h1>
         <p className="text-muted-foreground">
           Verwalten Sie Ihre persönlichen Informationen
         </p>

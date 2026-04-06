@@ -295,9 +295,9 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-[100dvh] flex w-full overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
         <DealerSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Modern Header */}
           <header className="h-14 sm:h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
             <div className="h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
@@ -331,7 +331,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10">
+          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
             <div className="max-w-7xl mx-auto">
               {/* Password Setup Dialog for dealers arriving via registration magic link */}
               <SetPasswordDialog open={showSetPassword} />
@@ -380,9 +380,9 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-[100dvh] flex w-full overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
         <UserSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Modern Header */}
           <header className="h-14 sm:h-20 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
             <div className="h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
@@ -416,7 +416,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10">
+          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Email Verification Banner */}
               {emailVerified === false && user?.email && (

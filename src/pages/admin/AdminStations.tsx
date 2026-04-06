@@ -159,7 +159,7 @@ const AdminStations = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Building2 className="w-8 h-8" />
             Ankaufstationen
           </h1>

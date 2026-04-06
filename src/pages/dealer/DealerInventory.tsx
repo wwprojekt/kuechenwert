@@ -123,7 +123,7 @@ const DealerInventory = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Inventar</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Inventar</h1>
           <p className="text-muted-foreground">
             Verwalten Sie Ihre erworbenen Wohnmobile
           </p>

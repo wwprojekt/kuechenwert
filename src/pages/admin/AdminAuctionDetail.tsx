@@ -406,6 +406,7 @@ export default function AdminAuctionDetail() {
               {/* Bids Table */}
               <DetailSection title={`Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
                 {sortedBids.length > 0 ? (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -447,6 +448,7 @@ export default function AdminAuctionDetail() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />

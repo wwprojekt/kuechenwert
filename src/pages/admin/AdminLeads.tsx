@@ -385,7 +385,7 @@ function StatCard({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold mt-1">{value}</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold mt-1">{value}</p>
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
         </div>
         <div className={`p-3 rounded-xl ${color}`}>
@@ -1601,7 +1601,7 @@ export default function AdminLeads() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-3">
             <UserPlus className="w-8 h-8 text-primary" />
             Leads & Wizard-Sessions
           </h1>

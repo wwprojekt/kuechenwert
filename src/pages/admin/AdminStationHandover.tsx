@@ -125,7 +125,7 @@ const AdminStationHandover = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Fahrzeugübergabe</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Fahrzeugübergabe</h1>
         <p className="text-muted-foreground mt-2">
           Verwalten Sie Fahrzeugübergaben an Ankaufstationen
         </p>
@@ -163,7 +163,7 @@ const AdminStationHandover = () => {
             {generatedPin && (
               <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground mb-2">Generierter PIN:</p>
-                <p className="text-3xl font-bold text-primary tracking-wider">{generatedPin}</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-primary tracking-wider">{generatedPin}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Gültig für 24 Stunden
                 </p>

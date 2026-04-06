@@ -507,6 +507,7 @@ export default function AdminClaims() {
 
       {/* Table */}
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -626,6 +627,7 @@ export default function AdminClaims() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       {/* ================================================================== */}

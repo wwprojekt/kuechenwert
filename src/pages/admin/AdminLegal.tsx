@@ -185,7 +185,7 @@ export default function AdminLegal() {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Scale className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Rechtliche Dokumente</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Rechtliche Dokumente</h1>
         </div>
         <Card className="p-6">
           <Skeleton className="h-12 w-full mb-4" />
@@ -202,7 +202,7 @@ export default function AdminLegal() {
         <div className="flex items-center gap-3">
           <Scale className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Rechtliche Dokumente</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Rechtliche Dokumente</h1>
             <p className="text-muted-foreground">
               AGB, Datenschutz und Impressum bearbeiten
             </p>

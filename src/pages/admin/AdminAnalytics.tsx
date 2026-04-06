@@ -301,7 +301,7 @@ export default function AdminAnalytics() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Analytics Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Analytics Dashboard</h1>
         <p className="text-muted-foreground">Detaillierte Einblicke in Ihre Plattform-Performance</p>
       </div>
 
@@ -332,7 +332,7 @@ export default function AdminAnalytics() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold">{stat.value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -464,7 +464,7 @@ export default function AdminAnalytics() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold">{stat.value}</p>
                 </CardContent>
               </Card>
             ))}

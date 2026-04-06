@@ -896,6 +896,7 @@ export default function AdminDealerDetail() {
                 <TabsContent value="activity">
                   <DetailSection title="Gebotsaktivität" icon={<Gavel className="w-5 h-5" />}>
                     {dealerBids.length > 0 ? (
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -929,6 +930,7 @@ export default function AdminDealerDetail() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />

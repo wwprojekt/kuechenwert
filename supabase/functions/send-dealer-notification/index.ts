@@ -15,6 +15,7 @@ interface DealerEmailRequest {
   companyName: string;
   rejectionReason?: string;
   customerNumber?: string;
+  confirmationUrl?: string; // Magic-Link für E-Mail-Bestätigung (nur bei application_received)
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,7 +30,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, type, companyName, rejectionReason, customerNumber: passedCustNum }: DealerEmailRequest = await req.json();
+    const { email, name, type, companyName, rejectionReason, customerNumber: passedCustNum, confirmationUrl }: DealerEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to dealer:`, email);
 
@@ -64,20 +65,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     switch (type) {
       case "application_received":
-        subject = "Händler-Bewerbung erhalten";
+        subject = "Ihre Händler-Bewerbung bei CaravanWert";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
-          ${paragraph(`Vielen Dank für Ihre Bewerbung als Händler bei ${settingsData.site_name}!`)}
+          ${paragraph(`Vielen Dank für Ihre Bewerbung als Händler bei <strong>${settingsData.site_name}</strong>! Wir freuen uns über Ihr Interesse an einer Partnerschaft.`)}
           ${infoBox('Ihre Bewerbung', `
             ${detailRow('Unternehmen', companyName)}
-            ${paragraph('Ihre Bewerbung wird derzeit von unserem Team geprüft. Sie erhalten in Kürze eine Rückmeldung per E-Mail.')}
+            ${detailRow('Status', '<span style="color: #f59e0b; font-weight: 700;">In Prüfung</span>')}
+            ${paragraph('Ihre Bewerbung wird derzeit von unserem Team sorgfältig geprüft. Sie erhalten eine Benachrichtigung per E-Mail, sobald die Prüfung abgeschlossen ist.')}
           `, 'info', settingsData)}
-          ${paragraph('Die Prüfung dauert in der Regel 1-2 Werktage.')}
+          ${confirmationUrl ? `
+            ${infoBox('E-Mail-Adresse bestätigen', `
+              ${paragraph('Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf den folgenden Button klicken. Dies ist erforderlich, damit wir Ihre Bewerbung bearbeiten können.')}
+            `, 'warning', settingsData)}
+            ${button('E-Mail-Adresse bestätigen', confirmationUrl, settingsData)}
+            ${paragraph('<small style="color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="' + confirmationUrl + '" style="color: #1f8aa2; word-break: break-all;">' + confirmationUrl + '</a></small>')}
+          ` : ''}
+          ${infoBox('Wie geht es weiter?', `
+            ${list([
+              'Unser Team prüft Ihre Unterlagen (1\u20132 Werktage)',
+              'Sie erhalten eine E-Mail mit dem Ergebnis der Prüfung',
+              'Nach Genehmigung erhalten Sie sofort Zugang zum Händler-Portal',
+              'Sie können dann auf Wohnmobile bieten und exklusive Angebote nutzen'
+            ])}
+          `, 'default', settingsData)}
+          ${paragraph('Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.')}
         `;
         break;
 
       case "approved":
-        subject = "Händler-Bewerbung genehmigt";
+        subject = "Willkommen als Händler bei CaravanWert!";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}

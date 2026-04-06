@@ -181,52 +181,68 @@ const RegisterHaendler = () => {
 
     try {
       const validated = dealerRegistrationSchema.parse(formData);
-      const redirectUrl = `${window.location.origin}/login`;
 
-      // Step 1: Create user account with email confirmation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: validated.email,
-        password: validated.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            first_name: validated.contactPersonName.split(" ")[0],
-            last_name: validated.contactPersonName.split(" ").slice(1).join(" ") || "",
-            phone: validated.phone,
-            company_name: validated.companyName,
-            company_address: validated.companyAddress,
-            company_postal_code: validated.companyPostalCode,
-            company_city: validated.companyCity,
-            country: validated.country,
-            contact_person_name: validated.contactPersonName,
-            contact_person_position: validated.contactPersonPosition || null,
-            website: validated.website || null,
-            legal_form: validated.legalForm || null,
-            founded_year: validated.foundedYear || null,
-            is_dealer: true,
-            user_type: 'dealer',
+      // Step 1: Register dealer via our custom Edge Function
+      // This replaces supabase.auth.signUp() to avoid Supabase's generic confirmation email.
+      // The Edge Function creates the user, generates a branded confirmation email with
+      // CaravanWert layout, and notifies the admin – all in one atomic operation.
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
+
+      const registerResponse = await fetch(
+        `${supabaseUrl}/functions/v1/register-dealer`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
           },
-        },
-      });
+          body: JSON.stringify({
+            email: validated.email,
+            password: validated.password,
+            firstName: validated.contactPersonName.split(" ")[0],
+            lastName: validated.contactPersonName.split(" ").slice(1).join(" ") || "",
+            phone: validated.phone,
+            companyName: validated.companyName,
+            companyAddress: validated.companyAddress,
+            companyPostalCode: validated.companyPostalCode,
+            companyCity: validated.companyCity,
+            country: validated.country,
+            contactPersonName: validated.contactPersonName,
+            contactPersonPosition: validated.contactPersonPosition || null,
+            website: validated.website || null,
+            legalForm: validated.legalForm || null,
+            foundedYear: validated.foundedYear || null,
+          }),
+        }
+      );
 
-      if (authError) throw authError;
+      const registerResult = await registerResponse.json();
 
-      if (!authData.user) {
+      if (!registerResponse.ok) {
+        // Handle specific error codes from our Edge Function
+        if (registerResult.code === 'USER_EXISTS') {
+          throw new Error(registerResult.error || tr.errorUserCreationFailed);
+        }
+        throw new Error(registerResult.error || tr.errorUserCreationFailed);
+      }
+
+      const userId = registerResult.userId;
+      if (!userId) {
         throw new Error(tr.errorUserCreationFailed);
       }
 
       // Step 2: Upload document via Edge Function (bypasses RLS)
+      // The dealer-document-upload function verifies user_type === 'dealer'
+      // in user_metadata and checks the 10-minute registration window.
       if (documentFile) {
         setUploadingDocument(true);
         try {
           const uploadFormData = new FormData();
           uploadFormData.append('file', documentFile);
-          uploadFormData.append('user_id', authData.user.id);
+          uploadFormData.append('user_id', userId);
           uploadFormData.append('file_type', 'trade_license');
           uploadFormData.append('registration_token', 'true');
-
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-          const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
           const response = await fetch(
             `${supabaseUrl}/functions/v1/dealer-document-upload`,

@@ -765,6 +765,7 @@ export const useWizardForm = () => {
                 wbraid: trackingData.wbraid,
                 ga4ClientId: trackingData.ga4ClientId,
                 transactionId,
+                skipUserEmail: true, // Admin-only – User bekommt bereits die Aktivierungs-E-Mail
                 turnstileToken: botProtection?.turnstileToken || undefined,
                 honeypot: botProtection?.honeypot || undefined,
               },
@@ -831,6 +832,7 @@ export const useWizardForm = () => {
           wbraid: trackingData.wbraid,
           ga4ClientId: trackingData.ga4ClientId,
           transactionId,
+          skipUserEmail: true, // Admin-only – eingeloggter User braucht keine Bestätigungs-E-Mail
           turnstileToken: botProtection?.turnstileToken || undefined,
           honeypot: botProtection?.honeypot || undefined,
         },

@@ -55,6 +55,9 @@ verify_jwt = false
 verify_jwt = false
 
 # --- Dealer ---
+[functions.register-dealer]
+verify_jwt = false
+
 [functions.dealer-document-upload]
 verify_jwt = false
 

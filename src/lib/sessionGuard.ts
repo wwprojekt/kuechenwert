@@ -94,6 +94,7 @@ export function isLockError(error: unknown): boolean {
       : (error as { message?: string })?.message || '';
   return (
     message.includes('Lock broken by another request') ||
+    message.includes('Lock was stolen by another request') ||
     message.includes('released because another request stole it') ||
     message.includes('Lock acquisition timed out') ||
     message.includes('was not released within') ||
@@ -227,10 +228,36 @@ export async function ensureValidSession(): Promise<{
     // No user at all
     return { user: null, wasRefreshed: false, sessionExpired: false };
   } catch (err) {
-    // Lock-Fehler sind harmlos - Session als nicht verfügbar melden, aber nicht als abgelaufen
+    // Lock-Fehler: Kurz warten und erneut versuchen.
+    // Ohne Retry würde user:null zurückgegeben, was im Wizard-Submit dazu führt
+    // dass der eingeloggte User fälschlicherweise "Passwort fehlt" sieht.
     if (isLockError(err)) {
-      logger.log('ensureValidSession: Lock-Fehler (harmlos, wird ignoriert)');
-      return { user: null, wasRefreshed: false, sessionExpired: false };
+      logger.log('ensureValidSession: Lock-Fehler erkannt, warte 500ms und versuche erneut...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          return { user, wasRefreshed: false, sessionExpired: false };
+        }
+        // Zweiter Versuch fehlgeschlagen – versuche getSession als Fallback
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          return { user: session.user, wasRefreshed: false, sessionExpired: false };
+        }
+        return { user: null, wasRefreshed: false, sessionExpired: false };
+      } catch (retryErr) {
+        logger.log('ensureValidSession: Retry nach Lock-Fehler ebenfalls fehlgeschlagen');
+        // Letzter Fallback: getSession() ist lokal und braucht keinen Lock
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            return { user: session.user, wasRefreshed: false, sessionExpired: false };
+          }
+        } catch {
+          // Alles fehlgeschlagen
+        }
+        return { user: null, wasRefreshed: false, sessionExpired: false };
+      }
     }
     logger.error('ensureValidSession error:', err);
     return { user: null, wasRefreshed: false, sessionExpired: true };

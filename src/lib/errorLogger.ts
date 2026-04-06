@@ -73,6 +73,30 @@ class ErrorLogger {
         return;
       }
 
+      // Filter out Navigator Lock errors (harmless, Supabase Auth-JS session synchronization)
+      if (
+        reasonStr.includes('Lock broken by another request') ||
+        reasonStr.includes('Lock was stolen by another request') ||
+        reasonStr.includes('released because another request stole it') ||
+        reasonStr.includes('Lock acquisition timed out') ||
+        reasonStr.includes('was not released within') ||
+        reasonStr.includes('Acquiring an exclusive Navigator LockManager lock') ||
+        reasonStr.includes('Acquiring process lock') ||
+        reasonStr.includes('isAcquireTimeout')
+      ) {
+        return;
+      }
+
+      // Filter out network errors during automatic Supabase token refresh
+      // These occur when _refreshAccessToken fails due to unstable connection (2G, background tab)
+      const stackStr = event.reason?.stack || '';
+      if (
+        (reasonStr.includes('Failed to fetch') || reasonStr.includes('Load failed')) &&
+        stackStr.includes('_refreshAccessToken')
+      ) {
+        return;
+      }
+
       this.logError({
         message: `Unhandled Promise Rejection: ${event.reason}`,
         stack: event.reason?.stack,

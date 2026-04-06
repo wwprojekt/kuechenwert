@@ -295,10 +295,18 @@ const step7Schema = z.object({
 });
 
 // Step 8: Location & Account (Standort + Passwort - letzter Schritt)
-// bodyType und manufacturer werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit
+// bodyType, manufacturer und saleChannel werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit.
+// saleChannel MUSS hier geprüft werden, weil handleSubmit nur validateStep(8) aufruft, nicht validateStep(7).
+// Ohne diese Prüfung kann ein leerer saleChannel an die DB gesendet werden → PostgreSQL-Enum-Fehler.
 const step8Schema = z.object({
   bodyType: z.string().min(1, "Aufbauart fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 1"),
   manufacturer: z.string().min(1, "Hersteller fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 2"),
+  saleChannel: z.enum(['instant_price', 'auction', 'station'], {
+    errorMap: () => ({ message: "Bitte w\u00e4hlen Sie einen Verkaufsweg \u2013 gehen Sie zur\u00fcck zu Schritt 7" }),
+  }),
+  customerName: z.string().min(1, "Name fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
+  customerEmail: z.string().email("E-Mail-Adresse fehlt oder ung\u00fcltig \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
+  customerPhone: z.string().min(5, "Telefonnummer fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 7"),
   street: z.string().min(1, "Stra\u00dfe ist erforderlich"),
   houseNumber: z.string().min(1, "Hausnummer ist erforderlich"),
   zipCode: z.string().min(3, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(10, "PLZ ist zu lang"),
@@ -412,6 +420,10 @@ export const useWizardForm = () => {
           step8Schema.parse({
             bodyType: formData.bodyType,
             manufacturer: formData.manufacturer,
+            saleChannel: formData.saleChannel,
+            customerName: formData.customerName,
+            customerEmail: formData.customerEmail,
+            customerPhone: formData.customerPhone,
             street: formData.street,
             houseNumber: formData.houseNumber,
             zipCode: formData.zipCode,
@@ -643,6 +655,20 @@ export const useWizardForm = () => {
       }
       if (!formData.manufacturer || !formData.model || !formData.year || !formData.condition) {
         throw new Error('Fahrzeugdaten sind unvollständig. Bitte prüfen Sie Hersteller, Modell, Baujahr und Zustand.');
+      }
+
+      // Defensive Validierung: sale_channel muss ein gültiger Enum-Wert sein
+      // Verhindert PostgreSQL-Fehler "invalid input value for enum sale_channel: ''"
+      // Tritt auf wenn der User per URL-Parameter (?step=8) direkt zum letzten Step springt
+      // und Step 7 (Verkaufsweg) nie besucht hat → saleChannel bleibt "" (initialFormData)
+      const VALID_SALE_CHANNELS = ['instant_price', 'auction', 'station'] as const;
+      if (!formData.saleChannel || !VALID_SALE_CHANNELS.includes(formData.saleChannel as typeof VALID_SALE_CHANNELS[number])) {
+        throw new Error('Bitte wählen Sie einen Verkaufsweg aus. Gehen Sie zurück zu Schritt 7.');
+      }
+
+      // Defensive Validierung: Kontaktdaten müssen vorhanden sein
+      if (!formData.customerName || !formData.customerEmail) {
+        throw new Error('Kontaktdaten sind unvollständig. Bitte prüfen Sie Name und E-Mail-Adresse.');
       }
 
       // Wohnwagen haben keinen Motor – Motor-Felder auf null setzen

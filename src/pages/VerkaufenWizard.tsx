@@ -186,14 +186,20 @@ const VerkaufenWizard = () => {
     }
   }, [searchParams, updateFormData]);
 
-  // Step-Guard: Wenn Pflichtdaten aus vorherigen Steps fehlen, zurück zum entsprechenden Step
-  // Verhindert, dass Nutzer per URL-Parameter (z.B. ?step=4) Steps überspringen
-  // und dann beim Submit ungültige Daten an die Datenbank senden
+  // Step-Guard: Verhindert, dass Nutzer per URL-Parameter (z.B. ?step=8) Steps überspringen
+  // und dann beim Submit ungültige Daten an die Datenbank senden.
+  // Prüft kritische Pflichtfelder aus vorherigen Steps und setzt zurück zum frühesten fehlenden Step.
   useEffect(() => {
     if (currentStep >= 2 && !formData.bodyType) {
       setCurrentStep(1);
+    } else if (currentStep >= 8 && !formData.saleChannel) {
+      // sale_channel ist Pflicht (Step 7) – ohne gültigen Wert → DB-Enum-Fehler
+      setCurrentStep(7);
+    } else if (currentStep >= 6 && (!formData.customerName || !formData.customerEmail)) {
+      // Kontaktdaten werden in Step 5 erfasst
+      setCurrentStep(5);
     }
-  }, [currentStep, formData.bodyType]);
+  }, [currentStep, formData.bodyType, formData.saleChannel, formData.customerName, formData.customerEmail]);
 
   // Google Ads: Wizard-Start tracken
   useEffect(() => {

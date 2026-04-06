@@ -90,6 +90,7 @@ const AUTH_ERROR_MAP: Record<string, string> = {
   'rate_limit': 'Zu viele Anfragen. Bitte versuchen Sie es in einigen Minuten erneut.',
   // Navigator Lock-Fehler (Supabase Auth-JS Session-Synchronisierung)
   'Lock broken by another request': 'Sitzungssynchronisierung wird durchgeführt. Bitte versuchen Sie es erneut.',
+  'Lock was stolen by another request': 'Sitzungssynchronisierung wird durchgeführt. Bitte versuchen Sie es erneut.',
   'was released because another request stole it': 'Sitzungssynchronisierung wird durchgeführt. Bitte versuchen Sie es erneut.',
   'Lock acquisition timed out': 'Die Anmeldung hat etwas länger gedauert. Bitte versuchen Sie es erneut.',
   'was not released within': 'Die Anmeldung hat etwas länger gedauert. Bitte versuchen Sie es erneut.',

@@ -25,6 +25,7 @@ function isLockError(error: unknown): boolean {
       : '';
   return (
     message.includes('Lock broken by another request') ||
+    message.includes('Lock was stolen by another request') ||
     message.includes('released because another request stole it') ||
     message.includes('Lock acquisition timed out') ||
     message.includes('was not released within') ||

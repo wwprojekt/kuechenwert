@@ -484,6 +484,7 @@ export function installGlobalErrorHandlers(): void {
     // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
     if (
       event.message?.includes('Lock broken by another request') ||
+      event.message?.includes('Lock was stolen by another request') ||
       event.message?.includes('released because another request stole it') ||
       event.message?.includes('Lock acquisition timed out') ||
       event.message?.includes('was not released within') ||
@@ -527,6 +528,7 @@ export function installGlobalErrorHandlers(): void {
     // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
     if (
       message.includes('Lock broken by another request') ||
+      message.includes('Lock was stolen by another request') ||
       message.includes('released because another request stole it') ||
       message.includes('Lock acquisition timed out') ||
       message.includes('was not released within') ||
@@ -534,7 +536,12 @@ export function installGlobalErrorHandlers(): void {
       message.includes('Acquiring process lock') ||
       message.includes('isAcquireTimeout')
     ) return;
-
+    // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
+    const stackStr = reason instanceof Error ? (reason.stack || '') : '';
+    if (
+      (message.includes('Failed to fetch') || message.includes('Load failed')) &&
+      stackStr.includes('_refreshAccessToken')
+    ) return;
     const translated = translateError(message);
     logErrorToSupabase({
       errorCode: 'GLOBAL_UNHANDLED_REJECTION',
@@ -573,6 +580,13 @@ export function installGlobalErrorHandlers(): void {
     if (errorArg) {
       // Ignoriere Browser-Extension-Fehler
       if (errorArg.message?.includes('Object Not Found Matching Id')) return;
+      // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
+      // Diese entstehen wenn _refreshAccessToken bei instabiler Verbindung (2G, Safari-Hintergrund) fehlschlägt.
+      // Der Supabase-Client versucht es automatisch erneut, daher sind diese Fehler nicht actionable.
+      if (
+        (errorArg.message?.includes('Failed to fetch') || errorArg.message?.includes('Load failed')) &&
+        errorArg.stack?.includes('_refreshAccessToken')
+      ) return;
       const translated = translateError(errorArg.message);
       logErrorToSupabase({
         errorCode: 'CONSOLE_ERROR',

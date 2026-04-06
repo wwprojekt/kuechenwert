@@ -616,9 +616,18 @@ const Wertrechner = () => {
     },
     onError: (error: unknown) => {
       const germanMessage = handleApiError(error, 'Wertrechner');
+      // Bei Netzwerkfehlern (Load failed, Failed to fetch) eine spezifischere Meldung zeigen
+      // die dem User klar macht, dass er es einfach erneut versuchen kann.
+      const isNetwork = error instanceof Error && (
+        error.message.includes('Load failed') ||
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('NetworkError')
+      );
       toast({
-        title: "Fehler beim Senden",
-        description: germanMessage,
+        title: isNetwork ? "Verbindungsproblem" : "Fehler beim Senden",
+        description: isNetwork
+          ? "Die Verbindung wurde unterbrochen. Bitte tippen Sie erneut auf \"Wert jetzt anzeigen\"."
+          : germanMessage,
         variant: "destructive",
       });
     },

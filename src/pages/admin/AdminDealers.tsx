@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -307,6 +308,14 @@ export default function AdminDealers() {
   }, [activeDealers, searchTerm]);
 
   const sortedFilteredDealers = useMemo(() => sortData(filteredDealers, dealerSortAccessors), [filteredDealers, sortData]);
+
+  // Pagination für Händler
+  const [dealerPage, setDealerPage] = useState(1);
+  const DEALER_PAGE_SIZE = 20;
+  useEffect(() => { setDealerPage(1); }, [searchTerm, activeTab]);
+  const paginatedDealers = useMemo(() => {
+    return sortedFilteredDealers.slice((dealerPage - 1) * DEALER_PAGE_SIZE, dealerPage * DEALER_PAGE_SIZE);
+  }, [sortedFilteredDealers, dealerPage]);
 
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "haendler",
@@ -894,7 +903,7 @@ export default function AdminDealers() {
                     </TableCell>
                   </TableRow>
                 ) : filteredDealers.length > 0 ? (
-                  sortedFilteredDealers.map((dealer: DealerApplication) => (
+                  paginatedDealers.map((dealer: DealerApplication) => (
                     <TableRow key={dealer.id}>
                       <TableCell className="font-medium flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -1026,6 +1035,16 @@ export default function AdminDealers() {
                 )}
               </TableBody>
             </Table>
+            {sortedFilteredDealers.length > DEALER_PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={dealerPage}
+                  pageSize={DEALER_PAGE_SIZE}
+                  totalItems={sortedFilteredDealers.length}
+                  onPageChange={setDealerPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

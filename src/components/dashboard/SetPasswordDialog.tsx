@@ -103,12 +103,22 @@ const SetPasswordDialog = ({ open }: SetPasswordDialogProps) => {
         });
       } else {
         logger.error("Password set error:", error);
-        const germanMessage = handleAuthError(error, "SetPasswordDialog");
-        toast({
-          title: "Passwort konnte nicht gespeichert werden",
-          description: germanMessage,
-          variant: "destructive",
-        });
+        const errMsg = (error as any)?.message || '';
+        // Spezifische Fehlermeldungen für häufige Probleme
+        if (errMsg.includes('same_password') || errMsg.includes('should be different from the old password')) {
+          toast({
+            title: "Passwort bereits vergeben",
+            description: "Dieses Passwort ist bereits Ihr aktuelles Passwort. Bitte wählen Sie ein anderes Passwort.",
+            variant: "destructive",
+          });
+        } else {
+          const germanMessage = handleAuthError(error, "SetPasswordDialog");
+          toast({
+            title: "Passwort konnte nicht gespeichert werden",
+            description: germanMessage,
+            variant: "destructive",
+          });
+        }
       }
     } finally {
       setIsLoading(false);

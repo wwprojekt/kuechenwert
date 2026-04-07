@@ -185,16 +185,38 @@ function toast({ ...props }: Toast) {
       'Anmeldung erforderlich',
       'Sitzung abgelaufen',
       'Nicht gefunden',
+      'Gleiches Passwort',
+      'Passwort bereits vergeben',
+      'Zu viele Anfragen',
+      'KI-Bewertung vorübergehend nicht verfügbar',
     ];
     const businessEventDescriptions = [
       'Bieten Sie erneut!',
       'Bitte melden Sie sich an',
       'Ihre Sitzung ist abgelaufen',
+      'muss sich vom bisherigen Passwort unterscheiden',
+      'muss sich vom alten Passwort unterscheiden',
+      'ist bereits Ihr aktuelles Passwort',
+      'Bitte warten Sie einige Minuten',
     ];
     const isBusinessEvent = businessEventTitles.some(t => titleStr.includes(t))
       || businessEventDescriptions.some(d => errorMessage.includes(d));
 
-    if (!isDuplicate && !isValidationToast && !isBusinessEvent) {
+    // Navigator Lock-Fehler filtern (harmlos, Supabase Auth-JS Session-Synchronisierung)
+    const lockErrorPatterns = [
+      'Lock was stolen by another request',
+      'Lock broken by another request',
+      'released because another request stole it',
+      'Lock acquisition timed out',
+      'was not released within',
+      'Acquiring an exclusive Navigator LockManager lock',
+      'Acquiring process lock',
+      'isAcquireTimeout',
+      'Sitzungssynchronisierung',
+    ];
+    const isLockError = lockErrorPatterns.some(p => errorMessage.includes(p) || titleStr.includes(p));
+
+    if (!isDuplicate && !isValidationToast && !isBusinessEvent && !isLockError) {
       logErrorToSupabase({
         errorCode: 'TOAST_ERROR',
         errorMessage: `${titleStr}: ${errorMessage}`,

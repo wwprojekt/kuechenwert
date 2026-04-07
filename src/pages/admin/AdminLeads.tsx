@@ -1481,7 +1481,17 @@ export default function AdminLeads() {
         });
       }
     } catch (err: any) {
-      toast({ title: "KI-Fehler", description: err.message || "KI-Bewertung fehlgeschlagen", variant: "destructive" });
+      const msg = err.message || "KI-Bewertung fehlgeschlagen";
+      // Rate Limit oder Edge Function Fehler benutzerfreundlich anzeigen
+      const isRateLimit = msg.includes('429') || msg.includes('Rate limit') || msg.includes('Too many');
+      const isEdgeFunctionError = msg.includes('non-2xx') || msg.includes('Edge Function');
+      if (isRateLimit) {
+        toast({ title: "Zu viele Anfragen", description: "Bitte warten Sie einige Minuten und versuchen Sie es erneut." });
+      } else if (isEdgeFunctionError) {
+        toast({ title: "KI-Bewertung vorübergehend nicht verfügbar", description: "Die KI-Bewertung konnte nicht durchgeführt werden. Bitte versuchen Sie es später erneut." });
+      } else {
+        toast({ title: "KI-Fehler", description: msg, variant: "destructive" });
+      }
     } finally {
       setAiLoading(false);
     }

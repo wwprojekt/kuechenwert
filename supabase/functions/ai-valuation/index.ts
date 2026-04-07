@@ -54,7 +54,20 @@ Deno.serve(async (req) => {
   };
   const rateLimitResult = await checkRateLimit(req, AI_VALUATION_RATE_LIMIT);
   if (!rateLimitResult.allowed) {
-    return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
+    // Return 200 with error in body instead of 429 to prevent
+    // "Edge Function returned a non-2xx status code" errors in the frontend
+    return new Response(
+      JSON.stringify({
+        success: false,
+        hasAiEstimate: false,
+        error: 'rate_limit',
+        message: 'Zu viele Anfragen. Bitte warten Sie einige Minuten und versuchen Sie es erneut.',
+      }),
+      {
+        status: 200,
+        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+      }
+    );
   }
 
   try {

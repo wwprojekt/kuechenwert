@@ -97,12 +97,21 @@ const ResetPassword = () => {
         });
       } else {
         logger.error("Password update error:", error);
-        const germanMessage = handleAuthError(error, 'ResetPassword');
-        toast({
-          title: "Passwortänderung fehlgeschlagen",
-          description: germanMessage,
-          variant: "destructive",
-        });
+        const errMsg = (error as any)?.message || '';
+        if (errMsg.includes('same_password') || errMsg.includes('should be different from the old password')) {
+          toast({
+            title: "Gleiches Passwort",
+            description: "Das neue Passwort muss sich vom bisherigen Passwort unterscheiden. Bitte wählen Sie ein anderes Passwort.",
+            variant: "destructive",
+          });
+        } else {
+          const germanMessage = handleAuthError(error, 'ResetPassword');
+          toast({
+            title: "Passwortänderung fehlgeschlagen",
+            description: germanMessage,
+            variant: "destructive",
+          });
+        }
       }
     } finally {
       setIsLoading(false);

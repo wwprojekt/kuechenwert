@@ -356,6 +356,28 @@ export function handleAndLogError(
     (window as any).__lastLoggedErrorTime = Date.now();
   }
 
+  // Harmlose Auth-Fehler NICHT loggen (normales Benutzerverhalten)
+  const harmlessAuthPatterns = [
+    'Invalid login credentials',
+    'Email not confirmed',
+    'New password should be different',
+    'same_password',
+    'Ungültige E-Mail-Adresse oder Passwort',
+    'E-Mail-Adresse wurde noch nicht bestätigt',
+    'muss sich vom alten Passwort unterscheiden',
+    'muss sich vom bisherigen Passwort unterscheiden',
+    'User already registered',
+    'already registered',
+    'For security purposes, you can only request this',
+    'Aus Sicherheitsgründen können Sie',
+  ];
+  const isHarmlessAuth = harmlessAuthPatterns.some(p => 
+    originalMessage.includes(p) || translated.message.includes(p)
+  );
+  if (isHarmlessAuth) {
+    return translated.message;
+  }
+
   // Asynchron in Supabase loggen (blockiert nicht die UI)
   logErrorToSupabase({
     errorCode: translated.code,

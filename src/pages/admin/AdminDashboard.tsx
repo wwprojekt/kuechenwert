@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -7,7 +7,7 @@ import {
   Phone, AlertCircle, MessageSquare, Building2, FileText,
   CheckCircle2, Eye, ArrowRight, Bell, Inbox, CalendarClock,
   RefreshCw, ChevronRight, ExternalLink, Timer, PhoneOff,
-  AlertTriangle, Star, FileWarning, Flame,
+  AlertTriangle, Star, FileWarning, Flame, Euro, Activity, BarChart3, Banknote, Receipt, PhoneCall,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -291,6 +291,154 @@ function useActionItems() {
 }
 
 // ============================================================================
+// Revenue / Financial Overview Hook
+// ============================================================================
+
+function useRevenueStats() {
+  return useQuery({
+    queryKey: ["adminRevenueStats"],
+    queryFn: async () => {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 1).toISOString();
+
+      const { data: allInvoices } = await supabase
+        .from("invoices")
+        .select("id, gross_amount, net_amount, tax_amount, payment_status, status, due_date, created_at, paid_at")
+        .in("status", ["sent", "paid", "overdue", "partial"]);
+
+      if (!allInvoices) return { weekRevenue: 0, monthRevenue: 0, openInvoices: 0, overdueInvoices: 0, openAmount: 0, overdueAmount: 0 };
+
+      const paidThisMonth = allInvoices.filter(i => i.paid_at && i.paid_at >= startOfMonth);
+      const paidThisWeek = allInvoices.filter(i => i.paid_at && i.paid_at >= startOfWeek);
+      const open = allInvoices.filter(i => i.payment_status === "pending" || i.payment_status === "partial");
+      const overdue = allInvoices.filter(i => i.payment_status === "overdue" || (i.due_date && new Date(i.due_date) < now && i.payment_status !== "paid"));
+
+      return {
+        weekRevenue: paidThisWeek.reduce((s, i) => s + Number(i.gross_amount || 0), 0),
+        monthRevenue: paidThisMonth.reduce((s, i) => s + Number(i.gross_amount || 0), 0),
+        openInvoices: open.length,
+        overdueInvoices: overdue.length,
+        openAmount: open.reduce((s, i) => s + Number(i.gross_amount || 0), 0),
+        overdueAmount: overdue.reduce((s, i) => s + Number(i.gross_amount || 0), 0),
+      };
+    },
+    refetchInterval: 60000,
+  });
+}
+
+// ============================================================================
+// Activity Timeline Hook
+// ============================================================================
+
+function useActivityTimeline() {
+  return useQuery({
+    queryKey: ["adminActivityTimeline"],
+    queryFn: async () => {
+      const [bidsRes, leadsRes, emailsRes, dealerRes] = await Promise.all([
+        supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(motorhome:motorhomes(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("wizard_sessions").select("id, customer_name, vehicle_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
+        supabase.from("admin_emails").select("id, subject, direction, created_at, from_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
+        supabase.from("dealer_applications").select("id, company_name, created_at, status").order("created_at", { ascending: false }).limit(3),
+      ]);
+
+      type TimelineItem = { id: string; type: string; title: string; subtitle: string; time: string; icon: string; color: string };
+      const items: TimelineItem[] = [];
+
+      for (const b of bidsRes.data || []) {
+        const bidder = (b as any).bidder;
+        const vehicle = (b as any).auction?.motorhome;
+        items.push({
+          id: `bid-${b.id}`, type: "bid",
+          title: `Gebot: ${Number(b.amount).toLocaleString("de-DE")} €`,
+          subtitle: `${bidder?.company_name || `${bidder?.first_name || ""} ${bidder?.last_name || ""}`.trim()} → ${vehicle?.manufacturer || ""} ${vehicle?.model || ""}`,
+          time: b.created_at, icon: "gavel", color: "text-green-600",
+        });
+      }
+      for (const l of leadsRes.data || []) {
+        const vehicle = l.vehicle_summary || ((l.form_data as any)?.manufacturer || "Fahrzeug");
+        items.push({
+          id: `lead-${l.id}`, type: "lead",
+          title: l.status === "completed" ? "Lead abgeschlossen" : "Neuer Lead",
+          subtitle: `${l.customer_name || "Unbekannt"} – ${vehicle}`,
+          time: l.created_at, icon: "user-plus", color: "text-blue-600",
+        });
+      }
+      for (const e of emailsRes.data || []) {
+        items.push({
+          id: `email-${e.id}`, type: "email",
+          title: "E-Mail eingegangen",
+          subtitle: `${e.from_email || "Unbekannt"}: ${e.subject || "Kein Betreff"}`,
+          time: e.created_at, icon: "mail", color: "text-orange-600",
+        });
+      }
+      for (const d of dealerRes.data || []) {
+        items.push({
+          id: `dealer-${d.id}`, type: "dealer",
+          title: d.status === "pending" ? "Neue Händler-Bewerbung" : `Händler ${d.status}`,
+          subtitle: d.company_name || "Unbekannt",
+          time: d.created_at, icon: "building", color: "text-amber-600",
+        });
+      }
+
+      return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
+    },
+    refetchInterval: 15000,
+  });
+}
+
+// ============================================================================
+// Performance-Kennzahlen Hook
+// ============================================================================
+
+function usePerformanceMetrics() {
+  return useQuery({
+    queryKey: ["adminPerformanceMetrics"],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const [wizardRes, auctionRes, soldRes] = await Promise.all([
+        supabase.from("wizard_sessions").select("id, created_at, completed_at, admin_called_at, status").gte("created_at", thirtyDaysAgo),
+        supabase.from("auctions").select("id, status, created_at, end_time, current_bid").gte("created_at", thirtyDaysAgo),
+        supabase.from("auctions").select("id, current_bid").eq("status", "sold").gte("created_at", thirtyDaysAgo),
+      ]);
+
+      const wizards = wizardRes.data || [];
+      const auctions = auctionRes.data || [];
+      const sold = soldRes.data || [];
+
+      const completedWizards = wizards.filter(w => w.status === "completed");
+      const calledWizards = completedWizards.filter(w => w.admin_called_at);
+      const avgResponseHours = calledWizards.length > 0
+        ? calledWizards.reduce((s, w) => {
+            const created = new Date(w.completed_at || w.created_at).getTime();
+            const called = new Date(w.admin_called_at!).getTime();
+            return s + (called - created) / (1000 * 60 * 60);
+          }, 0) / calledWizards.length
+        : null;
+
+      const conversionRate = completedWizards.length > 0
+        ? Math.round((auctions.filter(a => a.status !== "draft").length / completedWizards.length) * 100)
+        : 0;
+
+      const avgSalePrice = sold.length > 0
+        ? sold.reduce((s, a) => s + Number(a.current_bid || 0), 0) / sold.length
+        : 0;
+
+      return {
+        totalLeads30d: completedWizards.length,
+        totalAuctions30d: auctions.filter(a => a.status !== "draft").length,
+        totalSold30d: sold.length,
+        avgResponseHours: avgResponseHours !== null ? Math.round(avgResponseHours * 10) / 10 : null,
+        conversionRate,
+        avgSalePrice,
+      };
+    },
+    refetchInterval: 120000,
+  });
+}
+
+// ============================================================================
 // Laufende Auktionen mit Countdown
 // ============================================================================
 
@@ -488,7 +636,7 @@ function QuickStatCard({
   badge,
 }: {
   title: string;
-  value: number;
+  value: number | string;
   subtitle?: string;
   icon: React.ElementType;
   color: string;
@@ -508,7 +656,7 @@ function QuickStatCard({
                 <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
               )}
             </div>
-            <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-lg ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}>
+            <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-lg ${bgColor} dark:bg-opacity-20 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}>
               <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
             </div>
           </div>
@@ -655,6 +803,45 @@ export default function AdminDashboard() {
   const { data: activeAuctions } = useActiveAuctions();
   const { data: urgentLeads } = useUrgentLeads();
   const { data: recentBids } = useRecentBids();
+  const { data: revenue } = useRevenueStats();
+  const { data: timeline } = useActivityTimeline();
+  const { data: metrics } = usePerformanceMetrics();
+  const queryClient = useQueryClient();
+
+  // Realtime: Sofortige Updates bei neuen Geboten, Leads, Nachrichten
+  useEffect(() => {
+    const channel = supabase.channel("admin-dashboard-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bids" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminRecentBids"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActiveAuctions"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wizard_sessions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminUrgentLeads"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActionItems"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
+        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "wizard_sessions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminUrgentLeads"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActionItems"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_emails" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "auctions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminActiveAuctions"] });
+        queryClient.invalidateQueries({ queryKey: ["adminDashboardStats"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "dealer_applications" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
+        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const totalActionItems = actionItems?.length || 0;
   const highPriorityItems = actionItems?.filter(i => i.priority === "high").length || 0;

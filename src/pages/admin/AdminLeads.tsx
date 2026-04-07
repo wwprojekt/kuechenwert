@@ -3,6 +3,7 @@ import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeD
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminDateFilter } from "@/components/admin/AdminDateFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -679,6 +680,8 @@ export default function AdminLeads() {
   const [quickLeadAdminNotes, setQuickLeadAdminNotes] = useState("");
   // Delete states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [selectedValuationIds, setSelectedValuationIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -962,11 +965,21 @@ export default function AdminLeads() {
     });
   }, [wizardSessions, quickLeads]);
 
+  // Date filter helper
+  const matchesDateRange = (dateStr: string | null) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  };
+
   const filteredSessions = useMemo(() => {
     return enrichedSessions.filter((session) => {
-      // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer - die bleiben sichtbar)
       if (session.disposition && session.disposition !== "already_customer") return false;
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
+      if (!matchesDateRange(session.created_at)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -978,37 +991,39 @@ export default function AdminLeads() {
       }
       return true;
     });
-  }, [enrichedSessions, statusFilter, searchQuery]);
+  }, [enrichedSessions, statusFilter, searchQuery, dateFrom, dateTo]);
 
   const filteredQuickLeads = useMemo(() => {
-    // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer)
     const withoutDisposition = quickLeads.filter(l => !l.disposition || l.disposition === "already_customer");
-    if (!searchQuery) return withoutDisposition;
-    const q = searchQuery.toLowerCase();
-    return withoutDisposition.filter(
-      (lead) =>
+    return withoutDisposition.filter((lead) => {
+      if (!matchesDateRange(lead.created_at)) return false;
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
         (lead.name || (lead.form_data_snapshot?.customerName as string) || (lead.form_data_snapshot?.name as string) || "").toLowerCase().includes(q) ||
         (lead.email || (lead.form_data_snapshot?.customerEmail as string) || "").toLowerCase().includes(q) ||
         (lead.phone || (lead.form_data_snapshot?.customerPhone as string) || "").toLowerCase().includes(q) ||
         (lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string) || "").toLowerCase().includes(q) ||
         (lead.model || (lead.form_data_snapshot?.model as string) || "").toLowerCase().includes(q)
-    );
-  }, [quickLeads, searchQuery]);
+      );
+    });
+  }, [quickLeads, searchQuery, dateFrom, dateTo]);
 
   const filteredValuationLeads = useMemo(() => {
-    // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer)
     const withoutDisposition = valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer");
-    if (!searchQuery) return withoutDisposition;
-    const q = searchQuery.toLowerCase();
-    return withoutDisposition.filter(
-      (lead) =>
+    return withoutDisposition.filter((lead) => {
+      if (!matchesDateRange(lead.created_at)) return false;
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
         (lead.name || "").toLowerCase().includes(q) ||
         (lead.email || "").toLowerCase().includes(q) ||
         (lead.phone || "").toLowerCase().includes(q) ||
         (lead.manufacturer || "").toLowerCase().includes(q) ||
         (lead.model || "").toLowerCase().includes(q)
-    );
-  }, [valuationLeads, searchQuery]);
+      );
+    });
+  }, [valuationLeads, searchQuery, dateFrom, dateTo]);
 
   // ---- Disposition Filtered Lists ----
 
@@ -1854,7 +1869,8 @@ export default function AdminLeads() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <AdminDateFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
             <ExportButton
               onExportCSV={() => exportCSV(filteredSessions || [])}
               onExportExcel={() => exportExcel(filteredSessions || [])}
@@ -1890,13 +1906,24 @@ export default function AdminLeads() {
         {/* ================================================================ */}
         <TabsContent value="wizard_sessions">
           {selectedSessionIds.size > 0 && (
-            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 mb-3 animate-fade-in gap-2">
               <span className="text-sm font-medium">
                 {selectedSessionIds.size} Session{selectedSessionIds.size > 1 ? "s" : ""} ausgewählt
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={async () => {
+                  const ids = Array.from(selectedSessionIds);
+                  for (const id of ids) {
+                    await supabase.from("wizard_sessions").update({ admin_called_at: new Date().toISOString() } as any).eq("id", id);
+                  }
+                  toast({ title: `${ids.length} Leads als kontaktiert markiert` });
+                  queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+                  setSelectedSessionIds(new Set());
+                }}>
+                  <Phone className="w-3.5 h-3.5 mr-1.5" /> Als kontaktiert
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedSessionIds(new Set())}>
-                  Auswahl aufheben
+                  Aufheben
                 </Button>
                 <Button
                   variant="destructive"
@@ -2110,13 +2137,24 @@ export default function AdminLeads() {
         {/* ================================================================ */}
         <TabsContent value="quick_leads">
           {selectedLeadIds.size > 0 && (
-            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 mb-3 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 mb-3 animate-fade-in gap-2">
               <span className="text-sm font-medium">
                 {selectedLeadIds.size} Lead{selectedLeadIds.size > 1 ? "s" : ""} ausgewählt
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={async () => {
+                  const ids = Array.from(selectedLeadIds);
+                  for (const id of ids) {
+                    await supabase.from("quick_leads").update({ contacted_at: new Date().toISOString(), status: "contacted" } as any).eq("id", id);
+                  }
+                  toast({ title: `${ids.length} Leads als kontaktiert markiert` });
+                  queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
+                  setSelectedLeadIds(new Set());
+                }}>
+                  <Phone className="w-3.5 h-3.5 mr-1.5" /> Als kontaktiert
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds(new Set())}>
-                  Auswahl aufheben
+                  Aufheben
                 </Button>
                 <Button
                   variant="destructive"

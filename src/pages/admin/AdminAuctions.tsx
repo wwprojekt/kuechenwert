@@ -228,31 +228,63 @@ export default function AdminAuctions() {
   // ---- Handle ?create=motorhomeId URL parameter ----
   const createAuctionMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
+      // Prüfe ob IRGENDEINE Auktion für dieses Motorhome existiert (egal welcher Status)
       const { data: existing } = await supabase
         .from("auctions")
-        .select("id")
+        .select("id, status")
         .eq("motorhome_id", motorhomeId)
-        .in("status", ["draft", "active"])
         .maybeSingle();
 
-      if (existing) {
-        return { id: existing.id, alreadyExists: true };
-      }
-
-      // CRITICAL FIX: Fetch motorhome reserve_price and auto-populate on auction
+      // Fetch motorhome reserve_price
       const { data: motorhome } = await supabase
         .from("motorhomes")
         .select("reserve_price")
         .eq("id", motorhomeId)
         .single();
 
+      if (existing) {
+        // Wenn Auktion bereits draft oder active ist, einfach dorthin navigieren
+        if (existing.status === "draft" || existing.status === "active") {
+          return { id: existing.id, alreadyExists: true, recycled: false };
+        }
+
+        // Wenn Auktion beendet/kaufchance/sold/cancelled ist: recyceln (UPDATE statt INSERT)
+        const updateData: Record<string, unknown> = {
+          status: "draft",
+          starting_bid: 50,
+          current_bid: null,
+          start_time: null,
+          end_time: null,
+          kaufchance_expires_at: null,
+          kaufchance_min_price: null,
+        };
+
+        if (motorhome?.reserve_price) {
+          updateData.reserve_price = motorhome.reserve_price;
+        }
+
+        const { error: updateError } = await supabase
+          .from("auctions")
+          .update(updateData)
+          .eq("id", existing.id);
+
+        if (updateError) throw updateError;
+
+        // Alte Bids und Kaufchance-Daten aufräumen
+        await supabase.from("bids").delete().eq("auction_id", existing.id);
+        await supabase.from("kaufchance_invitations").delete().eq("auction_id", existing.id);
+        await supabase.from("post_auction_offers").delete().eq("auction_id", existing.id);
+
+        return { id: existing.id, alreadyExists: false, recycled: true };
+      }
+
+      // Keine Auktion vorhanden: Neue erstellen
       const insertData: Record<string, unknown> = {
         motorhome_id: motorhomeId,
         starting_bid: 50,
         status: "draft",
       };
 
-      // Auto-populate reserve_price from motorhome if available
       if (motorhome?.reserve_price) {
         insertData.reserve_price = motorhome.reserve_price;
       }
@@ -264,12 +296,14 @@ export default function AdminAuctions() {
         .single();
 
       if (error) throw error;
-      return { id: auction.id, alreadyExists: false };
+      return { id: auction.id, alreadyExists: false, recycled: false };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
       if (result.alreadyExists) {
-        toast.info("Es existiert bereits eine Auktion für dieses Fahrzeug");
+        toast.info("Es existiert bereits eine aktive Auktion für dieses Fahrzeug");
+      } else if (result.recycled) {
+        toast.success("Auktion wurde zurückgesetzt und als neuer Entwurf erstellt");
       } else {
         toast.success("Auktionsentwurf erfolgreich erstellt");
       }

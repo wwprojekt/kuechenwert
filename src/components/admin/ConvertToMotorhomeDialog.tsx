@@ -414,18 +414,49 @@ export function ConvertToMotorhomeDialog({
 
       // Automatisch Auktion erstellen wenn sale_channel === 'auction'
       if ((formData.sale_channel || "auction") === "auction") {
-        const { error: auctionError } = await supabase
-          .from("auctions")
-          .insert({
-            motorhome_id: motorhome.id,
-            starting_bid: 50,
-            reserve_price: formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null),
-            status: "draft",
-          } as any);
+        const reservePrice = formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null);
 
-        if (auctionError) {
-          logger.error("Auktion konnte nicht erstellt werden:", auctionError);
-          // Nicht abbrechen - Motorhome wurde bereits erstellt
+        // Prüfe ob bereits eine Auktion für dieses Motorhome existiert (UNIQUE Constraint)
+        const { data: existingAuction } = await supabase
+          .from("auctions")
+          .select("id")
+          .eq("motorhome_id", motorhome.id)
+          .maybeSingle();
+
+        if (existingAuction) {
+          // Bestehende Auktion recyceln
+          const { error: updateError } = await supabase
+            .from("auctions")
+            .update({
+              starting_bid: 50,
+              reserve_price: reservePrice,
+              status: "draft",
+              current_bid: null,
+              start_time: null,
+              end_time: null,
+              kaufchance_expires_at: null,
+              kaufchance_min_price: null,
+            } as any)
+            .eq("id", existingAuction.id);
+
+          if (updateError) {
+            logger.error("Auktion konnte nicht aktualisiert werden:", updateError);
+          }
+        } else {
+          // Neue Auktion erstellen
+          const { error: auctionError } = await supabase
+            .from("auctions")
+            .insert({
+              motorhome_id: motorhome.id,
+              starting_bid: 50,
+              reserve_price: reservePrice,
+              status: "draft",
+            } as any);
+
+          if (auctionError) {
+            logger.error("Auktion konnte nicht erstellt werden:", auctionError);
+            // Nicht abbrechen - Motorhome wurde bereits erstellt
+          }
         }
       }
 

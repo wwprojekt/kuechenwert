@@ -84,18 +84,44 @@ const handler = async (req: Request): Promise<Response> => {
       // Get unique bidders
       const uniqueBidders = [...new Set(bids.map(b => b.bidder_id))];
 
+      // ─── Notification-Preferences laden für alle Bieter ───
+      const { data: notifPrefs } = await supabase
+        .from('user_notification_preferences')
+        .select('user_id, email_auction_ending')
+        .in('user_id', uniqueBidders);
+      const prefsMap = new Map(notifPrefs?.map(p => [p.user_id, p]) || []);
+
       for (const bidderId of uniqueBidders) {
-        // ─── DUPLIKAT-PRÜFUNG: Wurde dieser Bieter für diese Auktion bereits benachrichtigt? ───
+        // ─── NOTIFICATION-PREFERENCE CHECK ───
+        const userPref = prefsMap.get(bidderId);
+        if (userPref && userPref.email_auction_ending === false) {
+          console.log(`Skipping notification for bidder ${bidderId} - opted out`);
+          notifications.push({ bidderId, auctionId: auction.id, success: true, skipped: true });
+          continue;
+        }
+
+        // Fetch bidder profile FIRST so we can use email for duplicate check
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, first_name')
+          .eq('id', bidderId)
+          .single();
+
+        if (!profile?.email) continue;
+
+        // ─── DUPLIKAT-PRÜFUNG: Über recipient_email + Subject (enthält Fahrzeugnamen) ───
+        const motorhomeName = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`;
+        const expectedSubject = `⏰ Auktion endet bald - ${motorhomeName}`;
         const { data: existingNotification } = await supabase
           .from('admin_emails')
           .select('id')
-          .eq('recipient_id', bidderId)
+          .eq('recipient_email', profile.email)
           .eq('email_type', 'auction_ending_soon')
-          .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // Innerhalb der letzten 2 Stunden
+          .eq('subject', expectedSubject)
           .limit(1);
 
         if (existingNotification && existingNotification.length > 0) {
-          console.log(`Skipping duplicate notification for bidder ${bidderId} on auction ${auction.id}`);
+          console.log(`Skipping duplicate notification for ${profile.email} on auction ${auction.id} (${motorhomeName})`);
           notifications.push({ bidderId, auctionId: auction.id, success: true, skipped: true });
           continue;
         }
@@ -105,17 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
         const highestBid = Math.max(...bidderBids.map(b => Number(b.amount)));
         const isWinning = highestBid >= Number(auction.current_bid);
 
-        // Fetch bidder profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email, first_name')
-          .eq('id', bidderId)
-          .single();
-
-        if (!profile?.email) continue;
-
         const userName = profile.first_name || profile.email.split('@')[0];
-        const motorhomeName = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`;
         
         const endTime = new Date(auction.end_time);
         const timeRemaining = Math.ceil((endTime.getTime() - Date.now()) / (1000 * 60));

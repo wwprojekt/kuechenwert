@@ -142,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${activeAuctions && activeAuctions.length > 0 ? infoBox('Aktuelle Auktionen', auctionList, 'info', settingsData) : ''}
           ${paragraph('Verpassen Sie nicht die Chance auf attraktive Fahrzeuge zu g&uuml;nstigen Preisen!')}
           ${button('Auktionen entdecken', 'https://caravanwert.de/auktionen', settingsData)}
-          ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie als H&auml;ndler bei ${settingsData.site_name} registriert sind. <a href="https://caravanwert.de/unsubscribe" style="color: #1f8aa2;">Abmelden</a></span>')}
+          ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie als H&auml;ndler bei ${settingsData.site_name} registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Abmelden</a></span>')}
         `;
 
         const html = buildEmailLayout(settingsData, subject, emailContent);
@@ -160,7 +160,7 @@ const handler = async (req: Request): Promise<Response> => {
             html,
             reply_to: 'info@caravanwert.de',
             headers: {
-              'List-Unsubscribe': '<https://caravanwert.de/unsubscribe>',
+              'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>',
             },
           }),
         });

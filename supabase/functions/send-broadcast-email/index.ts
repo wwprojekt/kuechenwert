@@ -180,7 +180,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (test_mode && test_email) {
       let emailContent = body_html;
       if (include_unsubscribe) {
-        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/einstellungen" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/abmelden" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
       }
       const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -197,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
           html,
           reply_to: 'info@caravanwert.de',
           headers: {
-            'List-Unsubscribe': '<https://caravanwert.de/abmelden>',
+            'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>',
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           },
         }),
@@ -228,7 +228,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build email HTML with optional unsubscribe link
     let emailContent = body_html;
     if (include_unsubscribe) {
-      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/einstellungen" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/abmelden" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
     }
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -253,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           if (include_unsubscribe) {
             resendPayload.headers = {
-              'List-Unsubscribe': '<https://caravanwert.de/abmelden>',
+              'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>',
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             };
           }

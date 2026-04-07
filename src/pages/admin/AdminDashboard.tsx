@@ -537,18 +537,19 @@ export default function AdminDashboard() {
   const highPriorityItems = actionItems?.filter(i => i.priority === "high").length || 0;
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-4 sm:space-y-6 max-w-[1400px]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Willkommen zurück. Hier ist dein Überblick.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <RefreshCw className="w-3 h-3" />
-          Aktualisiert sich automatisch
+          <span className="hidden sm:inline">Aktualisiert sich automatisch</span>
+          <span className="sm:hidden">Auto-Aktualisierung</span>
         </div>
       </div>
 
@@ -633,7 +634,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content: Action Items + Recent Motorhomes */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         {/* Left: Action Items (3/5) */}
         <div className="lg:col-span-3 space-y-4">
           <Card className="border-2">
@@ -746,13 +747,13 @@ export default function AdminDashboard() {
           {/* Schnellzugriff-Karten */}
           <Card className="border-2">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ExternalLink className="w-5 h-5 text-slate-500" />
-                Schnellzugriff
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                Bereiche mit Handlungsbedarf
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                 <Link to="/admin/leads">
                   <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/60 transition-colors cursor-pointer">
                     <UserPlus className="w-4 h-4 text-cyan-500" />

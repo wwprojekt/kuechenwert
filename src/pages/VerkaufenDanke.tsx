@@ -297,11 +297,11 @@ const VerkaufenDanke = () => {
                   +49 511 51532476
                 </a>
                 <a
-                  href="mailto:kontakt@caravanwert.de"
+                  href="mailto:info@caravanwert.de"
                   className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
                 >
                   <Mail className="w-4 h-4" />
-                  kontakt@caravanwert.de
+                  info@caravanwert.de
                 </a>
               </div>
             </Card>

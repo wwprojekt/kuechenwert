@@ -3,52 +3,16 @@ import { Mail, Phone, MapPin, ArrowRight, Facebook, Instagram, Youtube, Linkedin
 import { useSettings } from "@/contexts/SettingsContext";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SiteLogo } from "@/components/SiteLogo";
 import { CookieSettingsModal } from "@/components/CookieSettingsModal";
-import { useToast } from "@/hooks/use-toast";
-import { trackPhoneClick, trackEmailClick, trackCTAClick } from "@/lib/gadsConversionService";
-import { trackMetaNewsletterSignup, trackMetaPhoneClick } from "@/lib/metaPixelService";
-import { z } from "zod";
-
-const newsletterSchema = z.object({
-  email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-});
+import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
+import { trackMetaPhoneClick } from "@/lib/metaPixelService";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { settings } = useSettings();
-  const { toast } = useToast();
   const location = useLocation();
   const [showCookieSettings, setShowCookieSettings] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
-
-  const handleNewsletterSubmit = () => {
-    try {
-      newsletterSchema.parse({ email: newsletterEmail });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Ungültige E-Mail",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-    setNewsletterSubmitted(true);
-
-    // Google Ads: Newsletter-Anmeldung tracken
-    trackCTAClick('newsletter_signup', location.pathname, '/newsletter');
-    // Meta Pixel: Newsletter-Anmeldung
-    trackMetaNewsletterSignup();
-
-    toast({
-      title: "Anmeldung erfolgreich!",
-      description: "Sie erhalten ab sofort unseren Newsletter.",
-    });
-  };
 
   return (
     <footer className="relative overflow-hidden">
@@ -111,48 +75,39 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Newsletter Section */}
+      {/* Verkaufs-CTA Section */}
       <div className="bg-slate-900 border-t border-slate-800">
         <div className="container py-12">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="text-center lg:text-left">
               <h3 className="text-xl font-semibold text-white mb-2">
-                Bleiben Sie informiert
+                Bereit, Ihr Wohnmobil zu verkaufen?
               </h3>
               <p className="text-slate-400 text-sm">
-                Erhalten Sie die neuesten Angebote und Tipps direkt in Ihr Postfach.
+                Starten Sie jetzt mit der kostenlosen Bewertung – unverbindlich und in nur 2 Minuten.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-              {newsletterSubmitted ? (
-                <div className="flex items-center gap-2 text-emerald-400">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="text-sm font-medium">Vielen Dank für Ihre Anmeldung!</span>
-                </div>
-              ) : (
-                <>
-                  <Input 
-                    type="email" 
-                    placeholder="Ihre E-Mail-Adresse" 
-                    value={newsletterEmail}
-                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleNewsletterSubmit()}
-                    className="h-11 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-primary w-full sm:w-72"
-                  />
-                  <Button 
-                    onClick={handleNewsletterSubmit}
-                    className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium"
-                  >
-                    Anmelden
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </>
-              )}
+              <Link to="/verkaufen/wizard">
+                <Button
+                  className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium"
+                >
+                  Jetzt kostenlos bewerten
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/wertrechner">
+                <Button
+                  variant="outline"
+                  className="h-11 px-6 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                >
+                  Wert berechnen
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
       </div>
-
       {/* Main Footer */}
       <div className="bg-slate-950">
         <div className="container py-16">

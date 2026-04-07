@@ -79,7 +79,7 @@ export const QuickAuctionForm = ({ className = '', variant = 'hero' }: QuickAuct
             </div>
           </div>
           <p className="text-xs text-foreground">
-            <span className="font-bold text-primary">127 Händler</span> suchen aktuell in Ihrer Region
+            <span className="font-bold text-primary">Geprüfte Händler</span> suchen aktuell in Ihrer Region
           </p>
         </div>
 

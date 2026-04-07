@@ -22,7 +22,7 @@ const Verkaufen = () => {
     {
       icon: Clock,
       title: "Schnelle Abwicklung",
-      description: "Verkaufen Sie Ihr Wohnmobil in nur 24 Stunden - von der Bewertung bis zur Auszahlung."
+      description: "Verkaufen Sie Ihr Wohnmobil in nur 24–48 Stunden – von der Bewertung bis zur Auszahlung."
     },
     {
       icon: Shield,
@@ -40,7 +40,7 @@ const Verkaufen = () => {
     {
       step: "1",
       title: "Online-Bewertung",
-      description: "Füllen Sie unser Formular aus und erhalten Sie in 24h eine kostenlose Bewertung."
+      description: "Füllen Sie unser einfaches Formular aus und erhalten Sie eine kostenlose Bewertung."
     },
     {
       step: "2",
@@ -259,7 +259,7 @@ const Verkaufen = () => {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Bereit für den Verkauf?</h2>
             <p className="text-xl mb-8 opacity-95">
-              Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie innerhalb von 24 Stunden verbindliche Gebote von geprüften Händlern.
+              Starten Sie jetzt mit der kostenlosen Bewertung Ihres Wohnmobils und erhalten Sie verbindliche Gebote von geprüften Händlern.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/verkaufen/wizard">

@@ -30,7 +30,7 @@ const steps = [
   { id: 2, name: "Fahrzeugdaten", description: "Hersteller, Modell & mehr" },
   { id: 3, name: "Details", description: "Technische Angaben" },
   { id: 4, name: "Ausstattung", description: "Optional" },
-  { id: 5, name: "Kontakt", description: "Fortschritt speichern" },
+  { id: 5, name: "Kontakt", description: "Ihre Kontaktdaten" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
   { id: 7, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
   { id: 8, name: "Abschluss", description: "Standort & Konto" },
@@ -420,6 +420,22 @@ const VerkaufenWizard = () => {
                   <div className="min-h-[200px] md:min-h-[400px]">{renderStep()}</div>
                 </Card>
 
+                {/* Mobile Trust Signals (hidden on desktop where sidebar is visible) */}
+                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden py-2">
+                  <span className="flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    100% kostenlos
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Shield className="h-3.5 w-3.5 text-green-500" />
+                    DSGVO-konform
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    Unverbindlich
+                  </span>
+                </div>
+
                 {/* Navigation Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between">
                   <Button
@@ -490,7 +506,7 @@ const VerkaufenWizard = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Über 500 geprüfte Händler</span>
+                      <span>Geprüfte Händler deutschlandweit</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -512,8 +528,8 @@ const VerkaufenWizard = () => {
                     </h3>
                   </div>
                   <p className="text-xs text-green-700 dark:text-green-300">
-                    <strong>127 Händler</strong> suchen aktuell nach Wohnmobilen.
-                    Durchschnittlich <strong>3 Angebote</strong> pro Fahrzeug innerhalb von 48h.
+                    <strong>Geprüfte Händler</strong> suchen aktuell nach Wohnmobilen.
+                    Durchschnittlich <strong>mehrere Angebote</strong> pro Fahrzeug innerhalb von 48h.
                   </p>
                 </Card>
 
@@ -525,9 +541,9 @@ const VerkaufenWizard = () => {
                       {currentStep <= 2
                         ? "Nur noch wenige Angaben bis zum Angebot"
                         : currentStep <= 4
-                        ? (currentUser ? "Ihre Profildaten wurden automatisch übernommen" : "Gleich können Sie Ihren Fortschritt speichern")
+                        ? (currentUser ? "Ihre Profildaten wurden automatisch übernommen" : "Gleich können Sie Ihre Kontaktdaten eingeben")
                         : currentStep === 5
-                        ? (currentUser ? "Bitte bestätigen Sie Ihre Kontaktdaten" : "Fast geschafft – speichern Sie Ihren Fortschritt")
+                        ? (currentUser ? "Bitte bestätigen Sie Ihre Kontaktdaten" : "Fast geschafft – nur noch Name und E-Mail")
                         : currentStep === 6
                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7

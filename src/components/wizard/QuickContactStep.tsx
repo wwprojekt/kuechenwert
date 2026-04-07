@@ -38,7 +38,7 @@ export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = f
           )}
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-          {isAuthenticated && hasPrefilled ? "Kontaktdaten bestätigen" : "Fortschritt speichern"}
+          {isAuthenticated && hasPrefilled ? "Kontaktdaten bestätigen" : "Ihre Kontaktdaten"}
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
           {isAuthenticated && hasPrefilled

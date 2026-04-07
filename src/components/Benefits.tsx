@@ -88,7 +88,7 @@ const Benefits = () => {
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center mb-12 sm:mb-16 lg:mb-20">
           <div className="space-y-4 sm:space-y-6 order-2 lg:order-1">
             <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-foreground">
-              Über 200 <span className="text-primary">geprüfte Händler</span> deutschlandweit
+              Verifizierte <span className="text-primary">geprüfte Händler</span> deutschlandweit
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
               Alle unsere Partnerhändler durchlaufen ein strenges Prüfverfahren. Sie profitieren von professionellem Service und fairen Preisen durch echten Wettbewerb.

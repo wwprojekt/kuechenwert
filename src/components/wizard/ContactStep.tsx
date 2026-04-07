@@ -64,7 +64,7 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
   }, [password, confirmPassword, onPasswordChange]);
 
   // Dynamischer FOMO-Counter
-  const [dealerCount] = useState(() => Math.floor(Math.random() * 30) + 110);
+  // No fake FOMO counter
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -87,7 +87,7 @@ export const ContactStep = ({ formData, updateFormData, onPasswordChange }: Cont
           </div>
           <div>
             <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-              {dealerCount} Händler suchen aktuell nach {formData.bodyType || "Wohnmobilen"} wie Ihrem {formData.manufacturer || ""}
+              Geprüfte Händler suchen aktuell nach {formData.bodyType || "Wohnmobilen"} wie Ihrem {formData.manufacturer || ""}
             </p>
             <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
               Durchschnittlich erhalten Verkäufer innerhalb von 24 Stunden ihr erstes Angebot

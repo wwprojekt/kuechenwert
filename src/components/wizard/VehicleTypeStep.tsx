@@ -90,7 +90,7 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {} }: 
           <TrendingUp className="w-4 h-4" />
         </div>
         <p className="text-sm text-foreground">
-          <strong>127 Händler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"}
+          <strong>Geprüfte Händler</strong> suchen aktuell nach {vehicleType === "Wohnwagen" ? "Wohnwagen" : "Wohnmobilen"}
         </p>
       </div>
 

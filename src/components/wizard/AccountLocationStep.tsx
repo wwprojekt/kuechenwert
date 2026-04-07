@@ -273,23 +273,34 @@ export const AccountLocationStep = ({
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {/* Passwort-Stärke-Indikator */}
-              {registerPassword && (
-                <div className="space-y-1">
+              {/* Passwort-Anforderungen */}
+              {registerPassword ? (
+                <div className="space-y-1.5">
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full ${passwordStrength.color} transition-all duration-300 rounded-full`}
                       style={{ width: passwordStrength.width }}
                     />
                   </div>
-                  <p className={`text-xs ${
-                    passwordStrength.label === "Stark" ? "text-green-600" :
-                    passwordStrength.label === "Mittel" ? "text-yellow-600" : "text-red-600"
-                  }`}>
-                    Passwortstärke: {passwordStrength.label}
-                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                    <li className={registerPassword.length >= 8 ? "text-green-600" : ""}>
+                      • Mindestens 8 Zeichen
+                    </li>
+                    <li className={/[A-Z]/.test(registerPassword) ? "text-green-600" : ""}>
+                      • Mindestens ein Großbuchstabe
+                    </li>
+                    <li className={/[a-z]/.test(registerPassword) ? "text-green-600" : ""}>
+                      • Mindestens ein Kleinbuchstabe
+                    </li>
+                    <li className={/[0-9]/.test(registerPassword) ? "text-green-600" : ""}>
+                      • Mindestens eine Zahl
+                    </li>
+                    <li className={/[^A-Za-z0-9]/.test(registerPassword) ? "text-green-600" : ""}>
+                      • Mindestens ein Sonderzeichen
+                    </li>
+                  </ul>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">

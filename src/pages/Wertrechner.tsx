@@ -828,7 +828,7 @@ const Wertrechner = () => {
           {/* Social proof */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm font-medium text-primary">
             <TrendingUp className="w-4 h-4" />
-            <span>Über 5.000 Fahrzeuge bewertet</span>
+            <span>Professionelle Fahrzeugbewertung</span>
           </div>
         </div>
       </PageHero>

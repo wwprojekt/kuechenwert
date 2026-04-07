@@ -201,15 +201,16 @@ const Register = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link to="/login">
+                <Link to="/verkaufen/wizard">
                   <Button className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
-                    Zur Anmeldung
+                    Jetzt Wohnmobil verkaufen
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
-                <Link to="/">
+                <Link to="/login">
                   <Button variant="outline">
-                    Zur Startseite
+                    Zur Anmeldung
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>

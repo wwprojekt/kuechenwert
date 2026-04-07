@@ -19,17 +19,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const languages = [
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-];
+// Language selector removed – site is German-only for now
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
+  // Language state removed – site is German-only
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { settings } = useSettings();
@@ -84,31 +78,7 @@ const Header = () => {
                 Für Händler
               </Link>
             </div>
-            <span className="text-slate-700">|</span>
-            {/* Language Switcher */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 hover:text-white transition-colors focus:outline-none">
-                  <span className="text-sm">{currentLanguage.flag}</span>
-                  <span>{currentLanguage.code.toUpperCase()}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 bg-slate-900 border-slate-700">
-                {languages.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang.code}
-                    onClick={() => setCurrentLanguage(lang)}
-                    className={`cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800 focus:bg-slate-800 focus:text-white ${
-                      currentLanguage.code === lang.code ? 'bg-slate-800 text-white' : ''
-                    }`}
-                  >
-                    <span className="text-base">{lang.flag}</span>
-                    <span>{lang.name}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Language selector removed – site is German-only */}
           </div>
         </div>
       </div>
@@ -136,8 +106,14 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuItem asChild>
+                  <Link to="/verkaufen/wizard" className="cursor-pointer font-semibold text-primary">
+                    Jetzt verkaufen
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
                   <Link to="/verkaufen" className="cursor-pointer">
-                    Wohnmobil verkaufen
+                    So funktioniert's
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

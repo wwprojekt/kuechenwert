@@ -665,7 +665,8 @@ export default function AdminDealers() {
         {/* Applications Tab */}
         <TabsContent value="applications" className="space-y-4">
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -781,13 +782,15 @@ export default function AdminDealers() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
         {/* Rejected Applications Tab */}
         <TabsContent value="rejected" className="space-y-4">
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -853,6 +856,7 @@ export default function AdminDealers() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -882,7 +886,8 @@ export default function AdminDealers() {
             </div>
           </div>
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -1035,6 +1040,7 @@ export default function AdminDealers() {
                 )}
               </TableBody>
             </Table>
+            </div>
             {sortedFilteredDealers.length > DEALER_PAGE_SIZE && (
               <div className="px-4 pb-4">
                 <AdminPagination

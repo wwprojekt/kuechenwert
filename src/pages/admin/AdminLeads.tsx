@@ -1911,7 +1911,8 @@ export default function AdminLeads() {
             </div>
           )}
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
@@ -2090,6 +2091,7 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            </div>
             {filteredSessions.length > LEADS_PAGE_SIZE && (
               <div className="px-4 pb-4">
                 <AdminPagination
@@ -2129,7 +2131,8 @@ export default function AdminLeads() {
             </div>
           )}
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
@@ -2292,6 +2295,7 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            </div>
             {filteredQuickLeads.length > LEADS_PAGE_SIZE && (
               <div className="px-4 pb-4">
                 <AdminPagination
@@ -2331,7 +2335,8 @@ export default function AdminLeads() {
             </div>
           )}
           <Card>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
@@ -2517,6 +2522,7 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            </div>
             {filteredValuationLeads.length > LEADS_PAGE_SIZE && (
               <div className="px-4 pb-4">
                 <AdminPagination
@@ -2541,7 +2547,8 @@ export default function AdminLeads() {
           return (
             <TabsContent key={dispositionKey} value={dispositionKey}>
               <Card>
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
@@ -2668,6 +2675,7 @@ export default function AdminLeads() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             </TabsContent>
           );

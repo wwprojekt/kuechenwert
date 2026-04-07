@@ -355,7 +355,8 @@ export default function AdminUsers() {
       </Card>
 
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <SortableTableHead field="name" label="Name" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -481,6 +482,7 @@ export default function AdminUsers() {
             )}
           </TableBody>
         </Table>
+        </div>
         {(sortedUsers?.length || 0) > USER_PAGE_SIZE && (
           <div className="px-4 pb-4">
             <AdminPagination

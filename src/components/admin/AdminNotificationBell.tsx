@@ -91,7 +91,7 @@ export function AdminNotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 max-w-sm p-0" align="end" sideOffset={8}>
         <div className="p-3 border-b">
           <h4 className="font-semibold text-sm">Benachrichtigungen</h4>
           {totalCount > 0 ? (

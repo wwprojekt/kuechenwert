@@ -116,11 +116,11 @@ export function AdminCommandPalette() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 h-9 w-full max-w-[280px] lg:max-w-sm rounded-lg border border-input bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted transition-colors"
+        className="flex items-center gap-2 h-9 sm:w-48 lg:w-64 rounded-lg border border-input bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted transition-colors"
       >
         <Search className="h-4 w-4 flex-shrink-0" />
         <span className="flex-1 text-left truncate hidden sm:inline">Suchen…</span>
-        <kbd className="hidden md:inline-flex h-5 items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <kbd className="hidden lg:inline-flex h-5 items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
           ⌘K
         </kbd>
       </button>

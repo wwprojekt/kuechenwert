@@ -1,14 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -66,6 +67,14 @@ import {
   ExternalLink,
   CalendarPlus,
   Ban,
+  RotateCcw,
+  History,
+  TrendingUp,
+  Shield,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  UserPlus,
 } from "lucide-react";
 
 // ============================================================================
@@ -94,10 +103,15 @@ interface AuctionInfo {
   kaufchance_expires_at: string | null;
   kaufchance_min_price: number | null;
   reserve_price: number | null;
+  starting_bid: number | null;
+  end_time: string | null;
   motorhome: {
+    id: string;
     manufacturer: string;
     model: string;
     seller_id: string;
+    reserve_price: number | null;
+    year: number | null;
   } | null;
 }
 
@@ -108,6 +122,24 @@ interface ProfileInfo {
   company_name: string | null;
   email: string | null;
   customer_number: string | null;
+}
+
+interface BidInfo {
+  id: string;
+  auction_id: string;
+  bidder_id: string;
+  amount: number;
+  created_at: string;
+  is_autobid: boolean;
+}
+
+interface KaufchanceInvitation {
+  id: string;
+  auction_id: string;
+  bidder_id: string;
+  highest_bid: number;
+  rank: number;
+  invited_at: string;
 }
 
 // ============================================================================
@@ -175,6 +207,15 @@ export default function AdminPostAuctionOffers() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
 
+  // Kaufchance Detail Dialog state
+  const [kaufchanceDetailOpen, setKaufchanceDetailOpen] = useState(false);
+  const [selectedKaufchanceAuction, setSelectedKaufchanceAuction] = useState<AuctionInfo | null>(null);
+  const [kaufchanceBids, setKaufchanceBids] = useState<BidInfo[]>([]);
+  const [kaufchanceInvitations, setKaufchanceInvitations] = useState<KaufchanceInvitation[]>([]);
+  const [kaufchanceAllOffers, setKaufchanceAllOffers] = useState<PostAuctionOffer[]>([]);
+  const [kaufchanceDetailLoading, setKaufchanceDetailLoading] = useState(false);
+  const [showAllBids, setShowAllBids] = useState(false);
+
   // Admin action state
   const [adminCounterAmount, setAdminCounterAmount] = useState("");
   const [adminCounterMessage, setAdminCounterMessage] = useState("");
@@ -183,6 +224,13 @@ export default function AdminPostAuctionOffers() {
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   const [endingKaufchance, setEndingKaufchance] = useState<string | null>(null);
   const [extendingKaufchance, setExtendingKaufchance] = useState<string | null>(null);
+  const [backToAuctionLoading, setBackToAuctionLoading] = useState<string | null>(null);
+
+  // Admin: Angebot im Namen des Händlers erstellen
+  const [adminOfferDealerId, setAdminOfferDealerId] = useState("");
+  const [adminOfferAmount, setAdminOfferAmount] = useState("");
+  const [adminOfferMessage, setAdminOfferMessage] = useState("");
+  const [adminOfferLoading, setAdminOfferLoading] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -210,9 +258,9 @@ export default function AdminPostAuctionOffers() {
       const { data } = await supabase
         .from("auctions")
         .select(`
-          id, motorhome_id, status, current_bid,
+          id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          motorhome:motorhomes (manufacturer, model, seller_id)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .in("id", auctionIds);
       const map: Record<string, AuctionInfo> = {};
@@ -229,20 +277,20 @@ export default function AdminPostAuctionOffers() {
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          id, motorhome_id, status, current_bid,
+          id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          motorhome:motorhomes (manufacturer, model, seller_id)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .eq("status", "kaufchance")
         .order("kaufchance_expires_at", { ascending: true });
       if (error) throw error;
-      return data || [];
+      return (data || []) as AuctionInfo[];
     },
     refetchInterval: 30000,
   });
 
   const { data: profileMap = {} } = useQuery({
-    queryKey: ["adminOfferProfiles", offers.map(o => o.buyer_id)],
+    queryKey: ["adminOfferProfiles", offers.map(o => o.buyer_id), kaufchanceAuctions.map(a => a.id)],
     queryFn: async () => {
       const allIds = new Set<string>();
       offers.forEach(o => {
@@ -333,6 +381,72 @@ export default function AdminPostAuctionOffers() {
     },
   });
 
+  // ---- Load Kaufchance Detail Data ----
+
+  const loadKaufchanceDetail = useCallback(async (auction: AuctionInfo) => {
+    setKaufchanceDetailLoading(true);
+    setSelectedKaufchanceAuction(auction);
+    setKaufchanceDetailOpen(true);
+    setShowAllBids(false);
+    setAdminOfferDealerId("");
+    setAdminOfferAmount("");
+    setAdminOfferMessage("");
+
+    try {
+      // Load all bids for this auction
+      const { data: bidsData } = await supabase
+        .from("bids")
+        .select("*")
+        .eq("auction_id", auction.id)
+        .order("created_at", { ascending: false });
+
+      setKaufchanceBids((bidsData || []) as BidInfo[]);
+
+      // Load kaufchance invitations
+      const { data: invData } = await supabase
+        .from("kaufchance_invitations")
+        .select("*")
+        .eq("auction_id", auction.id)
+        .order("rank", { ascending: true });
+
+      setKaufchanceInvitations((invData || []) as KaufchanceInvitation[]);
+
+      // Load all post-auction offers for this auction
+      const { data: offersData } = await supabase
+        .from("post_auction_offers")
+        .select("*")
+        .eq("auction_id", auction.id)
+        .order("created_at", { ascending: false });
+
+      setKaufchanceAllOffers((offersData || []) as PostAuctionOffer[]);
+
+      // Load profiles for bidders and offer buyers
+      const newProfileIds = new Set<string>();
+      (bidsData || []).forEach((b: any) => { if (b.bidder_id) newProfileIds.add(b.bidder_id); });
+      (invData || []).forEach((i: any) => { if (i.bidder_id) newProfileIds.add(i.bidder_id); });
+      (offersData || []).forEach((o: any) => { if (o.buyer_id) newProfileIds.add(o.buyer_id); });
+
+      // Filter out already loaded profiles
+      const missingIds = Array.from(newProfileIds).filter(id => !profileMap[id]);
+      if (missingIds.length > 0) {
+        const { data: newProfiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, company_name, email, customer_number")
+          .in("id", missingIds);
+
+        if (newProfiles && newProfiles.length > 0) {
+          // We need to refetch profiles to include these
+          queryClient.invalidateQueries({ queryKey: ["adminOfferProfiles"] });
+        }
+      }
+    } catch (err) {
+      console.error("Error loading kaufchance detail:", err);
+      toast({ title: "Fehler", description: "Details konnten nicht geladen werden.", variant: "destructive" });
+    } finally {
+      setKaufchanceDetailLoading(false);
+    }
+  }, [profileMap, queryClient, toast]);
+
   // ---- Admin Actions ----
 
   const handleAdminAcceptOffer = async (offerId: string) => {
@@ -348,6 +462,7 @@ export default function AdminPostAuctionOffers() {
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
       setDetailDialogOpen(false);
+      setKaufchanceDetailOpen(false);
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
@@ -365,6 +480,10 @@ export default function AdminPostAuctionOffers() {
       if (error) throw error;
       toast({ title: 'Angebot abgelehnt' });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      // Reload detail if open
+      if (selectedKaufchanceAuction) {
+        loadKaufchanceDetail(selectedKaufchanceAuction);
+      }
       setDetailDialogOpen(false);
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
@@ -395,6 +514,9 @@ export default function AdminPostAuctionOffers() {
       setAdminCounterAmount("");
       setAdminCounterMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      if (selectedKaufchanceAuction) {
+        loadKaufchanceDetail(selectedKaufchanceAuction);
+      }
       setDetailDialogOpen(false);
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
@@ -430,7 +552,6 @@ export default function AdminPostAuctionOffers() {
   const handleEndKaufchance = async (auctionId: string) => {
     setEndingKaufchance(auctionId);
     try {
-      // Setze Auktion auf "ended" und Motorhome auf "not_sold"
       const { data: auctionData, error: auctionFetchError } = await supabase
         .from('auctions')
         .select('motorhome_id')
@@ -461,6 +582,7 @@ export default function AdminPostAuctionOffers() {
       toast({ title: 'Kaufchance beendet', description: 'Auktion wurde als "nicht verkauft" markiert.' });
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      setKaufchanceDetailOpen(false);
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
@@ -486,6 +608,118 @@ export default function AdminPostAuctionOffers() {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
       setExtendingKaufchance(null);
+    }
+  };
+
+  // ---- Zurück in Auktion ----
+  const handleBackToAuction = async (auctionId: string) => {
+    setBackToAuctionLoading(auctionId);
+    try {
+      // 1. Lade aktuelle Auktionsdaten
+      const { data: currentAuction, error: fetchErr } = await supabase
+        .from('auctions')
+        .select('motorhome_id, reserve_price, starting_bid, motorhome:motorhomes(reserve_price)')
+        .eq('id', auctionId)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const motorhomeId = currentAuction?.motorhome_id;
+      if (!motorhomeId) throw new Error('Kein Wohnmobil mit dieser Auktion verknüpft.');
+
+      // 2. Alte Kaufchance beenden
+      const { error: endErr } = await supabase
+        .from('auctions')
+        .update({ status: 'ended', updated_at: new Date().toISOString() })
+        .eq('id', auctionId);
+      if (endErr) throw endErr;
+
+      // 3. Alle ausstehenden Angebote ablehnen
+      await supabase
+        .from('post_auction_offers')
+        .update({ status: 'rejected', seller_response: 'Kaufchance beendet – zurück in Auktion', updated_at: new Date().toISOString() })
+        .eq('auction_id', auctionId)
+        .in('status', ['pending', 'countered']);
+
+      // 4. Neue Auktion als Draft erstellen
+      const reservePrice = currentAuction?.reserve_price
+        || (currentAuction?.motorhome as any)?.reserve_price
+        || null;
+
+      const { data: newAuction, error: createErr } = await supabase
+        .from('auctions')
+        .insert({
+          motorhome_id: motorhomeId,
+          starting_bid: currentAuction?.starting_bid || 50,
+          reserve_price: reservePrice,
+          status: 'draft',
+        } as any)
+        .select('id')
+        .single();
+      if (createErr) throw createErr;
+
+      // 5. Motorhome-Status zurücksetzen
+      await supabase
+        .from('motorhomes')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', motorhomeId);
+
+      toast({
+        title: 'Zurück in Auktion',
+        description: `Neue Auktion als Entwurf erstellt. Sie können sie jetzt unter Auktionen aktivieren.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      setKaufchanceDetailOpen(false);
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setBackToAuctionLoading(null);
+    }
+  };
+
+  // ---- Admin: Angebot im Namen des Händlers erstellen ----
+  const handleAdminCreateOffer = async (auctionId: string) => {
+    const amount = parseFloat(adminOfferAmount);
+    if (!adminOfferDealerId) {
+      toast({ title: 'Fehler', description: 'Bitte Händler-ID eingeben.', variant: 'destructive' });
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Fehler', description: 'Bitte gültigen Betrag eingeben.', variant: 'destructive' });
+      return;
+    }
+
+    setAdminOfferLoading(true);
+    try {
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48); // 48h Frist
+
+      const { error } = await supabase
+        .from('post_auction_offers')
+        .insert({
+          auction_id: auctionId,
+          buyer_id: adminOfferDealerId,
+          offer_amount: amount,
+          message: adminOfferMessage || 'Angebot erstellt durch Admin',
+          status: 'pending',
+          expires_at: expiresAt.toISOString(),
+        });
+      if (error) throw error;
+
+      toast({ title: 'Angebot erstellt', description: `${amount.toLocaleString('de-DE')} € im Namen des Händlers` });
+      setAdminOfferDealerId("");
+      setAdminOfferAmount("");
+      setAdminOfferMessage("");
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      // Reload detail
+      if (selectedKaufchanceAuction) {
+        loadKaufchanceDetail(selectedKaufchanceAuction);
+      }
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setAdminOfferLoading(false);
     }
   };
 
@@ -582,7 +816,7 @@ export default function AdminPostAuctionOffers() {
       </div>
 
       {/* ================================================================== */}
-      {/* Active Kaufchancen Overview */}
+      {/* Active Kaufchancen Overview - CLICKABLE */}
       {/* ================================================================== */}
       {kaufchanceAuctions.length > 0 && (
         <Card className="border-2 border-amber-200 dark:border-amber-800">
@@ -590,9 +824,10 @@ export default function AdminPostAuctionOffers() {
             <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
               <Gavel className="w-5 h-5 text-amber-600" />
               Aktive Kaufchancen – Auktionsübersicht
+              <Badge variant="outline" className="ml-2">{kaufchanceAuctions.length}</Badge>
             </h2>
             <div className="space-y-4">
-              {kaufchanceAuctions.map((auction: any) => {
+              {kaufchanceAuctions.map((auction: AuctionInfo) => {
                 const motorhome = auction.motorhome;
                 const vehicleName = motorhome
                   ? `${motorhome.manufacturer} ${motorhome.model}`
@@ -606,20 +841,35 @@ export default function AdminPostAuctionOffers() {
                 const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
 
                 return (
-                  <div key={auction.id} className={`p-4 rounded-lg border ${isExpired ? 'bg-muted/50 opacity-70' : 'bg-card'}`}>
+                  <div
+                    key={auction.id}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md hover:border-primary/40 ${isExpired ? 'bg-muted/50 opacity-70' : 'bg-card'}`}
+                    onClick={() => loadKaufchanceDetail(auction)}
+                  >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold">{vehicleName}</h3>
+                          {motorhome?.year && <span className="text-sm text-muted-foreground">({motorhome.year})</span>}
                           {isExpired ? (
                             <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
                           ) : (
                             <Badge className="bg-amber-500 text-white">Aktiv</Badge>
                           )}
+                          <Badge variant="outline" className="text-xs">
+                            <Eye className="w-3 h-3 mr-1" />
+                            Details anzeigen
+                          </Badge>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                           <span>Verkäufer: <strong>{sellerName}</strong></span>
                           <span>Letztes Gebot: <strong>{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</strong></span>
+                          {auction.reserve_price && (
+                            <span>Reservepreis: <strong className="text-amber-600">{Number(auction.reserve_price).toLocaleString('de-DE')} €</strong></span>
+                          )}
+                          {motorhome?.reserve_price && !auction.reserve_price && (
+                            <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</strong></span>
+                          )}
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
                           {auction.kaufchance_expires_at && (
                             <span>
@@ -634,17 +884,8 @@ export default function AdminPostAuctionOffers() {
                         </div>
                       </div>
 
-                      {/* Admin-Aktionen */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                          onClick={() => window.open(`/admin/auctions?search=${encodeURIComponent(vehicleName)}`, '_blank')}
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                          Auktion
-                        </Button>
+                      {/* Quick Actions (stop propagation to prevent detail dialog) */}
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -658,6 +899,24 @@ export default function AdminPostAuctionOffers() {
                             <CalendarPlus className="w-3.5 h-3.5 mr-1" />
                           )}
                           +3 Tage
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          disabled={backToAuctionLoading === auction.id}
+                          onClick={() => {
+                            if (window.confirm(`"${vehicleName}" zurück in eine neue Auktion? Die Kaufchance wird beendet und eine neue Draft-Auktion erstellt.`)) {
+                              handleBackToAuction(auction.id);
+                            }
+                          }}
+                        >
+                          {backToAuctionLoading === auction.id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                          )}
+                          Neue Auktion
                         </Button>
                         <Button
                           size="sm"
@@ -677,39 +936,6 @@ export default function AdminPostAuctionOffers() {
                           )}
                           Beenden
                         </Button>
-                      </div>
-
-                      {/* Admin: Mindestgebot setzen */}
-                      <div className="flex items-center gap-2 min-w-[280px]">
-                        <div className="flex-1">
-                          <Label className="text-xs text-muted-foreground">Mindestgebot (Admin)</Label>
-                          <div className="flex gap-2 mt-1">
-                            <Input
-                              type="number"
-                              placeholder={auction.kaufchance_min_price ? `Aktuell: ${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €` : 'Betrag in €'}
-                              value={adminMinPriceInputs[auction.id] || ''}
-                              onChange={(e) => setAdminMinPriceInputs(prev => ({ ...prev, [auction.id]: e.target.value }))}
-                              className="flex-1"
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={savingMinPrice === auction.id || !adminMinPriceInputs[auction.id]}
-                              onClick={() => handleSaveMinPrice(auction.id)}
-                            >
-                              {savingMinPrice === auction.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Send className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
-                          {auction.kaufchance_min_price && (
-                            <p className="text-xs text-amber-600 mt-1">
-                              Aktuelles Mindestgebot: {Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €
-                            </p>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -848,17 +1074,17 @@ export default function AdminPostAuctionOffers() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium text-sm">
+                      <span className="font-semibold text-green-600">
                         {offer.offer_amount.toLocaleString("de-DE")} €
                       </span>
                     </TableCell>
                     <TableCell>
                       {offer.counter_offer_amount != null ? (
-                        <span className="text-sm font-medium text-blue-600">
+                        <span className="font-semibold text-blue-600">
                           {offer.counter_offer_amount.toLocaleString("de-DE")} €
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
+                        <span className="text-muted-foreground">–</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -866,25 +1092,24 @@ export default function AdminPostAuctionOffers() {
                     </TableCell>
                     <TableCell>
                       {offer.expires_at ? (
-                        <div>
-                          <span className={`text-xs ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
-                            {isExpired ? "Abgelaufen" : formatDistanceToNow(new Date(offer.expires_at), { addSuffix: true, locale: de })}
-                          </span>
-                        </div>
+                        <span className={`text-sm ${isExpired ? "text-destructive" : ""}`}>
+                          {format(new Date(offer.expires_at), "dd.MM. HH:mm", { locale: de })}
+                        </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
+                        <span className="text-muted-foreground">–</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(offer.created_at), { addSuffix: true, locale: de })}
+                      <span className="text-sm">
+                        {format(new Date(offer.created_at), "dd.MM. HH:mm", { locale: de })}
                       </span>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => {
                             setSelectedOffer(offer);
                             setAdminCounterAmount("");
@@ -897,13 +1122,13 @@ export default function AdminPostAuctionOffers() {
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8 hover:text-destructive"
                           onClick={() => {
                             setDeleteIds([offer.id]);
                             setDeleteDialogOpen(true);
                           }}
                           title="Löschen"
-                          className="hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -918,7 +1143,560 @@ export default function AdminPostAuctionOffers() {
       </Card>
 
       {/* ================================================================== */}
-      {/* Detail Dialog with Admin Actions */}
+      {/* KAUFCHANCE DETAIL DIALOG - Full view with bids, offers, admin tools */}
+      {/* ================================================================== */}
+      <Dialog open={kaufchanceDetailOpen} onOpenChange={setKaufchanceDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+          {selectedKaufchanceAuction && (() => {
+            const auction = selectedKaufchanceAuction;
+            const motorhome = auction.motorhome;
+            const vehicleName = motorhome ? `${motorhome.manufacturer} ${motorhome.model}` : 'Unbekannt';
+            const seller = motorhome?.seller_id ? profileMap[motorhome.seller_id] : null;
+            const sellerName = seller
+              ? (seller.company_name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email || 'Unbekannt')
+              : 'Unbekannt';
+            const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
+            const effectiveReservePrice = auction.reserve_price || motorhome?.reserve_price || null;
+            const displayBids = showAllBids ? kaufchanceBids : kaufchanceBids.slice(0, 10);
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-xl">
+                    <Gavel className="w-5 h-5 text-amber-600" />
+                    Kaufchance: {vehicleName}
+                    {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
+                  </DialogTitle>
+                  <DialogDescription className="flex items-center gap-3 flex-wrap">
+                    {isExpired ? (
+                      <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
+                    ) : (
+                      <Badge className="bg-amber-500 text-white">Aktiv</Badge>
+                    )}
+                    <span>Verkäufer: <strong>{sellerName}</strong></span>
+                    {seller?.email && <span className="text-xs">({seller.email})</span>}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {kaufchanceDetailLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <Tabs defaultValue="overview" className="mt-4">
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="overview">Übersicht</TabsTrigger>
+                      <TabsTrigger value="bids">
+                        Gebote ({kaufchanceBids.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="offers">
+                        Angebote ({kaufchanceAllOffers.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="admin">Admin-Tools</TabsTrigger>
+                    </TabsList>
+
+                    {/* ---- TAB: Übersicht ---- */}
+                    <TabsContent value="overview" className="space-y-4 mt-4">
+                      {/* Preisübersicht */}
+                      <Card className="p-4">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <Euro className="w-4 h-4" /> Preisübersicht
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center p-3 rounded-lg bg-muted/50">
+                            <p className="text-xs text-muted-foreground">Letztes Gebot</p>
+                            <p className="text-lg font-bold">{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</p>
+                          </div>
+                          <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20">
+                            <p className="text-xs text-muted-foreground">Reservepreis</p>
+                            <p className="text-lg font-bold text-amber-600">
+                              {effectiveReservePrice ? `${Number(effectiveReservePrice).toLocaleString('de-DE')} €` : 'Nicht gesetzt'}
+                            </p>
+                          </div>
+                          <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                            <p className="text-xs text-muted-foreground">Mindestgebot (Admin)</p>
+                            <p className="text-lg font-bold text-blue-600">
+                              {auction.kaufchance_min_price ? `${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €` : 'Nicht gesetzt'}
+                            </p>
+                          </div>
+                          <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                            <p className="text-xs text-muted-foreground">Höchstes Angebot</p>
+                            <p className="text-lg font-bold text-green-600">
+                              {kaufchanceAllOffers.length > 0
+                                ? `${Math.max(...kaufchanceAllOffers.map(o => o.offer_amount)).toLocaleString('de-DE')} €`
+                                : 'Keine'}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Zeitinfo */}
+                      <Card className="p-4">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <Clock className="w-4 h-4" /> Zeitverlauf
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {auction.end_time && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Auktion beendet:</span>
+                              <span>{format(new Date(auction.end_time), "dd.MM.yyyy HH:mm", { locale: de })}</span>
+                            </div>
+                          )}
+                          {auction.kaufchance_expires_at && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Kaufchance-Frist:</span>
+                              <span className={isExpired ? "text-destructive font-medium" : "font-medium"}>
+                                {format(new Date(auction.kaufchance_expires_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                                {isExpired && " (abgelaufen)"}
+                                {!isExpired && (
+                                  <span className="text-xs ml-1 text-muted-foreground">
+                                    ({formatDistanceToNow(new Date(auction.kaufchance_expires_at), { addSuffix: true, locale: de })})
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+
+                      {/* Eingeladene Bieter */}
+                      {kaufchanceInvitations.length > 0 && (
+                        <Card className="p-4">
+                          <h3 className="font-semibold mb-3 flex items-center gap-2">
+                            <User className="w-4 h-4" /> Eingeladene Bieter ({kaufchanceInvitations.length})
+                          </h3>
+                          <div className="space-y-2">
+                            {kaufchanceInvitations.map((inv) => {
+                              const bidder = profileMap[inv.bidder_id];
+                              const bidderName = bidder
+                                ? (bidder.company_name || `${bidder.first_name || ''} ${bidder.last_name || ''}`.trim() || bidder.email || 'Unbekannt')
+                                : inv.bidder_id.substring(0, 8) + '...';
+                              const hasOffer = kaufchanceAllOffers.some(o => o.buyer_id === inv.bidder_id);
+
+                              return (
+                                <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs font-mono">#{inv.rank}</Badge>
+                                    <span className="text-sm font-medium">{bidderName}</span>
+                                    {bidder?.customer_number && (
+                                      <span className="text-xs text-muted-foreground font-mono">#{bidder.customer_number}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-sm font-semibold">{Number(inv.highest_bid).toLocaleString('de-DE')} €</span>
+                                    {hasOffer ? (
+                                      <Badge className="bg-green-500 text-white text-xs">Hat Angebot</Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs text-muted-foreground">Kein Angebot</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </Card>
+                      )}
+                    </TabsContent>
+
+                    {/* ---- TAB: Gebote (Auktions-Historie) ---- */}
+                    <TabsContent value="bids" className="space-y-4 mt-4">
+                      <Card className="p-4">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <History className="w-4 h-4" /> Auktions-Gebote (chronologisch)
+                        </h3>
+                        {kaufchanceBids.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">Keine Gebote vorhanden.</p>
+                        ) : (
+                          <>
+                            <div className="text-xs text-muted-foreground mb-3">
+                              {kaufchanceBids.length} Gebote insgesamt | Höchstes: {Math.max(...kaufchanceBids.map(b => Number(b.amount))).toLocaleString('de-DE')} € | {new Set(kaufchanceBids.map(b => b.bidder_id)).size} Bieter
+                            </div>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>#</TableHead>
+                                  <TableHead>Bieter</TableHead>
+                                  <TableHead>Betrag</TableHead>
+                                  <TableHead>Typ</TableHead>
+                                  <TableHead>Zeitpunkt</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {displayBids.map((bid, idx) => {
+                                  const bidder = profileMap[bid.bidder_id];
+                                  const bidderName = bidder
+                                    ? (bidder.company_name || `${bidder.first_name || ''} ${bidder.last_name || ''}`.trim() || bidder.email || bid.bidder_id.substring(0, 8))
+                                    : bid.bidder_id.substring(0, 8) + '...';
+                                  const isHighest = idx === 0;
+
+                                  return (
+                                    <TableRow key={bid.id} className={isHighest ? "bg-green-50 dark:bg-green-950/20" : ""}>
+                                      <TableCell className="font-mono text-xs">{kaufchanceBids.length - (showAllBids ? idx : idx)}</TableCell>
+                                      <TableCell>
+                                        <div>
+                                          <p className="text-sm font-medium">{bidderName}</p>
+                                          {bidder?.customer_number && (
+                                            <p className="text-xs text-muted-foreground font-mono">#{bidder.customer_number}</p>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className={`font-semibold ${isHighest ? 'text-green-600' : ''}`}>
+                                          {Number(bid.amount).toLocaleString('de-DE')} €
+                                        </span>
+                                      </TableCell>
+                                      <TableCell>
+                                        {bid.is_autobid ? (
+                                          <Badge variant="outline" className="text-xs">Auto</Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-xs">Manuell</Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-sm">
+                                        {format(new Date(bid.created_at), "dd.MM.yyyy HH:mm:ss", { locale: de })}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                            {kaufchanceBids.length > 10 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full mt-2"
+                                onClick={() => setShowAllBids(!showAllBids)}
+                              >
+                                {showAllBids ? (
+                                  <><ChevronUp className="w-4 h-4 mr-1" /> Weniger anzeigen</>
+                                ) : (
+                                  <><ChevronDown className="w-4 h-4 mr-1" /> Alle {kaufchanceBids.length} Gebote anzeigen</>
+                                )}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </Card>
+                    </TabsContent>
+
+                    {/* ---- TAB: Kaufchance-Angebote ---- */}
+                    <TabsContent value="offers" className="space-y-4 mt-4">
+                      {kaufchanceAllOffers.length === 0 ? (
+                        <Card className="p-8">
+                          <div className="text-center">
+                            <Clock className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-muted-foreground">Noch keine Kaufchance-Angebote eingegangen.</p>
+                          </div>
+                        </Card>
+                      ) : (
+                        kaufchanceAllOffers.map((offer) => {
+                          const buyer = profileMap[offer.buyer_id];
+                          const buyerName = buyer
+                            ? (buyer.company_name || `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || buyer.email || 'Unbekannt')
+                            : 'Unbekannt';
+                          const offerExpired = offer.expires_at && isPast(new Date(offer.expires_at)) && offer.status === 'pending';
+                          const canAct = offer.status === 'pending' && !offerExpired;
+
+                          return (
+                            <Card key={offer.id} className={`p-4 ${offerExpired ? 'opacity-60' : ''}`}>
+                              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h4 className="font-semibold">{buyerName}</h4>
+                                    {buyer?.customer_number && (
+                                      <Badge variant="outline" className="text-xs font-mono">#{buyer.customer_number}</Badge>
+                                    )}
+                                    <OfferStatusBadge status={offer.status} expiresAt={offer.expires_at} />
+                                  </div>
+
+                                  <div className="flex items-center gap-6 mb-2">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Angebot</p>
+                                      <p className="font-bold text-lg text-green-600">{Number(offer.offer_amount).toLocaleString('de-DE')} €</p>
+                                    </div>
+                                    {offer.counter_offer_amount != null && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Gegenangebot</p>
+                                        <p className="font-bold text-lg text-blue-600">{Number(offer.counter_offer_amount).toLocaleString('de-DE')} €</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {offer.message && (
+                                    <p className="text-sm text-muted-foreground italic mb-1">"{offer.message}"</p>
+                                  )}
+                                  {offer.seller_response && (
+                                    <p className="text-sm text-blue-600 mb-1">Antwort: "{offer.seller_response}"</p>
+                                  )}
+
+                                  <p className="text-xs text-muted-foreground">
+                                    Erstellt: {format(new Date(offer.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                                    {offer.expires_at && (
+                                      <> | Frist: {format(new Date(offer.expires_at), "dd.MM.yyyy HH:mm", { locale: de })}</>
+                                    )}
+                                  </p>
+                                </div>
+
+                                {/* Admin-Aktionen für dieses Angebot */}
+                                {canAct && (
+                                  <div className="flex flex-col gap-2 min-w-[200px]">
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-500 hover:bg-green-600"
+                                      disabled={adminActionLoading}
+                                      onClick={() => handleAdminAcceptOffer(offer.id)}
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                                      Annehmen
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      disabled={adminActionLoading}
+                                      onClick={() => handleAdminRejectOffer(offer.id)}
+                                    >
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      Ablehnen
+                                    </Button>
+                                    <Separator />
+                                    <div className="space-y-1">
+                                      <Input
+                                        type="number"
+                                        placeholder="Gegenangebot €"
+                                        value={adminCounterAmount}
+                                        onChange={(e) => setAdminCounterAmount(e.target.value)}
+                                        className="h-8 text-sm"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 h-8"
+                                        disabled={adminActionLoading || !adminCounterAmount}
+                                        onClick={() => handleAdminCounterOffer(offer.id)}
+                                      >
+                                        <Send className="w-3.5 h-3.5 mr-1" />
+                                        Gegenangebot
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          );
+                        })
+                      )}
+                    </TabsContent>
+
+                    {/* ---- TAB: Admin-Tools ---- */}
+                    <TabsContent value="admin" className="space-y-4 mt-4">
+                      {/* Mindestgebot setzen */}
+                      <Card className="p-4 border-2 border-amber-200">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-amber-700">
+                          <Shield className="w-4 h-4" /> Mindestgebot (Admin)
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Setzen Sie das Mindestgebot, unter dem kein Angebot angenommen werden soll.
+                          {auction.kaufchance_min_price && (
+                            <> Aktuell: <strong className="text-amber-600">{Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €</strong></>
+                          )}
+                        </p>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder={auction.kaufchance_min_price ? `Aktuell: ${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €` : 'Betrag in €'}
+                            value={adminMinPriceInputs[auction.id] || ''}
+                            onChange={(e) => setAdminMinPriceInputs(prev => ({ ...prev, [auction.id]: e.target.value }))}
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="outline"
+                            disabled={savingMinPrice === auction.id || !adminMinPriceInputs[auction.id]}
+                            onClick={() => handleSaveMinPrice(auction.id)}
+                          >
+                            {savingMinPrice === auction.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <><Send className="w-4 h-4 mr-1" /> Speichern</>
+                            )}
+                          </Button>
+                        </div>
+                      </Card>
+
+                      {/* Angebot im Namen des Händlers erstellen */}
+                      <Card className="p-4 border-2 border-blue-200">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-700">
+                          <UserPlus className="w-4 h-4" /> Angebot im Namen eines Händlers erstellen
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Erstellen Sie manuell ein Kaufangebot im Namen eines eingeladenen Händlers (z.B. nach telefonischer Absprache).
+                        </p>
+
+                        {/* Eingeladene Händler als Auswahl */}
+                        {kaufchanceInvitations.length > 0 && (
+                          <div className="mb-3">
+                            <Label className="text-xs text-muted-foreground mb-1 block">Eingeladener Händler auswählen:</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {kaufchanceInvitations.map((inv) => {
+                                const bidder = profileMap[inv.bidder_id];
+                                const name = bidder
+                                  ? (bidder.company_name || `${bidder.first_name || ''} ${bidder.last_name || ''}`.trim() || bidder.email || inv.bidder_id.substring(0, 8))
+                                  : inv.bidder_id.substring(0, 8) + '...';
+                                const isSelected = adminOfferDealerId === inv.bidder_id;
+
+                                return (
+                                  <Button
+                                    key={inv.id}
+                                    size="sm"
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`text-xs ${isSelected ? '' : 'hover:bg-blue-50'}`}
+                                    onClick={() => setAdminOfferDealerId(inv.bidder_id)}
+                                  >
+                                    #{inv.rank} {name} ({Number(inv.highest_bid).toLocaleString('de-DE')} €)
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Label className="text-xs">Händler-ID (oder oben auswählen)</Label>
+                              <Input
+                                placeholder="UUID des Händlers"
+                                value={adminOfferDealerId}
+                                onChange={(e) => setAdminOfferDealerId(e.target.value)}
+                                className="font-mono text-xs"
+                              />
+                            </div>
+                            <div className="w-40">
+                              <Label className="text-xs">Betrag (€)</Label>
+                              <Input
+                                type="number"
+                                placeholder="Betrag"
+                                value={adminOfferAmount}
+                                onChange={(e) => setAdminOfferAmount(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <Textarea
+                            placeholder="Nachricht (optional, z.B. 'Telefonisches Angebot vom 07.04.')"
+                            value={adminOfferMessage}
+                            onChange={(e) => setAdminOfferMessage(e.target.value)}
+                            rows={2}
+                            className="resize-none"
+                          />
+                          <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                            disabled={adminOfferLoading || !adminOfferDealerId || !adminOfferAmount}
+                            onClick={() => handleAdminCreateOffer(auction.id)}
+                          >
+                            {adminOfferLoading ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Plus className="w-4 h-4 mr-1" />
+                            )}
+                            Angebot erstellen
+                          </Button>
+                        </div>
+                      </Card>
+
+                      {/* Frist verlängern */}
+                      <Card className="p-4">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <CalendarPlus className="w-4 h-4" /> Kaufchance-Frist verlängern
+                        </h3>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={extendingKaufchance === auction.id}
+                            onClick={() => handleExtendKaufchance(auction.id, 1)}
+                          >
+                            +1 Tag
+                          </Button>
+                          <Button
+                            variant="outline"
+                            disabled={extendingKaufchance === auction.id}
+                            onClick={() => handleExtendKaufchance(auction.id, 3)}
+                          >
+                            +3 Tage
+                          </Button>
+                          <Button
+                            variant="outline"
+                            disabled={extendingKaufchance === auction.id}
+                            onClick={() => handleExtendKaufchance(auction.id, 7)}
+                          >
+                            +7 Tage
+                          </Button>
+                        </div>
+                      </Card>
+
+                      {/* Zurück in Auktion */}
+                      <Card className="p-4 border-2 border-green-200">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-green-700">
+                          <RotateCcw className="w-4 h-4" /> Zurück in Auktion
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Wenn sich Verkäufer und Käufer nicht einig werden, kann das Wohnmobil zurück in eine neue Auktion.
+                          Die aktuelle Kaufchance wird beendet, alle ausstehenden Angebote abgelehnt, und eine neue Draft-Auktion erstellt.
+                        </p>
+                        <Button
+                          className="w-full"
+                          variant="outline"
+                          disabled={backToAuctionLoading === auction.id}
+                          onClick={() => {
+                            if (window.confirm(`"${vehicleName}" wirklich zurück in eine neue Auktion? Die Kaufchance wird beendet.`)) {
+                              handleBackToAuction(auction.id);
+                            }
+                          }}
+                        >
+                          {backToAuctionLoading === auction.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                          )}
+                          Neue Auktion als Entwurf erstellen
+                        </Button>
+                      </Card>
+
+                      {/* Kaufchance beenden */}
+                      <Card className="p-4 border-2 border-destructive/20">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-destructive">
+                          <Ban className="w-4 h-4" /> Kaufchance endgültig beenden
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Beendet die Kaufchance ohne Verkauf. Das Wohnmobil wird als "nicht verkauft" markiert.
+                        </p>
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          disabled={endingKaufchance === auction.id}
+                          onClick={() => {
+                            if (window.confirm(`Kaufchance für "${vehicleName}" wirklich endgültig beenden?`)) {
+                              handleEndKaufchance(auction.id);
+                            }
+                          }}
+                        >
+                          {endingKaufchance === auction.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Ban className="w-4 h-4 mr-2" />
+                          )}
+                          Kaufchance beenden (nicht verkauft)
+                        </Button>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ================================================================== */}
+      {/* Single Offer Detail Dialog */}
       {/* ================================================================== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

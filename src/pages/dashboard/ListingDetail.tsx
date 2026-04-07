@@ -970,6 +970,28 @@ export default function ListingDetail() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Kaufchance-Info: Preise und Frist */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <p className="text-xs text-muted-foreground">Letztes Auktionsgebot</p>
+                <p className="text-lg font-bold">{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</p>
+              </div>
+              {motorhome.reserve_price && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 text-center">
+                  <p className="text-xs text-muted-foreground">Ihr Mindestpreis</p>
+                  <p className="text-lg font-bold text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</p>
+                </div>
+              )}
+              {auction.kaufchance_expires_at && (
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-center">
+                  <p className="text-xs text-muted-foreground">Kaufchance-Frist</p>
+                  <p className="text-sm font-semibold">
+                    {format(new Date(auction.kaufchance_expires_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {kaufchanceLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -1103,6 +1125,14 @@ export default function ListingDetail() {
                 })}
               </div>
             )}
+
+            {/* Hinweis: Zurück in Auktion */}
+            <div className="p-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20">
+              <p className="text-sm text-muted-foreground">
+                Wenn kein passendes Angebot dabei ist, kann Ihr Wohnmobil erneut in eine Auktion gegeben werden.
+                Bitte kontaktieren Sie uns unter <strong>info@caravanwert.de</strong> oder warten Sie, bis unser Team sich bei Ihnen meldet.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

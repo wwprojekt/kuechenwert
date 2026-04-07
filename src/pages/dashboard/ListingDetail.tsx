@@ -223,17 +223,10 @@ export default function ListingDetail() {
     if (!resolvedAuction?.id || resolvedAuction?.status !== 'kaufchance') return;
     setKaufchanceLoading(true);
     try {
+      // Kein buyer-Join: Verkäufer sieht anonymisierte Bieter ("Bieter 1", "Bieter 2" etc.)
       const { data, error } = await supabase
         .from('post_auction_offers')
-        .select(`
-          *,
-          buyer:profiles!post_auction_offers_buyer_id_fkey (
-            first_name,
-            last_name,
-            company_name,
-            customer_number
-          )
-        `)
+        .select('*')
         .eq('auction_id', resolvedAuction.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -1003,23 +996,17 @@ export default function ListingDetail() {
               </div>
             ) : (
               <div className="space-y-4">
-                {kaufchanceOffers.map((offer: any) => {
-                  const buyerName = offer.buyer?.company_name
-                    || `${offer.buyer?.first_name || ''} ${offer.buyer?.last_name || ''}`.trim()
-                    || 'Unbekannt';
-                  const custNum = offer.buyer?.customer_number || '';
+                {kaufchanceOffers.map((offer: any, offerIdx: number) => {
+                  // Anonymisiert: Verkäufer sieht keine echten Händlernamen
+                  const anonymizedName = `Bieter ${offerIdx + 1}`;
 
                   return (
                     <div key={offer.id} className="p-4 rounded-lg border bg-card">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">{buyerName}</h4>
-                            {custNum && (
-                              <Badge variant="outline" className="text-xs font-mono">
-                                #{custNum}
-                              </Badge>
-                            )}
+                            <h4 className="font-semibold">{anonymizedName}</h4>
+                            {/* Kundennummer ausgeblendet - Anonymisierung */}
                             {offer.status === 'pending' && (
                               <Badge variant="outline" className="text-orange-600 border-orange-600">Ausstehend</Badge>
                             )}

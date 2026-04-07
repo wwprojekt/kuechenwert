@@ -127,7 +127,12 @@ const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/jpg",
+  "image/heic",
+  "image/heif",
 ];
+
+/** Extensions that are valid even when MIME type is empty or octet-stream (iOS HEIC issue) */
+const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -213,8 +218,12 @@ export default function PendingDealerDocumentUpload({
   const handleUpload = async (slotType: string, file: File) => {
     if (!user) return;
 
-    // Validate MIME
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    // Validate MIME (with fallback to extension for HEIC/HEIF on iOS)
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+    const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
+    const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
+    // Accept if MIME is valid, or if extension is valid and MIME is empty/octet-stream
+    if (!isMimeValid && !(isExtValid && (file.type === '' || file.type === 'application/octet-stream'))) {
       toast.error(tr.docInvalidType);
       return;
     }
@@ -537,7 +546,7 @@ export default function PendingDealerDocumentUpload({
                             fileInputRefs.current[slot.type] = el;
                           }}
                           type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
+                          accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/jpeg,image/png,image/heic,image/heif,application/pdf"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];

@@ -100,16 +100,25 @@ export const DamageDocumentation = ({
         throw new Error(validation.error);
       }
 
-      // Optimize image
-      const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
+      // Optimize image (with fallback for HEIC on unsupported browsers)
+      let uploadFile: File;
+      let fileExt: string;
+      try {
+        const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
+        uploadFile = optimized.file;
+        fileExt = optimized.format;
+      } catch {
+        // Fallback: upload original file if optimization fails (e.g. HEIC)
+        uploadFile = file;
+        fileExt = file.name.split('.').pop() || 'jpg';
+      }
       
       // Upload to storage
-      const fileExt = optimized.file.name.split('.').pop();
       const fileName = `${motorhomeId}/damage_${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('motorhome-photos')
-        .upload(fileName, optimized.file);
+        .upload(fileName, uploadFile);
 
       if (uploadError) throw uploadError;
 

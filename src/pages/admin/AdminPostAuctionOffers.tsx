@@ -225,6 +225,10 @@ export default function AdminPostAuctionOffers() {
   const [endingKaufchance, setEndingKaufchance] = useState<string | null>(null);
   const [extendingKaufchance, setExtendingKaufchance] = useState<string | null>(null);
   const [backToAuctionLoading, setBackToAuctionLoading] = useState<string | null>(null);
+  const [backToAuctionDialogOpen, setBackToAuctionDialogOpen] = useState(false);
+  const [backToAuctionAuctionId, setBackToAuctionAuctionId] = useState<string | null>(null);
+  const [backToAuctionReservePrice, setBackToAuctionReservePrice] = useState("");
+  const [backToAuctionVehicleName, setBackToAuctionVehicleName] = useState("");
 
   // Admin: Angebot im Namen des Händlers erstellen
   const [adminOfferDealerId, setAdminOfferDealerId] = useState("");
@@ -289,29 +293,34 @@ export default function AdminPostAuctionOffers() {
     refetchInterval: 30000,
   });
 
+  // Collect all profile IDs we need (stable dependency for queryKey)
+  const allProfileIds = useMemo(() => {
+    const ids = new Set<string>();
+    offers.forEach(o => {
+      if (o.buyer_id) ids.add(o.buyer_id);
+    });
+    Object.values(auctionMap).forEach((a: AuctionInfo) => {
+      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
+    });
+    kaufchanceAuctions.forEach((a: any) => {
+      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
+    });
+    return Array.from(ids).sort();
+  }, [offers, auctionMap, kaufchanceAuctions]);
+
   const { data: profileMap = {} } = useQuery({
-    queryKey: ["adminOfferProfiles", offers.map(o => o.buyer_id), kaufchanceAuctions.map(a => a.id)],
+    queryKey: ["adminOfferProfiles", allProfileIds],
     queryFn: async () => {
-      const allIds = new Set<string>();
-      offers.forEach(o => {
-        if (o.buyer_id) allIds.add(o.buyer_id);
-      });
-      Object.values(auctionMap).forEach((a: AuctionInfo) => {
-        if (a.motorhome?.seller_id) allIds.add(a.motorhome.seller_id);
-      });
-      kaufchanceAuctions.forEach((a: any) => {
-        if (a.motorhome?.seller_id) allIds.add(a.motorhome.seller_id);
-      });
-      if (allIds.size === 0) return {};
+      if (allProfileIds.length === 0) return {};
       const { data } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, company_name, email, customer_number")
-        .in("id", Array.from(allIds));
+        .in("id", allProfileIds);
       const map: Record<string, ProfileInfo> = {};
       (data || []).forEach((p: any) => { map[p.id] = p; });
       return map;
     },
-    enabled: offers.length > 0 || kaufchanceAuctions.length > 0,
+    enabled: allProfileIds.length > 0,
   });
 
   // ---- Statistics ----
@@ -611,14 +620,28 @@ export default function AdminPostAuctionOffers() {
     }
   };
 
-  // ---- Zurück in Auktion ----
-  const handleBackToAuction = async (auctionId: string) => {
+  // ---- Zurück in Auktion: Dialog öffnen ----
+  const openBackToAuctionDialog = (auctionId: string, vehicleName: string, currentReservePrice: number | null) => {
+    setBackToAuctionAuctionId(auctionId);
+    setBackToAuctionVehicleName(vehicleName);
+    setBackToAuctionReservePrice(currentReservePrice ? String(currentReservePrice) : "");
+    setBackToAuctionDialogOpen(true);
+  };
+
+  // ---- Zurück in Auktion: Bestehende Auktion recyceln (UPDATE statt INSERT) ----
+  // WICHTIG: Die auctions-Tabelle hat einen UNIQUE Constraint auf motorhome_id,
+  // daher kann keine zweite Auktion für dasselbe Wohnmobil erstellt werden.
+  // Stattdessen wird die bestehende Auktion zurückgesetzt: neuer Status, neue Zeiten,
+  // neuer Mindestpreis. Alte Bids und Offers werden archiviert/gelöscht.
+  const handleBackToAuction = async () => {
+    if (!backToAuctionAuctionId) return;
+    const auctionId = backToAuctionAuctionId;
     setBackToAuctionLoading(auctionId);
     try {
       // 1. Lade aktuelle Auktionsdaten
       const { data: currentAuction, error: fetchErr } = await supabase
         .from('auctions')
-        .select('motorhome_id, reserve_price, starting_bid, motorhome:motorhomes(reserve_price)')
+        .select('motorhome_id, reserve_price, starting_bid, motorhome:motorhomes(reserve_price, postal_code, city)')
         .eq('id', auctionId)
         .single();
       if (fetchErr) throw fetchErr;
@@ -626,38 +649,58 @@ export default function AdminPostAuctionOffers() {
       const motorhomeId = currentAuction?.motorhome_id;
       if (!motorhomeId) throw new Error('Kein Wohnmobil mit dieser Auktion verknüpft.');
 
-      // 2. Alte Kaufchance beenden
-      const { error: endErr } = await supabase
-        .from('auctions')
-        .update({ status: 'ended', updated_at: new Date().toISOString() })
-        .eq('id', auctionId);
-      if (endErr) throw endErr;
+      // Prüfe PLZ (wie bei normaler Aktivierung)
+      const mh = currentAuction?.motorhome as any;
+      if (!mh?.postal_code) {
+        throw new Error('Das Wohnmobil hat keine PLZ. Bitte zuerst die Fahrzeugdaten vervollständigen.');
+      }
 
-      // 3. Alle ausstehenden Angebote ablehnen
+      // 2. Alle ausstehenden Kaufchance-Angebote ablehnen
       await supabase
         .from('post_auction_offers')
         .update({ status: 'rejected', seller_response: 'Kaufchance beendet – zurück in Auktion', updated_at: new Date().toISOString() })
         .eq('auction_id', auctionId)
         .in('status', ['pending', 'countered']);
 
-      // 4. Neue Auktion als Draft erstellen
-      const reservePrice = currentAuction?.reserve_price
-        || (currentAuction?.motorhome as any)?.reserve_price
-        || null;
+      // 3. Alle Kaufchance-Einladungen löschen
+      await supabase
+        .from('kaufchance_invitations')
+        .delete()
+        .eq('auction_id', auctionId);
 
-      const { data: newAuction, error: createErr } = await supabase
+      // 4. Alle alten Bids löschen (damit die neue Auktion sauber startet)
+      await supabase
+        .from('bids')
+        .delete()
+        .eq('auction_id', auctionId);
+
+      // 5. Neuen Mindestpreis bestimmen
+      const newReservePrice = backToAuctionReservePrice
+        ? parseFloat(backToAuctionReservePrice)
+        : (currentAuction?.reserve_price || (mh as any)?.reserve_price || null);
+
+      // 6. Bestehende Auktion recyceln: Status auf 'active', neue Zeiten, neuer Mindestpreis
+      const startTime = new Date();
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+
+      const { error: updateErr } = await supabase
         .from('auctions')
-        .insert({
-          motorhome_id: motorhomeId,
+        .update({
+          status: 'active' as any,
+          current_bid: null,
+          reserve_price: newReservePrice && !isNaN(newReservePrice) ? newReservePrice : null,
           starting_bid: currentAuction?.starting_bid || 50,
-          reserve_price: reservePrice,
-          status: 'draft',
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          kaufchance_deadline: null,
+          kaufchance_min_price: null,
+          updated_at: new Date().toISOString(),
         } as any)
-        .select('id')
-        .single();
-      if (createErr) throw createErr;
+        .eq('id', auctionId);
+      if (updateErr) throw updateErr;
 
-      // 5. Motorhome-Status zurücksetzen
+      // 7. Motorhome-Status auf 'active' setzen
       await supabase
         .from('motorhomes')
         .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -665,12 +708,13 @@ export default function AdminPostAuctionOffers() {
 
       toast({
         title: 'Zurück in Auktion',
-        description: `Neue Auktion als Entwurf erstellt. Sie können sie jetzt unter Auktionen aktivieren.`,
+        description: `Auktion neu gestartet! Läuft 7 Tage bis ${endTime.toLocaleDateString('de-DE')} ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}.${newReservePrice ? ` Mindestpreis: ${Number(newReservePrice).toLocaleString('de-DE')} €` : ''}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       setKaufchanceDetailOpen(false);
+      setBackToAuctionDialogOpen(false);
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
@@ -905,11 +949,11 @@ export default function AdminPostAuctionOffers() {
                           variant="outline"
                           className="text-blue-600 border-blue-300 hover:bg-blue-50"
                           disabled={backToAuctionLoading === auction.id}
-                          onClick={() => {
-                            if (window.confirm(`"${vehicleName}" zurück in eine neue Auktion? Die Kaufchance wird beendet und eine neue Draft-Auktion erstellt.`)) {
-                              handleBackToAuction(auction.id);
-                            }
-                          }}
+                          onClick={() => openBackToAuctionDialog(
+                            auction.id,
+                            vehicleName,
+                            auction.reserve_price || motorhome?.reserve_price || null
+                          )}
                         >
                           {backToAuctionLoading === auction.id ? (
                             <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -1639,24 +1683,23 @@ export default function AdminPostAuctionOffers() {
                         </h3>
                         <p className="text-sm text-muted-foreground mb-3">
                           Wenn sich Verkäufer und Käufer nicht einig werden, kann das Wohnmobil zurück in eine neue Auktion.
-                          Die aktuelle Kaufchance wird beendet, alle ausstehenden Angebote abgelehnt, und eine neue Draft-Auktion erstellt.
+                          Die aktuelle Kaufchance wird beendet, alle ausstehenden Angebote abgelehnt, und eine neue aktive Auktion (7 Tage) gestartet.
                         </p>
                         <Button
-                          className="w-full"
-                          variant="outline"
+                          className="w-full bg-green-600 hover:bg-green-700 text-white"
                           disabled={backToAuctionLoading === auction.id}
-                          onClick={() => {
-                            if (window.confirm(`"${vehicleName}" wirklich zurück in eine neue Auktion? Die Kaufchance wird beendet.`)) {
-                              handleBackToAuction(auction.id);
-                            }
-                          }}
+                          onClick={() => openBackToAuctionDialog(
+                            auction.id,
+                            vehicleName,
+                            effectiveReservePrice
+                          )}
                         >
                           {backToAuctionLoading === auction.id ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           ) : (
                             <RotateCcw className="w-4 h-4 mr-2" />
                           )}
-                          Neue Auktion als Entwurf erstellen
+                          Zurück in Auktion (sofort starten)
                         </Button>
                       </Card>
 
@@ -1897,6 +1940,71 @@ export default function AdminPostAuctionOffers() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Zurück in Auktion Dialog */}
+      <Dialog open={backToAuctionDialogOpen} onOpenChange={setBackToAuctionDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-green-600" />
+              Zurück in Auktion
+            </DialogTitle>
+            <DialogDescription>
+              <strong>{backToAuctionVehicleName}</strong> wird zurück in eine neue aktive Auktion gesetzt.
+              Die Kaufchance wird beendet und alle ausstehenden Angebote abgelehnt.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Neue Auktion wird sofort gestartet</p>
+              <p className="text-xs text-green-600 dark:text-green-400">Laufzeit: 7 Tage ab jetzt</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="backToAuctionReservePrice" className="text-sm font-medium">
+                Mindestpreis / Reservepreis (optional)
+              </Label>
+              <div className="relative">
+                <Input
+                  id="backToAuctionReservePrice"
+                  type="number"
+                  placeholder="Leer lassen = alter Preis beibehalten"
+                  value={backToAuctionReservePrice}
+                  onChange={(e) => setBackToAuctionReservePrice(e.target.value)}
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">&euro;</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Geben Sie einen neuen Mindestpreis ein oder lassen Sie das Feld leer, um den bisherigen Preis beizubehalten.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setBackToAuctionDialogOpen(false)}
+              disabled={!!backToAuctionLoading}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={!!backToAuctionLoading}
+              onClick={handleBackToAuction}
+            >
+              {backToAuctionLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4 mr-2" />
+              )}
+              Auktion starten
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

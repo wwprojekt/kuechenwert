@@ -73,7 +73,12 @@ const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/jpg',
+  'image/heic',
+  'image/heif',
 ];
+
+/** File extensions accepted even when MIME type is empty or octet-stream (iOS HEIC issue) */
+const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -236,9 +241,13 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Validate file type (MIME)
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return new Response(JSON.stringify({ error: 'Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG' }), {
+    // Validate file type (MIME with extension fallback for iOS HEIC)
+    const fileExtension = (file.name.split('.').pop() || '').toLowerCase();
+    const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
+    const isExtValid = ALLOWED_EXTENSIONS.includes(fileExtension);
+    // Accept if MIME is valid, or if extension is valid and MIME is empty/octet-stream
+    if (!isMimeValid && !(isExtValid && (file.type === '' || file.type === 'application/octet-stream'))) {
+      return new Response(JSON.stringify({ error: 'Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG, HEIC' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

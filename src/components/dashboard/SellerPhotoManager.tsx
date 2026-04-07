@@ -526,14 +526,18 @@ export function SellerPhotoManager({
 
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
-        // Filter to only image files
-        const imageFiles = Array.from(files).filter((f) =>
-          f.type.startsWith("image/")
-        );
+        // Filter to only image files (also accept HEIC/HEIF with empty/wrong MIME type)
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'bmp', 'tiff', 'tif'];
+        const imageFiles = Array.from(files).filter((f) => {
+          if (f.type.startsWith("image/")) return true;
+          // Fallback: check file extension for HEIC/HEIF files with wrong MIME
+          const ext = f.name.split('.').pop()?.toLowerCase() || '';
+          return imageExtensions.includes(ext);
+        });
         if (imageFiles.length > 0) {
           handleUpload(imageFiles);
         } else {
-          toast({ title: "Ungültige Dateien", description: "Bitte nur Bilddateien hochladen.", variant: "destructive" });
+          toast({ title: "Ungültige Dateien", description: "Bitte nur Bilddateien hochladen (JPG, PNG, WebP, HEIC).", variant: "destructive" });
         }
       }
     },

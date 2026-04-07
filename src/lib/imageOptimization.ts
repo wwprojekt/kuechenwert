@@ -315,21 +315,38 @@ class ImageOptimizer {
    * Validate image file
    */
   validateImageFile(file: File): { valid: boolean; error?: string } {
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      return { valid: false, error: 'File is not an image' };
-    }
-
     // Check supported formats
     const supportedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'];
-    if (!supportedFormats.includes(file.type)) {
-      return { valid: false, error: 'Unsupported image format' };
+    
+    // Some mobile browsers (especially iOS Safari) report HEIC/HEIF files with
+    // empty MIME type or 'application/octet-stream'. We detect them by file extension.
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const heicExtensions = ['heic', 'heif'];
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'bmp', 'tiff', 'tif'];
+    const isHeicByExtension = heicExtensions.includes(ext);
+    const isImageByExtension = imageExtensions.includes(ext);
+
+    // Check file type - allow if MIME starts with image/ OR if extension is a known image format
+    if (!file.type.startsWith('image/') && !isImageByExtension) {
+      // Special case: empty MIME or octet-stream with image extension
+      if (file.type === '' || file.type === 'application/octet-stream') {
+        if (!isImageByExtension) {
+          return { valid: false, error: 'Datei ist kein Bild. Bitte laden Sie JPG, PNG, WebP oder HEIC hoch.' };
+        }
+      } else {
+        return { valid: false, error: 'Datei ist kein Bild. Bitte laden Sie JPG, PNG, WebP oder HEIC hoch.' };
+      }
+    }
+
+    // Check supported MIME types (skip check for HEIC by extension since MIME may be wrong)
+    if (!isHeicByExtension && file.type && !supportedFormats.includes(file.type) && file.type !== 'application/octet-stream') {
+      return { valid: false, error: 'Nicht unterstütztes Bildformat. Erlaubt: JPG, PNG, WebP, HEIC, AVIF.' };
     }
 
     // Check file size (max 50MB)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      return { valid: false, error: 'Image file too large (max 50MB)' };
+      return { valid: false, error: 'Bild zu groß (max. 50 MB). Bitte verkleinern Sie das Bild.' };
     }
 
     return { valid: true };

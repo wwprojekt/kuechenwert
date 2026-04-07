@@ -384,33 +384,32 @@ export function handleValidationError(
   componentName?: string
 ): string {
   // Bei ZodError die erste Fehlermeldung extrahieren
+  // HINWEIS: Validierungsfehler werden NICHT mehr in error_logs geschrieben,
+  // da sie normales Benutzerverhalten darstellen (z.B. "Weiter" klicken ohne Pflichtfeld).
+  // Sie werden nur als Toast dem User angezeigt.
   if (error && typeof error === 'object' && 'errors' in error) {
     const zodError = error as { errors: Array<{ message: string; path: string[] }> };
     if (zodError.errors.length > 0) {
       const firstError = zodError.errors[0];
       const translated = translateError(firstError.message);
       
-      logErrorToSupabase({
-        errorCode: translated.code,
-        errorMessage: translated.message,
-        errorCategory: 'validation',
-        severity: 'low',
-        pagePath: window.location.pathname,
-        pageTitle: getPageTitle(window.location.pathname),
-        componentName,
-        originalError: firstError.message,
-        metadata: { 
-          field: firstError.path?.join('.'),
-          allErrors: zodError.errors.map(e => ({ message: e.message, path: e.path?.join('.') })),
-        },
-        errorSource: 'caught',
+      // Nur in die Konsole loggen für Debugging, nicht in die DB
+      logger.debug(`[Validation] ${componentName || 'unknown'}: ${translated.message}`, {
+        field: firstError.path?.join('.'),
+        allErrors: zodError.errors.map(e => ({ message: e.message, path: e.path?.join('.') })),
       });
 
       return translated.message;
     }
   }
 
-  return handleAndLogError(error, { componentName, category: 'validation', severity: 'low' });
+  // Nur bei nicht-Zod-Fehlern in die DB loggen (echte Fehler)
+  if (error instanceof Error && error.name !== 'ZodError') {
+    return handleAndLogError(error, { componentName, category: 'validation', severity: 'low' });
+  }
+  
+  const translated = translateError(error instanceof Error ? error.message : String(error));
+  return translated.message;
 }
 
 /**

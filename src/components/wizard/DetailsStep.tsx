@@ -7,13 +7,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DetailsStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  fieldErrors?: Record<string, string>;
 }
 
-export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
+export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: DetailsStepProps) => {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
   const handleDefectsToggle = (value: string) => {
@@ -46,14 +48,14 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
           <h3 className="text-lg font-semibold">Motor & Antrieb</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fuel_type">
+              <Label htmlFor="fuel_type" className={cn(fieldErrors.fuel_type && "text-red-600")}>
                 Kraftstoffart <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.fuel_type || ""}
                 onValueChange={(value) => updateFormData({ fuel_type: value })}
               >
-                <SelectTrigger id="fuel_type">
+                <SelectTrigger id="fuel_type" className={cn(fieldErrors.fuel_type && "border-red-500 ring-red-500/20 ring-2")}>
                   <SelectValue placeholder="Wählen Sie..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -63,17 +65,20 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                   <SelectItem value="Hybrid">Hybrid</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors.fuel_type && (
+                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.fuel_type}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="transmission">
+              <Label htmlFor="transmission" className={cn(fieldErrors.transmission && "text-red-600")}>
                 Getriebe <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.transmission || ""}
                 onValueChange={(value) => updateFormData({ transmission: value })}
               >
-                <SelectTrigger id="transmission">
+                <SelectTrigger id="transmission" className={cn(fieldErrors.transmission && "border-red-500 ring-red-500/20 ring-2")}>
                   <SelectValue placeholder="Wählen Sie..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -81,6 +86,9 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                   <SelectItem value="Automatik">Automatik</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors.transmission && (
+                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.transmission}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -148,7 +156,7 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
           {/* Sitzplätze mit Gurt - NUR für Wohnmobile */}
           {!isWohnwagen && (
             <div className="space-y-2">
-              <Label htmlFor="seats_with_seatbelts" className="flex items-center gap-2">
+              <Label htmlFor="seats_with_seatbelts" className={cn("flex items-center gap-2", fieldErrors.seats_with_seatbelts && "text-red-600")}>
                 <UsersIcon className="w-4 h-4" />
                 Sitzplätze mit Gurt <span className="text-red-500">*</span>
               </Label>
@@ -156,7 +164,7 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                 value={formData.seats_with_seatbelts?.toString() || ""}
                 onValueChange={(value) => updateFormData({ seats_with_seatbelts: parseInt(value) })}
               >
-                <SelectTrigger id="seats_with_seatbelts">
+                <SelectTrigger id="seats_with_seatbelts" className={cn(fieldErrors.seats_with_seatbelts && "border-red-500 ring-red-500/20 ring-2")}>
                   <SelectValue placeholder="Anzahl wählen" />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,11 +173,14 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.seats_with_seatbelts && (
+                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.seats_with_seatbelts}</p>
+              )}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="sleeping_places" className="flex items-center gap-2">
+            <Label htmlFor="sleeping_places" className={cn("flex items-center gap-2", fieldErrors.sleeping_places && "text-red-600")}>
               <Bed className="w-4 h-4" />
               Schlafplätze <span className="text-red-500">*</span>
             </Label>
@@ -177,7 +188,7 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
               value={formData.sleeping_places?.toString() || ""}
               onValueChange={(value) => updateFormData({ sleeping_places: parseInt(value) })}
             >
-              <SelectTrigger id="sleeping_places">
+              <SelectTrigger id="sleeping_places" className={cn(fieldErrors.sleeping_places && "border-red-500 ring-red-500/20 ring-2")}>
                 <SelectValue placeholder="Anzahl wählen" />
               </SelectTrigger>
               <SelectContent>
@@ -186,6 +197,9 @@ export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
                 ))}
               </SelectContent>
             </Select>
+            {fieldErrors.sleeping_places && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.sleeping_places}</p>
+            )}
           </div>
         </div>
       </div>

@@ -5,13 +5,15 @@ import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Calendar, Gauge, Info } from "lucide-react";
 import { popularManufacturers, wohnwagenManufacturers } from "@/lib/vehicle-data";
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface VehicleInfoStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  fieldErrors?: Record<string, string>;
 }
 
-export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepProps) => {
+export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: VehicleInfoStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
 
   const currentManufacturers = useMemo(() => {
@@ -52,12 +54,13 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        {/* Hersteller */}
         <div className="space-y-2">
-          <Label htmlFor="manufacturer" className="flex items-center gap-1">
+          <Label htmlFor="manufacturer" className={cn("flex items-center gap-1", fieldErrors.manufacturer && "text-red-600")}>
             Hersteller <span className="text-red-500">*</span>
           </Label>
           <Select value={formData.manufacturer} onValueChange={handleManufacturerChange}>
-            <SelectTrigger id="manufacturer" className="transition-smooth">
+            <SelectTrigger id="manufacturer" className={cn("transition-smooth", fieldErrors.manufacturer && "border-red-500 ring-red-500/20 ring-2")}>
               <SelectValue placeholder="Hersteller wählen" />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -68,10 +71,14 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
               ))}
             </SelectContent>
           </Select>
+          {fieldErrors.manufacturer && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.manufacturer}</p>
+          )}
         </div>
 
+        {/* Modell */}
         <div className="space-y-2">
-          <Label htmlFor="model" className="flex items-center gap-1">
+          <Label htmlFor="model" className={cn("flex items-center gap-1", fieldErrors.model && "text-red-600")}>
             Modell / Baureihe <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -80,14 +87,18 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
             placeholder={formData.manufacturer ? "z.B. B-Klasse, California, Coral..." : "Bitte zuerst Hersteller wählen"}
             value={formData.model}
             onChange={(e) => updateFormData({ model: e.target.value })}
-            className="transition-smooth"
+            className={cn("transition-smooth", fieldErrors.model && "border-red-500 ring-red-500/20 ring-2")}
             disabled={!formData.manufacturer}
             autoComplete="off"
           />
+          {fieldErrors.model && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.model}</p>
+          )}
         </div>
 
+        {/* Baujahr */}
         <div className="space-y-2">
-          <Label htmlFor="year" className="flex items-center gap-2">
+          <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
             <Calendar className="w-4 h-4" />
             Baujahr <span className="text-red-500">*</span>
           </Label>
@@ -95,7 +106,7 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
             value={formData.year?.toString() || ""}
             onValueChange={(value) => updateFormData({ year: parseInt(value) })}
           >
-            <SelectTrigger id="year" className="transition-smooth">
+            <SelectTrigger id="year" className={cn("transition-smooth", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
               <SelectValue placeholder="Baujahr wählen" />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -106,11 +117,15 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
               ))}
             </SelectContent>
           </Select>
+          {fieldErrors.year && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.year}</p>
+          )}
         </div>
 
+        {/* Kilometerstand - nur Wohnmobil */}
         {vehicleType !== "Wohnwagen" && (
           <div className="space-y-2">
-            <Label htmlFor="mileage" className="flex items-center gap-2">
+            <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
               <Gauge className="w-4 h-4" />
               Kilometerstand <span className="text-red-500">*</span>
             </Label>
@@ -123,20 +138,24 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
               value={formData.mileage || ""}
               onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
               min={0}
-              className="transition-smooth"
+              className={cn("transition-smooth", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.mileage && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.mileage}</p>
+            )}
           </div>
         )}
 
+        {/* Zustand */}
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="condition" className="flex items-center gap-1">
+          <Label htmlFor="condition" className={cn("flex items-center gap-1", fieldErrors.condition && "text-red-600")}>
             Zustand <span className="text-red-500">*</span>
           </Label>
           <Select
             value={formData.condition}
             onValueChange={(value) => updateFormData({ condition: value })}
           >
-            <SelectTrigger id="condition" className="transition-smooth">
+            <SelectTrigger id="condition" className={cn("transition-smooth", fieldErrors.condition && "border-red-500 ring-red-500/20 ring-2")}>
               <SelectValue placeholder="Zustand wählen" />
             </SelectTrigger>
             <SelectContent>
@@ -147,6 +166,9 @@ export const VehicleInfoStep = ({ formData, updateFormData }: VehicleInfoStepPro
               <SelectItem value="Reparaturbedürftig">Reparaturbedürftig</SelectItem>
             </SelectContent>
           </Select>
+          {fieldErrors.condition && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.condition}</p>
+          )}
         </div>
       </div>
     </div>

@@ -39,7 +39,7 @@ const steps = [
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft } = useWizardForm();
+  const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft, fieldErrors, clearFieldErrors } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
   const hasRestoredRef = useRef(false);
   const [registerPassword, setRegisterPassword] = useState("");
@@ -290,6 +290,7 @@ const VerkaufenWizard = () => {
 
   const handlePrevious = () => {
     if (currentStep > 1) {
+      clearFieldErrors();
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -326,19 +327,19 @@ const VerkaufenWizard = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <VehicleTypeStep formData={formData} updateFormData={updateFormData} />;
+        return <VehicleTypeStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 2:
-        return <VehicleInfoStep formData={formData} updateFormData={updateFormData} />;
+        return <VehicleInfoStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 3:
-        return <DetailsStep formData={formData} updateFormData={updateFormData} />;
+        return <DetailsStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 4:
         return <EquipmentStep formData={formData} updateFormData={updateFormData} />;
       case 5:
-        return <QuickContactStep formData={formData} updateFormData={updateFormData} isAuthenticated={!!currentUser} />;
+        return <QuickContactStep formData={formData} updateFormData={updateFormData} isAuthenticated={!!currentUser} fieldErrors={fieldErrors} />;
       case 6:
         return <PhotosStep formData={formData} updateFormData={updateFormData} />;
       case 7:
-        return <SaleChannelStep formData={formData} updateFormData={updateFormData} />;
+        return <SaleChannelStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 8:
         return <AccountLocationStep
           formData={formData}
@@ -348,6 +349,7 @@ const VerkaufenWizard = () => {
           confirmPassword={confirmPassword}
           setConfirmPassword={setConfirmPassword}
           isAuthenticated={!!currentUser}
+          fieldErrors={fieldErrors}
         />;
       default:
         return null;

@@ -13,13 +13,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Star, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SaleChannelStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  fieldErrors?: Record<string, string>;
 }
 
-export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepProps) => {
+export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: SaleChannelStepProps) => {
   // Dynamischer FOMO-Counter
   const [dealerCount] = useState(() => Math.floor(Math.random() * 30) + 110);
 
@@ -55,7 +57,7 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
 
       {/* Verkaufsweg */}
       <div className="space-y-3">
-        <Label className="text-base font-semibold">Wie möchten Sie verkaufen? <span className="text-red-500">*</span></Label>
+        <Label className={cn("text-base font-semibold", fieldErrors.saleChannel && "text-red-600")}>Wie möchten Sie verkaufen? <span className="text-red-500">*</span></Label>
         <RadioGroup
           value={formData.saleChannel}
           onValueChange={(value) => updateFormData({ saleChannel: value })}
@@ -160,6 +162,9 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
             </div>
           </Card>
         </RadioGroup>
+        {fieldErrors.saleChannel && (
+          <p className="text-sm text-red-600 font-medium animate-fade-in">{fieldErrors.saleChannel}</p>
+        )}
       </div>
 
       {/* Preis-Felder je nach Verkaufsweg */}
@@ -203,7 +208,7 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Name - vorausgefüllt aus Step 5, aber editierbar */}
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="customerName" className="flex items-center gap-2">
+            <Label htmlFor="customerName" className={cn("flex items-center gap-2", fieldErrors.customerName && "text-red-600")}>
               <UserIcon className="w-4 h-4" />
               Name <span className="text-red-500">*</span>
             </Label>
@@ -214,11 +219,15 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
               value={formData.customerName || ""}
               onChange={(e) => updateFormData({ customerName: e.target.value })}
               autoComplete="name"
+              className={cn(fieldErrors.customerName && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.customerName && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerName}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="customerEmail" className="flex items-center gap-2">
+            <Label htmlFor="customerEmail" className={cn("flex items-center gap-2", fieldErrors.customerEmail && "text-red-600")}>
               <Mail className="w-4 h-4" />
               E-Mail <span className="text-red-500">*</span>
             </Label>
@@ -229,11 +238,15 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
               value={formData.customerEmail || ""}
               onChange={(e) => updateFormData({ customerEmail: e.target.value })}
               autoComplete="email"
+              className={cn(fieldErrors.customerEmail && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.customerEmail && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerEmail}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="customerPhone" className="flex items-center gap-2">
+            <Label htmlFor="customerPhone" className={cn("flex items-center gap-2", fieldErrors.customerPhone && "text-red-600")}>
               <Phone className="w-4 h-4" />
               Telefon <span className="text-red-500">*</span>
             </Label>
@@ -244,7 +257,11 @@ export const SaleChannelStep = ({ formData, updateFormData }: SaleChannelStepPro
               value={formData.customerPhone || ""}
               onChange={(e) => updateFormData({ customerPhone: e.target.value })}
               autoComplete="tel"
+              className={cn(fieldErrors.customerPhone && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.customerPhone && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerPhone}</p>
+            )}
           </div>
         </div>
       </div>

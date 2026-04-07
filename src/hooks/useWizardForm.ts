@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
+import { translateError } from "@/lib/germanErrors";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { ensureValidSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
@@ -331,6 +332,7 @@ export const useWizardForm = () => {
     return initialFormData;
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -350,6 +352,19 @@ export const useWizardForm = () => {
 
   const updateFormData = useCallback((updates: Partial<WizardFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+    // Fehler für geänderte Felder sofort entfernen
+    const updatedFields = Object.keys(updates);
+    if (updatedFields.length > 0) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        updatedFields.forEach((field) => delete next[field]);
+        // Spezialfall: no_known_defects löscht auch den refine-Fehler
+        if ('no_known_defects' in updates || 'known_defects' in updates) {
+          delete next['_refine'];
+        }
+        return next;
+      });
+    }
   }, []);
 
   const validateStep = async (step: number): Promise<boolean> => {
@@ -435,6 +450,17 @@ export const useWizardForm = () => {
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
+        // Feld-spezifische Fehler extrahieren für Inline-Anzeige
+        const errors: Record<string, string> = {};
+        error.errors.forEach((e) => {
+          const fieldPath = e.path?.join('.') || '_refine';
+          if (!errors[fieldPath]) {
+            const translated = translateError(e.message);
+            errors[fieldPath] = translated.message;
+          }
+        });
+        setFieldErrors(errors);
+
         const germanMessage = handleValidationError(error, 'VerkaufenWizard');
         toast({
           title: "Bitte überprüfen Sie Ihre Eingaben",
@@ -945,6 +971,10 @@ export const useWizardForm = () => {
     }
   };
 
+  const clearFieldErrors = useCallback(() => {
+    setFieldErrors({});
+  }, []);
+
   return {
     formData,
     updateFormData,
@@ -952,5 +982,7 @@ export const useWizardForm = () => {
     submitForm,
     isSubmitting,
     clearDraft,
+    fieldErrors,
+    clearFieldErrors,
   };
 };

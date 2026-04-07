@@ -26,6 +26,7 @@ import {
 interface VehicleTypeStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  fieldErrors?: Record<string, string>;
 }
 
 type SvgIconComponent = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
@@ -49,7 +50,7 @@ const WOHNWAGEN_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
   "Mobilheim": { icon: MobilheimIcon, description: "Stationäres Wohnheim" },
 };
 
-export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepProps) => {
+export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {} }: VehicleTypeStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
 
   const currentBodyTypes = useMemo(() => {
@@ -125,7 +126,7 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
 
       {/* Aufbauart-Auswahl - 2-spaltig */}
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground">
+        <label className={cn("text-sm font-semibold", fieldErrors.bodyType ? "text-red-600" : "text-foreground")}>
           Aufbauart <span className="text-red-500">*</span>
         </label>
         <div className="grid grid-cols-2 gap-3">
@@ -178,6 +179,9 @@ export const VehicleTypeStep = ({ formData, updateFormData }: VehicleTypeStepPro
           })}
         </div>
       </div>
+      {fieldErrors.bodyType && (
+        <p className="text-sm text-red-600 font-medium animate-fade-in">{fieldErrors.bodyType}</p>
+      )}
 
       {/* Trust-Footer */}
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-1">

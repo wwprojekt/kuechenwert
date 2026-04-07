@@ -13,14 +13,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Mail, User, Shield, Save, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface QuickContactStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
   isAuthenticated?: boolean;
+  fieldErrors?: Record<string, string>;
 }
 
-export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = false }: QuickContactStepProps) => {
+export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = false, fieldErrors = {} }: QuickContactStepProps) => {
   // Prüfen ob Felder bereits vorausgefüllt sind (z.B. aus Profil)
   const hasPrefilled = !!(formData.customerName && formData.customerEmail);
 
@@ -79,7 +81,7 @@ export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = f
       {/* Kontaktfelder */}
       <div className="space-y-4 max-w-md mx-auto">
         <div className="space-y-2">
-          <Label htmlFor="quickName" className="flex items-center gap-2">
+          <Label htmlFor="quickName" className={cn("flex items-center gap-2", fieldErrors.customerName && "text-red-600")}>
             <User className="w-4 h-4 text-muted-foreground" />
             Name <span className="text-red-500">*</span>
           </Label>
@@ -89,14 +91,17 @@ export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = f
             placeholder="Vor- und Nachname"
             value={formData.customerName || ""}
             onChange={(e) => updateFormData({ customerName: e.target.value })}
-            className="h-12 text-base"
+            className={cn("h-12 text-base", fieldErrors.customerName && "border-red-500 ring-red-500/20 ring-2")}
             autoComplete="name"
             autoFocus={!hasPrefilled}
           />
+          {fieldErrors.customerName && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerName}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="quickEmail" className="flex items-center gap-2">
+          <Label htmlFor="quickEmail" className={cn("flex items-center gap-2", fieldErrors.customerEmail && "text-red-600")}>
             <Mail className="w-4 h-4 text-muted-foreground" />
             E-Mail <span className="text-red-500">*</span>
           </Label>
@@ -106,9 +111,12 @@ export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = f
             placeholder="ihre@email.de"
             value={formData.customerEmail || ""}
             onChange={(e) => updateFormData({ customerEmail: e.target.value })}
-            className="h-12 text-base"
+            className={cn("h-12 text-base", fieldErrors.customerEmail && "border-red-500 ring-red-500/20 ring-2")}
             autoComplete="email"
           />
+          {fieldErrors.customerEmail && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerEmail}</p>
+          )}
         </div>
       </div>
 

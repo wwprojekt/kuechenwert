@@ -19,6 +19,7 @@ import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2 } from "lucide-react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { EU_COUNTRIES } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
+import { cn } from "@/lib/utils";
 
 /**
  * PLZ-Konfiguration pro Land:
@@ -67,6 +68,7 @@ interface AccountLocationStepProps {
   confirmPassword: string;
   setConfirmPassword: (pw: string) => void;
   isAuthenticated: boolean;
+  fieldErrors?: Record<string, string>;
 }
 
 export const AccountLocationStep = ({
@@ -77,7 +79,8 @@ export const AccountLocationStep = ({
   confirmPassword,
   setConfirmPassword,
   isAuthenticated,
-}: AccountLocationStepProps) => {
+  fieldErrors = {},
+}: AccountLocationStepProps & { fieldErrors?: Record<string, string> }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -161,7 +164,7 @@ export const AccountLocationStep = ({
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2 md:col-span-3">
-            <Label htmlFor="street">
+            <Label htmlFor="street" className={cn(fieldErrors.street && "text-red-600")}>
               Straße <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -171,11 +174,15 @@ export const AccountLocationStep = ({
               value={formData.street || ""}
               onChange={(e) => updateFormData({ street: e.target.value })}
               autoComplete="street-address"
+              className={cn(fieldErrors.street && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.street && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.street}</p>
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="houseNumber">
+            <Label htmlFor="houseNumber" className={cn(fieldErrors.houseNumber && "text-red-600")}>
               Hausnummer <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -184,11 +191,15 @@ export const AccountLocationStep = ({
               placeholder="12a"
               value={formData.houseNumber || ""}
               onChange={(e) => updateFormData({ houseNumber: e.target.value })}
+              className={cn(fieldErrors.houseNumber && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.houseNumber && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.houseNumber}</p>
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="zipCode">
+            <Label htmlFor="zipCode" className={cn(fieldErrors.zipCode && "text-red-600")}>
               PLZ <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -200,11 +211,15 @@ export const AccountLocationStep = ({
               value={formData.zipCode || ""}
               onChange={(e) => handleZipCodeChange(e.target.value)}
               autoComplete="postal-code"
+              className={cn(fieldErrors.zipCode && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.zipCode && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.zipCode}</p>
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-3">
-            <Label htmlFor="city">
+            <Label htmlFor="city" className={cn(fieldErrors.city && "text-red-600")}>
               Ort <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -214,7 +229,11 @@ export const AccountLocationStep = ({
               value={formData.city || ""}
               onChange={(e) => updateFormData({ city: e.target.value })}
               autoComplete="address-level2"
+              className={cn(fieldErrors.city && "border-red-500 ring-red-500/20 ring-2")}
             />
+            {fieldErrors.city && (
+              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.city}</p>
+            )}
           </div>
         </div>
       </div>
@@ -232,7 +251,7 @@ export const AccountLocationStep = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="registerPassword">
+              <Label htmlFor="registerPassword" className={cn(fieldErrors.registerPassword && "text-red-600")}>
                 Passwort <span className="text-red-500">*</span>
               </Label>
               <div className="relative">

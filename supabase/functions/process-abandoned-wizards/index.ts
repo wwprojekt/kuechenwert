@@ -337,31 +337,55 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (sessionsForFirstEmail && sessionsForFirstEmail.length > 0) {
+      // ─── DEDUPLIZIERUNG: Nur EINE Email pro customer_email ───
+      // Wenn ein Nutzer mehrere abandoned Sessions hat, sende nur für die neueste
+      // und markiere ALLE als gesendet
+      const sessionsByEmail = new Map<string, typeof sessionsForFirstEmail>();
       for (const session of sessionsForFirstEmail) {
-        const { subject, html } = buildFirstReminderEmail(session, settingsData);
+        const email = session.customer_email?.toLowerCase();
+        if (!email) continue;
+        if (!sessionsByEmail.has(email)) {
+          sessionsByEmail.set(email, []);
+        }
+        sessionsByEmail.get(email)!.push(session);
+      }
+
+      for (const [email, sessions] of sessionsByEmail) {
+        // Sortiere nach last_activity_at DESC - neueste Session zuerst
+        sessions.sort((a: any, b: any) => 
+          new Date(b.last_activity_at || b.created_at).getTime() - 
+          new Date(a.last_activity_at || a.created_at).getTime()
+        );
+        const newestSession = sessions[0];
+
+        const { subject, html } = buildFirstReminderEmail(newestSession, settingsData);
 
         const success = await sendEmailAndLog(
           supabase,
-          session.customer_email,
-          session.customer_name,
+          newestSession.customer_email,
+          newestSession.customer_name,
           subject,
           html,
           "wizard_recovery_first",
           settingsData,
-          session.id
+          newestSession.id
         );
 
         if (success) {
-          // Mark email as sent and update status to abandoned
+          // Markiere ALLE Sessions dieses Nutzers als gesendet
+          const sessionIds = sessions.map((s: any) => s.id);
           await supabase
             .from("wizard_sessions")
             .update({
               resume_email_sent_at: now.toISOString(),
               status: "abandoned",
             })
-            .eq("id", session.id);
+            .in("id", sessionIds);
 
           firstEmailSent++;
+          if (sessions.length > 1) {
+            console.log(`Deduplicated: ${email} had ${sessions.length} sessions, sent 1 email, marked all as sent`);
+          }
         } else {
           errors++;
         }
@@ -390,30 +414,51 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (sessionsForFollowup && sessionsForFollowup.length > 0) {
+      // ─── DEDUPLIZIERUNG: Nur EINE Followup-Email pro customer_email ───
+      const followupByEmail = new Map<string, typeof sessionsForFollowup>();
       for (const session of sessionsForFollowup) {
-        const { subject, html } = buildFollowupEmail(session, settingsData);
+        const email = session.customer_email?.toLowerCase();
+        if (!email) continue;
+        if (!followupByEmail.has(email)) {
+          followupByEmail.set(email, []);
+        }
+        followupByEmail.get(email)!.push(session);
+      }
+
+      for (const [email, sessions] of followupByEmail) {
+        sessions.sort((a: any, b: any) => 
+          new Date(b.last_activity_at || b.created_at).getTime() - 
+          new Date(a.last_activity_at || a.created_at).getTime()
+        );
+        const newestSession = sessions[0];
+
+        const { subject, html } = buildFollowupEmail(newestSession, settingsData);
 
         const success = await sendEmailAndLog(
           supabase,
-          session.customer_email,
-          session.customer_name,
+          newestSession.customer_email,
+          newestSession.customer_name,
           subject,
           html,
           "wizard_recovery_followup",
           settingsData,
-          session.id
+          newestSession.id
         );
 
         if (success) {
-          // Mark followup email as sent
+          // Markiere ALLE Sessions dieses Nutzers als gesendet
+          const sessionIds = sessions.map((s: any) => s.id);
           await supabase
             .from("wizard_sessions")
             .update({
               followup_email_sent_at: now.toISOString(),
             })
-            .eq("id", session.id);
+            .in("id", sessionIds);
 
           followupEmailSent++;
+          if (sessions.length > 1) {
+            console.log(`Deduplicated followup: ${email} had ${sessions.length} sessions, sent 1 email, marked all as sent`);
+          }
         } else {
           errors++;
         }

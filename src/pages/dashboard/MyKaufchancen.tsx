@@ -177,7 +177,7 @@ export default function MyKaufchancen() {
       if (data?.success) {
         toast({
           title: 'Gegenangebot angenommen!',
-          description: `Sie haben das Gegenangebot von ${offer.counter_offer_amount!.toLocaleString('de-DE')} \u20ac angenommen. Der Kaufvertrag wird erstellt.`,
+          description: `Sie haben das Gegenangebot von ${offer.counter_offer_amount!.toLocaleString('de-DE')} € angenommen. Der Kaufvertrag wird erstellt.`,
         });
       } else {
         throw new Error(data?.error || 'Unbekannter Fehler');

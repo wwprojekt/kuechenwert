@@ -311,14 +311,14 @@ export default function ListingDetail() {
         .update({
           status: 'countered',
           counter_offer_amount: amount,
-          seller_response: message || `Gegenangebot: ${amount.toLocaleString('de-DE')} \u20ac`,
+          seller_response: message || `Gegenangebot: ${amount.toLocaleString('de-DE')} €`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', offerId);
       if (error) throw error;
       toast({
         title: 'Gegenangebot gesendet',
-        description: `Gegenangebot von ${amount.toLocaleString('de-DE')} \u20ac wurde gesendet.`,
+        description: `Gegenangebot von ${amount.toLocaleString('de-DE')} € wurde gesendet.`,
       });
       setCounterOfferAmounts(prev => ({ ...prev, [offerId]: '' }));
       setCounterOfferMessages(prev => ({ ...prev, [offerId]: '' }));
@@ -1017,14 +1017,14 @@ export default function ListingDetail() {
                               <p className="text-xs text-muted-foreground">Angebot</p>
                               <p className="font-bold text-lg flex items-center gap-1">
                                 <Euro className="w-4 h-4" />
-                                {Number(offer.offer_amount).toLocaleString('de-DE')} \u20ac
+                                {Number(offer.offer_amount).toLocaleString('de-DE')} €
                               </p>
                             </div>
                             {offer.counter_offer_amount && (
                               <div>
                                 <p className="text-xs text-muted-foreground">Ihr Gegenangebot</p>
                                 <p className="font-bold text-lg text-blue-600">
-                                  {Number(offer.counter_offer_amount).toLocaleString('de-DE')} \u20ac
+                                  {Number(offer.counter_offer_amount).toLocaleString('de-DE')} €
                                 </p>
                               </div>
                             )}
@@ -1071,7 +1071,7 @@ export default function ListingDetail() {
                               <div className="flex gap-2">
                                 <Input
                                   type="number"
-                                  placeholder="Betrag in \u20ac"
+                                  placeholder="Betrag in €"
                                   value={counterOfferAmounts[offer.id] || ''}
                                   onChange={(e) => setCounterOfferAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
                                   className="flex-1"

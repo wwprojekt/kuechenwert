@@ -63,6 +63,9 @@ import {
   User,
   Plus,
   Send,
+  ExternalLink,
+  CalendarPlus,
+  Ban,
 } from "lucide-react";
 
 // ============================================================================
@@ -178,6 +181,8 @@ export default function AdminPostAuctionOffers() {
   const [adminMinPriceInputs, setAdminMinPriceInputs] = useState<Record<string, string>>({});
   const [savingMinPrice, setSavingMinPrice] = useState<string | null>(null);
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+  const [endingKaufchance, setEndingKaufchance] = useState<string | null>(null);
+  const [extendingKaufchance, setExtendingKaufchance] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -381,12 +386,12 @@ export default function AdminPostAuctionOffers() {
         .update({
           status: 'countered',
           counter_offer_amount: amount,
-          seller_response: adminCounterMessage || `Gegenangebot: ${amount.toLocaleString('de-DE')} \u20ac`,
+          seller_response: adminCounterMessage || `Gegenangebot: ${amount.toLocaleString('de-DE')} €`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', offerId);
       if (error) throw error;
-      toast({ title: 'Gegenangebot gesendet', description: `${amount.toLocaleString('de-DE')} \u20ac` });
+      toast({ title: 'Gegenangebot gesendet', description: `${amount.toLocaleString('de-DE')} €` });
       setAdminCounterAmount("");
       setAdminCounterMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
@@ -412,13 +417,75 @@ export default function AdminPostAuctionOffers() {
         .update({ kaufchance_min_price: amount })
         .eq('id', auctionId);
       if (error) throw error;
-      toast({ title: 'Mindestgebot gespeichert', description: `${amount.toLocaleString('de-DE')} \u20ac` });
+      toast({ title: 'Mindestgebot gespeichert', description: `${amount.toLocaleString('de-DE')} €` });
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
       queryClient.invalidateQueries({ queryKey: ["adminOfferAuctions"] });
     } catch (err: any) {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
       setSavingMinPrice(null);
+    }
+  };
+
+  const handleEndKaufchance = async (auctionId: string) => {
+    setEndingKaufchance(auctionId);
+    try {
+      // Setze Auktion auf "ended" und Motorhome auf "not_sold"
+      const { data: auctionData, error: auctionFetchError } = await supabase
+        .from('auctions')
+        .select('motorhome_id')
+        .eq('id', auctionId)
+        .single();
+      if (auctionFetchError) throw auctionFetchError;
+
+      const { error: auctionError } = await supabase
+        .from('auctions')
+        .update({ status: 'ended', updated_at: new Date().toISOString() })
+        .eq('id', auctionId);
+      if (auctionError) throw auctionError;
+
+      if (auctionData?.motorhome_id) {
+        await supabase
+          .from('motorhomes')
+          .update({ status: 'not_sold', updated_at: new Date().toISOString() })
+          .eq('id', auctionData.motorhome_id);
+      }
+
+      // Alle ausstehenden Angebote ablehnen
+      await supabase
+        .from('post_auction_offers')
+        .update({ status: 'rejected', seller_response: 'Kaufchance beendet durch Admin', updated_at: new Date().toISOString() })
+        .eq('auction_id', auctionId)
+        .in('status', ['pending', 'countered']);
+
+      toast({ title: 'Kaufchance beendet', description: 'Auktion wurde als "nicht verkauft" markiert.' });
+      queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setEndingKaufchance(null);
+    }
+  };
+
+  const handleExtendKaufchance = async (auctionId: string, days: number = 3) => {
+    setExtendingKaufchance(auctionId);
+    try {
+      const newExpiry = new Date();
+      newExpiry.setDate(newExpiry.getDate() + days);
+
+      const { error } = await supabase
+        .from('auctions')
+        .update({ kaufchance_expires_at: newExpiry.toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', auctionId);
+      if (error) throw error;
+
+      toast({ title: 'Frist verlängert', description: `Kaufchance läuft jetzt bis ${newExpiry.toLocaleDateString('de-DE')} ${newExpiry.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` });
+      queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setExtendingKaufchance(null);
     }
   };
 
@@ -507,9 +574,9 @@ export default function AdminPostAuctionOffers() {
         />
         <StatCard
           title="Durchschn. Angebot"
-          value={`${stats.avgOffer.toLocaleString("de-DE")} \u20ac`}
+          value={`${stats.avgOffer.toLocaleString("de-DE")} €`}
           icon={Euro}
-          description={`${stats.totalOfferValue.toLocaleString("de-DE")} \u20ac gesamt`}
+          description={`${stats.totalOfferValue.toLocaleString("de-DE")} € gesamt`}
           color="bg-purple-500"
         />
       </div>
@@ -552,7 +619,7 @@ export default function AdminPostAuctionOffers() {
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                           <span>Verkäufer: <strong>{sellerName}</strong></span>
-                          <span>Letztes Gebot: <strong>{Number(auction.current_bid || 0).toLocaleString('de-DE')} \u20ac</strong></span>
+                          <span>Letztes Gebot: <strong>{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</strong></span>
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
                           {auction.kaufchance_expires_at && (
                             <span>
@@ -567,6 +634,51 @@ export default function AdminPostAuctionOffers() {
                         </div>
                       </div>
 
+                      {/* Admin-Aktionen */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          onClick={() => window.open(`/admin/auctions?search=${encodeURIComponent(vehicleName)}`, '_blank')}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                          Auktion
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                          disabled={extendingKaufchance === auction.id}
+                          onClick={() => handleExtendKaufchance(auction.id, 3)}
+                        >
+                          {extendingKaufchance === auction.id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <CalendarPlus className="w-3.5 h-3.5 mr-1" />
+                          )}
+                          +3 Tage
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                          disabled={endingKaufchance === auction.id}
+                          onClick={() => {
+                            if (window.confirm(`Kaufchance für "${vehicleName}" wirklich beenden? Alle ausstehenden Angebote werden abgelehnt.`)) {
+                              handleEndKaufchance(auction.id);
+                            }
+                          }}
+                        >
+                          {endingKaufchance === auction.id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <Ban className="w-3.5 h-3.5 mr-1" />
+                          )}
+                          Beenden
+                        </Button>
+                      </div>
+
                       {/* Admin: Mindestgebot setzen */}
                       <div className="flex items-center gap-2 min-w-[280px]">
                         <div className="flex-1">
@@ -574,7 +686,7 @@ export default function AdminPostAuctionOffers() {
                           <div className="flex gap-2 mt-1">
                             <Input
                               type="number"
-                              placeholder={auction.kaufchance_min_price ? `Aktuell: ${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} \u20ac` : 'Betrag in \u20ac'}
+                              placeholder={auction.kaufchance_min_price ? `Aktuell: ${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €` : 'Betrag in €'}
                               value={adminMinPriceInputs[auction.id] || ''}
                               onChange={(e) => setAdminMinPriceInputs(prev => ({ ...prev, [auction.id]: e.target.value }))}
                               className="flex-1"
@@ -594,7 +706,7 @@ export default function AdminPostAuctionOffers() {
                           </div>
                           {auction.kaufchance_min_price && (
                             <p className="text-xs text-amber-600 mt-1">
-                              Aktuelles Mindestgebot: {Number(auction.kaufchance_min_price).toLocaleString('de-DE')} \u20ac
+                              Aktuelles Mindestgebot: {Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €
                             </p>
                           )}
                         </div>
@@ -737,13 +849,13 @@ export default function AdminPostAuctionOffers() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium text-sm">
-                        {offer.offer_amount.toLocaleString("de-DE")} \u20ac
+                        {offer.offer_amount.toLocaleString("de-DE")} €
                       </span>
                     </TableCell>
                     <TableCell>
                       {offer.counter_offer_amount != null ? (
                         <span className="text-sm font-medium text-blue-600">
-                          {offer.counter_offer_amount.toLocaleString("de-DE")} \u20ac
+                          {offer.counter_offer_amount.toLocaleString("de-DE")} €
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">-</span>
@@ -836,27 +948,27 @@ export default function AdminPostAuctionOffers() {
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Angebotsbetrag:</span>
                         <span className="text-lg font-bold text-green-600">
-                          {selectedOffer.offer_amount.toLocaleString("de-DE")} \u20ac
+                          {selectedOffer.offer_amount.toLocaleString("de-DE")} €
                         </span>
                       </div>
                       {selectedOffer.counter_offer_amount != null && (
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Gegenangebot:</span>
                           <span className="text-lg font-bold text-blue-600">
-                            {selectedOffer.counter_offer_amount.toLocaleString("de-DE")} \u20ac
+                            {selectedOffer.counter_offer_amount.toLocaleString("de-DE")} €
                           </span>
                         </div>
                       )}
                       {auction?.current_bid != null && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Letztes Auktionsgebot:</span>
-                          <span className="font-medium">{Number(auction.current_bid).toLocaleString("de-DE")} \u20ac</span>
+                          <span className="font-medium">{Number(auction.current_bid).toLocaleString("de-DE")} €</span>
                         </div>
                       )}
                       {auction?.kaufchance_min_price != null && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Mindestgebot (Admin):</span>
-                          <span className="font-medium text-amber-600">{Number(auction.kaufchance_min_price).toLocaleString("de-DE")} \u20ac</span>
+                          <span className="font-medium text-amber-600">{Number(auction.kaufchance_min_price).toLocaleString("de-DE")} €</span>
                         </div>
                       )}
                     </div>
@@ -974,7 +1086,7 @@ export default function AdminPostAuctionOffers() {
                           <p className="text-xs font-medium">Gegenangebot im Namen des Verkäufers:</p>
                           <Input
                             type="number"
-                            placeholder="Betrag in \u20ac"
+                            placeholder="Betrag in €"
                             value={adminCounterAmount}
                             onChange={(e) => setAdminCounterAmount(e.target.value)}
                           />

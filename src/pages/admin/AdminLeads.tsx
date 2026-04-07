@@ -871,9 +871,10 @@ export default function AdminLeads() {
 
   // ---- Statistics ----
 
-  // Aktive Sessions (ohne Disposition) für Funnel und Statistiken
+  // Aktive Sessions (ohne versteckende Disposition) für Funnel und Statistiken
+  // already_customer zählt weiterhin als aktive Session
   const activeSessions = useMemo(() => 
-    wizardSessions.filter(s => !s.disposition), 
+    wizardSessions.filter(s => !s.disposition || s.disposition === "already_customer"), 
     [wizardSessions]
   );
 
@@ -914,8 +915,8 @@ export default function AdminLeads() {
       avgAbandonStep,
       actionableLeads,
       notContacted,
-      quickLeadsTotal: quickLeads.filter(l => !l.disposition).length,
-      valuationLeadsTotal: valuationLeads.filter(l => !l.disposition).length,
+      quickLeadsTotal: quickLeads.filter(l => !l.disposition || l.disposition === "already_customer").length,
+      valuationLeadsTotal: valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer").length,
     };
   }, [activeSessions, quickLeads, valuationLeads]);
 
@@ -955,8 +956,8 @@ export default function AdminLeads() {
 
   const filteredSessions = useMemo(() => {
     return enrichedSessions.filter((session) => {
-      // Leads mit Disposition aus dem Original-Tab ausblenden
-      if (session.disposition) return false;
+      // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer - die bleiben sichtbar)
+      if (session.disposition && session.disposition !== "already_customer") return false;
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -972,8 +973,8 @@ export default function AdminLeads() {
   }, [enrichedSessions, statusFilter, searchQuery]);
 
   const filteredQuickLeads = useMemo(() => {
-    // Leads mit Disposition aus dem Original-Tab ausblenden
-    const withoutDisposition = quickLeads.filter(l => !l.disposition);
+    // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer)
+    const withoutDisposition = quickLeads.filter(l => !l.disposition || l.disposition === "already_customer");
     if (!searchQuery) return withoutDisposition;
     const q = searchQuery.toLowerCase();
     return withoutDisposition.filter(
@@ -987,8 +988,8 @@ export default function AdminLeads() {
   }, [quickLeads, searchQuery]);
 
   const filteredValuationLeads = useMemo(() => {
-    // Leads mit Disposition aus dem Original-Tab ausblenden
-    const withoutDisposition = valuationLeads.filter(l => !l.disposition);
+    // Leads mit Disposition aus dem Original-Tab ausblenden (AUSSER already_customer)
+    const withoutDisposition = valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer");
     if (!searchQuery) return withoutDisposition;
     const q = searchQuery.toLowerCase();
     return withoutDisposition.filter(
@@ -1801,28 +1802,28 @@ export default function AdminLeads() {
           <TabsList>
             <TabsTrigger value="wizard_sessions" className="gap-2">
               <Timer className="w-4 h-4" />
-              Wizard-Sessions ({wizardSessions.filter(s => !s.disposition).length})
-              {wizardSessions.filter(s => !s.is_viewed && !s.disposition).length > 0 && (
+              Wizard-Sessions ({wizardSessions.filter(s => !s.disposition || s.disposition === "already_customer").length})
+              {wizardSessions.filter(s => !s.is_viewed && (!s.disposition || s.disposition === "already_customer")).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {wizardSessions.filter(s => !s.is_viewed && !s.disposition).length}
+                  {wizardSessions.filter(s => !s.is_viewed && (!s.disposition || s.disposition === "already_customer")).length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="quick_leads" className="gap-2">
               <UserPlus className="w-4 h-4" />
-              Quick-Leads ({quickLeads.filter(l => !l.disposition).length})
-              {quickLeads.filter(l => !l.is_viewed && !l.disposition).length > 0 && (
+              Quick-Leads ({quickLeads.filter(l => !l.disposition || l.disposition === "already_customer").length})
+              {quickLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {quickLeads.filter(l => !l.is_viewed && !l.disposition).length}
+                  {quickLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="valuation_leads" className="gap-2">
               <Calculator className="w-4 h-4" />
-              Wertrechner ({valuationLeads.filter(l => !l.disposition).length})
-              {valuationLeads.filter(l => !l.is_viewed && !l.disposition).length > 0 && (
+              Wertrechner ({valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer").length})
+              {valuationLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {valuationLeads.filter(l => !l.is_viewed && !l.disposition).length}
+                  {valuationLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length}
                 </Badge>
               )}
             </TabsTrigger>

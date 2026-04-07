@@ -141,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph(`Es ist eine Weile her, seit Sie zuletzt bei <strong>${settingsData.site_name}</strong> aktiv waren. Wir m&ouml;chten Sie auf einige interessante Auktionen aufmerksam machen:`)}
           ${activeAuctions && activeAuctions.length > 0 ? infoBox('Aktuelle Auktionen', auctionList, 'info', settingsData) : ''}
           ${paragraph('Verpassen Sie nicht die Chance auf attraktive Fahrzeuge zu g&uuml;nstigen Preisen!')}
-          ${button('Auktionen entdecken', 'https://caravanwert.de/auktionen', settingsData)}
+          ${button('Auktionen entdecken', 'https://caravanwert.de/kaufen', settingsData)}
           ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie als H&auml;ndler bei ${settingsData.site_name} registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Abmelden</a></span>')}
         `;
 

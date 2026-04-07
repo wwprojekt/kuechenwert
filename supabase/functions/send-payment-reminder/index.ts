@@ -9,6 +9,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 /**
  * Freundliche Zahlungserinnerung – wird per Cron-Job aufgerufen.
  * Sendet eine Erinnerung 3 Tage nach Fälligkeit, BEVOR das Mahnwesen greift.
+ *
+ * FIXED: amount → gross_amount (invoices table column)
+ * FIXED: buyer_id → dealer_id (invoices table column)
+ * FIXED: status = 'pending' → payment_status = 'pending' (invoices uses payment_status)
+ * FIXED: dunning_level removed (not a column in invoices)
+ * FIXED: auctions join via auction_id FK
  */
 
 const handler = async (req: Request): Promise<Response> => {
@@ -25,16 +31,21 @@ const handler = async (req: Request): Promise<Response> => {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
+    // FIXED: Use correct column names from invoices table
+    // - gross_amount instead of amount
+    // - dealer_id instead of buyer_id
+    // - payment_status instead of status for payment filtering
+    // - removed dunning_level (not in invoices table)
+    // - auction_id is a FK in invoices, so we can join via auctions(motorhomes(...))
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
-        id, invoice_number, amount, due_date, buyer_id, dunning_level, payment_reminder_sent,
-        auctions (
-          motorhomes (manufacturer, model, year)
+        id, invoice_number, gross_amount, due_date, dealer_id, payment_reminder_sent,
+        auctions:auction_id (
+          motorhomes:motorhome_id (manufacturer, model, year)
         )
       `)
-      .eq('status', 'pending')
-      .eq('dunning_level', 0)
+      .eq('payment_status', 'pending')
       .lte('due_date', threeDaysAgo.toISOString().split('T')[0])
       .neq('payment_reminder_sent', true);
 
@@ -62,11 +73,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const invoice of invoices) {
       try {
-        // Get buyer profile
+        // Get dealer profile (FIXED: dealer_id instead of buyer_id)
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name, email, customer_number')
-          .eq('id', invoice.buyer_id)
+          .eq('id', invoice.dealer_id)
           .single();
 
         if (!profile?.email) continue;
@@ -79,11 +90,12 @@ const handler = async (req: Request): Promise<Response> => {
           year: 'numeric', month: 'long', day: 'numeric',
         });
 
-        const amount = typeof invoice.amount === 'number'
-          ? invoice.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-          : `${invoice.amount} \u20ac`;
+        // FIXED: Use gross_amount instead of amount
+        const amount = typeof invoice.gross_amount === 'number'
+          ? invoice.gross_amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+          : `${invoice.gross_amount} €`;
 
-        const subject = `Freundliche Zahlungserinnerung \u2013 Rechnung ${invoice.invoice_number}`;
+        const subject = `Freundliche Zahlungserinnerung – Rechnung ${invoice.invoice_number}`;
         const emailContent = `
           ${greeting(name || undefined)}
           ${customerBadge(profile.customer_number)}

@@ -22,10 +22,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Get all active auctions grouped by seller
+    // FIXED: current_price → current_bid, start_price → starting_bid
+    // FIXED: bid_count is NOT a column in auctions table, must be counted separately
     const { data: auctions, error: fetchError } = await supabase
       .from('auctions')
       .select(`
-        id, current_price, start_price, bid_count, end_time, status,
+        id, current_bid, starting_bid, end_time, status,
         motorhomes (manufacturer, model, year, seller_id)
       `)
       .eq('status', 'active');
@@ -35,6 +37,17 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ message: "No active auctions", count: 0 }), {
         status: 200, headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // Fetch bid counts for all active auctions
+    const auctionIds = auctions.map(a => a.id);
+    const bidCounts: Record<string, number> = {};
+    for (const auctionId of auctionIds) {
+      const { count } = await supabase
+        .from('bids')
+        .select('id', { count: 'exact', head: true })
+        .eq('auction_id', auctionId);
+      bidCounts[auctionId] = count || 0;
     }
 
     // Fetch site settings
@@ -86,22 +99,23 @@ const handler = async (req: Request): Promise<Response> => {
         for (const auction of sellerAuctionList) {
           const motorhome = auction.motorhomes as any;
           const vehicleStr = `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})`;
-          const currentPrice = typeof auction.current_price === 'number'
-            ? auction.current_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-            : `${auction.current_price} €`;
+          const currentBid = typeof auction.current_bid === 'number'
+            ? auction.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+            : `${auction.current_bid || 0} €`;
           const endDate = new Date(auction.end_time);
           const remainingMs = endDate.getTime() - Date.now();
           const remainingDays = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60 * 24)));
           const remainingHours = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+          const auctionBidCount = bidCounts[auction.id] || 0;
 
           auctionRows += infoBox(vehicleStr, `
-            ${detailRow('Aktueller Preis', `<strong style="color: #1f8aa2;">${currentPrice}</strong>`)}
-            ${detailRow('Anzahl Gebote', `${auction.bid_count || 0}`)}
+            ${detailRow('Aktueller Preis', `<strong style="color: #1f8aa2;">${currentBid}</strong>`)}
+            ${detailRow('Anzahl Gebote', `${auctionBidCount}`)}
             ${detailRow('Verbleibende Zeit', `${remainingDays} Tage, ${remainingHours} Stunden`)}
-          `, auction.bid_count > 0 ? 'success' : 'default', settingsData);
+          `, auctionBidCount > 0 ? 'success' : 'default', settingsData);
         }
 
-        const subject = `Ihre Auktions-&Uuml;bersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`;
+        const subject = `Ihre Auktions-Übersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`;
         const emailContent = `
           ${greeting(name || undefined)}
           ${paragraph(`Hier ist Ihre t&auml;gliche &Uuml;bersicht &uuml;ber Ihre <strong>${sellerAuctionList.length} aktive${sellerAuctionList.length > 1 ? 'n' : ''} Auktion${sellerAuctionList.length > 1 ? 'en' : ''}</strong>:`)}
@@ -121,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
           body: JSON.stringify({
             from: `${settingsData.site_name} <info@caravanwert.de>`,
             to: [profile.email],
-            subject: `Ihre Auktions-Übersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`,
+            subject,
             html,
             reply_to: 'info@caravanwert.de',
           }),
@@ -141,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: name || null,
-            subject: `Ihre Auktions-Übersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`,
+            subject,
             body_html: html,
             body_text: '',
             email_type: 'auction_summary',

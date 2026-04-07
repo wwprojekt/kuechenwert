@@ -262,7 +262,7 @@ const AuctionDetail = () => {
           content_category: mh.body_type || 'Wohnmobil',
           content_ids: [mh.id],
           content_type: 'vehicle',
-          value: data.current_bid || data.start_price || 0,
+          value: data.current_bid || data.starting_bid || 0,
           currency: 'EUR',
         });
       }

@@ -2,14 +2,29 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/**
+ * Benachrichtigung über bald endende Auktionen – wird per Cron-Job aufgerufen.
+ * Sendet Bietern eine Email wenn eine Auktion in der nächsten Stunde endet.
+ *
+ * FIXED: Auth-Check hinzugefügt (BUG-5)
+ * FIXED: Duplikat-Prüfung über admin_emails (BUG-6)
+ */
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
+  }
+
+  // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
+  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   try {
@@ -70,6 +85,21 @@ const handler = async (req: Request): Promise<Response> => {
       const uniqueBidders = [...new Set(bids.map(b => b.bidder_id))];
 
       for (const bidderId of uniqueBidders) {
+        // ─── DUPLIKAT-PRÜFUNG: Wurde dieser Bieter für diese Auktion bereits benachrichtigt? ───
+        const { data: existingNotification } = await supabase
+          .from('admin_emails')
+          .select('id')
+          .eq('recipient_id', bidderId)
+          .eq('email_type', 'auction_ending_soon')
+          .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // Innerhalb der letzten 2 Stunden
+          .limit(1);
+
+        if (existingNotification && existingNotification.length > 0) {
+          console.log(`Skipping duplicate notification for bidder ${bidderId} on auction ${auction.id}`);
+          notifications.push({ bidderId, auctionId: auction.id, success: true, skipped: true });
+          continue;
+        }
+
         // Get bidder's highest bid
         const bidderBids = bids.filter(b => b.bidder_id === bidderId);
         const highestBid = Math.max(...bidderBids.map(b => Number(b.amount)));
@@ -116,6 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
         `;
 
         const html = buildEmailLayout(settingsData, 'Auktion endet bald!', content);
+        const subject = `⏰ Auktion endet bald - ${motorhomeName}`;
 
         // Send email
         try {
@@ -128,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
             body: JSON.stringify({
               from: `${settingsData.site_name} <info@caravanwert.de>`,
               to: [profile.email],
-              subject: `⏰ Auktion endet bald - ${motorhomeName}`,
+              subject,
               html,
             }),
           });
@@ -138,14 +169,15 @@ const handler = async (req: Request): Promise<Response> => {
             notifications.push({ bidderId, auctionId: auction.id, success: true });
             console.log(`Notification sent to ${profile.email} for auction ${auction.id}`);
 
-            // Log in admin_emails for System tab
+            // Log in admin_emails for System tab (also used for duplicate check)
             try {
               await supabase.from('admin_emails').insert({
                 sender_email: 'info@caravanwert.de',
                 sender_name: settingsData.site_name,
                 recipient_email: profile.email,
                 recipient_name: userName || null,
-                subject: `⏰ Auktion endet bald - ${motorhomeName}`,
+                recipient_id: bidderId,
+                subject,
                 body_html: html,
                 body_text: '',
                 email_type: 'auction_ending_soon',
@@ -171,7 +203,8 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         auctionsChecked: endingAuctions.length,
-        notificationsSent: notifications.filter(n => n.success).length,
+        notificationsSent: notifications.filter(n => n.success && !n.skipped).length,
+        notificationsSkipped: notifications.filter(n => n.skipped).length,
         notificationsFailed: notifications.filter(n => !n.success).length,
       }),
       { headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } }

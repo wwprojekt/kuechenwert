@@ -49,7 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: activeAuctions } = await supabase
       .from('auctions')
       .select(`
-        id, current_price, bid_count, end_time,
+        id, current_bid, end_time,
         motorhomes (manufacturer, model, year)
       `)
       .eq('status', 'active')
@@ -127,10 +127,10 @@ const handler = async (req: Request): Promise<Response> => {
         if (activeAuctions && activeAuctions.length > 0) {
           const items = activeAuctions.map((a: any) => {
             const m = a.motorhomes;
-            const price = typeof a.current_price === 'number'
-              ? a.current_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-              : `${a.current_price} €`;
-            return `<strong>${m.manufacturer} ${m.model} (${m.year})</strong> &ndash; aktuell ${price} (${a.bid_count || 0} Gebote)`;
+            const price = typeof a.current_bid === 'number'
+              ? a.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+              : `${a.current_bid || 0} €`;
+            return `<strong>${m.manufacturer} ${m.model} (${m.year})</strong> &ndash; aktuell ${price}`;
           });
           auctionList = list(items);
         }

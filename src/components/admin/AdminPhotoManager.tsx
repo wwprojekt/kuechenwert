@@ -2,8 +2,9 @@
  * Admin Photo Manager Component
  * 
  * Provides full photo management for motorhomes in the admin panel:
- * - Drag & Drop reordering of photos
- * - Upload new photos
+ * - Drag & Drop file upload from desktop (external files)
+ * - Drag & Drop reordering of photos (internal sorting)
+ * - Upload new photos via file picker
  * - Delete individual photos (with confirmation)
  * - Set primary/title photo
  * 
@@ -200,8 +201,13 @@ export function AdminPhotoManager({
   );
   const [hasOrderChanged, setHasOrderChanged] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [totalUploadCount, setTotalUploadCount] = useState(0);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [isFileDragging, setIsFileDragging] = useState(false);
   const isDragging = useRef(false);
+  const dragCounter = useRef(0);
 
   // Sync with parent when initialPhotos change (e.g. after refetch)
   // Only sync if we haven't made unsaved local changes and no drag is active
@@ -225,7 +231,7 @@ export function AdminPhotoManager({
   );
 
   // ---------------------------------------------------------------------------
-  // Drag & Drop Handler
+  // Internal Drag & Drop Handler (photo reordering)
   // ---------------------------------------------------------------------------
 
   const handleDragEnd = useCallback(
@@ -342,20 +348,24 @@ export function AdminPhotoManager({
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Upload New Photos
+  // Upload New Photos (accepts FileList or File array)
   // ---------------------------------------------------------------------------
 
   const handleUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      if (fileArray.length === 0) return;
 
       setIsUploading(true);
+      setUploadedCount(0);
+      setTotalUploadCount(fileArray.length);
+      setUploadProgress("Fotos werden vorbereitet...");
       const newPhotos: Photo[] = [];
 
       try {
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
+        for (let i = 0; i < fileArray.length; i++) {
+          const file = fileArray[i];
+          setUploadProgress(`Foto ${i + 1} von ${fileArray.length} wird hochgeladen...`);
 
           // Validate file using project's image validation
           const validation = validateImageFile(file);
@@ -415,6 +425,7 @@ export function AdminPhotoManager({
           }
 
           newPhotos.push(photoRecord);
+          setUploadedCount(i + 1);
         }
 
         if (newPhotos.length > 0) {
@@ -429,11 +440,79 @@ export function AdminPhotoManager({
         toast.error("Fehler beim Hochladen der Fotos");
       } finally {
         setIsUploading(false);
-        // Reset input so same file can be selected again
-        event.target.value = "";
+        setUploadProgress("");
+        setUploadedCount(0);
+        setTotalUploadCount(0);
       }
     },
     [motorhomeId, photos.length, queryClient, queryKey]
+  );
+
+  // Wrapper for file input onChange events
+  const handleFileInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        handleUpload(files);
+      }
+      // Reset input so same file can be selected again
+      event.target.value = "";
+    },
+    [handleUpload]
+  );
+
+  // ---------------------------------------------------------------------------
+  // External File Drop Zone Handlers
+  // ---------------------------------------------------------------------------
+
+  const handleFileDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsFileDragging(true);
+    }
+  }, []);
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsFileDragging(false);
+    }
+  }, []);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleFileDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsFileDragging(false);
+      dragCounter.current = 0;
+
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        // Filter to only image files (also accept HEIC/HEIF with empty/wrong MIME type)
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'bmp', 'tiff', 'tif'];
+        const imageFiles = Array.from(files).filter((f) => {
+          if (f.type.startsWith("image/")) return true;
+          // Fallback: check file extension for HEIC/HEIF files with wrong MIME
+          const ext = f.name.split('.').pop()?.toLowerCase() || '';
+          return imageExtensions.includes(ext);
+        });
+        if (imageFiles.length > 0) {
+          handleUpload(imageFiles);
+        } else {
+          toast.error("Bitte nur Bilddateien hochladen (JPG, PNG, WebP, HEIC).");
+        }
+      }
+    },
+    [handleUpload]
   );
 
   // ---------------------------------------------------------------------------
@@ -475,9 +554,9 @@ export function AdminPhotoManager({
               </Button>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*"
                 multiple
-                onChange={handleUpload}
+                onChange={handleFileInputChange}
                 className="hidden"
                 disabled={isUploading}
               />
@@ -503,75 +582,159 @@ export function AdminPhotoManager({
       </CardHeader>
 
       <CardContent>
-        {photos.length === 0 ? (
-          /* Empty State with Upload Zone */
-          <label className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 cursor-pointer transition-colors">
-            <Upload className="w-12 h-12 text-muted-foreground mb-4" />
-            <span className="text-lg font-medium mb-1">Fotos hochladen</span>
-            <span className="text-sm text-muted-foreground">
-              Klicken oder Dateien hierher ziehen (max. 100 MB pro Bild)
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleUpload}
-              className="hidden"
-              disabled={isUploading}
-            />
-          </label>
-        ) : (
-          /* Photo Grid with Drag & Drop */
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={() => { isDragging.current = true; }}
-            onDragEnd={(event) => {
-              isDragging.current = false;
-              handleDragEnd(event);
-            }}
-            onDragCancel={() => { isDragging.current = false; }}
-          >
-            <SortableContext
-              items={photos.map((p) => p.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {photos.map((photo, index) => (
-                  <SortablePhotoItem
-                    key={photo.id}
-                    photo={photo}
-                    index={index}
-                    onDelete={setPhotoToDelete}
-                    onSetPrimary={handleSetPrimary}
-                    isDeleting={deletePhotoMutation.isPending}
-                  />
-                ))}
-
-                {/* Add More Photos Tile */}
-                <label className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center cursor-pointer transition-colors">
-                  {isUploading ? (
-                    <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="w-8 h-8 text-muted-foreground mb-1" />
-                      <span className="text-xs text-muted-foreground">
-                        Mehr Fotos
-                      </span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleUpload}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </label>
+        {/* Upload Progress */}
+        {isUploading && (
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+              <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+              <span className="flex-1">{uploadProgress || "Fotos werden hochgeladen..."}</span>
+              {totalUploadCount > 0 && (
+                <span className="font-medium">
+                  {uploadedCount}/{totalUploadCount}
+                </span>
+              )}
+            </div>
+            {totalUploadCount > 1 && (
+              <div className="w-full bg-blue-100 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.max(5, (uploadedCount / totalUploadCount) * 100)}%`,
+                  }}
+                />
               </div>
-            </SortableContext>
-          </DndContext>
+            )}
+          </div>
+        )}
+
+        {photos.length === 0 ? (
+          /* Empty State with Upload Drop Zone */
+          <div
+            className={`flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              isFileDragging
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50"
+            }`}
+            onDragEnter={handleFileDragEnter}
+            onDragLeave={handleFileDragLeave}
+            onDragOver={handleFileDragOver}
+            onDrop={handleFileDrop}
+            onClick={() => {
+              // Trigger file input click when clicking the drop zone
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*";
+              input.multiple = true;
+              input.onchange = (e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.files && target.files.length > 0) {
+                  handleUpload(target.files);
+                }
+              };
+              input.click();
+            }}
+          >
+            {isFileDragging ? (
+              <>
+                <Upload className="w-12 h-12 text-primary mb-4" />
+                <span className="text-lg font-medium text-primary mb-1">
+                  Fotos hier ablegen
+                </span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-12 h-12 text-muted-foreground mb-4" />
+                <span className="text-lg font-medium mb-1">Fotos hochladen</span>
+                <span className="text-sm text-muted-foreground">
+                  Klicken oder Dateien hierher ziehen (max. 100 MB pro Bild)
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* File Drop Zone (always visible when photos exist) */}
+            <div
+              className={`border-2 border-dashed rounded-lg p-4 text-center text-sm transition-colors cursor-pointer ${
+                isFileDragging
+                  ? "border-primary bg-primary/5 text-primary font-medium"
+                  : "border-muted-foreground/20 text-muted-foreground hover:border-primary/30"
+              }`}
+              onDragEnter={handleFileDragEnter}
+              onDragLeave={handleFileDragLeave}
+              onDragOver={handleFileDragOver}
+              onDrop={handleFileDrop}
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*";
+                input.multiple = true;
+                input.onchange = (e) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.files && target.files.length > 0) {
+                    handleUpload(target.files);
+                  }
+                };
+                input.click();
+              }}
+            >
+              {isFileDragging
+                ? "Fotos hier ablegen"
+                : "Weitere Fotos hierher ziehen oder klicken zum Auswählen"}
+            </div>
+
+            {/* Photo Grid with Drag & Drop Reordering */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={() => { isDragging.current = true; }}
+              onDragEnd={(event) => {
+                isDragging.current = false;
+                handleDragEnd(event);
+              }}
+              onDragCancel={() => { isDragging.current = false; }}
+            >
+              <SortableContext
+                items={photos.map((p) => p.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {photos.map((photo, index) => (
+                    <SortablePhotoItem
+                      key={photo.id}
+                      photo={photo}
+                      index={index}
+                      onDelete={setPhotoToDelete}
+                      onSetPrimary={handleSetPrimary}
+                      isDeleting={deletePhotoMutation.isPending}
+                    />
+                  ))}
+
+                  {/* Add More Photos Tile */}
+                  <label className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center cursor-pointer transition-colors">
+                    {isUploading ? (
+                      <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="w-8 h-8 text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground">
+                          Mehr Fotos
+                        </span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/*"
+                      multiple
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
         )}
 
         {/* Hint */}

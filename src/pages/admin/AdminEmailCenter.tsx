@@ -369,6 +369,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
       const { data: contactMsgs } = await supabase
         .from("contact_messages")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -561,7 +562,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         const { error } = await supabase.from('support_messages').delete().eq('id', deleteTarget.id);
         if (error) throw error;
       } else if (deleteTarget.source === 'contact') {
-        const { error } = await supabase.from('contact_messages').delete().eq('id', deleteTarget.id);
+        // Soft-Delete: Setzt deleted_at statt Zeilen zu löschen (Nachweispflicht)
+        const { error } = await supabase.from('contact_messages').update({ deleted_at: new Date().toISOString() }).eq('id', deleteTarget.id);
         if (error) throw error;
       }
       toast.success("Nachricht gelöscht");
@@ -606,7 +608,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         if (error) errors.push(`Support: ${error.message}`);
       }
       if (contactIds.length > 0) {
-        const { error } = await supabase.from('contact_messages').delete().in('id', contactIds);
+        // Soft-Delete: Setzt deleted_at statt Zeilen zu löschen (Nachweispflicht)
+        const { error } = await supabase.from('contact_messages').update({ deleted_at: new Date().toISOString() }).in('id', contactIds);
         if (error) errors.push(`Kontakt: ${error.message}`);
       }
 

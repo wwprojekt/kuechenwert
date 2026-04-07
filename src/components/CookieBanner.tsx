@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Cookie, Settings, Shield, BarChart3, Megaphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * DSGVO-Compliant Cookie Consent Types
@@ -184,6 +185,21 @@ const CookieBanner = () => {
 
     // Dispatch event for analytics service to react
     window.dispatchEvent(new CustomEvent('consent-updated', { detail: finalConsent }));
+
+    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern
+    // Fire-and-forget – darf die UX nicht blockieren
+    supabase.from('cookie_consent').upsert({
+      consent_id: finalConsent.consentId,
+      user_id: null, // Wird ggf. später mit auth.uid() verknüpft
+      essential: finalConsent.essential,
+      functional: finalConsent.functional,
+      analytics: finalConsent.analytics,
+      marketing: finalConsent.marketing,
+      user_agent: navigator.userAgent.substring(0, 500),
+      consent_version: CONSENT_VERSION,
+    }, { onConflict: 'consent_id' }).then(({ error }) => {
+      if (error) logger.error('Failed to save consent to DB:', error);
+    });
 
     logger.log('Cookie consent saved:', finalConsent);
   }, []);

@@ -777,6 +777,7 @@ export default function AdminLeads() {
       const { data, error } = await supabase
         .from("quick_leads")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as QuickLead[];
@@ -1278,22 +1279,23 @@ export default function AdminLeads() {
 
   const deleteQuickLeads = useMutation({
     mutationFn: async (ids: string[]) => {
+      // Soft-Delete: Setzt deleted_at statt Zeilen zu löschen (Datenschutz-Nachweispflicht)
       const { error } = await supabase
         .from("quick_leads")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .in("id", ids);
       if (error) throw error;
     },
     onSuccess: (_, ids) => {
       toast({
-        title: `${ids.length} Lead${ids.length > 1 ? "s" : ""} gelöscht`,
-        description: "Die ausgewählten Quick-Leads wurden entfernt.",
+        title: `${ids.length} Lead${ids.length > 1 ? "s" : ""} archiviert`,
+        description: "Die ausgewählten Quick-Leads wurden archiviert.",
       });
       setSelectedLeadIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
     },
     onError: (error: Error) => {
-      toast({ title: "Fehler beim Löschen", description: error.message, variant: "destructive" });
+      toast({ title: "Fehler beim Archivieren", description: error.message, variant: "destructive" });
     },
   });
 

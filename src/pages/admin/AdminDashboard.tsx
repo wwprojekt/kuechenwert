@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,14 @@ import {
   Gavel, Car, Users, TrendingUp, Clock, UserPlus, Mail,
   Phone, AlertCircle, MessageSquare, Building2, FileText,
   CheckCircle2, Eye, ArrowRight, Bell, Inbox, CalendarClock,
-  RefreshCw, ChevronRight, ExternalLink,
+  RefreshCw, ChevronRight, ExternalLink, Timer, PhoneOff,
+  AlertTriangle, Star, FileWarning, Flame,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, differenceInHours, differenceInMinutes, differenceInDays, isPast } from "date-fns";
 import { de } from "date-fns/locale";
 
 // ============================================================================
@@ -290,6 +291,78 @@ function useActionItems() {
 }
 
 // ============================================================================
+// Laufende Auktionen mit Countdown
+// ============================================================================
+
+function useActiveAuctions() {
+  return useQuery({
+    queryKey: ["adminActiveAuctions"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("auctions")
+        .select(`
+          id, end_time, current_bid, starting_bid, status,
+          motorhome:motorhomes(id, manufacturer, model, year, motorhome_photos(url, display_order)),
+          bids(count)
+        `)
+        .eq("status", "active")
+        .order("end_time", { ascending: true })
+        .limit(8);
+      return data || [];
+    },
+    refetchInterval: 15000,
+  });
+}
+
+// ============================================================================
+// Nicht-kontaktierte Leads (dringend)
+// ============================================================================
+
+function useUrgentLeads() {
+  return useQuery({
+    queryKey: ["adminUrgentLeads"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wizard_sessions")
+        .select("id, customer_name, customer_email, customer_phone, vehicle_summary, created_at, completed_at, status, is_viewed, resume_email_sent_at, admin_called_at, form_data")
+        .eq("status", "completed")
+        .is("disposition", null)
+        .order("completed_at", { ascending: true })
+        .limit(10);
+      return (data || []).map(s => ({
+        ...s,
+        ageDays: s.completed_at ? differenceInDays(new Date(), new Date(s.completed_at)) : 0,
+        contacted: !!(s.resume_email_sent_at || s.admin_called_at),
+      }));
+    },
+    refetchInterval: 30000,
+  });
+}
+
+// ============================================================================
+// Letzte Gebote (Live-Feed)
+// ============================================================================
+
+function useRecentBids() {
+  return useQuery({
+    queryKey: ["adminRecentBids"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bids")
+        .select(`
+          id, amount, created_at, is_autobid,
+          auction:auctions(id, motorhome:motorhomes(manufacturer, model)),
+          bidder:profiles!bids_bidder_id_fkey(first_name, last_name, company_name)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      return data || [];
+    },
+    refetchInterval: 15000,
+  });
+}
+
+// ============================================================================
 // Recently Changed Motorhomes Hook
 // ============================================================================
 
@@ -308,7 +381,6 @@ function useRecentlyChangedMotorhomes() {
 
       if (!data) return [];
 
-      // Seller-Profile laden
       const sellerIds = [...new Set(data.map(m => m.seller_id).filter(Boolean))];
       let profileMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
 
@@ -524,6 +596,54 @@ function ActionItemsList({ items }: { items: ActionItem[] }) {
 }
 
 // ============================================================================
+// Countdown Component (Live-Ticker)
+// ============================================================================
+
+function AuctionCountdown({ endTime }: { endTime: string }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const end = new Date(endTime);
+  if (isPast(end)) return <span className="text-red-600 font-semibold text-xs">Abgelaufen</span>;
+
+  const hours = differenceInHours(end, now);
+  const mins = differenceInMinutes(end, now) % 60;
+
+  if (hours < 1) {
+    return (
+      <span className="text-red-600 font-bold text-xs animate-pulse">
+        {mins}min
+      </span>
+    );
+  }
+  if (hours < 24) {
+    return (
+      <span className={`font-semibold text-xs ${hours < 6 ? "text-orange-600" : "text-amber-600"}`}>
+        {hours}h {mins}min
+      </span>
+    );
+  }
+  return (
+    <span className="text-muted-foreground text-xs">
+      {Math.floor(hours / 24)}T {hours % 24}h
+    </span>
+  );
+}
+
+// ============================================================================
+// Urgency Badge
+// ============================================================================
+
+function UrgencyBadge({ days }: { days: number }) {
+  if (days >= 3) return <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0">{days} Tage</Badge>;
+  if (days >= 1) return <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{days} Tag{days > 1 ? "e" : ""}</Badge>;
+  return <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">Heute</Badge>;
+}
+
+// ============================================================================
 // Main Dashboard Component
 // ============================================================================
 
@@ -532,6 +652,9 @@ export default function AdminDashboard() {
   const { data: actionItems, isLoading: actionsLoading } = useActionItems();
   const { data: recentMotorhomes } = useRecentlyChangedMotorhomes();
   const { data: counts } = useUnreadCounts();
+  const { data: activeAuctions } = useActiveAuctions();
+  const { data: urgentLeads } = useUrgentLeads();
+  const { data: recentBids } = useRecentBids();
 
   const totalActionItems = actionItems?.length || 0;
   const highPriorityItems = actionItems?.filter(i => i.priority === "high").length || 0;

@@ -22,7 +22,7 @@ import {
 import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { format } from "date-fns";
+import { format, differenceInHours, differenceInMinutes, isPast } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
 import {
@@ -40,6 +40,26 @@ import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+
+// ============================================================================
+// Live Countdown for active auctions
+// ============================================================================
+
+function InlineCountdown({ endTime }: { endTime: string }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const end = new Date(endTime);
+  if (isPast(end)) return <Badge variant="destructive" className="text-[10px]">Abgelaufen</Badge>;
+  const h = differenceInHours(end, now);
+  const m = differenceInMinutes(end, now) % 60;
+  if (h < 1) return <Badge className="bg-red-500 text-white text-[10px] animate-pulse">{m}min</Badge>;
+  if (h < 6) return <Badge className="bg-orange-500 text-white text-[10px]">{h}h {m}m</Badge>;
+  if (h < 24) return <Badge className="bg-amber-500 text-white text-[10px]">{h}h {m}m</Badge>;
+  return <span className="text-xs text-muted-foreground">{Math.floor(h / 24)}T {h % 24}h</span>;
+}
 
 // ============================================================================
 // Helper: Send registration invite after activating an auction
@@ -580,11 +600,12 @@ export default function AdminAuctions() {
         </TableCell>
         <TableCell>
           {auction.end_time ? (
-            <div className="flex items-center gap-1 text-sm">
-              <Clock className="w-4 h-4" />
-              {format(new Date(auction.end_time), "dd.MM.yyyy HH:mm", {
-                locale: de,
-              })}
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                {format(new Date(auction.end_time), "dd.MM. HH:mm", { locale: de })}
+              </div>
+              {auction.status === "active" && <InlineCountdown endTime={auction.end_time} />}
             </div>
           ) : (
             <span className="text-muted-foreground">-</span>

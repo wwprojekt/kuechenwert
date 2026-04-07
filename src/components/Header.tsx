@@ -318,13 +318,20 @@ const Header = () => {
           <div className="lg:hidden border-t bg-background/95">
             <div className="container py-4 flex flex-col gap-1">
               <Link
+                to="/verkaufen/wizard"
+                className="text-sm font-semibold transition-smooth py-3 text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Jetzt verkaufen
+              </Link>
+              <Link
                 to="/verkaufen"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/verkaufen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
+                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
+                  isActive('/verkaufen') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Verkaufen
+                → So funktioniert's
               </Link>
               <Link
                 to="/wertermittlung"

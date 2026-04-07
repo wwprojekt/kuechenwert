@@ -106,7 +106,7 @@ const CTA = () => {
               <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 pt-6 sm:pt-8 lg:pt-10 text-white animate-fade-in animate-delay-400">
                 {[
                   "Kostenlos & unverbindlich",
-                  "Keine Anmeldung nötig",
+                  "Kein Login zum Starten",
                   "Ergebnis in 24h"
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-2 sm:gap-3 glass-dark rounded-full px-4 sm:px-6 py-2 sm:py-3">

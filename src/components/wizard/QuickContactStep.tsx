@@ -12,7 +12,7 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Mail, User, Shield, Save, CheckCircle2 } from "lucide-react";
+import { Mail, User, Shield, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuickContactStepProps {
@@ -34,7 +34,7 @@ export const QuickContactStep = ({ formData, updateFormData, isAuthenticated = f
           {isAuthenticated && hasPrefilled ? (
             <CheckCircle2 className="w-7 h-7 text-primary" />
           ) : (
-            <Save className="w-7 h-7 text-primary" />
+            <Mail className="w-7 h-7 text-primary" />
           )}
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">

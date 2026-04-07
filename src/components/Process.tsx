@@ -164,7 +164,7 @@ const Process = () => {
             </Button>
           </a>
           <p className="mt-4 text-sm text-muted-foreground">
-            Keine Anmeldung erforderlich • Unverbindlich • Kostenlos
+            Kein Login zum Starten nötig • Unverbindlich • Kostenlos
           </p>
         </div>
       </div>

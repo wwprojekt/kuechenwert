@@ -99,8 +99,8 @@ const Benefits = () => {
                 <div className="text-xs sm:text-sm text-muted-foreground">Geprüfte Partner</div>
               </div>
               <div className="space-y-1 sm:space-y-2">
-                <div className="text-2xl sm:text-3xl font-bold text-primary">24/7</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Support verfügbar</div>
+                <div className="text-2xl sm:text-3xl font-bold text-primary">Mo–Fr</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Persönlicher Support</div>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -663,6 +664,9 @@ export default function AdminLeads() {
   const [activeTab, setActiveTab] = useState("wizard_sessions");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Paginierung
+  const [leadsPage, setLeadsPage] = useState(1);
+  const LEADS_PAGE_SIZE = 20;
   // Wizard session detail dialog
   const [selectedSession, setSelectedSession] = useState<WizardSession | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -869,6 +873,9 @@ export default function AdminLeads() {
 
     markSessions();
   }, [wizardSessions, existingSellerIds, existingSellerEmails, queryClient]);
+
+  // Seite zurücksetzen bei Wechsel
+  useEffect(() => { setLeadsPage(1); }, [activeTab, searchQuery, statusFilter]);
 
   // ---- Statistics ----
 
@@ -1937,7 +1944,7 @@ export default function AdminLeads() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredSessions.map((session) => (
+                  filteredSessions.slice((leadsPage - 1) * LEADS_PAGE_SIZE, leadsPage * LEADS_PAGE_SIZE).map((session) => (
                     <TableRow
                       key={session.id}
                       className={`cursor-pointer hover:bg-muted/50 ${selectedSessionIds.has(session.id) ? "bg-primary/5" : ""} ${!session.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
@@ -2083,6 +2090,16 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            {filteredSessions.length > LEADS_PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={leadsPage}
+                  pageSize={LEADS_PAGE_SIZE}
+                  totalItems={filteredSessions.length}
+                  onPageChange={setLeadsPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -2146,7 +2163,7 @@ export default function AdminLeads() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredQuickLeads.map((lead) => (
+                  filteredQuickLeads.slice((leadsPage - 1) * LEADS_PAGE_SIZE, leadsPage * LEADS_PAGE_SIZE).map((lead) => (
                     <TableRow
                       key={lead.id}
                       className={`cursor-pointer hover:bg-muted/50 ${selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""} ${!lead.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
@@ -2275,6 +2292,16 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            {filteredQuickLeads.length > LEADS_PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={leadsPage}
+                  pageSize={LEADS_PAGE_SIZE}
+                  totalItems={filteredQuickLeads.length}
+                  onPageChange={setLeadsPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -2338,7 +2365,7 @@ export default function AdminLeads() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredValuationLeads.map((lead) => (
+                  filteredValuationLeads.slice((leadsPage - 1) * LEADS_PAGE_SIZE, leadsPage * LEADS_PAGE_SIZE).map((lead) => (
                     <TableRow key={lead.id} className={`cursor-pointer hover:bg-muted/50 ${selectedValuationIds.has(lead.id) ? "bg-primary/5" : ""} ${!lead.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`} onClick={() => openValuationDetail(lead)}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -2490,6 +2517,16 @@ export default function AdminLeads() {
                 )}
               </TableBody>
             </Table>
+            {filteredValuationLeads.length > LEADS_PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={leadsPage}
+                  pageSize={LEADS_PAGE_SIZE}
+                  totalItems={filteredValuationLeads.length}
+                  onPageChange={setLeadsPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
 

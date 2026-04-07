@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -407,6 +408,7 @@ function CountBadge({ count, color = "bg-red-500" }: { count: number; color?: st
 function QuickStatCard({
   title,
   value,
+  subtitle,
   icon: Icon,
   color,
   bgColor,
@@ -415,6 +417,7 @@ function QuickStatCard({
 }: {
   title: string;
   value: number;
+  subtitle?: string;
   icon: React.ElementType;
   color: string;
   bgColor: string;
@@ -424,14 +427,17 @@ function QuickStatCard({
   return (
     <Link to={link}>
       <Card className="relative overflow-hidden hover:shadow-md border-2 hover:border-primary/30 transition-all duration-200 cursor-pointer group">
-        <CardContent className="p-5">
+        <CardContent className="p-4 sm:p-5">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
-              <p className="text-2xl font-bold mt-1">{value}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider truncate">{title}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">{value}</p>
+              {subtitle && (
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+              )}
             </div>
-            <div className={`h-11 w-11 rounded-lg ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-              <Icon className={`w-5 h-5 ${color}`} />
+            <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-lg ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}>
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
             </div>
           </div>
           {badge !== undefined && badge > 0 && (
@@ -442,6 +448,78 @@ function QuickStatCard({
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+// ============================================================================
+// Grouped Action Items Component
+// ============================================================================
+
+function ActionItemsList({ items }: { items: ActionItem[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_COUNT = 8;
+
+  const grouped = useMemo(() => {
+    const groups: Record<string, ActionItem[]> = {};
+    for (const item of items) {
+      const key = item.badge || item.type;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+    return groups;
+  }, [items]);
+
+  const displayed = showAll ? items : items.slice(0, INITIAL_COUNT);
+
+  return (
+    <div className="space-y-1">
+      {/* Zusammenfassung */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {Object.entries(grouped).map(([key, groupItems]) => (
+          <span key={key} className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-muted">
+            <span className="font-medium">{groupItems.length}</span>
+            <span className="text-muted-foreground">{key}</span>
+          </span>
+        ))}
+      </div>
+
+      {displayed.map((item) => (
+        <Link key={item.id} to={item.link} className="block">
+          <div className={`flex items-start gap-3 p-2.5 sm:p-3 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group ${
+            item.priority === "high" ? "border-l-4 border-l-red-400" : ""
+          }`}>
+            <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg ${item.iconColor} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+              <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium truncate">{item.title}</p>
+                {item.badge && (
+                  <Badge className={`${item.badgeColor} text-[10px] px-1.5 py-0 h-4 text-white flex-shrink-0`}>
+                    {item.badge}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground whitespace-nowrap">
+                {timeAgo(item.time)}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+            </div>
+          </div>
+        </Link>
+      ))}
+      {items.length > INITIAL_COUNT && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="w-full text-center py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          {showAll ? "Weniger anzeigen" : `+ ${items.length - INITIAL_COUNT} weitere anzeigen`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -494,10 +572,11 @@ export default function AdminDashboard() {
       )}
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <QuickStatCard
-          title="Anfragen"
+          title="Neue Anfragen"
           value={counts?.totalAnfragen || 0}
+          subtitle="unbearbeitet"
           icon={FileText}
           color="text-blue-600"
           bgColor="bg-blue-100"
@@ -507,6 +586,7 @@ export default function AdminDashboard() {
         <QuickStatCard
           title="Nachrichten"
           value={counts?.totalMessages || 0}
+          subtitle={counts?.totalMessages ? "offen" : "alles erledigt"}
           icon={Inbox}
           color="text-orange-600"
           bgColor="bg-orange-100"
@@ -516,22 +596,25 @@ export default function AdminDashboard() {
         <QuickStatCard
           title="Wohnmobile"
           value={stats?.totalMotorhomes || 0}
+          subtitle={`${stats?.activeAuctions || 0} in Auktion`}
           icon={Car}
           color="text-green-600"
           bgColor="bg-green-100"
           link="/admin/motorhomes"
         />
         <QuickStatCard
-          title="Auktionen"
+          title="Laufende Auktionen"
           value={stats?.activeAuctions || 0}
+          subtitle={`${stats?.totalAuctions || 0} insgesamt`}
           icon={Gavel}
           color="text-purple-600"
           bgColor="bg-purple-100"
           link="/admin/auctions"
         />
         <QuickStatCard
-          title="Händler"
+          title="Händler-Bewerbungen"
           value={counts?.pendingDealers || 0}
+          subtitle="ausstehend"
           icon={Building2}
           color="text-amber-600"
           bgColor="bg-amber-100"
@@ -541,6 +624,7 @@ export default function AdminDashboard() {
         <QuickStatCard
           title="Benutzer"
           value={stats?.totalUsers || 0}
+          subtitle="registriert"
           icon={Users}
           color="text-slate-600"
           bgColor="bg-slate-100"
@@ -577,43 +661,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-muted-foreground mt-1">Keine offenen Aufgaben vorhanden.</p>
                 </div>
               ) : (
-                <div className="space-y-1">
-                  {actionItems.slice(0, 15).map((item) => (
-                    <Link key={item.id} to={item.link} className="block">
-                      <div className={`flex items-start gap-3 p-3 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group ${
-                        item.priority === "high" ? "border-l-4 border-l-red-400" : ""
-                      }`}>
-                        <div className={`h-9 w-9 rounded-lg ${item.iconColor} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                          <item.icon className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{item.title}</p>
-                            {item.badge && (
-                              <Badge className={`${item.badgeColor} text-[10px] px-1.5 py-0 h-4 text-white`}>
-                                {item.badge}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                            {timeAgo(item.time)}
-                          </span>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  {actionItems.length > 15 && (
-                    <div className="text-center pt-2">
-                      <p className="text-xs text-muted-foreground">
-                        + {actionItems.length - 15} weitere Aufgaben
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <ActionItemsList items={actionItems} />
               )}
             </CardContent>
           </Card>

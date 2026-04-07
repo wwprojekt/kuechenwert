@@ -16,6 +16,7 @@ import {
   type CookieConsent 
 } from './CookieBanner';
 import { logger } from '@/lib/logger';
+import { supabase } from '@/integrations/supabase/client';
 
 const CONSENT_VERSION = '1.0';
 const CONSENT_STORAGE_KEY = 'cookie-consent';
@@ -88,6 +89,20 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
 
     // Dispatch event for analytics service
     window.dispatchEvent(new CustomEvent('consent-updated', { detail: finalConsent }));
+
+    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern
+    supabase.from('cookie_consent').upsert({
+      consent_id: finalConsent.consentId,
+      user_id: null,
+      essential: finalConsent.essential,
+      functional: finalConsent.functional,
+      analytics: finalConsent.analytics,
+      marketing: finalConsent.marketing,
+      user_agent: navigator.userAgent.substring(0, 500),
+      consent_version: CONSENT_VERSION,
+    }, { onConflict: 'consent_id' }).then(({ error }) => {
+      if (error) logger.error('Failed to save consent to DB:', error);
+    });
 
     logger.log('Cookie consent updated:', finalConsent);
   };

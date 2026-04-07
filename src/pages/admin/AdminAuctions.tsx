@@ -39,6 +39,7 @@ import {
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 // ============================================================================
 // Helper: Send registration invite after activating an auction
@@ -727,8 +728,32 @@ export default function AdminAuctions() {
   };
 
   // ---- Render table for a tab ----
+  // ---- Search + Pagination ----
+  const [auctionSearch, setAuctionSearch] = useState("");
+  const [auctionPage, setAuctionPage] = useState(1);
+  const PAGE_SIZE = 20;
+
+  function getFilteredAuctionsForTab(tab: TabDef) {
+    let items = getAuctionsForTab(tab);
+    if (auctionSearch.trim()) {
+      const q = auctionSearch.toLowerCase().trim();
+      items = items.filter((a: any) => {
+        const vehicle = `${a.motorhome?.manufacturer || ""} ${a.motorhome?.model || ""}`.toLowerCase();
+        const seller = `${a.motorhome?.seller?.first_name || ""} ${a.motorhome?.seller?.last_name || ""} ${a.motorhome?.seller?.email || ""}`.toLowerCase();
+        return vehicle.includes(q) || seller.includes(q);
+      });
+    }
+    return items;
+  }
+
+  // Reset Seite bei Tab-/Suchwechsel
+  useEffect(() => { setAuctionPage(1); }, [activeTab, auctionSearch]);
+
   const renderTable = (tab: TabDef) => {
-    const tabAuctions = sortData(getAuctionsForTab(tab), sortAccessors);
+    const filtered = getFilteredAuctionsForTab(tab);
+    const sorted = sortData(filtered, sortAccessors);
+    const totalItems = sorted.length;
+    const pageItems = sorted.slice((auctionPage - 1) * PAGE_SIZE, auctionPage * PAGE_SIZE);
 
     return (
       <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
@@ -756,21 +781,31 @@ export default function AdminAuctions() {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : tabAuctions.length === 0 ? (
+            ) : pageItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <tab.icon className={`w-8 h-8 ${tab.color} opacity-50`} />
-                    <p>{tab.emptyText}</p>
+                    <p>{auctionSearch ? "Keine Treffer für diese Suche" : tab.emptyText}</p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              tabAuctions.map(renderAuctionRow)
+              pageItems.map(renderAuctionRow)
             )}
           </TableBody>
         </Table>
         </div>
+        {totalItems > PAGE_SIZE && (
+          <div className="px-4 pb-4">
+            <AdminPagination
+              page={auctionPage}
+              pageSize={PAGE_SIZE}
+              totalItems={totalItems}
+              onPageChange={setAuctionPage}
+            />
+          </div>
+        )}
       </Card>
     );
   };
@@ -778,14 +813,14 @@ export default function AdminAuctions() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Auktionsverwaltung</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Verwalten Sie alle Auktionen auf der Plattform
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <ExportButton
             onExportCSV={() => exportCSV(auctions || [])}
             onExportExcel={() => exportExcel(auctions || [])}
@@ -795,9 +830,11 @@ export default function AdminAuctions() {
             onClick={() => checkExpiredAuctionsMutation.mutate()}
             disabled={checkExpiredAuctionsMutation.isPending}
             className="gap-2"
+            size="sm"
           >
             <RotateCw className={`w-4 h-4 ${checkExpiredAuctionsMutation.isPending ? 'animate-spin' : ''}`} />
-            Abgelaufene prüfen
+            <span className="hidden sm:inline">Abgelaufene prüfen</span>
+            <span className="sm:hidden">Prüfen</span>
           </Button>
         </div>
       </div>
@@ -812,9 +849,21 @@ export default function AdminAuctions() {
         </Card>
       )}
 
+      {/* Suchfeld */}
+      <div className="relative max-w-sm">
+        <Car className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Fahrzeug oder Verkäufer suchen…"
+          value={auctionSearch}
+          onChange={(e) => setAuctionSearch(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="flex flex-wrap h-auto gap-1">
           {TABS.map((tab) => {
             const count = getCountForTab(tab);
             const Icon = tab.icon;
@@ -822,14 +871,14 @@ export default function AdminAuctions() {
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
-                className="flex items-center gap-2 py-3 data-[state=active]:shadow-sm"
+                className="flex items-center gap-1.5 py-2 px-3 data-[state=active]:shadow-sm text-sm"
               >
                 <Icon className={`w-4 h-4 ${activeTab === tab.key ? "" : tab.color}`} />
-                <span>{tab.label}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
                 {count > 0 && (
                   <Badge
                     variant={activeTab === tab.key ? "secondary" : "outline"}
-                    className="ml-1 text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center"
+                    className="ml-0.5 text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center"
                   >
                     {count}
                   </Badge>

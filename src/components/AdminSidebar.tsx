@@ -1,6 +1,4 @@
 import { NavLink } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
   Gavel,
@@ -51,62 +49,30 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 // ============================================================================
-// Badge Counts Hook
+// Badge Counts Hook – nutzt den geteilten Cache von AdminNotificationBell
 // ============================================================================
 
-function useSidebarBadges() {
-  return useQuery({
-    queryKey: ["sidebarBadges"],
-    queryFn: async () => {
-      const [
-        wizardRes,
-        leadsRes,
-        valuationRes,
-        supportRes,
-        contactRes,
-        dealerRes,
-        questionsRes,
-        unreadEmailsRes,
-        reviewsRes,
-        claimsRes,
-        appointmentsRes,
-        offersRes,
-      ] = await Promise.all([
-        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
-        supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
-        supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
-        supabase.from("admin_emails").select("*", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
-        // Neue Bewertungen die noch moderiert werden müssen
-        supabase.from("dealer_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        // Offene Reklamationen (eingereicht oder in Prüfung)
-        supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
-        // Anstehende Termine (heute und morgen)
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split('T')[0]),
-        // Neue Nachauktions-Angebote die noch nicht bearbeitet wurden
-        supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      ]);
+import { useAdminNotificationCounts } from "@/components/admin/AdminNotificationBell";
 
-      return {
-        leads: (wizardRes.count || 0) + (leadsRes.count || 0) + (valuationRes.count || 0),
-        messages: (supportRes.count || 0) + (contactRes.count || 0),
-        support: supportRes.count || 0,
-        contacts: contactRes.count || 0,
-        dealers: dealerRes.count || 0,
-        questions: questionsRes.count || 0,
-        unreadEmails: unreadEmailsRes.count || 0,
-        reviews: reviewsRes.count || 0,
-        claims: claimsRes.count || 0,
-        appointments: appointmentsRes.count || 0,
-        offers: offersRes.count || 0,
-      };
-    },
-    refetchInterval: 30000,
-    staleTime: 10000,
-  });
+function useSidebarBadges() {
+  const { data } = useAdminNotificationCounts();
+  return {
+    data: data
+      ? {
+          leads: data.leads,
+          messages: data.support,
+          support: data.support,
+          contacts: 0,
+          dealers: data.dealers,
+          questions: data.questions,
+          unreadEmails: data.unreadEmails,
+          reviews: data.reviews,
+          claims: data.claims,
+          appointments: data.appointments,
+          offers: data.offers,
+        }
+      : undefined,
+  };
 }
 
 // ============================================================================
@@ -227,7 +193,21 @@ function CollapsibleGroup({
   badges: Record<string, number>;
   collapsed: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(group.defaultOpen ?? true);
+  const storageKey = `admin-sidebar-group-${group.label}`;
+  const [isOpen, setIsOpen] = useState(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return stored !== null ? stored === "true" : (group.defaultOpen ?? true);
+    } catch {
+      return group.defaultOpen ?? true;
+    }
+  });
+
+  const toggleGroup = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    try { localStorage.setItem(storageKey, String(next)); } catch { /* ignore */ }
+  };
 
   // Berechne Gesamt-Badge für die Gruppe
   const groupBadgeCount = group.items.reduce((sum, item) => {
@@ -272,7 +252,7 @@ function CollapsibleGroup({
     <div className="mb-1">
       {/* Group Header - Clickable to collapse/expand */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleGroup}
         className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
       >
         <group.icon className="w-3.5 h-3.5" />

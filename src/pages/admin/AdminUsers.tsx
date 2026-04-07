@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { useNavigate } from "react-router-dom";
@@ -240,6 +241,14 @@ export default function AdminUsers() {
 
   const sortedUsers = useMemo(() => sortData(filteredUsers, userSortAccessors), [filteredUsers, sortData]);
 
+  // Pagination
+  const [userPage, setUserPage] = useState(1);
+  const USER_PAGE_SIZE = 25;
+  useEffect(() => { setUserPage(1); }, [searchTerm, roleFilter, statusFilter]);
+  const paginatedUsers = useMemo(() => {
+    return sortedUsers?.slice((userPage - 1) * USER_PAGE_SIZE, userPage * USER_PAGE_SIZE) || [];
+  }, [sortedUsers, userPage]);
+
   const getRoleBadges = (roles: UserRole[]) => {
     if (!roles || roles.length === 0)
       return <Badge variant="outline">Keine Rolle</Badge>;
@@ -372,7 +381,7 @@ export default function AdminUsers() {
                 </TableCell>
               </TableRow>
             ) : (
-              sortedUsers?.map((user) => (
+              paginatedUsers.map((user) => (
                 <TableRow
                   key={user.id}
                   className={user.is_suspended ? "opacity-60" : ""}
@@ -472,6 +481,16 @@ export default function AdminUsers() {
             )}
           </TableBody>
         </Table>
+        {(sortedUsers?.length || 0) > USER_PAGE_SIZE && (
+          <div className="px-4 pb-4">
+            <AdminPagination
+              page={userPage}
+              pageSize={USER_PAGE_SIZE}
+              totalItems={sortedUsers?.length || 0}
+              onPageChange={setUserPage}
+            />
+          </div>
+        )}
       </Card>
 
       {/* Edit Dialog */}

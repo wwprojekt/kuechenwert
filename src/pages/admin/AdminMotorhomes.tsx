@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -451,8 +452,18 @@ export default function AdminMotorhomes() {
     }
   };
 
+  // ---- Pagination ----
+  const [mhPage, setMhPage] = useState(1);
+  const MH_PAGE_SIZE = 20;
+
+  // Reset Seite bei Filter-Änderung
+  useEffect(() => { setMhPage(1); }, [activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter]);
+
   // ---- Render Table ----
-  const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => (
+  const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => {
+    const totalItems = items.length;
+    const pageItems = items.slice((mhPage - 1) * MH_PAGE_SIZE, mhPage * MH_PAGE_SIZE);
+    return (
     <Card className="border-2 hover:border-primary/20 transition-smooth overflow-hidden">
       <div className="overflow-x-auto">
       <Table className="min-w-[900px]">
@@ -500,7 +511,7 @@ export default function AdminMotorhomes() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.length === 0 ? (
+          {pageItems.length === 0 ? (
             <TableRow>
               <TableCell colSpan={11} className="text-center py-12">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -510,7 +521,7 @@ export default function AdminMotorhomes() {
               </TableCell>
             </TableRow>
           ) : (
-            items.map((motorhome) => {
+            pageItems.map((motorhome) => {
               const firstPhoto = motorhome.motorhome_photos
                 ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
               const photoCount = motorhome.motorhome_photos?.length || 0;
@@ -640,8 +651,19 @@ export default function AdminMotorhomes() {
         </TableBody>
       </Table>
       </div>
+      {totalItems > MH_PAGE_SIZE && (
+        <div className="px-4 pb-4">
+          <AdminPagination
+            page={mhPage}
+            pageSize={MH_PAGE_SIZE}
+            totalItems={totalItems}
+            onPageChange={setMhPage}
+          />
+        </div>
+      )}
     </Card>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">

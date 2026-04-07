@@ -1,5 +1,41 @@
 # Custom Instructions - Maximale Qualität
 
+## Projekt: CaravanWert
+CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses Projekt nutzt folgenden Tech-Stack:
+
+### Tech-Stack
+- **Framework:** React 18 mit TypeScript (Vite 5 als Build-Tool)
+- **Styling:** Tailwind CSS 3 + tailwindcss-animate + shadcn/ui (Radix UI Primitives)
+- **State Management:** TanStack React Query v5 + React Context (src/contexts/)
+- **Routing:** React Router DOM v6
+- **Backend/Datenbank:** Supabase (supabase-js v2)
+- **Formulare:** React Hook Form + Zod Validierung
+- **Rich-Text-Editor:** TipTap (mit Image und Link Extensions)
+- **Charts:** Recharts
+- **Drag & Drop:** dnd-kit (core + sortable + utilities)
+- **SEO:** react-helmet-async
+- **Internationalisierung:** flag-icons
+- **HTML Sanitization:** DOMPurify
+- **Testing:** Vitest + Testing Library + Playwright (E2E) + MSW (API Mocking)
+- **Pfad-Aliase:** Wahrscheinlich `@/*` → `./src/*` (wie WohnWert)
+- **TypeScript:** Strict Mode
+
+### Supabase-Integration
+- Client: `src/integrations/supabase/client.ts`
+- Typen: `src/integrations/supabase/types.ts`
+- IMMER die generierten Supabase-Typen aus `types.ts` verwenden, NIEMALS eigene Typen für Datenbank-Tabellen erstellen
+
+### Projektstruktur
+- `src/components/` - React-Komponenten
+- `src/pages/` - Seitenkomponenten (Routing)
+- `src/hooks/` - Custom React Hooks
+- `src/contexts/` - React Context Provider
+- `src/lib/` - Utility-Funktionen
+- `src/integrations/` - Externe Integrationen (Supabase)
+- `src/data/` - Statische Daten
+- `src/test/` - Test-Utilities und Setup
+- `src/assets/` - Statische Assets
+
 ## Grundprinzipien
 
 1. **KEINE Vermutungen oder Annahmen:** Du darfst NIEMALS Vermutungen oder Annahmen machen. Bevor du etwas veränderst, musst du IMMER zuerst verifizieren, dass deine Annahme korrekt ist. Lies den bestehenden Code, prüfe die Dokumentation, teste die aktuelle Funktionalität.
@@ -13,27 +49,35 @@
    - Stelle sicher, dass deine Änderung konsistent mit dem Rest des Projekts ist
 
 4. **Testen nach Änderung:** Nach jeder Änderung:
-   - Führe vorhandene Tests aus
-   - Teste die geänderte Funktionalität manuell
+   - Führe `npm run test:run` aus um Unit-Tests zu prüfen
+   - Führe `npm run build` aus um Build-Fehler zu erkennen
+   - Bei UI-Änderungen: `npm run test:e2e` für End-to-End Tests
    - Prüfe ob nichts anderes durch die Änderung kaputt gegangen ist
-   - Verifiziere dass der Build/Compile fehlerfrei durchläuft
+
+5. **Supabase-Änderungen:** Bei Datenbankänderungen:
+   - Prüfe IMMER zuerst die aktuelle Tabellenstruktur über den MCP Supabase-Server
+   - Ändere NIEMALS Tabellen ohne vorherige Analyse der Abhängigkeiten
+   - Aktualisiere nach Schema-Änderungen IMMER die `types.ts` Datei
 
 ## Coding-Standards
-
 - Schreibe sauberen, gut lesbaren Code mit klaren Kommentaren
 - Folge den bestehenden Code-Konventionen des Projekts
-- Nutze TypeScript statt JavaScript wenn möglich
+- Nutze IMMER TypeScript mit strikten Typen, NIEMALS `any`
+- Verwende shadcn/ui Komponenten wo möglich statt eigene zu bauen
+- Verwende `@/` Pfad-Aliase für Imports
 - Implementiere Fehlerbehandlung für alle kritischen Operationen
 - Schreibe keine Dummy-Daten oder Platzhalter - alles muss funktionsfähig sein
+- Nutze React Query für alle Server-State-Operationen
+- Nutze Zod für alle Formular-Validierungen
+- Nutze React Context für globalen App-State (src/contexts/)
+- Nutze MSW für API-Mocking in Tests
 
 ## Kommunikation
-
 - Erkläre was du tust und warum, bevor du es tust
 - Wenn du unsicher bist, frage nach statt zu raten
 - Melde Probleme oder Risiken sofort
 - Gib eine Zusammenfassung aller Änderungen am Ende
 
 ## Sprache
-
 - Kommuniziere auf Deutsch mit dem Benutzer
 - Code-Kommentare auf Englisch (Industriestandard)

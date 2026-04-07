@@ -84,11 +84,14 @@ export default function MyBids() {
   }, {} as Record<string, any>);
 
   // Filter grouped bids
+  // FIX: Only status "sold" counts as "won". Status "ended" means the auction
+  // ended WITHOUT a sale (reserve not met / no bids), so nobody won.
+  // "kaufchance" is also included as "won" potential since the dealer was invited.
   const filteredBids = groupedBids ? Object.values(groupedBids).filter((group: any) => {
     if (filter === "all") return true;
-    if (filter === "active") return group.auction.status === "active";
-    if (filter === "won") return (group.auction.status === "sold" || group.auction.status === "ended") && group.isWinning;
-    if (filter === "lost") return (group.auction.status === "sold" || group.auction.status === "ended") && !group.isWinning;
+    if (filter === "active") return group.auction.status === "active" || group.auction.status === "kaufchance";
+    if (filter === "won") return group.auction.status === "sold" && group.isWinning;
+    if (filter === "lost") return (group.auction.status === "sold" && !group.isWinning) || group.auction.status === "ended";
     return true;
   }) : [];
 
@@ -104,12 +107,12 @@ export default function MyBids() {
     }
   }, [filteredBids, sortBy]);
 
-  // Count for tabs
+  // Count for tabs (consistent with filter logic above)
   const counts = {
     all: Object.keys(groupedBids || {}).length,
-    active: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "active").length,
-    won: Object.values(groupedBids || {}).filter((g: any) => (g.auction.status === "sold" || g.auction.status === "ended") && g.isWinning).length,
-    lost: Object.values(groupedBids || {}).filter((g: any) => (g.auction.status === "sold" || g.auction.status === "ended") && !g.isWinning).length,
+    active: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "active" || g.auction.status === "kaufchance").length,
+    won: Object.values(groupedBids || {}).filter((g: any) => g.auction.status === "sold" && g.isWinning).length,
+    lost: Object.values(groupedBids || {}).filter((g: any) => (g.auction.status === "sold" && !g.isWinning) || g.auction.status === "ended").length,
   };
 
   return (

@@ -693,7 +693,7 @@ export default function AdminPostAuctionOffers() {
           starting_bid: currentAuction?.starting_bid || 50,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
-          kaufchance_deadline: null,
+          kaufchance_expires_at: null,
           kaufchance_min_price: null,
           updated_at: new Date().toISOString(),
         } as any)

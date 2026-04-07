@@ -194,6 +194,18 @@ Deno.serve(async (req) => {
       throw new Error('Nur freigeschaltete Händler dürfen Sofortkäufe tätigen');
     }
 
+    // Check if dealer account is restricted (e.g. due to unpaid invoices / dunning level 4+)
+    const { data: dealerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('account_restricted, restriction_reason')
+      .eq('id', user.id)
+      .single();
+
+    if (dealerProfile?.account_restricted) {
+      console.warn(`Restricted dealer ${user.id} tried instant-buy. Reason: ${dealerProfile.restriction_reason}`);
+      throw new Error('Ihr Händlerkonto ist gesperrt. Bitte kontaktieren Sie den Support.');
+    }
+
     // 3. Validate request body
     const rawBody = await req.json();
     const validation = InstantBuySchema.safeParse(rawBody);

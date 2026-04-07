@@ -104,6 +104,18 @@ Deno.serve(async (req) => {
       throw new Error('Nur freigeschaltete Händler dürfen Gebote abgeben');
     }
 
+    // Check if dealer account is restricted (e.g. due to unpaid invoices / dunning level 4+)
+    const { data: dealerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('account_restricted, restriction_reason')
+      .eq('id', user.id)
+      .single();
+
+    if (dealerProfile?.account_restricted) {
+      console.warn(`Restricted dealer ${user.id} tried to bid. Reason: ${dealerProfile.restriction_reason}`);
+      throw new Error('Ihr Händlerkonto ist gesperrt. Bitte kontaktieren Sie den Support.');
+    }
+
     // Parse and validate request body with Zod
     const rawBody = await req.json();
     const validationResult = BidRequestSchema.safeParse(rawBody);

@@ -236,8 +236,13 @@ export function AuctionEditDialog({
       return;
     }
 
-    // Validate postal code when activating
+    // CRITICAL: Validate reserve price when activating - prevents selling below minimum
     const isActivating = auction?.status !== "active" && formData.status === "active";
+    if (isActivating && (!reservePrice || reservePrice <= 0)) {
+      toast.error("Bitte geben Sie einen Mindestpreis (Reservepreis) ein, bevor Sie die Auktion aktivieren. Ohne Mindestpreis wird das Fahrzeug zum niedrigsten Gebot verkauft!");
+      return;
+    }
+    // Validate postal code when activating
     if (isActivating && !formData.postal_code.trim()) {
       toast.error("Bitte geben Sie die PLZ des Fahrzeugstandorts ein, bevor Sie die Auktion aktivieren");
       return;

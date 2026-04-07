@@ -238,21 +238,39 @@ Deno.serve(async (req) => {
     let soldTo: string | null = null;
     let isKaufchance = false;
 
+    // CRITICAL FIX: Use auction.reserve_price, but fallback to motorhome.reserve_price
+    // This prevents selling below the seller's minimum price even if the admin forgot
+    // to set the reserve_price on the auction itself.
+    const effectiveReservePrice = auction.reserve_price
+      ?? auction.motorhome?.reserve_price
+      ?? null;
+
+    if (effectiveReservePrice && !auction.reserve_price) {
+      console.warn(
+        `WARN: Auction ${auctionId} has no reserve_price set, using motorhome reserve_price: ${effectiveReservePrice}`
+      );
+      // Auto-fix: write the motorhome reserve_price back to the auction for consistency
+      await supabase
+        .from('auctions')
+        .update({ reserve_price: effectiveReservePrice })
+        .eq('id', auctionId);
+    }
+
     if (highestBid) {
-      const reserveMet = auction.reserve_price
-        ? Number(highestBid.amount) >= Number(auction.reserve_price)
+      const reserveMet = effectiveReservePrice
+        ? Number(highestBid.amount) >= Number(effectiveReservePrice)
         : true;
 
       if (reserveMet) {
         newStatus = 'sold';
         motorhomeStatus = 'sold';
         soldTo = highestBid.bidder_id;
-        console.log('Auction sold to:', soldTo, 'for:', highestBid.amount);
+        console.log('Auction sold to:', soldTo, 'for:', highestBid.amount, '(reserve:', effectiveReservePrice, ')');
       } else {
         // Reserve not met but bids exist → Kaufchance!
         newStatus = 'kaufchance';
         isKaufchance = true;
-        console.log('Reserve price not met. Highest bid:', highestBid.amount, 'Reserve:', auction.reserve_price, '→ Entering Kaufchance phase');
+        console.log('Reserve price not met. Highest bid:', highestBid.amount, 'Reserve:', effectiveReservePrice, '→ Entering Kaufchance phase');
       }
     } else {
       console.log('No bids placed on auction');
@@ -268,7 +286,7 @@ Deno.serve(async (req) => {
     if (kaufchanceExpiresAt) {
       updateData.kaufchance_expires_at = kaufchanceExpiresAt;
       // Set initial kaufchance_min_price to the reserve_price (admin can adjust later)
-      updateData.kaufchance_min_price = auction.reserve_price;
+      updateData.kaufchance_min_price = effectiveReservePrice;
     }
 
     const { error: updateAuctionError } = await supabase
@@ -382,7 +400,7 @@ Deno.serve(async (req) => {
                 motorhomeModel: motorhomeName,
                 auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`,
                 currentBid: `€${Number(highestBid!.amount).toLocaleString()}`,
-                reservePrice: `€${Number(auction.reserve_price).toLocaleString()}`,
+                reservePrice: `€${Number(effectiveReservePrice).toLocaleString()}`,
                 topBiddersCount: String(topBidders.length),
                 expiresAt: new Date(kaufchanceExpiresAt!).toLocaleDateString('de-DE', {
                   day: '2-digit',
@@ -407,9 +425,9 @@ Deno.serve(async (req) => {
         ${infoBox('Auktionsergebnis', `
           ${detailRow('Status', '🔔 KAUFCHANCE')}
           ${detailRow('Fahrzeug', motorhomeName)}
-          ${detailRow('Mindestgebot', `€${Number(auction.reserve_price).toLocaleString()}`)}
+          ${detailRow('Mindestgebot', `€${Number(effectiveReservePrice).toLocaleString()}`)}
           ${detailRow('Höchstes Gebot', `€${Number(highestBid!.amount).toLocaleString()}`)}
-          ${detailRow('Differenz', `€${(Number(auction.reserve_price) - Number(highestBid!.amount)).toLocaleString()}`)}
+          ${detailRow('Differenz', `€${(Number(effectiveReservePrice) - Number(highestBid!.amount)).toLocaleString()}`)}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
         `, 'warning')}
         ${infoBox('Eingeladene Bieter (Top-2)', topBidders.map((b, i) => 
@@ -697,7 +715,7 @@ Deno.serve(async (req) => {
           ${detailRow('Status', '✅ VERKAUFT')}
           ${detailRow('Fahrzeug', motorhomeName)}
           ${detailRow('Zuschlagspreis', `€${Number(highestBid!.amount).toLocaleString()}`)}
-          ${detailRow('Mindestgebot', auction.reserve_price ? `€${Number(auction.reserve_price).toLocaleString()}` : 'Keines')}
+          ${detailRow('Mindestgebot', effectiveReservePrice ? `€${Number(effectiveReservePrice).toLocaleString()}` : 'Keines')}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
         `, 'success')}
         ${infoBox('Gewinner (Käufer)', `
@@ -787,7 +805,7 @@ Deno.serve(async (req) => {
         ${infoBox('Auktionsergebnis', `
           ${detailRow('Status', '⚠️ NICHT VERKAUFT')}
           ${detailRow('Fahrzeug', motorhomeName)}
-          ${detailRow('Mindestgebot', auction.reserve_price ? `€${Number(auction.reserve_price).toLocaleString()}` : 'Keines')}
+          ${detailRow('Mindestgebot', effectiveReservePrice ? `€${Number(effectiveReservePrice).toLocaleString()}` : 'Keines')}
           ${detailRow('Höchstes Gebot', highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : 'Keine Gebote')}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
         `, 'warning')}

@@ -104,7 +104,7 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
 // Tab definitions
 // ============================================================================
 
-type TabKey = "draft" | "active" | "unsold" | "sold";
+type TabKey = "draft" | "active" | "kaufchance" | "unsold" | "sold";
 
 interface TabDef {
   key: TabKey;
@@ -131,6 +131,14 @@ const TABS: TabDef[] = [
     statuses: ["active"],
     emptyText: "Keine laufenden Auktionen",
     color: "text-blue-600",
+  },
+  {
+    key: "kaufchance",
+    label: "Kaufchance",
+    icon: AlertTriangle,
+    statuses: ["kaufchance"],
+    emptyText: "Keine Kaufchancen vorhanden",
+    color: "text-orange-600",
   },
   {
     key: "unsold",
@@ -231,13 +239,27 @@ export default function AdminAuctions() {
         return { id: existing.id, alreadyExists: true };
       }
 
+      // CRITICAL FIX: Fetch motorhome reserve_price and auto-populate on auction
+      const { data: motorhome } = await supabase
+        .from("motorhomes")
+        .select("reserve_price")
+        .eq("id", motorhomeId)
+        .single();
+
+      const insertData: Record<string, unknown> = {
+        motorhome_id: motorhomeId,
+        starting_bid: 50,
+        status: "draft",
+      };
+
+      // Auto-populate reserve_price from motorhome if available
+      if (motorhome?.reserve_price) {
+        insertData.reserve_price = motorhome.reserve_price;
+      }
+
       const { data: auction, error } = await supabase
         .from("auctions")
-        .insert({
-          motorhome_id: motorhomeId,
-          starting_bid: 50,
-          status: "draft",
-        })
+        .insert(insertData)
         .select("id")
         .single();
 

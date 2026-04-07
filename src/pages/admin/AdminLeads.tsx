@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
@@ -79,6 +79,8 @@ import {
   Undo2,
   Pencil,
   Save,
+  Ban,
+  UserX,
 } from "lucide-react";
 
 // ============================================================================
@@ -435,6 +437,8 @@ const DISPOSITION_LABELS: Record<string, string> = {
   wrong_number: "Falsche Nummer",
   no_answer: "Nicht rangegangen",
   considering: "Überlegt sich das",
+  not_interested: "Kein Interesse / Absage",
+  already_customer: "Bestandskunde",
   done: "Erledigt",
 };
 
@@ -442,6 +446,8 @@ const DISPOSITION_COLORS: Record<string, string> = {
   wrong_number: "bg-red-100 text-red-700 border-red-200",
   no_answer: "bg-amber-100 text-amber-700 border-amber-200",
   considering: "bg-blue-100 text-blue-700 border-blue-200",
+  not_interested: "bg-gray-100 text-gray-700 border-gray-300",
+  already_customer: "bg-purple-100 text-purple-700 border-purple-200",
   done: "bg-green-100 text-green-700 border-green-200",
 };
 
@@ -449,6 +455,8 @@ const DISPOSITION_ICONS: Record<string, React.ElementType> = {
   wrong_number: PhoneOff,
   no_answer: PhoneMissed,
   considering: Clock,
+  not_interested: Ban,
+  already_customer: UserX,
   done: CheckCircle2,
 };
 
@@ -517,6 +525,24 @@ function DispositionButtons({ currentDisposition, onSetDisposition, isPending }:
           className={currentDisposition === "considering" ? "bg-blue-600 hover:bg-blue-700" : "text-blue-600 border-blue-200 hover:bg-blue-50"}
         >
           <Clock className="w-4 h-4 mr-1" /> Überlegt sich das
+        </Button>
+        <Button
+          variant={currentDisposition === "not_interested" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("not_interested")}
+          disabled={isPending || currentDisposition === "not_interested"}
+          className={currentDisposition === "not_interested" ? "bg-gray-600 hover:bg-gray-700" : "text-gray-600 border-gray-300 hover:bg-gray-50"}
+        >
+          <Ban className="w-4 h-4 mr-1" /> Kein Interesse
+        </Button>
+        <Button
+          variant={currentDisposition === "already_customer" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSetDisposition("already_customer")}
+          disabled={isPending || currentDisposition === "already_customer"}
+          className={currentDisposition === "already_customer" ? "bg-purple-600 hover:bg-purple-700" : "text-purple-600 border-purple-200 hover:bg-purple-50"}
+        >
+          <UserX className="w-4 h-4 mr-1" /> Bestandskunde
         </Button>
         <Button
           variant={currentDisposition === "done" ? "default" : "outline"}
@@ -770,6 +796,78 @@ export default function AdminLeads() {
     },
     refetchInterval: 30000,
   });
+
+  // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Motorhomes ----
+  const { data: existingSellerData = { ids: [], emails: [] } } = useQuery({
+    queryKey: ["existingSellerUserIds"],
+    queryFn: async () => {
+      // Hole alle Seller-IDs die bereits mindestens ein Motorhome haben
+      const { data: motorhomes, error: mError } = await supabase
+        .from("motorhomes")
+        .select("seller_id")
+        .not("seller_id", "is", null);
+      if (mError) throw mError;
+
+      const sellerIds = [...new Set((motorhomes || []).map((m: { seller_id: string }) => m.seller_id).filter(Boolean))];
+
+      // Hole die E-Mails dieser Seller für E-Mail-basierte Erkennung
+      let sellerEmails: string[] = [];
+      if (sellerIds.length > 0) {
+        const { data: profiles, error: pError } = await supabase
+          .from("profiles")
+          .select("id, email")
+          .in("id", sellerIds);
+        if (!pError && profiles) {
+          sellerEmails = profiles.map((p: { email: string }) => p.email?.toLowerCase()).filter(Boolean);
+        }
+      }
+
+      return { ids: sellerIds as string[], emails: sellerEmails };
+    },
+    refetchInterval: 60000,
+  });
+
+  // Konvertiere zu Sets für schnelle Lookups (nur im Render, nicht im Cache)
+  const existingSellerIds = useMemo(() => new Set(existingSellerData.ids), [existingSellerData.ids]);
+  const existingSellerEmails = useMemo(() => new Set(existingSellerData.emails), [existingSellerData.emails]);
+
+  // ---- Auto-Disposition: Bestandskunden automatisch markieren ----
+  // Wenn eine Wizard Session eine user_id hat und dieser User bereits Motorhomes hat,
+  // wird die Session automatisch als "already_customer" markiert (einmalig).
+  useEffect(() => {
+    if (!wizardSessions.length || existingSellerIds.size === 0) return;
+
+    const sessionsToMark = wizardSessions.filter(
+      (s) =>
+        !s.disposition &&
+        (
+          // Erkennung über user_id (eingeloggter Bestandskunde)
+          (s.user_id && existingSellerIds.has(s.user_id)) ||
+          // Erkennung über E-Mail (gleiche E-Mail wie ein Bestandskunde)
+          (s.customer_email && existingSellerEmails.has(s.customer_email.toLowerCase()))
+        )
+    );
+
+    if (sessionsToMark.length === 0) return;
+
+    // Markiere alle gefundenen Sessions als "already_customer"
+    const markSessions = async () => {
+      for (const session of sessionsToMark) {
+        try {
+          await supabase
+            .from("wizard_sessions")
+            .update({ disposition: "already_customer" } as any)
+            .eq("id", session.id);
+        } catch (err) {
+          console.error("Failed to auto-mark session as already_customer:", err);
+        }
+      }
+      // Refetch nach dem Markieren
+      queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
+    };
+
+    markSessions();
+  }, [wizardSessions, existingSellerIds, existingSellerEmails, queryClient]);
 
   // ---- Statistics ----
 

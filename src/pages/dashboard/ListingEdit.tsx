@@ -68,6 +68,8 @@ export default function ListingEdit() {
   });
 
   const isAuctionLive = auctionData?.status === 'active' || auctionData?.status === 'kaufchance';
+  // Mindestpreis darf NUR vom Admin geändert werden - sobald eine Auktion existiert (egal welcher Status)
+  const hasAuction = !!auctionData;
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ["motorhomePhotos", id],
@@ -296,12 +298,15 @@ export default function ListingEdit() {
       };
 
       // Only include prices if they have values
-      if (data.instant_price) {
-        updateData.instant_price = Number(data.instant_price);
-        // Bei Sofortkauf: reserve_price automatisch auf instant_price setzen
-        updateData.reserve_price = Number(data.reserve_price) || Number(data.instant_price);
-      } else if (data.reserve_price) {
-        updateData.reserve_price = Number(data.reserve_price);
+      // CRITICAL: Wenn eine Auktion existiert, darf der Verkäufer den Mindestpreis NICHT ändern
+      if (!hasAuction) {
+        if (data.instant_price) {
+          updateData.instant_price = Number(data.instant_price);
+          // Bei Sofortkauf: reserve_price automatisch auf instant_price setzen
+          updateData.reserve_price = Number(data.reserve_price) || Number(data.instant_price);
+        } else if (data.reserve_price) {
+          updateData.reserve_price = Number(data.reserve_price);
+        }
       }
 
       await withSessionRetry(async () => {
@@ -460,6 +465,7 @@ export default function ListingEdit() {
                         setFormData({ ...formData, instant_price: val, ...(val ? { reserve_price: val } : {}) });
                       }}
                       placeholder="z.B. 45000"
+                      disabled={hasAuction}
                     />
                     {formData.instant_price && (
                       <p className="text-xs text-muted-foreground">Der Mindestpreis wird automatisch auf den Sofortkauf-Preis gesetzt.</p>
@@ -474,8 +480,11 @@ export default function ListingEdit() {
                       value={formData.reserve_price}
                       onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value })}
                       placeholder="z.B. 40000"
-                      disabled={!!formData.instant_price}
+                      disabled={!!formData.instant_price || hasAuction}
                     />
+                    {hasAuction && (
+                      <p className="text-xs text-amber-600 font-medium">Der Mindestpreis kann nur vom Admin geändert werden, sobald eine Auktion erstellt wurde.</p>
+                    )}
                   </div>
                 </div>
               </TabsContent>

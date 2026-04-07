@@ -126,7 +126,7 @@ interface MotorhomeWithRelations {
   auctions?: AuctionInfo | AuctionInfo[] | null;
 }
 
-type TabKey = "alle" | "vorbereitung" | "in_auktion" | "nicht_verkauft" | "verkauft";
+type TabKey = "alle" | "vorbereitung" | "in_auktion" | "kaufchance" | "nicht_verkauft" | "verkauft";
 type SortKey = "created_at" | "year" | "mileage" | "manufacturer";
 type SortDir = "asc" | "desc";
 
@@ -138,12 +138,14 @@ type SortDir = "asc" | "desc";
 function getActiveAuction(auctions: AuctionInfo | AuctionInfo[] | null | undefined): AuctionInfo | null {
   if (!auctions || typeof auctions === "string") return null;
   if (Array.isArray(auctions)) {
-    // Prefer active, then draft, then ended/sold
+    // Prefer active, then kaufchance, then draft, then ended/sold
     return (
       auctions.find((a) => a.status === "active") ||
-      auctions.find((a) => a.status === "draft") ||
-      auctions.find((a) => a.status === "ended") ||
+      auctions.find((a) => a.status === "kaufchance") ||
       auctions.find((a) => a.status === "sold") ||
+      auctions.find((a) => a.status === "ended") ||
+      auctions.find((a) => a.status === "cancelled") ||
+      auctions.find((a) => a.status === "draft") ||
       auctions[0] ||
       null
     );
@@ -160,6 +162,7 @@ function getRealStatus(m: MotorhomeWithRelations): string {
   if (!auction) return "vorbereitung"; // No auction at all
   if (auction.status === "draft") return "vorbereitung";
   if (auction.status === "active") return "in_auktion";
+  if (auction.status === "kaufchance") return "kaufchance";
   if (auction.status === "sold") return "verkauft";
   if (auction.status === "ended" || auction.status === "cancelled") return "nicht_verkauft";
 
@@ -177,6 +180,8 @@ function getStatusBadge(realStatus: string) {
       return <Badge className="bg-red-500 hover:bg-red-600 text-white">Nicht verkauft</Badge>;
     case "verkauft":
       return <Badge className="bg-green-500 hover:bg-green-600 text-white">Verkauft</Badge>;
+    case "kaufchance":
+      return <Badge className="bg-orange-500 hover:bg-orange-600 text-white">Kaufchance</Badge>;
     case "reserviert":
       return <Badge className="bg-purple-500 hover:bg-purple-600 text-white">Reserviert</Badge>;
     default:
@@ -211,6 +216,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
   { key: "alle", label: "Alle", icon: Car, color: "text-gray-500" },
   { key: "vorbereitung", label: "Vorbereitung", icon: Package, color: "text-amber-500" },
   { key: "in_auktion", label: "In Auktion", icon: Radio, color: "text-blue-500" },
+  { key: "kaufchance", label: "Kaufchance", icon: AlertTriangle, color: "text-orange-500" },
   { key: "nicht_verkauft", label: "Nicht verkauft", icon: XCircle, color: "text-red-500" },
   { key: "verkauft", label: "Verkauft", icon: CheckCircle2, color: "text-green-500" },
 ];
@@ -382,11 +388,13 @@ export default function AdminMotorhomes() {
 
   // ---- Quick Stats ----
   const stats = useMemo(() => {
-    if (!motorhomes) return { total: 0, noPhotos: 0, inAuction: 0, sold: 0 };
+    if (!motorhomes) return { total: 0, noPhotos: 0, inAuction: 0, kaufchance: 0, nichtVerkauft: 0, sold: 0 };
     return {
       total: motorhomes.length,
       noPhotos: motorhomes.filter((m) => !m.motorhome_photos || m.motorhome_photos.length === 0).length,
       inAuction: motorhomes.filter((m) => getRealStatus(m) === "in_auktion").length,
+      kaufchance: motorhomes.filter((m) => getRealStatus(m) === "kaufchance").length,
+      nichtVerkauft: motorhomes.filter((m) => getRealStatus(m) === "nicht_verkauft").length,
       sold: motorhomes.filter((m) => m.status === "sold").length,
     };
   }, [motorhomes]);

@@ -235,26 +235,36 @@ export default function AdminAuctions() {
         .eq("motorhome_id", motorhomeId)
         .maybeSingle();
 
-      // Fetch motorhome reserve_price
+      // Fetch motorhome Daten (reserve_price + PLZ-Check)
       const { data: motorhome } = await supabase
         .from("motorhomes")
-        .select("reserve_price")
+        .select("reserve_price, postal_code, city")
         .eq("id", motorhomeId)
         .single();
 
+      // PLZ-Check: Ohne PLZ kann keine Auktion live gehen
+      if (!motorhome?.postal_code) {
+        throw new Error("PLZ_MISSING");
+      }
+
+      // Auktionszeiten: Sofort live, 7 Tage Laufzeit
+      const now = new Date();
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+
       if (existing) {
-        // Wenn Auktion bereits draft oder active ist, einfach dorthin navigieren
-        if (existing.status === "draft" || existing.status === "active") {
-          return { id: existing.id, alreadyExists: true, recycled: false };
+        // Wenn Auktion bereits active ist, einfach dorthin navigieren
+        if (existing.status === "active") {
+          return { id: existing.id, motorhomeId, alreadyExists: true, recycled: false };
         }
 
-        // Wenn Auktion beendet/kaufchance/sold/cancelled ist: recyceln (UPDATE statt INSERT)
+        // Bestehende Auktion recyceln und sofort aktivieren
         const updateData: Record<string, unknown> = {
-          status: "draft",
+          status: "active",
           starting_bid: 50,
           current_bid: null,
-          start_time: null,
-          end_time: null,
+          start_time: now.toISOString(),
+          end_time: endTime.toISOString(),
           kaufchance_expires_at: null,
           kaufchance_min_price: null,
         };
@@ -275,14 +285,19 @@ export default function AdminAuctions() {
         await supabase.from("kaufchance_invitations").delete().eq("auction_id", existing.id);
         await supabase.from("post_auction_offers").delete().eq("auction_id", existing.id);
 
-        return { id: existing.id, alreadyExists: false, recycled: true };
+        // Motorhome-Status auf active setzen
+        await supabase.from("motorhomes").update({ status: "active" }).eq("id", motorhomeId);
+
+        return { id: existing.id, motorhomeId, alreadyExists: false, recycled: true };
       }
 
-      // Keine Auktion vorhanden: Neue erstellen
+      // Keine Auktion vorhanden: Neue erstellen und sofort aktivieren
       const insertData: Record<string, unknown> = {
         motorhome_id: motorhomeId,
         starting_bid: 50,
-        status: "draft",
+        status: "active",
+        start_time: now.toISOString(),
+        end_time: endTime.toISOString(),
       };
 
       if (motorhome?.reserve_price) {
@@ -296,23 +311,36 @@ export default function AdminAuctions() {
         .single();
 
       if (error) throw error;
-      return { id: auction.id, alreadyExists: false, recycled: false };
+
+      // Motorhome-Status auf active setzen
+      await supabase.from("motorhomes").update({ status: "active" }).eq("id", motorhomeId);
+
+      return { id: auction.id, motorhomeId, alreadyExists: false, recycled: false };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
       if (result.alreadyExists) {
-        toast.info("Es existiert bereits eine aktive Auktion für dieses Fahrzeug");
+        toast.info("Es existiert bereits eine laufende Auktion für dieses Fahrzeug");
       } else if (result.recycled) {
-        toast.success("Auktion wurde zurückgesetzt und als neuer Entwurf erstellt");
+        toast.success("Auktion wurde zurückgesetzt und ist jetzt live (7 Tage)");
       } else {
-        toast.success("Auktionsentwurf erfolgreich erstellt");
+        toast.success("Auktion erfolgreich erstellt und ist jetzt live (7 Tage)");
       }
       setSearchParams({});
-      setActiveTab("draft");
+      setActiveTab("active");
+
+      // Registrierungseinladung senden falls nötig
+      if (result.motorhomeId) {
+        sendRegistrationInviteIfNeeded(result.motorhomeId);
+      }
     },
     onError: (error: any) => {
-      toast.error(`Fehler beim Erstellen der Auktion: ${error.message}`);
-      logger.error("Create auction error:", error);
+      if (error?.message === "PLZ_MISSING") {
+        toast.error("Bitte zuerst den Fahrzeugstandort (PLZ) eintragen, bevor die Auktion gestartet werden kann. Klicken Sie auf 'Bearbeiten'.", { duration: 6000 });
+      } else {
+        toast.error(`Fehler beim Erstellen der Auktion: ${error.message}`);
+        logger.error("Create auction error:", error);
+      }
       setSearchParams({});
     },
   });

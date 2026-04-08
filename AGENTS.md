@@ -121,7 +121,34 @@ After code changes, these functions need redeploying:
 5. Ongoing: outbid/ending_soon/won/lost (transactional, unchanged)
 6. Day 30+: Inactivity reminder (unchanged, monthly max)
 
+## Dealer Flow Fixes (08.04.2026 – Phase 6)
+### DB Migrations Applied
+- `approve_dealer_application()`: Now syncs company_name, street, zip, city, country, vat_id → profiles
+- `create_auction_invoice()`: Fixed parameter name (dealer_id_param), added reverse charge
+- `create_instant_buy_invoice()`: Fixed referencing non-existent columns + reverse charge
+- `get_dealer_tax_info(dealer_id)`: New helper → 19% DE / 0% EU reverse charge
+- `reapply_dealer_application()`: New function for rejected dealers to re-apply
+- New columns: `invoices.reverse_charge`, `invoices.dealer_country`, `profiles.vat_id`, `dealer_applications.vat_id`
+- Backfill: All 44 approved dealers' profiles synced from dealer_applications
+
+### Edge Functions Deployed
+- `register-dealer` v2: Stores vatId
+- `generate-invoice-pdf` v13: Reverse charge box, full dealer address + USt-IdNr
+
+### Frontend Changes
+- SmartDashboard: EmailVerificationBanner also in DealerLayoutContent
+- PendingDealerBanner: Re-apply button for rejected dealers (calls `reapply_dealer_application` RPC)
+- useDealerPending: Country from DB → user_metadata → 'DE' fallback chain
+- RegisterHaendler: USt-ID field for non-DE countries, FileText icon
+- AdminDealerDetail: Email unconfirmed warning + resend button
+- dealerRegistrationTranslations: All 8 languages' benefits corrected
+
+### CRITICAL BUG FOUND & FIXED
+- `create_auction_invoice()` had param name `winner_id_param` but `close-auction` called with `dealer_id_param` → would have caused invoice creation to fail on next auction close
+
 ## Known Remaining Items
+- 1 approved dealer has unconfirmed email (admin can resend via new button)
+- 37 of 44 approved dealers have never placed a bid (engagement issue → digest email helps)
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
 - Search is starts-with; could benefit from fuzzy matching for typos (users type "Exzellent" for "Excellent")
 - Edge Functions deployment: send-dealer-auction-digest, send-dealer-notification, send-inactivity-email need redeployment via Supabase CLI

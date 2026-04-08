@@ -446,8 +446,15 @@ export default function AdminPostAuctionOffers() {
           .in("id", missingIds);
 
         if (newProfiles && newProfiles.length > 0) {
-          // We need to refetch profiles to include these
-          queryClient.invalidateQueries({ queryKey: ["adminOfferProfiles"] });
+          // Merge new profiles directly into the cache so they are immediately available
+          queryClient.setQueryData<Record<string, ProfileInfo>>(
+            ["adminOfferProfiles", allProfileIds],
+            (old) => {
+              const merged = { ...(old || {}) };
+              newProfiles.forEach((p: any) => { merged[p.id] = p; });
+              return merged;
+            }
+          );
         }
       }
     } catch (err) {
@@ -456,7 +463,7 @@ export default function AdminPostAuctionOffers() {
     } finally {
       setKaufchanceDetailLoading(false);
     }
-  }, [profileMap, queryClient, toast]);
+  }, [profileMap, queryClient, toast, allProfileIds]);
 
   // ---- Admin Actions ----
 

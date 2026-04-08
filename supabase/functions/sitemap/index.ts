@@ -53,6 +53,9 @@ serve(async (req) => {
       { loc: `${baseUrl}/wohnmobil-wertermittlung-kostenlos`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       { loc: `${baseUrl}/wir-kaufen-dein-wohnmobil`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       { loc: `${baseUrl}/wieviel-ist-mein-wohnmobil-wert`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wohnmobil-haendler-werden`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      // Auth & Registration pages (noindex in meta but useful for sitemap discovery)
+      { loc: `${baseUrl}/register/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
     ]
 
     // Ratgeber pages (88 guides)

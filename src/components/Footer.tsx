@@ -207,6 +207,11 @@ const Footer = () => {
                     Für Händler
                   </Link>
                 </li>
+                <li>
+                  <Link to="/wohnmobil-haendler-werden" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Händler werden
+                  </Link>
+                </li>
               </ul>
             </div>
 

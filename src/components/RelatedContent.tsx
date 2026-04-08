@@ -111,6 +111,21 @@ export const kaufenRelatedLinks: RelatedLink[] = [
 
 export const haendlerRelatedLinks: RelatedLink[] = [
   {
+    title: "Händler werden",
+    description: "Alle Infos zur Registrierung, Provision und dem Auktionsprozess",
+    href: "/wohnmobil-haendler-werden",
+  },
+  {
+    title: "Händler-Registrierung",
+    description: "Jetzt kostenlos registrieren und sofort mitbieten",
+    href: "/register/haendler",
+  },
+  {
+    title: "Aktuelle Auktionen",
+    description: "Entdecken Sie aktuelle Wohnmobil-Auktionen",
+    href: "/kaufen",
+  },
+  {
     title: "Kontakt",
     description: "Vereinbaren Sie ein persönliches Beratungsgespräch",
     href: "/kontakt",
@@ -119,11 +134,6 @@ export const haendlerRelatedLinks: RelatedLink[] = [
     title: "FAQ",
     description: "Häufig gestellte Fragen zum Händler-Partnerprogramm",
     href: "/faq",
-  },
-  {
-    title: "Über uns",
-    description: "Lernen Sie unser Team und unsere Vision kennen",
-    href: "/ueber-uns",
   },
 ];
 

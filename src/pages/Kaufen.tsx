@@ -418,7 +418,7 @@ const Kaufen = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-sm">Sie sind Händler? Registrieren Sie sich kostenlos und bieten Sie mit!</p>
-                        <p className="text-xs text-muted-foreground">Keine Gebühren · Provision nur bei Zuschlag · Sofort-Freischaltung</p>
+                        <p className="text-xs text-muted-foreground">Keine Gebühren · Provision nur bei Zuschlag · <Link to="/wohnmobil-haendler-werden" className="text-primary hover:underline">Mehr erfahren</Link></p>
                       </div>
                     </div>
                     <Link to="/register/haendler" className="flex-shrink-0">

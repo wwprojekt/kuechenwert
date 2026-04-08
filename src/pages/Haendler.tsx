@@ -199,9 +199,9 @@ const Haendler = () => {
                   Jetzt registrieren
                 </Button>
               </Link>
-              <Link to="/kontakt">
+              <Link to="/wohnmobil-haendler-werden">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Beratung vereinbaren
+                  Mehr erfahren
                 </Button>
               </Link>
             </div>

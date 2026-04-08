@@ -133,6 +133,10 @@ const WohnmobilHaendlerWerden = () => {
       keywords="wohnmobil händler werden, wohnmobil auktion händler, wohnwagen einkauf händler, wohnmobil händler plattform, wohnmobil händler registrieren"
       canonicalPath="/wohnmobil-haendler-werden"
       structuredData={structuredData}
+      breadcrumbs={[
+        { name: "Für Händler", path: "/haendler" },
+        { name: "Händler werden", path: "/wohnmobil-haendler-werden" },
+      ]}
       hideFooter
     >
       <PageHero size="lg">
@@ -415,14 +419,23 @@ const WohnmobilHaendlerWerden = () => {
         </div>
       </section>
 
-      {/* Mini footer for legal (since hideFooter removes seller-focused default) */}
-      <footer className="py-6 bg-slate-900 text-slate-400 text-center text-xs">
-        <div className="container flex flex-wrap justify-center gap-4">
-          <span>© {new Date().getFullYear()} {siteName} GmbH</span>
-          <Link to="/impressum" className="hover:text-white">Impressum</Link>
-          <Link to="/datenschutz" className="hover:text-white">Datenschutz</Link>
-          <Link to="/agb" className="hover:text-white">AGB</Link>
-          <Link to="/kontakt" className="hover:text-white">Kontakt</Link>
+      {/* Mini footer for legal + internal links (since hideFooter removes seller-focused default) */}
+      <footer className="py-8 bg-slate-900 text-slate-400 text-xs">
+        <div className="container">
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <Link to="/haendler" className="hover:text-white">Für Händler</Link>
+            <Link to="/kaufen" className="hover:text-white">Aktuelle Auktionen</Link>
+            <Link to="/register/haendler" className="hover:text-white">Händler-Registrierung</Link>
+            <Link to="/preise" className="hover:text-white">Preise & Provisionen</Link>
+            <Link to="/faq" className="hover:text-white">FAQ</Link>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 text-slate-500">
+            <span>© {new Date().getFullYear()} {siteName} GmbH</span>
+            <Link to="/impressum" className="hover:text-white">Impressum</Link>
+            <Link to="/datenschutz" className="hover:text-white">Datenschutz</Link>
+            <Link to="/agb" className="hover:text-white">AGB</Link>
+            <Link to="/kontakt" className="hover:text-white">Kontakt</Link>
+          </div>
         </div>
       </footer>
     </PageLayout>

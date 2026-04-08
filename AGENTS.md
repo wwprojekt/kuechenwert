@@ -40,7 +40,7 @@ npm run build        # Production build via Vite → dist/
 - "Schritt X von 8: Name" label above progress bar
 - Contextual Weiter labels: "Weiter zu Fahrzeugdaten", "Weiter zu Details", etc.
 - Progress starts at 12% instead of 8% (less discouraging)
-- Erstzulassung changed from type="date" (mm/dd/yyyy) to type="month" (German-friendly)
+- Erstzulassung: originally type="date" → type="month" → Phase 7: custom Monat/Jahr Selects
 
 ### Phase 3 – Photos & SaleChannel Drop-off Fix (committed)
 - **PhotosStep redesign**: Removed confusing "Fotos später nachreichen" toggle button (was alongside "Weiter")
@@ -81,6 +81,14 @@ npm run build        # Production build via Vite → dist/
 - **Basisfahrzeuge**: 21 Chassis-Optionen mit 82 PS-Werten
 - User data analysis: Most common free-form entries verified against model lists
 - Forster VB-Serie, Rimor Bliss/Europe, Sprite, Bailey, T@B added based on real user patterns
+
+### Phase 7 – Step 3 UX-Optimierung (08.04.2026, committed)
+- **Erstzulassung**: Native `type="month"` Picker ersetzt durch Monat/Jahr-Dropdowns (browser-unabhängig, keine "---------- ----" Anzeige mehr)
+- **Kraftstoffart**: Dropdown durch 4 klickbare Tiles ersetzt (⛽ Diesel/⛽ Benzin/🔋 Hybrid/⚡ Elektro)
+- **Getriebe**: Dropdown durch 2 klickbare Tiles ersetzt (⚙️ Schaltung/🅰️ Automatik) – reduziert Klicks von 4 auf 2 pro Feld
+- **Basisfahrzeug & Leistung**: Collapsible-Sektion mit Toggle-Button (default: zugeklappt für neue User, offen wenn Daten vorhanden)
+- **Wohnwagen-Erstzulassung**: Gleicher Monat/Jahr-Dropdown Fix
+- **Analyse-Ergebnis**: Step 3 NICHT in 2 Steps aufteilen – nur 9.1% Absprung, Splitting würde Wizard psychologisch verlängern. Stattdessen: visuell entlasten durch Tiles + Collapsible.
 
 ## Known Remaining Items
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")

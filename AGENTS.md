@@ -75,11 +75,16 @@ npm run build        # Production build via Vite → dist/
 - **PS→kW conversion**: PS chips and manual input both auto-calculate `power_kw` (PS × 0.7355)
 - **Chips show both units**: e.g. "140 PS (103 kW)" for professional feel
 
-## Known Issues (08.04.2026)
-- **6 commits not pushed to origin/main** – changes not deployed to production via Netlify!
-- Commits: auto-advance, step-dots, contextual labels, Basisfahrzeug, photos redesign, kW fix
-- Erstzulassung field on LIVE site still shows "mm/dd/yyyy" (fixed in code to type="month")
+## Vehicle Data Stats (08.04.2026)
+- **Wohnmobil**: 96 Hersteller, 1035 Modelle
+- **Wohnwagen**: 36 Hersteller, 156 Modelle
+- **Basisfahrzeuge**: 21 Chassis-Optionen mit 82 PS-Werten
+- User data analysis: Most common free-form entries verified against model lists
+- Forster VB-Serie, Rimor Bliss/Europe, Sprite, Bailey, T@B added based on real user patterns
+
+## Known Remaining Items
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
+- Search is starts-with; could benefit from fuzzy matching for typos (users type "Exzellent" for "Excellent")
 
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

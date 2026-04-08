@@ -17,7 +17,8 @@ npm run build        # Production build via Vite → dist/
   - Session persistence via `useWizardSession.ts` (anonymous_id-based for non-auth users)
   - Form state in `useWizardForm.ts` with Zod validation per step
   - Vehicle data (manufacturers/models) in `src/lib/vehicle-data.ts`
-- **Step numbering mismatch**: Schema names (step1Schema–step8Schema) don't match step numbers in validateStep. E.g., step3Schema validates Step 5 (QuickContact), step4SchemaWohnmobil validates Step 3 (DetailsStep).
+- **Step numbering mismatch**: Schema names (step1Schema–step8Schema) don't match step numbers in validateStep. E.g., step3Schema validates Step 5 (QuickContact), step4Schema validates Step 3 (now fully optional).
+- **Step 3 is fully optional** (no validation): Smart defaults pre-fill Diesel + Schaltung + Keine Mängel. User can pass with 0 clicks.
 
 ## Wizard Funnel Data (Apr 2026, 224 all-time sessions)
 - Step 1 drop: 14 (6.3%), Step 2 drop: 15 (6.7%), Step 3 drop: 16 (7.1%)
@@ -211,6 +212,23 @@ After code changes, these functions need redeploying:
 - **Wohnwagen**: Nur TÜV/HU + Zustand-Checkboxen (kein EZ, Sitzplätze, Basisfahrzeug)
 - **Step-Name**: "Ausstattung" → "Details & Ausstattung", Label "Weiter zu Kontakt"
 - **MonthYearPicker**: Wiederverwendbare Komponente für EZ + TÜV (mit futureYears-Param für TÜV)
+
+### Phase 6 – Step 3 Zero-Friction Redesign + Konkurrenzanalyse (08.04.2026 Session 3)
+- **Caravanmarkt24 Analyse**: Single-page progressive disclosure, nur 4 Felder (Typ/Marke/Kategorie/Baureihe), KEINE Tech-Details
+  - "3 Min" Zeitschätzung, "138 Anfragen in 24h" Social Proof, Google 4.9★ Badge
+  - Kein Multi-Step Wizard, sondern Felder erscheinen nach und nach auf einer Seite
+- **Step 3 Redesign**: "Technische Details" → "Bessere Angebote erhalten"
+  - 0 Pflichtfelder (vorher 4), Smart Defaults: Diesel + Schaltung + Keine Mängel
+  - Kein Progressive Disclosure mehr innerhalb des Steps
+  - Grüne CheckCircle2-Haken bei gefüllten Feldern
+  - Positives Framing: "Händler bieten bis zu 15% mehr"
+  - step4SchemaWohnmobil/Wohnwagen → step4Schema (leeres z.object)
+- **Critical Data Fixes** (same session):
+  - 2 sold auctions (Eriba €10.950, Forster €23.000) hatten keine Rechnungen → CA2026-001014 + CA2026-001015 erstellt, PDFs generiert, Emails + Winner-Notifications gesendet
+  - 3 Wizard-Sessions (Chausson C656, Bürstner A574/3, XGO Dynamic 25) als "converted" markiert ohne Motorhome → re-converted erfolgreich
+  - 2 Kaufverträge (KV-2026-00001, KV-2026-00002) reaktiviert
+- **auto-convert-wizard v15**: Partial-failure recovery – prüft ob Motorhome existiert bevor "already converted" zurückgegeben wird
+- **Security Migration**: 11× search_path gefixt, public_site_settings → SECURITY INVOKER, 2 RLS-Policies hinzugefügt
 
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)

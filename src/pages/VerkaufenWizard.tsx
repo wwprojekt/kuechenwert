@@ -362,8 +362,6 @@ const VerkaufenWizard = () => {
 
   // Determine button labels based on step
   const getNextButtonLabel = () => {
-    if (currentStep === 1) return formData.bodyType ? "Weiter zu Fahrzeugdaten" : "Weiter";
-    if (currentStep === 2) return "Weiter zu technischen Details";
     if (currentStep === 4) return "Weiter (optional)";
     if (currentStep === 6) return formData.photos.length > 0 ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}` : "Weiter ohne Fotos";
     return "Weiter";
@@ -405,36 +403,14 @@ const VerkaufenWizard = () => {
       <div className="min-h-screen py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* Progress Indicator with step labels */}
+            {/* Progress Indicator – clean, no step count */}
             <div className="mb-4 md:mb-6 animate-slide-up">
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="text-xs sm:text-sm font-medium text-foreground">
-                  <span className="hidden sm:inline">Schritt {currentStep} von {steps.length}: </span>
-                  <span className="sm:hidden">{currentStep}/{steps.length}: </span>
-                  <span className="text-primary">{steps[currentStep - 1]?.name}</span>
-                </span>
+              <div className="flex justify-end items-center mb-1.5">
                 <span className="text-xs sm:text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
               <Progress value={progress} className="h-2 sm:h-2.5 rounded-full" />
-              {/* Compact step dots – only on wider screens */}
-              <div className="hidden md:flex justify-between mt-2 px-1">
-                {steps.map((step) => (
-                  <div key={step.id} className="flex flex-col items-center gap-0.5">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full transition-colors",
-                      step.id < currentStep ? "bg-primary" : step.id === currentStep ? "bg-primary ring-2 ring-primary/30" : "bg-muted-foreground/20"
-                    )} />
-                    <span className={cn(
-                      "text-[10px] leading-tight",
-                      step.id <= currentStep ? "text-primary font-medium" : "text-muted-foreground"
-                    )}>
-                      {step.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Main Content Area */}

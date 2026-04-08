@@ -2,9 +2,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Calendar, Gauge, Info, Check, Search } from "lucide-react";
+import { Calendar, Gauge, Info, Check } from "lucide-react";
 import { popularManufacturers, wohnwagenManufacturers, manufacturerModels, wohnwagenManufacturerModels } from "@/lib/vehicle-data";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 interface VehicleInfoStepProps {
@@ -13,45 +13,119 @@ interface VehicleInfoStepProps {
   fieldErrors?: Record<string, string>;
 }
 
-// Top manufacturers by market share (shown prominently)
-const TOP_WOHNMOBIL = ["Hymer", "Dethleffs", "Bürstner", "Knaus", "Carthago", "Hobby", "Pössl", "Adria", "Carado", "Chausson", "Fendt", "Frankia"];
-const TOP_WOHNWAGEN = ["Hobby", "Fendt", "Knaus", "Dethleffs", "Bürstner", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba"];
+/**
+ * Searchable Combobox – simple input that filters a list.
+ * Used for Hersteller and Modell selection (like AutoScout24).
+ */
+const SearchableSelect = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  hasError,
+  id,
+}: {
+  options: string[];
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+  disabled?: boolean;
+  hasError?: boolean;
+  id?: string;
+}) => {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!query) return options;
+    const lower = query.toLowerCase();
+    return options.filter((o) => o.toLowerCase().includes(lower));
+  }, [options, query]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // When value is set externally (e.g. reset), sync the query
+  useEffect(() => {
+    if (!value) setQuery("");
+  }, [value]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Input
+        ref={inputRef}
+        id={id}
+        type="text"
+        value={value || query}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+        className={cn(
+          "h-12 text-base",
+          hasError && "border-red-500 ring-red-500/20 ring-2"
+        )}
+        onChange={(e) => {
+          const val = e.target.value;
+          setQuery(val);
+          onChange(val);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          if (options.length > 0) setOpen(true);
+          // Select all text on focus for easy replacement
+          if (value) inputRef.current?.select();
+        }}
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[220px] overflow-y-auto">
+          {filtered.slice(0, 50).map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => {
+                onChange(o);
+                setQuery("");
+                setOpen(false);
+              }}
+              className={cn(
+                "w-full text-left px-4 py-3 text-sm transition-colors",
+                "hover:bg-primary/5 active:bg-primary/10",
+                o === value && "bg-primary/10 font-medium text-primary"
+              )}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: VehicleInfoStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
   const isWohnwagen = vehicleType === "Wohnwagen";
-  const [showAllManufacturers, setShowAllManufacturers] = useState(false);
-  const [manufacturerSearch, setManufacturerSearch] = useState("");
-  const [modelSearch, setModelSearch] = useState("");
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const modelInputRef = useRef<HTMLInputElement>(null);
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-
-  const topManufacturers = isWohnwagen ? TOP_WOHNWAGEN : TOP_WOHNMOBIL;
-  const allManufacturers = useMemo(() => {
+  const manufacturers = useMemo(() => {
     return isWohnwagen ? wohnwagenManufacturers : popularManufacturers;
   }, [isWohnwagen]);
 
-  const modelOptions = useMemo(() => {
+  const models = useMemo(() => {
     if (!formData.manufacturer) return [];
-    const models = isWohnwagen
+    const m = isWohnwagen
       ? wohnwagenManufacturerModels[formData.manufacturer]
       : manufacturerModels[formData.manufacturer];
-    return models || [];
+    return m || [];
   }, [formData.manufacturer, isWohnwagen]);
-
-  const filteredModels = useMemo(() => {
-    if (!modelSearch) return modelOptions;
-    const lower = modelSearch.toLowerCase();
-    return modelOptions.filter((m) => m.toLowerCase().includes(lower));
-  }, [modelOptions, modelSearch]);
-
-  const filteredManufacturers = useMemo(() => {
-    const remaining = allManufacturers.filter((m) => !topManufacturers.includes(m));
-    if (!manufacturerSearch) return remaining;
-    const lower = manufacturerSearch.toLowerCase();
-    return remaining.filter((m) => m.toLowerCase().includes(lower));
-  }, [allManufacturers, topManufacturers, manufacturerSearch]);
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -62,39 +136,19 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     return years;
   }, []);
 
-  // Close model dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (
-        modelDropdownRef.current &&
-        !modelDropdownRef.current.contains(e.target as Node) &&
-        modelInputRef.current &&
-        !modelInputRef.current.contains(e.target as Node)
-      ) {
-        setShowModelDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  const handleManufacturerChange = useCallback((value: string) => {
+    // When manufacturer changes, reset model
+    if (value !== formData.manufacturer) {
+      updateFormData({ manufacturer: value, model: "" });
+    } else {
+      updateFormData({ manufacturer: value });
+    }
+  }, [formData.manufacturer, updateFormData]);
 
-  const handleManufacturerSelect = (value: string) => {
-    updateFormData({ manufacturer: value, model: "" });
-    setShowAllManufacturers(false);
-    setManufacturerSearch("");
-    setModelSearch("");
-  };
-
-  const handleModelSelect = (model: string) => {
-    updateFormData({ model });
-    setModelSearch("");
-    setShowModelDropdown(false);
-  };
-
-  // Count filled fields for micro-progress
-  const totalRequired = isWohnwagen ? 4 : 5; // manufacturer, model, year, (mileage), condition
+  // Micro-progress
+  const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
-    formData.manufacturer,
+    formData.manufacturer && manufacturers.includes(formData.manufacturer) ? formData.manufacturer : null,
     formData.model,
     formData.year,
     ...(!isWohnwagen ? [formData.mileage] : []),
@@ -104,17 +158,17 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="mb-2">
+      <div>
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
           <Info className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fahrzeugdaten
         </h2>
         <p className="text-sm text-muted-foreground">
-          Beschreiben Sie Ihr {vehicleType} in wenigen Schritten
+          Beschreiben Sie Ihr {vehicleType} – dauert nur eine Minute
         </p>
       </div>
 
-      {/* Selected body type badge + micro-progress */}
+      {/* Body type badge + micro-progress */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {formData.bodyType && (
           <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 flex items-center gap-2 text-sm">
@@ -138,268 +192,131 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         </div>
       </div>
 
-      {/* ===== HERSTELLER ===== */}
-      <div className="space-y-3">
-        <Label className={cn("flex items-center gap-1 text-base font-semibold", fieldErrors.manufacturer && "text-red-600")}>
-          Hersteller wählen <span className="text-red-500">*</span>
-        </Label>
+      {/* ===== ALL FIELDS VISIBLE AT ONCE ===== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Hersteller – searchable combobox */}
+        <div className="space-y-1.5">
+          <Label htmlFor="manufacturer" className={cn(fieldErrors.manufacturer && "text-red-600")}>
+            Hersteller <span className="text-red-500">*</span>
+          </Label>
+          <SearchableSelect
+            id="manufacturer"
+            options={manufacturers}
+            value={formData.manufacturer}
+            onChange={handleManufacturerChange}
+            placeholder="Hersteller eingeben..."
+            hasError={!!fieldErrors.manufacturer}
+          />
+          {fieldErrors.manufacturer && (
+            <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>
+          )}
+        </div>
 
-        {/* Quick-pick: Top-Hersteller als Chips */}
-        {!formData.manufacturer && (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {topManufacturers.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => handleManufacturerSelect(m)}
-                  className="min-h-[44px] px-3 py-2.5 rounded-lg border-2 border-border bg-background text-sm font-medium
-                    hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm transition-all
-                    active:scale-[0.97] active:bg-primary/10"
-                >
-                  {m}
-                </button>
+        {/* Modell – searchable combobox, populated by manufacturer */}
+        <div className="space-y-1.5">
+          <Label htmlFor="model" className={cn(fieldErrors.model && "text-red-600")}>
+            Modell / Baureihe <span className="text-red-500">*</span>
+          </Label>
+          <SearchableSelect
+            id="model"
+            options={models}
+            value={formData.model}
+            onChange={(val) => updateFormData({ model: val })}
+            placeholder={formData.manufacturer ? "Modell eingeben..." : "Erst Hersteller wählen"}
+            disabled={!formData.manufacturer}
+            hasError={!!fieldErrors.model}
+          />
+          {fieldErrors.model && (
+            <p className="text-sm text-red-600">{fieldErrors.model}</p>
+          )}
+        </div>
+
+        {/* Baujahr */}
+        <div className="space-y-1.5">
+          <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
+            <Calendar className="w-4 h-4" />
+            Baujahr <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={formData.year?.toString() || ""}
+            onValueChange={(value) => updateFormData({ year: parseInt(value) })}
+          >
+            <SelectTrigger id="year" className={cn("h-12 text-base", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
+              <SelectValue placeholder="Baujahr wählen" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {yearOptions.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
               ))}
-            </div>
+            </SelectContent>
+          </Select>
+          {fieldErrors.year && (
+            <p className="text-sm text-red-600">{fieldErrors.year}</p>
+          )}
+        </div>
 
-            {!showAllManufacturers ? (
-              <button
-                type="button"
-                onClick={() => setShowAllManufacturers(true)}
-                className="min-h-[44px] w-full sm:w-auto text-sm text-primary hover:underline font-medium flex items-center justify-center sm:justify-start gap-1.5 py-2"
-              >
-                <Search className="w-4 h-4" />
-                Alle {allManufacturers.length} Hersteller anzeigen
-              </button>
-            ) : (
-              <div className="space-y-2 animate-fade-in">
-                <Input
-                  type="text"
-                  placeholder="Hersteller suchen..."
-                  value={manufacturerSearch}
-                  onChange={(e) => setManufacturerSearch(e.target.value)}
-                  className="h-11 text-base"
-                  autoFocus
-                />
-                <div className="max-h-[240px] overflow-y-auto border rounded-lg divide-y">
-                  {filteredManufacturers.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => handleManufacturerSelect(m)}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 active:bg-primary/10 transition-colors"
-                    >
-                      {m}
-                    </button>
-                  ))}
-                  {filteredManufacturers.length === 0 && (
-                    <p className="px-4 py-3 text-sm text-muted-foreground">Kein Hersteller gefunden</p>
-                  )}
-                </div>
-              </div>
+        {/* Kilometerstand – nur Wohnmobil */}
+        {!isWohnwagen && (
+          <div className="space-y-1.5">
+            <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
+              <Gauge className="w-4 h-4" />
+              Kilometerstand <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="mileage"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="z.B. 45000"
+              value={formData.mileage || ""}
+              onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
+              min={0}
+              className={cn("h-12 text-base", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
+            />
+            {fieldErrors.mileage && (
+              <p className="text-sm text-red-600">{fieldErrors.mileage}</p>
             )}
-          </>
-        )}
-
-        {/* Selected manufacturer badge */}
-        {formData.manufacturer && (
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2.5 text-sm font-semibold text-primary">
-              <Check className="w-4 h-4" />
-              {formData.manufacturer}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                updateFormData({ manufacturer: "", model: "" });
-                setShowAllManufacturers(false);
-              }}
-              className="min-h-[44px] px-3 py-2 text-sm text-primary font-medium hover:underline transition-colors"
-            >
-              Ändern
-            </button>
           </div>
-        )}
-        {fieldErrors.manufacturer && (
-          <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.manufacturer}</p>
         )}
       </div>
 
-      {/* ===== MODELL (shown after manufacturer) ===== */}
-      {formData.manufacturer && (
-        <div className="space-y-3 animate-fade-in">
-          <Label className={cn("flex items-center gap-1 text-base font-semibold", fieldErrors.model && "text-red-600")}>
-            Modell / Baureihe <span className="text-red-500">*</span>
-          </Label>
-
-          {/* Model quick-pick chips (if models available) */}
-          {modelOptions.length > 0 && !formData.model && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {modelOptions.slice(0, 9).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => handleModelSelect(m)}
-                    className="min-h-[44px] px-3 py-2 rounded-lg border border-border bg-background text-sm text-left
-                      hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-[0.97] active:bg-primary/10
-                      truncate"
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-              {modelOptions.length > 9 && (
-                <p className="text-xs text-muted-foreground">+ {modelOptions.length - 9} weitere Modelle</p>
+      {/* Zustand – full width, visual tiles */}
+      <div className="space-y-1.5">
+        <Label className={cn(fieldErrors.condition && "text-red-600")}>
+          Zustand <span className="text-red-500">*</span>
+        </Label>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {[
+            { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
+            { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },
+            { value: "Gepflegt", emoji: "👌", short: "Gepflegt" },
+            { value: "Gebrauchsspuren", emoji: "🔧", short: "Gebraucht" },
+            { value: "Reparaturbedürftig", emoji: "⚠️", short: "Reparatur" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => updateFormData({ condition: opt.value })}
+              className={cn(
+                "min-h-[52px] px-1.5 py-2 rounded-lg border-2 text-center font-medium transition-all flex flex-col items-center justify-center gap-0.5",
+                "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
+                formData.condition === opt.value
+                  ? "border-primary bg-primary/10 text-primary shadow-sm"
+                  : "border-border bg-background text-foreground"
               )}
-            </div>
-          )}
-
-          {/* Model input with autocomplete dropdown */}
-          <div className="relative">
-            <Input
-              ref={modelInputRef}
-              id="model"
-              type="text"
-              placeholder={modelOptions.length > 0 ? "Modell wählen oder eingeben..." : "z.B. B-Klasse, California, Coral..."}
-              value={formData.model || modelSearch}
-              onChange={(e) => {
-                const val = e.target.value;
-                setModelSearch(val);
-                updateFormData({ model: val });
-                setShowModelDropdown(val.length > 0 && filteredModels.length > 0);
-              }}
-              onFocus={() => {
-                if (modelOptions.length > 0 && !formData.model) {
-                  setShowModelDropdown(true);
-                }
-              }}
-              className={cn("h-12 text-base transition-smooth", fieldErrors.model && "border-red-500 ring-red-500/20 ring-2")}
-              autoComplete="off"
-            />
-            {showModelDropdown && filteredModels.length > 0 && (
-              <div
-                ref={modelDropdownRef}
-                className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[240px] overflow-y-auto"
-              >
-                {filteredModels.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => handleModelSelect(m)}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 active:bg-primary/10 transition-colors"
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {formData.model && (
-            <div className="flex items-center gap-1.5 text-xs text-green-600">
-              <Check className="w-3.5 h-3.5" />
-              Modell eingetragen
-            </div>
-          )}
-          {fieldErrors.model && (
-            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.model}</p>
-          )}
+            >
+              <span className="text-lg leading-none">{opt.emoji}</span>
+              <span className="text-[11px] sm:text-xs leading-tight sm:hidden">{opt.short}</span>
+              <span className="text-xs leading-tight hidden sm:block">{opt.value}</span>
+            </button>
+          ))}
         </div>
-      )}
-
-      {/* ===== BAUJAHR + KM + ZUSTAND (shown after model) ===== */}
-      {formData.manufacturer && formData.model && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Baujahr */}
-            <div className="space-y-2">
-              <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
-                <Calendar className="w-4 h-4" />
-                Baujahr <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.year?.toString() || ""}
-                onValueChange={(value) => updateFormData({ year: parseInt(value) })}
-              >
-                <SelectTrigger id="year" className={cn("h-12 text-base transition-smooth", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
-                  <SelectValue placeholder="Baujahr wählen" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldErrors.year && (
-                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.year}</p>
-              )}
-            </div>
-
-            {/* Kilometerstand - nur Wohnmobil */}
-            {!isWohnwagen && (
-              <div className="space-y-2">
-                <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
-                  <Gauge className="w-4 h-4" />
-                  Kilometerstand <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="mileage"
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="z.B. 45000"
-                  value={formData.mileage || ""}
-                  onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
-                  min={0}
-                  className={cn("h-12 text-base transition-smooth", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
-                />
-                {fieldErrors.mileage && (
-                  <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.mileage}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Zustand – eigene Sektion für volle Breite */}
-          <div className="space-y-2">
-            <Label htmlFor="condition" className={cn("flex items-center gap-1", fieldErrors.condition && "text-red-600")}>
-              Zustand <span className="text-red-500">*</span>
-            </Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {[
-                { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
-                { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },
-                { value: "Gepflegt", emoji: "👌", short: "Gepflegt" },
-                { value: "Gebrauchsspuren", emoji: "🔧", short: "Gebraucht" },
-                { value: "Reparaturbedürftig", emoji: "⚠️", short: "Reparatur" },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => updateFormData({ condition: opt.value })}
-                  className={cn(
-                    "min-h-[56px] px-1.5 py-2 rounded-lg border-2 text-center font-medium transition-all flex flex-col items-center justify-center gap-0.5",
-                    "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
-                    formData.condition === opt.value
-                      ? "border-primary bg-primary/10 text-primary shadow-sm"
-                      : "border-border bg-background text-foreground"
-                  )}
-                >
-                  <span className="text-lg leading-none">{opt.emoji}</span>
-                  <span className="text-[11px] sm:text-xs leading-tight sm:hidden">{opt.short}</span>
-                  <span className="text-xs leading-tight hidden sm:block">{opt.value}</span>
-                </button>
-              ))}
-            </div>
-            {fieldErrors.condition && (
-              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.condition}</p>
-            )}
-          </div>
-        </div>
-      )}
+        {fieldErrors.condition && (
+          <p className="text-sm text-red-600">{fieldErrors.condition}</p>
+        )}
+      </div>
 
       {/* Positive reinforcement when all fields filled */}
       {filledCount === totalRequired && (

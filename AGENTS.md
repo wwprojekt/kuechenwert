@@ -77,9 +77,10 @@ npm run build        # Production build via Vite → dist/
 - **Chips show both units**: e.g. "140 PS (103 kW)" for professional feel
 
 ## Vehicle Data Stats (08.04.2026)
-- **Wohnmobil**: 96 Hersteller, 1035 Modelle
-- **Wohnwagen**: 36 Hersteller, 156 Modelle
-- **Basisfahrzeuge**: 21 Chassis-Optionen mit 82 PS-Werten
+- **Wohnmobil**: 96 Hersteller, 1126 Modelle
+- **Wohnwagen**: 36 Hersteller, 173 Modelle
+- **Basisfahrzeuge**: 27 Chassis-Optionen mit 152 PS-Werten
+- **PS-Format**: Chips zeigen `XXkW/YYYPS` (z.B. "103kW/140PS")
 - User data analysis: Most common free-form entries verified against model lists
 - Forster VB-Serie, Rimor Bliss/Europe, Sprite, Bailey, T@B added based on real user patterns
 

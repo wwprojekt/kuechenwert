@@ -3,14 +3,68 @@ import PageHero from "@/components/PageHero";
 import RelatedContent, { haendlerRelatedLinks } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Users, Zap, Shield, CheckCircle2, Handshake, BarChart3, Target } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Users, Zap, Shield, CheckCircle2, Handshake, BarChart3, Target, Clock, Gavel, ArrowRight, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 import dealerProfessional from "@/assets/dealer-professional.jpg";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Haendler = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || 'CaravanWert';
+
+  // Live auction data for social proof
+  const { data: liveAuctions } = useQuery({
+    queryKey: ["haendler-live-auctions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("auctions")
+        .select(`
+          id, current_bid, starting_bid, end_time,
+          motorhome:motorhomes!left(
+            manufacturer, model, year, body_type, mileage, city,
+            photos:motorhome_photos(url, display_order)
+          )
+        `)
+        .eq("status", "active")
+        .order("end_time", { ascending: true })
+        .limit(4);
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 60000,
+  });
+
+  const { data: auctionStats } = useQuery({
+    queryKey: ["haendler-auction-stats"],
+    queryFn: async () => {
+      const [activeRes, soldRes, dealerRes] = await Promise.all([
+        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "sold"),
+        supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
+      ]);
+      return {
+        activeAuctions: activeRes.count || 0,
+        soldAuctions: soldRes.count || 0,
+        approvedDealers: dealerRes.count || 0,
+      };
+    },
+    staleTime: 60000,
+  });
+
+  const getTimeRemaining = (endTime: string) => {
+    const diff = new Date(endTime).getTime() - Date.now();
+    if (diff <= 0) return "Beendet";
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `${days}T ${hours}h`;
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
   const benefits = [
     {
       icon: TrendingUp,
@@ -74,10 +128,10 @@ const Haendler = () => {
   ];
 
   const stats = [
-    { number: "30+", label: "Aktive Auktionen" },
+    { number: auctionStats ? `${auctionStats.activeAuctions}` : "30+", label: "Aktive Auktionen" },
     { number: "Täglich", label: "Neue Fahrzeuge" },
     { number: "0 €", label: "Registrierung" },
-    { number: "100%", label: "Transparent" }
+    { number: auctionStats ? `${auctionStats.approvedDealers}+` : "40+", label: "Registrierte Händler" }
   ];
 
   const process = [
@@ -209,6 +263,96 @@ const Haendler = () => {
           </div>
         </div>
       </section>
+
+      {/* Live Auctions Preview – Social Proof */}
+      {liveAuctions && liveAuctions.length > 0 && (
+        <section className="py-20 bg-gradient-to-b from-background to-muted/30">
+          <div className="container">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 border border-red-200 mb-6">
+                <Flame className="h-4 w-4 text-red-500 animate-pulse" />
+                <span className="text-sm font-semibold text-red-700">LIVE – Jetzt verfügbar</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
+                Diese Fahrzeuge warten auf Ihr Gebot
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                {auctionStats?.activeAuctions || liveAuctions.length} aktive Auktionen – registrieren Sie sich und bieten Sie mit.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              {liveAuctions.map((auction: any) => {
+                const m = auction.motorhome;
+                if (!m) return null;
+                const photos = m.photos?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+                const photoUrl = photos?.[0]?.url;
+                const price = auction.current_bid || auction.starting_bid || 0;
+                const timeLeft = getTimeRemaining(auction.end_time);
+                const isUrgent = new Date(auction.end_time).getTime() - Date.now() < 24 * 60 * 60 * 1000;
+
+                return (
+                  <Card key={auction.id} className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-all group">
+                    <div className="relative aspect-[4/3] bg-muted overflow-hidden">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt={`${m.manufacturer} ${m.model}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <Gavel className="h-12 w-12 opacity-30" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3">
+                        <Badge variant={isUrgent ? "destructive" : "secondary"} className="gap-1 text-xs font-semibold shadow-md">
+                          <Clock className="h-3 w-3" />
+                          {timeLeft}
+                        </Badge>
+                      </div>
+                      {!auction.current_bid && (
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-emerald-500 text-white text-xs font-semibold shadow-md">
+                            Noch ohne Gebot!
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-bold text-sm line-clamp-1 mb-1">
+                        {m.manufacturer} {m.model}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                        {m.year && <span>{m.year}</span>}
+                        {m.body_type && <><span>·</span><span>{m.body_type}</span></>}
+                        {m.mileage && <><span>·</span><span>{Number(m.mileage).toLocaleString("de-DE")} km</span></>}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-muted-foreground">Aktuelles Gebot</div>
+                          <div className="text-lg font-bold text-primary">
+                            {Number(price).toLocaleString("de-DE")} €
+                          </div>
+                        </div>
+                        <Gavel className="h-5 w-5 text-muted-foreground/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <div className="text-center">
+              <Link to="/register/haendler">
+                <Button size="lg" className="gradient-hero hover:gradient-hero-hover shadow-lg hover:shadow-glow gap-2">
+                  Jetzt registrieren & mitbieten
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground mt-3">
+                Kostenlose Registrierung · Keine monatlichen Gebühren · Sofort bieten nach Freischaltung
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Services Section */}
       <section className="py-20 bg-muted/30">

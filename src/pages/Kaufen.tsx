@@ -408,6 +408,28 @@ const Kaufen = () => {
 
             {/* Listings Grid */}
             <div>
+              {/* Dealer Registration CTA for non-authenticated visitors */}
+              {!user && (
+                <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-primary/5 via-cyan-50/50 to-primary/5 border-2 border-primary/20">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Shield className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">Sie sind Händler? Registrieren Sie sich kostenlos und bieten Sie mit!</p>
+                        <p className="text-xs text-muted-foreground">Keine Gebühren · Provision nur bei Zuschlag · Sofort-Freischaltung</p>
+                      </div>
+                    </div>
+                    <Link to="/register/haendler" className="flex-shrink-0">
+                      <Button size="sm" className="gap-1.5">
+                        Händler werden
+                        <ArrowUpDown className="h-3.5 w-3.5 rotate-90" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
               {/* Header with sort, filter button (mobile), and save search */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">

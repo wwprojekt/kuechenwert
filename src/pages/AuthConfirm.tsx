@@ -68,6 +68,7 @@ const AuthConfirm = () => {
   const [resendEmail, setResendEmail] = useState("");
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [resendMessage, setResendMessage] = useState("");
+  const originalType = (searchParams.get("type") || "signup") as VerifyType;
 
   useEffect(() => {
     const confirmEmail = async () => {
@@ -183,26 +184,34 @@ const AuthConfirm = () => {
     setResendMessage("");
 
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-      });
-
-      if (error) {
-        // If the error indicates the email is already confirmed, show a helpful message
-        if (error.message.includes("already confirmed") || error.message.includes("already registered")) {
-          setResendStatus("error");
-          setResendMessage(
-            "Diese E-Mail-Adresse ist bereits bestätigt. Sie können sich direkt anmelden."
-          );
-          return;
+      // Use the correct resend method based on the original link type
+      if (originalType === "recovery") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/confirm?type=recovery`,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.resend({
+          type: "signup",
+          email,
+        });
+        if (error) {
+          if (error.message.includes("already confirmed") || error.message.includes("already registered")) {
+            setResendStatus("error");
+            setResendMessage(
+              "Diese E-Mail-Adresse ist bereits bestätigt. Sie können sich direkt anmelden."
+            );
+            return;
+          }
+          throw error;
         }
-        throw error;
       }
 
       setResendStatus("sent");
       setResendMessage(
-        `Ein neuer Bestätigungslink wurde an ${email} gesendet. Bitte prüfen Sie auch Ihren Spam-Ordner.`
+        originalType === "recovery"
+          ? `Ein neuer Passwort-Reset-Link wurde an ${email} gesendet. Bitte prüfen Sie auch Ihren Spam-Ordner.`
+          : `Ein neuer Bestätigungslink wurde an ${email} gesendet. Bitte prüfen Sie auch Ihren Spam-Ordner.`
       );
     } catch (err: unknown) {
       console.error("Resend confirmation error:", err);
@@ -273,10 +282,10 @@ const AuthConfirm = () => {
                   <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  Neuen Bestätigungslink anfordern
+                  {originalType === "recovery" ? "Neuen Passwort-Reset-Link anfordern" : "Neuen Bestätigungslink anfordern"}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  Geben Sie Ihre E-Mail-Adresse ein, um einen neuen Bestätigungslink zu erhalten.
+                  Geben Sie Ihre E-Mail-Adresse ein, um einen neuen {originalType === "recovery" ? "Passwort-Reset-Link" : "Bestätigungslink"} zu erhalten.
                 </p>
 
                 <form onSubmit={handleResendConfirmation} className="space-y-3">
@@ -323,7 +332,7 @@ const AuthConfirm = () => {
                       ? "Wird gesendet..."
                       : resendStatus === "sent"
                       ? "Link wurde gesendet"
-                      : "Neuen Bestätigungslink senden"}
+                      : originalType === "recovery" ? "Neuen Reset-Link senden" : "Neuen Bestätigungslink senden"}
                   </button>
                 </form>
 

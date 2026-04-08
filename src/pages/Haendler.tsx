@@ -107,8 +107,8 @@ const Haendler = () => {
   const serviceSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Händler-Partnerprogramm',
-    description: 'Werden Sie Teil unseres wachsenden Händlernetzwerks. Schneller Bestandsverkauf, professioneller Marketing-Support und Zugang zu kaufbereiten Kunden.',
+    name: 'Wohnmobil-Auktionsplattform für Händler',
+    description: 'Online-Auktionsplattform für Wohnmobil-Händler. Ersteigern Sie geprüfte Wohnmobile und Wohnwagen direkt von Privatverkäufern zu attraktiven Preisen.',
     provider: {
       '@type': 'Organization',
       name: siteName,
@@ -118,15 +118,15 @@ const Haendler = () => {
       '@type': 'Place',
       name: 'Deutschland',
     },
-    serviceType: 'B2B Vehicle Trading Platform',
+    serviceType: 'B2B Vehicle Auction Platform',
   };
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Händler-Partnerprogramm – Wohnmobil-Ankauf"
-      description="Partnerprogramm für Wohnmobil-Händler. Schneller Bestandsverkauf, Marketing-Support und Zugang zu kaufbereiten Kunden. Jetzt Partner werden!"
-      keywords="händler programm, wohnmobil händler, b2b wohnmobil, händler partnerschaft"
+      title="Für Händler – Wohnmobile günstig per Auktion einkaufen"
+      description="Ersteigern Sie Wohnmobile und Wohnwagen von Privatverkäufern. Kostenlose Registrierung, transparente Auktionen, sichere Abwicklung. Jetzt als Händler registrieren!"
+      keywords="wohnmobil händler einkauf, wohnmobil auktion händler, wohnwagen ankauf händler, b2b wohnmobil"
       canonicalPath="/haendler"
       structuredData={serviceSchema}
     >
@@ -247,9 +247,9 @@ const Haendler = () => {
       <section className="py-20">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">So werden Sie Partner</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">In 4 Schritten zum ersten Fahrzeug</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              In nur 4 einfachen Schritten zum erfolgreichen {siteName} Partner.
+              So einfach kaufen Sie Wohnmobile über {siteName}.
             </p>
           </div>
           
@@ -274,9 +274,9 @@ const Haendler = () => {
         <div className="container">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Warum {siteName}?</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Warum über {siteName} einkaufen?</h2>
               <p className="text-lg opacity-90">
-                Wir sind mehr als nur eine Plattform - wir sind Ihr strategischer Partner für Wachstum.
+                Ihr direkter Draht zu Privatverkäufern – ohne Zwischenhändler.
               </p>
             </div>
 
@@ -314,24 +314,24 @@ const Haendler = () => {
 
             <Card className="border-primary/20">
               <CardHeader>
-                <CardTitle className="text-2xl">Unser Versprechen an Sie</CardTitle>
+                <CardTitle className="text-2xl">Das bieten wir Ihnen</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">Persönlicher Ansprechpartner für alle Ihre Anliegen</p>
+                  <p className="text-base">Tägliche E-Mail mit neuen Fahrzeugen – Sie verpassen kein Angebot</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">Kontinuierliche Weiterentwicklung unserer Plattform und Services</p>
+                  <p className="text-base">Echtzeit-Benachrichtigungen wenn Sie überboten werden</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">Regelmäßige Schulungen und Brancheninsights</p>
+                  <p className="text-base">Kaufvertrag und Rechnung automatisch bei Zuschlag</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">Faire und transparente Provisionsmodelle</p>
+                  <p className="text-base">Provision nur bei erfolgreichem Kauf – keine laufenden Kosten</p>
                 </div>
               </CardContent>
             </Card>
@@ -381,9 +381,9 @@ const Haendler = () => {
       <section id="partner-werden" className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Werden Sie noch heute Partner!</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Jetzt kostenlos registrieren</h2>
             <p className="text-xl mb-8 opacity-95">
-              Werden Sie Teil unseres wachsenden Händlernetzwerks und profitieren Sie von unserem starken Service.
+              Ersteigern Sie Wohnmobile direkt von Privatverkäufern – registrieren Sie sich in 2 Minuten.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/register/haendler">

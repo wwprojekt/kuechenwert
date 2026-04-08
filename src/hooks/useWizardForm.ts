@@ -248,13 +248,10 @@ const step2SchemaWohnwagen = z.object({
   condition: z.string().min(1, "Zustand ist erforderlich"),
 });
 
-// Step 3: Technical Details – Wohnmobil (fuel_type, transmission, seats, sleeping_places required; defects validated))
+// Step 3: Technical Details – Wohnmobil (fuel_type, transmission, sleeping_places required; seats optional; defects validated)
 const step4SchemaWohnmobil = z.object({
   fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
   transmission: z.string().min(1, "Getriebe ist erforderlich"),
-  seats_with_seatbelts: z.number({ required_error: "Sitzplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Sitzplätze" })
-    .min(1, "Mindestens 1 Sitzplatz erforderlich")
-    .max(9, "Maximal 9 Sitzplätze möglich"),
   sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
     .min(1, "Mindestens 1 Schlafplatz erforderlich")
     .max(9, "Maximal 9 Schlafplätze möglich"),
@@ -406,7 +403,6 @@ export const useWizardForm = () => {
             step4SchemaWohnmobil.parse({
               fuel_type: formData.fuel_type,
               transmission: formData.transmission,
-              seats_with_seatbelts: formData.seats_with_seatbelts,
               sleeping_places: formData.sleeping_places,
               no_known_defects: formData.no_known_defects,
               known_defects: formData.known_defects,

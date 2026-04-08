@@ -69,6 +69,18 @@ npm run build        # Production build via Vite → dist/
 - **mobile.de**: Extensive API fields (make, model, power kW, registration), 15 photos, paid visibility packages
 - **Key takeaways**: Minimal required fields + rich optional data; photo quality is critical; time estimates reduce friction
 
+### Phase 5 – Data Integrity & Backend Fixes (08.04.2026)
+- **DB migration**: Added `base_vehicle` column to `motorhomes` table
+- **Edge Function**: `auto-convert-wizard` v14 deployed – maps `formData.baseVehicle` → `base_vehicle`
+- **PS→kW conversion**: PS chips and manual input both auto-calculate `power_kw` (PS × 0.7355)
+- **Chips show both units**: e.g. "140 PS (103 kW)" for professional feel
+
+## Known Issues (08.04.2026)
+- **6 commits not pushed to origin/main** – changes not deployed to production via Netlify!
+- Commits: auto-advance, step-dots, contextual labels, Basisfahrzeug, photos redesign, kW fix
+- Erstzulassung field on LIVE site still shows "mm/dd/yyyy" (fixed in code to type="month")
+- Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
+
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)

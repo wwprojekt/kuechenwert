@@ -75,6 +75,7 @@ import {
   ChevronDown,
   ChevronUp,
   UserPlus,
+  Phone,
 } from "lucide-react";
 
 // ============================================================================
@@ -122,6 +123,7 @@ interface ProfileInfo {
   company_name: string | null;
   email: string | null;
   customer_number: string | null;
+  phone: string | null;
 }
 
 interface BidInfo {
@@ -314,7 +316,7 @@ export default function AdminPostAuctionOffers() {
       if (allProfileIds.length === 0) return {};
       const { data } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, company_name, email, customer_number")
+        .select("id, first_name, last_name, company_name, email, customer_number, phone")
         .in("id", allProfileIds);
       const map: Record<string, ProfileInfo> = {};
       (data || []).forEach((p: any) => { map[p.id] = p; });
@@ -440,7 +442,7 @@ export default function AdminPostAuctionOffers() {
       if (missingIds.length > 0) {
         const { data: newProfiles } = await supabase
           .from("profiles")
-          .select("id, first_name, last_name, company_name, email, customer_number")
+          .select("id, first_name, last_name, company_name, email, customer_number, phone")
           .in("id", missingIds);
 
         if (newProfiles && newProfiles.length > 0) {
@@ -1105,6 +1107,11 @@ export default function AdminPostAuctionOffers() {
                         {profileMap[offer.buyer_id]?.email && (
                           <p className="text-xs text-muted-foreground">{profileMap[offer.buyer_id].email}</p>
                         )}
+                        {profileMap[offer.buyer_id]?.phone && (
+                          <a href={`tel:${profileMap[offer.buyer_id].phone}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {profileMap[offer.buyer_id].phone}
+                          </a>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1219,6 +1226,11 @@ export default function AdminPostAuctionOffers() {
                     )}
                     <span>Verkäufer: <strong>{sellerName}</strong></span>
                     {seller?.email && <span className="text-xs">({seller.email})</span>}
+                    {seller?.phone && (
+                      <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {seller.phone}
+                      </a>
+                    )}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1318,12 +1330,20 @@ export default function AdminPostAuctionOffers() {
                               const hasOffer = kaufchanceAllOffers.some(o => o.buyer_id === inv.bidder_id);
 
                               return (
-                                <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                                  <div className="flex items-center gap-2">
+                                <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 flex-wrap gap-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <Badge variant="outline" className="text-xs font-mono">#{inv.rank}</Badge>
                                     <span className="text-sm font-medium">{bidderName}</span>
                                     {bidder?.customer_number && (
                                       <span className="text-xs text-muted-foreground font-mono">#{bidder.customer_number}</span>
+                                    )}
+                                    {bidder?.email && (
+                                      <span className="text-xs text-muted-foreground">{bidder.email}</span>
+                                    )}
+                                    {bidder?.phone && (
+                                      <a href={`tel:${bidder.phone}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                        <Phone className="w-3 h-3" /> {bidder.phone}
+                                      </a>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-3">
@@ -1445,13 +1465,23 @@ export default function AdminPostAuctionOffers() {
                             <Card key={offer.id} className={`p-4 ${offerExpired ? 'opacity-60' : ''}`}>
                               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                                     <h4 className="font-semibold">{buyerName}</h4>
                                     {buyer?.customer_number && (
                                       <Badge variant="outline" className="text-xs font-mono">#{buyer.customer_number}</Badge>
                                     )}
                                     <OfferStatusBadge status={offer.status} expiresAt={offer.expires_at} />
                                   </div>
+                                  {(buyer?.email || buyer?.phone) && (
+                                    <div className="flex items-center gap-3 mb-2 text-xs text-muted-foreground flex-wrap">
+                                      {buyer?.email && <span>{buyer.email}</span>}
+                                      {buyer?.phone && (
+                                        <a href={`tel:${buyer.phone}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                                          <Phone className="w-3 h-3" /> {buyer.phone}
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
 
                                   <div className="flex items-center gap-6 mb-2">
                                     <div>
@@ -1806,6 +1836,11 @@ export default function AdminPostAuctionOffers() {
                         <div className="text-right">
                           <p className="font-medium">{getProfileName(selectedOffer.buyer_id)}</p>
                           {buyer?.email && <p className="text-xs text-muted-foreground">{buyer.email}</p>}
+                          {buyer?.phone && (
+                            <a href={`tel:${buyer.phone}`} className="text-xs text-primary hover:underline flex items-center justify-end gap-1">
+                              <Phone className="w-3 h-3" /> {buyer.phone}
+                            </a>
+                          )}
                           {buyer?.customer_number && <p className="text-xs font-mono text-muted-foreground">#{buyer.customer_number}</p>}
                         </div>
                       </div>
@@ -1815,6 +1850,11 @@ export default function AdminPostAuctionOffers() {
                           <div className="text-right">
                             <p className="font-medium">{getProfileName(auction!.motorhome!.seller_id)}</p>
                             {seller.email && <p className="text-xs text-muted-foreground">{seller.email}</p>}
+                            {seller.phone && (
+                              <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline flex items-center justify-end gap-1">
+                                <Phone className="w-3 h-3" /> {seller.phone}
+                              </a>
+                            )}
                           </div>
                         </div>
                       )}

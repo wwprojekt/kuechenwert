@@ -9,8 +9,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
  * Inaktivitäts-E-Mail – wird per Cron-Job wöchentlich aufgerufen.
- * Sendet Händlern, die 30+ Tage nicht geboten haben, eine Erinnerung
- * mit aktuellen Auktionen.
+ *
+ * ZWEI Stufen:
+ * 1. "Erste-Schritte" Nudge: 3 Tage nach Genehmigung, wenn noch kein Gebot (email_type: 'dealer_first_nudge')
+ * 2. Langzeit-Inaktivität: 30+ Tage ohne Gebot (email_type: 'inactivity') – wie bisher
+ *
+ * Anti-Spam: Jede Stufe wird max. 1x gesendet. Opt-out wird respektiert.
  */
 
 const handler = async (req: Request): Promise<Response> => {
@@ -32,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Find approved dealers
     const { data: dealers, error: dealerError } = await supabase
       .from('dealer_applications')
-      .select('user_id, company_name')
+      .select('user_id, company_name, created_at, status_changed_at')
       .eq('status', 'approved');
 
     if (dealerError) throw new Error(`Dealer fetch error: ${dealerError.message}`);
@@ -44,6 +48,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
     // Get active auctions for recommendations
     const { data: activeAuctions } = await supabase
@@ -55,6 +61,18 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('status', 'active')
       .order('end_time', { ascending: true })
       .limit(5);
+
+    // Get bid counts for auction display
+    const auctionBidCounts: Record<string, number> = {};
+    if (activeAuctions) {
+      for (const a of activeAuctions) {
+        const { count } = await supabase
+          .from('bids')
+          .select('id', { count: 'exact', head: true })
+          .eq('auction_id', a.id);
+        auctionBidCounts[a.id] = count || 0;
+      }
+    }
 
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
@@ -68,11 +86,125 @@ const handler = async (req: Request): Promise<Response> => {
     let sent = 0;
     let failed = 0;
     let skipped = 0;
+    let firstNudgeSent = 0;
 
     for (const dealer of dealers) {
       try {
         if (!dealer.user_id) continue;
 
+        // Get profile + opt-out check
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email, broadcast_emails_enabled')
+          .eq('id', dealer.user_id)
+          .single();
+
+        if (!profile?.email) continue;
+        if (profile.broadcast_emails_enabled === false) {
+          skipped++;
+          continue;
+        }
+
+        // Check if dealer has EVER bid
+        const { data: anyBids } = await supabase
+          .from('bids')
+          .select('id')
+          .eq('bidder_id', dealer.user_id)
+          .limit(1);
+
+        const hasEverBid = anyBids && anyBids.length > 0;
+        const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+
+        // ── STUFE 1: First-Nudge (3 Tage nach Approval, nie geboten) ────
+        if (!hasEverBid) {
+          const approvedAt = new Date(dealer.status_changed_at || dealer.created_at);
+          const daysSinceApproval = (Date.now() - approvedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+          if (daysSinceApproval >= 3 && daysSinceApproval < 30) {
+            // Check if first nudge was already sent
+            const { data: existingNudge } = await supabase
+              .from('admin_emails')
+              .select('id')
+              .eq('recipient_email', profile.email)
+              .eq('email_type', 'dealer_first_nudge')
+              .limit(1);
+
+            if (!existingNudge || existingNudge.length === 0) {
+              // Build first nudge email
+              let auctionPreview = '';
+              if (activeAuctions && activeAuctions.length > 0) {
+                const items = activeAuctions.slice(0, 3).map((a: any) => {
+                  const m = a.motorhomes;
+                  const price = typeof a.current_bid === 'number'
+                    ? a.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+                    : `${a.current_bid || 0} €`;
+                  const bids = auctionBidCounts[a.id] || 0;
+                  return `<strong>${m.manufacturer} ${m.model} (${m.year})</strong> &ndash; ${price} &middot; ${bids} Gebote`;
+                });
+                auctionPreview = list(items);
+              }
+
+              const nudgeSubject = `${settingsData.site_name}: ${activeAuctions?.length || 0} Auktionen warten auf Ihr erstes Gebot`;
+              const nudgeContent = `
+                ${greeting(name || dealer.company_name || undefined)}
+                ${paragraph(`Sie sind seit ein paar Tagen als H&auml;ndler bei <strong>${settingsData.site_name}</strong> freigeschaltet &ndash; wunderbar!`)}
+                ${paragraph(`Aktuell laufen <strong>${activeAuctions?.length || 0} Auktionen</strong> auf unserer Plattform. Hier sind einige Highlights:`)}
+                ${activeAuctions && activeAuctions.length > 0 ? infoBox('Aktuelle Top-Auktionen', auctionPreview, 'info', settingsData) : ''}
+                ${infoBox('So einfach geht\u0027s', `
+                  ${list([
+                    '<strong>Einloggen</strong> unter <a href="https://caravanwert.de/login" style="color: #1f8aa2;">caravanwert.de/login</a>',
+                    '<strong>Auktion ausw&auml;hlen</strong> &ndash; Klicken Sie auf ein Fahrzeug das Sie interessiert',
+                    '<strong>Gebot abgeben</strong> &ndash; Geben Sie Ihren Wunschpreis ein und klicken Sie auf &quot;Bieten&quot;',
+                    '<strong>Fertig!</strong> Sie werden per E-Mail informiert wenn sich etwas &auml;ndert',
+                  ])}
+                `, 'default', settingsData)}
+                ${button('Jetzt erstes Gebot abgeben', 'https://caravanwert.de/kaufen', settingsData)}
+                ${paragraph(`<strong>Tipp:</strong> Sie k&ouml;nnen auch ein <strong>Auto-Bid</strong> setzen &ndash; dann bietet das System automatisch f&uuml;r Sie mit bis zu Ihrem H&ouml;chstbetrag.`)}
+                ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese einmalige E-Mail als frisch freigeschalteter H&auml;ndler. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Benachrichtigungen anpassen</a></span>')}
+              `;
+
+              const nudgeHtml = buildEmailLayout(settingsData, nudgeSubject, nudgeContent);
+
+              const emailResponse = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${RESEND_API_KEY}`,
+                },
+                body: JSON.stringify({
+                  from: `${settingsData.site_name} <info@caravanwert.de>`,
+                  to: [profile.email],
+                  subject: nudgeSubject,
+                  html: nudgeHtml,
+                  reply_to: 'info@caravanwert.de',
+                  headers: { 'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>' },
+                }),
+              });
+
+              if (emailResponse.ok) {
+                const resendResult = await emailResponse.json();
+                await supabase.from('admin_emails').insert({
+                  sender_email: 'info@caravanwert.de',
+                  sender_name: settingsData.site_name,
+                  recipient_email: profile.email,
+                  recipient_name: name || null,
+                  recipient_id: dealer.user_id,
+                  subject: nudgeSubject,
+                  body_html: nudgeContent,
+                  email_type: 'dealer_first_nudge',
+                  direction: 'outbound',
+                  status: 'sent',
+                  resend_id: resendResult.id,
+                  is_read: true,
+                });
+                firstNudgeSent++;
+              }
+              continue; // Don't also send inactivity email
+            }
+          }
+        }
+
+        // ── STUFE 2: Langzeit-Inaktivität (30+ Tage) ───────────────────
         // Check if dealer has bid in the last 30 days
         const { data: recentBids } = await supabase
           .from('bids')
@@ -85,15 +217,6 @@ const handler = async (req: Request): Promise<Response> => {
           skipped++;
           continue; // Dealer is active, skip
         }
-
-        // Check if we already sent an inactivity email in the last 30 days
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, email')
-          .eq('id', dealer.user_id)
-          .single();
-
-        if (!profile?.email) continue;
 
         const { data: recentReminder } = await supabase
           .from('admin_emails')
@@ -108,20 +231,6 @@ const handler = async (req: Request): Promise<Response> => {
           continue; // Already reminded recently
         }
 
-        // Check broadcast opt-out
-        const { data: prefs } = await supabase
-          .from('profiles')
-          .select('broadcast_emails_enabled')
-          .eq('id', dealer.user_id)
-          .single();
-
-        if (prefs && prefs.broadcast_emails_enabled === false) {
-          skipped++;
-          continue;
-        }
-
-        const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-
         // Build auction recommendations
         let auctionList = '';
         if (activeAuctions && activeAuctions.length > 0) {
@@ -135,14 +244,14 @@ const handler = async (req: Request): Promise<Response> => {
           auctionList = list(items);
         }
 
-        const subject = `Wir vermissen Sie! Aktuelle Auktionen bei ${settingsData.site_name}`;
+        const subject = `${activeAuctions?.length || 0} aktuelle Auktionen bei ${settingsData.site_name}`;
         const emailContent = `
           ${greeting(name || undefined)}
-          ${paragraph(`Es ist eine Weile her, seit Sie zuletzt bei <strong>${settingsData.site_name}</strong> aktiv waren. Wir m&ouml;chten Sie auf einige interessante Auktionen aufmerksam machen:`)}
+          ${paragraph(`Es ist eine Weile her, seit Sie zuletzt bei <strong>${settingsData.site_name}</strong> aktiv waren. Aktuell laufen <strong>${activeAuctions?.length || 0} Auktionen</strong> &ndash; hier ein &Uuml;berblick:`)}
           ${activeAuctions && activeAuctions.length > 0 ? infoBox('Aktuelle Auktionen', auctionList, 'info', settingsData) : ''}
-          ${paragraph('Verpassen Sie nicht die Chance auf attraktive Fahrzeuge zu g&uuml;nstigen Preisen!')}
+          ${paragraph('Die Konkurrenz ist gering &ndash; Ihre Chancen auf ein Schn&auml;ppchen stehen gut!')}
           ${button('Auktionen entdecken', 'https://caravanwert.de/kaufen', settingsData)}
-          ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie als H&auml;ndler bei ${settingsData.site_name} registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Abmelden</a></span>')}
+          ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie als H&auml;ndler bei ' + settingsData.site_name + ' registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Abmelden</a></span>')}
         `;
 
         const html = buildEmailLayout(settingsData, subject, emailContent);
@@ -197,8 +306,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Inactivity emails: sent=${sent}, failed=${failed}, skipped=${skipped}`,
+      message: `Inactivity emails: sent=${sent}, firstNudge=${firstNudgeSent}, failed=${failed}, skipped=${skipped}`,
       sent,
+      firstNudgeSent,
       failed,
       skipped,
     }), {

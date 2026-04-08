@@ -958,6 +958,58 @@ const DealerDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Onboarding Card for new dealers who haven't bid yet */}
+      {!isLocked && stats && stats.totalBids === 0 && recentAuctions && recentAuctions.length > 0 && (
+        <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-cyan-50/50 animate-fade-in">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Willkommen! So starten Sie Ihr erstes Gebot
+            </CardTitle>
+            <CardDescription>
+              Sie haben noch kein Gebot abgegeben – aktuell {recentAuctions.length > 1 ? `warten ${recentAuctions.length} Fahrzeuge` : 'wartet 1 Fahrzeug'} auf Ihr Gebot
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/70 border">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-primary font-bold text-sm">1</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Auktion wählen</p>
+                  <p className="text-xs text-muted-foreground">Scrollen Sie nach unten und klicken Sie auf ein Fahrzeug</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/70 border">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-primary font-bold text-sm">2</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Betrag eingeben</p>
+                  <p className="text-xs text-muted-foreground">Geben Sie Ihren Wunschpreis ein und klicken Sie auf "Bieten"</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/70 border">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-primary font-bold text-sm">3</span>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Benachrichtigung erhalten</p>
+                  <p className="text-xs text-muted-foreground">Sie werden per E-Mail informiert wenn Sie überboten werden</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <Zap className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-800">
+                <strong>Tipp:</strong> Mit "Auto-Bid" bietet das System automatisch für Sie bis zu Ihrem Höchstbetrag – so verpassen Sie kein Fahrzeug.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Enhanced Bid Overview with Status Indicators */}
       {!isLocked && stats?.recentBids && stats.recentBids.length > 0 && (
         <Card className="border-2 hover:border-primary/20 transition-smooth">

@@ -93,8 +93,57 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         break;
 
-      case "approved":
+      case "approved": {
         subject = "Willkommen als Händler bei CaravanWert!";
+
+        // Fetch current active auctions to show in approval email
+        let auctionPreviewHtml = '';
+        try {
+          const { data: activeAuctions } = await supabase
+            .from('auctions')
+            .select(`
+              id, current_bid, starting_bid, end_time, instant_buy_price,
+              motorhomes!left (manufacturer, model, year, body_type, mileage, city)
+            `)
+            .eq('status', 'active')
+            .order('end_time', { ascending: true })
+            .limit(5);
+
+          if (activeAuctions && activeAuctions.length > 0) {
+            let auctionRows = '';
+            for (const auction of activeAuctions) {
+              const m = auction.motorhomes as any;
+              if (!m) continue;
+              const price = (auction.current_bid || auction.starting_bid || 0);
+              const priceStr = price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+              const endDate = new Date(auction.end_time);
+              const remainingMs = endDate.getTime() - Date.now();
+              const remainingDays = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60 * 24)));
+              const remainingHours = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+              const timeStr = remainingDays > 0 ? `${remainingDays}d ${remainingHours}h` : `${remainingHours}h`;
+
+              // Get bid count
+              const { count: bidCount } = await supabase
+                .from('bids')
+                .select('id', { count: 'exact', head: true })
+                .eq('auction_id', auction.id);
+
+              auctionRows += detailRow(
+                `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
+                `${priceStr} · ${bidCount || 0} Gebote · endet in ${timeStr}`
+              );
+            }
+            auctionPreviewHtml = infoBox(
+              `🔥 ${activeAuctions.length} Auktionen warten auf Sie`,
+              auctionRows,
+              'info',
+              settingsData
+            );
+          }
+        } catch (err) {
+          console.error('Failed to fetch auctions for approval email:', err);
+        }
+
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
@@ -104,17 +153,20 @@ const handler = async (req: Request): Promise<Response> => {
             ${custNum ? detailRow('Ihre Kundennummer', `<strong style="color: #1f8aa2; font-size: 16px;">${custNum}</strong>`) : ''}
             ${paragraph('Sie haben jetzt Zugriff auf unser Händler-Portal und können auf Wohnmobile bieten.')}
           `, 'success', settingsData)}
-          ${infoBox('Nächste Schritte', `
+          ${auctionPreviewHtml}
+          ${infoBox('So starten Sie', `
             ${list([
-              'Loggen Sie sich in Ihr Händler-Portal ein',
-              'Vervollständigen Sie Ihr Unternehmensprofil',
-              'Entdecken Sie aktuelle Auktionen',
-              'Geben Sie Ihr erstes Gebot ab'
+              '<strong>Einloggen</strong> &ndash; Melden Sie sich mit Ihren Zugangsdaten an',
+              '<strong>Auktionen durchst&ouml;bern</strong> &ndash; Finden Sie Fahrzeuge die zu Ihrem Sortiment passen',
+              '<strong>Erstes Gebot abgeben</strong> &ndash; Klicken Sie auf eine Auktion und bieten Sie mit',
+              '<strong>T&auml;glich informiert</strong> &ndash; Sie erhalten ab morgen t&auml;glich eine &Uuml;bersicht neuer Auktionen per E-Mail',
             ])}
           `, 'default', settingsData)}
-          ${button('Zum Händler-Portal', 'https://caravanwert.de/dashboard', settingsData)}
+          ${button('Jetzt Auktionen entdecken', 'https://caravanwert.de/kaufen', settingsData)}
+          ${paragraph(`<strong>Tipp:</strong> Aktivieren Sie Audio-Benachrichtigungen in Ihrem Dashboard &ndash; so verpassen Sie kein Gebot!`)}
         `;
         break;
+      }
 
       case "rejected":
         subject = "Händler-Bewerbung - Rückmeldung";

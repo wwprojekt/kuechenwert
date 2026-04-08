@@ -14,92 +14,92 @@ const Haendler = () => {
   const benefits = [
     {
       icon: TrendingUp,
-      title: "Schneller Umschlag",
-      description: "Verkaufen Sie Ihre Bestandsfahrzeuge schneller durch unser wachsendes Händlernetzwerk."
+      title: "Günstig einkaufen",
+      description: "Ersteigern Sie geprüfte Wohnmobile und Wohnwagen zu attraktiven Preisen – direkt von Privatverkäufern."
     },
     {
       icon: Shield,
       title: "Sichere Abwicklung",
-      description: "Rechtlich abgesicherte Prozesse und sichere Zahlungsabwicklung."
+      description: "Rechtlich abgesicherte Kaufverträge, transparente Provisionen und professionelle Übergabe."
     },
     {
       icon: Users,
-      title: "Exklusiver Zugang",
-      description: "Zugriff auf unsere Datenbank mit Tausenden kaufinteressierten Kunden."
+      title: "Exklusives Angebot",
+      description: "Zugang zu Fahrzeugen, die nur über unsere Plattform verfügbar sind – bevor sie auf den freien Markt kommen."
     },
     {
       icon: Zap,
-      title: "Digitale Tools",
-      description: "Moderne Plattform für effizientes Bestandsmanagement und Verkauf."
+      title: "Wenig Aufwand",
+      description: "Keine eigene Akquise nötig: Wir bringen die Verkäufer – Sie bieten bequem online."
     }
   ];
 
   const services = [
     {
-      title: "Ankaufsplattform",
-      description: "Nutzen Sie unsere Plattform, um überschüssige Bestände schnell und unkompliziert zu verkaufen.",
+      title: "Online-Auktionen",
+      description: "Bieten Sie bequem online auf geprüfte Wohnmobile und Wohnwagen von Privatverkäufern.",
       features: [
-        "Direkter Zugang zu Käufernetzwerk",
-        "Automatische Preisermittlung",
-        "Schnelle Abwicklung in 48h"
+        "Tägliche neue Fahrzeuge",
+        "Transparente Gebots-Historie",
+        "Sofortkauf-Option bei ausgewählten Fahrzeugen"
       ]
     },
     {
-      title: "Marketing-Support",
-      description: "Profitieren Sie von unserer Reichweite und professionellen Marketingkampagnen.",
+      title: "Fahrzeug-Informationen",
+      description: "Alle wichtigen Daten auf einen Blick – für schnelle Kaufentscheidungen.",
       features: [
-        "Professionelle Fahrzeugfotos",
-        "Online-Marketing-Kampagnen",
-        "Social Media Promotion"
+        "Detaillierte Fahrzeugbeschreibungen",
+        "Hochwertige Fotos",
+        "Zustandsberichte & Kilometerstand"
       ]
     },
     {
-      title: "Bestandsmanagement",
-      description: "Optimieren Sie Ihre Lagerkosten durch intelligentes Bestandsmanagement.",
+      title: "Kaufchance-System",
+      description: "Wenn die Reserve nicht erreicht wird, erhalten Top-Bieter eine zweite Chance zum Kauf.",
       features: [
-        "Bestandsanalyse",
-        "Verkaufsempfehlungen",
-        "Marktpreis-Monitoring"
+        "Exklusives Angebot für Höchstbieter",
+        "Verhandlung direkt über die Plattform",
+        "72h Frist für Gegenangebote"
       ]
     },
     {
-      title: "Netzwerk-Zugang",
-      description: "Werden Sie Teil unseres Händlernetzwerks und profitieren Sie von Synergien.",
+      title: "Händler-Dashboard",
+      description: "Behalten Sie den Überblick über Ihre Gebote, gewonnene Auktionen und Rechnungen.",
       features: [
-        "Händler-zu-Händler Plattform",
-        "Exklusive Events",
-        "Brancheninsights"
+        "Echtzeit-Benachrichtigungen bei Geboten",
+        "Gebotsübersicht & Favoritenliste",
+        "Rechnungen & Kaufverträge digital"
       ]
     }
   ];
 
   const stats = [
-    { number: "Europaweit", label: "Händlernetzwerk" },
-    { number: "24h", label: "Durchschn. Reaktionszeit" },
-    { number: "Geprüft", label: "Händler" },
-    { number: "100%", label: "Kostenlos starten" }
+    { number: "30+", label: "Aktive Auktionen" },
+    { number: "Täglich", label: "Neue Fahrzeuge" },
+    { number: "0 €", label: "Registrierung" },
+    { number: "100%", label: "Transparent" }
   ];
 
   const process = [
     {
       step: "1",
-      title: "Registrierung",
-      description: "Schnelle Online-Registrierung mit Nachweis Ihrer Gewerbeberechtigung."
+      title: "Kostenlos registrieren",
+      description: "Schnelle Online-Registrierung mit Gewerbenachweis – Freischaltung in 1–2 Werktagen."
     },
     {
       step: "2",
-      title: "Plattform-Zugang",
-      description: "Erhalten Sie sofortigen Zugang zu unserer Händlerplattform und allen Tools."
+      title: "Auktionen entdecken",
+      description: "Durchstöbern Sie aktuelle Wohnmobile und Wohnwagen mit detaillierten Fahrzeugdaten."
     },
     {
       step: "3",
-      title: "Fahrzeuge einstellen",
-      description: "Laden Sie Ihre Fahrzeuge hoch - wir kümmern uns um die Vermarktung."
+      title: "Online bieten",
+      description: "Geben Sie Gebote ab – bequem vom Büro aus. Per Auto-Bid auch automatisch mitbieten."
     },
     {
       step: "4",
-      title: "Verkauf abwickeln",
-      description: "Wir vermitteln Käufer und wickeln die gesamte Transaktion ab."
+      title: "Fahrzeug übernehmen",
+      description: "Bei Zuschlag: Kaufvertrag digital, sichere Übergabe und einfache Abwicklung."
     }
   ];
 
@@ -135,11 +135,11 @@ const Haendler = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Ihr <span className="gradient-text">Partner</span> für erfolgreichen Wohnmobil-Handel
+              Wohnmobile <span className="gradient-text">günstig einkaufen</span> – per Online-Auktion
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Werden Sie Teil unseres wachsenden Händlernetzwerks in Deutschland. Profitieren Sie von schnellem Bestandsverkauf, 
-              professionellem Marketing-Support und Zugang zu kaufbereiten Kunden.
+              Ersteigern Sie geprüfte Wohnmobile und Wohnwagen direkt von Privatverkäufern. 
+              Kostenlose Registrierung, transparente Gebote, sichere Abwicklung.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/register/haendler">
@@ -284,18 +284,18 @@ const Haendler = () => {
               {[
                 {
                   icon: BarChart3,
-                  title: "Wachsende Plattform",
-                  description: "Profitieren Sie von unserer stetig wachsenden Reichweite und Bekanntheit."
+                  title: "Stetig neue Fahrzeuge",
+                  description: "Wöchentlich kommen neue Wohnmobile und Wohnwagen aus Privathand in die Auktion."
                 },
                 {
                   icon: Target,
-                  title: "Zielgruppenreichweite",
-                  description: "Zugang zu über 50.000 qualifizierten Wohnmobil-Interessenten monatlich über unsere Plattform."
+                  title: "Weniger Wettbewerb",
+                  description: "Überschaubares Bieterfeld – Ihre Chancen auf einen Zuschlag sind hoch."
                 },
                 {
                   icon: Handshake,
-                  title: "Faire Partnerschaft",
-                  description: "Transparente Konditionen und keine versteckten Kosten."
+                  title: "Faire Konditionen",
+                  description: "Transparente Provisionen nur bei Zuschlag. Keine monatlichen Gebühren."
                 }
               ].map((item, index) => (
                 <Card key={index} className="text-center border-primary/20 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -343,27 +343,28 @@ const Haendler = () => {
       <section className="py-20">
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Händlerpartnerschaft - Gemeinsam zum Erfolg</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Häufige Fragen von Händlern</h2>
             
-            <h3 className="text-2xl font-bold mt-8 mb-4">Für wen ist das Partnerprogramm geeignet?</h3>
+            <h3 className="text-2xl font-bold mt-8 mb-4">Für wen ist die Plattform geeignet?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Unser Partnerprogramm richtet sich an etablierte Wohnmobil-Händler, Autohäuser mit Wohnmobil-Abteilung, 
-              Wohnmobil-Vermietungen und Servicebetriebe. Egal ob Sie ein großes Autohaus oder ein spezialisierter 
-              Wohnmobil-Händler sind - wir bieten maßgeschneiderte Lösungen für Ihre Bedürfnisse.
+              Unsere Auktionsplattform richtet sich an Wohnmobil-Händler, Autohäuser mit Camping-Abteilung,
+              Wohnmobil-Vermietungen und Servicebetriebe, die ihren Bestand günstig aus Privathand aufstocken möchten.
+              Egal ob Sie regelmäßig oder gelegentlich einkaufen – Sie zahlen nur bei Zuschlag.
             </p>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">Welche Voraussetzungen gibt es?</h3>
+            <h3 className="text-2xl font-bold mt-8 mb-4">Wie funktioniert das Bieten?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Sie benötigen einen gültigen Gewerbenachweis für den Fahrzeughandel, nachweisbare Erfahrung im Wohnmobil-Bereich 
-              und die Bereitschaft zur vertrauensvollen Zusammenarbeit. Die Mitgliedschaft im Partnerprogramm ist kostenlos - 
-              Sie zahlen nur eine erfolgsbasierte Provision bei Verkaufsabschluss.
+              Jedes Fahrzeug durchläuft eine zeitlich begrenzte Auktion. Sie können manuell oder per Auto-Bid 
+              bieten. Bei einem Gebot in der letzten Minute wird die Auktion automatisch verlängert (Soft-Close), 
+              damit kein Schnäppchen durch Last-Second-Gebote verloren geht. Bei Zuschlag erhalten Sie automatisch 
+              Kaufvertrag und Rechnung.
             </p>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">Wie funktioniert die Provisionsabrechnung?</h3>
+            <h3 className="text-2xl font-bold mt-8 mb-4">Was kostet die Teilnahme?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Unsere Provisionsmodelle sind transparent und fair gestaltet. Sie zahlen nur bei erfolgreicher Vermittlung - 
-              keine versteckten Kosten oder Abos. Die genauen Konditionen besprechen wir individuell mit Ihnen, 
-              abhängig von Ihrer Unternehmensgröße und den geplanten Volumina.
+              Die Registrierung und das Bieten sind kostenlos. Es fällt nur eine Provision an, wenn Sie eine 
+              Auktion gewinnen – also nur bei tatsächlichem Kauf. Keine monatlichen Gebühren, keine Mindestabnahmen.
+              Die Provisionsstaffel ist transparent in Ihrem Händler-Dashboard einsehbar.
             </p>
           </div>
         </div>

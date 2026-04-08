@@ -182,6 +182,23 @@ After code changes, these functions need redeploying:
 - First-bid rate after digest (compare pre/post deployment)
 - /haendler → /register/haendler conversion (analytics_page_views)
 - Bids per auction trend (currently avg ~0.3, target: 2+)
+### Phase 5b – Step 3 (DetailsStep) Redesign (08.04.2026)
+- **Root cause**: 83% of Step 3 droppers filled ZERO fields → visual overwhelm (6 sections visible at once)
+- **Progressive Disclosure**: Phase 1 (fuel+transmission) → Phase 2 (sleeping chips) → Phase 3 (defects pre-selected) → Optional collapsed
+- **seats_with_seatbelts**: Moved from required → optional (collapsed section)
+- **Pflichtfelder reduced**: Wohnmobil 5→4, Wohnwagen 2→2 (unchanged)
+- **Mängel pre-selected**: "Keine Mängel" auto-selected on mount → 0 decisions needed
+- **Schlafplätze**: Dropdown → Chip-Row [1-9] (one tap)
+- **Optional collapsed section**: Sitzplätze, Erstzulassung, Basisfahrzeug, Fahrzeugzustand-Checkboxen
+- **Validation schema updated**: step4SchemaWohnmobil no longer requires seats_with_seatbelts
+
+### Competitor Analysis: caravanmarkt24.de
+- Ultra-minimal entry: 2 fields only (Fahrzeugtyp dropdown + Marke dropdown)
+- FOMO: "138 Anfragen in den letzten 24 Stunden" with fire emoji
+- Time promise: "Jetzt Daten eintragen (3 Min)"
+- Google 4.9 rating badge directly in form
+- Progressive disclosure: start simple → expand after initial commitment
+- No visible multi-step wizard at entry point
 
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)

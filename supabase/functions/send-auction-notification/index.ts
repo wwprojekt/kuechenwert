@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -244,6 +244,25 @@ const handler = async (req: Request): Promise<Response> => {
           ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
           ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+
+      case "seller_relisted":
+        subject = `Gute Neuigkeiten: ${motorhomeModel} – Erneute Auktion gestartet!`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Gute Neuigkeiten!</strong> Ihr Fahrzeug wurde erneut in unsere H&auml;ndler-Auktion aufgenommen.')}
+          ${infoBox('Auktionsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${endTime ? detailRow('Neues Auktionsende', endTime) : ''}
+          `, 'success', settingsData)}
+          ${paragraph('Ihr Fahrzeug ist ab sofort wieder f&uuml;r alle gepr&uuml;ften H&auml;ndler sichtbar und es k&ouml;nnen neue Gebote abgegeben werden.')}
+          ${paragraph('<strong>Was bedeutet das f&uuml;r Sie?</strong>')}
+          ${paragraph('<strong>1.</strong> Ihr Fahrzeug wird erneut 7 Tage lang versteigert<br><strong>2.</strong> Sie werden &uuml;ber eingehende Gebote informiert<br><strong>3.</strong> Unser Team begleitet Sie w&auml;hrend des gesamten Prozesses')}
+          ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph('Mit freundlichen Gr&uuml;&szlig;en,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
 

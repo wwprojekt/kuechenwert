@@ -122,6 +122,64 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
 }
 
 // ============================================================================
+// Helper: Send relist notification to seller (instead of registration invite)
+// ============================================================================
+
+async function sendRelistNotification(motorhomeId: string, endTime: Date) {
+  try {
+    const { data: motorhome, error: mhError } = await supabase
+      .from("motorhomes")
+      .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name, customer_number)")
+      .eq("id", motorhomeId)
+      .maybeSingle();
+
+    if (mhError || !motorhome) {
+      logger.warn("Could not load motorhome for relist notification:", mhError?.message);
+      return;
+    }
+
+    const seller = motorhome.seller as any;
+    if (!seller?.email) {
+      logger.info("No seller email found, skipping relist notification");
+      return;
+    }
+
+    const sellerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ") || "";
+    const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
+    const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
+
+    const { data, error } = await supabase.functions.invoke("send-auction-notification", {
+      body: {
+        email: seller.email,
+        name: sellerName,
+        type: "seller_relisted",
+        motorhomeModel: vehicleName,
+        auctionUrl: "https://caravanwert.de/dashboard",
+        endTime: formattedEndTime,
+        customerNumber: seller.customer_number || undefined,
+      },
+    });
+
+    if (error) {
+      logger.error("Failed to send relist notification:", error.message);
+      toast.info(
+        `Auktion erneut gestartet. Benachrichtigung an ${seller.email} konnte nicht gesendet werden.`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    toast.success(
+      `Verk\u00e4ufer ${seller.email} wurde \u00fcber die erneute Auktion informiert`,
+      { duration: 5000 }
+    );
+    logger.info(`Relist notification sent to ${seller.email} for motorhome ${motorhome.id}`);
+  } catch (err: any) {
+    logger.error("Error in sendRelistNotification:", err);
+  }
+}
+
+// ============================================================================
 // Tab definitions
 // ============================================================================
 
@@ -521,6 +579,71 @@ export default function AdminAuctions() {
     },
   });
 
+  // ---- Relist Auction (ended/cancelled -> active) ----
+  const relistAuctionMutation = useMutation({
+    mutationFn: async (auction: { id: string; motorhome_id: string }) => {
+      const { data: mh } = await supabase
+        .from('motorhomes')
+        .select('postal_code, city')
+        .eq('id', auction.motorhome_id)
+        .maybeSingle();
+
+      if (!mh?.postal_code) {
+        throw new Error('PLZ_MISSING');
+      }
+
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+
+      // Reset auction to active with new 7-day period
+      const { error } = await supabase
+        .from('auctions')
+        .update({
+          status: 'active',
+          start_time: new Date().toISOString(),
+          end_time: endTime.toISOString(),
+          current_bid: null,
+          kaufchance_expires_at: null,
+          kaufchance_min_price: null,
+        })
+        .eq('id', auction.id);
+
+      if (error) throw error;
+
+      // Update motorhome status back to active
+      await supabase
+        .from('motorhomes')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', auction.motorhome_id);
+
+      // Delete old bids for a fresh start
+      await supabase
+        .from('bids')
+        .delete()
+        .eq('auction_id', auction.id);
+
+      return { ...auction, endTime };
+    },
+    onSuccess: (result) => {
+      toast.success("Auktion erfolgreich erneut gestartet");
+      queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+
+      // Send relist notification to seller (NOT registration invite)
+      if (result.motorhome_id) {
+        sendRelistNotification(result.motorhome_id, result.endTime);
+      }
+    },
+    onError: (error: any) => {
+      if (error?.message === 'PLZ_MISSING') {
+        toast.error("Bitte zuerst den Fahrzeugstandort (PLZ) eintragen, bevor die Auktion erneut gestartet werden kann.", { duration: 6000 });
+      } else {
+        toast.error("Fehler beim erneuten Starten der Auktion");
+        logger.error(error);
+      }
+    },
+  });
+
   // ---- Status Badge ----
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -707,6 +830,60 @@ export default function AdminAuctions() {
                         <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Löschen...</>
                       ) : (
                         "Endgültig löschen"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
+            {/* Erneut in die Auktion - bei ended oder cancelled */}
+            {(auction.status === "ended" || auction.status === "cancelled") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Erneut in die Auktion">
+                    <RotateCw className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Erneut in die Auktion?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="text-sm text-muted-foreground">
+                        Das Fahrzeug &quot;{auction.motorhome?.manufacturer} {auction.motorhome?.model}&quot; wird erneut f\u00fcr 7 Tage in die Auktion aufgenommen.
+                        Alle bisherigen Gebote werden zur\u00fcckgesetzt.
+                        {!auction.motorhome?.postal_code && (
+                          <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Achtung: Es wurde noch keine PLZ f\u00fcr den Fahrzeugstandort eingetragen.</span>
+                          </span>
+                        )}
+                        {auction.motorhome?.seller?.email && (
+                          <>
+                            <br /><br />
+                            <span className="flex items-center gap-1.5 text-blue-600">
+                              <Mail className="w-3.5 h-3.5" />
+                              Der Verk\u00e4ufer <strong>{auction.motorhome.seller.email}</strong> wird automatisch per E-Mail informiert.
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => relistAuctionMutation.mutate({
+                        id: auction.id,
+                        motorhome_id: auction.motorhome_id,
+                      })}
+                      disabled={relistAuctionMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {relistAuctionMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starten...</>
+                      ) : (
+                        <>\u21BB Erneut in die Auktion</>
                       )}
                     </AlertDialogAction>
                   </AlertDialogFooter>

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { Mail, MapPin, AlertTriangle } from "lucide-react";
 
 interface Auction {
@@ -101,6 +102,65 @@ async function sendRegistrationInviteOnActivation(motorhomeId: string) {
     );
   } catch (err: any) {
     logger.error("Error in sendRegistrationInviteOnActivation:", err);
+  }
+}
+
+/**
+ * Helper: Send relist notification to seller when auction is re-activated (ended/cancelled -> active).
+ * Non-blocking – errors are logged but don't prevent the status update.
+ */
+async function sendRelistNotificationFromDialog(motorhomeId: string) {
+  try {
+    const { data: motorhome, error: mhError } = await supabase
+      .from("motorhomes")
+      .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name, customer_number)")
+      .eq("id", motorhomeId)
+      .maybeSingle();
+
+    if (mhError || !motorhome) {
+      logger.warn("Could not load motorhome for relist notification:", mhError?.message);
+      return;
+    }
+
+    const seller = motorhome.seller as any;
+    if (!seller?.email) {
+      logger.info("No seller email found, skipping relist notification");
+      return;
+    }
+
+    const sellerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ") || "";
+    const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
+    const endTime = new Date();
+    endTime.setDate(endTime.getDate() + 7);
+    const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
+
+    const { data, error } = await supabase.functions.invoke("send-auction-notification", {
+      body: {
+        email: seller.email,
+        name: sellerName,
+        type: "seller_relisted",
+        motorhomeModel: vehicleName,
+        auctionUrl: "https://caravanwert.de/dashboard",
+        endTime: formattedEndTime,
+        customerNumber: seller.customer_number || undefined,
+      },
+    });
+
+    if (error || data?.error) {
+      logger.error("Failed to send relist notification:", error?.message || data?.error);
+      toast.info(
+        `Auktion erneut gestartet. Benachrichtigung an ${seller.email} konnte nicht gesendet werden.`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    toast.success(
+      `Verk\u00e4ufer ${seller.email} wurde \u00fcber die erneute Auktion informiert`,
+      { duration: 5000 }
+    );
+  } catch (err: any) {
+    logger.error("Error in sendRelistNotificationFromDialog:", err);
   }
 }
 
@@ -206,11 +266,17 @@ export function AuctionEditDialog({
       toast.success("Auktion erfolgreich aktualisiert");
       handleOpenChange(false);
 
-      // If status changed to "active", automatically send registration invite
+      // If status changed to "active", send appropriate notification
       if (result.previousStatus !== "active" && result.newStatus === "active") {
         const motorhomeId = auction?.motorhome_id || auction?.motorhome?.id;
         if (motorhomeId) {
-          sendRegistrationInviteOnActivation(motorhomeId);
+          if (result.previousStatus === "ended" || result.previousStatus === "cancelled") {
+            // Relist: Send info email instead of registration invite
+            sendRelistNotificationFromDialog(motorhomeId);
+          } else {
+            // First activation (draft -> active): Send registration invite
+            sendRegistrationInviteOnActivation(motorhomeId);
+          }
         }
       }
     },

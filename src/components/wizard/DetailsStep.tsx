@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info, Truck } from "lucide-react";
+import { useState } from "react";
+import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info, Truck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { baseVehicles, getPowerOptionsForBaseVehicle } from "@/lib/vehicle-data";
 
@@ -17,6 +18,7 @@ interface DetailsStepProps {
 
 export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: DetailsStepProps) => {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
+  const [showBaseVehicle, setShowBaseVehicle] = useState(!!formData.baseVehicle || !!formData.power_ps);
 
   const handleDefectsToggle = (value: string) => {
     const noDefects = value === "no";
@@ -73,68 +75,125 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
           <h3 className="text-lg font-semibold">Motor & Antrieb</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fuel_type" className={cn(fieldErrors.fuel_type && "text-red-600")}>
+              <Label className={cn(fieldErrors.fuel_type && "text-red-600")}>
                 Kraftstoffart <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={formData.fuel_type || ""}
-                onValueChange={(value) => updateFormData({ fuel_type: value })}
-              >
-                <SelectTrigger id="fuel_type" className={cn(fieldErrors.fuel_type && "border-red-500 ring-red-500/20 ring-2")}>
-                  <SelectValue placeholder="Wählen Sie..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Diesel">Diesel</SelectItem>
-                  <SelectItem value="Benzin">Benzin</SelectItem>
-                  <SelectItem value="Elektro">Elektro</SelectItem>
-                  <SelectItem value="Hybrid">Hybrid</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "Diesel", label: "⛽ Diesel" },
+                  { value: "Benzin", label: "⛽ Benzin" },
+                  { value: "Hybrid", label: "🔋 Hybrid" },
+                  { value: "Elektro", label: "⚡ Elektro" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateFormData({ fuel_type: opt.value })}
+                    className={cn(
+                      "px-3 py-2 rounded-lg text-sm font-medium border transition-all text-center",
+                      formData.fuel_type === opt.value
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-card border-border hover:border-primary/50 hover:bg-primary/5",
+                      fieldErrors.fuel_type && !formData.fuel_type && "border-red-300"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               {fieldErrors.fuel_type && (
                 <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.fuel_type}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="transmission" className={cn(fieldErrors.transmission && "text-red-600")}>
+              <Label className={cn(fieldErrors.transmission && "text-red-600")}>
                 Getriebe <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={formData.transmission || ""}
-                onValueChange={(value) => updateFormData({ transmission: value })}
-              >
-                <SelectTrigger id="transmission" className={cn(fieldErrors.transmission && "border-red-500 ring-red-500/20 ring-2")}>
-                  <SelectValue placeholder="Wählen Sie..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Schaltgetriebe">Schaltgetriebe</SelectItem>
-                  <SelectItem value="Automatik">Automatik</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "Schaltgetriebe", label: "⚙️ Schaltung" },
+                  { value: "Automatik", label: "🅰️ Automatik" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateFormData({ transmission: opt.value })}
+                    className={cn(
+                      "px-3 py-2 rounded-lg text-sm font-medium border transition-all text-center",
+                      formData.transmission === opt.value
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-card border-border hover:border-primary/50 hover:bg-primary/5",
+                      fieldErrors.transmission && !formData.transmission && "border-red-300"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               {fieldErrors.transmission && (
                 <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.transmission}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                id="first_registration"
-                type="month"
-                value={formData.first_registration ? formData.first_registration.substring(0, 7) : ""}
-                onChange={(e) => updateFormData({ first_registration: e.target.value ? `${e.target.value}-01` : "" })}
-              />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <div className="grid grid-cols-2 gap-2 max-w-sm">
+              <Select
+                value={formData.first_registration ? formData.first_registration.substring(5, 7) : ""}
+                onValueChange={(month) => {
+                  const year = formData.first_registration ? formData.first_registration.substring(0, 4) : "";
+                  if (year) {
+                    updateFormData({ first_registration: `${year}-${month}-01` });
+                  } else {
+                    updateFormData({ first_registration: `${new Date().getFullYear()}-${month}-01` });
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Monat" /></SelectTrigger>
+                <SelectContent>
+                  {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
+                    <SelectItem key={m} value={m}>
+                      {["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"][i]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={formData.first_registration ? formData.first_registration.substring(0, 4) : ""}
+                onValueChange={(year) => {
+                  const month = formData.first_registration ? formData.first_registration.substring(5, 7) : "01";
+                  updateFormData({ first_registration: `${year}-${month}-01` });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Jahr" /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => (new Date().getFullYear() + 1 - i).toString()).map(y => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
-        {/* Basisfahrzeug + Leistung – chassis-based PS selection */}
+        {/* Basisfahrzeug + Leistung – collapsible optional section */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Truck className="w-5 h-5 text-primary" />
-            Basisfahrzeug & Leistung <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setShowBaseVehicle(prev => !prev)}
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Truck className="w-4 h-4 text-primary" />
+              Basisfahrzeug & Leistung hinzufügen
+              <span className="text-xs font-normal">(optional)</span>
+            </span>
+            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", showBaseVehicle && "rotate-180")} />
+          </button>
+          {showBaseVehicle && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
             <div className="space-y-2">
               <Label htmlFor="baseVehicle">Basisfahrzeug / Chassis</Label>
               <Select
@@ -191,7 +250,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
                 />
               )}
             </div>
-          </div>
+          </div>}
         </div>
       </>)}
 
@@ -212,16 +271,41 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
       {isWohnwagen && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Zulassung</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_registration_ww">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                id="first_registration_ww"
-                type="month"
-                value={formData.first_registration ? formData.first_registration.substring(0, 7) : ""}
-                onChange={(e) => updateFormData({ first_registration: e.target.value ? `${e.target.value}-01` : "" })}
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-2 max-w-md">
+            <Select
+              value={formData.first_registration ? formData.first_registration.substring(5, 7) : ""}
+              onValueChange={(month) => {
+                const year = formData.first_registration ? formData.first_registration.substring(0, 4) : "";
+                if (year) {
+                  updateFormData({ first_registration: `${year}-${month}-01` });
+                } else {
+                  updateFormData({ first_registration: `${new Date().getFullYear()}-${month}-01` });
+                }
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Monat" /></SelectTrigger>
+              <SelectContent>
+                {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
+                  <SelectItem key={m} value={m}>
+                    {["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"][i]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={formData.first_registration ? formData.first_registration.substring(0, 4) : ""}
+              onValueChange={(year) => {
+                const month = formData.first_registration ? formData.first_registration.substring(5, 7) : "01";
+                updateFormData({ first_registration: `${year}-${month}-01` });
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Jahr" /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => (new Date().getFullYear() + 1 - i).toString()).map(y => (
+                  <SelectItem key={y} value={y}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}

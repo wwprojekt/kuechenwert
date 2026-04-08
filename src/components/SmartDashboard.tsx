@@ -271,6 +271,19 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { isPendingDealer, isRejectedDealer } = useDealerPending();
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+
+  // Check email verification status (same as UserLayoutContent)
+  useEffect(() => {
+    const checkVerification = async () => {
+      if (!user) return;
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setEmailVerified(!!data.user.email_confirmed_at);
+      }
+    };
+    checkVerification();
+  }, [user]);
 
   // Check if user arrived via registration magic link and needs to set a password
   const [showSetPassword, setShowSetPassword] = useState(false);
@@ -332,7 +345,11 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
           {/* Main Content Area */}
           <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Email Verification Banner – also for dealers */}
+              {emailVerified === false && user?.email && (
+                <EmailVerificationBanner email={user.email} />
+              )}
               {/* Password Setup Dialog for dealers arriving via registration magic link */}
               <SetPasswordDialog open={showSetPassword} />
               {children}

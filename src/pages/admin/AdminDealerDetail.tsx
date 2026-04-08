@@ -252,6 +252,19 @@ export default function AdminDealerDetail() {
         .order("created_at", { ascending: false })
         .limit(5);
 
+      // 7. Check email confirmation status via auth
+      let emailConfirmed = true;
+      if (data.user_id) {
+        try {
+          const { data: authCheck } = await supabase.functions.invoke('get-dealer-auth-status', {
+            body: { userId: data.user_id }
+          });
+          if (authCheck && typeof authCheck.emailConfirmed === 'boolean') {
+            emailConfirmed = authCheck.emailConfirmed;
+          }
+        } catch { /* ignore – assume confirmed */ }
+      }
+
       return {
         ...data,
         profile,
@@ -260,6 +273,7 @@ export default function AdminDealerDetail() {
         bids,
         wonAuctions,
         invoices: invoices || [],
+        emailConfirmed,
       };
     },
     enabled: !!id,
@@ -539,6 +553,40 @@ export default function AdminDealerDetail() {
     >
       {dealer && (
         <div className="space-y-6">
+          {/* Email Verification Warning */}
+          {dealer.emailConfirmed === false && (
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-800 dark:text-amber-300">
+                  E-Mail nicht bestätigt
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Dieser Händler hat seine E-Mail-Adresse noch nicht bestätigt und kann sich daher nicht einloggen oder bieten.
+                  {dealer.status === 'approved' && ' Trotzdem genehmigt – bitte Händler kontaktieren.'}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-400 text-amber-700 hover:bg-amber-100"
+                onClick={async () => {
+                  try {
+                    await supabase.functions.invoke('resend-confirmation-email', {
+                      body: { email: dealer.profile?.email }
+                    });
+                    toast.success("Bestätigungsmail erneut gesendet");
+                  } catch {
+                    toast.error("Fehler beim Senden");
+                  }
+                }}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Erneut senden
+              </Button>
+            </div>
+          )}
+
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard

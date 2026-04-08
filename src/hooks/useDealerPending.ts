@@ -45,7 +45,7 @@ export function useDealerPending() {
       if (!user) return null;
       const { data } = await supabase
         .from('dealer_applications')
-        .select('id, status, company_name, company_address, company_city, company_postal_code, contact_person_name, phone, submitted_at, reviewed_at, rejection_reason, legal_form')
+        .select('id, status, company_name, company_address, company_city, company_postal_code, contact_person_name, phone, submitted_at, reviewed_at, rejection_reason, legal_form, country')
         .eq('user_id', user.id)
         .in('status', ['pending', 'rejected'])
         .maybeSingle();
@@ -59,10 +59,9 @@ export function useDealerPending() {
   const isRejectedDealer = !!application && application.status === 'rejected';
   const hasDealerApplication = !!application;
 
-  // Resolve country from user_metadata (set during signUp) with "DE" fallback.
-  // NOTE: Once the `country` column is added to dealer_applications and the
-  // Supabase types are regenerated, prefer `application?.country` as primary source.
+  // Resolve country: prefer DB (dealer_applications.country) → user_metadata → "DE" fallback
   const dealerCountry: string =
+    application?.country ||
     (user?.user_metadata?.country as string | undefined) ||
     'DE';
 

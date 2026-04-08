@@ -32,6 +32,7 @@ import {
   ArrowRight,
   Upload,
   File,
+  FileText,
   AlertCircle,
   Calendar,
   Scale,
@@ -122,6 +123,7 @@ const RegisterHaendler = () => {
     country: DEFAULT_COUNTRY,
     legalForm: "",
     foundedYear: "",
+    vatId: "",
     contactPersonName: "",
     contactPersonPosition: "",
     phone: "",
@@ -213,6 +215,7 @@ const RegisterHaendler = () => {
             website: validated.website || null,
             legalForm: validated.legalForm || null,
             foundedYear: validated.foundedYear || null,
+            vatId: validated.vatId || null,
           }),
         }
       );
@@ -622,6 +625,27 @@ const RegisterHaendler = () => {
                       />
                     </div>
                   </div>
+
+                  {/* VAT ID (EU) – shown only for non-DE countries */}
+                  {formData.country && formData.country !== 'DE' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="vatId" className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        USt-IdNr. / VAT ID
+                        <span className="text-xs text-muted-foreground ml-1">(optional)</span>
+                      </Label>
+                      <Input
+                        id="vatId"
+                        placeholder={`z.B. ${formData.country}123456789`}
+                        value={formData.vatId}
+                        onChange={(e) => setFormData({ ...formData, vatId: e.target.value.toUpperCase() })}
+                        className="uppercase"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Für Reverse-Charge-Rechnungen innerhalb der EU
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

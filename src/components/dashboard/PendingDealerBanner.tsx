@@ -11,9 +11,12 @@ import {
   ChevronUp,
   Building2,
   Calendar,
+  RotateCcw,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { DealerApplication } from "@/hooks/useDealerPending";
 import { getPendingDealerTranslations } from "@/lib/pendingDealerTranslations";
 import { getLanguageForCountry } from "@/lib/dealerRegistrationTranslations";
@@ -40,9 +43,27 @@ export default function PendingDealerBanner({
   countryCode = "DE",
 }: PendingDealerBannerProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
+  const [reapplying, setReapplying] = useState(false);
   const isPending = application.status === "pending";
   const tr = getPendingDealerTranslations(countryCode);
+
+  const handleReapply = async () => {
+    setReapplying(true);
+    try {
+      const { error } = await supabase.rpc('reapply_dealer_application', {
+        application_id_param: application.id,
+      });
+      if (error) throw error;
+      toast({ title: "Bewerbung erneut eingereicht", description: "Ihr Antrag wird erneut geprüft." });
+      onRefresh?.();
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Bitte versuchen Sie es später erneut.", variant: "destructive" });
+    } finally {
+      setReapplying(false);
+    }
+  };
 
   // Resolve locale string for date formatting (e.g. "de-DE", "fr-FR")
   const lang = getLanguageForCountry(countryCode);
@@ -120,7 +141,7 @@ export default function PendingDealerBanner({
                 : tr.bannerRejectedDescription}
             </p>
 
-            {/* Rejection reason */}
+            {/* Rejection reason + re-apply button */}
             {!isPending && application.rejection_reason && (
               <Alert
                 variant="destructive"
@@ -132,6 +153,18 @@ export default function PendingDealerBanner({
                   {application.rejection_reason}
                 </AlertDescription>
               </Alert>
+            )}
+            {!isPending && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReapply}
+                disabled={reapplying}
+                className="mt-3 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/50"
+              >
+                <RotateCcw className={`w-4 h-4 mr-2 ${reapplying ? 'animate-spin' : ''}`} />
+                {reapplying ? 'Wird eingereicht...' : 'Erneut zur Prüfung einreichen'}
+              </Button>
             )}
 
             {/* Expandable details */}

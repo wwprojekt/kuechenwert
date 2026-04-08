@@ -125,7 +125,7 @@ const WohnmobilHaendlerWerden = () => {
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      name: "Wohnmobil Händler werden – Auktionsplattform für B2B-Einkauf",
+      name: "Wohnmobil Händler werden – Auktionsplattform für Händler-Einkauf",
       description: "Registrieren Sie sich als Wohnmobil-Händler und ersteigern Sie Fahrzeuge direkt von Privatverkäufern. Provision ab 1,2 %, keine monatlichen Gebühren.",
       provider: { "@type": "Organization", name: siteName, url: "https://caravanwert.de" },
     },
@@ -136,7 +136,7 @@ const WohnmobilHaendlerWerden = () => {
     <PageLayout
       title="Wohnmobil Händler werden – Per Auktion günstig einkaufen"
       description="Registrieren Sie sich als Händler auf CaravanWert und ersteigern Sie geprüfte Wohnmobile & Wohnwagen direkt von Privatverkäufern. Provision ab 1,2 %, keine Mindestabnahme."
-      keywords="wohnmobil händler werden, wohnmobil auktion händler, wohnwagen einkauf händler, b2b wohnmobil plattform, wohnmobil händler registrieren"
+      keywords="wohnmobil händler werden, wohnmobil auktion händler, wohnwagen einkauf händler, wohnmobil händler plattform, wohnmobil händler registrieren"
       canonicalPath="/wohnmobil-haendler-werden"
       structuredData={structuredData}
       hideFooter
@@ -146,7 +146,7 @@ const WohnmobilHaendlerWerden = () => {
           <div className="animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
               <Gavel className="h-4 w-4" />
-              B2B-Auktionsplattform für Händler
+              Auktionsplattform für Händler – direkt von Privat
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
               Wohnmobile <span className="gradient-text">günstig einkaufen</span> – direkt von Privat

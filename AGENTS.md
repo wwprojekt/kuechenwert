@@ -239,7 +239,39 @@ After code changes, these functions need redeploying:
 - Edge Functions still needing redeployment: send-dealer-notification (updated approval email), send-inactivity-email (first-nudge tier)
 - Consider: Dealer referral program, phone onboarding for top-value dealers
 
+## Dealer Flow Audit (08.04.2026 Session 4)
+
+### Bugs Found & Fixed
+1. **RLS Stats Bug**: `/haendler` and `/wohnmobil-haendler-werden` showed "0+" dealers and "0 brands"
+   - Root cause: `dealer_applications` RLS blocks anonymous SELECT → count always 0
+   - Fix: Created `get_public_platform_stats()` SECURITY DEFINER function
+   - Both pages now use `supabase.rpc("get_public_platform_stats")` instead of direct table queries
+2. **Wrong Column Name**: `/wohnmobil-haendler-werden` queried `start_price` (doesn't exist) → `starting_bid`
+3. **Wrong Column Name**: `/wohnmobil-haendler-werden` queried `storage_path` (doesn't exist) → `url`
+   - Photos NEVER loaded on the dealer SEO landing page before this fix
+4. **Confusing Stat**: "0 €" for Registrierung was misleading → changed to "Kostenlos"
+
+### Dealer Flow Verification (Complete)
+- ✅ `/haendler` – Landing page with live stats, auction previews, CTA
+- ✅ `/wohnmobil-haendler-werden` – SEO landing page with live data, photos, FAQs
+- ✅ `/register/haendler` – Registration form with all fields, document upload
+- ✅ `/login` / `/login/haendler` – Login with Händler-Registrierung link
+- ✅ `/kaufen` – Marketplace with Händler CTA banner, auction cards
+- ✅ Dealer Dashboard – Onboarding card for 0-bid dealers
+- ✅ `place-bid` – Restriction checks, atomic bidding, soft-close
+- ✅ `instant-buy` – Restriction checks, full sale flow
+- ✅ `accept-kaufchance-offer` – Race condition protection, counter-offers
+- ✅ `close-auction` – Correct param names, invoice creation
+- ✅ `send-dealer-auction-digest` – Deployed and active
+- ✅ `send-dealer-notification` – Updated approval email deployed
+- ✅ All 56 Edge Functions deployed and ACTIVE
+
+### Public Platform Stats RPC
+- Function: `get_public_platform_stats()` (SECURITY DEFINER)
+- Returns: active_auctions, sold_auctions, approved_dealers, total_motorhomes, ending_soon, unique_brands
+- Accessible by anon and authenticated roles
+
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)
-- Build dist/ and serve with Python http.server works but lacks SPA routing
+- Build dist/ and serve with `npx vite preview --port 8011` for SPA routing support

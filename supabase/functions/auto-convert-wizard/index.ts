@@ -143,10 +143,30 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (session.status === "converted") {
-      return new Response(
-        JSON.stringify({ message: "Session already converted" }),
-        { status: 200, headers }
-      );
+      // Safety check: verify a motorhome actually exists for this user.
+      // If not, the previous conversion partially failed → allow re-conversion.
+      if (session.user_id) {
+        const { data: existingMotorhome } = await adminClient
+          .from("motorhomes")
+          .select("id")
+          .eq("seller_id", session.user_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingMotorhome) {
+          return new Response(
+            JSON.stringify({ message: "Session already converted", motorhomeId: existingMotorhome.id }),
+            { status: 200, headers }
+          );
+        }
+        // No motorhome found despite "converted" status → partial failure, continue
+        edgeLogger.warn(`Session ${body.sessionId} marked as converted but no motorhome found for user ${session.user_id}. Re-converting...`);
+      } else {
+        return new Response(
+          JSON.stringify({ message: "Session already converted" }),
+          { status: 200, headers }
+        );
+      }
     }
 
     const formData = session.form_data || {};

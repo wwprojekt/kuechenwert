@@ -406,17 +406,19 @@ const VerkaufenWizard = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator with step labels */}
-            <div className="mb-4 md:mb-8 animate-slide-up">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs md:text-sm font-medium text-foreground">
-                  Schritt {currentStep} von {steps.length}: <span className="text-primary">{steps[currentStep - 1]?.name}</span>
+            <div className="mb-4 md:mb-6 animate-slide-up">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-xs sm:text-sm font-medium text-foreground">
+                  <span className="hidden sm:inline">Schritt {currentStep} von {steps.length}: </span>
+                  <span className="sm:hidden">{currentStep}/{steps.length}: </span>
+                  <span className="text-primary">{steps[currentStep - 1]?.name}</span>
                 </span>
-                <span className="text-sm font-semibold text-primary">
+                <span className="text-xs sm:text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
-              <Progress value={progress} className="h-2.5 rounded-full" />
-              {/* Compact step dots on desktop */}
+              <Progress value={progress} className="h-2 sm:h-2.5 rounded-full" />
+              {/* Compact step dots – only on wider screens */}
               <div className="hidden md:flex justify-between mt-2 px-1">
                 {steps.map((step) => (
                   <div key={step.id} className="flex flex-col items-center gap-0.5">
@@ -466,7 +468,7 @@ const VerkaufenWizard = () => {
                     size="lg"
                     onClick={handlePrevious}
                     disabled={currentStep === 1}
-                    className="w-full sm:w-auto order-2 sm:order-1"
+                    className="w-full sm:w-auto order-2 sm:order-1 min-h-[48px]"
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" />
                     Zurück
@@ -480,7 +482,7 @@ const VerkaufenWizard = () => {
                         size="lg"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
+                        className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2 min-h-[52px] text-base"
                       >
                         {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
                         <Check className="w-4 h-4 ml-2" />
@@ -490,7 +492,7 @@ const VerkaufenWizard = () => {
                     <Button
                       size="lg"
                       onClick={handleNext}
-                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2"
+                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2 min-h-[52px] text-base"
                     >
                       {getNextButtonLabel()}
                       <ChevronRight className="w-4 h-4 ml-2" />

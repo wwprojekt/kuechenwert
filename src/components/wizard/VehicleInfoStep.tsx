@@ -147,15 +147,15 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         {/* Quick-pick: Top-Hersteller als Chips */}
         {!formData.manufacturer && (
           <>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {topManufacturers.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => handleManufacturerSelect(m)}
-                  className="px-3 py-2 rounded-lg border-2 border-border bg-background text-sm font-medium
+                  className="min-h-[44px] px-3 py-2.5 rounded-lg border-2 border-border bg-background text-sm font-medium
                     hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm transition-all
-                    active:scale-95"
+                    active:scale-[0.97] active:bg-primary/10"
                 >
                   {m}
                 </button>
@@ -166,9 +166,9 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
               <button
                 type="button"
                 onClick={() => setShowAllManufacturers(true)}
-                className="text-sm text-primary hover:underline font-medium flex items-center gap-1"
+                className="min-h-[44px] w-full sm:w-auto text-sm text-primary hover:underline font-medium flex items-center justify-center sm:justify-start gap-1.5 py-2"
               >
-                <Search className="w-3.5 h-3.5" />
+                <Search className="w-4 h-4" />
                 Alle {allManufacturers.length} Hersteller anzeigen
               </button>
             ) : (
@@ -178,22 +178,22 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                   placeholder="Hersteller suchen..."
                   value={manufacturerSearch}
                   onChange={(e) => setManufacturerSearch(e.target.value)}
-                  className="h-10"
+                  className="h-11 text-base"
                   autoFocus
                 />
-                <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
+                <div className="max-h-[240px] overflow-y-auto border rounded-lg divide-y">
                   {filteredManufacturers.map((m) => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => handleManufacturerSelect(m)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-primary/5 transition-colors"
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 active:bg-primary/10 transition-colors"
                     >
                       {m}
                     </button>
                   ))}
                   {filteredManufacturers.length === 0 && (
-                    <p className="px-3 py-2 text-sm text-muted-foreground">Kein Hersteller gefunden</p>
+                    <p className="px-4 py-3 text-sm text-muted-foreground">Kein Hersteller gefunden</p>
                   )}
                 </div>
               </div>
@@ -203,8 +203,8 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
         {/* Selected manufacturer badge */}
         {formData.manufacturer && (
-          <div className="flex items-center gap-2 animate-fade-in">
-            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm font-semibold text-primary">
+          <div className="flex items-center gap-3 animate-fade-in">
+            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2.5 text-sm font-semibold text-primary">
               <Check className="w-4 h-4" />
               {formData.manufacturer}
             </div>
@@ -214,7 +214,7 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 updateFormData({ manufacturer: "", model: "" });
                 setShowAllManufacturers(false);
               }}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3 py-2 text-sm text-primary font-medium hover:underline transition-colors"
             >
               Ändern
             </button>
@@ -235,21 +235,22 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
           {/* Model quick-pick chips (if models available) */}
           {modelOptions.length > 0 && !formData.model && (
             <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {modelOptions.slice(0, 12).map((m) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {modelOptions.slice(0, 9).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => handleModelSelect(m)}
-                    className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm
-                      hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95"
+                    className="min-h-[44px] px-3 py-2 rounded-lg border border-border bg-background text-sm text-left
+                      hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-[0.97] active:bg-primary/10
+                      truncate"
                   >
                     {m}
                   </button>
                 ))}
               </div>
-              {modelOptions.length > 12 && (
-                <p className="text-xs text-muted-foreground">+ {modelOptions.length - 12} weitere Modelle</p>
+              {modelOptions.length > 9 && (
+                <p className="text-xs text-muted-foreground">+ {modelOptions.length - 9} weitere Modelle</p>
               )}
             </div>
           )}
@@ -273,20 +274,20 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                   setShowModelDropdown(true);
                 }
               }}
-              className={cn("h-11 text-base transition-smooth", fieldErrors.model && "border-red-500 ring-red-500/20 ring-2")}
+              className={cn("h-12 text-base transition-smooth", fieldErrors.model && "border-red-500 ring-red-500/20 ring-2")}
               autoComplete="off"
             />
             {showModelDropdown && filteredModels.length > 0 && (
               <div
                 ref={modelDropdownRef}
-                className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[200px] overflow-y-auto"
+                className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[240px] overflow-y-auto"
               >
                 {filteredModels.map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => handleModelSelect(m)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary/5 transition-colors"
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 active:bg-primary/10 transition-colors"
                   >
                     {m}
                   </button>
@@ -309,84 +310,87 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
       {/* ===== BAUJAHR + KM + ZUSTAND (shown after model) ===== */}
       {formData.manufacturer && formData.model && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-          {/* Baujahr */}
-          <div className="space-y-2">
-            <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
-              <Calendar className="w-4 h-4" />
-              Baujahr <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.year?.toString() || ""}
-              onValueChange={(value) => updateFormData({ year: parseInt(value) })}
-            >
-              <SelectTrigger id="year" className={cn("h-11 transition-smooth", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
-                <SelectValue placeholder="Baujahr wählen" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.year && (
-              <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.year}</p>
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Baujahr */}
+            <div className="space-y-2">
+              <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
+                <Calendar className="w-4 h-4" />
+                Baujahr <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.year?.toString() || ""}
+                onValueChange={(value) => updateFormData({ year: parseInt(value) })}
+              >
+                <SelectTrigger id="year" className={cn("h-12 text-base transition-smooth", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
+                  <SelectValue placeholder="Baujahr wählen" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.year && (
+                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.year}</p>
+              )}
+            </div>
+
+            {/* Kilometerstand - nur Wohnmobil */}
+            {!isWohnwagen && (
+              <div className="space-y-2">
+                <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
+                  <Gauge className="w-4 h-4" />
+                  Kilometerstand <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="mileage"
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="z.B. 45000"
+                  value={formData.mileage || ""}
+                  onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
+                  min={0}
+                  className={cn("h-12 text-base transition-smooth", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
+                />
+                {fieldErrors.mileage && (
+                  <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.mileage}</p>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Kilometerstand - nur Wohnmobil */}
-          {!isWohnwagen && (
-            <div className="space-y-2">
-              <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
-                <Gauge className="w-4 h-4" />
-                Kilometerstand <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="mileage"
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="z.B. 45000"
-                value={formData.mileage || ""}
-                onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
-                min={0}
-                className={cn("h-11 transition-smooth", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
-              />
-              {fieldErrors.mileage && (
-                <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.mileage}</p>
-              )}
-            </div>
-          )}
-
-          {/* Zustand */}
-          <div className={cn("space-y-2", isWohnwagen ? "" : "md:col-span-2")}>
+          {/* Zustand – eigene Sektion für volle Breite */}
+          <div className="space-y-2">
             <Label htmlFor="condition" className={cn("flex items-center gap-1", fieldErrors.condition && "text-red-600")}>
               Zustand <span className="text-red-500">*</span>
             </Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {[
-                { value: "Neuwertig", emoji: "✨" },
-                { value: "Sehr gepflegt", emoji: "👍" },
-                { value: "Gepflegt", emoji: "👌" },
-                { value: "Gebrauchsspuren", emoji: "🔧" },
-                { value: "Reparaturbedürftig", emoji: "⚠️" },
+                { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
+                { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },
+                { value: "Gepflegt", emoji: "👌", short: "Gepflegt" },
+                { value: "Gebrauchsspuren", emoji: "🔧", short: "Gebraucht" },
+                { value: "Reparaturbedürftig", emoji: "⚠️", short: "Reparatur" },
               ].map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => updateFormData({ condition: opt.value })}
                   className={cn(
-                    "px-2 py-2.5 rounded-lg border-2 text-center text-xs sm:text-sm font-medium transition-all",
-                    "hover:border-primary/50 hover:bg-primary/5",
+                    "min-h-[56px] px-1.5 py-2 rounded-lg border-2 text-center font-medium transition-all flex flex-col items-center justify-center gap-0.5",
+                    "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
                     formData.condition === opt.value
                       ? "border-primary bg-primary/10 text-primary shadow-sm"
                       : "border-border bg-background text-foreground"
                   )}
                 >
-                  <span className="block text-base mb-0.5">{opt.emoji}</span>
-                  {opt.value}
+                  <span className="text-lg leading-none">{opt.emoji}</span>
+                  <span className="text-[11px] sm:text-xs leading-tight sm:hidden">{opt.short}</span>
+                  <span className="text-xs leading-tight hidden sm:block">{opt.value}</span>
                 </button>
               ))}
             </div>

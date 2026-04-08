@@ -34,6 +34,7 @@ function mapWizardToMotorhome(formData: Record<string, any>) {
     instant_price: formData.instantPrice ? Number(formData.instantPrice) : null,
 
     // Technical details (wizard uses fuel_type, power_ps, emission_class directly)
+    base_vehicle: isWohnwagen ? null : (formData.baseVehicle || null),
     fuel_type: isWohnwagen ? null : (formData.fuel_type || formData.fuelType || null),
     transmission: isWohnwagen ? null : (formData.transmission || null),
     engine_power_hp: isWohnwagen ? null : (formData.power_ps ? Number(formData.power_ps) : (formData.enginePower ? Number(formData.enginePower) : null)),

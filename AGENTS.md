@@ -90,9 +90,37 @@ npm run build        # Production build via Vite → dist/
 - **Wohnwagen-Erstzulassung**: Gleicher Monat/Jahr-Dropdown Fix
 - **Analyse-Ergebnis**: Step 3 NICHT in 2 Steps aufteilen – nur 9.1% Absprung, Splitting würde Wizard psychologisch verlängern. Stattdessen: visuell entlasten durch Tiles + Collapsible.
 
+### Phase 8 – Modell-Datenbank Expansion (08.04.2026, committed)
+- **Live-Analyse bestätigt**: Wizard Steps 1–8 funktionieren einwandfrei (Desktop)
+- **DB-Analyse**: Pössl-Nutzer (6.-häufigster Hersteller, 12 Sessions) brach bei Step 2 ab wegen fehlender Modellvorschläge
+- **Pilote**: 5 → 27 Modelle (Pacific, Galaxy, Atlas, Van, Explorateur, Aventura, Reference, Sensation, Vega, Foxy Van)
+- **Rapido**: Duplikate entfernt, 24 echte Modellnummern (C50-C86, V-Serie, 6F/8F/80dF, Distinction i-Serie)
+- **GiottiLine**: 4 → 18 Modelle (Siena, Toscan, GiottiCompact, GiottiVan, Therry-Serie)
+- **Roller Team**: 7 → 19 Modelle (Kronos, Zefiro, Livingstone, Pegaso, T-Line mit Nummern)
+- **Sun Living**: 5 → 16 Modelle (Lido + S/A/V/C-Serie mit spezifischen Nummern)
+- **Sunlight**: +6 Modelle inkl. T 65 (von echtem Nutzer gesucht aber fehlend!)
+- **Le Voyageur**: 5 → 11 (LV + Liner mit Längenangaben)
+- **Concorde**: 7 → 11 (Credo Action, Charisma III, Cruiser Daily, Liner Plus, Compact)
+- **Total**: 96 Hersteller, 1117 Modelle (vorher 1035, +82 Modelle, +7.9%)
+
+## Vehicle Data Stats
+- Wohnmobil: 96 Hersteller, 1117 Modelle
+- Wohnwagen: 36 Hersteller, 156 Modelle
+- Basisfahrzeuge: 19 (mit PS-Optionen)
+- Popular WM: Hymer(56), Bürstner(37), Dethleffs(33), Knaus(29), Pilote(27), Weinsberg(27), Adria(27)
+- Popular WW: Hobby(10), Fendt(10), Wilk(10), Kabe(9), Tabbert(9), Bürstner(9)
+
+## Real User Data Insights (08.04.2026)
+- Top WM-Hersteller nach Sessions: Hobby(24), Dethleffs(19), Weinsberg(15), Bürstner(14), Hymer(12), Pössl(12)
+- Nutzer geben oft sehr spezifische Modellnummern ein (z.B. "560 CFe", "T6613 EB") → Freitext-Feld essential
+- Häufige Tippfehler: "Sunligth", "Bürstner " (Leerzeichen), "Exzellent"
+- "Carado T447" als Hersteller eingetragen (4 Sessions) → Nutzer verwechseln Hersteller/Modell-Feld
+- "Fiat Ducato" als Pössl-Modell eingetragen → Nutzer verwechseln Basisfahrzeug/Modell
+
 ## Known Remaining Items
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
 - Search is starts-with; could benefit from fuzzy matching for typos (users type "Exzellent" for "Excellent")
+- Consider trim() on manufacturer/model inputs to handle trailing spaces
 
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

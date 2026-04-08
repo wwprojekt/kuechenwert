@@ -246,8 +246,8 @@ const VerkaufenWizard = () => {
     }
   }, [currentStep, formData.customerEmail, formData.customerName]);
 
-  // Ungerade Prozentwerte wirken authentischer und weniger konstruiert
-  const progressMap: Record<number, number> = { 1: 8, 2: 20, 3: 33, 4: 45, 5: 57, 6: 69, 7: 82, 8: 100 };
+  // Higher starting percentage reduces abandonment psychology
+  const progressMap: Record<number, number> = { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
@@ -328,7 +328,7 @@ const VerkaufenWizard = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <VehicleTypeStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
+        return <VehicleTypeStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} onAutoAdvance={handleNext} />;
       case 2:
         return <VehicleInfoStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 3:
@@ -360,11 +360,20 @@ const VerkaufenWizard = () => {
   // Step indicator labels for compact progress bar
   const isLastStep = currentStep === steps.length;
 
-  // Determine button labels based on step
+  // Contextual button labels – tell users what's next to reduce uncertainty
   const getNextButtonLabel = () => {
-    if (currentStep === 4) return "Weiter (optional)";
-    if (currentStep === 6) return formData.photos.length > 0 ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}` : "Weiter ohne Fotos";
-    return "Weiter";
+    switch (currentStep) {
+      case 1: return "Weiter zu Fahrzeugdaten";
+      case 2: return "Weiter zu Details";
+      case 3: return "Weiter zu Ausstattung";
+      case 4: return "Weiter (optional)";
+      case 5: return "Weiter zu Fotos";
+      case 6: return formData.photos.length > 0
+        ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}`
+        : "Weiter ohne Fotos";
+      case 7: return "Zum Abschluss";
+      default: return "Weiter";
+    }
   };
 
   return (
@@ -403,14 +412,34 @@ const VerkaufenWizard = () => {
       <div className="min-h-screen py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* Progress Indicator – clean, no step count */}
+            {/* Progress Indicator with step dots */}
             <div className="mb-4 md:mb-6 animate-slide-up">
-              <div className="flex justify-end items-center mb-1.5">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-xs text-muted-foreground">
+                  Schritt {currentStep} von {steps.length}: <span className="font-medium text-foreground">{steps[currentStep - 1]?.name}</span>
+                </span>
                 <span className="text-xs sm:text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
               <Progress value={progress} className="h-2 sm:h-2.5 rounded-full" />
+              {/* Step dots – clickable visual orientation */}
+              <div className="flex items-center justify-center gap-1.5 mt-2">
+                {steps.map((step, i) => (
+                  <div
+                    key={step.id}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      i + 1 === currentStep
+                        ? "w-6 bg-primary"
+                        : i + 1 < currentStep
+                          ? "w-1.5 bg-primary/60"
+                          : "w-1.5 bg-border"
+                    )}
+                    title={step.name}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Main Content Area */}

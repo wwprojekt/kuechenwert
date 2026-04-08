@@ -134,9 +134,9 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
               <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input
                 id="first_registration"
-                type="date"
-                value={formData.first_registration || ""}
-                onChange={(e) => updateFormData({ first_registration: e.target.value })}
+                type="month"
+                value={formData.first_registration ? formData.first_registration.substring(0, 7) : ""}
+                onChange={(e) => updateFormData({ first_registration: e.target.value ? `${e.target.value}-01` : "" })}
               />
             </div>
           </div>
@@ -162,12 +162,12 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
           <h3 className="text-lg font-semibold">Zulassung</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label htmlFor="first_registration_ww">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input
-                id="first_registration"
-                type="date"
-                value={formData.first_registration || ""}
-                onChange={(e) => updateFormData({ first_registration: e.target.value })}
+                id="first_registration_ww"
+                type="month"
+                value={formData.first_registration ? formData.first_registration.substring(0, 7) : ""}
+                onChange={(e) => updateFormData({ first_registration: e.target.value ? `${e.target.value}-01` : "" })}
               />
             </div>
           </div>

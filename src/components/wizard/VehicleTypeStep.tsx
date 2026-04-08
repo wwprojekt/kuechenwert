@@ -6,7 +6,7 @@
  * der jeweiligen Aufbauart dargestellt.
  */
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import type { ComponentType, SVGProps } from "react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Car, Caravan, Users, TrendingUp, Check } from "lucide-react";
@@ -27,6 +27,7 @@ interface VehicleTypeStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
   fieldErrors?: Record<string, string>;
+  onAutoAdvance?: () => void;
 }
 
 type SvgIconComponent = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
@@ -50,8 +51,15 @@ const WOHNWAGEN_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
   "Mobilheim": { icon: MobilheimIcon, description: "Stationäres Wohnheim" },
 };
 
-export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {} }: VehicleTypeStepProps) => {
+export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, onAutoAdvance }: VehicleTypeStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    };
+  }, []);
 
   const currentBodyTypes = useMemo(() => {
     return vehicleType === "Wohnwagen" ? [...wohnwagenBodyTypes] : [...bodyTypes];
@@ -139,7 +147,13 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {} }: 
               <button
                 key={type}
                 type="button"
-                onClick={() => updateFormData({ bodyType: type })}
+                onClick={() => {
+                  updateFormData({ bodyType: type });
+                  if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+                  if (onAutoAdvance) {
+                    autoAdvanceTimerRef.current = setTimeout(() => onAutoAdvance(), 450);
+                  }
+                }}
                 className={cn(
                   "p-3 rounded-xl border-2 text-center transition-all duration-200 group animate-fade-in relative",
                   "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",

@@ -248,31 +248,10 @@ const step2SchemaWohnwagen = z.object({
   condition: z.string().min(1, "Zustand ist erforderlich"),
 });
 
-// Step 3: Technical Details – Wohnmobil (fuel_type, transmission, sleeping_places required; seats optional; defects validated)
-const step4SchemaWohnmobil = z.object({
-  fuel_type: z.string().min(1, "Kraftstoffart ist erforderlich"),
-  transmission: z.string().min(1, "Getriebe ist erforderlich"),
-  sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
-    .min(1, "Mindestens 1 Schlafplatz erforderlich")
-    .max(9, "Maximal 9 Schlafplätze möglich"),
-  no_known_defects: z.boolean(),
-  known_defects: z.string().optional(),
-}).refine(
-  (data) => data.no_known_defects || (data.known_defects && data.known_defects.trim().length > 0),
-  { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
-);
-
-// Step 3: Technical Details – Wohnwagen (kein Motor, kein Getriebe, keine Sitzplätze)
-const step4SchemaWohnwagen = z.object({
-  sleeping_places: z.number({ required_error: "Schlafplätze ist ein Pflichtfeld", invalid_type_error: "Bitte wählen Sie die Anzahl der Schlafplätze" })
-    .min(1, "Mindestens 1 Schlafplatz erforderlich")
-    .max(9, "Maximal 9 Schlafplätze möglich"),
-  no_known_defects: z.boolean(),
-  known_defects: z.string().optional(),
-}).refine(
-  (data) => data.no_known_defects || (data.known_defects && data.known_defects.trim().length > 0),
-  { message: "Bitte geben Sie an, ob Mängel bekannt sind, oder beschreiben Sie die vorhandenen Mängel" }
-);
+// Step 3: Technical Details – ALL OPTIONAL (smart defaults pre-filled in DetailsStep)
+// Competitor analysis (Caravanmarkt24): they don't ask ANY tech details for initial offer.
+// Making this step zero-friction while still collecting valuable data via defaults.
+const step4Schema = z.object({});
 
 // Step 4: Equipment (all optional - no validation needed)
 const step5Schema = z.object({});
@@ -393,21 +372,8 @@ export const useWizardForm = () => {
           }
           break;
         case 3:
-          if (formData.vehicleType === "Wohnwagen") {
-            step4SchemaWohnwagen.parse({
-              sleeping_places: formData.sleeping_places,
-              no_known_defects: formData.no_known_defects,
-              known_defects: formData.known_defects,
-            });
-          } else {
-            step4SchemaWohnmobil.parse({
-              fuel_type: formData.fuel_type,
-              transmission: formData.transmission,
-              sleeping_places: formData.sleeping_places,
-              no_known_defects: formData.no_known_defects,
-              known_defects: formData.known_defects,
-            });
-          }
+          // Step 3 is fully optional (smart defaults pre-filled)
+          step4Schema.parse({});
           break;
         case 4:
           step5Schema.parse({});

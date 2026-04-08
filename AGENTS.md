@@ -19,12 +19,14 @@ npm run build        # Production build via Vite → dist/
   - Vehicle data (manufacturers/models) in `src/lib/vehicle-data.ts`
 - **Step numbering mismatch**: Schema names (step1Schema–step8Schema) don't match step numbers in validateStep. E.g., step3Schema validates Step 5 (QuickContact), step4SchemaWohnmobil validates Step 3 (DetailsStep).
 
-## Wizard Funnel Data (Apr 2026, 224 all-time sessions)
-- Step 1 drop: 14 (6.3%), Step 2 drop: 15 (6.7%), Step 3 drop: 16 (7.1%)
-- Step 4 drop: 7 (3.1%), Step 5 drop: 6 (2.7%)
-- **Step 6 (Photos) drop: 24 (10.7%)** ← BIGGEST bottleneck
-- Step 7 drop: 11 (4.9%), Completed: 129 (57.6%)
-- Step 2 droppers: ~50% have ZERO fields filled → form overwhelm
+## Wizard Funnel Data (Apr 2026, 241 sessions since March)
+- Step 1 drop: 21 (8.7%), Step 2 drop: 19 (7.9%), Step 3 drop: 21 (8.7%)
+- Step 4 drop: 9 (3.7%), Step 5 drop: 5 (2.1%)
+- **Step 6 (Photos) drop: 24 (10.0%)** ← BIGGEST bottleneck (22 of 24 have 0 photos!)
+- Step 7 drop: 8 (3.3%), Completed: 132 (54.8%)
+- **Completion by body type**: Alkoven 80%, Wohnwagen 65.6%, Vollintegriert 56.3%, Teilintegriert 55.9%, Kastenwagen 54.5%, Campingbus 37.5%
+- **Step 2 droppers**: 6 instant-bouncer (<1min, 0 fields), 6 model-search-frustration, 3 typo-related, 4 returning users
+- **Step 6 droppers**: Real users with email+data who saw photo upload and bailed
 
 ## Conversion Optimizations (08.04.2026)
 ### Phase 1 – Step 2 Redesign (committed)
@@ -117,10 +119,25 @@ npm run build        # Production build via Vite → dist/
 - "Carado T447" als Hersteller eingetragen (4 Sessions) → Nutzer verwechseln Hersteller/Modell-Feld
 - "Fiat Ducato" als Pössl-Modell eingetragen → Nutzer verwechseln Basisfahrzeug/Modell
 
+### Phase 9 – Deep Funnel Analysis & Fixes (08.04.2026, committed)
+- **Datenbasierte Tiefenanalyse**: Alle 241 Sessions einzeln analysiert (form_data JSON-Felder: customerName/customerEmail/saleChannel)
+- **Fuzzy-Suche implementiert**: Bigram-Overlap + Single-Char-Off Algorithmus im SearchableSelect
+  - Getestet: smara→Amara(0.7), Exzellent→Excellent(0.38), Pösl→Pössl(0.7), Dethlefs→Dethleffs(0.7), random→Hymer(0.0)
+  - Behebt 3-6 Step-2-Abbrüche pro Monat (Tippfehler-bedingt)
+- **Whitespace-Trimming**: onBlur in SearchableSelect trimmt trailing/leading spaces
+  - Behebt "Bürstner " (trailing space) aus echten Sessions
+- **Micro-Progress Fix**: Freetext-Hersteller zählen jetzt als "ausgefüllt" (manufacturer?.trim() statt manufacturers.includes())
+- **Photo-Step prominenter Skip**: Neuer "Ohne Fotos fortfahren" Button OBERHALB des Upload-Bereichs
+  - Ziel: 24 Step-6-Abbrecher reduzieren (22 davon hatten 0 Fotos)
+- **Button-Label**: "Weiter – Fotos nachreichen" → "Weiter ohne Fotos" (klarere Absicht)
+- **Sale Channel Stats**: Auction 59%, Instant Price 36%, Station 4.5%
+- **Photo Upload Rate**: Nur 33% aller abgeschlossenen Sessions haben Fotos
+
 ## Known Remaining Items
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
-- Search is starts-with; could benefit from fuzzy matching for typos (users type "Exzellent" for "Excellent")
-- Consider trim() on manufacturer/model inputs to handle trailing spaces
+- Campingbus completion rate lowest at 37.5% – small sample, monitor
+- 67% of completed sessions have 0 photos – consider post-wizard photo email workflow
+- 4 users navigated back from later steps to Step 2 and got stuck
 
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

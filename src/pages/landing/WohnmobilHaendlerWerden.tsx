@@ -196,7 +196,7 @@ const WohnmobilHaendlerWerden = () => {
       </section>
 
       {/* FAQ */}
-      <FAQSection faqs={faqs} title="Häufige Fragen von Händlern" />
+      <FAQSection items={faqs} title="Häufige Fragen von Händlern" />
 
       {/* CTA */}
       <section className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">

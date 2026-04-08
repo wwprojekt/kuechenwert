@@ -370,7 +370,7 @@ const VerkaufenWizard = () => {
       case 5: return "Weiter zu Fotos";
       case 6: return formData.photos.length > 0
         ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}`
-        : "Weiter ohne Fotos";
+        : "Weiter – Fotos nachreichen";
       case 7: return "Zum Abschluss";
       default: return "Weiter";
     }

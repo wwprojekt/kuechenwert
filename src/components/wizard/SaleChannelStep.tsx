@@ -5,7 +5,7 @@
  * Name und E-Mail werden bereits in Step 5 (QuickContactStep) erfasst und hier vorausgefüllt.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +22,12 @@ interface SaleChannelStepProps {
 }
 
 export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: SaleChannelStepProps) => {
-  // No fake FOMO counter – use honest messaging
+  // Pre-select recommended option to reduce friction (user can change)
+  useEffect(() => {
+    if (!formData.saleChannel) {
+      updateFormData({ saleChannel: "auction" });
+    }
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">

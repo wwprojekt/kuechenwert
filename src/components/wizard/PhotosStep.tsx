@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useEffect, useState } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Camera, Upload, X, ImageIcon, Info } from "lucide-react";
+import { Camera, Upload, X, ImageIcon, Info, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 
@@ -12,8 +11,6 @@ interface PhotosStepProps {
 }
 
 export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
-  const [skipPhotos, setSkipPhotos] = useState(false);
-
   const photoUrls = useMemo(() => {
     return formData.photos.map((photo) => URL.createObjectURL(photo));
   }, [formData.photos]);
@@ -32,7 +29,6 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
       );
       const newPhotos = [...formData.photos, ...validFiles].slice(0, 30);
       updateFormData({ photos: newPhotos });
-      // Reset input so same file can be re-selected
       e.target.value = "";
     },
     [formData.photos, updateFormData]
@@ -46,45 +42,94 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
     [formData.photos, updateFormData]
   );
 
+  const hasPhotos = formData.photos.length > 0;
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="mb-6">
+    <div className="space-y-5 animate-fade-in">
+      <div className="mb-4">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
           <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fotos Ihres Wohnmobils
         </h2>
         <p className="text-muted-foreground">
-          Fotos erhöhen Ihre Verkaufschancen um bis zu <strong>80%</strong> – Sie können sie aber auch später nachreichen
+          Fotos sind <strong>optional</strong> – Sie können sie jetzt hochladen oder jederzeit per E-Mail nachreichen
         </p>
       </div>
 
-      {/* FOMO-Hinweis */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-        <p className="text-sm text-blue-800 dark:text-blue-200 flex items-start gap-2">
-          <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+      {/* Reassurance: optional + can be added later */}
+      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+        <p className="text-sm text-green-800 dark:text-green-200 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
-            Inserate mit <strong>mindestens 5 Fotos</strong> erhalten durchschnittlich <strong>3x mehr Anfragen</strong> von Händlern.
+            {hasPhotos
+              ? `${formData.photos.length} Foto${formData.photos.length !== 1 ? "s" : ""} hochgeladen – super! Mehr Fotos = bessere Angebote.`
+              : "Kein Problem ohne Fotos – wir kontaktieren Sie und Sie können Fotos bequem per E-Mail nachreichen."
+            }
           </span>
         </p>
       </div>
 
-      {!skipPhotos && (
-        <>
-          {/* Upload-Bereich */}
-          <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+      {/* Upload area – compact and friendly */}
+      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+        <label
+          htmlFor="photo-upload"
+          className="flex flex-col items-center justify-center py-5 md:py-8 px-4 cursor-pointer"
+        >
+          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+          <span className="text-base font-medium text-foreground mb-1">
+            {hasPhotos ? "Weitere Fotos hinzufügen" : "Fotos hochladen"}
+          </span>
+          <span className="text-xs text-muted-foreground text-center">
+            Klicken oder Dateien hierher ziehen
+          </span>
+          <input
+            id="photo-upload"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </label>
+      </Card>
+
+      {/* Photo preview */}
+      {hasPhotos && (
+        <div className="space-y-3">
+          <Label className="text-base font-medium">
+            {formData.photos.length} Foto{formData.photos.length !== 1 ? "s" : ""} hochgeladen
+          </Label>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            {photoUrls.map((url, index) => (
+              <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
+                <img
+                  src={url}
+                  alt={`Foto ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(index)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 md:p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                {index === 0 && (
+                  <span className="absolute bottom-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">
+                    Titelbild
+                  </span>
+                )}
+              </div>
+            ))}
+
             <label
-              htmlFor="photo-upload"
-              className="flex flex-col items-center justify-center py-6 md:py-10 px-4 cursor-pointer"
+              htmlFor="photo-upload-more"
+              className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center cursor-pointer transition-colors"
             >
-              <Upload className="w-10 h-10 text-muted-foreground mb-3" />
-              <span className="text-base font-medium text-foreground mb-1">
-                Fotos hochladen
-              </span>
-              <span className="text-sm text-muted-foreground text-center">
-                Klicken oder Dateien hierher ziehen (max. 30 Fotos, je max. 100 MB)
-              </span>
+              <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+              <span className="text-xs text-muted-foreground">Mehr</span>
               <input
-                id="photo-upload"
+                id="photo-upload-more"
                 type="file"
                 accept="image/*"
                 multiple
@@ -92,93 +137,34 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
                 className="hidden"
               />
             </label>
-          </Card>
-
-          {/* Foto-Vorschau */}
-          {formData.photos.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base font-medium">
-                {formData.photos.length} Foto{formData.photos.length !== 1 ? "s" : ""} hochgeladen
-              </Label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {photoUrls.map((url, index) => (
-                  <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
-                    <img
-                      src={url}
-                      alt={`Foto ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 md:p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                    {index === 0 && (
-                      <span className="absolute bottom-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">
-                        Titelbild
-                      </span>
-                    )}
-                  </div>
-                ))}
-
-                {/* Upload-Platzhalter */}
-                <label
-                  htmlFor="photo-upload-more"
-                  className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center cursor-pointer transition-colors"
-                >
-                  <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-                  <span className="text-xs text-muted-foreground">Mehr</span>
-                  <input
-                    id="photo-upload-more"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
 
-      {/* Fotos später nachreichen - prominenter Button */}
-      <Button
-        type="button"
-        variant={skipPhotos ? "default" : "outline"}
-        className={`w-full py-6 text-base font-semibold transition-all ${
-          skipPhotos
-            ? "bg-primary text-white shadow-md"
-            : "border-2 border-primary/30 hover:border-primary hover:bg-primary/5"
-        }`}
-        onClick={() => {
-          const newSkip = !skipPhotos;
-          setSkipPhotos(newSkip);
-          if (newSkip) {
-            updateFormData({ photos: [] });
-          }
-        }}
-      >
-        <Camera className="w-5 h-5 mr-2" />
-        Fotos später nachreichen
-      </Button>
-
-      {/* Tipps */}
-      <div className="bg-muted/50 rounded-lg p-4 border border-border">
-        <p className="text-sm font-medium mb-2 flex items-center gap-2">
+      {/* Compact tips – less intimidating */}
+      <details className="group">
+        <summary className="text-sm font-medium flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
           <ImageIcon className="w-4 h-4" />
-          Tipps für gute Fotos:
+          Tipps für gute Fotos
+          <span className="text-xs group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="mt-2 bg-muted/50 rounded-lg p-3 border border-border">
+          <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
+            <li>Außenansicht von allen 4 Seiten</li>
+            <li>Innenraum: Wohnbereich, Küche, Bad</li>
+            <li>Cockpit und Armaturenbrett</li>
+            <li>Eventuelle Schäden oder Mängel</li>
+          </ul>
+        </div>
+      </details>
+
+      {/* Motivational stat – subtle, not pressuring */}
+      {!hasPhotos && (
+        <p className="text-xs text-center text-muted-foreground">
+          <Info className="w-3 h-3 inline mr-1" />
+          Tipp: Inserate mit Fotos erhalten durchschnittlich 3x mehr Händler-Anfragen
         </p>
-        <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
-          <li>Außenansicht von allen 4 Seiten</li>
-          <li>Innenraum: Wohnbereich, Küche, Bad</li>
-          <li>Cockpit und Armaturenbrett</li>
-          <li>Eventuelle Schäden oder Mängel</li>
-        </ul>
-      </div>
+      )}
     </div>
   );
 };

@@ -140,7 +140,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
               <Select
                 value={formData.baseVehicle || ""}
                 onValueChange={(value) => {
-                  updateFormData({ baseVehicle: value, power_ps: null });
+                  updateFormData({ baseVehicle: value, power_ps: null, power_kw: null });
                 }}
               >
                 <SelectTrigger id="baseVehicle">
@@ -162,7 +162,10 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
                     <button
                       key={ps}
                       type="button"
-                      onClick={() => updateFormData({ power_ps: formData.power_ps === ps ? null : ps })}
+                      onClick={() => {
+                        const newPs = formData.power_ps === ps ? null : ps;
+                        updateFormData({ power_ps: newPs, power_kw: newPs ? Math.round(newPs * 0.7355) : null });
+                      }}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-sm font-medium border transition-all",
                         formData.power_ps === ps
@@ -170,7 +173,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
                           : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
                       )}
                     >
-                      {ps} PS
+                      {ps} PS <span className="text-xs opacity-70">({Math.round(ps * 0.7355)} kW)</span>
                     </button>
                   ))}
                 </div>
@@ -180,7 +183,10 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
                   inputMode="numeric"
                   placeholder="z.B. 130"
                   value={formData.power_ps || ""}
-                  onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}
+                  onChange={(e) => {
+                    const ps = e.target.value ? parseInt(e.target.value) : null;
+                    updateFormData({ power_ps: ps, power_kw: ps ? Math.round(ps * 0.7355) : null });
+                  }}
                   min={0}
                 />
               )}

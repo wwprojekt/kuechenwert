@@ -52,6 +52,23 @@ npm run build        # Production build via Vite → dist/
 - Dynamic green banner: shows upload count when photos exist
 - **SaleChannelStep**: Pre-selects "auction" (recommended) on mount to reduce required clicks
 
+### Phase 4 – Basisfahrzeug/Chassis-basierte PS-Auswahl & Modelldaten (committed)
+- **Basisfahrzeug dropdown** in DetailsStep (Step 3) with 18 chassis options
+  - Fiat Ducato, Mercedes Sprinter, Ford Transit, VW Crafter/T5/T6, MAN TGE, etc.
+  - Selecting chassis shows PS options as clickable chips (no manual typing needed)
+  - Falls back to manual number input if "Sonstige" or no chassis selected
+- **Vehicle data expanded** for top manufacturers based on real user input analysis:
+  - Hobby, Hymer, Bürstner, Dethleffs, Knaus, Ahorn all expanded
+  - Wohnwagen: Fendt (+Platin, Brillant), Hobby (+Freistaat Edition), LMC (+Dominant), TEC (+Freetec)
+- **Key insight**: PS depends on chassis (Ducato=120/140/160/180), NOT on Wohnmobil brand
+- **User data patterns** (from wizard_sessions): Users type free-form models with floor plan numbers (e.g., "Excellent 560 UL"), some confuse manufacturer/model (e.g., "Carado T447" as manufacturer)
+
+## Competitor Analysis (Apr 2026)
+- **Caravanmarkt24**: 4-step flow, 10-15min, immediate offer within 24h
+- **TruckScout24**: Vehicle-type-first, mandatory: type/make/model/registration/mileage/price, up to 15 photos
+- **mobile.de**: Extensive API fields (make, model, power kW, registration), 15 photos, paid visibility packages
+- **Key takeaways**: Minimal required fields + rich optional data; photo quality is critical; time estimates reduce friction
+
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)

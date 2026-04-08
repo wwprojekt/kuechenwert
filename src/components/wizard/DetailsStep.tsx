@@ -1,14 +1,10 @@
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { useState, useEffect } from "react";
-import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info, Truck, ChevronDown, Check } from "lucide-react";
+import { useEffect } from "react";
+import { Gauge, AlertTriangle, CheckCircle2, Bed, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { baseVehicles, getPowerOptionsForBaseVehicle } from "@/lib/vehicle-data";
 
 interface DetailsStepProps {
   formData: WizardFormData;
@@ -18,7 +14,6 @@ interface DetailsStepProps {
 
 export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: DetailsStepProps) => {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
-  const [showOptional, setShowOptional] = useState(false);
 
   const handleDefectsToggle = (value: string) => {
     const noDefects = value === "no";
@@ -256,205 +251,18 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
         </div>
       )}
 
-      {/* ═══ All required done: confirmation + optional collapsed section ═══ */}
+      {/* ═══ All required done: confirmation ═══ */}
       {requiredFilled === requiredTotal && (
-        <div className="space-y-3 animate-fade-in">
+        <div className="animate-fade-in">
           <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-2 text-sm">
             <Check className="w-4 h-4 text-green-600" />
             <span className="text-green-700 dark:text-green-300 font-medium">
-              Alle Pflichtangaben vollständig – klicken Sie auf „Weiter" oder ergänzen Sie optionale Details
+              Alle Pflichtangaben vollständig – klicken Sie auf „Weiter"!
             </span>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setShowOptional(prev => !prev)}
-            className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Info className="w-4 h-4 text-primary" />
-              Weitere Details hinzufügen
-              <span className="text-xs font-normal">(optional – erhöht Ihr Angebot)</span>
-            </span>
-            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", showOptional && "rotate-180")} />
-          </button>
-
-          {showOptional && (
-            <div className="space-y-5 animate-fade-in border-l-2 border-primary/20 pl-4 ml-1">
-              {/* Sitzplätze optional, nur Wohnmobil */}
-              {!isWohnwagen && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <UsersIcon className="w-4 h-4" />
-                    Sitzplätze mit Gurt
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {[2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => updateFormData({ seats_with_seatbelts: formData.seats_with_seatbelts === n ? null : n })}
-                        className={cn(
-                          "w-10 h-10 rounded-lg text-sm font-medium border-2 transition-all",
-                          "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
-                          formData.seats_with_seatbelts === n
-                            ? "bg-primary text-white border-primary shadow-sm"
-                            : "bg-card border-border"
-                        )}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Erstzulassung */}
-              {!isWohnwagen && (
-                <div className="space-y-2">
-                  <Label>Erstzulassung</Label>
-                  <div className="grid grid-cols-2 gap-2 max-w-sm">
-                    <Select
-                      value={formData.first_registration ? formData.first_registration.substring(5, 7) : ""}
-                      onValueChange={(month) => {
-                        const year = formData.first_registration ? formData.first_registration.substring(0, 4) : "";
-                        if (year) {
-                          updateFormData({ first_registration: `${year}-${month}-01` });
-                        } else {
-                          updateFormData({ first_registration: `${new Date().getFullYear()}-${month}-01` });
-                        }
-                      }}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Monat" /></SelectTrigger>
-                      <SelectContent>
-                        {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
-                          <SelectItem key={m} value={m}>
-                            {["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"][i]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={formData.first_registration ? formData.first_registration.substring(0, 4) : ""}
-                      onValueChange={(year) => {
-                        const month = formData.first_registration ? formData.first_registration.substring(5, 7) : "01";
-                        updateFormData({ first_registration: `${year}-${month}-01` });
-                      }}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Jahr" /></SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => (new Date().getFullYear() + 1 - i).toString()).map(y => (
-                          <SelectItem key={y} value={y}>{y}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-
-              {/* Basisfahrzeug + PS */}
-              {!isWohnwagen && (
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-primary" />
-                    Basisfahrzeug / Chassis
-                  </Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                      value={formData.baseVehicle || ""}
-                      onValueChange={(value) => {
-                        updateFormData({ baseVehicle: value, power_ps: null, power_kw: null });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="z.B. Fiat Ducato" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {baseVehicles.map(bv => (
-                          <SelectItem key={bv.label} value={bv.label}>{bv.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Leistung (PS)</Label>
-                      {formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {getPowerOptionsForBaseVehicle(formData.baseVehicle).map(ps => (
-                            <button
-                              key={ps}
-                              type="button"
-                              onClick={() => {
-                                const newPs = formData.power_ps === ps ? null : ps;
-                                updateFormData({ power_ps: newPs, power_kw: newPs ? Math.round(newPs * 0.7355) : null });
-                              }}
-                              className={cn(
-                                "px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
-                                formData.power_ps === ps
-                                  ? "bg-primary text-white border-primary shadow-sm"
-                                  : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
-                              )}
-                            >
-                              {ps} PS <span className="text-xs opacity-70">({Math.round(ps * 0.7355)} kW)</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="z.B. 130"
-                          value={formData.power_ps || ""}
-                          onChange={(e) => {
-                            const ps = e.target.value ? parseInt(e.target.value) : null;
-                            updateFormData({ power_ps: ps, power_kw: ps ? Math.round(ps * 0.7355) : null });
-                          }}
-                          min={0}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Fahrzeugzustand Checkboxen */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Fahrzeugzustand
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {([
-                    { id: "accident_free", label: "Unfallfrei", field: "accident_free" },
-                    { id: "non_smoker", label: "Nichtraucher", field: "non_smoker" },
-                    { id: "service_history_available", label: "Scheckheft", field: "service_history_available" },
-                  ] as const).map(opt => (
-                    <div
-                      key={opt.id}
-                      className={cn(
-                        "flex items-center space-x-2 rounded-lg p-2.5 cursor-pointer transition-all border",
-                        formData[opt.field] ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-transparent hover:bg-muted/40"
-                      )}
-                      onClick={(e) => { e.preventDefault(); updateFormData({ [opt.field]: !formData[opt.field] }); }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); updateFormData({ [opt.field]: !formData[opt.field] }); } }}
-                    >
-                      <Checkbox
-                        id={opt.id}
-                        checked={formData[opt.field] as boolean}
-                        onCheckedChange={(checked) => updateFormData({ [opt.field]: checked as boolean })}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <span className="text-sm font-medium cursor-pointer">{opt.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
+
     </div>
   );
 };

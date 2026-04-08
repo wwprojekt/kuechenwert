@@ -30,7 +30,7 @@ const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
   { id: 2, name: "Fahrzeugdaten", description: "Hersteller, Modell & mehr" },
   { id: 3, name: "Details", description: "Technische Angaben" },
-  { id: 4, name: "Ausstattung", description: "Optional" },
+  { id: 4, name: "Details & Ausstattung", description: "Bessere Angebote erhalten" },
   { id: 5, name: "Kontakt", description: "Ihre Kontaktdaten" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
   { id: 7, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
@@ -365,8 +365,8 @@ const VerkaufenWizard = () => {
     switch (currentStep) {
       case 1: return "Weiter zu Fahrzeugdaten";
       case 2: return "Weiter zu Details";
-      case 3: return "Weiter zu Ausstattung";
-      case 4: return "Weiter (optional)";
+      case 3: return "Weiter zu Details & Ausstattung";
+      case 4: return "Weiter zu Kontakt";
       case 5: return "Weiter zu Fotos";
       case 6: return formData.photos.length > 0
         ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}`

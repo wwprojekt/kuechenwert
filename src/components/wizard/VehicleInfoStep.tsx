@@ -13,12 +13,18 @@ interface VehicleInfoStepProps {
   fieldErrors?: Record<string, string>;
 }
 
+// Popular manufacturers shown at top of dropdown when no search query
+const POPULAR_WOHNMOBIL = ["Hymer", "Dethleffs", "Bürstner", "Knaus", "Carthago", "Hobby", "Pössl", "Adria", "Carado", "Chausson", "Fendt", "Frankia"];
+const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Knaus", "Dethleffs", "Bürstner", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba"];
+
 /**
- * Searchable Combobox – simple input that filters a list.
- * Used for Hersteller and Modell selection (like AutoScout24).
+ * Searchable Combobox – input that filters a list as you type.
+ * - No query: shows popular items first (if provided), then rest alphabetically
+ * - With query: starts-with matches first, then contains matches
  */
 const SearchableSelect = ({
   options,
+  popular,
   value,
   onChange,
   placeholder,
@@ -27,6 +33,7 @@ const SearchableSelect = ({
   id,
 }: {
   options: string[];
+  popular?: string[];
   value: string;
   onChange: (val: string) => void;
   placeholder: string;
@@ -39,11 +46,29 @@ const SearchableSelect = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = useMemo(() => {
-    if (!query) return options;
+  const results = useMemo(() => {
+    if (!query) {
+      // No search: show popular first, then the rest alphabetically
+      if (popular && popular.length > 0) {
+        const popularSet = new Set(popular);
+        const rest = options.filter((o) => !popularSet.has(o));
+        return { popular: popular.filter((p) => options.includes(p)), rest };
+      }
+      return { popular: [], rest: options };
+    }
+    // With search: starts-with first, then contains (excluding starts-with)
     const lower = query.toLowerCase();
-    return options.filter((o) => o.toLowerCase().includes(lower));
-  }, [options, query]);
+    const startsWith: string[] = [];
+    const contains: string[] = [];
+    for (const o of options) {
+      const oLower = o.toLowerCase();
+      if (oLower.startsWith(lower)) startsWith.push(o);
+      else if (oLower.includes(lower)) contains.push(o);
+    }
+    return { popular: [], rest: [...startsWith, ...contains] };
+  }, [options, popular, query]);
+
+  const hasResults = results.popular.length > 0 || results.rest.length > 0;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -55,10 +80,15 @@ const SearchableSelect = ({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // When value is set externally (e.g. reset), sync the query
   useEffect(() => {
     if (!value) setQuery("");
   }, [value]);
+
+  const handleSelect = (val: string) => {
+    onChange(val);
+    setQuery("");
+    setOpen(false);
+  };
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -82,23 +112,42 @@ const SearchableSelect = ({
         }}
         onFocus={() => {
           if (options.length > 0) setOpen(true);
-          // Select all text on focus for easy replacement
           if (value) inputRef.current?.select();
         }}
       />
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[220px] overflow-y-auto">
-          {filtered.slice(0, 50).map((o) => (
+      {open && hasResults && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[260px] overflow-y-auto">
+          {/* Popular section */}
+          {results.popular.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Beliebt</div>
+              {results.popular.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => handleSelect(o)}
+                  className={cn(
+                    "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                    "hover:bg-primary/5 active:bg-primary/10",
+                    o === value && "bg-primary/10 font-medium text-primary"
+                  )}
+                >
+                  {o}
+                </button>
+              ))}
+              {results.rest.length > 0 && (
+                <div className="border-t my-1" />
+              )}
+            </>
+          )}
+          {/* Rest / search results */}
+          {results.rest.slice(0, 40).map((o) => (
             <button
               key={o}
               type="button"
-              onClick={() => {
-                onChange(o);
-                setQuery("");
-                setOpen(false);
-              }}
+              onClick={() => handleSelect(o)}
               className={cn(
-                "w-full text-left px-4 py-3 text-sm transition-colors",
+                "w-full text-left px-4 py-2.5 text-sm transition-colors",
                 "hover:bg-primary/5 active:bg-primary/10",
                 o === value && "bg-primary/10 font-medium text-primary"
               )}
@@ -202,6 +251,7 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
           <SearchableSelect
             id="manufacturer"
             options={manufacturers}
+            popular={isWohnwagen ? POPULAR_WOHNWAGEN : POPULAR_WOHNMOBIL}
             value={formData.manufacturer}
             onChange={handleManufacturerChange}
             placeholder="Hersteller eingeben..."

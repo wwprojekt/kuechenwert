@@ -27,6 +27,7 @@ export interface WizardFormData {
   description: string;
 
   // Step 2: Technical Details
+  baseVehicle?: string;
   fuel_type?: string;
   power_kw?: number | null;
   power_ps?: number | null;
@@ -127,6 +128,7 @@ const initialFormData: WizardFormData = {
   condition: "",
   description: "",
   
+  baseVehicle: undefined,
   fuel_type: undefined,
   power_kw: null,
   power_ps: null,

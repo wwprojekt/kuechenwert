@@ -1,7 +1,7 @@
 export const manufacturerModels: Record<string, string[]> = {
   'Adria': ['Astella', 'Alpina', 'Adora', 'Altea', 'Action', 'Aviva', 'Aviva Lite', 'Supersonic', 'Sonic', 'Sonic Plus', 'Sonic Supreme', 'Matrix', 'Matrix Plus', 'Matrix Supreme', 'Coral', 'Coral XL', 'Coral Supreme', 'Compact Max', 'Compact', 'Compact Plus', 'Compact Supreme', 'Supertwin', 'Twin Sports', 'Twin Supreme', 'Twin', 'Twin Plus', 'Sun Living'],
   'Affinity': ['One', 'Duo', 'Three', 'Four', 'Five', 'M Duo', 'M Three', 'M Four', 'Freedo'],
-  'Ahorn': ['Van', 'Van City', 'Camp', 'Canada', 'Alaska', 'Alaska TE', 'Alaska TQ'],
+  'Ahorn': ['Van', 'Van City', 'Camp', 'Camp T', 'Camp A', 'Canada', 'Canada T', 'Alaska', 'Alaska TE', 'Alaska TQ', 'ACT', 'ACT 590', 'EC 660', 'T 640 plus', 'T 690 plus', 'C-Klasse'],
   'Arca': ['America', 'Europa', 'A-Series', 'T-Series', 'Superamerica', 'M-Series', 'P-Series', 'Junior'],
   'Autostar': ['Prestige', 'Performance', 'Passion', 'Celtic Edition', 'Privilege', 'Auros', 'Athenor', 'Aryal', 'Axea', 'Atlas', 'MobilStar', 'Van', '30e Edition'],
   'Autotrail': ['Adventure', 'Excel', 'Expedition', 'Expedition Coachbuilt', 'F-Line', 'Frontier', 'Grande Frontier', 'Imala', 'Tracker', 'V-Line'],
@@ -12,7 +12,7 @@ export const manufacturerModels: Record<string, string[]> = {
   'Bimobil': ['BJ 383', 'EX 358', 'EX 366', 'EX 368', 'EX 412 SH', 'EX 420', 'EX 432', 'EX 462', 'EX 480', 'EX 510', 'HD 420', 'HD 435', 'HR 380', 'husky 230', 'husky 240', 'husky 270', 'LB 365', 'LBX 365', 'LHX 428', 'ST 702'],
   'Bravia': ['Swan 495', 'Swan 599', 'Swan 636', 'Swan 680'],
   'Burow': ['Oman', 'BIG5', 'Capron', 'Liberte'],
-  'Bürstner': ['Signature SFT', 'Habiton HM', 'Habiton HMX', 'Lyseo Gallery', 'Lyseo Harmony', 'Lyseo M', 'Lyseo TD', 'Lyseo Time', 'Lineo C', 'Campeo C', 'Campeo', 'Eliseo C', 'Travel Van', 'Ixeo', 'City Car', 'Copa', 'Playa', 'Premio', 'Premio Plus', 'Averso', 'Averso Plus', 'Belcanto', 'Amara', 'Flipper', 'Nexxo', 'Nexxo Van', 'Delfin'],
+  'Bürstner': ['Signature SFT', 'Habiton HM', 'Habiton HMX', 'Lyseo Gallery', 'Lyseo Harmony', 'Lyseo M', 'Lyseo TD', 'Lyseo Time', 'Lyseo IT', 'Lyseo A', 'Lineo C', 'Campeo C', 'Campeo', 'Eliseo C', 'Eliseo', 'Travel Van', 'Ixeo', 'Ixeo Time', 'Ixeo Plus', 'City Car', 'Copa', 'Playa', 'Premio', 'Premio Plus', 'Premio Life', 'Averso', 'Averso Plus', 'Averso Harmony', 'Belcanto', 'Amara', 'Flipper', 'Nexxo', 'Nexxo Van', 'Nexxo Time', 'Delfin', 'Limited', 'Active'],
   'CI International': ['Horon', 'Magis', 'Mizar', 'Riviera', 'Sinfonia', 'X-Til', 'Carioca', 'Elliot', 'Esperia', 'Kyros', 'S-Range', 'Litoranea', 'Onice'],
   'CS Reisemobile': ['CORONA', 'COSMO', 'DUO', 'DUO INDEPENDENT', 'ENCANTO', 'INDEPENDENT', 'LUXOR', 'RONDO', 'Amigo'],
   'Campster': ['Campster', 'Campstar', 'Vanster', 'e-Vanster'],
@@ -24,7 +24,7 @@ export const manufacturerModels: Record<string, string[]> = {
   'Clever': ['Tour 540', 'Celebration 600', 'Spirit 600', 'Vario Kids 600', 'Runner 636', 'Runner 636 Active', 'Aventuro 600', 'Drive 540', 'Drive 600', 'Duo 540', 'Cleverly'],
   'Concorde': ['Credo', 'Carver', 'Charisma', 'Cruiser', 'Liner', 'Centurion', 'Reisemobile'],
   'Crosscamp': ['ADVTR', 'EXPLR', 'EXPDN'],
-  'Dethleffs': ['Globebus', 'Globebus GO', 'Globetrotter XL I', 'Globetrotter XXL A', 'Just Camp', 'Just Go', 'Trend', 'Trend A', 'Esprit', 'Alpa', 'Yoka Go', 'c-joy', 'c-go', 'c-go XL Family', 'Summer Edition', 'Pulse', 'Pulse Classic', 'Camper', 'Aero', 'Beduin', 'Nomad', 'Advantage', 'Generation'],
+  'Dethleffs': ['Globebus', 'Globebus GO', 'Globebus Performance', 'Globetrotter XL I', 'Globetrotter XXL A', 'Globetrail', 'Globeline', 'Globevan', 'Just Camp', 'Just Go', 'Trend', 'Trend A', 'Esprit', 'Esprit Comfort', 'Alpa', 'Yoka Go', 'c-joy', 'c-go', 'c-go XL Family', 'Summer Edition', 'Pulse', 'Pulse Classic', 'Pulse Gold', 'Camper', 'Camper Lifestyle', 'Aero', 'Beduin', 'Nomad', 'Advantage', 'Advantage Edition', 'Generation', 'Evan', 'RM'],
   'Dreamer': ['D68', 'D43 UP', 'D55', 'D55 UP', 'CAMPER SPORT', 'CAMPER FIVE', 'D43 SELECT', 'D43 UP SELECT', 'CITY CAMP SELECT', 'CAP LAND SELECT', 'D55 SELECT', 'D68 SELECT', 'D68 UP SELECT', 'D62 SELECT', 'LIVING VAN SELECT', 'FAMILY VAN SELECT', 'CAMPER VAN XL SELECT'],
   'Eifelland': ['Holiday', 'Deseo', 'Sunshine', 'Relax', 'Businesscamper', 'Workcation', 'Eifelland Classic', 'HD Camper'],
   'Elnagh': ['Magnum', 'E-Van', 'T-Loft', 'Baron', 'Clipper', 'Columbia', 'Cutter', 'Dinghy', 'Doral', 'Duke', 'Marlin'],
@@ -40,15 +40,15 @@ export const manufacturerModels: Record<string, string[]> = {
   'Globecar': ['Roadscout', 'Globestar', 'Campscout', 'Roadstar', 'Summit', 'Summit Prime', 'Summit Shine', 'Globescout'],
   'Glücksmobil': ['A', 'C', 'S', 'T', 'VAN'],
   'HRZ': ['Tango', 'Mambo', 'Life', 'Chamäleon', 'Beach', 'Joy', 'Dream', 'Star', 'Family L', 'Toscana', 'Biker', 'Freedom', 'Sahara', 'Casablanca', 'Safari', 'Casablanca L', 'Casablanca U', 'Racing', 'Longus', 'Reha Camper 2'],
-  'Hobby': ['PRESTIGE T', 'PRESTIGE I', 'MAXIA T', 'MAXIA I', 'ONTOUR C', 'ONTOUR T', 'ONTOUR A', 'ONTOUR V', 'DE LUXE', 'DE LUXE EDITION', 'EXCELLENT', 'EXCELLENT EDITION', 'PRESTIGE', 'MAXIA', 'BEACHY', 'Optima', 'Optima De Luxe', 'Siesta', 'Vantana'],
-  'Hymer': ['B-Klasse MasterLine', 'B-Klasse ModernComfort T', 'B-Klasse ModernComfort I', 'B-ML T 780', 'B-MC T 550', 'B-MC T 580', 'B-MC T 600', 'B-MC T 680', 'B-MC I 690', 'Exsis-t 474', 'Exsis-t 580', 'Exsis-t 588', 'Exsis-t 678', 'Exsis-i 580', 'Exsis-i 588', 'Exsis-i 678', 'ML-T 540', 'ML-T 560', 'ML-T 570', 'ML-T 580', 'ML-T CrossOver', 'Venture S', 'Grand Canyon S', 'Grand Canyon S CrossOver', 'Grand Canyon S 600', 'Grand Canyon S 700', 'Free 540', 'Free 600', 'Free S 600', 'Free Campus', 'DuoMobil', 'Tramp S 585', 'Tramp S 695', 'Sydney', 'Santa Fe', 'Yellowstone', 'GT-S', 'Redwood', 'Eriba Touring', 'Eriba Feeling', 'Eriba Nova', 'Eriba Exciting', 'Hymercar', 'Hymermobil', 'Hymer Van', 'T-Klasse S', 'T-Klasse'],
+  'Hobby': ['Prestige T', 'Prestige I', 'Maxia T', 'Maxia I', 'OnTour C', 'OnTour T', 'OnTour A', 'OnTour Van', 'Prestige Van', 'Maxia Van', 'Optima', 'Optima De Luxe', 'Optima Premium', 'Premium', 'Siesta', 'Siesta Nice', 'Sphinx', 'Toskana', 'Toskana Exclusive', 'Van', 'Vantana', 'Vantana De Luxe', 'Vantana Ontour', 'Beachy'],
+  'Hymer': ['B-Klasse MasterLine', 'B-Klasse ModernComfort T', 'B-Klasse ModernComfort I', 'B-Klasse White Line', 'B-Klasse SL', 'B-Klasse DynamicLine', 'B-ML T 780', 'B-MC T 550', 'B-MC T 580', 'B-MC T 600', 'B-MC T 680', 'B-MC I 690', 'Exsis-t 474', 'Exsis-t 470', 'Exsis-t 580', 'Exsis-t 588', 'Exsis-t 678', 'Exsis-i 580', 'Exsis-i 588', 'Exsis-i 678', 'ML-T 540', 'ML-T 560', 'ML-T 570', 'ML-T 580', 'ML-T CrossOver', 'Venture S', 'Grand Canyon S', 'Grand Canyon S CrossOver', 'Grand Canyon S 600', 'Grand Canyon S 700', 'Free 540', 'Free 600', 'Free S 600', 'Free Campus', 'DuoMobil', 'Tramp S 585', 'Tramp S 695', 'Tramp CL', 'Sydney', 'Santa Fe', 'Yellowstone', 'GT-S', 'Redwood', 'Eriba Touring', 'Eriba Feeling', 'Eriba Nova', 'Eriba Exciting', 'Hymercar', 'Hymermobil', 'Hymer Van', 'T-Klasse S', 'T-Klasse', 'S-Klasse', 'StarLine', 'Camp', 'Car'],
   'Ilusion': ['I.Lux', 'XMK', 'Premium'],
   'Itineo': ['PS740', 'PF600', 'PC640', 'PJ700', 'PM740', 'CM660', 'CJ660', 'JC740', 'SB740', 'MB740', 'FC650', 'MC740'],
   'Joa Camp': ['60F', '75T', '75Q', '70T', '70Q', '54G', '60G', '63T'],
   'Joint': ['Spaceline', 'E-Serie', 'J-Serie', 'S-Serie', 'T-Serie', 'X-Serie', 'Z-Serie', 'New Life', 'Elegance'],
   'Kabe': ['Imperial', 'Crown', 'Royal', 'Novum', 'Classic', 'Travel Master', 'Van', 'Edelstein', 'Ametist', 'Smaragd', 'Safir', 'Rubin', 'Onyx', 'Briljant', 'Hacienda'],
   'Karmann': ['Davis', 'Dexter', 'Duncan', 'Davis Lifestyle', 'Davis Trendstyle'],
-  'Knaus': ['VAN TI 550', 'VAN TI 590', 'VAN TI 640', 'VAN TI PLUS 650', 'VAN TI PLUS 700', 'VAN I 550', 'VAN I 580', 'VAN I 650', 'L!VE TI 650', 'L!VE TI 700', 'L!VE WAVE 650', 'L!VE WAVE 700', 'L!VE I 650', 'L!VE I 700', 'L!VE I 900', 'SKY TI 650', 'SKY TI 700', 'SKY TI PLATINUM', 'SUN I 700', 'SUN I 900', 'BOXDRIVE 600 XL', 'BOXLIFE PRO 540', 'BOXLIFE PRO 600', 'BOXLIFE PRO 630', 'SPORT&FUN', 'YASEO', 'SPORT', 'SÜDWIND'],
+  'Knaus': ['Van TI', 'Van TI Plus', 'Van TI Vansation', 'Van I', 'L!VE TI', 'L!VE Wave', 'L!VE I', 'Sky TI', 'Sky TI Platinum', 'Sun TI', 'Sun I', 'BoxDrive', 'BoxLife', 'BoxLife Pro', 'BoxStar', 'BoxStar Road', 'BoxStar Lifetime', 'BoxTime', 'Sport&Fun', 'YASEO', 'Sport', 'Südwind', 'Starclass', 'Deseo', 'Deseo Plus', 'Travelino', 'Sky Traveller', 'Sun Traveller', 'Eurostar'],
   'LMC': ['Tracer', 'Tourer', 'Cruiser', 'Innovan', 'Breezer', 'Sassino', 'Style', 'Style Lift', 'Vivo', 'Musica', 'Exquisite VIP', 'e:dero', 'Videro', 'Tandero', 'Luxus'],
   'La Strada': ['NOVA', 'NOVA M', 'REGENT', 'REGENT S', 'AVANTI', 'AVANTI EB', 'AVANTI H'],
   'Laika': ['Ecovip', 'Ecovip H', 'Ecovip L', 'Kreos', 'Kreos H', 'Kreos L', 'Kosmo', 'Rexosline', 'X'],
@@ -113,12 +113,12 @@ export const wohnwagenManufacturerModels: Record<string, string[]> = {
   'Eifelland': ['Holiday', 'Deseo'],
   'Elddis': ['Affinity', 'Avante', 'Crusader'],
   'Eriba': ['Touring', 'Nova', 'Feeling', 'Exciting', 'Living'],
-  'Fendt': ['Bianco', 'Tendenza', 'Opal', 'Diamant', 'Saphir', 'Apero'],
-  'Hobby': ['De Luxe', 'Excellent', 'Prestige', 'Maxia', 'OnTour', 'Landhaus', 'Excellent Edition', 'Beachy'],
+  'Fendt': ['Apero', 'Bianco', 'Bianco Activ', 'Bianco Selection', 'Tendenza', 'Opal', 'Diamant', 'Saphir', 'Platin', 'Brillant'],
+  'Hobby': ['Beachy', 'OnTour', 'De Luxe', 'Excellent', 'Excellent Edition', 'Prestige', 'Maxia', 'Landhaus', 'Premium', 'Freistaat Edition'],
   'Hymer': ['Eriba Touring', 'Eriba Nova', 'Eriba Exciting', 'Eriba Feeling'],
   'Kabe': ['Royal', 'Imperial', 'Briljant', 'Hacienda', 'Ametist', 'Smaragd', 'Safir', 'Rubin', 'Onyx'],
   'Knaus': ['Sport', 'Südwind', 'Starclass', 'Deseo', 'Travelino', 'YASEO'],
-  'LMC': ['Musica', 'Sassino', 'Style', 'Vivo', 'Style Lift', 'Exquisite VIP'],
+  'LMC': ['Musica', 'Sassino', 'Style', 'Vivo', 'Style Lift', 'Exquisite VIP', 'Dominant', 'Münsterland'],
   'La Mancelle': ['Fantaisy', 'Liberty'],
   'Niewiadow': ['N126', 'N132', 'N-Line'],
   'Rapido': ['Caravan'],
@@ -129,7 +129,7 @@ export const wohnwagenManufacturerModels: Record<string, string[]> = {
   'Sterckeman': ['Starlett', 'Evolution', 'Alize'],
   'Caravelair': ['Allegra', 'Antares', 'Alba', 'Artica'],
   'Tabbert': ['Rossini', 'Da Vinci', 'Pep', 'Vivaldi', 'Puccini', 'Cellini', 'Pantiga', 'Cazadora', 'Senara'],
-  'TEC': ['TravelKing', 'Rotec', 'Travelbird'],
+  'TEC': ['TravelKing', 'Traveler King', 'Rotec', 'Travelbird', 'Freeway', 'Freetec'],
   'Trigano': ['Silver', 'Caravelair'],
   'Weinsberg': ['CaraOne', 'CaraTwo', 'CaraCito'],
   'Wilk': ['Deluxe', 'Sento', 'Vida', 'Eterno', 'Safari', 'S3', 'S4', 'De Luxe', 'Stern', 'Sport'],
@@ -161,3 +161,40 @@ export const vehicleTypes = [
   { value: 'Wohnmobil', label: 'Wohnmobil' },
   { value: 'Wohnwagen', label: 'Wohnwagen' },
 ] as const;
+
+// Base vehicle / chassis options with typical engine power (PS) ranges
+// PS depends on the chassis, not the Wohnmobil brand – this is the correct mapping
+export interface BaseVehicleOption {
+  label: string;
+  powerOptions: number[]; // PS values
+}
+
+export const baseVehicles: BaseVehicleOption[] = [
+  { label: 'Fiat Ducato', powerOptions: [120, 140, 160, 180] },
+  { label: 'Fiat Ducato (älter)', powerOptions: [115, 130, 150, 160, 180] },
+  { label: 'Mercedes Sprinter', powerOptions: [114, 143, 163, 170, 177, 190] },
+  { label: 'Ford Transit', powerOptions: [130, 155, 170, 185] },
+  { label: 'VW Crafter', powerOptions: [102, 140, 163, 177] },
+  { label: 'MAN TGE', powerOptions: [102, 140, 163, 177] },
+  { label: 'Renault Master', powerOptions: [135, 150, 170, 180] },
+  { label: 'Citroën Jumper', powerOptions: [120, 140, 160, 180] },
+  { label: 'Peugeot Boxer', powerOptions: [120, 140, 160, 180] },
+  { label: 'Iveco Daily', powerOptions: [140, 156, 160, 180, 210] },
+  { label: 'VW T5', powerOptions: [84, 102, 140, 174, 180] },
+  { label: 'VW T6 / T6.1', powerOptions: [90, 110, 150, 199, 204] },
+  { label: 'VW T7 Multivan', powerOptions: [136, 150, 204, 218, 245] },
+  { label: 'Mercedes Vito / V-Klasse', powerOptions: [116, 136, 163, 190, 239] },
+  { label: 'Mercedes Marco Polo', powerOptions: [136, 163, 190] },
+  { label: 'Opel Vivaro / Zafira Life', powerOptions: [120, 145, 177] },
+  { label: 'Toyota Proace', powerOptions: [120, 145, 177] },
+  { label: 'AL-KO Chassis', powerOptions: [] },
+  { label: 'Sonstige', powerOptions: [] },
+];
+
+export const baseVehicleLabels = baseVehicles.map(bv => bv.label);
+
+// Get power options for a specific base vehicle
+export function getPowerOptionsForBaseVehicle(baseVehicle: string): number[] {
+  const found = baseVehicles.find(bv => bv.label === baseVehicle);
+  return found?.powerOptions ?? [];
+}

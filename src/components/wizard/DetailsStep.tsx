@@ -1,13 +1,13 @@
-import { Label } from "@/components/ui/label"; // Used for Select labels
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-// RadioGroup nicht mehr benötigt - Cards mit eigenem State
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info } from "lucide-react";
+import { Gauge, Shield, AlertTriangle, CheckCircle2, Bed, Users as UsersIcon, Info, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { baseVehicles, getPowerOptionsForBaseVehicle } from "@/lib/vehicle-data";
 
 interface DetailsStepProps {
   formData: WizardFormData;
@@ -68,7 +68,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
       </div>
 
       {/* Motor & Antrieb - NUR für Wohnmobile */}
-      {!isWohnwagen && (
+      {!isWohnwagen && (<>
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Motor & Antrieb</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,20 +117,6 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="power_ps">Leistung (PS) <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                id="power_ps"
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="z.B. 130"
-                value={formData.power_ps || ""}
-                onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}
-                min={0}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="first_registration">Erstzulassung <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input
                 id="first_registration"
@@ -141,7 +127,67 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
             </div>
           </div>
         </div>
-      )}
+
+        {/* Basisfahrzeug + Leistung – chassis-based PS selection */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Truck className="w-5 h-5 text-primary" />
+            Basisfahrzeug & Leistung <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="baseVehicle">Basisfahrzeug / Chassis</Label>
+              <Select
+                value={formData.baseVehicle || ""}
+                onValueChange={(value) => {
+                  updateFormData({ baseVehicle: value, power_ps: null });
+                }}
+              >
+                <SelectTrigger id="baseVehicle">
+                  <SelectValue placeholder="z.B. Fiat Ducato" />
+                </SelectTrigger>
+                <SelectContent>
+                  {baseVehicles.map(bv => (
+                    <SelectItem key={bv.label} value={bv.label}>{bv.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Leistung (PS)</Label>
+              {formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {getPowerOptionsForBaseVehicle(formData.baseVehicle).map(ps => (
+                    <button
+                      key={ps}
+                      type="button"
+                      onClick={() => updateFormData({ power_ps: formData.power_ps === ps ? null : ps })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-sm font-medium border transition-all",
+                        formData.power_ps === ps
+                          ? "bg-primary text-white border-primary shadow-sm"
+                          : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
+                      )}
+                    >
+                      {ps} PS
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="z.B. 130"
+                  value={formData.power_ps || ""}
+                  onChange={(e) => updateFormData({ power_ps: e.target.value ? parseInt(e.target.value) : null })}
+                  min={0}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </>)}
 
       {/* Wohnwagen-Hinweis */}
       {isWohnwagen && (

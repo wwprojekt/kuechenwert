@@ -146,12 +146,50 @@ After code changes, these functions need redeploying:
 ### CRITICAL BUG FOUND & FIXED
 - `create_auction_invoice()` had param name `winner_id_param` but `close-auction` called with `dealer_id_param` → would have caused invoice creation to fail on next auction close
 
+## Dealer Acquisition & Activation (08.04.2026 Session 3)
+
+### Problem Analysis (Daten-basiert)
+- **44 approved dealers, nur 7 haben jemals geboten (16% Aktivierung)**
+- **37 Händler (84%) = 0 Gebote** → komplett schlafend
+- Nur 1 wirklich aktiver Händler (Autohaus Schiller: 42 Gebote, Gold)
+- **31 aktive Auktionen, meisten mit 0 Geboten** → Supply/Demand Mismatch
+- 2 verkauft von 63 Auktionen = 3.2% Erfolgsrate
+- Registrierungs-Funnel: 169 /haendler Views → 152 /register → 43 Applications (90d) = 28% OK
+- **Root Cause: Kein Digest-Email wurde jemals gesendet** (Function war nie deployed!)
+
+### Fixes Implemented
+1. **KRITISCH: `send-dealer-auction-digest` Edge Function deployed** (v1)
+   - War nur als Code vorhanden, nie deployed → Cron lief ins Leere
+   - DB-Migration: `dealer_auction_digest` + `dealer_first_nudge` Email-Types zur Constraint hinzugefügt
+   - Ab morgen 08:00: Alle 44 Händler erhalten täglichen Auction Digest
+   
+2. **/haendler Seite: Live-Auktionen Preview**
+   - Echte Fahrzeug-Karten mit Fotos, Countdown-Timer, "Noch ohne Gebot" Badge
+   - Echtzeit-Statistiken statt hardcoded values
+   - LIVE-Badge mit Pulse-Animation für Urgency
+   
+3. **/kaufen Seite: Dealer Registration CTA**
+   - Banner für nicht-eingeloggte Besucher: "Sie sind Händler?"
+   - Link zu /register/haendler
+   
+4. **Neue SEO Landing Page: /wohnmobil-haendler-werden**
+   - B2B-Akquise-Seite für Google Ads Targeting
+   - FAQ, Live-Stats, Schema.org Structured Data
+   - Keywords: 'wohnmobil händler werden', 'wohnmobil auktion händler'
+
+### Dealer Activation Metrics to Monitor
+- Daily digest email send count (admin_emails WHERE email_type = 'dealer_auction_digest')
+- First-bid rate after digest (compare pre/post deployment)
+- /haendler → /register/haendler conversion (analytics_page_views)
+- Bids per auction trend (currently avg ~0.3, target: 2+)
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
-- 37 of 44 approved dealers have never placed a bid (engagement issue → digest email helps)
+- 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)
 - Baujahr ranges per model NOT implemented (user requested "von wann bis wann")
 - Search is starts-with; could benefit from fuzzy matching for typos (users type "Exzellent" for "Excellent")
-- Edge Functions deployment: send-dealer-auction-digest, send-dealer-notification, send-inactivity-email need redeployment via Supabase CLI
+- Edge Functions still needing redeployment: send-dealer-notification (updated approval email), send-inactivity-email (first-nudge tier)
+- Consider: Dealer referral program, phone onboarding for top-value dealers
 
 ## Dev Environment Notes
 - No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

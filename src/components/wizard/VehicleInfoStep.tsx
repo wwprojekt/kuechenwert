@@ -18,9 +18,39 @@ const POPULAR_WOHNMOBIL = ["Hymer", "Dethleffs", "Bürstner", "Knaus", "Carthago
 const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Knaus", "Dethleffs", "Bürstner", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba"];
 
 /**
+ * Fuzzy match: handles common typos like "Exzellent"→"Excellent", "smara"→"Amara".
+ * Uses bigram overlap (2-char pairs) for typo tolerance + subsequence for reordering.
+ */
+const fuzzyScore = (query: string, target: string): number => {
+  const q = query.toLowerCase();
+  const t = target.toLowerCase();
+  if (t.includes(q)) return 1;
+  if (q.length < 2 || t.length < 2) return 0;
+
+  // Bigram overlap: count shared 2-char pairs
+  const qBigrams = new Set<string>();
+  for (let i = 0; i < q.length - 1; i++) qBigrams.add(q.slice(i, i + 2));
+  let shared = 0;
+  for (let i = 0; i < t.length - 1; i++) {
+    if (qBigrams.has(t.slice(i, i + 2))) shared++;
+  }
+  const bigramScore = (2 * shared) / (q.length - 1 + t.length - 1);
+
+  // Also try: does removing any single char from query create a substring match?
+  if (q.length >= 3) {
+    for (let i = 0; i < q.length; i++) {
+      const reduced = q.slice(0, i) + q.slice(i + 1);
+      if (t.includes(reduced)) return 0.7; // single-char-off = strong match
+    }
+  }
+
+  return bigramScore >= 0.3 ? bigramScore * 0.5 : 0;
+};
+
+/**
  * Searchable Combobox – input that filters a list as you type.
  * - No query: shows popular items first (if provided), then rest alphabetically
- * - With query: starts-with matches first, then contains matches
+ * - With query: exact starts-with first, then contains, then fuzzy matches
  */
 const SearchableSelect = ({
   options,
@@ -48,7 +78,6 @@ const SearchableSelect = ({
 
   const results = useMemo(() => {
     if (!query) {
-      // No search: show popular first, then the rest alphabetically
       if (popular && popular.length > 0) {
         const popularSet = new Set(popular);
         const rest = options.filter((o) => !popularSet.has(o));
@@ -56,16 +85,22 @@ const SearchableSelect = ({
       }
       return { popular: [], rest: options };
     }
-    // With search: starts-with first, then contains (excluding starts-with)
-    const lower = query.toLowerCase();
+    const lower = query.trim().toLowerCase();
+    if (!lower) return { popular: [], rest: options };
     const startsWith: string[] = [];
     const contains: string[] = [];
+    const fuzzy: { option: string; score: number }[] = [];
     for (const o of options) {
       const oLower = o.toLowerCase();
       if (oLower.startsWith(lower)) startsWith.push(o);
       else if (oLower.includes(lower)) contains.push(o);
+      else {
+        const score = fuzzyScore(lower, oLower);
+        if (score > 0) fuzzy.push({ option: o, score });
+      }
     }
-    return { popular: [], rest: [...startsWith, ...contains] };
+    fuzzy.sort((a, b) => b.score - a.score);
+    return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)] };
   }, [options, popular, query]);
 
   const hasResults = results.popular.length > 0 || results.rest.length > 0;
@@ -113,6 +148,10 @@ const SearchableSelect = ({
         onFocus={() => {
           if (options.length > 0) setOpen(true);
           if (value) inputRef.current?.select();
+        }}
+        onBlur={() => {
+          // Trim whitespace when user leaves the field
+          if (value && value !== value.trim()) onChange(value.trim());
         }}
       />
       {open && hasResults && (
@@ -186,7 +225,6 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
   }, []);
 
   const handleManufacturerChange = useCallback((value: string) => {
-    // When manufacturer changes, reset model
     if (value !== formData.manufacturer) {
       updateFormData({ manufacturer: value, model: "" });
     } else {
@@ -194,11 +232,11 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     }
   }, [formData.manufacturer, updateFormData]);
 
-  // Micro-progress
+  // Micro-progress – count any non-empty manufacturer (freetext OK)
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
-    formData.manufacturer && manufacturers.includes(formData.manufacturer) ? formData.manufacturer : null,
-    formData.model,
+    formData.manufacturer?.trim(),
+    formData.model?.trim(),
     formData.year,
     ...(!isWohnwagen ? [formData.mileage] : []),
     formData.condition,

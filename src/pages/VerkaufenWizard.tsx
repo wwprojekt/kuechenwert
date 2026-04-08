@@ -338,7 +338,7 @@ const VerkaufenWizard = () => {
       case 5:
         return <QuickContactStep formData={formData} updateFormData={updateFormData} isAuthenticated={!!currentUser} fieldErrors={fieldErrors} />;
       case 6:
-        return <PhotosStep formData={formData} updateFormData={updateFormData} />;
+        return <PhotosStep formData={formData} updateFormData={updateFormData} onSkipPhotos={handleNext} />;
       case 7:
         return <SaleChannelStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       case 8:
@@ -370,7 +370,7 @@ const VerkaufenWizard = () => {
       case 5: return "Weiter zu Fotos";
       case 6: return formData.photos.length > 0
         ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}`
-        : "Weiter – Fotos nachreichen";
+        : "Weiter ohne Fotos";
       case 7: return "Zum Abschluss";
       default: return "Weiter";
     }

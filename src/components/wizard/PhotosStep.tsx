@@ -1,16 +1,17 @@
 import { useCallback, useMemo, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Camera, Upload, X, ImageIcon, Info, CheckCircle2 } from "lucide-react";
+import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 
 interface PhotosStepProps {
   formData: WizardFormData;
   updateFormData: (updates: Partial<WizardFormData>) => void;
+  onSkipPhotos?: () => void;
 }
 
-export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
+export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosStepProps) => {
   const photoUrls = useMemo(() => {
     return formData.photos.map((photo) => URL.createObjectURL(photo));
   }, [formData.photos]);
@@ -56,7 +57,7 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
         </p>
       </div>
 
-      {/* Reassurance: optional + can be added later */}
+      {/* Reassurance + prominent skip CTA */}
       <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
         <p className="text-sm text-green-800 dark:text-green-200 flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -68,6 +69,18 @@ export const PhotosStep = ({ formData, updateFormData }: PhotosStepProps) => {
           </span>
         </p>
       </div>
+
+      {/* Prominent skip shortcut – ABOVE upload area for visibility */}
+      {!hasPhotos && onSkipPhotos && (
+        <button
+          type="button"
+          onClick={onSkipPhotos}
+          className="w-full py-3 px-4 rounded-lg border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all flex items-center justify-center gap-2 text-sm font-medium text-primary"
+        >
+          Ohne Fotos fortfahren – Fotos per E-Mail nachreichen
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      )}
 
       {/* Upload area – compact and friendly */}
       <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">

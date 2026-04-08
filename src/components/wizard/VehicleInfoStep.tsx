@@ -232,7 +232,6 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     }
   }, [formData.manufacturer, updateFormData]);
 
-  // Micro-progress – count any non-empty manufacturer (freetext OK)
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
     formData.manufacturer?.trim(),
@@ -255,29 +254,13 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         </p>
       </div>
 
-      {/* Body type badge + micro-progress */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        {formData.bodyType && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 flex items-center gap-2 text-sm">
-            <Check className="w-3.5 h-3.5 text-primary" />
-            <span className="text-primary font-medium">{vehicleType} · {formData.bodyType}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
-          <div className="flex gap-0.5">
-            {Array.from({ length: totalRequired }).map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "w-5 h-1.5 rounded-full transition-colors",
-                  i < filledCount ? "bg-primary" : "bg-muted"
-                )}
-              />
-            ))}
-          </div>
-          <span>{filledCount} von {totalRequired}</span>
+      {/* Body type badge */}
+      {formData.bodyType && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 flex items-center gap-2 text-sm w-fit">
+          <Check className="w-3.5 h-3.5 text-primary" />
+          <span className="text-primary font-medium">{vehicleType} · {formData.bodyType}</span>
         </div>
-      </div>
+      )}
 
       {/* ===== ALL FIELDS VISIBLE AT ONCE ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -7,7 +7,7 @@ import type { WizardFormData } from "@/hooks/useWizardForm";
 import { useState } from "react";
 import { Settings, Home, Sun, Tent, Droplets, Tv, Camera, ParkingCircle, Battery, Wind, Lock, Shield, Snowflake, Users, Truck, Calendar, ClipboardCheck, ChevronDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { baseVehicles, getPowerOptionsForBaseVehicle } from "@/lib/vehicle-data";
+import { baseVehicles, getPowerOptionsForBaseVehicle, formatPower, psToKw } from "@/lib/vehicle-data";
 
 interface EquipmentStepProps {
   formData: WizardFormData;
@@ -180,32 +180,37 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                       type="button"
                       onClick={() => {
                         const newPs = formData.power_ps === ps ? null : ps;
-                        updateFormData({ power_ps: newPs, power_kw: newPs ? Math.round(newPs * 0.7355) : null });
+                        updateFormData({ power_ps: newPs, power_kw: newPs ? psToKw(newPs) : null });
                       }}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
+                        "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap",
                         formData.power_ps === ps
                           ? "bg-primary text-white border-primary shadow-sm"
                           : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
                       )}
                     >
-                      {ps} PS
+                      {formatPower(ps)}
                     </button>
                   ))}
                 </div>
               ) : (
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="Leistung in PS"
-                  value={formData.power_ps || ""}
-                  onChange={(e) => {
-                    const ps = e.target.value ? parseInt(e.target.value) : null;
-                    updateFormData({ power_ps: ps, power_kw: ps ? Math.round(ps * 0.7355) : null });
-                  }}
-                  min={0}
-                  className="h-10"
-                />
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Leistung in PS"
+                    value={formData.power_ps || ""}
+                    onChange={(e) => {
+                      const ps = e.target.value ? parseInt(e.target.value) : null;
+                      updateFormData({ power_ps: ps, power_kw: ps ? psToKw(ps) : null });
+                    }}
+                    min={0}
+                    className="h-10"
+                  />
+                  {formData.power_ps && (
+                    <p className="text-xs text-muted-foreground">= {formatPower(formData.power_ps)}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

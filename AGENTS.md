@@ -200,6 +200,18 @@ After code changes, these functions need redeploying:
 - Progressive disclosure: start simple → expand after initial commitment
 - No visible multi-step wizard at entry point
 
+### Phase 5c – Step 4 Redesign: Fahrzeug-Details & Ausstattung (08.04.2026)
+- **Problem**: Sitzplätze, EZ, Basisfahrzeug, Zustand-Checkboxen waren in Step 3 als collapsed "optional" versteckt – aber Händler brauchen diese Infos
+- **Daten-Beweis**: 69% der Nutzer füllen Sitzplätze freiwillig aus, 96% Nichtraucher, 88% Unfallfrei → Nutzer WOLLEN das
+- **TÜV/HU Katastrophe**: Nur 21% der Motorhomes hatten TÜV-Daten (16/77) – jetzt im Wizard sichtbar
+- **Step 3 → Step 4 Migration**: Optional-Section aus Step 3 entfernt, Felder nach Step 4 verschoben
+- **Step 4 Aufbau**: Oben sichtbar (Fahrzeug-Details) + unten collapsed (25 Equipment-Checkboxen)
+  - Sichtbar: Sitzplätze (Chips), EZ + TÜV/HU (MonthYearPicker), Basisfahrzeug/PS, Unfallfrei/Nichtraucher/Scheckheft
+  - Collapsed: Wohnbereich, Fahrzeug-Extras, Energie & Außen, Freitext
+- **Wohnwagen**: Nur TÜV/HU + Zustand-Checkboxen (kein EZ, Sitzplätze, Basisfahrzeug)
+- **Step-Name**: "Ausstattung" → "Details & Ausstattung", Label "Weiter zu Kontakt"
+- **MonthYearPicker**: Wiederverwendbare Komponente für EZ + TÜV (mit futureYears-Param für TÜV)
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

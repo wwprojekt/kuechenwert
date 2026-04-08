@@ -153,7 +153,7 @@ const initialFormData: WizardFormData = {
   beds_description: undefined,
 
   known_defects: undefined,
-  no_known_defects: false,
+  no_known_defects: true,
   
   has_kitchen: true,
   heating_type: undefined,

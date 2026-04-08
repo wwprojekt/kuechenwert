@@ -8,6 +8,7 @@ import { SiteLogo } from "@/components/SiteLogo";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Check, Shield, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { VehicleTypeStep } from "@/components/wizard/VehicleTypeStep";
 import { VehicleInfoStep } from "@/components/wizard/VehicleInfoStep";
 import { QuickContactStep } from "@/components/wizard/QuickContactStep";
@@ -361,6 +362,8 @@ const VerkaufenWizard = () => {
 
   // Determine button labels based on step
   const getNextButtonLabel = () => {
+    if (currentStep === 1) return formData.bodyType ? "Weiter zu Fahrzeugdaten" : "Weiter";
+    if (currentStep === 2) return "Weiter zu technischen Details";
     if (currentStep === 4) return "Weiter (optional)";
     if (currentStep === 6) return formData.photos.length > 0 ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}` : "Weiter ohne Fotos";
     return "Weiter";
@@ -402,14 +405,34 @@ const VerkaufenWizard = () => {
       <div className="min-h-screen py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* Progress Indicator - nur Prozentbalken */}
+            {/* Progress Indicator with step labels */}
             <div className="mb-4 md:mb-8 animate-slide-up">
-              <div className="flex justify-end items-center mb-2">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs md:text-sm font-medium text-foreground">
+                  Schritt {currentStep} von {steps.length}: <span className="text-primary">{steps[currentStep - 1]?.name}</span>
+                </span>
                 <span className="text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
               <Progress value={progress} className="h-2.5 rounded-full" />
+              {/* Compact step dots on desktop */}
+              <div className="hidden md:flex justify-between mt-2 px-1">
+                {steps.map((step) => (
+                  <div key={step.id} className="flex flex-col items-center gap-0.5">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full transition-colors",
+                      step.id < currentStep ? "bg-primary" : step.id === currentStep ? "bg-primary ring-2 ring-primary/30" : "bg-muted-foreground/20"
+                    )} />
+                    <span className={cn(
+                      "text-[10px] leading-tight",
+                      step.id <= currentStep ? "text-primary font-medium" : "text-muted-foreground"
+                    )}>
+                      {step.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Main Content Area */}
@@ -417,7 +440,7 @@ const VerkaufenWizard = () => {
               {/* Form Card - 2/3 width on desktop */}
               <div className="lg:col-span-2">
                 <Card className="p-3 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
-                  <div className="min-h-[200px] md:min-h-[400px]">{renderStep()}</div>
+                  <div className="min-h-[180px] md:min-h-[350px]">{renderStep()}</div>
                 </Card>
 
                 {/* Mobile Trust Signals (hidden on desktop where sidebar is visible) */}

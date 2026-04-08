@@ -30,16 +30,41 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
     });
   };
 
+  // Count required fields progress
+  const requiredFilled = [
+    ...(!isWohnwagen ? [formData.fuel_type, formData.transmission, formData.seats_with_seatbelts] : []),
+    formData.sleeping_places,
+    formData.no_known_defects || (formData.known_defects !== undefined),
+  ].filter(Boolean).length;
+  const requiredTotal = isWohnwagen ? 2 : 5; // wohnwagen: sleeping_places + defects; wohnmobil: fuel, trans, seats, sleeping, defects
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+      <div className="mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
           <Gauge className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Technische Details
         </h2>
-        <p className="text-muted-foreground">
-          Ein paar wichtige Angaben zu Ihrem {isWohnwagen ? "Wohnwagen" : "Fahrzeug"} – die meisten Felder sind optional
+        <p className="text-sm text-muted-foreground">
+          {isWohnwagen
+            ? "Nur 2 Pflichtangaben – der Rest ist optional"
+            : "Nur wenige Pflichtangaben – der Rest ist optional"
+          }
         </p>
+        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+          <div className="flex gap-0.5">
+            {Array.from({ length: requiredTotal }).map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "w-5 h-1.5 rounded-full transition-colors",
+                  i < requiredFilled ? "bg-primary" : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
+          <span>{requiredFilled} von {requiredTotal} Pflichtangaben</span>
+        </div>
       </div>
 
       {/* Motor & Antrieb - NUR für Wohnmobile */}

@@ -41,15 +41,13 @@ const Haendler = () => {
   const { data: auctionStats } = useQuery({
     queryKey: ["haendler-auction-stats"],
     queryFn: async () => {
-      const [activeRes, soldRes, dealerRes] = await Promise.all([
-        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "sold"),
-        supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
-      ]);
+      const { data, error } = await supabase.rpc("get_public_platform_stats");
+      if (error) throw error;
+      const stats = data as any;
       return {
-        activeAuctions: activeRes.count || 0,
-        soldAuctions: soldRes.count || 0,
-        approvedDealers: dealerRes.count || 0,
+        activeAuctions: stats?.active_auctions || 0,
+        soldAuctions: stats?.sold_auctions || 0,
+        approvedDealers: stats?.approved_dealers || 0,
       };
     },
     staleTime: 60000,
@@ -130,7 +128,7 @@ const Haendler = () => {
   const stats = [
     { number: auctionStats ? `${auctionStats.activeAuctions}` : "30+", label: "Aktive Auktionen" },
     { number: "Täglich", label: "Neue Fahrzeuge" },
-    { number: "0 €", label: "Registrierung" },
+    { number: "Kostenlos", label: "Registrierung" },
     { number: auctionStats ? `${auctionStats.approvedDealers}+` : "40+", label: "Registrierte Händler" }
   ];
 

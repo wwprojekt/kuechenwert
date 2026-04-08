@@ -19,18 +19,14 @@ const WohnmobilHaendlerWerden = () => {
   const { data: stats } = useQuery({
     queryKey: ["dealer-landing-stats"],
     queryFn: async () => {
-      const [activeRes, dealerRes, endingSoonRes, brandsRes] = await Promise.all([
-        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
-        supabase.from("auctions").select("id", { count: "exact", head: true }).eq("status", "active").lte("end_time", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()),
-        supabase.from("motorhomes").select("manufacturer").neq("status", "draft"),
-      ]);
-      const uniqueBrands = new Set(brandsRes.data?.map(m => m.manufacturer).filter(Boolean));
+      const { data, error } = await supabase.rpc("get_public_platform_stats");
+      if (error) throw error;
+      const s = data as any;
       return {
-        active: activeRes.count || 0,
-        dealers: dealerRes.count || 0,
-        endingSoon: endingSoonRes.count || 0,
-        brands: uniqueBrands.size || 30,
+        active: s?.active_auctions || 0,
+        dealers: s?.approved_dealers || 0,
+        endingSoon: s?.ending_soon || 0,
+        brands: s?.unique_brands || 30,
       };
     },
     staleTime: 60000,
@@ -41,7 +37,7 @@ const WohnmobilHaendlerWerden = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("auctions")
-        .select("id, current_bid, start_price, end_time, bid_count, motorhome_id")
+        .select("id, current_bid, starting_bid, end_time, bid_count, motorhome_id")
         .eq("status", "active")
         .order("end_time", { ascending: true })
         .limit(3);
@@ -50,15 +46,13 @@ const WohnmobilHaendlerWerden = () => {
       const mhIds = data.map(a => a.motorhome_id).filter(Boolean);
       const [{ data: mhs }, { data: photos }] = await Promise.all([
         supabase.from("motorhomes").select("id, manufacturer, model, year, body_type, mileage").in("id", mhIds),
-        supabase.from("motorhome_photos").select("motorhome_id, storage_path").in("motorhome_id", mhIds).eq("is_primary", true),
+        supabase.from("motorhome_photos").select("motorhome_id, url, display_order").in("motorhome_id", mhIds).order("display_order", { ascending: true }),
       ]);
 
       return data.map(auction => {
         const mh = mhs?.find(m => m.id === auction.motorhome_id);
         const photo = photos?.find(p => p.motorhome_id === auction.motorhome_id);
-        const photoUrl = photo?.storage_path
-          ? `https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/motorhome-photos/${photo.storage_path}`
-          : null;
+        const photoUrl = photo?.url || null;
         const timeLeft = new Date(auction.end_time).getTime() - Date.now();
         const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
         const daysLeft = Math.floor(hoursLeft / 24);
@@ -66,7 +60,7 @@ const WohnmobilHaendlerWerden = () => {
           id: auction.id,
           title: `${mh?.manufacturer || ""} ${mh?.model || ""}`.trim() || "Wohnmobil",
           year: mh?.year, bodyType: mh?.body_type, mileage: mh?.mileage,
-          currentBid: auction.current_bid || auction.start_price,
+          currentBid: auction.current_bid || auction.starting_bid,
           bidCount: auction.bid_count || 0,
           timeLeft: daysLeft > 0 ? `${daysLeft}T ${hoursLeft % 24}h` : `${hoursLeft}h`,
           photoUrl,

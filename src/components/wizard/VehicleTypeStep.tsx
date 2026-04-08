@@ -54,6 +54,8 @@ const WOHNWAGEN_BODY_TYPE_INFO: Record<string, BodyTypeInfo> = {
 export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, onAutoAdvance }: VehicleTypeStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onAutoAdvanceRef = useRef(onAutoAdvance);
+  onAutoAdvanceRef.current = onAutoAdvance;
 
   useEffect(() => {
     return () => {
@@ -150,8 +152,8 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
                 onClick={() => {
                   updateFormData({ bodyType: type });
                   if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-                  if (onAutoAdvance) {
-                    autoAdvanceTimerRef.current = setTimeout(() => onAutoAdvance(), 450);
+                  if (onAutoAdvanceRef.current) {
+                    autoAdvanceTimerRef.current = setTimeout(() => onAutoAdvanceRef.current?.(), 450);
                   }
                 }}
                 className={cn(

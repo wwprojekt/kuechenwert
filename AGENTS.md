@@ -77,10 +77,11 @@ npm run build        # Production build via Vite → dist/
 - **Chips show both units**: e.g. "140 PS (103 kW)" for professional feel
 
 ## Vehicle Data Stats (08.04.2026)
-- **Wohnmobil**: 96 Hersteller, 1126 Modelle
-- **Wohnwagen**: 36 Hersteller, 173 Modelle
-- **Basisfahrzeuge**: 27 Chassis-Optionen mit 152 PS-Werten
+- **Wohnmobil**: 96 Hersteller, 1165 Modelle
+- **Wohnwagen**: 36 Hersteller, ~175 Modelle
+- **Basisfahrzeuge**: 29 Chassis-Optionen mit 157 PS-Werten (inkl. E-Ducato + eSprinter)
 - **PS-Format**: Chips zeigen `XXkW/YYYPS` (z.B. "103kW/140PS")
+- **Letzte Erweiterung**: Knaus (Van Wave, Sky Wave, Sky I, CUVision), Pössl (Summit Shine, Roadstar X/XT, Campstar, Vanstar), Weinsberg (Edition PEPPER/FIRE, CUVolution), Etrusco (Base-Serie), Renault Master 130PS (2025), Fiat E-Ducato, Mercedes eSprinter
 - User data analysis: Most common free-form entries verified against model lists
 - Forster VB-Serie, Rimor Bliss/Europe, Sprite, Bailey, T@B added based on real user patterns
 

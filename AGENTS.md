@@ -256,6 +256,18 @@ After code changes, these functions need redeploying:
 ### Edge Function Deployed
 - `track-conversion` v11 – GCLID merge fix
 
+### trackEvent Conversion Tracking (08.04.2026 Session 7)
+- **Comprehensive `trackEvent` calls** added to all key user interaction points:
+  - `wizard_started`, `wizard_step`, `wizard_abandoned` (VerkaufenWizard + useWizardForm)
+  - `auction_viewed`, `bid_placed` (AuctionDetail)
+  - `filter_applied`, `sort_changed` (Kaufen)
+  - `favorite_added`, `favorite_removed` (useFavorites)
+  - `contact_form_submitted` (Kontakt)
+  - `valuation_lead_submitted` (Wertermittlung)
+  - `calculator_used` (Wertrechner)
+  - `registration_started` (Register + RegisterHaendler)
+- Events tracked to `analytics_events` table for internal analytics
+
 ### Still Pending (Requires User Action)
 - **GA4_API_SECRET**: Must be created in Google Analytics → Admin → Data Streams → Measurement Protocol API secrets, then stored as Supabase secret. Without it, server-side tracking is inactive.
 - In Google Ads: Reclassify `LANDING_PAGE_LEAD` conversion from "Primary" to "Secondary/Observation" in campaign settings

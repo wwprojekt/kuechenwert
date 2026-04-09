@@ -36,6 +36,7 @@ import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackWertermittlungLead, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaLead } from "@/lib/metaPixelService";
+import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
@@ -133,8 +134,8 @@ const Wertermittlung = () => {
         `${formData.manufacturer} ${formData.model} ${formData.year}`, txId
       );
 
-      // Meta Pixel: Lead Event
       trackMetaLead({ content_name: `${formData.manufacturer} ${formData.model}`, content_category: 'Wertermittlung' });
+      trackEvent('wertermittlung_submitted', { category: 'business', label: `${formData.manufacturer} ${formData.model}`, properties: { manufacturer: formData.manufacturer, model: formData.model, year: formData.year } });
 
       toast({
         title: "Anfrage gesendet!",

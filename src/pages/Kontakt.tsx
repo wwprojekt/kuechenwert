@@ -14,6 +14,7 @@ import { z } from "zod";
 import { handleValidationError, handleApiError } from "@/lib/errorLogService";
 import { trackKontaktformularGesendet, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
+import { trackEvent } from "@/lib/analyticsService";
 import { trackMetaContact, trackMetaLead } from "@/lib/metaPixelService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
@@ -115,9 +116,9 @@ const Kontakt = () => {
       const txId = (window as any).__lastTransactionId || generateTransactionId('kontakt');
       await trackKontaktformularGesendet(txId);
 
-      // Meta Pixel: Contact + Lead Events
       trackMetaContact();
       trackMetaLead({ content_name: 'Kontaktformular', content_category: 'Kontakt' });
+      trackEvent('kontakt_submitted', { category: 'business', label: formData.subject });
 
       toast({
         title: "Nachricht gesendet!",

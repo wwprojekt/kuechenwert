@@ -19,6 +19,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { anonymizePostalCode } from "@/lib/plzCoordinates";
+import { trackEvent } from "@/lib/analyticsService";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
@@ -365,6 +366,16 @@ const Kaufen = () => {
   // Stable callback to prevent FilterSidebar useEffect from re-triggering on every render
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
+    const activeFilters = Object.entries(newFilters).filter(([k, v]) => {
+      if (k === 'priceRange') return (v as number[])[0] > 0 || (v as number[])[1] < 500000;
+      if (k === 'yearRange') return (v as number[])[0] > 1980 || (v as number[])[1] < new Date().getFullYear();
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === 'string') return v !== '';
+      return false;
+    }).map(([k]) => k);
+    if (activeFilters.length > 0) {
+      trackEvent('filter_applied', { category: 'auction', properties: { filters: activeFilters, brand: newFilters.brand, vehicleTypes: newFilters.vehicleTypes } });
+    }
   }, []);
 
   // Shared filter sidebar component (used in both desktop and mobile)
@@ -469,7 +480,7 @@ const Kaufen = () => {
 
                 <div className="flex items-center gap-2">
                   {/* Sort Dropdown */}
-                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                  <Select value={sortBy} onValueChange={(value) => { setSortBy(value as SortOption); trackEvent('sort_changed', { category: 'auction', label: value }); }}>
                     <SelectTrigger className="w-[180px] h-9">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />

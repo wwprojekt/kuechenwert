@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { withSessionRetry } from "@/lib/sessionGuard";
+import { trackEvent } from "@/lib/analyticsService";
 
 interface UseFavoritesResult {
   favorites: string[]; // Array of motorhome IDs
@@ -74,6 +75,7 @@ export function useFavorites(): UseFavoritesResult {
       }, 'Favorites.add');
 
       setFavorites(prev => [...prev, motorhomeId]);
+      trackEvent('favorite_added', { category: 'auction', properties: { motorhomeId } });
       toast({
         title: "Favorit hinzugefügt",
         description: "Das Fahrzeug wurde zu Ihren Favoriten hinzugefügt",
@@ -102,6 +104,7 @@ export function useFavorites(): UseFavoritesResult {
       }, 'Favorites.remove');
 
       setFavorites(prev => prev.filter(id => id !== motorhomeId));
+      trackEvent('favorite_removed', { category: 'auction', properties: { motorhomeId } });
       toast({
         title: "Favorit entfernt",
         description: "Das Fahrzeug wurde aus Ihren Favoriten entfernt",

@@ -23,6 +23,7 @@ import { useWizardSession } from "@/hooks/useWizardSession";
 import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { trackWizardStarted, trackWizardStep, trackWizardAbandoned } from "@/lib/gadsConversionService";
 import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
+import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
@@ -206,8 +207,8 @@ const VerkaufenWizard = () => {
   useEffect(() => {
     const source = searchParams.get('source') || 'direct';
     trackWizardStarted(source);
-    // Meta Pixel: InitiateCheckout bei Wizard-Start
     trackMetaInitiateCheckout({ content_name: 'Verkaufs-Wizard', content_category: 'Wohnmobil' });
+    trackEvent('wizard_started', { category: 'wizard', properties: { source } });
   }, []);
 
   // Auto-save progress
@@ -224,6 +225,7 @@ const VerkaufenWizard = () => {
       if (currentStep < steps.length) {
         const currentStepInfo = steps[currentStep - 1];
         trackWizardAbandoned(currentStep, currentStepInfo?.name || `Schritt ${currentStep}`);
+        trackEvent('wizard_abandoned', { category: 'wizard', value: currentStep, properties: { step: currentStep, stepName: currentStepInfo?.name } });
       }
     };
 
@@ -282,8 +284,8 @@ const VerkaufenWizard = () => {
       });
       const nextStepInfo = steps[nextStep - 1];
       trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
-      // Meta Pixel: Wizard-Schritt tracken
       trackMetaWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
+      trackEvent('wizard_step', { category: 'wizard', label: nextStepInfo?.name, value: nextStep, properties: { step: nextStep, bodyType: formData.bodyType } });
       setCurrentStep(nextStep);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }

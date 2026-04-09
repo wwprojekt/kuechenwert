@@ -17,6 +17,7 @@ import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/er
 import { ensureValidSession } from "@/lib/sessionGuard";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
+import { trackEvent } from "@/lib/analyticsService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
@@ -256,7 +257,6 @@ const AuctionDetail = () => {
       if (data.motorhome) {
         const mh = data.motorhome;
         trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
-        // Meta Pixel: ViewContent Event
         trackMetaViewContent({
           content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
           content_category: mh.body_type || 'Wohnmobil',
@@ -265,6 +265,7 @@ const AuctionDetail = () => {
           value: data.current_bid || data.starting_bid || 0,
           currency: 'EUR',
         });
+        trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type, bidsCount: data.bids_count } });
       }
     };
 
@@ -708,6 +709,8 @@ const AuctionDetail = () => {
           items: [{ id: auction.motorhome?.id, name: `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`, category: 'Wohnmobil', price: amount }],
         });
       } catch { /* tracking should never break the bid flow */ }
+
+      trackEvent('bid_placed', { category: 'business', label: `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`, value: amount, properties: { auctionId: auction.id, autobid: enableAutobid } });
 
       toast({
         title: "Gebot erfolgreich!",

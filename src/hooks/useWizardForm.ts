@@ -8,6 +8,7 @@ import { handleValidationError, handleAndLogError } from "@/lib/errorLogService"
 import { translateError } from "@/lib/germanErrors";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
+import { trackEvent } from "@/lib/analyticsService";
 import { ensureValidSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -534,6 +535,7 @@ export const useWizardForm = () => {
         (window as any).__lastTransactionId = txId1;
         setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone }).catch(() => {});
         trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
+        trackEvent('wizard_completed', { category: 'business', properties: { manufacturer: formData.manufacturer, model: formData.model, bodyType: formData.bodyType, saleChannel: formData.saleChannel, path: 'guest' } });
 
         clearDraft();
 
@@ -892,6 +894,7 @@ export const useWizardForm = () => {
       const txId3 = (window as any).__lastTransactionId || generateTransactionId('wizard');
       await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
       trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId3);
+      trackEvent('wizard_completed', { category: 'business', properties: { manufacturer: formData.manufacturer, model: formData.model, bodyType: formData.bodyType, saleChannel: formData.saleChannel, path: 'authenticated' } });
 
       toast({
         title: "Erfolgreich eingestellt!",

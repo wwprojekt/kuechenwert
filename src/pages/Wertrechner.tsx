@@ -41,6 +41,7 @@ import { getTrackingData } from "@/lib/clickIdService";
 import { trackMetaLead, trackMetaWertrechnerCompleted } from "@/lib/metaPixelService";
 import { handleApiError } from "@/lib/errorLogService";
 import { withNetworkRetry } from "@/lib/sessionGuard";
+import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 
@@ -583,6 +584,7 @@ const Wertrechner = () => {
         manufacturer: formData.manufacturer || '',
         estimated_value: (value.min + value.max) / 2,
       });
+      trackEvent('wertrechner_submitted', { category: 'business', label: `${formData.manufacturer} ${formData.model}`, value: Math.round((value.min + value.max) / 2), properties: { manufacturer: formData.manufacturer, model: formData.model, year: formData.year, estimatedMin: value.min, estimatedMax: value.max } });
 
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
 

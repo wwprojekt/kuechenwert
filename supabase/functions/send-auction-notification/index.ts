@@ -36,6 +36,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ─── ANTI-SPAM: new_bid max 1x pro 6h pro Seller pro Auktion ───
+    if (type === 'new_bid' && email && auctionUrl) {
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+      const { data: recentBidEmail } = await supabase
+        .from('admin_emails')
+        .select('id')
+        .eq('recipient_email', email)
+        .eq('email_type', 'auction_new_bid')
+        .ilike('subject', '%Neues Gebot%')
+        .gt('created_at', sixHoursAgo)
+        .limit(1);
+      if (recentBidEmail && recentBidEmail.length > 0) {
+        console.log(`Anti-spam: Skipped new_bid email to ${email} (already sent in last 6h)`);
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'throttled' }), {
+          status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+        });
+      }
+    }
+
     // Fetch customer number if not passed
     let custNum = passedCustNum || '';
     if (!custNum) {

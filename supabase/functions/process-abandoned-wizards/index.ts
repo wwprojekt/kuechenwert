@@ -351,6 +351,23 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       for (const [email, sessions] of sessionsByEmail) {
+        // ANTI-SPAM: Max 1 recovery_first pro Email pro 7 Tage
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentRecovery } = await supabase
+          .from("admin_emails")
+          .select("id")
+          .eq("recipient_email", email)
+          .eq("email_type", "wizard_recovery_first")
+          .gt("created_at", sevenDaysAgo)
+          .limit(1);
+        if (recentRecovery && recentRecovery.length > 0) {
+          // Trotzdem alle Sessions als gesendet markieren damit sie nicht erneut auftauchen
+          const sessionIds = sessions.map((s: any) => s.id);
+          await supabase.from("wizard_sessions").update({ resume_email_sent_at: now.toISOString(), status: "abandoned" }).in("id", sessionIds);
+          console.log(`Anti-spam: Skipped recovery_first for ${email} (already sent in last 7 days)`);
+          continue;
+        }
+
         // Sortiere nach last_activity_at DESC - neueste Session zuerst
         sessions.sort((a: any, b: any) => 
           new Date(b.last_activity_at || b.created_at).getTime() - 
@@ -426,6 +443,19 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       for (const [email, sessions] of followupByEmail) {
+        // ANTI-SPAM: Max 1 followup pro Email pro 30 Tage
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentFollowup } = await supabase
+          .from("admin_emails").select("id")
+          .eq("recipient_email", email).eq("email_type", "wizard_recovery_followup")
+          .gt("created_at", thirtyDaysAgo).limit(1);
+        if (recentFollowup && recentFollowup.length > 0) {
+          const sessionIds = sessions.map((s: any) => s.id);
+          await supabase.from("wizard_sessions").update({ followup_email_sent_at: now.toISOString() }).in("id", sessionIds);
+          console.log(`Anti-spam: Skipped followup for ${email} (already sent in last 30 days)`);
+          continue;
+        }
+
         sessions.sort((a: any, b: any) => 
           new Date(b.last_activity_at || b.created_at).getTime() - 
           new Date(a.last_activity_at || a.created_at).getTime()

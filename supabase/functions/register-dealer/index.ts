@@ -45,6 +45,7 @@ interface RegisterDealerRequest {
   website?: string;
   legalForm?: string;
   foundedYear?: string;
+  vatId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -123,6 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
         website: body.website || null,
         legal_form: body.legalForm || null,
         founded_year: body.foundedYear || null,
+        vat_id: body.vatId || null,
         is_dealer: true,
         user_type: "dealer",
       },

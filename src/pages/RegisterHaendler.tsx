@@ -79,6 +79,7 @@ function createDealerSchema(countryCode: string) {
     contactPersonName: z.string().min(2, tr.errorContactNameRequired),
     contactPersonPosition: z.string().optional(),
     phone: z.string().regex(/^[\d\s\-+()]+$/, tr.errorPhoneInvalid),
+    vatId: z.string().optional().or(z.literal("")),
     website: z.string().url(tr.errorUrlInvalid).optional().or(z.literal("")),
     agbAccepted: z.literal(true, { errorMap: () => ({ message: tr.errorAgbRequired }) }),
   }).refine((data) => data.password === data.passwordConfirm, {

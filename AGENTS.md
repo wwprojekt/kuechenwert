@@ -232,6 +232,16 @@ After code changes, these functions need redeploying:
 - **auto-convert-wizard v15**: Partial-failure recovery – prüft ob Motorhome existiert bevor "already converted" zurückgegeben wird
 - **Security Migration**: 11× search_path gefixt, public_site_settings → SECURITY INVOKER, 2 RLS-Policies hinzugefügt
 
+## Wertrechner Kalibrierung (09.04.2026)
+- **Problem**: Algorithmus überschätzte Ø 62,7% vs. Experten-Bewertungen (80% der Fälle zu hoch)
+- **Root Cause**: Zu hohe Basispreise (integriert 120k), Luxus-Tier ×2.8, Abschreibung flacht ab Jahr 5 bei nur 3%
+- **Datengrundlage**: 284 Leads mit Algo + Experten-Wert, 299 KI-Trainingsdaten
+- **Fixes**: Basispreise -20-30%, Tiers gesenkt (luxus 2.0, premium 1.2), Abschreibungskurven 13 Stufen
+- **Ergebnis**: Concorde 1994 Alkoven von +486% auf +15%, Dethleffs 2003 von +83% auf -26%
+- **Fallback-Label**: KI-Fehler zeigt jetzt "Algorithmische Schätzung" (grau) statt irreführend "KI-Wertschätzung" (teal)
+- **Konfidenz-Spanne**: ±5% bei ≥85%, ±10% bei ≥70%, ±15% bei ≥50%, ±20% bei <50%
+- **Hinweis**: User sieht in ~95% der Fälle den KI-Wert (299 Trainingsdaten, API Key aktiv). Algo ist nur Fallback.
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

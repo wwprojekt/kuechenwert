@@ -119,12 +119,10 @@ function sendConversion(label: string, value: number, transactionId?: string): P
 
 export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSIONS (für Kampagnen-Optimierung / Gebotsoptimierung) ***
+  // WICHTIG: Nur feuern wenn ECHTE Kontaktdaten (Email/Telefon) erfasst wurden!
   
-  // Bestehende Conversion: "Bewertung abgeschlossen" – Wizard komplett durchlaufen
+  // Bewertung abgeschlossen: Wizard komplett durchlaufen (nur in trackWizardCompleted)
   BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpdD',
-  
-  // Landing Page Lead: Kontaktdaten auf einer der 6 Google Ads Landing Pages erfasst
-  LANDING_PAGE_LEAD: 'ZiKsCMmOkY4cEL7FhpdD',
   
   // Kontaktformular: /kontakt Formular abgesendet
   KONTAKTFORMULAR_GESENDET: '5RLHCN2SkY4cEL7FhpdD',
@@ -135,13 +133,17 @@ export const CONVERSION_LABELS = {
   // Wertrechner: /wertrechner Lead-Capture mit Kontaktdaten abgesendet
   WERTRECHNER_LEAD: 'JBEqCPiNkY4cEL7FhpdD',
   
-  // Wizard Abgeschlossen: Schritt 5 (Kontaktdaten) im VerkaufenWizard abgesendet
+  // Wizard Abgeschlossen: Kontaktdaten im VerkaufenWizard abgesendet
   WIZARD_ABGESCHLOSSEN: 'JO7oCPuNkY4cEL7FhpdD',
   
   // Terminbuchung: Termin über AppointmentBookingModal gebucht
   TERMINBUCHUNG: '3_bOCP6NkY4cEL7FhpdD',
   
   // *** SEKUNDÄRE CONVERSIONS (für Beobachtung, nicht für Gebotsoptimierung) ***
+  
+  // Landing Page Funnel-Einstieg: Nutzer wählt Fahrzeugdaten auf Landing Page
+  // KEIN Lead! Nur Micro-Conversion als Funnel-Einstieg
+  LANDING_PAGE_LEAD: 'ZiKsCMmOkY4cEL7FhpdD',
   
   // Wizard Gestartet: Schritt 1 im VerkaufenWizard geladen
   WIZARD_GESTARTET: '-m3-CIGOkY4cEL7FhpdD',
@@ -154,17 +156,8 @@ export const CONVERSION_LABELS = {
 // CUSTOM EVENTS (ohne Conversion-Label, nur für Remarketing/Analytics)
 // ============================================================
 
-/**
- * Seite aufgerufen - wird automatisch durch gtag config getrackt
- * Zusätzlich senden wir spezifische Seitenaufrufe für wichtige Seiten
- */
-export function trackPageView(pagePath: string, pageTitle: string): void {
-  safeGtag('event', 'page_view', {
-    page_path: pagePath,
-    page_title: pageTitle,
-    send_to: GOOGLE_ADS_ID,
-  });
-}
+// trackPageView entfernt – page_view wird automatisch durch gtag config gesendet.
+// Spezifisches Google Ads page_view war redundant und nirgends aufgerufen.
 
 // ============================================================
 // PRIMÄRE LEAD-TRACKING EVENTS
@@ -172,23 +165,28 @@ export function trackPageView(pagePath: string, pageTitle: string): void {
 // ============================================================
 
 /**
- * Landing Page Lead: Kontaktdaten auf einer Google Ads Landing Page erfasst
+ * Landing Page Funnel-Einstieg: Nutzer wählt Fahrzeugdaten auf einer Landing Page.
+ * SEKUNDÄRE Conversion (nur Beobachtung) – es werden KEINE Kontaktdaten erfasst.
+ * Der echte Lead wird erst im Wertrechner als WERTRECHNER_LEAD getrackt.
  * Wird ausgelöst in: LandingLeadForm (alle 6 Landing Pages)
- * Primäre Conversion: Ja (für Gebotsoptimierung)
  */
 export async function trackLandingPageLead(landingPage: string, vehicleInfo?: string, transactionId?: string): Promise<void> {
-  const txId = transactionId || generateTransactionId('landing_page');
-  // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.LANDING_PAGE_LEAD, 5.0, txId);
-
-  // GA4 + Google Ads: generate_lead Event (GA4 empfohlenes Event)
-  safeGtag('event', 'generate_lead', {
-    transaction_id: txId,
-    event_category: 'Lead',
-    event_label: `landing_page_lead_${landingPage}`,
-    value: 5.0,
+  const txId = transactionId || generateTransactionId('landing_funnel');
+  // Sekundäre Conversion: Funnel-Einstieg (value: 1€, nicht 5€)
+  safeGtag('event', 'conversion', {
+    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
+    value: 1.0,
     currency: 'EUR',
-    lead_source: 'landing_page',
+    transaction_id: txId,
+  });
+
+  // GA4: Custom Event (NICHT generate_lead – kein Lead ohne Kontaktdaten!)
+  safeGtag('event', 'landing_funnel_start', {
+    transaction_id: txId,
+    event_category: 'Funnel',
+    event_label: `landing_funnel_${landingPage}`,
+    value: 1.0,
+    currency: 'EUR',
     landing_page: landingPage,
     vehicle_info: vehicleInfo || '',
   });
@@ -310,13 +308,16 @@ export async function trackTerminbuchung(station?: string, transactionId?: strin
  * Sekundäre Conversion: Für Beobachtung
  */
 export function trackWizardStarted(source: string): void {
+  const txId = generateTransactionId('wizard_start');
   safeGtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_GESTARTET}`,
     value: 1.0,
     currency: 'EUR',
+    transaction_id: txId,
   });
 
   safeGtag('event', 'begin_checkout', {
+    transaction_id: txId,
     event_category: 'Wizard',
     event_label: 'wizard_started',
     wizard_source: source,
@@ -324,6 +325,7 @@ export function trackWizardStarted(source: string): void {
 
   // GA4 Zielgruppe 'Wertermittlung gestartet' verwendet dieses Event
   safeGtag('event', 'wizard_start', {
+    transaction_id: txId,
     event_category: 'Wizard',
     wizard_source: source,
   });
@@ -334,17 +336,20 @@ export function trackWizardStarted(source: string): void {
  * Schritt 2 = Sekundäre Conversion (Fahrzeugdaten eingegeben)
  */
 export function trackWizardStep(stepNumber: number, stepName: string): void {
+  const txId = generateTransactionId(`wizard_step${stepNumber}`);
   // Sekundäre Conversion: Wizard Fahrzeugdaten (Schritt 2 erreicht)
   if (stepNumber === 2) {
     safeGtag('event', 'conversion', {
       send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.WIZARD_FAHRZEUGDATEN}`,
       value: 1.0,
       currency: 'EUR',
+      transaction_id: txId,
     });
   }
 
   // Custom Event für jeden Schritt
   safeGtag('event', 'wizard_step', {
+    transaction_id: txId,
     event_category: 'Wizard',
     event_label: stepName,
     step_number: stepNumber,
@@ -403,43 +408,20 @@ export function trackWizardAbandoned(stepNumber: number, stepName: string): void
 // ============================================================
 
 /**
- * Lead: Kontaktdaten erfasst (generisch)
- * @deprecated Verwende stattdessen die spezifischen Track-Funktionen
- * (trackLandingPageLead, trackKontaktformularGesendet, etc.)
- */
-export function trackLeadContactData(source: string, vehicleInfo?: string): void {
-  // Generisches Lead-Event für Abwärtskompatibilität
-  // Löst die Landing Page Lead Conversion aus (als Fallback)
-  safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.LANDING_PAGE_LEAD}`,
-    value: 5.0,
-    currency: 'EUR',
-  });
-
-  safeGtag('event', 'generate_lead', {
-    event_category: 'Lead',
-    event_label: source,
-    value: 5.0,
-    currency: 'EUR',
-    lead_source: source,
-    vehicle_info: vehicleInfo || '',
-  });
-}
-
-/**
- * Beratung angefragt (Button "Beratung vereinbaren")
+ * Ankaufstation-Anfrage: Fahrzeuganfrage über /ankaufstationen gesendet.
+ * NICHT als TERMINBUCHUNG tracken – das ist eine Fahrzeuganfrage, kein Termin.
+ * Custom Event für GA4 Analyse.
  */
 export function trackBeratungRequested(pagePath: string): void {
-  safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.TERMINBUCHUNG}`,
-    value: 5.0,
-    currency: 'EUR',
-  });
-
-  safeGtag('event', 'schedule_consultation', {
+  const txId = generateTransactionId('ankaufstation');
+  // Custom Event (KEINE Conversion – separate Ankauf-Analyse in GA4)
+  safeGtag('event', 'purchase_inquiry', {
+    transaction_id: txId,
     event_category: 'Lead',
-    event_label: 'beratung_vereinbaren',
+    event_label: 'ankaufstation_anfrage',
     page_path: pagePath,
+    value: 1.0,
+    currency: 'EUR',
   });
 }
 
@@ -448,18 +430,15 @@ export function trackBeratungRequested(pagePath: string): void {
 // ============================================================
 
 /**
- * Nutzer hat sich registriert
- * Sendet ebenfalls die "Bewertung abgeschlossen" Conversion,
- * da die Registrierung Teil des Wizard-Abschlusses ist
+ * Nutzer hat sich registriert.
+ * NUR sign_up Event – KEINE BEWERTUNG_ABGESCHLOSSEN Conversion!
+ * BEWERTUNG_ABGESCHLOSSEN wird ausschließlich in trackWizardCompleted() gefeuert.
+ * Händler-Registrierungen und normale Registrierungen sind KEINE Bewertungen.
  */
 export function trackUserRegistered(method: string): void {
-  safeGtag('event', 'conversion', {
-    send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN}`,
-    value: 1.0,
-    currency: 'EUR',
-  });
-
+  const txId = generateTransactionId('signup');
   safeGtag('event', 'sign_up', {
+    transaction_id: txId,
     event_category: 'Auth',
     event_label: method,
     method: method,
@@ -481,17 +460,7 @@ export function trackUserLoggedIn(method: string): void {
 // AUKTIONS-TRACKING EVENTS
 // ============================================================
 
-/**
- * Auktion wurde erstellt
- */
-export function trackAuctionCreated(vehicleInfo: string): void {
-  safeGtag('event', 'auction_created', {
-    event_category: 'Auction',
-    event_label: vehicleInfo,
-    value: 1.0,
-    currency: 'EUR',
-  });
-}
+// trackAuctionCreated entfernt – war dead code (nirgends aufgerufen).
 
 // ============================================================
 // CTA-KLICK-TRACKING (Telefon, WhatsApp, E-Mail)
@@ -647,13 +616,8 @@ export function trackVehicleViewed(vehicleId: string, vehicleInfo: string): void
   });
 }
 
-/**
- * Kontaktformular gesendet (Legacy)
- * @deprecated Verwende stattdessen trackKontaktformularGesendet()
- */
-export function trackContactFormSubmitted(): void {
-  trackKontaktformularGesendet();
-}
+// trackContactFormSubmitted entfernt – war deprecated dead code.
+// trackLeadContactData entfernt – war deprecated dead code.
 
 // ============================================================
 // UTILITY: Conversion-Labels anzeigen

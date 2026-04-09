@@ -8,7 +8,7 @@ import FAQSection from "@/components/FAQSection";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { trackLandingPageLead, trackPhoneClick } from "@/lib/gadsConversionService";
+import { trackPhoneClick, trackCTAClick } from "@/lib/gadsConversionService";
 import { trackEvent } from "@/lib/analyticsService";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 
@@ -71,7 +71,8 @@ const WohnmobilHaendlerWerden = () => {
   });
 
   const handleCtaClick = (source: string) => {
-    trackLandingPageLead("wohnmobil-haendler-werden", source);
+    // NUR CTA-Klick tracken (KEINE Conversion – kein Lead ohne Kontaktdaten!)
+    trackCTAClick(`dealer_cta_${source}`, "/wohnmobil-haendler-werden", "/register/haendler");
     trackEvent("dealer_cta_click", { category: "dealer_acquisition", properties: { source } });
   };
 

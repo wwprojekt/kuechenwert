@@ -257,26 +257,15 @@ const handler = async (req: Request): Promise<Response> => {
         };
 
         // GCLID/GBRAID/WBRAID an GA4 senden für direkte Google Ads Attribution
-        // Wenn GA4 mit Google Ads verknüpft ist, wird die Conversion automatisch
-        // dem richtigen Google Ads Klick zugeordnet
-        if (gclid) {
-          // GCLID wird als session-Parameter gesendet, damit GA4 die Session
-          // dem Google Ads Klick zuordnen kann
+        // Alle Click-IDs zusammen in einem Merge (vorher: jede überschrieb die vorherige!)
+        const clickIdParams: Record<string, string> = {};
+        if (gclid) clickIdParams.gclid = gclid;
+        if (gbraid) clickIdParams.gbraid = gbraid;
+        if (wbraid) clickIdParams.wbraid = wbraid;
+        if (Object.keys(clickIdParams).length > 0) {
           (ga4Payload.events as Array<Record<string, unknown>>)[0].params = {
             ...eventParams,
-            gclid,
-          };
-        }
-        if (gbraid) {
-          (ga4Payload.events as Array<Record<string, unknown>>)[0].params = {
-            ...eventParams,
-            gbraid,
-          };
-        }
-        if (wbraid) {
-          (ga4Payload.events as Array<Record<string, unknown>>)[0].params = {
-            ...eventParams,
-            wbraid,
+            ...clickIdParams,
           };
         }
 

@@ -285,10 +285,20 @@ After code changes, these functions need redeploying:
    - Per-User Logging (email_type: `favorite_price_change`) für Dedup
    - DB: `favorite_price_change` zur admin_emails constraint hinzugefügt
 
-### Noch nicht gefixt (niedrigere Priorität)
-- `wizard_recovery_first`: Bis zu 6x pro User (Problem: neue Sessions desselben Users)
-- Seller bekommt Email bei JEDEM neuen Gebot (send-auction-notification, nicht geloggt)
-- Admin bekommt 113 Lead-Admin-Emails (sollte Digest sein)
+### Phase 2 Anti-Spam (08.04.2026 Session 6)
+4. **wizard_recovery_first Anti-Spam** (process-abandoned-wizards v11)
+   - Max 1 recovery_first pro Email pro 7 Tage (war bis 6x)
+   - Max 1 followup pro Email pro 30 Tage
+   - Sessions werden trotzdem als gesendet markiert → kein Retry-Spam
+5. **Seller new_bid Throttle** (send-auction-notification v24)
+   - Max 1 new_bid Email pro Seller pro 6h (statt bei jedem Gebot)
+   - Throttle via admin_emails lookup (email_type: auction_new_bid)
+   - DB constraint: alle auction_* email_types hinzugefügt
+6. **Admin Lead-Emails** → war bereits gefixt (Admin-Emails wurden entfernt, Zeile 146-148 in send-lead-notification)
+7. **RLS Security Fix**
+   - audit_logs: Offene INSERT Policy "Service role can insert" ENTFERNT (war WITH CHECK true für public)
+   - dealer_notifications: Offene INSERT Policy ENTFERNT (service_role bypasses RLS ohnehin)
+8. **Wertrechner Flow** → analysiert, keine Bugs gefunden (301 Leads/30d, 0 Fehler, konsistente Daten)
 
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)

@@ -260,6 +260,36 @@ After code changes, these functions need redeploying:
 - **GA4_API_SECRET**: Must be created in Google Analytics → Admin → Data Streams → Measurement Protocol API secrets, then stored as Supabase secret. Without it, server-side tracking is inactive.
 - In Google Ads: Reclassify `LANDING_PAGE_LEAD` conversion from "Primary" to "Secondary/Observation" in campaign settings
 
+## Email Anti-Spam Fixes (08.04.2026 Session 5)
+
+### Problem: Massive Email-Überflutung der Händler
+- **209 Bid-Emails** total: 122 bid_confirmed + 87 bid_outbid
+- **Autohaus Schiller**: 151 Emails total (96 Bid + 49 ending_soon + 4 winner + 2 invoice)
+- **101 auction_ending_soon Emails** mit 4-5x Duplikaten pro Auktion pro Händler
+- **22 favorite_notification Emails** (15 an einen einzigen User)
+
+### Fixes
+1. **bid_confirmed Email ENTFERNT** (place-bid v24)
+   - In-App Notification bleibt (dealer_notifications)
+   - UI-Feedback reicht (Toast + aktualisierter Betrag)
+   - bid_outbid Email bleibt (hat Handlungsbedarf)
+
+2. **auction_ending_soon Dedup gefixt** (send-auction-ending-notification v20)
+   - ALTER: Subject-Match in admin_emails → funktionierte NICHT (Unicode/Race Condition)
+   - NEU: Dedup via dealer_notifications (user_id + type + auction_id)
+   - Dedup-Marker wird VOR dem Email-Versand inserted (Race-Condition-sicher)
+   - Max 1 ending-soon Email pro Bieter pro Auktion, jemals
+
+3. **favorite_notification Anti-Spam** (send-favorite-notification v9)
+   - Max 1 price_change Email pro User pro 24h
+   - Per-User Logging (email_type: `favorite_price_change`) für Dedup
+   - DB: `favorite_price_change` zur admin_emails constraint hinzugefügt
+
+### Noch nicht gefixt (niedrigere Priorität)
+- `wizard_recovery_first`: Bis zu 6x pro User (Problem: neue Sessions desselben Users)
+- Seller bekommt Email bei JEDEM neuen Gebot (send-auction-notification, nicht geloggt)
+- Admin bekommt 113 Lead-Admin-Emails (sollte Digest sein)
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

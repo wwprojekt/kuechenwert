@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 0a. In-App Notification: Bid confirmed for current bidder
+    // 0a. In-App Notification: Bid confirmed for current bidder (reicht, KEINE Email)
     supabaseAdmin
       .from('dealer_notifications')
       .insert({
@@ -216,15 +216,8 @@ Deno.serve(async (req) => {
       .then(({ error }) => { if (error) console.error('Error inserting bid_confirmed notification:', error); })
       .catch((e: unknown) => console.error('Error inserting bid_confirmed notification:', e));
 
-    // 1. Notify the current bidder that their bid was placed
-    supabaseAdmin.functions.invoke('send-bid-notification', {
-      body: {
-        bidderId: user.id,
-        auctionId,
-        bidAmount: amount,
-        isOutbid: false,
-      },
-    }).catch((e) => console.error('Error sending bid confirmation:', e));
+    // KEINE Bestätigungs-Email mehr! In-App Notification + UI-Feedback reicht.
+    // Vorher: 122 bid_confirmed Emails = Spam für aktive Händler.
 
     // 2. Notify the previous highest bidder that they were outbid
     const { data: previousBids } = await supabaseAdmin

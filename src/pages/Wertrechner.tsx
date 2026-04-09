@@ -52,10 +52,10 @@ const leadSchema = z.object({
 
 // ─── Wohnmobil Body Types ───────────────────────────────────────────────────
 const WOHNMOBIL_BODY_TYPES = [
-  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", basePrice: 120000 },
-  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", basePrice: 90000 },
-  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", basePrice: 80000 },
-  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", basePrice: 65000 },
+  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", basePrice: 95000 },
+  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", basePrice: 75000 },
+  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", basePrice: 65000 },
+  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", basePrice: 60000 },
   { value: "campingbus", label: "Campingbus", icon: CarFront, description: "Flexibel und alltagstauglich", basePrice: 55000 },
 ];
 
@@ -127,26 +127,29 @@ const WOHNWAGEN_BRAND_TIERS: Record<string, string> = {
 };
 
 const TIER_MULTIPLIERS: Record<string, number> = {
-  luxus: 2.8,
-  premium: 1.4,
+  luxus: 2.0,
+  premium: 1.2,
   mittelklasse: 1.0,
-  economy: 0.8,
+  economy: 0.82,
 };
 
 // ─── Wohnmobil Abschreibungskurven ─────────────────────────────────────────
+// Kalibriert anhand 284 Experten-Bewertungen (April 2026):
+// Alte Kurven (3% ab Jahr 5) führten zu 74-183% Überschätzung bei >15 Jahren.
+// Neue Kurven: steilere Abschreibung ab Jahr 5, realistisch für Gebrauchtwagen-Markt.
 const WOHNMOBIL_DEPRECIATION_CURVES: Record<string, number[]> = {
-  campingbus: [0.15, 0.06, 0.05, 0.04, 0.03],
-  kastenwagen: [0.15, 0.06, 0.05, 0.04, 0.03],
-  alkoven: [0.16, 0.08, 0.06, 0.04, 0.03],
-  teilintegriert: [0.16, 0.07, 0.06, 0.04, 0.03],
-  integriert: [0.17, 0.07, 0.06, 0.05, 0.03],
+  campingbus:     [0.15, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06],
+  kastenwagen:    [0.15, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06],
+  alkoven:        [0.16, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
+  teilintegriert: [0.16, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
+  integriert:     [0.17, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
 };
 
 // ─── Wohnwagen Abschreibungskurven (kein Motor → langsamere Abschreibung) ──
 const WOHNWAGEN_DEPRECIATION_CURVES: Record<string, number[]> = {
-  wohnwagen: [0.14, 0.06, 0.05, 0.04, 0.03],
-  faltcaravan: [0.16, 0.07, 0.05, 0.04, 0.03],
-  mobilheim: [0.10, 0.05, 0.04, 0.03, 0.02],
+  wohnwagen:   [0.14, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06, 0.07],
+  faltcaravan: [0.16, 0.08, 0.06, 0.05, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
+  mobilheim:   [0.10, 0.06, 0.05, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.04, 0.05, 0.05, 0.06],
 };
 
 // Kilometer-Anpassungsfaktor (relativ zum Alter) – nur für Wohnmobile
@@ -452,6 +455,7 @@ const Wertrechner = () => {
   const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [aiEstimate, setAiEstimate] = useState<{ value: number; confidence: number; reasoning?: string; trainingCount: number } | null>(null);
+  const [aiFailed, setAiFailed] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [mileageDisplay, setMileageDisplay] = useState(() => {
     if (formData.mileage) {
@@ -584,6 +588,7 @@ const Wertrechner = () => {
 
       // KI-Schätzung im Hintergrund abrufen (non-blocking)
       setAiLoading(true);
+      setAiFailed(false);
       (async () => {
         try {
           const { data: aiData } = await supabase.functions.invoke("ai-valuation", {
@@ -606,9 +611,11 @@ const Wertrechner = () => {
               reasoning: aiData.aiReasoning,
               trainingCount: aiData.trainingCount || 0,
             });
+          } else {
+            setAiFailed(true);
           }
         } catch {
-          // KI-Schätzung ist optional, Fehler ignorieren
+          setAiFailed(true);
         } finally {
           setAiLoading(false);
         }
@@ -1255,36 +1262,62 @@ const Wertrechner = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Hauptwert-Anzeige: Nur KI-Wert */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-50 p-8 text-center border border-teal-200 shadow-md">
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
+                    {/* Hauptwert-Anzeige */}
+                    <div className={cn(
+                      "relative overflow-hidden rounded-2xl p-8 text-center border shadow-md",
+                      aiEstimate
+                        ? "bg-gradient-to-br from-teal-50 via-white to-teal-50 border-teal-200"
+                        : "bg-gradient-to-br from-slate-50 via-white to-slate-50 border-slate-200"
+                    )}>
+                      <div className={cn(
+                        "absolute top-0 left-0 w-full h-1 bg-gradient-to-r",
+                        aiEstimate ? "from-teal-400 via-teal-500 to-teal-600" : "from-slate-400 via-slate-500 to-slate-600"
+                      )} />
                       <div className="flex items-center justify-center gap-2 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-teal-700" />
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          aiEstimate ? "bg-teal-100" : "bg-slate-100"
+                        )}>
+                          {aiEstimate ? <TrendingUp className="w-5 h-5 text-teal-700" /> : <Calculator className="w-5 h-5 text-slate-600" />}
                         </div>
-                        <span className="text-sm font-semibold text-teal-700 uppercase tracking-wide">KI-Wertschätzung</span>
+                        <span className={cn(
+                          "text-sm font-semibold uppercase tracking-wide",
+                          aiEstimate ? "text-teal-700" : "text-slate-600"
+                        )}>
+                          {aiEstimate ? "KI-Wertschätzung" : "Algorithmische Schätzung"}
+                        </span>
                       </div>
-                      {aiEstimate ? (
+                      {aiEstimate ? (() => {
+                        // Fix 3: Spanne skaliert mit Konfidenz
+                        const spread = aiEstimate.confidence >= 85 ? 0.05
+                          : aiEstimate.confidence >= 70 ? 0.10
+                          : aiEstimate.confidence >= 50 ? 0.15
+                          : 0.20;
+                        return (
+                          <>
+                            <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
+                              <AnimatedValue value={Math.round(aiEstimate.value * (1 - spread))} /> &ndash; <AnimatedValue value={Math.round(aiEstimate.value * (1 + spread))} />
+                            </div>
+                            <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
+                            <div className="flex items-center justify-center gap-3 text-xs text-teal-600 mt-3">
+                              <span className="inline-flex items-center gap-1"><Shield className="w-3 h-3" /> Konfidenz: {aiEstimate.confidence}%</span>
+                              <span>&bull;</span>
+                              <span>Basierend auf {aiEstimate.trainingCount} Vergleichsdaten</span>
+                            </div>
+                            {aiEstimate.reasoning && (
+                              <p className="text-xs text-teal-500 mt-3 italic max-w-md mx-auto">{aiEstimate.reasoning}</p>
+                            )}
+                          </>
+                        );
+                      })() : (
                         <>
-                          <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
-                            <AnimatedValue value={Math.round(aiEstimate.value * 0.95)} /> &ndash; <AnimatedValue value={Math.round(aiEstimate.value * 1.05)} />
-                          </div>
-                          <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
-                          <div className="flex items-center justify-center gap-3 text-xs text-teal-600 mt-3">
-                            <span className="inline-flex items-center gap-1"><Shield className="w-3 h-3" /> Konfidenz: {aiEstimate.confidence}%</span>
-                            <span>&bull;</span>
-                            <span>Basierend auf {aiEstimate.trainingCount} Vergleichsdaten</span>
-                          </div>
-                          {aiEstimate.reasoning && (
-                            <p className="text-xs text-teal-500 mt-3 italic max-w-md mx-auto">{aiEstimate.reasoning}</p>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
+                          <div className={cn("text-4xl md:text-5xl font-bold mb-3", aiFailed ? "text-slate-700" : "text-teal-800")}>
                             <AnimatedValue value={estimatedValue.min} /> &ndash; <AnimatedValue value={estimatedValue.max} />
                           </div>
                           <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
+                          {aiFailed && (
+                            <p className="text-xs text-slate-400 mt-2">Basierend auf Marktdaten-Algorithmus</p>
+                          )}
                         </>
                       )}
                     </div>

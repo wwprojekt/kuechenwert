@@ -109,22 +109,31 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (!profile?.email) continue;
 
-        // ─── DUPLIKAT-PRÜFUNG: Über recipient_email + Subject (enthält Fahrzeugnamen) ───
+        // ─── DUPLIKAT-PRÜFUNG: Über recipient_id + auction_id (bombensicher) ───
         const motorhomeName = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`;
-        const expectedSubject = `⏰ Auktion endet bald - ${motorhomeName}`;
         const { data: existingNotification } = await supabase
-          .from('admin_emails')
+          .from('dealer_notifications')
           .select('id')
-          .eq('recipient_email', profile.email)
-          .eq('email_type', 'auction_ending_soon')
-          .eq('subject', expectedSubject)
+          .eq('user_id', bidderId)
+          .eq('type', 'auction_ending_soon')
+          .eq('auction_id', auction.id)
           .limit(1);
 
         if (existingNotification && existingNotification.length > 0) {
-          console.log(`Skipping duplicate notification for ${profile.email} on auction ${auction.id} (${motorhomeName})`);
+          console.log(`Skipping duplicate ending-soon for ${profile.email} on auction ${auction.id}`);
           notifications.push({ bidderId, auctionId: auction.id, success: true, skipped: true });
           continue;
         }
+
+        // In-App Notification + Dedup-Marker (insert BEFORE email to prevent race conditions)
+        await supabase.from('dealer_notifications').insert({
+          user_id: bidderId,
+          type: 'auction_ending_soon',
+          title: `Auktion endet bald: ${motorhomeName}`,
+          message: `Die Auktion für ${motorhomeName} endet in Kürze.`,
+          link: `/auktion/${auction.id}`,
+          auction_id: auction.id,
+        });
 
         // Get bidder's highest bid
         const bidderBids = bids.filter(b => b.bidder_id === bidderId);

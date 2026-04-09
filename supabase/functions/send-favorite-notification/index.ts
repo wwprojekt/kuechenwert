@@ -70,12 +70,30 @@ Deno.serve(async (req) => {
     const prefsMap = new Map(prefs?.map(p => [p.user_id, p]) || []);
 
     let sent = 0;
+    let skipped = 0;
     const errors: string[] = [];
 
     for (const user of favoriteUsers) {
       // Check if user wants notifications (default: yes)
       const userPref = prefsMap.get(user.id);
       if (userPref && userPref.bid_notifications === false) continue;
+
+      // ─── ANTI-SPAM: Max 1 Favoriten-Email pro User pro 24h ───
+      if (event_type === "price_change" && user.email) {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentEmail } = await supabase
+          .from("admin_emails")
+          .select("id")
+          .eq("recipient_email", user.email)
+          .eq("email_type", "favorite_price_change")
+          .gt("created_at", oneDayAgo)
+          .limit(1);
+
+        if (recentEmail && recentEmail.length > 0) {
+          skipped++;
+          continue;
+        }
+      }
 
       // Check if user has bounced email
       const { data: profile } = await supabase
@@ -150,6 +168,17 @@ Deno.serve(async (req) => {
 
         if (res.ok) {
           sent++;
+          // Per-user log for dedup (email_type: favorite_price_change for anti-spam check)
+          supabase.from("admin_emails").insert({
+            sender_email: "info@caravanwert.de",
+            sender_name: "CaravanWert",
+            recipient_email: user.email,
+            recipient_id: user.id,
+            subject,
+            body_html: '', body_text: '',
+            email_type: event_type === "price_change" ? "favorite_price_change" : "favorite_notification",
+            direction: "outbound", status: "sent", is_read: true,
+          }).then(({ error: logErr }) => { if (logErr) console.error('Per-user log error:', logErr); });
         } else {
           const errText = await res.text();
           errors.push(`${user.email}: ${errText}`);
@@ -159,25 +188,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Log to admin_emails
-    try {
-      await supabase.from("admin_emails").insert({
-        sender_email: "info@caravanwert.de",
-        sender_name: "CaravanWert",
-        recipient_email: `${sent} Favoriten-Nutzer`,
-        subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
-        body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || motorhome_id}. ${sent} E-Mails gesendet.`,
-        body_text: '',
-        email_type: 'favorite_notification',
-        direction: "outbound",
-        status: errors.length > 0 ? "partial" : "sent",
-        is_read: true,
-      });
-    } catch (logErr) {
-      console.error('Failed to log email in admin_emails:', logErr);
+    // Note: Per-user logging now happens inside the send loop (see below)
+    // Aggregate log kept for admin overview
+    if (sent > 0) {
+      try {
+        await supabase.from("admin_emails").insert({
+          sender_email: "info@caravanwert.de",
+          sender_name: "CaravanWert",
+          recipient_email: `${sent} Favoriten-Nutzer`,
+          subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
+          body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || motorhome_id}. ${sent} gesendet, ${skipped} übersprungen (Anti-Spam).`,
+          body_text: '',
+          email_type: 'favorite_notification',
+          direction: "outbound",
+          status: errors.length > 0 ? "partial" : "sent",
+          is_read: true,
+        });
+      } catch (logErr) {
+        console.error('Failed to log email in admin_emails:', logErr);
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, sent, errors: errors.length }), {
+    return new Response(JSON.stringify({ success: true, sent, skipped, errors: errors.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

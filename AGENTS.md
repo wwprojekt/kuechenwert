@@ -242,6 +242,24 @@ After code changes, these functions need redeploying:
 - **Konfidenz-Spanne**: ±5% bei ≥85%, ±10% bei ≥70%, ±15% bei ≥50%, ±20% bei <50%
 - **Hinweis**: User sieht in ~95% der Fälle den KI-Wert (299 Trainingsdaten, API Key aktiv). Algo ist nur Fallback.
 
+## Google Tracking Fixes (08.04.2026 Session 5)
+
+### 7 Critical Bugs Fixed
+1. **trackUserRegistered**: Removed BEWERTUNG_ABGESCHLOSSEN conversion (was firing on EVERY registration, not just wizard completion)
+2. **LANDING_PAGE_LEAD**: Downgraded from primary (5€) to secondary conversion (1€) – landing pages capture NO contact data
+3. **trackBeratungRequested**: Removed TERMINBUCHUNG label – Ankaufstation inquiries are NOT appointments. New custom event: `purchase_inquiry`
+4. **GCLID/GBRAID/WBRAID overwrite bug**: Each click-ID was overwriting the previous one in track-conversion. Fixed to merge all into one object.
+5. **Missing transaction_id**: Added to trackWizardStarted, trackWizardStep, trackUserRegistered, trackBeratungRequested
+6. **Dead code removed**: trackContactFormSubmitted, trackLeadContactData, trackPageView, trackAuctionCreated (all unused)
+7. **WohnmobilHaendlerWerden**: Replaced trackLandingPageLead → trackCTAClick for dealer CTAs (no lead data captured)
+
+### Edge Function Deployed
+- `track-conversion` v11 – GCLID merge fix
+
+### Still Pending (Requires User Action)
+- **GA4_API_SECRET**: Must be created in Google Analytics → Admin → Data Streams → Measurement Protocol API secrets, then stored as Supabase secret. Without it, server-side tracking is inactive.
+- In Google Ads: Reclassify `LANDING_PAGE_LEAD` conversion from "Primary" to "Secondary/Observation" in campaign settings
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

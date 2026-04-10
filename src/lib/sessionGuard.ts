@@ -265,6 +265,42 @@ export async function ensureValidSession(): Promise<{
 }
 
 /**
+ * Stellt eine valide, nicht-abgelaufene Session sicher bevor RLS-geschützte Queries ausgeführt werden.
+ * 
+ * KRITISCH: supabase.auth.getSession() liest aus dem LOKALEN CACHE und gibt
+ * Session-Objekte zurück, auch wenn der Access Token BEREITS ABGELAUFEN ist!
+ * RLS-Queries mit abgelaufenem Token liefern stil leere Ergebnisse (auth.uid()=NULL),
+ * was z.B. dazu führt, dass isDealer=false wird und das Bieten-UI verschwindet.
+ * 
+ * Diese Funktion prüft die Token-Gültigkeit und refresht proaktiv wenn nötig.
+ * 
+ * @returns true wenn Session gültig, false wenn nicht wiederherstellbar
+ */
+export async function ensureValidRLSSession(): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Keine Session → Refresh versuchen
+    if (!session) {
+      const { data, error } = await supabase.auth.refreshSession();
+      return !error && !!data.session;
+    }
+    
+    // Session vorhanden → Access Token auf Gültigkeit prüfen
+    if (session.access_token && !isTokenValid(session.access_token, 60)) {
+      // Token abgelaufen oder läuft in < 60s ab → Refresh
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session) return false;
+    }
+    
+    return true;
+  } catch (e) {
+    if (isLockError(e)) return true; // Lock-Fehler = harmlos, Token vermutlich OK
+    return false;
+  }
+}
+
+/**
  * Prüft ob ein Access Token noch gültig ist (nicht abgelaufen).
  * Ein JWT hat 3 Base64-Segmente: header.payload.signature.
  * Wir prüfen nur das `exp`-Feld im Payload.

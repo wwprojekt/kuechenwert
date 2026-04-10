@@ -11,7 +11,7 @@ import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
-import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -82,15 +82,13 @@ export default function MyKaufchancen() {
     isLoadingRef.current = true;
     if (!silent) setLoading(true);
     try {
-      // Session-Check: Ensure valid token before RLS-protected queries
-      // (expired sessions cause RLS to silently return empty results)
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          showSessionExpired('/dashboard/kaufchancen');
-          return;
-        }
+      // Session-Check: Ensure valid token before RLS-protected queries.
+      // KRITISCH: getSession() gibt auch abgelaufene Tokens aus dem Cache zurück!
+      // ensureValidRLSSession() prüft die TATSÄCHLICHE Token-Gültigkeit und refresht wenn nötig.
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) {
+        showSessionExpired('/dashboard/kaufchancen');
+        return;
       }
 
       // Step 1: Load the current user's kaufchance invitations

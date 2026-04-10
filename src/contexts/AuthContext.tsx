@@ -210,10 +210,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    // Periodischer Token-Refresh für aktive Tabs: Händler lassen Tabs stundenlang
+    // offen. Der Supabase auto-refresh kann in seltenen Fällen fehlschlagen
+    // (Browser throttling, Lock-Konflikte). Dieses Intervall ist ein Safety-Net.
+    const periodicRefreshInterval = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !session) return;
+      
+      const expiresAt = session.expires_at;
+      const now = Math.floor(Date.now() / 1000);
+      // Refresh wenn Token in < 5 Minuten abläuft
+      if (expiresAt && (expiresAt - now) < 300) {
+        logger.log("[Auth] Periodischer Token-Refresh (Token läuft bald ab)");
+        supabase.auth.refreshSession()
+          .then(({ data, error }) => {
+            if (!error && data.session) {
+              setSession(data.session);
+              setUser(data.session.user);
+            }
+          })
+          .catch((e) => {
+            if (!isLockError(e)) {
+              logger.warn("[Auth] Periodischer Refresh fehlgeschlagen:", e);
+            }
+          });
+      }
+    }, 4 * 60 * 1000); // Alle 4 Minuten prüfen
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(periodicRefreshInterval);
     };
   }, [attemptSessionRecovery, session]);
 

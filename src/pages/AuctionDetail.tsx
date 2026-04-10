@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
-import { getFreshAccessToken, isTokenValid } from "@/lib/sessionGuard";
+import { getFreshAccessToken, isTokenValid, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
@@ -125,10 +125,19 @@ const AuctionDetail = () => {
   const [isInvitedToKaufchance, setIsInvitedToKaufchance] = useState(false);
 
   // Check if current user is invited to kaufchance
+  // kaufchance_invitations RLS: USING(bidder_id = auth.uid())
+  // → bei abgelaufener Session: auth.uid()=NULL → 0 Zeilen → fälschlicherweise nicht eingeladen
   useEffect(() => {
     const checkKaufchanceInvitation = async () => {
       if (!user || !id) return;
       try {
+        // Session-Check VOR RLS-Query (getSession gibt auch abgelaufene Tokens zurück!)
+        const sessionValid = await ensureValidRLSSession();
+        if (!sessionValid) {
+          showSessionExpired(`/auktion/${id}`);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('kaufchance_invitations')
           .select('id')
@@ -145,7 +154,7 @@ const AuctionDetail = () => {
       }
     };
     checkKaufchanceInvitation();
-  }, [user, id]);
+  }, [user, id, showSessionExpired]);
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,30 +30,27 @@ export default function MyDocuments() {
   const [contracts, setContracts] = useState<PurchaseContract[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadDocuments = useCallback(async () => {
     if (!user) return;
 
-    const loadDocuments = async () => {
-      setLoading(true);
-      try {
-        // Lade Kaufverträge für den Verkäufer
-        const { data, error } = await supabase
-          .from("purchase_contracts")
-          .select("id, contract_number, sale_price, status, contract_url, storage_path, buyer_name, vehicle_description, created_at, motorhome_id")
-          .eq("seller_id", user.id)
-          .order("created_at", { ascending: false });
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("purchase_contracts")
+        .select("id, contract_number, sale_price, status, contract_url, storage_path, buyer_name, vehicle_description, created_at, motorhome_id")
+        .eq("seller_id", user.id)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
-        setContracts((data as PurchaseContract[]) || []);
-      } catch (error) {
-        console.error("Error loading documents:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDocuments();
+      if (error) throw error;
+      setContracts((data as PurchaseContract[]) || []);
+    } catch (error) {
+      console.error("Error loading documents:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useLiveData(loadDocuments, { enabled: !!user, pollingInterval: 0 });
 
   const handleDownload = async (contract: PurchaseContract) => {
     try {

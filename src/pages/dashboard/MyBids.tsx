@@ -57,6 +57,8 @@ export default function MyBids() {
       return data;
     },
     enabled: !!user,
+    refetchOnWindowFocus: "always",
+    refetchInterval: 30_000,
   });
 
   const groupedBids = bids?.reduce((acc, bid) => {

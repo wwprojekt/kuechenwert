@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,45 +49,43 @@ export default function MyFavorites() {
   const [favorites, setFavorites] = useState<FavoriteVehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadFavorites = useCallback(async () => {
     if (!user) return;
 
-    const loadFavorites = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("user_favorites")
-          .select(`
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_favorites")
+        .select(`
+          id,
+          motorhome_id,
+          created_at,
+          motorhome:motorhomes (
             id,
-            motorhome_id,
-            created_at,
-            motorhome:motorhomes (
-              id,
-              manufacturer,
-              model,
-              year,
-              mileage,
-              status,
-              country,
-              listing_number,
-              photos:motorhome_photos (url, display_order),
-              auctions (id, status, current_bid, end_time)
-            )
-          `)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+            manufacturer,
+            model,
+            year,
+            mileage,
+            status,
+            country,
+            listing_number,
+            photos:motorhome_photos (url, display_order),
+            auctions (id, status, current_bid, end_time)
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
-        setFavorites((data as unknown as FavoriteVehicle[]) || []);
-      } catch (error) {
-        console.error("Error loading favorites:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadFavorites();
+      if (error) throw error;
+      setFavorites((data as unknown as FavoriteVehicle[]) || []);
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useLiveData(loadFavorites, { enabled: !!user, pollingInterval: 60_000 });
 
   const handleRemove = async (e: React.MouseEvent, motorhomeId: string) => {
     e.preventDefault();

@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,46 +64,43 @@ export default function MyInvoices() {
 
   const sortedInvoices = useMemo(() => sortData(invoices, invoiceSortAccessors), [invoices, sortData]);
 
-  useEffect(() => {
+  const loadInvoices = useCallback(async () => {
     if (!user) return;
 
-    const loadInvoices = async () => {
-      setLoading(true);
-      try {
-        // Load customer number
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('customer_number')
-          .eq('id', user.id)
-          .single();
-        if (profileData?.customer_number) setCustomerNumber(profileData.customer_number);
+    setLoading(true);
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('customer_number')
+        .eq('id', user.id)
+        .single();
+      if (profileData?.customer_number) setCustomerNumber(profileData.customer_number);
 
-        const { data, error } = await supabase
-          .from("invoices")
-          .select(`
-            *,
-            auction:auctions (
-              id,
-              motorhome:motorhomes (
-                manufacturer,
-                model
-              )
+      const { data, error } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          auction:auctions (
+            id,
+            motorhome:motorhomes (
+              manufacturer,
+              model
             )
-          `)
-          .eq("dealer_id", user.id)
-          .order("invoice_date", { ascending: false });
+          )
+        `)
+        .eq("dealer_id", user.id)
+        .order("invoice_date", { ascending: false });
 
-        if (error) throw error;
-        setInvoices((data as unknown as Invoice[]) || []);
-      } catch (error) {
-        console.error("Error loading invoices:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInvoices();
+      if (error) throw error;
+      setInvoices((data as unknown as Invoice[]) || []);
+    } catch (error) {
+      console.error("Error loading invoices:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useLiveData(loadInvoices, { enabled: !!user, pollingInterval: 60_000 });
 
   const getStatusBadge = (invoice: Invoice) => {
     const status = invoice.payment_status || invoice.status;

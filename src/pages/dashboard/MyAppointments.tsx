@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, DollarSign, Key, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveData } from "@/hooks/useLiveData";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -71,11 +72,7 @@ const MyAppointments = () => {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user) {
-      fetchAppointments();
-    }
-  }, [user, fetchAppointments]);
+  useLiveData(fetchAppointments, { enabled: !!user, pollingInterval: 0 });
 
   const cancelAppointment = async (appointmentId: string) => {
     try {

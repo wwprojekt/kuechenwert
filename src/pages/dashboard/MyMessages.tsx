@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +51,7 @@ export default function MyMessages() {
     message: "",
   });
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -68,11 +69,9 @@ export default function MyMessages() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadMessages();
   }, [user]);
+
+  useLiveData(loadMessages, { enabled: !!user, pollingInterval: 60_000 });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

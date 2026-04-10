@@ -197,6 +197,7 @@ type DispositionItem = {
   created_at: string | null;
   source_label: string;
   wrong_number_email_count: number;
+  wrong_number_email_last_sent: string | null;
   admin_estimated_value: number | null;
 };
 
@@ -1042,6 +1043,7 @@ export default function AdminLeads() {
         created_at: s.created_at,
         source_label: "Wizard",
         wrong_number_email_count: s.wrong_number_email_count || 0,
+        wrong_number_email_last_sent: s.wrong_number_email_last_sent || null,
         admin_estimated_value: s.admin_estimated_value || null,
       });
     });
@@ -1058,6 +1060,7 @@ export default function AdminLeads() {
         created_at: l.created_at,
         source_label: "Quick-Lead",
         wrong_number_email_count: l.wrong_number_email_count || 0,
+        wrong_number_email_last_sent: l.wrong_number_email_last_sent || null,
         admin_estimated_value: l.admin_estimated_value || null,
       });
     });
@@ -1074,6 +1077,7 @@ export default function AdminLeads() {
         created_at: l.created_at,
         source_label: "Wertrechner",
         wrong_number_email_count: l.wrong_number_email_count || 0,
+        wrong_number_email_last_sent: l.wrong_number_email_last_sent || null,
         admin_estimated_value: l.admin_estimated_value || l.ai_estimated_value || null,
       });
     });
@@ -2649,27 +2653,43 @@ export default function AdminLeads() {
                           </TableCell>
                           {isWrongNumber && (
                             <TableCell>
-                              <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleSendWrongNumberEmail(item); }}
-                                  disabled={sendingWrongNumberEmail === item.id || !item.email}
-                                  className="text-xs bg-red-600 hover:bg-red-700"
-                                  title={!item.email ? "Keine E-Mail-Adresse vorhanden" : "Falsche-Nummer-E-Mail senden"}
-                                >
-                                  {sendingWrongNumberEmail === item.id ? (
-                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Sende...</>
-                                  ) : (
-                                    <><Send className="w-3 h-3 mr-1" /> E-Mail senden</>
-                                  )}
-                                </Button>
-                                {item.wrong_number_email_count > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {item.wrong_number_email_count}x gesendet
-                                  </Badge>
-                                )}
-                              </div>
+                              {(() => {
+                                const maxReached = item.wrong_number_email_count >= 3;
+                                const lastSent = item.wrong_number_email_last_sent;
+                                const daysSinceLast = lastSent ? (Date.now() - new Date(lastSent).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+                                const cooldownActive = daysSinceLast < 7;
+                                const blocked = maxReached || cooldownActive;
+                                return (
+                                  <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={(e) => { e.stopPropagation(); handleSendWrongNumberEmail(item); }}
+                                      disabled={sendingWrongNumberEmail === item.id || !item.email || blocked}
+                                      className={`text-xs ${blocked ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}
+                                      title={
+                                        !item.email ? "Keine E-Mail-Adresse vorhanden"
+                                        : maxReached ? "Max. 3 E-Mails pro Lead erreicht"
+                                        : cooldownActive ? `Cooldown: nächster Versand in ${Math.ceil(7 - daysSinceLast)} Tag(en)`
+                                        : "Falsche-Nummer-E-Mail senden"
+                                      }
+                                    >
+                                      {sendingWrongNumberEmail === item.id ? (
+                                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Sende...</>
+                                      ) : maxReached ? (
+                                        <>Max erreicht</>
+                                      ) : (
+                                        <><Send className="w-3 h-3 mr-1" /> E-Mail senden</>
+                                      )}
+                                    </Button>
+                                    {item.wrong_number_email_count > 0 && (
+                                      <Badge variant={maxReached ? "destructive" : "secondary"} className="text-xs">
+                                        {item.wrong_number_email_count}/3 gesendet
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                           )}
                           <TableCell>

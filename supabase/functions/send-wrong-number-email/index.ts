@@ -162,6 +162,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Anti-Spam: Max 3 emails per lead, ever
+    const currentCount = lead.wrong_number_email_count || 0;
+    if (currentCount >= 3) {
+      return new Response(
+        JSON.stringify({ error: `Bereits ${currentCount}x gesendet. Maximale Anzahl erreicht.` }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Anti-Spam: Cooldown 7 days between sends to same lead
+    const lastSent = lead.wrong_number_email_last_sent;
+    if (lastSent) {
+      const daysSinceLast = (Date.now() - new Date(lastSent).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceLast < 7) {
+        const nextAllowed = new Date(new Date(lastSent).getTime() + 7 * 24 * 60 * 60 * 1000);
+        return new Response(
+          JSON.stringify({
+            error: `Letzte E-Mail vor ${Math.round(daysSinceLast)} Tag(en) gesendet. Nächster Versand möglich ab ${nextAllowed.toLocaleDateString("de-DE")}.`,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Use override value, or DB value
     const estimatedValue = overrideValue || info.estimatedValue;
     if (!estimatedValue) {
@@ -321,7 +345,6 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Increment wrong_number_email_count and set last_sent timestamp
-    const currentCount = lead.wrong_number_email_count || 0;
     await supabase
       .from(tableName)
       .update({

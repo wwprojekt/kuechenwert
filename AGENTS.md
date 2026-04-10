@@ -478,6 +478,34 @@ After code changes, these functions need redeploying:
 - Haendler + SEO-Seite: RPC get_public_platform_stats funktioniert
 - Alle 92 Motorhomes haben account_type='private' (keine null-Werte)
 
+## Push-Notification Integration (08.04.2026 Session 7)
+
+### Bestandsaufnahme & Fixes
+- **Service Worker** (`public/sw.js`): Push-Handler existierten (push, notificationclick, pushsubscriptionchange)
+- ❌ **`serviceWorker.ts` war nie importiert** → SW registrierte sich nie → Push konnte nie funktionieren
+  - Fix: `import "./lib/serviceWorker"` in `main.tsx` (Side-effect: auto-registers in production)
+- ❌ **`usePushNotifications` Hook war verwaist** → 0 Komponenten nutzten ihn
+  - Fix: In `NotificationPreferences.tsx` eingebunden
+- ❌ **Kein Push-Toggle in der UI** → DB hatte `push_enabled`, `push_new_bid`, `push_outbid`, `push_auction_ending` Spalten, aber UI zeigte sie nicht
+  - Fix: Neue Push-Notification-Card in NotificationPreferences mit:
+    - Browser-Unterstützung-Check
+    - Subscribe/Unsubscribe-Button (steuert `push_subscriptions` Tabelle)
+    - Aktiv/Blockiert-Badge je nach Browser-Permission
+    - Individuelle Toggles (push_new_bid, push_outbid, push_auction_ending)
+- **`push_subscriptions`**: 0 Rows (logisch, da vorher kein UI zum Subscriben existierte)
+- **`send-push-notification` Edge Function**: Aktiv, aber nutzt kein VAPID-Signing/ECDH-Encryption (Backend-Limitation für echte Web Push)
+
+### Nicht-funktionale Schwächen – Aktueller Status
+| Feature | Alter Status | Neuer Status |
+|---|---|---|
+| `analytics_events` Tracking | "nie angebunden" | ✅ **Funktioniert** (57+ Rows, 12 Dateien rufen trackEvent auf, flushQueues alle 30s) |
+| `analytics_daily_summary` | "nie befüllt" | ✅ **View repariert** (liefert Daten aus analytics_page_views) |
+| `audit_logs` / `useAuditLog` | "nie verdrahtet" | ✅ **Integriert** in AdminAuctionDetail, AdminDealerDetail, AdminSettings |
+| `DashboardLayout.tsx` | "Dead Code" | ✅ **Gelöscht** (SmartDashboard ist der Ersatz) |
+| Push Notifications | "0 Einträge" | ✅ **UI integriert** (SW Registration + Hook + Toggle in NotificationPreferences) |
+| Blog | "0 Artikel" | ⏸️ Bewusst offen gelassen |
+| Migration Edge Functions | "sollten deaktiviert werden" | ⏸️ Harmlos (benötigen service_role, werden nie aufgerufen) |
+
 ## Dev Environment Notes
 - .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)

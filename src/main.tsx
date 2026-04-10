@@ -4,6 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { z } from "zod";
 import { germanZodErrorMap } from "./lib/germanErrors";
 import { installGlobalErrorHandlers, initBreadcrumbTracking } from "./lib/errorLogService";
+import "./lib/serviceWorker"; // Side-effect: auto-registers SW in production
 import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import App from "./App.tsx";

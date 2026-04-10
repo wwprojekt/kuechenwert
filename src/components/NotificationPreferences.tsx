@@ -13,15 +13,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Bell, 
+  BellRing,
   Mail, 
   Volume2, 
   Clock,
-  TestTube
+  TestTube,
+  Smartphone,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAudioNotification } from '@/hooks/useAudioNotification';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface NotificationPreferences {
   // Email preferences
@@ -32,6 +40,12 @@ interface NotificationPreferences {
   email_payment_reminder: boolean;
   email_new_auction: boolean;
   email_price_alerts: boolean;
+  
+  // Push preferences
+  push_enabled: boolean;
+  push_new_bid: boolean;
+  push_outbid: boolean;
+  push_auction_ending: boolean;
   
   // Audio preferences
   audio_enabled: boolean;
@@ -56,6 +70,7 @@ export const NotificationPreferences = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const audioNotifications = useAudioNotification();
+  const push = usePushNotifications();
   
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email_new_bid: true,
@@ -65,6 +80,10 @@ export const NotificationPreferences = () => {
     email_payment_reminder: true,
     email_new_auction: true,
     email_price_alerts: true,
+    push_enabled: false,
+    push_new_bid: true,
+    push_outbid: true,
+    push_auction_ending: true,
     audio_enabled: true,
     audio_volume: 0.7,
     audio_new_bid: true,
@@ -139,6 +158,28 @@ export const NotificationPreferences = () => {
     savePreferencesMutation.mutate(preferences);
   };
 
+  const handlePushToggle = async () => {
+    if (push.isSubscribed) {
+      const success = await push.unsubscribe();
+      if (success) {
+        setPreferences(p => ({ ...p, push_enabled: false }));
+        toast({ title: 'Push-Benachrichtigungen deaktiviert' });
+      } else {
+        toast({ title: 'Fehler', description: 'Push konnte nicht deaktiviert werden', variant: 'destructive' });
+      }
+    } else {
+      const success = await push.subscribe();
+      if (success) {
+        setPreferences(p => ({ ...p, push_enabled: true }));
+        toast({ title: 'Push-Benachrichtigungen aktiviert', description: 'Sie erhalten jetzt Push-Nachrichten bei wichtigen Ereignissen' });
+      } else if (push.permission === 'denied') {
+        toast({ title: 'Berechtigung verweigert', description: 'Bitte erlauben Sie Benachrichtigungen in Ihren Browsereinstellungen', variant: 'destructive' });
+      } else {
+        toast({ title: 'Fehler', description: 'Push konnte nicht aktiviert werden', variant: 'destructive' });
+      }
+    }
+  };
+
   const handleTestAudio = async () => {
     await audioNotifications.testNotification();
   };
@@ -206,6 +247,99 @@ export const NotificationPreferences = () => {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Push Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Push-Benachrichtigungen
+          </CardTitle>
+          <CardDescription>
+            Erhalten Sie Echtzeit-Benachrichtigungen direkt im Browser
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          {!push.isSupported ? (
+            <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="text-sm text-muted-foreground">
+                Push-Benachrichtigungen werden von Ihrem Browser nicht unterstützt.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="font-medium flex items-center gap-2">
+                    Push-Benachrichtigungen aktivieren
+                    {push.isSubscribed ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Aktiv
+                      </Badge>
+                    ) : push.permission === 'denied' ? (
+                      <Badge variant="destructive">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Blockiert
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {push.permission === 'denied' 
+                      ? 'Push ist in Ihren Browsereinstellungen blockiert. Bitte erlauben Sie Benachrichtigungen für diese Seite.'
+                      : 'Sofortige Benachrichtigungen bei Geboten, Überbieten und Auktionsende'}
+                  </div>
+                </div>
+                <Button
+                  variant={push.isSubscribed ? "outline" : "default"}
+                  size="sm"
+                  onClick={handlePushToggle}
+                  disabled={push.isLoading || push.permission === 'denied'}
+                >
+                  {push.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : push.isSubscribed ? (
+                    <>
+                      <BellRing className="h-4 w-4 mr-2" />
+                      Deaktivieren
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Aktivieren
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {push.isSubscribed && (
+                <div className="grid gap-3">
+                  {[
+                    { key: 'push_new_bid', label: 'Neue Gebote', description: 'Push bei neuen Geboten auf Ihre Auktionen' },
+                    { key: 'push_outbid', label: 'Überboten', description: 'Sofort-Benachrichtigung wenn Sie überboten werden' },
+                    { key: 'push_auction_ending', label: 'Auktion endet bald', description: 'Push-Erinnerung vor Auktionsende' },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{item.label}</div>
+                        <div className="text-sm text-muted-foreground">{item.description}</div>
+                      </div>
+                      <Switch
+                        checked={preferences[item.key as keyof NotificationPreferences] as boolean}
+                        onCheckedChange={(checked) =>
+                          setPreferences({ ...preferences, [item.key]: checked })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

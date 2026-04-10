@@ -431,6 +431,14 @@ After code changes, these functions need redeploying:
 - `currentBidForCommission = auction ? (auction.current_bid || auction.starting_bid) : 0`
 - **REGEL**: NIEMALS React Hooks nach einem early return aufrufen — alle Hooks MÜSSEN bedingungslos vor jedem `return` stehen
 
+## AuctionDetail Architektur (10.04.2026)
+- **Commission-Hook refactored**: `useCommissionFromTiers` lebt jetzt in `AuctionCommissionOverview` (Child-Component), NICHT mehr in AuctionDetail.tsx
+  - Hook wird NUR ausgeführt wenn Auction geladen UND User Dealer/Admin ist
+  - Kein unnötiger commission_tiers DB-Call für anonyme/private Besucher
+  - React Hook-Order-Violation architektonisch unmöglich (nicht mehr Workaround mit `saleAmount=0`)
+- **Loading Skeleton**: `AuctionDetailSkeleton` ersetzt den weißen Spinner – User sieht sofort Seitenstruktur
+- **Pattern für zukünftige Hooks**: Hooks die geladene Daten brauchen → in Child-Component verschieben, NICHT mit Fallback-Wert im Parent aufrufen
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

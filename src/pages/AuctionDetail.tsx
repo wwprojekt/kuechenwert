@@ -399,6 +399,53 @@ const AuctionDetail = () => {
     };
   }, [id, user, toast, notifyOutbid]);
 
+  // Realtime: Subscribe to kaufchance offer changes (seller responds to this user's offers)
+  useEffect(() => {
+    if (!user || !id || auction?.status !== 'kaufchance') return;
+
+    const kaufchanceChannel = supabase
+      .channel(`kaufchance-detail-${id}-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "post_auction_offers",
+          filter: `buyer_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newRecord = payload.new as any;
+          if (newRecord.auction_id !== id) return;
+
+          if (newRecord.status === "countered") {
+            const amount = newRecord.counter_offer_amount;
+            toast({
+              title: "Neues Gegenangebot!",
+              description: amount
+                ? `Der Verkäufer hat ein Gegenangebot über ${Number(amount).toLocaleString("de-DE")} € gemacht.`
+                : "Der Verkäufer hat ein Gegenangebot gemacht.",
+            });
+          } else if (newRecord.status === "accepted") {
+            toast({
+              title: "🎉 Angebot angenommen!",
+              description: "Der Verkäufer hat Ihr Angebot akzeptiert! Der Kaufvertrag wird erstellt.",
+            });
+          } else if (newRecord.status === "rejected") {
+            toast({
+              title: "Angebot abgelehnt",
+              description: "Ihr Angebot wurde abgelehnt. Sie können ein neues Angebot abgeben.",
+              variant: "destructive",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(kaufchanceChannel);
+    };
+  }, [id, user, auction?.status, toast]);
+
   // Countdown timer
   useEffect(() => {
     if (!auction) return;

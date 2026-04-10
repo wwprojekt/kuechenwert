@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
-import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy } from "lucide-react";
+import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -69,11 +69,15 @@ export default function MyKaufchancen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("browse");
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const isMountedRef = useRef(true);
+  const isLoadingRef = useRef(false);
 
-  const loadData = async () => {
-    if (!user) return;
+  const loadData = useCallback(async (silent = false) => {
+    if (!user || isLoadingRef.current) return;
 
-    setLoading(true);
+    isLoadingRef.current = true;
+    if (!silent) setLoading(true);
     try {
       // Step 1: Load the current user's kaufchance invitations
       const { data: invitations, error: invError } = await supabase
@@ -82,6 +86,7 @@ export default function MyKaufchancen() {
         .eq("bidder_id", user.id);
 
       if (invError) throw invError;
+      if (!isMountedRef.current) return;
 
       // Step 2: Load the auctions for which this user is invited
       if (invitations && invitations.length > 0) {
@@ -110,6 +115,7 @@ export default function MyKaufchancen() {
           .order("kaufchance_expires_at", { ascending: true });
 
         if (auctionError) throw auctionError;
+        if (!isMountedRef.current) return;
 
         // Merge invitation data into auction data
         const invMap = new Map(invitations.map((inv: any) => [inv.auction_id, inv]));
@@ -151,17 +157,117 @@ export default function MyKaufchancen() {
         .order("created_at", { ascending: false });
 
       if (offersError) throw offersError;
+      if (!isMountedRef.current) return;
+
       setMyOffers((offersData as unknown as MyOffer[]) || []);
+      setLastRefresh(new Date());
     } catch (error) {
       console.error("Error loading kaufchancen:", error);
     } finally {
-      setLoading(false);
+      isLoadingRef.current = false;
+      if (isMountedRef.current) setLoading(false);
     }
-  };
+  }, [user]);
 
+  // Initial load
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [loadData]);
+
+  // Realtime: Subscribe to offer changes (seller responds, counter-offer, etc.)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`kaufchance-offers-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "post_auction_offers",
+          filter: `buyer_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Seller responded → reload data silently
+          loadData(true);
+
+          // Toast for status changes
+          const newStatus = (payload.new as any)?.status;
+          if (payload.eventType === "UPDATE" && newStatus) {
+            if (newStatus === "countered") {
+              const amount = (payload.new as any)?.counter_offer_amount;
+              toast({
+                title: "Neues Gegenangebot!",
+                description: amount
+                  ? `Der Verkäufer hat ein Gegenangebot über ${Number(amount).toLocaleString("de-DE")} € gemacht.`
+                  : "Der Verkäufer hat ein Gegenangebot gemacht.",
+              });
+            } else if (newStatus === "accepted") {
+              toast({
+                title: "🎉 Angebot angenommen!",
+                description: "Der Verkäufer hat Ihr Angebot akzeptiert!",
+              });
+            } else if (newStatus === "rejected") {
+              toast({
+                title: "Angebot abgelehnt",
+                description: "Der Verkäufer hat Ihr Angebot leider abgelehnt.",
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "kaufchance_invitations",
+          filter: `bidder_id=eq.${user.id}`,
+        },
+        () => {
+          // New kaufchance invitation → reload
+          loadData(true);
+          toast({
+            title: "Neue Kaufchance!",
+            description: "Sie wurden als Top-Bieter zu einer neuen Kaufchance eingeladen.",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, loadData, toast]);
+
+  // Refetch when tab/window regains focus
+  useEffect(() => {
+    const handleFocus = () => loadData(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") loadData(true);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loadData]);
+
+  // Polling fallback: refresh every 30s as safety net
+  useEffect(() => {
+    const interval = setInterval(() => loadData(true), 30_000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  // Cleanup mount ref
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const handleAcceptCounterOffer = async (e: React.MouseEvent, offer: MyOffer) => {
     e.preventDefault();
@@ -240,14 +346,31 @@ export default function MyKaufchancen() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-          <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
-          Kaufchancen
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+            Kaufchancen
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[10px] text-muted-foreground hidden sm:inline">
+            {format(lastRefresh, "HH:mm", { locale: de })} Uhr
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => loadData(false)}
+            disabled={loading}
+            title="Aktualisieren"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

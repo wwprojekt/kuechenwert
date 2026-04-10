@@ -526,7 +526,8 @@ After code changes, these functions need redeploying:
     - Aktiv/Blockiert-Badge je nach Browser-Permission
     - Individuelle Toggles (push_new_bid, push_outbid, push_auction_ending)
 - **`push_subscriptions`**: 0 Rows (logisch, da vorher kein UI zum Subscriben existierte)
-- **`send-push-notification` Edge Function**: Aktiv, aber nutzt kein VAPID-Signing/ECDH-Encryption (Backend-Limitation für echte Web Push)
+- **`send-push-notification` Edge Function v8**: ✅ Vollständiges Web Push mit VAPID-Signing (ES256) + ECDH/aes128gcm Payload-Encryption (RFC 8291)
+- **VAPID Keys**: P-256 Key Pair in Supabase Vault (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`)
 
 ### Nicht-funktionale Schwächen – Aktueller Status
 | Feature | Alter Status | Neuer Status |
@@ -535,7 +536,7 @@ After code changes, these functions need redeploying:
 | `analytics_daily_summary` | "nie befüllt" | ✅ **View repariert** (liefert Daten aus analytics_page_views) |
 | `audit_logs` / `useAuditLog` | "nie verdrahtet" | ✅ **Integriert** in AdminAuctionDetail, AdminDealerDetail, AdminSettings |
 | `DashboardLayout.tsx` | "Dead Code" | ✅ **Gelöscht** (SmartDashboard ist der Ersatz) |
-| Push Notifications | "0 Einträge" | ✅ **UI integriert** (SW Registration + Hook + Toggle in NotificationPreferences) |
+| Push Notifications | "0 Einträge" | ✅ **Voll funktionsfähig** (SW + UI + VAPID/ECDH Edge Function v8) |
 | Blog | "0 Artikel" | ⏸️ Bewusst offen gelassen |
 | Migration Edge Functions | "sollten deaktiviert werden" | ⏸️ Harmlos (benötigen service_role, werden nie aufgerufen) |
 

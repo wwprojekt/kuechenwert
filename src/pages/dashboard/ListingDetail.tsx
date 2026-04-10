@@ -48,7 +48,8 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { useSessionExpired } from "@/components/SessionExpiredDialog";
+import { withSessionRetry, invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
@@ -57,6 +58,7 @@ export default function ListingDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { showSessionExpired } = useSessionExpired();
   const queryClient = useQueryClient();
   const [addendumText, setAddendumText] = useState("");
   const [showAddendumForm, setShowAddendumForm] = useState(false);
@@ -245,11 +247,11 @@ export default function ListingDetail() {
   const handleSellerAcceptOffer = async (offerId: string) => {
     setRespondingOfferId(offerId);
     try {
-      const { data, error } = await supabase.functions.invoke('accept-kaufchance-offer', {
+      const { data, error } = await invokeWithAuth('accept-kaufchance-offer', {
         body: { offerId },
       });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Unbekannter Fehler');
+      if (!(data as any)?.success) throw new Error((data as any)?.error || 'Unbekannter Fehler');
 
       toast({
         title: 'Angebot angenommen!',
@@ -258,6 +260,10 @@ export default function ListingDetail() {
       loadKaufchanceOffers();
       queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
     } catch (err: any) {
+      if (err instanceof SessionExpiredError) {
+        showSessionExpired(`/dashboard/listing/${id}`);
+        return;
+      }
       console.error('Error accepting offer:', err);
       toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
     } finally {

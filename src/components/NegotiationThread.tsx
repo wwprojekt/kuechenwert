@@ -15,6 +15,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSessionExpired } from "@/components/SessionExpiredDialog";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { useState } from "react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -49,6 +51,7 @@ interface NegotiationThreadProps {
 export function NegotiationThread({ offers, isSeller, onOfferUpdated }: NegotiationThreadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { showSessionExpired } = useSessionExpired();
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [counterAmount, setCounterAmount] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
@@ -103,11 +106,11 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
     try {
       if (actionType === "accept") {
         // Use the Edge Function for acceptance to trigger full purchase flow
-        const { data: acceptResult, error: acceptError } = await supabase.functions.invoke('accept-kaufchance-offer', {
+        const { data: acceptResult, error: acceptError } = await invokeWithAuth('accept-kaufchance-offer', {
           body: { offerId: selectedOffer.id },
         });
         if (acceptError) throw acceptError;
-        if (!acceptResult?.success) throw new Error(acceptResult?.error || 'Unbekannter Fehler');
+        if (!(acceptResult as any)?.success) throw new Error((acceptResult as any)?.error || 'Unbekannter Fehler');
       } else {
         const updateData: any = {
           seller_response: responseMessage.trim() || null,
@@ -178,6 +181,10 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
       setResponseMessage("");
       onOfferUpdated?.();
     } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        showSessionExpired('/dashboard/kaufchancen');
+        return;
+      }
       console.error("Error updating offer:", error);
       toast({
         title: "Fehler",

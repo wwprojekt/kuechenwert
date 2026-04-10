@@ -10,6 +10,8 @@ import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionExpired } from "@/components/SessionExpiredDialog";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -64,6 +66,7 @@ interface MyOffer {
 export default function MyKaufchancen() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { showSessionExpired } = useSessionExpired();
   const [kaufchancen, setKaufchancen] = useState<KaufchanceAuction[]>([]);
   const [myOffers, setMyOffers] = useState<MyOffer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,17 @@ export default function MyKaufchancen() {
     isLoadingRef.current = true;
     if (!silent) setLoading(true);
     try {
+      // Session-Check: Ensure valid token before RLS-protected queries
+      // (expired sessions cause RLS to silently return empty results)
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          showSessionExpired('/dashboard/kaufchancen');
+          return;
+        }
+      }
+
       // Step 1: Load the current user's kaufchance invitations
       const { data: invitations, error: invError } = await supabase
         .from("kaufchance_invitations")
@@ -126,6 +140,17 @@ export default function MyKaufchancen() {
 
         setKaufchancen(merged as KaufchanceAuction[]);
       } else {
+        // Empty invitations WHILE logged in → could be stale session
+        // Verify by attempting a known-good query
+        const { data: verifySession } = await supabase
+          .from("kaufchance_invitations")
+          .select("id")
+          .limit(0);
+        if (verifySession === null) {
+          // Query returned null (not empty array) → session issue
+          showSessionExpired('/dashboard/kaufchancen');
+          return;
+        }
         setKaufchancen([]);
       }
 
@@ -167,7 +192,7 @@ export default function MyKaufchancen() {
       isLoadingRef.current = false;
       if (isMountedRef.current) setLoading(false);
     }
-  }, [user]);
+  }, [user, showSessionExpired]);
 
   // Initial load
   useEffect(() => {
@@ -274,23 +299,27 @@ export default function MyKaufchancen() {
     e.stopPropagation();
     setRespondingOfferId(offer.id);
     try {
-      const { data, error } = await supabase.functions.invoke('accept-kaufchance-offer', {
+      const { data, error } = await invokeWithAuth('accept-kaufchance-offer', {
         body: { offerId: offer.id },
       });
 
       if (error) throw error;
 
-      if (data?.success) {
+      if ((data as any)?.success) {
         toast({
           title: 'Gegenangebot angenommen!',
           description: `Sie haben das Gegenangebot von ${offer.counter_offer_amount!.toLocaleString('de-DE')} € angenommen. Der Kaufvertrag wird erstellt.`,
         });
       } else {
-        throw new Error(data?.error || 'Unbekannter Fehler');
+        throw new Error((data as any)?.error || 'Unbekannter Fehler');
       }
 
       loadData();
     } catch (err: any) {
+      if (err instanceof SessionExpiredError) {
+        showSessionExpired('/dashboard/kaufchancen');
+        return;
+      }
       console.error('Error accepting counter offer:', err);
       toast({
         title: 'Fehler',

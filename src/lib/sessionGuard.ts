@@ -388,3 +388,66 @@ export async function withSessionRetry<T>(
     throw error; // Non-session error, re-throw
   }
 }
+
+/**
+ * SESSION_EXPIRED error sentinel – can be caught by callers to show SessionExpiredDialog.
+ */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('SESSION_EXPIRED');
+    this.name = 'SessionExpiredError';
+  }
+}
+
+/**
+ * Sichere Edge Function Aufrufe mit automatischem Token-Refresh + 401-Retry.
+ * 
+ * Verwendung: Statt `supabase.functions.invoke('fn', { body })` direkt,
+ * nutze `invokeWithAuth('fn', { body })`. Der Token wird vor dem Aufruf
+ * validiert und bei 401 automatisch erneuert + retry.
+ * 
+ * Bei fehlgeschlagenem Refresh wird SessionExpiredError geworfen,
+ * den der Caller fangen und den SessionExpiredDialog anzeigen kann.
+ * 
+ * @param functionName Name der Edge Function
+ * @param options body und andere Optionen
+ * @returns { data, error } vom Edge Function Aufruf
+ */
+export async function invokeWithAuth(
+  functionName: string,
+  options?: { body?: Record<string, unknown> }
+): Promise<{ data: unknown; error: null } | { data: null; error: Error }> {
+  // Step 1: Get a validated fresh token
+  let accessToken = await getFreshAccessToken();
+  if (!accessToken) {
+    throw new SessionExpiredError();
+  }
+
+  // Step 2: Call with fresh token
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: options?.body,
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  // Step 3: If 401, retry once with a new token
+  if (error && 'context' in error && (error as any).context?.status === 401) {
+    logger.warn(`${functionName}: 401, retrying with fresh token...`);
+    accessToken = await getFreshAccessToken();
+    if (!accessToken) {
+      throw new SessionExpiredError();
+    }
+
+    const retry = await supabase.functions.invoke(functionName, {
+      body: options?.body,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (retry.error && 'context' in retry.error && (retry.error as any).context?.status === 401) {
+      throw new SessionExpiredError();
+    }
+
+    return retry;
+  }
+
+  return { data, error };
+}

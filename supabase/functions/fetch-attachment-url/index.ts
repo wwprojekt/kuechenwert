@@ -30,15 +30,15 @@ serve(async (req) => {
       });
     }
 
-    // Check admin role
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Check admin role (via user_roles table, NOT profiles)
+    const { data: roles } = await supabase
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!profile || profile.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+    const isAdmin = roles?.some((r: any) => r.role === 'admin');
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

@@ -515,14 +515,18 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           reply_to_message_type: selectedItem.source !== 'email' ? selectedItem.source : undefined,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Try to extract the actual error message from the response
+        const detail = data?.error || error.message || 'Unbekannter Fehler';
+        throw new Error(detail);
+      }
       toast.success("Antwort gesendet");
       setSelectedItem(null);
       setReplyContent("");
       fetchInbox();
     } catch (error: any) {
       console.error("Error sending reply:", error);
-      toast.error("Antwort konnte nicht gesendet werden");
+      toast.error(`Antwort fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
     } finally {
       setIsReplying(false);
     }
@@ -750,21 +754,25 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                     } else if (att.id && (orig as AdminEmail).resend_id) {
                       // Fetch fresh download URL from Resend API via Edge Function
                       try {
-                        const res = await fetch(
-                          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-attachment-url`,
-                          {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await (window as any).__supabase?.auth?.getSession())?.data?.session?.access_token || ''}` },
-                            body: JSON.stringify({ emailId: (orig as AdminEmail).resend_id, attachmentId: att.id }),
-                          }
-                        );
-                        if (res.ok) {
-                          const data = await res.json();
-                          if (data.download_url) window.open(data.download_url, '_blank');
+                        const { data: sessionData } = await supabase.auth.getSession();
+                        const token = sessionData?.session?.access_token || '';
+                        const { data, error } = await supabase.functions.invoke('fetch-attachment-url', {
+                          body: { emailId: (orig as AdminEmail).resend_id, attachmentId: att.id },
+                        });
+                        if (error) {
+                          toast.error("Anhang konnte nicht geladen werden");
+                          console.error('Failed to fetch attachment URL:', error);
+                        } else if (data?.download_url) {
+                          window.open(data.download_url, '_blank');
+                        } else {
+                          toast.error("Kein Download-Link verfügbar");
                         }
                       } catch (err) {
                         console.error('Failed to fetch attachment URL:', err);
+                        toast.error("Anhang konnte nicht geladen werden");
                       }
+                    } else {
+                      toast.error("Anhang kann nicht geöffnet werden (keine Download-Daten verfügbar)");
                     }
                   };
 
@@ -1320,7 +1328,10 @@ function ComposeTab() {
           scheduled_at: scheduledAt || undefined,
         },
       });
-      if (error) throw error;
+      if (error) {
+        const detail = data?.error || error.message || 'Unbekannter Fehler';
+        throw new Error(detail);
+      }
       if (scheduledAt) {
         toast.success(`E-Mail geplant für ${format(new Date(scheduledAt), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}`);
       } else {
@@ -1331,7 +1342,7 @@ function ComposeTab() {
       setShowCcBcc(false); setShowSchedule(false);
     } catch (error: any) {
       console.error("Error sending email:", error);
-      toast.error("E-Mail konnte nicht gesendet werden");
+      toast.error(`E-Mail fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
     } finally {
       setIsSending(false);
     }

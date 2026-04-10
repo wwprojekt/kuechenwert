@@ -166,9 +166,23 @@ Deno.serve(async (req) => {
       minimum_bid?: number;
     };
 
-    // If the RPC returned a validation error, throw it
+    // If the RPC returned a validation error, return structured error with current state
     if (!outcome.success) {
-      throw new Error(outcome.error || 'Gebot konnte nicht platziert werden');
+      return new Response(
+        JSON.stringify({
+          error: outcome.error || 'Gebot konnte nicht platziert werden',
+          minimum_bid: outcome.minimum_bid,
+          current_bid: outcome.current_bid,
+        }),
+        {
+          status: 400,
+          headers: {
+            ...getCorsHeaders(req),
+            ...createRateLimitHeaders(rateLimitResult),
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     }
 
     console.log('Bid placed successfully via RPC:', outcome);

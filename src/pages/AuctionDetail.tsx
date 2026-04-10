@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -116,41 +117,31 @@ const AuctionDetail = () => {
   const { isFavorite, toggleFavorite, isLoading: isFavLoading } = useFavorites();
   const hotbidSoundPlayed = useRef(false);
   const { playNotification, notifyOutbid } = useAudioNotification();
-  const [dealerPostalCode, setDealerPostalCode] = useState<string | null>(null);
   const [addenda, setAddenda] = useState<{id: string; content: string; created_at: string}[]>([]);
-  const [isInvitedToKaufchance, setIsInvitedToKaufchance] = useState(false);
 
-  // Check if current user is invited to kaufchance
-  // kaufchance_invitations RLS: USING(bidder_id = auth.uid())
-  // → bei abgelaufener Session: auth.uid()=NULL → 0 Zeilen → fälschlicherweise nicht eingeladen
-  useEffect(() => {
-    const checkKaufchanceInvitation = async () => {
-      if (!user || !id) return;
-      try {
-        // Session-Check VOR RLS-Query (getSession gibt auch abgelaufene Tokens zurück!)
-        const sessionValid = await ensureValidRLSSession();
-        if (!sessionValid) {
-          showSessionExpired(`/auktion/${id}`);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('kaufchance_invitations')
-          .select('id')
-          .eq('auction_id', id)
-          .eq('bidder_id', user.id)
-          .maybeSingle();
-        if (!error && data) {
-          setIsInvitedToKaufchance(true);
-        } else {
-          setIsInvitedToKaufchance(false);
-        }
-      } catch {
-        setIsInvitedToKaufchance(false);
+  // Check if current user is invited to kaufchance (React Query for dedup + caching)
+  const { data: isInvitedToKaufchanceData } = useQuery({
+    queryKey: ['kaufchanceInvitation', id, user?.id],
+    queryFn: async () => {
+      // Session-Check VOR RLS-Query (getSession gibt auch abgelaufene Tokens zurück!)
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) {
+        showSessionExpired(`/auktion/${id}`);
+        return false;
       }
-    };
-    checkKaufchanceInvitation();
-  }, [user, id, showSessionExpired]);
+      const { data, error } = await supabase
+        .from('kaufchance_invitations')
+        .select('id')
+        .eq('auction_id', id!)
+        .eq('bidder_id', user!.id)
+        .maybeSingle();
+      return !error && !!data;
+    },
+    enabled: !!user && !!id,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+  const isInvitedToKaufchance = isInvitedToKaufchanceData ?? false;
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
@@ -185,21 +176,20 @@ const AuctionDetail = () => {
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-  // Fetch dealer's postal code for distance calculation
-  useEffect(() => {
-    const fetchDealerPostalCode = async () => {
-      if (!user) return;
+  // Fetch dealer's postal code for distance calculation (React Query for cross-page caching)
+  const { data: dealerPostalCode = null } = useQuery({
+    queryKey: ['profilePostalCode', user?.id],
+    queryFn: async () => {
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_zip, address_zip")
-        .eq("id", user.id)
+        .eq("id", user!.id)
         .maybeSingle();
-      if (profile) {
-        setDealerPostalCode(profile.company_zip || profile.address_zip || null);
-      }
-    };
-    fetchDealerPostalCode();
-  }, [user?.id]);
+      return profile?.company_zip || profile?.address_zip || null;
+    },
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // PLZ changes very rarely
+  });
 
   // Fetch auction details
   useEffect(() => {
@@ -728,6 +718,8 @@ const AuctionDetail = () => {
 
       if (error) {
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
+        let serverMinimumBid: number | undefined;
+        let serverCurrentBid: number | undefined;
         if (error instanceof FunctionsHttpError) {
           if (error.context?.status === 401) {
             showSessionExpired(`/auktion/${id}`);
@@ -737,6 +729,8 @@ const AuctionDetail = () => {
           try {
             const body = await error.context.json();
             if (body?.error) errorMsg = body.error;
+            if (body?.minimum_bid) serverMinimumBid = body.minimum_bid;
+            if (body?.current_bid) serverCurrentBid = body.current_bid;
           } catch {
             try {
               const text = await error.context.text();
@@ -748,6 +742,19 @@ const AuctionDetail = () => {
         } else if (error instanceof FunctionsFetchError) {
           errorMsg = 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.';
         }
+
+        // Auto-update local auction state with server's current bid if stale
+        if (serverCurrentBid && auction) {
+          const localBid = auction.current_bid || auction.starting_bid;
+          if (serverCurrentBid > localBid) {
+            setAuction(prev => prev ? { ...prev, current_bid: serverCurrentBid } : prev);
+          }
+        }
+        // Pre-fill input with server minimum so user can bid with one tap
+        if (serverMinimumBid) {
+          setBidAmount(String(serverMinimumBid));
+        }
+
         throw new Error(errorMsg);
       }
 

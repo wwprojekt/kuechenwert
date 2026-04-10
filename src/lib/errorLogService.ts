@@ -338,11 +338,27 @@ export function handleAndLogError(
     errorSource?: ErrorLogEntry['errorSource'];
   }
 ): string {
-  const originalMessage = error instanceof Error 
-    ? error.message 
-    : typeof error === 'string' 
-      ? error 
-      : (error as { message?: string })?.message || 'Unknown error';
+  // Extract error message robustly – covers Error, string, Supabase PostgrestError,
+  // FunctionsHttpError, plain objects, and edge cases like {code: "PGRST...", details: "..."}
+  let originalMessage: string;
+  if (error instanceof Error) {
+    originalMessage = error.message;
+  } else if (typeof error === 'string') {
+    originalMessage = error;
+  } else if (error && typeof error === 'object') {
+    const e = error as Record<string, unknown>;
+    originalMessage = (typeof e.message === 'string' && e.message)
+      || (typeof e.error === 'string' && e.error)
+      || (typeof e.error_description === 'string' && e.error_description)
+      || (typeof e.details === 'string' && e.details)
+      || (typeof e.hint === 'string' && e.hint)
+      || (typeof e.code === 'string' ? `Error code: ${e.code}` : '')
+      || 'Unbekannter Fehler';
+    // If there's a nested cause, append it
+    if (typeof e.cause === 'string') originalMessage += ` (${e.cause})`;
+  } else {
+    originalMessage = 'Unbekannter Fehler';
+  }
 
   const translated = translateError(originalMessage);
   
@@ -356,8 +372,9 @@ export function handleAndLogError(
     (window as any).__lastLoggedErrorTime = Date.now();
   }
 
-  // Harmlose Auth-Fehler NICHT loggen (normales Benutzerverhalten)
-  const harmlessAuthPatterns = [
+  // Harmlose Fehler NICHT loggen (normales Benutzerverhalten, kein Bug)
+  const harmlessPatterns = [
+    // Auth – falsche Credentials, unbestätigte Email, Passwort-Wiederverwendung
     'Invalid login credentials',
     'Email not confirmed',
     'New password should be different',
@@ -370,11 +387,16 @@ export function handleAndLogError(
     'already registered',
     'For security purposes, you can only request this',
     'Aus Sicherheitsgründen können Sie',
+    // Bidding – erwartete Validierungsfehler bei zu niedrigen Geboten
+    'Gebot muss mindestens',
+    'Gebot muss höher',
+    'Bid must be at least',
+    'Bid must be higher',
   ];
-  const isHarmlessAuth = harmlessAuthPatterns.some(p => 
+  const isHarmless = harmlessPatterns.some(p => 
     originalMessage.includes(p) || translated.message.includes(p)
   );
-  if (isHarmlessAuth) {
+  if (isHarmless) {
     return translated.message;
   }
 
@@ -547,7 +569,10 @@ export function installGlobalErrorHandlers(): void {
     if (message.includes('Object Not Found Matching Id')) return;
 
     // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
+    // Firefox gibt "The lock request is aborted" als message + "AbortError" als name
+    const reasonName = reason instanceof Error ? reason.name : '';
     if (
+      message.includes('lock request') ||
       message.includes('Lock broken by another request') ||
       message.includes('Lock was stolen by another request') ||
       message.includes('released because another request stole it') ||
@@ -555,7 +580,8 @@ export function installGlobalErrorHandlers(): void {
       message.includes('was not released within') ||
       message.includes('Acquiring an exclusive Navigator LockManager lock') ||
       message.includes('Acquiring process lock') ||
-      message.includes('isAcquireTimeout')
+      message.includes('isAcquireTimeout') ||
+      (reasonName === 'AbortError' && message.includes('lock'))
     ) return;
     // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
     const stackStr = reason instanceof Error ? (reason.stack || '') : '';

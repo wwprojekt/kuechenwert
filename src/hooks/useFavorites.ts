@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +7,7 @@ import { withSessionRetry } from "@/lib/sessionGuard";
 import { trackEvent } from "@/lib/analyticsService";
 
 interface UseFavoritesResult {
-  favorites: string[]; // Array of motorhome IDs
+  favorites: string[];
   isLoading: boolean;
   isFavorite: (motorhomeId: string) => boolean;
   toggleFavorite: (motorhomeId: string) => Promise<void>;
@@ -14,39 +15,32 @@ interface UseFavoritesResult {
   removeFavorite: (motorhomeId: string) => Promise<void>;
 }
 
+/**
+ * Canonical query key for user favorites.
+ * All components share ONE cache entry → ONE API call instead of N.
+ */
+export const favoritesQueryKey = (userId: string | undefined) => ['favorites', userId] as const;
+
 export function useFavorites(): UseFavoritesResult {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Load favorites on mount
-  useEffect(() => {
-    if (!user) {
-      setFavorites([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const loadFavorites = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("user_favorites")
-          .select("motorhome_id")
-          .eq("user_id", user.id);
-
-        if (error) throw error;
-        setFavorites(data?.map(f => f.motorhome_id).filter(Boolean) as string[] || []);
-      } catch (error) {
-        console.error("Error loading favorites:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadFavorites();
-  }, [user?.id]);
+  const { data: favorites = [], isLoading } = useQuery({
+    queryKey: favoritesQueryKey(user?.id),
+    queryFn: async (): Promise<string[]> => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("user_favorites")
+        .select("motorhome_id")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data?.map(f => f.motorhome_id).filter(Boolean) as string[] || [];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000, // 2 min – favorites don't change often
+    gcTime: 10 * 60 * 1000,
+  });
 
   const isFavorite = useCallback((motorhomeId: string): boolean => {
     return favorites.includes(motorhomeId);
@@ -62,6 +56,10 @@ export function useFavorites(): UseFavoritesResult {
       return;
     }
 
+    // Optimistic update: immediately reflect in UI for all components
+    const prevFavorites = queryClient.getQueryData<string[]>(favoritesQueryKey(user.id));
+    queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), old => [...(old || []), motorhomeId]);
+
     try {
       await withSessionRetry(async () => {
         const { error } = await supabase.from("user_favorites").insert({
@@ -69,29 +67,27 @@ export function useFavorites(): UseFavoritesResult {
           motorhome_id: motorhomeId,
         });
         if (error) {
-          if (error.code === "23505") return; // Already exists, ignore
+          if (error.code === "23505") return;
           throw error;
         }
       }, 'Favorites.add');
 
-      setFavorites(prev => [...prev, motorhomeId]);
       trackEvent('favorite_added', { category: 'auction', properties: { motorhomeId } });
-      toast({
-        title: "Favorit hinzugefügt",
-        description: "Das Fahrzeug wurde zu Ihren Favoriten hinzugefügt",
-      });
+      toast({ title: "Favorit hinzugefügt", description: "Das Fahrzeug wurde zu Ihren Favoriten hinzugefügt" });
     } catch (error) {
+      // Rollback on failure
+      queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), prevFavorites || []);
       console.error("Error adding favorite:", error);
-      toast({
-        title: "Fehler",
-        description: "Favorit konnte nicht hinzugefügt werden",
-        variant: "destructive",
-      });
+      toast({ title: "Fehler", description: "Favorit konnte nicht hinzugefügt werden", variant: "destructive" });
     }
-  }, [user, toast]);
+  }, [user, toast, queryClient]);
 
   const removeFavorite = useCallback(async (motorhomeId: string): Promise<void> => {
     if (!user) return;
+
+    // Optimistic update
+    const prevFavorites = queryClient.getQueryData<string[]>(favoritesQueryKey(user.id));
+    queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), old => (old || []).filter(id => id !== motorhomeId));
 
     try {
       await withSessionRetry(async () => {
@@ -103,21 +99,15 @@ export function useFavorites(): UseFavoritesResult {
         if (error) throw error;
       }, 'Favorites.remove');
 
-      setFavorites(prev => prev.filter(id => id !== motorhomeId));
       trackEvent('favorite_removed', { category: 'auction', properties: { motorhomeId } });
-      toast({
-        title: "Favorit entfernt",
-        description: "Das Fahrzeug wurde aus Ihren Favoriten entfernt",
-      });
+      toast({ title: "Favorit entfernt", description: "Das Fahrzeug wurde aus Ihren Favoriten entfernt" });
     } catch (error) {
+      // Rollback on failure
+      queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), prevFavorites || []);
       console.error("Error removing favorite:", error);
-      toast({
-        title: "Fehler",
-        description: "Favorit konnte nicht entfernt werden",
-        variant: "destructive",
-      });
+      toast({ title: "Fehler", description: "Favorit konnte nicht entfernt werden", variant: "destructive" });
     }
-  }, [user, toast]);
+  }, [user, toast, queryClient]);
 
   const toggleFavorite = useCallback(async (motorhomeId: string): Promise<void> => {
     if (isFavorite(motorhomeId)) {

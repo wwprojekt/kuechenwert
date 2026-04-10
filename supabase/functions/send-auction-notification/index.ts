@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -22,6 +22,11 @@ interface AuctionEmailRequest {
   expiresAt?: string;
   reservePrice?: string;
   topBiddersCount?: string;
+  // Offer notification fields
+  offerAmount?: string;
+  buyerName?: string;
+  sellerResponse?: string;
+  counterAmount?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount }: AuctionEmailRequest = await req.json();
+    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
@@ -282,6 +287,67 @@ const handler = async (req: Request): Promise<Response> => {
           ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
           ${paragraph('Mit freundlichen Gr&uuml;&szlig;en,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+
+      case "seller_new_offer":
+        subject = `Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Sie haben ein neues Kaufangebot erhalten!</strong>')}
+          ${paragraph(`Ein H\u00e4ndler hat w\u00e4hrend der Kaufchance-Phase ein Angebot f\u00fcr Ihr Fahrzeug abgegeben.`)}
+          ${infoBox('Angebotsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
+            ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
+            ${currentBid ? detailRow('Letztes Auktionsgebot', currentBid) : ''}
+          `, 'success', settingsData)}
+          ${paragraph('<strong>Ihre M\u00f6glichkeiten:</strong>')}
+          ${paragraph('<strong>1.</strong> Angebot annehmen \u2013 Kaufvertrag wird automatisch erstellt<br><strong>2.</strong> Gegenangebot machen \u2013 Verhandeln Sie den Preis<br><strong>3.</strong> Angebot ablehnen \u2013 Warten Sie auf weitere Angebote')}
+          ${button('Angebot im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`<em>Reagieren Sie zeitnah, damit der H\u00e4ndler nicht abspringt.</em>`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+        `;
+        break;
+
+      case "buyer_offer_rejected":
+        subject = `Ihr Angebot f\u00fcr ${motorhomeModel} wurde abgelehnt`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Leider wurde Ihr Kaufangebot f\u00fcr das folgende Fahrzeug abgelehnt:')}
+          ${infoBox('Angebotsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${offerAmount ? detailRow('Ihr Angebot', offerAmount) : ''}
+            ${sellerResponse ? detailRow('Begr\u00fcndung', sellerResponse) : ''}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Wie geht es weiter?</strong>')}
+          ${paragraph('Sie k\u00f6nnen jederzeit ein neues, h\u00f6heres Angebot abgeben, solange die Kaufchance-Phase noch l\u00e4uft. Nutzen Sie die Gelegenheit!')}
+          ${button('Neues Angebot abgeben', auctionUrl, settingsData)}
+          ${paragraph(`Entdecken Sie auch weitere verf\u00fcgbare Fahrzeuge auf unserer Plattform.`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
+        `;
+        break;
+
+      case "buyer_counter_offer":
+        subject = `Gegenangebot f\u00fcr ${motorhomeModel} \u2013 Ihre Reaktion ist gefragt!`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Der Verk\u00e4ufer hat ein Gegenangebot gemacht!</strong>')}
+          ${paragraph('Ihr Kaufangebot wurde nicht direkt angenommen, aber der Verk\u00e4ufer m\u00f6chte mit Ihnen verhandeln.')}
+          ${infoBox('Verhandlungsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${offerAmount ? detailRow('Ihr Angebot', offerAmount) : ''}
+            ${counterAmount ? detailRow('Gegenangebot des Verk\u00e4ufers', counterAmount) : ''}
+            ${sellerResponse ? detailRow('Nachricht', sellerResponse) : ''}
+          `, 'info', settingsData)}
+          ${paragraph('<strong>Ihre M\u00f6glichkeiten:</strong>')}
+          ${paragraph('<strong>1.</strong> Gegenangebot annehmen \u2013 Kaufvertrag wird erstellt<br><strong>2.</strong> Eigenes Gegenangebot machen \u2013 Weiter verhandeln<br><strong>3.</strong> Ablehnen \u2013 Verhandlung beenden')}
+          ${button('Gegenangebot ansehen', auctionUrl, settingsData)}
+          ${paragraph(`<em>Reagieren Sie zeitnah, um die Kaufchance nicht zu verpassen!</em>`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;
 

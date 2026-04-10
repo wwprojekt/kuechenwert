@@ -32,7 +32,7 @@ export function useAdminNotificationCounts() {
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("support_messages").select("*", { count: "exact", head: true }).is("status", null),
+        supabase.from("support_messages").select("*", { count: "exact", head: true }).is("admin_response", null),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).or("status.eq.new,status.is.null"),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
@@ -45,7 +45,8 @@ export function useAdminNotificationCounts() {
 
       return {
         leads: (wizardRes.count || 0) + (leadsRes.count || 0) + (valuationRes.count || 0),
-        support: (supportRes.count || 0) + (contactRes.count || 0),
+        support: supportRes.count || 0,
+        contacts: contactRes.count || 0,
         dealers: dealerRes.count || 0,
         questions: questionsRes.count || 0,
         unreadEmails: unreadEmailsRes.count || 0,
@@ -68,6 +69,7 @@ export function AdminNotificationBell() {
     { label: "Neue Leads", count: data?.leads || 0, path: "/admin/leads", icon: UserPlus, color: "text-cyan-600" },
     { label: "Ungelesene E-Mails", count: data?.unreadEmails || 0, path: "/admin/email", icon: Mail, color: "text-purple-600" },
     { label: "Support-Nachrichten", count: data?.support || 0, path: "/admin/messages", icon: MessageCircle, color: "text-orange-600" },
+    { label: "Kontakt-Anfragen", count: data?.contacts || 0, path: "/admin/messages", icon: MessageCircle, color: "text-pink-600" },
     { label: "Offene Fragen", count: data?.questions || 0, path: "/admin/questions", icon: MessageCircle, color: "text-indigo-600" },
     { label: "Händler-Bewerbungen", count: data?.dealers || 0, path: "/admin/dealers", icon: Building2, color: "text-amber-600" },
     { label: "Neue Bewertungen", count: data?.reviews || 0, path: "/admin/reviews", icon: Star, color: "text-yellow-600" },

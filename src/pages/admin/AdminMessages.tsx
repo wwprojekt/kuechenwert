@@ -79,21 +79,6 @@ export default function AdminMessages() {
 
   const fetchMessages = async () => {
     try {
-      // Mark all unread (NULL status) messages as 'open' so the sidebar badge clears
-      const { count: nullCount } = await supabase
-        .from("support_messages")
-        .select("*", { count: "exact", head: true })
-        .is("status", null);
-
-      if (nullCount && nullCount > 0) {
-        await supabase
-          .from("support_messages")
-          .update({ status: "open" })
-          .is("status", null);
-        // Refresh badge counts in sidebar and notification bell
-        queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
-      }
-
       // Fetch messages
       const { data: messagesData, error: messagesError } = await supabase
         .from("support_messages")

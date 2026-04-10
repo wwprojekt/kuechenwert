@@ -583,3 +583,19 @@ After code changes, these functions need redeploying:
 3. Realtime-Handler: Dedup via ID-Set (ref)
 4. Auto-Cleanup des ID-Sets nach Timeout
 ```
+
+## Bid-Increment + Auction-Realtime Fix (10.04.2026)
+
+### Bug 1: Bid-Increment-Display zeigte immer +€0
+- **Root Cause**: `bids[index]?.amount` referenzierte das GLEICHE Bid → Differenz immer 0
+- **Fix**: `bids[index + 1]?.amount` für das vorherige Gebot (absteigend sortierte Liste)
+- **Guard**: `index > 0 && bids[index + 1]` verhindert Out-of-Bounds
+
+### Bug 2: Kein Realtime auf `auctions` Tabelle
+- **Problem**: Soft-Close-Verlängerung (end_time) und Status-Änderungen (sold/ended/kaufchance) nur nach F5 sichtbar
+- **Fix**: Zweiter `.on("postgres_changes")` Handler auf dem bestehenden `auction-${id}` Channel
+  - Lauscht auf UPDATE events für `auctions` Tabelle mit `filter: id=eq.${id}`
+  - Aktualisiert: `end_time`, `status`, `current_bid`
+  - `lastAuctionStatusRef`: Ref-basierte Dedup für Status-Toasts (keine Side-Effects im State-Updater)
+- **Realtime-Voraussetzung**: `auctions` Tabelle ist bereits in `supabase_realtime` Publication ✅
+- **Toast-Pattern**: Toasts AUSSERHALB von `setAuction()` Callback (React StrictMode sicher)

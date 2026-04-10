@@ -41,8 +41,8 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
     name: settings?.site_name || 'CaravanWert',
     description: settings?.site_description || 'Ihre Plattform für den Wohnmobil-Verkauf',
     url: BASE_URL,
-    logo: `${BASE_URL}/favicon.webp`,
-    image: `${BASE_URL}/favicon.webp`,
+    logo: `${BASE_URL}/favicon.png`,
+    image: `${BASE_URL}/favicon.png`,
     ...(phone && { telephone: phone }),
     ...(email && { email }),
     ...(settings?.company_address && {
@@ -126,10 +126,10 @@ export function generateArticleSchema(data: ArticleSchemaData) {
       name: 'CaravanWert',
       logo: {
         '@type': 'ImageObject',
-        url: `${BASE_URL}/favicon.webp`,
+        url: `${BASE_URL}/favicon.png`,
       },
     },
-    image: data.imageUrl || `${BASE_URL}/favicon.webp`,
+    image: data.imageUrl || `${BASE_URL}/favicon.png`,
     articleSection: data.articleSection || 'Wohnmobil',
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -166,7 +166,7 @@ export function generateProductSchema(data: ProductSchemaData) {
     },
     model: data.model,
     productionDate: data.year?.toString(),
-    image: data.imageUrl || `${BASE_URL}/favicon.webp`,
+    image: data.imageUrl || `${BASE_URL}/favicon.png`,
     offers: {
       '@type': 'Offer',
       price: data.price,

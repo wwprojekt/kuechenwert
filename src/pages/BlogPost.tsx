@@ -93,10 +93,10 @@ const BlogPost = () => {
       name: siteName,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://caravanwert.de/favicon.webp',
+        url: 'https://caravanwert.de/favicon.png',
       },
     },
-    image: post.featured_image_url || 'https://caravanwert.de/favicon.webp',
+    image: post.featured_image_url || 'https://caravanwert.de/favicon.png',
     articleSection: post.category,
     mainEntityOfPage: {
       '@type': 'WebPage',

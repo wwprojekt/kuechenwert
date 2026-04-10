@@ -44,7 +44,7 @@ const PageLayout = ({
   
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  const defaultOgImage = 'https://caravanwert.de/og-image.webp';
+  const defaultOgImage = 'https://caravanwert.de/og-image.png';
   const ogImageUrl = ogImage || defaultOgImage;
 
   // Determine if breadcrumbs should be shown

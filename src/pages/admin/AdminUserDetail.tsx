@@ -446,7 +446,7 @@ export default function AdminUserDetail() {
                                       {mainPhoto ? (
                                         <img
                                           src={mainPhoto.url}
-                                          alt=""
+                                          alt={`${motorhome.manufacturer} ${motorhome.model} Foto`}
                                           className="w-full h-full object-cover"
                                         />
                                       ) : (

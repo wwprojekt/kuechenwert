@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Award, Users, TrendingUp, Shield, Heart, Target, Zap, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import dealerProfessional from "@/assets/dealer-professional.jpg";
-import handshakeDeal from "@/assets/handshake-deal.jpg";
+import dealerProfessional from "@/assets/dealer-professional.webp";
+import handshakeDeal from "@/assets/handshake-deal.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const UeberUns = () => {

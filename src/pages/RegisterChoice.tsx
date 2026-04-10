@@ -34,7 +34,7 @@ const RegisterChoice = () => {
           {/* Logo header – auf Mobile kompakt, auf Desktop voll */}
           <div className="text-center mb-3 md:mb-8 animate-fade-in">
             <Link to="/" className="hidden md:inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
             </Link>
             <h1 className="text-xl md:text-4xl font-bold text-foreground mb-1 md:mb-3">
               Wie möchten Sie sich registrieren?

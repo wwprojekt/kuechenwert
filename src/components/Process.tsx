@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { FileText, Camera, CheckCircle2, Banknote } from "lucide-react";
-import interiorImage from "@/assets/motorhome-interior.jpg";
-import familyImage from "@/assets/happy-family.jpg";
+import interiorImage from "@/assets/motorhome-interior.webp";
+import familyImage from "@/assets/happy-family.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const steps = [

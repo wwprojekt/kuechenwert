@@ -877,7 +877,7 @@ const AuctionDetail = () => {
     },
     model: motorhome.model,
     productionDate: motorhome.year?.toString(),
-    image: photos[0]?.url || 'https://caravanwert.de/favicon.png',
+    image: photos[0]?.url || 'https://caravanwert.de/favicon.webp',
     offers: {
       '@type': 'Offer',
       price: currentBid,

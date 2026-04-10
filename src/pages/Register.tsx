@@ -130,7 +130,7 @@ const Register = () => {
           {/* Logo header */}
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
             </Link>
             {!isSuccess && (
               <>

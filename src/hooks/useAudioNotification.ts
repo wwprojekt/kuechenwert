@@ -108,8 +108,8 @@ export const useAudioNotification = (options: Partial<AudioNotificationOptions> 
     // Show browser notification if permitted
     if (hasPermission && 'Notification' in window) {
       const notification = new Notification(title, {
-        icon: '/favicon.png',
-        badge: '/favicon.png',
+        icon: '/favicon.webp',
+        badge: '/favicon.webp',
         ...notificationOptions,
       });
       

@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { Shield, Clock, TrendingUp, Users, Award, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import dealerImage from "@/assets/dealer-professional.jpg";
-import handshakeImage from "@/assets/handshake-deal.jpg";
+import dealerImage from "@/assets/dealer-professional.webp";
+import handshakeImage from "@/assets/handshake-deal.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const benefits = [

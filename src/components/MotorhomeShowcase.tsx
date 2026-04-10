@@ -13,28 +13,28 @@ const MotorhomeShowcase = () => {
   const showcaseItems = [
     {
       id: 1,
-      image: "/images/motorhome-integrated.jpg",
+      image: "/images/motorhome-integrated.webp",
       title: "Integrierte Wohnmobile",
       subtitle: "Faire Preise",
       badge: "Beliebt",
     },
     {
       id: 2,
-      image: "/images/motorhome-alcove.jpg",
+      image: "/images/motorhome-alcove.webp",
       title: "Alkoven-Wohnmobile",
       subtitle: "Schneller Verkauf",
       badge: "Top",
     },
     {
       id: 3,
-      image: "/images/motorhome-van.jpg",
+      image: "/images/motorhome-van.webp",
       title: "Campervans & Kastenwagen",
       subtitle: "Hohe Nachfrage",
       badge: "Gefragt",
     },
     {
       id: 4,
-      image: "/images/caravan-touring.jpg",
+      image: "/images/caravan-touring.webp",
       title: "Wohnwagen & Caravans",
       subtitle: "Sofort verkaufen",
       badge: "Neu",

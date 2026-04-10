@@ -29,8 +29,8 @@ export function SiteLogo({
 }: SiteLogoProps) {
   const { settings } = useSettings();
 
-  // Use settings logo_url or fallback to /logo.png
-  const logoUrl = settings?.logo_url || "/logo.png";
+  // Use settings logo_url or fallback to /logo.webp
+  const logoUrl = settings?.logo_url || "/logo.webp";
   const siteName = settings?.site_name || "CaravanWert";
   const siteTagline = settings?.site_tagline || "Ihre Plattform für den Wohnmobil-Verkauf";
 

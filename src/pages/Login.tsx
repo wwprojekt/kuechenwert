@@ -128,7 +128,7 @@ const Login = () => {
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
             </Link>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               Willkommen zurück

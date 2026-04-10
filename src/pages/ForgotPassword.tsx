@@ -88,7 +88,7 @@ const ForgotPassword = () => {
           <div className="text-center">
             <Link to="/" className="inline-block mb-8">
               <img
-                src="/logo.png"
+                src="/logo.webp"
                 alt="CaravanWert"
                 className="h-16 w-auto mx-auto"
               />

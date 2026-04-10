@@ -413,7 +413,7 @@ const RegisterHaendler = () => {
           {/* Header */}
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
             </Link>
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
               <Building2 className="w-4 h-4" />

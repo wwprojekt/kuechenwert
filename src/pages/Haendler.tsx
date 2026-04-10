@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Users, Zap, Shield, CheckCircle2, Handshake, BarChart3, Target, Clock, Gavel, ArrowRight, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
-import dealerProfessional from "@/assets/dealer-professional.jpg";
+import dealerProfessional from "@/assets/dealer-professional.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";

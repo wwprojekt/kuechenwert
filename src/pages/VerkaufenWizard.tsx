@@ -416,10 +416,7 @@ const VerkaufenWizard = () => {
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator with step dots */}
             <div className="mb-4 md:mb-6 animate-slide-up">
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="text-xs text-muted-foreground">
-                  Schritt {currentStep} von {steps.length}: <span className="font-medium text-foreground">{steps[currentStep - 1]?.name}</span>
-                </span>
+              <div className="flex justify-end items-center mb-1.5">
                 <span className="text-xs sm:text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>

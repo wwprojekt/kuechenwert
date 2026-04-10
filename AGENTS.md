@@ -552,3 +552,34 @@ After code changes, these functions need redeploying:
 - Vite dev server has connectivity issues in container environments (hangs on curl)
 - Build dist/ and serve with `npx serve dist -l 8012 --single` for reliable SPA routing
 - Agent-proxy paths break SPA asset loading (absolute `/assets/` paths); production Netlify works fine
+
+## Live-Gebots-Update Fix (10.04.2026)
+### Root Cause
+- Nach erfolgreichem Gebot: UI zeigte Gebot NICHT sofort an (erst nach F5)
+- `place-bid` Success-Handler aktualisierte nur `end_time` (Soft-Close), aber NICHT `current_bid` oder `bids`-Liste
+- Verließ sich zu 100% auf Supabase Realtime WebSocket (eventually-consistent, kann Lücken haben)
+
+### Fix: Optimistic Update + Realtime Dedup (Option B)
+1. **place-bid Edge Function v26**: Gibt `bid.id`, `currentBid`, `minimumBid` im Response zurück
+2. **AuctionDetail Optimistic Update**: Nach erfolgreichem Gebot sofort:
+   - `auction.current_bid` lokal setzen
+   - Neues Bid-Objekt in `bids`-Liste einfügen (mit echtem `bid_id` von DB)
+   - `pulse-green` Animation triggern
+3. **Realtime Dedup**: `knownBidIdsRef` (Set<string>) verhindert Duplikate
+   - Eigenes Bid-ID wird registriert → Realtime-Event für gleiche ID wird übersprungen
+   - Auto-Cleanup nach 10s (Realtime kommt normalerweise in <2s)
+   - Fremde Gebote + Autobids kommen weiter sauber via Realtime
+
+### Geprüfte Bereiche (kein Fix nötig)
+- `useFavorites`: Bereits optimistic (add→sofort in Array, remove→sofort aus Array)
+- `MyKaufchancen`: `loadData()` nach Accept/Reject
+- `NotificationCenter` + `DealerDashboard`: React Query `invalidateQueries`
+- `Kaufen.tsx`: Lauscht auf `auctions` table (UPDATE von current_bid triggert Refetch)
+
+### Pattern für künftige Realtime-Features
+```
+1. Edge Function gibt ID + aktuelle Daten zurück
+2. Frontend: Optimistic Update mit echtem ID
+3. Realtime-Handler: Dedup via ID-Set (ref)
+4. Auto-Cleanup des ID-Sets nach Timeout
+```

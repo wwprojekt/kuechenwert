@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +65,7 @@ interface SupportMessage {
 export default function AdminMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<SupportMessage | null>(null);
@@ -77,6 +79,21 @@ export default function AdminMessages() {
 
   const fetchMessages = async () => {
     try {
+      // Mark all unread (NULL status) messages as 'open' so the sidebar badge clears
+      const { count: nullCount } = await supabase
+        .from("support_messages")
+        .select("*", { count: "exact", head: true })
+        .is("status", null);
+
+      if (nullCount && nullCount > 0) {
+        await supabase
+          .from("support_messages")
+          .update({ status: "open" })
+          .is("status", null);
+        // Refresh badge counts in sidebar and notification bell
+        queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
+      }
+
       // Fetch messages
       const { data: messagesData, error: messagesError } = await supabase
         .from("support_messages")
@@ -153,6 +170,7 @@ export default function AdminMessages() {
 
       setSelectedMessage(null);
       setResponse("");
+      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
       fetchMessages();
     } catch (error) {
       console.error("Error responding to message:", error);
@@ -174,6 +192,7 @@ export default function AdminMessages() {
         .eq("id", messageId);
 
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
       fetchMessages();
     } catch (error) {
       console.error("Error updating status:", error);
@@ -198,6 +217,7 @@ export default function AdminMessages() {
         description: "Die ausgewählten Nachrichten wurden entfernt.",
       });
       setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
       fetchMessages();
     } catch (error) {
       toast({ title: "Fehler beim Löschen", description: String(error), variant: "destructive" });

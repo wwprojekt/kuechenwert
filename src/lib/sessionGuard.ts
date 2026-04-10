@@ -265,6 +265,56 @@ export async function ensureValidSession(): Promise<{
 }
 
 /**
+ * Get a guaranteed fresh access token for Edge Function calls.
+ *
+ * IMPORTANT: Do NOT use getSession().access_token for Edge Functions with verify_jwt: true!
+ * getSession() reads from local cache and can return stale/expired tokens.
+ * This function calls refreshSession() and returns the token DIRECTLY from the response,
+ * bypassing any cache issues.
+ *
+ * @returns Fresh access token string, or null if session cannot be refreshed
+ */
+export async function getFreshAccessToken(): Promise<string | null> {
+  try {
+    // Primary: refreshSession() returns the fresh token directly in its response
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data.session) {
+      return data.session.access_token;
+    }
+
+    // Fallback: If refresh fails (e.g., lock error), try getUser to trigger auto-refresh
+    logger.warn('getFreshAccessToken: refreshSession failed, trying getUser fallback', { error: error?.message });
+
+    if (isLockError(error)) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const { data: retryData, error: retryError } = await supabase.auth.refreshSession();
+      if (!retryError && retryData.session) {
+        return retryData.session.access_token;
+      }
+    }
+
+    // Last resort: getSession (may be stale, but better than nothing)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      logger.warn('getFreshAccessToken: using getSession fallback (may be stale)');
+      return session.access_token;
+    }
+
+    return null;
+  } catch (err) {
+    logger.error('getFreshAccessToken: unexpected error', err);
+    if (isLockError(err)) {
+      // Last-resort fallback for lock errors
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.access_token ?? null;
+      } catch { return null; }
+    }
+    return null;
+  }
+}
+
+/**
  * Retry a Supabase operation once after refreshing the session.
  * Use this to wrap write operations that might fail due to expired tokens.
  * 

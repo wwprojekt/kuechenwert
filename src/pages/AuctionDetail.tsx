@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
-import { ensureValidSession } from "@/lib/sessionGuard";
+import { getFreshAccessToken } from "@/lib/sessionGuard";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
@@ -462,24 +462,9 @@ const AuctionDetail = () => {
 
      setIsSubmitting(true);
     try {
-      // Force-refresh session to get a guaranteed fresh JWT token
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
-        const { user: validUser, sessionExpired } = await ensureValidSession();
-        if (!validUser || sessionExpired) {
-          toast({
-            title: "Sitzung abgelaufen",
-            description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-            variant: "destructive",
-          });
-          navigate(`/login?redirect=/auktion/${id}`);
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession) {
+      // Get a guaranteed fresh JWT token (bypasses stale getSession() cache)
+      let accessToken = await getFreshAccessToken();
+      if (!accessToken) {
         toast({
           title: "Sitzung abgelaufen",
           description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -490,16 +475,39 @@ const AuctionDetail = () => {
         return;
       }
 
-      // Call server-side Edge Function for secure instant buy
-      const { data, error } = await supabase.functions.invoke('instant-buy', {
+      // Call server-side Edge Function for secure instant buy – with 401 retry
+      let { data, error } = await supabase.functions.invoke('instant-buy', {
         body: { auctionId: id },
-        headers: { Authorization: `Bearer ${currentSession.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      // Automatic retry on 401
+      if (error instanceof FunctionsHttpError && error.context?.status === 401) {
+        logger.warn('instant-buy: 401 on first attempt, retrying with fresh token...');
+        accessToken = await getFreshAccessToken();
+        if (accessToken) {
+          const retry = await supabase.functions.invoke('instant-buy', {
+            body: { auctionId: id },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          data = retry.data;
+          error = retry.error;
+        }
+      }
+
       if (error) {
-        // Extract actual error message using official Supabase pattern
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
         if (error instanceof FunctionsHttpError) {
+          if (error.context?.status === 401) {
+            toast({
+              title: "Sitzung abgelaufen",
+              description: "Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
+              variant: "destructive",
+            });
+            navigate(`/login?redirect=/auktion/${id}`);
+            setIsSubmitting(false);
+            return;
+          }
           try {
             const body = await error.context.json();
             if (body?.error) errorMsg = body.error;
@@ -604,38 +612,7 @@ const AuctionDetail = () => {
     setIsSubmitting(true);
 
     try {
-      // Force-refresh session to get a guaranteed fresh JWT token
-      // getSession() can return stale cached tokens → 401 on Edge Functions
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
-        // Refresh failed – try ensureValidSession as fallback
-        const { user: validUser, sessionExpired } = await ensureValidSession();
-        if (!validUser || sessionExpired) {
-          toast({
-            title: "Sitzung abgelaufen",
-            description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-            variant: "destructive",
-          });
-          navigate(`/login?redirect=/auktion/${id}`);
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // Get the freshly refreshed session token
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession) {
-        toast({
-          title: "Sitzung abgelaufen",
-          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-          variant: "destructive",
-        });
-        navigate(`/login?redirect=/auktion/${id}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Validate autobid settings
+      // Validate autobid settings first (no network needed)
       if (enableAutobid) {
         const maxAmount = parseFloat(maxAutobidAmount);
         if (isNaN(maxAmount) || maxAmount <= amount) {
@@ -649,21 +626,59 @@ const AuctionDetail = () => {
         }
       }
 
-      // Place bid via edge function with freshly refreshed token
-      const { data, error } = await supabase.functions.invoke('place-bid', {
-        body: {
-          auctionId: id,
-          amount: amount,
-          isAutobid: enableAutobid,
-          maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
-        },
-        headers: { Authorization: `Bearer ${currentSession.access_token}` },
+      // Get a guaranteed fresh JWT token (bypasses stale getSession() cache)
+      let accessToken = await getFreshAccessToken();
+      if (!accessToken) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        navigate(`/login?redirect=/auktion/${id}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Place bid via edge function – with automatic retry on 401
+      const bidBody = {
+        auctionId: id,
+        amount: amount,
+        isAutobid: enableAutobid,
+        maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
+      };
+
+      let { data, error } = await supabase.functions.invoke('place-bid', {
+        body: bidBody,
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      // Automatic retry on 401: refresh token once more and try again
+      if (error instanceof FunctionsHttpError && error.context?.status === 401) {
+        logger.warn('place-bid: 401 on first attempt, retrying with fresh token...');
+        accessToken = await getFreshAccessToken();
+        if (accessToken) {
+          const retry = await supabase.functions.invoke('place-bid', {
+            body: bidBody,
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          data = retry.data;
+          error = retry.error;
+        }
+      }
+
       if (error) {
-        // Extract actual error message using official Supabase pattern
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
         if (error instanceof FunctionsHttpError) {
+          if (error.context?.status === 401) {
+            toast({
+              title: "Sitzung abgelaufen",
+              description: "Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
+              variant: "destructive",
+            });
+            navigate(`/login?redirect=/auktion/${id}`);
+            setIsSubmitting(false);
+            return;
+          }
           try {
             const body = await error.context.json();
             if (body?.error) errorMsg = body.error;
@@ -677,17 +692,6 @@ const AuctionDetail = () => {
           errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
         } else if (error instanceof FunctionsFetchError) {
           errorMsg = 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.';
-        }
-        // Handle expired session specifically
-        if (errorMsg === 'Unauthorized' || errorMsg.includes('Unauthorized') || errorMsg.includes('JWT')) {
-          toast({
-            title: "Sitzung abgelaufen",
-            description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
-            variant: "destructive",
-          });
-          navigate(`/login?redirect=/auktion/${id}`);
-          setIsSubmitting(false);
-          return;
         }
         throw new Error(errorMsg);
       }

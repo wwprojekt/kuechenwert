@@ -356,6 +356,24 @@ After code changes, these functions need redeploying:
 - **Resend Limits**: ~64 Emails/Tag aktuell, Free Plan erlaubt 100/day, 3000/month (1579 im April)
 - **Edge Function error pattern**: catch-all `throw` → 500 ist schlecht für UX. Besser: spezifische HTTP-Codes + lesbare Fehlermeldungen
 
+## Session-Expired Comprehensive Fix (10.04.2026)
+### Root Causes Found & Fixed
+1. **Stille RLS-Leere**: Abgelaufene Sessions verursachen `auth.uid()=NULL` → RLS-Queries liefern leere Arrays statt Fehler → Händler sieht "Keine Kaufchancen" trotz aktiver Einladungen
+2. **Fehlender Auth-Schutz**: `accept-kaufchance-offer` Aufrufe in 3 Stellen (MyKaufchancen, NegotiationThread, ListingDetail) ohne Token-Refresh/401-Retry
+3. **Kein Session-Check vor Dashboard-Queries**: MyKaufchancen lud Daten ohne vorherige Session-Validierung
+
+### Fixes
+- **`invokeWithAuth()`**: Zentraler Helper in sessionGuard.ts für alle authentifizierten Edge Function Calls (getFreshAccessToken + 401-Retry + SessionExpiredError)
+- **`SessionExpiredError`**: Sentinel-Klasse für einheitliches Handling in catch-Blöcken
+- **MyKaufchancen Session-Check**: `getSession()` + `refreshSession()` vor RLS-Queries
+- **3× invokeWithAuth Migration**: MyKaufchancen, NegotiationThread, ListingDetail
+
+### Verbleibende Schwachstellen (Ehrliche Bewertung)
+- **Refresh Token Expiry (7 Tage)**: Wenn ein Händler >7 Tage nicht besucht, hilft kein Refresh mehr → SessionExpiredDialog wird korrekt angezeigt (Login nötig)
+- **Token-Korruption**: Wird erkannt und abgefangen, aber Root Cause (localStorage Race Conditions zwischen Tabs) nicht verhindert
+- **Andere Dashboard-Seiten** (MyBids, Favorites etc.): Nutzen React Query, das Errors zeigt – aber stille RLS-Leere bei Session-Expiry ist theoretisch möglich
+- **Browser-Tab-Batterie-Saver**: Einige Browser pausieren Background-Tabs aggressiv → Supabase autoRefreshToken-Timer kann stoppen
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

@@ -41,23 +41,6 @@ async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Pr
   return okm.slice(0, length);
 }
 
-// ─── ECDSA DER → raw r||s conversion for JWT ES256 ──────────────────────────
-
-function derToRaw(der: Uint8Array): Uint8Array {
-  const raw = new Uint8Array(64);
-  let offset = 3; // skip 0x30 <totalLen> 0x02
-  const rLen = der[offset++];
-  const r = der.slice(offset, offset + rLen);
-  offset += rLen + 1; // skip r bytes + 0x02
-  const sLen = der[offset++];
-  const s = der.slice(offset, offset + sLen);
-  const rT = r.length > 32 ? r.slice(r.length - 32) : r;
-  const sT = s.length > 32 ? s.slice(s.length - 32) : s;
-  raw.set(rT, 32 - rT.length);
-  raw.set(sT, 64 - sT.length);
-  return raw;
-}
-
 // ─── VAPID JWT (ES256) ───────────────────────────────────────────────────────
 
 async function createVapidAuth(
@@ -86,10 +69,10 @@ async function createVapidAuth(
   })));
 
   const sigInput = new TextEncoder().encode(`${header}.${payload}`);
-  const derSig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privKey, sigInput));
-  const rawSig = derToRaw(derSig);
+  // Web Crypto returns IEEE P1363 format (raw r||s, 64 bytes) – exactly what JWT ES256 needs
+  const signature = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privKey, sigInput));
 
-  return `vapid t=${header}.${payload}.${b64urlEncode(rawSig)}, k=${vapidPublicKey}`;
+  return `vapid t=${header}.${payload}.${b64urlEncode(signature)}, k=${vapidPublicKey}`;
 }
 
 // ─── Payload encryption (RFC 8291 – aes128gcm) ──────────────────────────────
@@ -147,18 +130,20 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.error("VAPID keys not configured");
+    // Read VAPID keys from vault via secure RPC (SECURITY DEFINER, service_role only)
+    const { data: vapidKeys, error: vapidError } = await supabase.rpc("get_vapid_keys");
+    if (vapidError || !vapidKeys?.public_key || !vapidKeys?.private_key) {
+      console.error("VAPID keys not configured:", vapidError?.message ?? "keys missing in vault");
       return new Response(
         JSON.stringify({ error: "VAPID keys not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    const vapidPublicKey: string = vapidKeys.public_key;
+    const vapidPrivateKey: string = vapidKeys.private_key;
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
     const { userId, userIds, title, body, url, icon, tag, data } = await req.json();
 
     const targetUserIds: string[] = userIds || (userId ? [userId] : []);
@@ -227,11 +212,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    await supabase.from("audit_logs").insert({
-      action: "push_notification_sent",
-      entity_type: "notification",
-      details: { title, sent, failed, targets: targetUserIds.length },
-    }).catch(() => {});
+    try {
+      await supabase.from("audit_logs").insert({
+        action: "push_notification_sent",
+        entity_type: "notification",
+        details: { title, sent, failed, targets: targetUserIds.length },
+      });
+    } catch { /* non-critical */ }
 
     return new Response(
       JSON.stringify({ success: true, sent, failed, total: subscriptions.length }),

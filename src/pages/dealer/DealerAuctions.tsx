@@ -86,6 +86,7 @@ const DealerAuctions = () => {
             mileage,
             postal_code,
             city,
+            seller_id,
             motorhome_photos(url, display_order)
           ),
           bids(bidder_id, amount)
@@ -97,8 +98,12 @@ const DealerAuctions = () => {
         logger.error('Supabase error fetching auctions:', error);
         throw error;
       }
-      logger.log(`Fetched ${data?.length || 0} active auctions`);
-      setAuctions(Array.isArray(data) ? data : []);
+      // Filter out dealer's own listings – they can't bid on their own vehicles
+      const filtered = (data || []).filter(
+        (a: any) => !a.motorhome?.seller_id || a.motorhome.seller_id !== user?.id
+      );
+      logger.log(`Fetched ${data?.length || 0} active auctions, showing ${filtered.length} (excluding own)`);
+      setAuctions(filtered);
     } catch (error: any) {
       logger.error('Error fetching auctions:', error);
       toast.error(`Fehler beim Laden der Auktionen: ${error.message || 'Unbekannter Fehler'}`);

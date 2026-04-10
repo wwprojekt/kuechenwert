@@ -42,6 +42,9 @@ interface MotorhomeCardProps {
   price?: number;
   badge?: string;
   
+  // Seller type
+  accountType?: string | null;
+  
   // Link
   linkTo: string;
 }
@@ -147,6 +150,7 @@ const MotorhomeCard = ({
   status,
   price,
   badge,
+  accountType,
   linkTo
 }: MotorhomeCardProps) => {
   const { user } = useAuth();
@@ -239,6 +243,11 @@ const MotorhomeCard = ({
             {isEndingSoon && !isSold && (
               <Badge className="bg-destructive text-destructive-foreground animate-pulse">
                 Endet bald!
+              </Badge>
+            )}
+            {accountType === 'dealer' && (
+              <Badge variant="outline" className="bg-white/90 text-gray-700 border-gray-300 text-[10px]">
+                Händler
               </Badge>
             )}
           </div>

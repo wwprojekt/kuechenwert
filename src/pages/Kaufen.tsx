@@ -644,6 +644,7 @@ const Kaufen = () => {
                           endTime={auction.end_time}
                           bidCount={bidCounts[auction.id] || 0}
                           status={auction.motorhome?.status}
+                          accountType={auction.motorhome?.account_type}
                           linkTo={`/auktion/${auction.id}`}
                         />
                       );

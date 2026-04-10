@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Search,
   ShoppingBag,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -91,26 +92,52 @@ interface MenuItem {
   url: string;
   icon: typeof LayoutDashboard;
   badgeKey?: string;
-  showCountBadge?: boolean; // Zeigt Gesamtzahl (z.B. aktive Auktionen)
+  showCountBadge?: boolean;
   /** If true, this item remains accessible even when the account is locked (pending/rejected) */
   allowWhenLocked?: boolean;
 }
 
-const menuItems: MenuItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
-  { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true },
-  { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showCountBadge: true, badgeKey: "activeAuctions" },
-  { title: "Inventar", url: "/dashboard/inventory", icon: Package },
-  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
-  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
-  { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
-  { title: "Suchaufträge", url: "/dashboard/search-alerts", icon: Search },
-  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, badgeKey: "appointments" },
-  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, badgeKey: "messages" },
-  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },
-  { title: "Reklamationen", url: "/dashboard/claims", icon: AlertTriangle, badgeKey: "claims" },
-  { title: "Profil", url: "/dashboard/profile", icon: User, allowWhenLocked: true },
-  { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, allowWhenLocked: true },
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
+
+const menuGroups: MenuGroup[] = [
+  {
+    label: "Übersicht",
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
+      { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true },
+    ],
+  },
+  {
+    label: "Kaufen",
+    items: [
+      { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showCountBadge: true, badgeKey: "activeAuctions" },
+      { title: "Inventar", url: "/dashboard/inventory", icon: Package },
+      { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
+      { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
+      { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
+      { title: "Suchaufträge", url: "/dashboard/search-alerts", icon: Search },
+    ],
+  },
+  {
+    label: "Verkaufen",
+    items: [
+      { title: "Meine Inserate", url: "/dashboard/listings", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Konto",
+    items: [
+      { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, badgeKey: "appointments" },
+      { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, badgeKey: "messages" },
+      { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },
+      { title: "Reklamationen", url: "/dashboard/claims", icon: AlertTriangle, badgeKey: "claims" },
+      { title: "Profil", url: "/dashboard/profile", icon: User, allowWhenLocked: true },
+      { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, allowWhenLocked: true },
+    ],
+  },
 ];
 
 // ============================================================================
@@ -169,78 +196,79 @@ export function DealerSidebar() {
           )}
         </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="font-semibold">Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => {
-                const itemLocked = isLocked && !item.allowWhenLocked;
+        {menuGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="font-semibold">{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const itemLocked = isLocked && !item.allowWhenLocked;
 
-                if (itemLocked) {
-                  // Render a non-clickable, greyed-out item
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <div
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed select-none"
-                        title="Wird nach Freigabe verfügbar"
-                      >
-                        <item.icon className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
-                        {!collapsed && (
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            {item.title}
-                            <Lock className="w-3 h-3" />
-                          </span>
-                        )}
-                      </div>
-                    </SidebarMenuItem>
-                  );
-                }
-
-                const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
-
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/dashboard"}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                          isActive
-                            ? "bg-primary text-white shadow-sm"
-                            : "hover:bg-muted"
-                        }`
-                      }
-                    >
-                      {collapsed ? (
-                        <div className="relative">
-                          <item.icon className="w-5 h-5 flex-shrink-0" />
-                          {badgeCount > 0 && !item.showCountBadge && (
-                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
-                              {badgeCount > 9 ? "9+" : badgeCount}
+                  if (itemLocked) {
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <div
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed select-none"
+                          title="Wird nach Freigabe verfügbar"
+                        >
+                          <item.icon className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
+                          {!collapsed && (
+                            <span className="flex items-center gap-2 text-muted-foreground">
+                              {item.title}
+                              <Lock className="w-3 h-3" />
                             </span>
                           )}
                         </div>
-                      ) : (
-                        <>
-                          <item.icon className="w-5 h-5 flex-shrink-0" />
-                          <span className="flex-1">{item.title}</span>
-                          {item.showCountBadge && badgeCount > 0 && (
-                            <Badge variant={badgeCount > 0 ? 'default' : 'secondary'} className="text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center">
-                              {badgeCount}
-                            </Badge>
-                          )}
-                          {!item.showCountBadge && badgeCount > 0 && (
-                            <DealerBadge count={badgeCount} />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                      </SidebarMenuItem>
+                    );
+                  }
+
+                  const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/dashboard"}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                            isActive
+                              ? "bg-primary text-white shadow-sm"
+                              : "hover:bg-muted"
+                          }`
+                        }
+                      >
+                        {collapsed ? (
+                          <div className="relative">
+                            <item.icon className="w-5 h-5 flex-shrink-0" />
+                            {badgeCount > 0 && !item.showCountBadge && (
+                              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                                {badgeCount > 9 ? "9+" : badgeCount}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <item.icon className="w-5 h-5 flex-shrink-0" />
+                            <span className="flex-1">{item.title}</span>
+                            {item.showCountBadge && badgeCount > 0 && (
+                              <Badge variant={badgeCount > 0 ? 'default' : 'secondary'} className="text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center">
+                                {badgeCount}
+                              </Badge>
+                            )}
+                            {!item.showCountBadge && badgeCount > 0 && (
+                              <DealerBadge count={badgeCount} />
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-2 sticky bottom-0 bg-sidebar z-10">

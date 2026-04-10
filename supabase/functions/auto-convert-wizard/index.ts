@@ -218,11 +218,12 @@ const handler = async (req: Request): Promise<Response> => {
           address_country: addressCountry,
         }, { onConflict: "id" });
         
-        // Ensure role exists
-        await adminClient.from("user_roles").upsert({
-          user_id: sellerId,
-          role: "seller",
-        }, { onConflict: "user_id" });
+        // Ensure role exists – but NEVER overwrite dealer with seller
+        const { data: existingRoleForExisting } = await adminClient
+          .from("user_roles").select("role").eq("user_id", sellerId).maybeSingle();
+        if (!existingRoleForExisting) {
+          await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+        }
         
       } else {
         // Create user via Admin API (NOT via signUp()!)
@@ -290,13 +291,22 @@ const handler = async (req: Request): Promise<Response> => {
         address_country: addressCountry,
       }, { onConflict: "id" });
 
-      // Always ensure role exists
-      await adminClient.from("user_roles").upsert({
-        user_id: sellerId,
-        role: "seller",
-      }, { onConflict: "user_id" });
+      // Ensure role exists – but NEVER overwrite a dealer role with seller
+      const { data: existingRole } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", sellerId)
+        .maybeSingle();
 
-      edgeLogger.info(`Ensured profile and role for seller ${sellerId}`);
+      if (!existingRole) {
+        await adminClient.from("user_roles").insert({
+          user_id: sellerId,
+          role: "seller",
+        });
+        edgeLogger.info(`Assigned seller role to ${sellerId}`);
+      } else {
+        edgeLogger.info(`Kept existing role '${existingRole.role}' for ${sellerId}`);
+      }
     }
 
     // 3. Create Motorhome

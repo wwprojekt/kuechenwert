@@ -1432,15 +1432,12 @@ const AuctionDetail = () => {
                   <h1 className="text-2xl font-bold mb-2">
                     {motorhome.manufacturer} {motorhome.model}
                   </h1>
-                  <p className="text-muted-foreground mb-2">
-                    {motorhome.body_type} • {motorhome.year}
-                  </p>
-                  {motorhome.seller && typeof motorhome.seller === 'object' && !Array.isArray(motorhome.seller) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>Verkäufer: {motorhome.seller.company_name || `${motorhome.seller.first_name} ${motorhome.seller.last_name}`}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                    <span>{motorhome.body_type} • {motorhome.year}</span>
+                    <Badge variant="outline" className={motorhome.account_type === 'dealer' ? 'text-[10px] bg-blue-50 text-blue-700 border-blue-200' : 'text-[10px] bg-gray-50 text-gray-600 border-gray-200'}>
+                      {motorhome.account_type === 'dealer' ? 'Händler' : 'Privat'}
+                    </Badge>
+                  </div>
                   {/* Anonymized Location & Distance */}
                   {motorhome.postal_code && (() => {
                     const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);

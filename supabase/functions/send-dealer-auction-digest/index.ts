@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         id, current_bid, starting_bid, end_time, created_at, instant_buy_price,
         motorhomes!left (
-          id, manufacturer, model, year, body_type, mileage, city,
+          id, manufacturer, model, year, body_type, mileage, city, seller_id,
           photos:motorhome_photos(url, display_order)
         )
       `)
@@ -161,10 +161,13 @@ const handler = async (req: Request): Promise<Response> => {
 
         const bidAuctionIds = new Set((dealerBids || []).map(b => b.auction_id));
 
+        // Exclude dealer's OWN auctions (where they are the seller)
+        const isNotOwnAuction = (a: any) => !a.motorhomes?.seller_id || a.motorhomes.seller_id !== dealer.user_id;
+
         // Filter: auctions the dealer hasn't bid on yet (prioritize these)
-        const unbidNewAuctions = newAuctions.filter(a => !bidAuctionIds.has(a.id));
-        const unbidEndingSoon = endingSoonAuctions.filter(a => !bidAuctionIds.has(a.id));
-        const biddedEndingSoon = endingSoonAuctions.filter(a => bidAuctionIds.has(a.id));
+        const unbidNewAuctions = newAuctions.filter(a => isNotOwnAuction(a) && !bidAuctionIds.has(a.id));
+        const unbidEndingSoon = endingSoonAuctions.filter(a => isNotOwnAuction(a) && !bidAuctionIds.has(a.id));
+        const biddedEndingSoon = endingSoonAuctions.filter(a => isNotOwnAuction(a) && bidAuctionIds.has(a.id));
 
         // Skip if nothing relevant for this dealer
         if (unbidNewAuctions.length === 0 && unbidEndingSoon.length === 0 && biddedEndingSoon.length === 0) {

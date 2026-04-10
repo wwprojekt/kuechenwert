@@ -39,6 +39,7 @@ import DashboardOverview from '@/pages/dashboard/DashboardOverview';
  */
 const DealerAuctions = lazyRetry(() => import('@/pages/dealer/DealerAuctions'));
 const DealerInventory = lazyRetry(() => import('@/pages/dealer/DealerInventory'));
+const DealerListingCreate = lazyRetry(() => import('@/pages/dealer/DealerListingCreate'));
 const ListingEdit = lazyRetry(() => import('@/pages/dashboard/ListingEdit'));
 const ListingDetail = lazyRetry(() => import('@/pages/dashboard/ListingDetail'));
 const MyListings = lazyRetry(() => import('@/pages/dashboard/MyListings'));
@@ -221,6 +222,7 @@ const DealerDashboardWrapper = () => {
             
             {/* Listing routes */}
             <Route path="listings" element={<LazyPage Component={MyListings} />} />
+            <Route path="listings/new" element={<LazyPage Component={DealerListingCreate} />} />
             <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
             <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
           </>

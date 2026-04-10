@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { de } from "date-fns/locale";
 
 export default function MyListings() {
   const { user } = useAuth();
+  const { primaryRole } = useUserRole();
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'bid_desc' | 'bid_asc'>('newest');
 
@@ -78,7 +80,7 @@ export default function MyListings() {
             Verwalten Sie Ihre Wohnmobil-Inserate
           </p>
         </div>
-        <Link to="/verkaufen/wizard">
+        <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/verkaufen/wizard"}>
           <Button size="lg" className="gradient-hero hover:gradient-hero-hover w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Neues Inserat
@@ -98,7 +100,7 @@ export default function MyListings() {
             <p className="text-muted-foreground mb-6">
               Erstellen Sie Ihr erstes Inserat und starten Sie den Verkauf
             </p>
-            <Link to="/verkaufen/wizard">
+            <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/verkaufen/wizard"}>
               <Button className="gradient-hero hover:gradient-hero-hover">
                 <Plus className="w-4 h-4 mr-2" />
                 Erstes Inserat erstellen

@@ -254,6 +254,7 @@ const AuctionDetail = () => {
       }
 
       setAuction(data);
+      lastAuctionStatusRef.current = data.status;
 
       // Google Ads: Fahrzeug angesehen (Remarketing)
       if (data.motorhome) {
@@ -309,6 +310,8 @@ const AuctionDetail = () => {
 
   // Set of bid IDs already known locally (for dedup against Realtime)
   const knownBidIdsRef = useRef<Set<string>>(new Set());
+  // Track last-known auction status for Realtime toast dedup
+  const lastAuctionStatusRef = useRef<string | null>(auction?.status ?? null);
 
   // Real-time bid updates with dedup against optimistic updates
   useEffect(() => {
@@ -369,6 +372,50 @@ const AuctionDetail = () => {
               title: "Neues Gebot!",
               description: `Aktuelles Höchstgebot: ${Number(newBid.amount).toLocaleString("de-DE")} €`,
             });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "auctions",
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          if (!isSubscribed) return;
+          const updated = payload.new as AuctionRow;
+          const prevStatus = lastAuctionStatusRef.current;
+
+          setAuction((prev) => {
+            if (!prev) return prev;
+            const changes: Partial<AuctionWithMotorhome> = {};
+
+            if (updated.end_time && updated.end_time !== prev.end_time) {
+              changes.end_time = updated.end_time;
+            }
+            if (updated.status && updated.status !== prev.status) {
+              changes.status = updated.status;
+            }
+            if (updated.current_bid != null && updated.current_bid !== prev.current_bid) {
+              changes.current_bid = updated.current_bid;
+            }
+
+            if (Object.keys(changes).length === 0) return prev;
+            return { ...prev, ...changes };
+          });
+
+          // Status-change toasts (compared via ref, outside state updater)
+          if (updated.status && updated.status !== prevStatus) {
+            lastAuctionStatusRef.current = updated.status;
+            if (updated.status === 'sold') {
+              toast({ title: "Auktion beendet", description: "Diese Auktion wurde verkauft." });
+            } else if (updated.status === 'ended') {
+              toast({ title: "Auktion beendet", description: "Diese Auktion ist abgelaufen." });
+            } else if (updated.status === 'kaufchance') {
+              toast({ title: "Kaufchance!", description: "Diese Auktion bietet jetzt eine Kaufchance." });
+            }
           }
         }
       )
@@ -2069,9 +2116,9 @@ const AuctionDetail = () => {
                             }`}>
                               €{bid.amount.toLocaleString()}
                             </p>
-                            {index > 0 && (
+                            {index > 0 && bids[index + 1] && (
                               <p className="text-[11px] text-green-600">
-                                +€{(bid.amount - bids[index]?.amount || 0).toLocaleString()}
+                                +€{(bid.amount - bids[index + 1].amount).toLocaleString()}
                               </p>
                             )}
                           </div>

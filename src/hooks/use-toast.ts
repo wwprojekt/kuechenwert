@@ -172,10 +172,14 @@ function toast({ ...props }: Toast) {
       'Bitte', 'Unvollständige', 'Ungültig', 'Pflichtfeld',
       'Sie müssen', 'Passwort', 'Mindestens', 'Maximal',
     ];
+    const validationTitles = [
+      'Bitte überprüfen Sie Ihre Eingaben',
+      'Unvollständige Angaben',
+      'Fehlende Angaben',
+      'Datei zu groß', 'File too large', 'Bild zu groß',
+    ];
     const isValidationToast = validationPrefixes.some(prefix => errorMessage.startsWith(prefix))
-      || titleStr === 'Bitte überprüfen Sie Ihre Eingaben'
-      || titleStr === 'Unvollständige Angaben'
-      || titleStr === 'Fehlende Angaben';
+      || validationTitles.some(t => titleStr === t);
 
     // Business-Events erkennen: Normale Geschäftsvorgänge die kein Fehler-Logging benötigen
     const businessEventTitles = [

@@ -414,6 +414,23 @@ After code changes, these functions need redeploying:
 5. **useUserRole retry** (Rolle fehlt? → Refresh + Re-Query)
 6. **SessionExpiredDialog** (letzter Fallback: User zum Login auffordern)
 
+## React Hooks Violation Fix (10.04.2026 Fehlerprotokoll 6)
+### Root Cause
+- `useCommissionFromTiers` wurde NACH dem early return `if (!auction || !auction.motorhome)` aufgerufen (Zeile 856)
+- Beim 1. Render (auction=null): Hook wurde NICHT ausgeführt → N Hooks
+- Beim 2. Render (auction geladen): Hook WURDE ausgeführt → N+1 Hooks
+- React Error #310: "Rendered more hooks than during the previous render"
+
+### Auswirkungen (3 Fehler aus Protokoll)
+1. **BIZ_AUCTION_ERROR (Hoch)**: AuctionErrorBoundary crashte die Seite komplett für Seller
+2. **CONSOLE_ERROR (Mittel)**: Duplikat von #1, vom console.error Interceptor gefangen
+3. **Query-Spam (7× in 1s)**: ErrorBoundary fing den Error → Re-Mount → Hooks-Error erneut → Loop → 7× kaufchance_invitations, 7× user_favorites, 6× profiles in einer Sekunde
+
+### Fix
+- `useCommissionFromTiers` VOR den early return verschoben
+- `currentBidForCommission = auction ? (auction.current_bid || auction.starting_bid) : 0`
+- **REGEL**: NIEMALS React Hooks nach einem early return aufrufen — alle Hooks MÜSSEN bedingungslos vor jedem `return` stehen
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

@@ -374,6 +374,39 @@ After code changes, these functions need redeploying:
 - **Andere Dashboard-Seiten** (MyBids, Favorites etc.): Nutzen React Query, das Errors zeigt – aber stille RLS-Leere bei Session-Expiry ist theoretisch möglich
 - **Browser-Tab-Batterie-Saver**: Einige Browser pausieren Background-Tabs aggressiv → Supabase autoRefreshToken-Timer kann stoppen
 
+## Session-Expired Bidding & Kaufchance Fix (10.04.2026)
+
+### Root Cause: Drei zusammenwirkende Schwachstellen
+1. **useUserRole silent downgrade**: `user_roles` RLS hat `USING(auth.uid()=user_id)`. Bei abgelaufener Session → `auth.uid()=NULL` → 0 Zeilen → `isDealer=false` → **gesamtes Bidding-UI verschwindet** (Preise, Gebote, Biet-Formular wird durch "Gebotsverlauf nur für Händler sichtbar" ersetzt)
+2. **getSession() Cache-Bug**: `supabase.auth.getSession()` liest aus LOKALEM CACHE und gibt Session-Objekte zurück, **auch wenn der Access Token BEREITS ABGELAUFEN ist**. Bisheriger Check `if (!session)` war IMMER false → abgelaufene Session wurde als gültig behandelt
+3. **Kein periodischer Token-Refresh**: AuthContext refreshte nur bei Tab-Wechsel (visibilitychange). Händler mit stundenlang offenem Tab ohne Wechsel bekamen keinen Refresh
+
+### Fixes implementiert
+- **`ensureValidRLSSession()`** in `sessionGuard.ts`: Prüft JWT `exp`-Feld statt nur ob Session-Objekt existiert. Refresht proaktiv wenn Token in < 60s abläuft
+- **`useUserRole`**: Ruft `ensureValidRLSSession()` VOR der user_roles Query auf. Bei unerwartet fehlender Rolle: Retry nach explizitem Refresh
+- **MyKaufchancen**: `getSession()`-Check durch `ensureValidRLSSession()` ersetzt
+- **AuctionDetail**: kaufchance_invitations Check mit `ensureValidRLSSession()`
+- **AuthContext**: Periodischer Token-Refresh alle 4 Minuten für aktive Tabs
+
+### RLS-Tabellen Analyse (Session-Sensitive)
+| Tabelle | SELECT RLS | Auswirkung bei expired |
+|---------|-----------|----------------------|
+| `user_roles` | `auth.uid() = user_id` | **KRITISCH: isDealer=false** |
+| `kaufchance_invitations` | `bidder_id = auth.uid()` | Kaufchancen unsichtbar |
+| `post_auction_offers` | `buyer_id = auth.uid()` | Angebote unsichtbar |
+| `profiles` | `auth.uid() = id` | Eigenes Profil fehlt |
+| `bids` | `USING(true)` | ✅ OK (public) |
+| `auctions` | `USING(true)` | ✅ OK (public) |
+| `motorhomes` | `USING(true)` | ✅ OK (public) |
+
+### Schutzkette (Defense-in-Depth)
+1. **Supabase auto-refresh** (Client-built-in, kann bei Browser-Throttling versagen)
+2. **AuthContext periodic refresh** (alle 4 Min für aktive Tabs)
+3. **AuthContext visibilitychange** (bei Tab-Wechsel, Token < 5 Min)
+4. **ensureValidRLSSession()** (direkt vor jeder RLS-Query, prüft JWT exp)
+5. **useUserRole retry** (Rolle fehlt? → Refresh + Re-Query)
+6. **SessionExpiredDialog** (letzter Fallback: User zum Login auffordern)
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

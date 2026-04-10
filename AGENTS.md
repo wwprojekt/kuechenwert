@@ -352,7 +352,36 @@ After code changes, these functions need redeploying:
 - Returns: active_auctions, sold_auctions, approved_dealers, total_motorhomes, ending_soon, unique_brands
 - Accessible by anon and authenticated roles
 
+## Händler-Verkauf & Sicherheits-Features (08.04.2026 Session 5)
+
+### Implementiert
+1. **401 Unauthorized beim Bieten behoben**: `getFreshAccessToken()` + Retry-Logik in `place-bid` und `instant-buy` Aufrufen
+2. **Händler-Dashboard Menüstruktur**: Gruppiert in Kaufen (Auktionen, Favoriten, Kaufchancen), Verkaufen (Inserate), Konto (Termine, Profil)
+3. **DealerListingCreate**: Neue Seite `/dashboard/listings/new` – Händler können Fahrzeuge mit Pflichtfeldern direkt inserieren (Draft-Auktion wird erstellt)
+4. **Privat/Händler Badge**: MotorhomeCard, Kaufen.tsx, AuctionDetail.tsx zeigen `account_type`-basiertes Badge
+5. **Eigene Auktionen gefiltert**: DealerAuctions.tsx filtert seller_id === user.id client-seitig heraus
+6. **send-dealer-auction-digest**: Eigene Auktionen des Dealers werden nicht im Digest angezeigt (`isNotOwnAuction` Filter)
+7. **auto-convert-wizard**: Dealer-Rolle wird NIE durch Seller überschrieben (prüft existingRole vor upsert)
+8. **DB-Level Schutz**: `place_bid_atomic` wirft Fehler wenn `motorhome_seller_id = p_bidder_id`
+
+### Geänderte Dateien
+- `src/components/DealerSidebar.tsx` – Menügruppen Kaufen/Verkaufen/Konto
+- `src/pages/dealer/DealerListingCreate.tsx` – NEU: Create-Formular
+- `src/components/SmartDashboard.tsx` – Route `/dashboard/listings/new`
+- `src/pages/dashboard/MyListings.tsx` – Rollenbasierter Link (dealer→dashboard, seller→wizard)
+- `src/pages/dealer/DealerAuctions.tsx` – seller_id Filter
+- `src/components/MotorhomeCard.tsx` – accountType Prop + Händler Badge
+- `src/pages/Kaufen.tsx` + `src/pages/AuctionDetail.tsx` – accountType Badge
+- `supabase/functions/auto-convert-wizard/index.ts` – Rollenschutz
+- `supabase/functions/send-dealer-auction-digest/index.ts` – Eigene-Auktionen-Filter
+
+### Edge Functions Status
+- `send-dealer-auction-digest` v2 ACTIVE (self-contained, keine _shared imports)
+- `auto-convert-wizard` v16 ACTIVE
+- Gesamt: **57 Edge Functions** alle ACTIVE
+
 ## Dev Environment Notes
-- No .env file in repo; needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+- .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)
-- Build dist/ and serve with `npx vite preview --port 8011` for SPA routing support
+- Build dist/ and serve with `npx serve dist -l 8012 --single` for reliable SPA routing
+- Agent-proxy paths break SPA asset loading (absolute `/assets/` paths); production Netlify works fine

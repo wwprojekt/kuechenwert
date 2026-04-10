@@ -85,7 +85,6 @@ export const DealerRating = ({
         .from('dealer_reviews')
         .select(`
           *,
-          reviewer:profiles(first_name, last_name, company_name),
           response:review_responses(response_text, created_at)
         `)
         .eq('dealer_id', dealerId)
@@ -227,8 +226,7 @@ export const DealerRating = ({
                     </span>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {review.reviewer.company_name || 
-                     `${review.reviewer.first_name} ${review.reviewer.last_name}`}
+                    Verifizierter Käufer
                   </Badge>
                 </div>
                 

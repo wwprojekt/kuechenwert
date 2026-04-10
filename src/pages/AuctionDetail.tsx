@@ -34,18 +34,14 @@ type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
 type MotorhomeRow = Database["public"]["Tables"]["motorhomes"]["Row"];
 type BidRow = Database["public"]["Tables"]["bids"]["Row"];
 type PhotoRow = Database["public"]["Tables"]["motorhome_photos"]["Row"];
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface AuctionWithMotorhome extends AuctionRow {
   motorhome: MotorhomeRow & {
     photos: PhotoRow[];
-    seller: Pick<ProfileRow, "first_name" | "last_name" | "company_name"> | null;
   };
 }
 
-interface BidWithBidder extends BidRow {
-  bidder: Pick<ProfileRow, "first_name" | "last_name" | "company_name"> | null;
-}
+type BidWithBidder = BidRow;
 import {
   Clock,
   TrendingUp,
@@ -224,12 +220,7 @@ const AuctionDetail = () => {
           *,
           motorhome:motorhomes!left(
             *,
-            photos:motorhome_photos(*),
-            seller:profiles!left(
-              first_name,
-              last_name,
-              company_name
-            )
+            photos:motorhome_photos(*)
           )
         `)
         .eq("id", id)
@@ -288,10 +279,7 @@ const AuctionDetail = () => {
     const fetchBids = async () => {
       const { data, error } = await supabase
         .from("bids")
-        .select(`
-          *,
-          bidder:profiles(first_name, last_name, company_name)
-        `)
+        .select("*")
         .eq("auction_id", id)
         .order("created_at", { ascending: false });
 
@@ -333,28 +321,11 @@ const AuctionDetail = () => {
           table: "bids",
           filter: `auction_id=eq.${id}`,
         },
-        async (payload) => {
-          // Guard: Check if component is still mounted before async operation
-          if (!isSubscribed) return;
-          
-          // Fetch bidder profile
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("first_name, last_name, company_name")
-            .eq("id", payload.new.bidder_id)
-            .single();
-
-          // Guard: Check again after async operation completes
+        (payload) => {
           if (!isSubscribed) return;
 
-          const newBid = {
-            ...payload.new,
-            bidder: profile,
-          };
+          setBids((prev) => [payload.new as BidWithBidder, ...(Array.isArray(prev) ? prev : [])]);
 
-          setBids((prev) => [newBid, ...(Array.isArray(prev) ? prev : [])]);
-
-          // Update auction current bid
           setAuction((prev) => prev ? ({
             ...prev,
             current_bid: payload.new.amount,
@@ -365,39 +336,28 @@ const AuctionDetail = () => {
             const isNewBidFromMe = payload.new.bidder_id === user.id;
             
             if (isNewBidFromMe) {
-              // I just placed a bid successfully → I'm the highest bidder
               setBidStatusAnimation('pulse-green');
               setTimeout(() => setBidStatusAnimation('none'), 2000);
             } else {
-              // Someone else placed a bid
-              // Check if I was previously the highest bidder (i.e., I got outbid)
               const wasHighestBidder = prevHighestBidderRef.current;
               if (wasHighestBidder) {
-                // I was the highest bidder and someone else just bid → I got outbid!
                 setBidStatusAnimation('pulse-red');
                 setTimeout(() => setBidStatusAnimation('none'), 3000);
-                // Play outbid sound and show browser notification
                 notifyOutbid(payload.new.amount);
               }
               
-              // Show toast for new bid from others
               toast({
                 title: wasHighestBidder ? "Sie wurden überboten!" : "Neues Gebot!",
                 description: wasHighestBidder
-                  ? `Neues Höchstgebot: €${payload.new.amount.toLocaleString()}. Bieten Sie erneut!`
-                  : `€${payload.new.amount.toLocaleString()} von ${
-                      profile?.company_name || `${profile?.first_name} ${profile?.last_name}`
-                    }`,
+                  ? `Neues Höchstgebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €. Bieten Sie erneut!`
+                  : `Neues Gebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €`,
                 variant: wasHighestBidder ? "destructive" : "default",
               });
             }
           } else {
-            // Not logged in - just show generic toast
             toast({
               title: "Neues Gebot!",
-              description: `€${payload.new.amount.toLocaleString()} von ${
-                profile?.company_name || `${profile?.first_name} ${profile?.last_name}`
-              }`,
+              description: `Aktuelles Höchstgebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €`,
             });
           }
         }

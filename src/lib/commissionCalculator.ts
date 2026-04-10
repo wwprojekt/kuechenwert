@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 
@@ -265,7 +266,7 @@ export const recordCommissionCalculation = (
 export const formatCommissionBreakdown = (calculation: CommissionCalculation) =>
   commissionCalculator.formatCommissionBreakdown(calculation);
 
-// React hook for commission calculations
+// React hook for commission calculations (RPC-based, legacy)
 export const useCommissionCalculation = (saleAmount: number, dealerId?: string) => {
   const [calculation, setCalculation] = React.useState<CommissionCalculation | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -283,3 +284,68 @@ export const useCommissionCalculation = (saleAmount: number, dealerId?: string) 
 
   return { calculation, loading, error };
 };
+
+/**
+ * Pure function: compute commission from cached tiers (no RPC).
+ * Mirrors DB logic: find tier → rate × amount → GREATEST(result, min_commission)
+ */
+export function computeCommissionFromTiers(
+  tiers: CommissionTier[],
+  saleAmount: number
+): { commission: number; rate: number; minCommission: number } | null {
+  if (!tiers.length || saleAmount <= 0) return null;
+
+  const tier = tiers.find(
+    t => t.is_active && saleAmount >= t.min_amount && saleAmount < t.max_amount
+  );
+
+  if (!tier) {
+    // Fallback: highest tier
+    const sorted = [...tiers].filter(t => t.is_active).sort((a, b) => b.min_amount - a.min_amount);
+    const fallback = sorted[0];
+    if (!fallback) return null;
+    const raw = saleAmount * (fallback.rate_value / 100);
+    const commission = Math.max(raw, fallback.min_commission);
+    return { commission, rate: fallback.rate_value, minCommission: fallback.min_commission };
+  }
+
+  const raw = saleAmount * (tier.rate_value / 100);
+  const commission = Math.max(raw, tier.min_commission);
+  return { commission, rate: tier.rate_value, minCommission: tier.min_commission };
+}
+
+/**
+ * React Query hook: loads tiers once, computes commission client-side.
+ * No RPC per bid change – ideal for realtime auction displays.
+ */
+export function useCommissionFromTiers(saleAmount: number) {
+  const tiersQuery = useQuery({
+    queryKey: ['commission-tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commission_tiers')
+        .select('*')
+        .eq('is_active', true)
+        .order('min_amount');
+      if (error) throw error;
+      return (data ?? []) as CommissionTier[];
+    },
+    staleTime: 10 * 60 * 1000, // 10 min – tiers rarely change
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const result = React.useMemo(
+    () => tiersQuery.data ? computeCommissionFromTiers(tiersQuery.data, saleAmount) : null,
+    [tiersQuery.data, saleAmount]
+  );
+
+  return {
+    tiers: tiersQuery.data ?? [],
+    commission: result?.commission ?? 0,
+    rate: result?.rate ?? 0,
+    minCommission: result?.minCommission ?? 0,
+    totalCost: saleAmount + (result?.commission ?? 0),
+    isLoading: tiersQuery.isLoading,
+    isMinApplied: result ? result.commission > saleAmount * (result.rate / 100) : false,
+  };
+}

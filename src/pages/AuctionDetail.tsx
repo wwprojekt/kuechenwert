@@ -28,6 +28,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { CountryFlag } from "@/components/CountryFlag";
+import { useCommissionFromTiers } from "@/lib/commissionCalculator";
 import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
@@ -852,6 +853,7 @@ const AuctionDetail = () => {
   const rawPhotos = motorhome.photos;
   const photos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
   const currentBid = auction.current_bid || auction.starting_bid;
+  const commissionInfo = useCommissionFromTiers(currentBid);
   const reserveMet = auction.reserve_price ? currentBid >= auction.reserve_price : true;
   // Only show reserve price info to the seller or admin
   const canSeeReservePrice = user?.id === (motorhome as any).seller_id || isAdmin;
@@ -1723,7 +1725,7 @@ const AuctionDetail = () => {
                 </div>
 
                 {/* Provision - visible for dealers and admins */}
-                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && settings?.commission_rate_percent > 0 && (
+                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && commissionInfo.commission > 0 && (
                   <>
                     <Separator />
                     <div className="space-y-2">
@@ -1734,15 +1736,23 @@ const AuctionDetail = () => {
                           <span className="font-medium">€{currentBid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Provision</span>
-                          <span className="font-medium">€{(currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                          <span className="text-muted-foreground">
+                            Provision ({commissionInfo.rate.toLocaleString('de-DE')}%{commissionInfo.isMinApplied ? ', mind.' : ''})
+                          </span>
+                          <span className="font-medium">€{commissionInfo.commission.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                         </div>
+                        {commissionInfo.isMinApplied && (
+                          <p className="text-xs text-muted-foreground">
+                            Mindestprovision €{commissionInfo.minCommission.toLocaleString('de-DE', { minimumFractionDigits: 2 })} angewendet
+                          </p>
+                        )}
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">Gesamtkosten</span>
-                        <span className="text-lg font-bold text-primary">€{(currentBid + currentBid * (settings.commission_rate_percent / 100)).toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-semibold">Gesamtkosten (netto)</span>
+                        <span className="text-lg font-bold text-primary">€{commissionInfo.totalCost.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
                       </div>
+                      <p className="text-xs text-muted-foreground">zzgl. MwSt. auf die Provision</p>
                     </div>
                   </>
                 )}

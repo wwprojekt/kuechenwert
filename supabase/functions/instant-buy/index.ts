@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
       const { data: invoiceId, error: invoiceRpcError } = await supabaseAdmin.rpc('create_instant_buy_invoice', {
         auction_id_param: auctionId,
         dealer_id_param: user.id,
-        instant_price_param: instantPrice,
+        sale_price_param: instantPrice,
       });
 
       if (invoiceRpcError) {

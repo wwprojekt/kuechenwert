@@ -1,12 +1,20 @@
+import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Calculator, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
+import { useCommissionFromTiers } from "@/lib/commissionCalculator";
 
 const Preise = () => {
+  const [calcAmount, setCalcAmount] = useState(15000);
+  const calcResult = useCommissionFromTiers(calcAmount);
+
   const sellerFreeServices = [
     "Verkaufsinserat erstellen",
     "Verkaufsinserat verlängern für neue Bieterrunde",
@@ -25,10 +33,6 @@ const Preise = () => {
     "Online Fragen an Verkäufer stellen",
     "Online-Nachverhandlung",
     "Vorgefertigter, rechtssicherer Kaufvertrag",
-  ];
-
-  const buyerPaidServices = [
-    "Fahrzeug ersteigern (Provision)",
   ];
 
   return (
@@ -58,25 +62,18 @@ const Preise = () => {
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Verkäufer
+                  Für Verkäufer – kostenlos
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold text-muted-foreground mb-4">
-                      kostenlose Leistungen
-                    </h3>
-                    <ul className="space-y-3">
-                      {sellerFreeServices.map((service, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm sm:text-base">{service}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                <ul className="space-y-3">
+                  {sellerFreeServices.map((service, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm sm:text-base">{service}</span>
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
 
@@ -84,14 +81,14 @@ const Preise = () => {
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Käufer
+                  Für Käufer (Händler)
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
                 <div className="space-y-6">
                   <div>
                     <h3 className="font-semibold text-muted-foreground mb-4">
-                      kostenlose Leistungen
+                      Kostenlose Leistungen
                     </h3>
                     <ul className="space-y-3">
                       {buyerFreeServices.map((service, index) => (
@@ -102,21 +99,99 @@ const Preise = () => {
                       ))}
                     </ul>
                   </div>
-
+                  <Separator />
                   <div>
-                    <h3 className="font-semibold text-muted-foreground mb-4">
-                      kostenpflichtige Leistungen
+                    <h3 className="font-semibold text-muted-foreground mb-2">
+                      Vermittlungsprovision
                     </h3>
-                    <ul className="space-y-3">
-                      {buyerPaidServices.map((service, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm sm:text-base">{service}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Nur bei erfolgreichem Kauf – gestaffelt nach Kaufpreis:
+                    </p>
+                    {calcResult.tiers.length > 0 ? (
+                      <div className="rounded-lg border overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-muted/50 text-left">
+                              <th className="px-4 py-2.5 font-medium">Kaufpreis</th>
+                              <th className="px-4 py-2.5 font-medium text-right">Satz</th>
+                              <th className="px-4 py-2.5 font-medium text-right">Mindestprovision</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {calcResult.tiers.map((tier, i) => (
+                              <tr key={tier.id} className={i % 2 === 0 ? '' : 'bg-muted/20'}>
+                                <td className="px-4 py-2">
+                                  {tier.max_amount >= 99999999
+                                    ? `ab €${tier.min_amount.toLocaleString('de-DE')}`
+                                    : `€${tier.min_amount.toLocaleString('de-DE')} – €${tier.max_amount.toLocaleString('de-DE')}`
+                                  }
+                                </td>
+                                <td className="px-4 py-2 text-right font-medium">{tier.rate_value.toLocaleString('de-DE')}%</td>
+                                <td className="px-4 py-2 text-right">€{tier.min_commission.toLocaleString('de-DE', { minimumFractionDigits: 0 })}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Staffel wird geladen…</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-3 flex items-start gap-1.5">
+                      <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      Alle Beträge zzgl. MwSt. Volumenrabatte für Vielkäufer möglich.
+                    </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Commission Calculator */}
+      <section className="py-12 sm:py-16 bg-muted/30">
+        <div className="container px-4 sm:px-6 lg:px-8">
+          <div className="max-w-lg mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Calculator className="w-5 h-5 text-primary" />
+                  Provisionsrechner
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="calc-amount">Kaufpreis (€)</Label>
+                  <Input
+                    id="calc-amount"
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={calcAmount || ''}
+                    onChange={(e) => setCalcAmount(Number(e.target.value) || 0)}
+                    className="mt-1"
+                  />
+                </div>
+                {calcAmount > 0 && calcResult.commission > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Kaufpreis</span>
+                      <span className="font-medium">€{calcAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Provision ({calcResult.rate.toLocaleString('de-DE')}%{calcResult.isMinApplied ? ', Mindestprovision' : ''})
+                      </span>
+                      <span className="font-medium">€{calcResult.commission.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-semibold">
+                      <span>Gesamtkosten (netto)</span>
+                      <span className="text-primary">€{calcResult.totalCost.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">zzgl. MwSt. auf die Provision</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

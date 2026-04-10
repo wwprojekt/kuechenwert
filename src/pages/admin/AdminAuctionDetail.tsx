@@ -30,6 +30,7 @@ import {
   Image as ImageIcon,
   Mail,
   Phone,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -158,6 +159,22 @@ export default function AdminAuctionDetail() {
     onError: (error) => {
       logger.error("Close auction error:", error);
       toast.error("Fehler beim Schließen der Auktion");
+    },
+  });
+
+  const deleteBidMutation = useMutation({
+    mutationFn: async (bidId: string) => {
+      const { data, error } = await supabase.rpc("admin_delete_bid", { p_bid_id: bidId });
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Gebot über ${formatPrice(data.deleted_amount)} gelöscht`);
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Fehler beim Löschen des Gebots");
     },
   });
 
@@ -418,6 +435,9 @@ export default function AdminAuctionDetail() {
                         <TableHead>Betrag</TableHead>
                         <TableHead>Typ</TableHead>
                         <TableHead>Zeitpunkt</TableHead>
+                        {["active", "draft"].includes(auction.status) && (
+                          <TableHead className="w-10"></TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -448,6 +468,55 @@ export default function AdminAuctionDetail() {
                           <TableCell className="text-muted-foreground">
                             {formatDate(bid.created_at)}
                           </TableCell>
+                          {["active", "draft"].includes(auction.status) && (
+                            <TableCell>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    disabled={deleteBidMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Gebot löschen?</AlertDialogTitle>
+                                    <AlertDialogDescription className="space-y-2">
+                                      <span className="block">
+                                        Gebot über <strong>{formatPrice(bid.amount)}</strong> von{" "}
+                                        <strong>{bid.bidder?.first_name} {bid.bidder?.last_name}</strong>{" "}
+                                        {bid.bidder?.company_name && `(${bid.bidder.company_name})`} wird unwiderruflich gelöscht.
+                                      </span>
+                                      {index === 0 && sortedBids.length > 1 && (
+                                        <span className="block text-amber-600">
+                                          ⚠️ Das ist das Höchstgebot. Das neue Höchstgebot wird{" "}
+                                          <strong>{formatPrice(sortedBids[1]?.amount)}</strong> von{" "}
+                                          {sortedBids[1]?.bidder?.first_name} {sortedBids[1]?.bidder?.last_name}.
+                                        </span>
+                                      )}
+                                      {index === 0 && sortedBids.length === 1 && (
+                                        <span className="block text-amber-600">
+                                          ⚠️ Das ist das einzige Gebot. Die Auktion hat danach keine Gebote mehr.
+                                        </span>
+                                      )}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteBidMutation.mutate(bid.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Gebot löschen
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

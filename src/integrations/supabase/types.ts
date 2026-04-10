@@ -3563,6 +3563,17 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_bid: {
+        Args: { p_bid_id: string }
+        Returns: {
+          success: boolean
+          error?: string
+          deleted_amount?: number
+          was_highest?: boolean
+          new_current_bid?: number
+          bidder_id?: string
+        }
+      }
       admin_search_listings: {
         Args: { search_term?: string }
         Returns: {

@@ -28,7 +28,8 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { CountryFlag } from "@/components/CountryFlag";
-import { useCommissionFromTiers } from "@/lib/commissionCalculator";
+import { AuctionCommissionOverview } from "@/components/AuctionCommissionOverview";
+import { AuctionDetailSkeleton } from "@/components/skeletons/AuctionDetailSkeleton";
 import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
@@ -176,10 +177,6 @@ const AuctionDetail = () => {
 
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
-  // Commission hook MUST be called before any early returns (React Rules of Hooks)
-  const currentBidForCommission = auction ? (auction.current_bid || auction.starting_bid) : 0;
-  const commissionInfo = useCommissionFromTiers(currentBidForCommission);
 
   // Fetch dealer's postal code for distance calculation (React Query for cross-page caching)
   const { data: dealerPostalCode = null } = useQuery({
@@ -846,9 +843,7 @@ const AuctionDetail = () => {
   if (!auction || !auction.motorhome) {
     return (
       <PageLayout breadcrumbs={true} title="Lädt..." description="Auktion wird geladen">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
+        <AuctionDetailSkeleton />
       </PageLayout>
     );
   }
@@ -1727,37 +1722,9 @@ const AuctionDetail = () => {
                   )}
                 </div>
 
-                {/* Provision - visible for dealers and admins */}
-                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && commissionInfo.commission > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Kostenübersicht</p>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Aktuelles Gebot</span>
-                          <span className="font-medium">€{currentBid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Provision ({commissionInfo.rate.toLocaleString('de-DE')}%{commissionInfo.isMinApplied ? ', mind.' : ''})
-                          </span>
-                          <span className="font-medium">€{commissionInfo.commission.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        {commissionInfo.isMinApplied && (
-                          <p className="text-xs text-muted-foreground">
-                            Mindestprovision €{commissionInfo.minCommission.toLocaleString('de-DE', { minimumFractionDigits: 2 })} angewendet
-                          </p>
-                        )}
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">Gesamtkosten (netto)</span>
-                        <span className="text-lg font-bold text-primary">€{commissionInfo.totalCost.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">zzgl. MwSt. auf die Provision</p>
-                    </div>
-                  </>
+                {/* Provision - visible for dealers and admins (hook lives inside the component) */}
+                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && (
+                  <AuctionCommissionOverview currentBid={currentBid} />
                 )}
 
                 {/* Reserve price indicator - only visible to seller and admin */}

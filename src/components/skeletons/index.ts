@@ -4,6 +4,7 @@
  */
 
 export { AuctionCardSkeleton, AuctionCardSkeletonGrid } from './AuctionCardSkeleton';
+export { AuctionDetailSkeleton } from './AuctionDetailSkeleton';
 export { 
   DashboardStatSkeleton, 
   DashboardStatSkeletonGrid, 

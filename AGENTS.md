@@ -380,6 +380,29 @@ After code changes, these functions need redeploying:
 - `auto-convert-wizard` v16 ACTIVE
 - Gesamt: **57 Edge Functions** alle ACTIVE
 
+## UX-Audit Fixes (08.04.2026 Session 5)
+
+### Kritische Bugs behoben
+1. **DealerListingCreate Custom-Model-Input**: War komplett kaputt – `value=""` hardcoded auf dem Custom-Input, nach erstem Tastendruck verschwand das Feld. Fix: separater `customModel`-State
+2. **DealerListingCreate Auction-Insert**: Kein Error-Handling → orphaned Motorhomes möglich. Fix: Bei Fehler wird Motorhome automatisch gelöscht
+3. **DealerListingCreate Wohnwagen-Mileage**: Zeigte disabled Feld mit "0" statt Feld auszublenden
+
+### UX-Verbesserungen
+- **MotorhomeCard**: Zeigt jetzt konsistent beide Badges (Händler blau, Privat grau) – vorher nur Händler
+- **DealerSidebar**: "Meine Gebote" hatte gleichen Icon wie "Aktive Auktionen" (Gavel) → HandCoins
+- **DealerSidebar**: "Neues Inserat" als Direktlink im Verkaufen-Menü (PlusCircle)
+- **Mindestpreis-Input**: Label zeigt €, min=0, step=100 gegen negative Werte
+- **Kilometerstand-Input**: min=0 gegen negative Werte
+
+### Geprüft und OK
+- Session-Retry beim Bieten (401 → refresh → retry)
+- DealerAuctions: eigene Auktionen korrekt gefiltert
+- MyListings: Rollenbasierte CTA (dealer→dashboard, seller→wizard)
+- ListingEdit: Unterstützt `?tab=photos` Query-Parameter
+- Digest Edge Function: seller_id Filter korrekt
+- Haendler + SEO-Seite: RPC get_public_platform_stats funktioniert
+- Alle 92 Motorhomes haben account_type='private' (keine null-Werte)
+
 ## Dev Environment Notes
 - .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 - Vite dev server has connectivity issues in container environments (hangs on curl)

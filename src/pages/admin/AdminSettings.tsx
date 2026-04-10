@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Brain, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { logger } from "@/lib/logger";
 
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
@@ -17,6 +18,7 @@ const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
 export default function AdminSettings() {
   const { toast } = useToast();
   const { settings, refreshSettings } = useSettings();
+  const { logEvent } = useAuditLog();
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState<any>({});
@@ -85,7 +87,8 @@ export default function AdminSettings() {
       if (error) throw error;
 
       await refreshSettings();
-      
+      logEvent({ action: "settings_changed", entityType: "settings", details: { fields: Object.keys(saveData) } });
+
       toast({
         title: "Einstellungen gespeichert",
         description: "Ihre Änderungen wurden erfolgreich gespeichert.",

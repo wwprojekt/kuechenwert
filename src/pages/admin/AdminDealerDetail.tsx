@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { approveDealerApplication, rejectDealerApplication, deleteDealerApplication } from "@/lib/dealerApplications";
 import { toast } from "sonner";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import {
@@ -87,6 +88,7 @@ export default function AdminDealerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { logEvent } = useAuditLog();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -287,6 +289,7 @@ export default function AdminDealerDetail() {
     },
     onSuccess: () => {
       toast.success("Händler erfolgreich genehmigt");
+      logEvent({ action: "dealer_approved", entityType: "dealer", entityId: id, details: { company: dealer?.company_name } });
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
@@ -305,6 +308,7 @@ export default function AdminDealerDetail() {
     },
     onSuccess: () => {
       toast.success("Händlerantrag abgelehnt");
+      logEvent({ action: "dealer_rejected", entityType: "dealer", entityId: id, details: { reason: rejectReason } });
       setShowRejectDialog(false);
       setRejectReason("");
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
@@ -324,6 +328,7 @@ export default function AdminDealerDetail() {
     },
     onSuccess: () => {
       toast.success("Händlerantrag gelöscht");
+      logEvent({ action: "delete", entityType: "dealer", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       navigate("/admin/dealers");
     },
@@ -349,6 +354,7 @@ export default function AdminDealerDetail() {
     },
     onSuccess: (_, suspend) => {
       toast.success(suspend ? "Händler gesperrt" : "Händler entsperrt");
+      logEvent({ action: suspend ? "user_suspended" : "user_unsuspended", entityType: "dealer", entityId: id, details: { user_id: dealer?.user_id } });
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
     },
     onError: (error) => {

@@ -8,6 +8,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import {
@@ -67,6 +68,7 @@ export default function AdminAuctionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { logEvent } = useAuditLog();
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Fetch auction with all related data
@@ -131,6 +133,7 @@ export default function AdminAuctionDetail() {
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich aktiviert");
+      logEvent({ action: "auction_activated", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
     onError: (error) => {
@@ -149,6 +152,7 @@ export default function AdminAuctionDetail() {
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich geschlossen");
+      logEvent({ action: "auction_closed", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
     onError: (error) => {

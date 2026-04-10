@@ -312,6 +312,50 @@ After code changes, these functions need redeploying:
    - dealer_notifications: Offene INSERT Policy ENTFERNT (service_role bypasses RLS ohnehin)
 8. **Wertrechner Flow** → analysiert, keine Bugs gefunden (301 Leads/30d, 0 Fehler, konsistente Daten)
 
+## Email Center & Bidding Bugfixes (10.04.2026)
+
+### Fehler-Analyse (5 Fehler aus Fehlerprotokoll)
+1. **send-admin-email 500** (5 Vorfälle, 12:46): Admin konnte keine Emails senden
+   - Resend-API-Fehler wurde als blindes `throw` weitergegeben → 500
+   - Frontend zeigte nur "FunctionsHttpError" statt der eigentlichen Fehlermeldung
+   - **Fix**: Resend-Fehler werden jetzt geparst (429→Tageslimit, 422→Validierung), Return 502 mit lesbarer Meldung
+   - Payload-Size-Validierung hinzugefügt (>450KB → klare Warnung)
+   - **send-admin-email v13 deployed**
+
+2. **fetch-attachment-url IMMER 403** (KRITISCHER BUG):
+   - Prüfte `profiles.role` statt `user_roles.role` → Spalte existiert nicht → IMMER Forbidden
+   - **Anhänge konnten NIE geöffnet werden** seit Deployment der Function
+   - **Fix**: Role-Check auf `user_roles` korrigiert
+   - **fetch-attachment-url v9 deployed**
+
+3. **place-bid 401 Flut** (8+ Vorfälle, Händler uwe.geipel):
+   - `verify_jwt: true` → Gateway blockt mit 401 BEVOR Function-Code läuft
+   - Kein Error-Body → Frontend kann Fehler nicht unterscheiden
+   - Doppelte 401 pro Versuch (Erstversuch + Retry beide scheitern)
+   - **Fix**: `verify_jwt: false`, Function hat bereits 5-stufigen Auth-Check
+   - Auth-Fehler geben jetzt 401 mit "Sitzung abgelaufen" zurück
+   - **place-bid v25 deployed**
+
+4. **Firefox Web Locks** (Fehler #4+5): "The lock request is aborted"
+   - Bekanntes Supabase/Firefox Problem mit Web Locks API
+   - `getFreshAccessToken()` hat bereits Lock-Error-Fallback mit 500ms Retry
+   - Keine weitere Aktion nötig
+
+5. **Email link expired** (Fehler #2): rob@citycampers.nl
+   - Normaler Fall: Dealer klickte abgelaufenen Bestätigungslink
+   - Admin hat bereits resend-confirmation Funktion
+
+### Frontend Fixes (AdminEmailCenter)
+- Attachment-Klick nutzte `window.__supabase` (undefined!) → `supabase.functions.invoke`
+- Reply/Send zeigten generische Fehler → `data.error` wird jetzt extrahiert und im Toast angezeigt
+- Attachments ohne Download-Daten zeigen klare Fehlermeldung statt stillem Nichtstun
+
+### Architektur-Erkenntnisse
+- **profiles.role existiert NICHT** – Rollen IMMER über `user_roles` Tabelle prüfen
+- **verify_jwt: true** ist problematisch für Functions die eigene Auth haben – Gateway-401 hat keinen Body
+- **Resend Limits**: ~64 Emails/Tag aktuell, Free Plan erlaubt 100/day, 3000/month (1579 im April)
+- **Edge Function error pattern**: catch-all `throw` → 500 ist schlecht für UX. Besser: spezifische HTTP-Codes + lesbare Fehlermeldungen
+
 ## Known Remaining Items
 - 1 approved dealer has unconfirmed email (admin can resend via new button)
 - 37 of 44 approved dealers have never placed a bid (digest email should help starting tomorrow)

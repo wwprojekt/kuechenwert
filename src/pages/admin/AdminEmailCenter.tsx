@@ -44,6 +44,25 @@ import { de } from "date-fns/locale";
 import DOMPurify from "dompurify";
 
 /**
+ * Extract the actual error message from a Supabase FunctionsHttpError.
+ * error.context is the raw Response – body can only be read ONCE,
+ * so we read as text first, then try JSON.parse.
+ */
+async function extractEdgeFunctionError(error: any): Promise<string> {
+  if (error instanceof FunctionsHttpError && error.context) {
+    try {
+      const text = await error.context.text();
+      try {
+        const json = JSON.parse(text);
+        if (json?.error) return json.error;
+      } catch { /* not JSON */ }
+      if (text) return text;
+    } catch { /* body unreadable */ }
+  }
+  return error?.message || 'Unbekannter Fehler';
+}
+
+/**
  * Sanitize HTML content to prevent XSS attacks.
  * Allows safe HTML tags commonly used in emails while stripping dangerous elements.
  */
@@ -500,23 +519,6 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
       .limit(50);
     setContactHistory((data || []) as any);
     setShowHistory(true);
-  };
-
-  // Extract the actual error message from a Supabase FunctionsHttpError.
-  // error.context is the raw Response object – body can only be read ONCE,
-  // so we read as text first, then try JSON.parse.
-  const extractEdgeFunctionError = async (error: any): Promise<string> => {
-    if (error instanceof FunctionsHttpError && error.context) {
-      try {
-        const text = await error.context.text();
-        try {
-          const json = JSON.parse(text);
-          if (json?.error) return json.error;
-        } catch { /* not JSON, use raw text */ }
-        if (text) return text;
-      } catch { /* body unreadable */ }
-    }
-    return error?.message || 'Unbekannter Fehler';
   };
 
   const handleReply = async () => {

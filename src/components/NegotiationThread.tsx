@@ -138,7 +138,7 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
 
         if (error) throw error;
 
-        // Send notification to buyer about rejection or counter offer
+        // Send notification via Edge Function (runs with service_role, bypasses RLS)
         try {
           const { data: offerData } = await supabase
             .from('post_auction_offers')
@@ -146,50 +146,17 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
             .eq('id', selectedOffer.id)
             .single();
 
-          if (offerData?.buyer_id) {
-            const { data: buyerProfile } = await supabase
-              .from('profiles')
-              .select('email, first_name, company_name')
-              .eq('id', offerData.buyer_id)
-              .single();
-
-            const { data: auctionInfo } = await supabase
-              .from('auctions')
-              .select('motorhome:motorhomes(manufacturer, model)')
-              .eq('id', offerData.auction_id)
-              .single();
-
-            const motorhomeName = `${auctionInfo?.motorhome?.manufacturer || ''} ${auctionInfo?.motorhome?.model || ''}`.trim();
-            const buyerDisplayName = buyerProfile?.company_name || buyerProfile?.first_name || buyerProfile?.email?.split('@')[0] || 'Kunde';
-
-            if (buyerProfile?.email) {
-              if (actionType === 'reject') {
-                await supabase.functions.invoke('send-auction-notification', {
-                  body: {
-                    email: buyerProfile.email,
-                    name: buyerDisplayName,
-                    type: 'buyer_offer_rejected',
-                    motorhomeModel: motorhomeName,
-                    auctionUrl: 'https://caravanwert.de/kaufen',
-                    offerAmount: `${Number(offerData.offer_amount).toLocaleString('de-DE')} \u20ac`,
-                    sellerResponse: responseMessage.trim() || undefined,
-                  },
-                });
-              } else if (actionType === 'counter') {
-                await supabase.functions.invoke('send-auction-notification', {
-                  body: {
-                    email: buyerProfile.email,
-                    name: buyerDisplayName,
-                    type: 'buyer_counter_offer',
-                    motorhomeModel: motorhomeName,
-                    auctionUrl: 'https://caravanwert.de/kaufen',
-                    offerAmount: `${Number(offerData.offer_amount).toLocaleString('de-DE')} \u20ac`,
-                    counterAmount: `${parseFloat(counterAmount).toLocaleString('de-DE')} \u20ac`,
-                    sellerResponse: responseMessage.trim() || undefined,
-                  },
-                });
-              }
-            }
+          if (offerData) {
+            await supabase.functions.invoke('notify-offer-action', {
+              body: {
+                action: actionType === 'reject' ? 'offer_rejected' : 'counter_offer',
+                auctionId: offerData.auction_id,
+                buyerId: offerData.buyer_id,
+                offerAmount: Number(offerData.offer_amount),
+                counterAmount: actionType === 'counter' ? parseFloat(counterAmount) : undefined,
+                sellerResponse: responseMessage.trim() || undefined,
+              },
+            });
           }
         } catch (notifyErr) {
           console.error('Failed to send buyer notification:', notifyErr);

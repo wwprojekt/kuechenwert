@@ -135,47 +135,19 @@ export function PostAuctionOfferDialog({
         if (error) throw error;
       }, 'PostAuctionOffer.insert');
 
-      // Send notification to seller about new offer
+      // Send notification via Edge Function (runs with service_role, bypasses RLS)
       try {
-        const { data: auctionData } = await supabase
-          .from('auctions')
-          .select('id, current_bid, motorhome:motorhomes(seller_id, manufacturer, model)')
-          .eq('id', auctionId)
-          .single();
-
-        if (auctionData?.motorhome?.seller_id) {
-          const { data: sellerProfile } = await supabase
-            .from('profiles')
-            .select('email, first_name')
-            .eq('id', auctionData.motorhome.seller_id)
-            .single();
-
-          const { data: buyerProfile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, company_name')
-            .eq('id', user.id)
-            .single();
-
-          const motorhomeName = `${auctionData.motorhome.manufacturer || ''} ${auctionData.motorhome.model || ''}`.trim();
-          const buyerDisplayName = buyerProfile?.company_name || `${buyerProfile?.first_name || ''} ${buyerProfile?.last_name || ''}`.trim() || 'Ein Händler';
-
-          if (sellerProfile?.email) {
-            await supabase.functions.invoke('send-auction-notification', {
-              body: {
-                email: sellerProfile.email,
-                name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
-                type: 'seller_new_offer',
-                motorhomeModel: motorhomeName,
-                auctionUrl: 'https://caravanwert.de/dashboard',
-                offerAmount: `${amount.toLocaleString('de-DE')} \u20ac`,
-                buyerName: buyerDisplayName,
-                currentBid: auctionData.current_bid ? `${Number(auctionData.current_bid).toLocaleString('de-DE')} \u20ac` : undefined,
-              },
-            });
-          }
-        }
+        await supabase.functions.invoke('notify-offer-action', {
+          body: {
+            action: 'new_offer',
+            auctionId,
+            buyerId: user.id,
+            offerAmount: amount,
+            message: message.trim() || undefined,
+          },
+        });
       } catch (notifyErr) {
-        console.error('Failed to send seller notification:', notifyErr);
+        console.error('Failed to send offer notification:', notifyErr);
       }
 
       toast({

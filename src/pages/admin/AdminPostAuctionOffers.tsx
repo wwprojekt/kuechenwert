@@ -491,12 +491,37 @@ export default function AdminPostAuctionOffers() {
   const handleAdminRejectOffer = async (offerId: string) => {
     setAdminActionLoading(true);
     try {
+      // Lade Offer-Daten vor dem Update für die Benachrichtigung
+      const { data: offerData } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount, auction_id')
+        .eq('id', offerId)
+        .single();
+
       const { error } = await supabase
         .from('post_auction_offers')
         .update({ status: 'rejected', seller_response: 'Abgelehnt durch Admin', updated_at: new Date().toISOString() })
         .eq('id', offerId);
       if (error) throw error;
-      toast({ title: 'Angebot abgelehnt' });
+
+      // Käufer benachrichtigen via Edge Function
+      if (offerData) {
+        try {
+          await supabase.functions.invoke('notify-offer-action', {
+            body: {
+              action: 'offer_rejected',
+              auctionId: offerData.auction_id,
+              buyerId: offerData.buyer_id,
+              offerAmount: Number(offerData.offer_amount),
+              sellerResponse: 'Abgelehnt durch Admin',
+            },
+          });
+        } catch (notifyErr) {
+          console.error('Failed to send rejection notification:', notifyErr);
+        }
+      }
+
+      toast({ title: 'Angebot abgelehnt', description: 'Der Käufer wurde per E-Mail benachrichtigt.' });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       // Reload detail if open
       if (selectedKaufchanceAuction) {
@@ -518,17 +543,43 @@ export default function AdminPostAuctionOffers() {
     }
     setAdminActionLoading(true);
     try {
+      // Lade Offer-Daten vor dem Update für die Benachrichtigung
+      const { data: offerData } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount, auction_id')
+        .eq('id', offerId)
+        .single();
+
       const { error } = await supabase
         .from('post_auction_offers')
         .update({
           status: 'countered',
           counter_offer_amount: amount,
-          seller_response: adminCounterMessage || `Gegenangebot: ${amount.toLocaleString('de-DE')} €`,
+          seller_response: adminCounterMessage || `Gegenangebot: ${amount.toLocaleString('de-DE')} \u20ac`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', offerId);
       if (error) throw error;
-      toast({ title: 'Gegenangebot gesendet', description: `${amount.toLocaleString('de-DE')} €` });
+
+      // Käufer benachrichtigen via Edge Function
+      if (offerData) {
+        try {
+          await supabase.functions.invoke('notify-offer-action', {
+            body: {
+              action: 'counter_offer',
+              auctionId: offerData.auction_id,
+              buyerId: offerData.buyer_id,
+              offerAmount: Number(offerData.offer_amount),
+              counterAmount: amount,
+              sellerResponse: adminCounterMessage || undefined,
+            },
+          });
+        } catch (notifyErr) {
+          console.error('Failed to send counter offer notification:', notifyErr);
+        }
+      }
+
+      toast({ title: 'Gegenangebot gesendet', description: `${amount.toLocaleString('de-DE')} \u20ac \u2013 K\u00e4ufer wurde per E-Mail benachrichtigt.` });
       setAdminCounterAmount("");
       setAdminCounterMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
@@ -760,7 +811,22 @@ export default function AdminPostAuctionOffers() {
         });
       if (error) throw error;
 
-      toast({ title: 'Angebot erstellt', description: `${amount.toLocaleString('de-DE')} € im Namen des Händlers` });
+      // Verkäufer benachrichtigen via Edge Function
+      try {
+        await supabase.functions.invoke('notify-offer-action', {
+          body: {
+            action: 'admin_offer',
+            auctionId,
+            buyerId: adminOfferDealerId,
+            offerAmount: amount,
+            message: adminOfferMessage || undefined,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to send admin offer notification:', notifyErr);
+      }
+
+      toast({ title: 'Angebot erstellt', description: `${amount.toLocaleString('de-DE')} \u20ac im Namen des H\u00e4ndlers \u2013 Verk\u00e4ufer wurde per E-Mail benachrichtigt.` });
       setAdminOfferDealerId("");
       setAdminOfferAmount("");
       setAdminOfferMessage("");

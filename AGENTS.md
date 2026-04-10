@@ -438,6 +438,19 @@ After code changes, these functions need redeploying:
 - **Mindestpreis-Input**: Label zeigt €, min=0, step=100 gegen negative Werte
 - **Kilometerstand-Input**: min=0 gegen negative Werte
 
+### Session-Expired Fix (10.04.2026)
+- **Root Cause**: `getFreshAccessToken()` gab korrupte Tokens aus `getSession()` Cache zurück
+  - Auth-Logs zeigten: "token is malformed: invalid number of segments" → JWT war physisch kaputt
+  - place-bid Edge Function bekam korruptes JWT → 401 → "Sitzung abgelaufen"
+- **isTokenValid()**: Neue Funktion prüft JWT-Struktur (3 Segmente) + exp-Feld VOR Rückgabe
+- **Kein stale Fallback mehr**: `getSession()` wird nur noch genutzt wenn Token validated ist
+- **Proaktiver Token-Refresh**: `visibilitychange` Event im AuthContext – wenn Tab wieder sichtbar wird und Token in <5min abläuft → automatischer Refresh
+- **SessionExpiredDialog**: Modaler Dialog statt Toast – "Erneut versuchen" (Recovery) + "Jetzt anmelden" Button
+- **Zombie-Session-Cleanup**: 57 expired Sessions in auth.sessions entdeckt, 21 gelöscht
+  - `cleanup_expired_sessions()` DB-Funktion erstellt (sessions >8 Tage)
+  - Supabase Default: Refresh Token = 7 Tage, Access Token = 1h (configurable)
+- **Dealer-Session-Pattern**: Viele Dealers lassen Tabs tagelang offen, refreshed_at NULL = nie refreshed
+
 ### Geprüft und OK
 - Session-Retry beim Bieten (401 → refresh → retry)
 - DealerAuctions: eigene Auktionen korrekt gefiltert

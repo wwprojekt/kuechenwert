@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Gavel, Search, Clock, TrendingUp, MapPin, Navigation, ArrowUpDown, Zap, Trophy } from "lucide-react";
 import {
   Select,
@@ -68,11 +69,7 @@ const DealerAuctions = () => {
     fetchDealerPlz();
   }, [user]);
 
-  useEffect(() => {
-    fetchAuctions();
-  }, []);
-
-  const fetchAuctions = async () => {
+  const fetchAuctions = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('auctions')
@@ -110,7 +107,9 @@ const DealerAuctions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useLiveData(fetchAuctions, { pollingInterval: 30_000 });
 
   const getUserHighestBid = (auction: Auction) => {
     const safeBids = Array.isArray(auction.bids) ? auction.bids : auction.bids ? [auction.bids] : [];

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveData } from "@/hooks/useLiveData";
 import { Package, Search, Calendar, Euro, ArrowUpDown } from "lucide-react";
 import {
   Select,
@@ -89,11 +90,7 @@ const DealerInventory = () => {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user) {
-      fetchInventory();
-    }
-  }, [user, fetchInventory]);
+  useLiveData(fetchInventory, { enabled: !!user, pollingInterval: 0 });
 
   const filteredInventory = inventory.filter(item =>
     `${item.manufacturer} ${item.model}`.toLowerCase().includes(searchTerm.toLowerCase())

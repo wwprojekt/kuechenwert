@@ -176,11 +176,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     window.addEventListener("storage", handleStorageChange);
 
+    // Proactive token refresh when tab becomes visible again.
+    // Dealers often leave tabs open for hours/days. When they return,
+    // the access token may be expired. Refreshing proactively prevents
+    // "Sitzung abgelaufen" errors when they try to bid.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && session) {
+        // Check if access token expires within the next 5 minutes
+        const expiresAt = session.expires_at;
+        const now = Math.floor(Date.now() / 1000);
+        const bufferSeconds = 300; // 5 minutes
+
+        if (expiresAt && (expiresAt - now) < bufferSeconds) {
+          logger.log("[Auth] Tab wieder sichtbar, Token läuft bald ab → proaktiver Refresh");
+          supabase.auth.refreshSession()
+            .then(({ data, error }) => {
+              if (!error && data.session) {
+                setSession(data.session);
+                setUser(data.session.user);
+                logger.log("[Auth] Proaktiver Token-Refresh erfolgreich");
+              } else if (error) {
+                logger.warn("[Auth] Proaktiver Token-Refresh fehlgeschlagen:", error.message);
+              }
+            })
+            .catch((e) => {
+              if (!isLockError(e)) {
+                logger.warn("[Auth] Proaktiver Token-Refresh Fehler:", e);
+              }
+            });
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [attemptSessionRecovery]);
+  }, [attemptSessionRecovery, session]);
 
   const signOut = async () => {
     intentionalSignOut.current = true;

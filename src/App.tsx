@@ -10,6 +10,7 @@ import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./compon
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
+import { SessionExpiredProvider } from "./components/SessionExpiredDialog";
 import { usePageTracking } from "./hooks/useAnalytics";
 import { lazyRetry, clearChunkReloadFlag } from "./lib/lazyRetry";
 import { detectAndSetTrafficType } from "./lib/gadsConversionService";
@@ -188,6 +189,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <SessionExpiredProvider>
             <ScrollRestoration />
             <PageTracker />
             <PageTransition>
@@ -281,6 +283,7 @@ const App = () => (
           </PageTransition>
           <WhatsAppButton />
           <CookieBanner />
+          </SessionExpiredProvider>
         </BrowserRouter>
       </TooltipProvider>
       </ThemeProvider>

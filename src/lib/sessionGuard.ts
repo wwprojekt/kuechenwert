@@ -265,12 +265,38 @@ export async function ensureValidSession(): Promise<{
 }
 
 /**
+ * Prüft ob ein Access Token noch gültig ist (nicht abgelaufen).
+ * Ein JWT hat 3 Base64-Segmente: header.payload.signature.
+ * Wir prüfen nur das `exp`-Feld im Payload.
+ * 
+ * @param token Der Access Token (JWT)
+ * @param bufferSeconds Puffer in Sekunden (Token gilt als abgelaufen wenn < buffer übrig)
+ * @returns true wenn Token noch gültig, false wenn abgelaufen/korrupt
+ */
+export function isTokenValid(token: string, bufferSeconds: number = 30): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false; // Malformed JWT
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) return false;
+    return payload.exp > (Date.now() / 1000) + bufferSeconds;
+  } catch {
+    return false; // Parse error → corrupted token
+  }
+}
+
+/**
  * Get a guaranteed fresh access token for Edge Function calls.
  *
  * IMPORTANT: Do NOT use getSession().access_token for Edge Functions with verify_jwt: true!
  * getSession() reads from local cache and can return stale/expired tokens.
  * This function calls refreshSession() and returns the token DIRECTLY from the response,
  * bypassing any cache issues.
+ * 
+ * CRITICAL FIX (10.04.2026): Previous version had a dangerous fallback that returned
+ * stale/corrupted tokens from getSession() cache. This caused place-bid 401 errors
+ * because a malformed JWT was sent to the Edge Function instead of redirecting to login.
+ * Now: EVERY token is validated before being returned. Corrupted tokens → null → login redirect.
  *
  * @returns Fresh access token string, or null if session cannot be refreshed
  */
@@ -278,37 +304,46 @@ export async function getFreshAccessToken(): Promise<string | null> {
   try {
     // Primary: refreshSession() returns the fresh token directly in its response
     const { data, error } = await supabase.auth.refreshSession();
-    if (!error && data.session) {
-      return data.session.access_token;
+    if (!error && data.session?.access_token) {
+      // Validate the token is well-formed and not expired
+      if (isTokenValid(data.session.access_token)) {
+        return data.session.access_token;
+      }
+      logger.warn('getFreshAccessToken: refreshSession returned invalid token');
     }
 
-    // Fallback: If refresh fails (e.g., lock error), try getUser to trigger auto-refresh
-    logger.warn('getFreshAccessToken: refreshSession failed, trying getUser fallback', { error: error?.message });
-
+    // Lock error: wait and retry once
     if (isLockError(error)) {
+      logger.warn('getFreshAccessToken: Lock-Fehler, warte 500ms und versuche erneut...');
       await new Promise(resolve => setTimeout(resolve, 500));
       const { data: retryData, error: retryError } = await supabase.auth.refreshSession();
-      if (!retryError && retryData.session) {
+      if (!retryError && retryData.session?.access_token && isTokenValid(retryData.session.access_token)) {
         return retryData.session.access_token;
       }
     }
 
-    // Last resort: getSession (may be stale, but better than nothing)
+    // Fallback: getSession – but ONLY if the cached token is actually valid
+    // Previously this returned stale/corrupted tokens → caused 401 on Edge Functions
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      logger.warn('getFreshAccessToken: using getSession fallback (may be stale)');
+    if (session?.access_token && isTokenValid(session.access_token)) {
+      logger.warn('getFreshAccessToken: using validated getSession fallback');
       return session.access_token;
     }
 
+    // All attempts failed → session is truly expired/corrupted
+    logger.warn('getFreshAccessToken: Alle Versuche fehlgeschlagen, Session ist abgelaufen');
     return null;
   } catch (err) {
-    logger.error('getFreshAccessToken: unexpected error', err);
     if (isLockError(err)) {
-      // Last-resort fallback for lock errors
+      logger.warn('getFreshAccessToken: Lock-Fehler im catch, versuche getSession fallback...');
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        return session?.access_token ?? null;
-      } catch { return null; }
+        if (session?.access_token && isTokenValid(session.access_token)) {
+          return session.access_token;
+        }
+      } catch { /* all failed */ }
+    } else {
+      logger.error('getFreshAccessToken: unexpected error', err);
     }
     return null;
   }

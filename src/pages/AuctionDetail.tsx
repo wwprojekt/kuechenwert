@@ -14,7 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
-import { getFreshAccessToken } from "@/lib/sessionGuard";
+import { getFreshAccessToken, isTokenValid } from "@/lib/sessionGuard";
+import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
@@ -104,6 +105,7 @@ const AuctionDetail = () => {
   const siteName = settings?.site_name || 'CaravanWert';
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { showSessionExpired } = useSessionExpired();
 
   const [auction, setAuction] = useState<AuctionWithMotorhome | null>(null);
   const [bids, setBids] = useState<BidWithBidder[]>([]);
@@ -509,15 +511,10 @@ const AuctionDetail = () => {
 
      setIsSubmitting(true);
     try {
-      // Get a guaranteed fresh JWT token (bypasses stale getSession() cache)
+      // Get a guaranteed fresh JWT token (validates token structure + expiry)
       let accessToken = await getFreshAccessToken();
       if (!accessToken) {
-        toast({
-          title: "Sitzung abgelaufen",
-          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-          variant: "destructive",
-        });
-        navigate(`/login?redirect=/auktion/${id}`);
+        showSessionExpired(`/auktion/${id}`);
         setIsSubmitting(false);
         return;
       }
@@ -546,12 +543,7 @@ const AuctionDetail = () => {
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
         if (error instanceof FunctionsHttpError) {
           if (error.context?.status === 401) {
-            toast({
-              title: "Sitzung abgelaufen",
-              description: "Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
-              variant: "destructive",
-            });
-            navigate(`/login?redirect=/auktion/${id}`);
+            showSessionExpired(`/auktion/${id}`);
             setIsSubmitting(false);
             return;
           }
@@ -673,15 +665,10 @@ const AuctionDetail = () => {
         }
       }
 
-      // Get a guaranteed fresh JWT token (bypasses stale getSession() cache)
+      // Get a guaranteed fresh JWT token (validates token structure + expiry)
       let accessToken = await getFreshAccessToken();
       if (!accessToken) {
-        toast({
-          title: "Sitzung abgelaufen",
-          description: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-          variant: "destructive",
-        });
-        navigate(`/login?redirect=/auktion/${id}`);
+        showSessionExpired(`/auktion/${id}`);
         setIsSubmitting(false);
         return;
       }
@@ -717,12 +704,7 @@ const AuctionDetail = () => {
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
         if (error instanceof FunctionsHttpError) {
           if (error.context?.status === 401) {
-            toast({
-              title: "Sitzung abgelaufen",
-              description: "Bitte melden Sie sich erneut an und versuchen Sie es nochmal.",
-              variant: "destructive",
-            });
-            navigate(`/login?redirect=/auktion/${id}`);
+            showSessionExpired(`/auktion/${id}`);
             setIsSubmitting(false);
             return;
           }

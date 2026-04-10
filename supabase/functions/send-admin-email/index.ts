@@ -157,6 +157,16 @@ const handler = async (req: Request): Promise<Response> => {
       }));
     }
 
+    // Validate payload size (Resend has limits)
+    const payloadJson = JSON.stringify(resendPayload);
+    const payloadSizeKB = Math.round(payloadJson.length / 1024);
+    if (payloadSizeKB > 450) {
+      console.error(`Email payload too large: ${payloadSizeKB}KB`);
+      return new Response(JSON.stringify({ 
+        error: `E-Mail ist zu groß (${payloadSizeKB}KB). Bitte entfernen Sie eingebettete Bilder oder reduzieren Sie den Inhalt. Maximum: ~450KB.` 
+      }), { status: 400, headers });
+    }
+
     // Send via Resend
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -164,12 +174,23 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify(resendPayload),
+      body: payloadJson,
     });
 
     if (!emailResponse.ok) {
-      const error = await emailResponse.text();
-      throw new Error(`Resend API error: ${error}`);
+      const errorText = await emailResponse.text();
+      console.error(`Resend API error (${emailResponse.status}): ${errorText}`);
+      
+      // Parse Resend error for user-friendly message
+      let userMessage = `E-Mail-Versand fehlgeschlagen (Resend ${emailResponse.status})`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.message) userMessage = errorJson.message;
+        if (errorJson.statusCode === 429) userMessage = 'Tageslimit für E-Mail-Versand erreicht. Bitte versuchen Sie es morgen erneut.';
+        if (errorJson.statusCode === 422) userMessage = `Validierungsfehler: ${errorJson.message}`;
+      } catch { /* ignore parse error */ }
+      
+      return new Response(JSON.stringify({ error: userMessage }), { status: 502, headers });
     }
 
     const resendResult = await emailResponse.json();

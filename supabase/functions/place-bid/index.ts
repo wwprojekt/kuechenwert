@@ -322,10 +322,12 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     console.error('Error in place-bid:', error);
     const errorMessage = error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten';
+    // Return 401 for auth errors so the frontend can redirect to login
+    const isAuthError = errorMessage === 'Unauthorized' || errorMessage === 'No authorization header';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: isAuthError ? 'Sitzung abgelaufen – bitte melden Sie sich erneut an' : errorMessage }),
       {
-        status: 400,
+        status: isAuthError ? 401 : 400,
         headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );

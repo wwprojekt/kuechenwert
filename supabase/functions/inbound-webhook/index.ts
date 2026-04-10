@@ -269,48 +269,53 @@ const handler = async (req: Request): Promise<Response> => {
 
     const receivedEmailId = emailData.email_id;
     if (RESEND_API_KEY && receivedEmailId) {
-      try {
-        // Fetch full email content
-        const emailRes = await fetch(`https://api.resend.com/emails/receiving/${receivedEmailId}`, {
+      // Helper: fetch email content from Resend Received Email API
+      const fetchEmailContent = async (): Promise<{ html: string; text: string; headers: any; attachments: any[] }> => {
+        const res = await fetch(`https://api.resend.com/emails/receiving/${receivedEmailId}`, {
           headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
         });
+        if (!res.ok) throw new Error(`Resend API ${res.status}: ${await res.text()}`);
+        return await res.json();
+      };
 
-        if (emailRes.ok) {
-          const fullEmail = await emailRes.json();
-          fullHtml = fullEmail.html || fullHtml;
-          fullText = fullEmail.text || fullText;
-          rawHeaders = fullEmail.headers || rawHeaders;
+      try {
+        // First attempt – Resend may not have content ready yet
+        let fullEmail = await fetchEmailContent();
 
-          // Process attachments with download URLs
-          if (fullEmail.attachments && fullEmail.attachments.length > 0) {
-            for (const att of fullEmail.attachments) {
-              try {
-                const attRes = await fetch(
-                  `https://api.resend.com/emails/receiving/${receivedEmailId}/attachments/${att.id}`,
-                  { headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` } }
-                );
+        // Retry once after 2s if content is empty (Resend processing delay)
+        if (!fullEmail.html && !fullEmail.text) {
+          console.log('Email content empty on first fetch, retrying in 2s...');
+          await new Promise(r => setTimeout(r, 2000));
+          fullEmail = await fetchEmailContent();
+          if (!fullEmail.html && !fullEmail.text) {
+            console.warn(`Email content still empty after retry for ${receivedEmailId}`);
+          }
+        }
 
-                if (attRes.ok) {
-                  const attData = await attRes.json();
-                  fullAttachments.push({
-                    id: att.id,
-                    filename: att.filename || attData.filename,
-                    content_type: att.content_type || attData.content_type,
-                    size: attData.size || 0,
-                    download_url: attData.download_url || null,
-                    expires_at: attData.expires_at || null,
-                  });
-                } else {
-                  // Fallback: store metadata only
-                  fullAttachments.push({
-                    id: att.id,
-                    filename: att.filename,
-                    content_type: att.content_type,
-                    size: 0,
-                  });
-                }
-              } catch (attErr) {
-                console.error(`Error fetching attachment ${att.id}:`, attErr);
+        fullHtml = fullEmail.html || fullHtml;
+        fullText = fullEmail.text || fullText;
+        rawHeaders = fullEmail.headers || rawHeaders;
+
+        // Process attachments with download URLs
+        if (fullEmail.attachments && fullEmail.attachments.length > 0) {
+          for (const att of fullEmail.attachments) {
+            try {
+              const attRes = await fetch(
+                `https://api.resend.com/emails/receiving/${receivedEmailId}/attachments/${att.id}`,
+                { headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` } }
+              );
+
+              if (attRes.ok) {
+                const attData = await attRes.json();
+                fullAttachments.push({
+                  id: att.id,
+                  filename: att.filename || attData.filename,
+                  content_type: att.content_type || attData.content_type,
+                  size: attData.size || 0,
+                  download_url: attData.download_url || null,
+                  expires_at: attData.expires_at || null,
+                });
+              } else {
                 fullAttachments.push({
                   id: att.id,
                   filename: att.filename,
@@ -318,18 +323,18 @@ const handler = async (req: Request): Promise<Response> => {
                   size: 0,
                 });
               }
+            } catch (attErr) {
+              console.error(`Error fetching attachment ${att.id}:`, attErr);
+              fullAttachments.push({
+                id: att.id,
+                filename: att.filename,
+                content_type: att.content_type,
+                size: 0,
+              });
             }
           }
-          console.log(`Fetched full email content: html=${fullHtml.length}chars, attachments=${fullAttachments.length}`);
-        } else {
-          console.error('Failed to fetch received email:', await emailRes.text());
-          // Fallback: use webhook metadata for attachments
-          fullAttachments = (emailData.attachments || []).map((att: any) => ({
-            filename: att.filename,
-            content_type: att.content_type,
-            size: att.content ? Math.round(att.content.length * 0.75) : 0,
-          }));
         }
+        console.log(`Fetched full email content: html=${fullHtml.length}chars, text=${fullText.length}chars, attachments=${fullAttachments.length}`);
       } catch (fetchErr) {
         console.error('Error fetching full email from Resend API:', fetchErr);
         // Fallback: use webhook metadata

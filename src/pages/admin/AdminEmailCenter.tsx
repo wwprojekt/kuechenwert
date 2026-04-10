@@ -752,7 +752,11 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(messageBody || '') }} className="prose prose-sm max-w-none" />
+            {messageBody ? (
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(messageBody) }} className="prose prose-sm max-w-none" />
+            ) : (
+              <p className="text-muted-foreground italic text-sm">Kein Inhalt verfügbar – der E-Mail-Body konnte beim Empfang nicht geladen werden.</p>
+            )}
           </div>
 
           {/* Attachments */}
@@ -773,8 +777,6 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                     } else if (att.id && (orig as AdminEmail).resend_id) {
                       // Fetch fresh download URL from Resend API via Edge Function
                       try {
-                        const { data: sessionData } = await supabase.auth.getSession();
-                        const token = sessionData?.session?.access_token || '';
                         const { data, error } = await supabase.functions.invoke('fetch-attachment-url', {
                           body: { emailId: (orig as AdminEmail).resend_id, attachmentId: att.id },
                         });

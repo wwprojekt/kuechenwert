@@ -17,6 +17,8 @@ import {
   Search,
   ShoppingBag,
   ClipboardList,
+  HandCoins,
+  PlusCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -115,7 +117,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showCountBadge: true, badgeKey: "activeAuctions" },
       { title: "Inventar", url: "/dashboard/inventory", icon: Package },
-      { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel },
+      { title: "Meine Gebote", url: "/dashboard/bids", icon: HandCoins },
       { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
       { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
       { title: "Suchaufträge", url: "/dashboard/search-alerts", icon: Search },
@@ -125,6 +127,7 @@ const menuGroups: MenuGroup[] = [
     label: "Verkaufen",
     items: [
       { title: "Meine Inserate", url: "/dashboard/listings", icon: ClipboardList },
+      { title: "Neues Inserat", url: "/dashboard/listings/new", icon: PlusCircle },
     ],
   },
   {

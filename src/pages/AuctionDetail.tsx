@@ -1434,9 +1434,15 @@ const AuctionDetail = () => {
                   </h1>
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span>{motorhome.body_type} • {motorhome.year}</span>
-                    <Badge variant="outline" className={motorhome.account_type === 'dealer' ? 'text-[10px] bg-blue-50 text-blue-700 border-blue-200' : 'text-[10px] bg-gray-50 text-gray-600 border-gray-200'}>
-                      {motorhome.account_type === 'dealer' ? 'Händler' : 'Privat'}
-                    </Badge>
+                    {motorhome.account_type === 'dealer' ? (
+                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                        Händler
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
+                        Privat
+                      </Badge>
+                    )}
                   </div>
                   {/* Anonymized Location & Distance */}
                   {motorhome.postal_code && (() => {

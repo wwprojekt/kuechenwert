@@ -245,11 +245,15 @@ const MotorhomeCard = ({
                 Endet bald!
               </Badge>
             )}
-            {accountType === 'dealer' && (
-              <Badge variant="outline" className="bg-white/90 text-gray-700 border-gray-300 text-[10px]">
+            {accountType === 'dealer' ? (
+              <Badge variant="outline" className="bg-blue-50/90 text-blue-700 border-blue-200 text-[10px]">
                 Händler
               </Badge>
-            )}
+            ) : accountType === 'private' ? (
+              <Badge variant="outline" className="bg-white/90 text-gray-600 border-gray-300 text-[10px]">
+                Privat
+              </Badge>
+            ) : null}
           </div>
 
           {/* Favorite Button */}

@@ -43,6 +43,7 @@ export default function DealerListingCreate() {
   const [vehicleType, setVehicleType] = useState<VehicleType>("Wohnmobil");
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
+  const [customModel, setCustomModel] = useState("");
   const [bodyType, setBodyType] = useState("");
   const [year, setYear] = useState("");
   const [mileage, setMileage] = useState("");
@@ -57,7 +58,9 @@ export default function DealerListingCreate() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 40 }, (_, i) => currentYear - i);
 
-  const isValid = manufacturer && model && bodyType && year && mileage && condition;
+  const effectiveModel = model === "__custom" ? customModel : model;
+  const isWohnwagen = vehicleType === "Wohnwagen";
+  const isValid = manufacturer && effectiveModel && bodyType && year && (isWohnwagen || mileage) && condition;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -65,15 +68,16 @@ export default function DealerListingCreate() {
       if (!isValid) throw new Error("Bitte füllen Sie alle Pflichtfelder aus");
 
       const isDealer = primaryRole === "dealer";
+      const finalModel = model === "__custom" ? customModel : model;
 
       const insertData = {
         seller_id: user.id,
         account_type: isDealer ? "dealer" : "private",
         manufacturer,
-        model,
+        model: finalModel,
         body_type: bodyType as any,
         year: Number(year),
-        mileage: vehicleType === "Wohnwagen" ? 0 : Number(mileage),
+        mileage: isWohnwagen ? 0 : Number(mileage),
         condition: condition as any,
         sale_channel: "auction" as const,
         reserve_price: reservePrice ? Number(reservePrice) : null,
@@ -92,12 +96,18 @@ export default function DealerListingCreate() {
       }, "DealerListingCreate.insert");
 
       // Create draft auction so admin can activate it
-      await supabase.from("auctions").insert({
+      const { error: auctionError } = await supabase.from("auctions").insert({
         motorhome_id: result.id,
         starting_bid: 50,
         reserve_price: reservePrice ? Number(reservePrice) : null,
         status: "draft",
       });
+
+      if (auctionError) {
+        // Cleanup orphaned motorhome on auction creation failure
+        await supabase.from("motorhomes").delete().eq("id", result.id);
+        throw new Error("Auktion konnte nicht erstellt werden: " + auctionError.message);
+      }
 
       // Notify admin about new dealer listing
       supabase.functions.invoke("send-lead-notification", {
@@ -106,7 +116,7 @@ export default function DealerListingCreate() {
           name: user.email || "Händler",
           email: user.email || "",
           manufacturer,
-          model,
+          model: finalModel,
           country: "DE",
           source: "dealer_dashboard",
         },
@@ -176,8 +186,9 @@ export default function DealerListingCreate() {
                       setVehicleType(type);
                       setManufacturer("");
                       setModel("");
+                      setCustomModel("");
                       setBodyType("");
-                      setMileage(type === "Wohnwagen" ? "0" : "");
+                      setMileage("");
                     }}
                     className="flex-1"
                   >
@@ -221,17 +232,27 @@ export default function DealerListingCreate() {
             <div className="space-y-2">
               <Label>Modell *</Label>
               {models.length > 0 ? (
-                <Select value={model} onValueChange={setModel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Modell wählen" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-64">
-                    {models.map((m) => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
-                    <SelectItem value="__custom">Anderes Modell...</SelectItem>
-                  </SelectContent>
-                </Select>
+                <>
+                  <Select value={model} onValueChange={(v) => { setModel(v); if (v !== "__custom") setCustomModel(""); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Modell wählen" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {models.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom">Anderes Modell...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {model === "__custom" && (
+                    <Input
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      placeholder="z.B. Excellent 560 UL"
+                      autoFocus
+                    />
+                  )}
+                </>
               ) : (
                 <Input
                   value={model}
@@ -239,18 +260,10 @@ export default function DealerListingCreate() {
                   placeholder="z.B. Excellent 560 UL"
                 />
               )}
-              {model === "__custom" && (
-                <Input
-                  value=""
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="Modellname eingeben"
-                  autoFocus
-                />
-              )}
             </div>
 
             {/* Year + Mileage */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${isWohnwagen ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div className="space-y-2">
                 <Label>Baujahr *</Label>
                 <Select value={year} onValueChange={setYear}>
@@ -264,16 +277,18 @@ export default function DealerListingCreate() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{vehicleType === "Wohnwagen" ? "Kilometerstand" : "Kilometerstand *"}</Label>
-                <Input
-                  type="number"
-                  value={mileage}
-                  onChange={(e) => setMileage(e.target.value)}
-                  placeholder="z.B. 45000"
-                  disabled={vehicleType === "Wohnwagen"}
-                />
-              </div>
+              {!isWohnwagen && (
+                <div className="space-y-2">
+                  <Label>Kilometerstand *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value)}
+                    placeholder="z.B. 45000"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Condition */}
@@ -293,9 +308,11 @@ export default function DealerListingCreate() {
 
             {/* Reserve Price (optional) */}
             <div className="space-y-2">
-              <Label>Mindestpreis (optional)</Label>
+              <Label>Mindestpreis in € (optional)</Label>
               <Input
                 type="number"
+                min="0"
+                step="100"
                 value={reservePrice}
                 onChange={(e) => setReservePrice(e.target.value)}
                 placeholder="z.B. 25000"

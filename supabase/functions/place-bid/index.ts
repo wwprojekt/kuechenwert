@@ -304,10 +304,13 @@ Deno.serve(async (req) => {
         success: true,
         message: 'Bid placed successfully',
         bid: {
+          id: outcome.bid_id,
           amount,
           isAutobid: isAutobid || false,
           maxAutobidAmount: isAutobid ? maxAutobidAmount : null,
         },
+        currentBid: amount,
+        minimumBid: amount + 50,
         auctionExtended: outcome.auction_extended || false,
         newEndTime: outcome.new_end_time,
       }),

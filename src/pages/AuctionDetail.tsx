@@ -307,9 +307,12 @@ const AuctionDetail = () => {
     fetchAddenda();
   }, [id]);
 
-  // Real-time bid updates with stale update prevention
+  // Set of bid IDs already known locally (for dedup against Realtime)
+  const knownBidIdsRef = useRef<Set<string>>(new Set());
+
+  // Real-time bid updates with dedup against optimistic updates
   useEffect(() => {
-    let isSubscribed = true; // Track mount state to prevent stale updates
+    let isSubscribed = true;
     
     const channel = supabase
       .channel(`auction-${id}`)
@@ -323,17 +326,24 @@ const AuctionDetail = () => {
         },
         (payload) => {
           if (!isSubscribed) return;
+          const newBid = payload.new as BidWithBidder;
 
-          setBids((prev) => [payload.new as BidWithBidder, ...(Array.isArray(prev) ? prev : [])]);
+          // Dedup: Skip if this bid was already added via optimistic update
+          if (knownBidIdsRef.current.has(newBid.id)) {
+            knownBidIdsRef.current.delete(newBid.id);
+            return;
+          }
+
+          setBids((prev) => [newBid, ...(Array.isArray(prev) ? prev : [])]);
 
           setAuction((prev) => prev ? ({
             ...prev,
-            current_bid: payload.new.amount,
+            current_bid: newBid.amount,
           }) : null);
 
           // ─── Live Bidding Status & Sound ───────────────────────
           if (user) {
-            const isNewBidFromMe = payload.new.bidder_id === user.id;
+            const isNewBidFromMe = newBid.bidder_id === user.id;
             
             if (isNewBidFromMe) {
               setBidStatusAnimation('pulse-green');
@@ -343,21 +353,21 @@ const AuctionDetail = () => {
               if (wasHighestBidder) {
                 setBidStatusAnimation('pulse-red');
                 setTimeout(() => setBidStatusAnimation('none'), 3000);
-                notifyOutbid(payload.new.amount);
+                notifyOutbid(newBid.amount);
               }
               
               toast({
                 title: wasHighestBidder ? "Sie wurden überboten!" : "Neues Gebot!",
                 description: wasHighestBidder
-                  ? `Neues Höchstgebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €. Bieten Sie erneut!`
-                  : `Neues Gebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €`,
+                  ? `Neues Höchstgebot: ${Number(newBid.amount).toLocaleString("de-DE")} €. Bieten Sie erneut!`
+                  : `Neues Gebot: ${Number(newBid.amount).toLocaleString("de-DE")} €`,
                 variant: wasHighestBidder ? "destructive" : "default",
               });
             }
           } else {
             toast({
               title: "Neues Gebot!",
-              description: `Aktuelles Höchstgebot: ${Number(payload.new.amount).toLocaleString("de-DE")} €`,
+              description: `Aktuelles Höchstgebot: ${Number(newBid.amount).toLocaleString("de-DE")} €`,
             });
           }
         }
@@ -365,7 +375,7 @@ const AuctionDetail = () => {
       .subscribe();
 
     return () => {
-      isSubscribed = false; // Mark as unmounted
+      isSubscribed = false;
       supabase.removeChannel(channel);
     };
   }, [id, user, toast, notifyOutbid]);
@@ -698,9 +708,40 @@ const AuctionDetail = () => {
         throw new Error(data.error);
       }
 
-      // Update local auction state if extended
+      // ─── Optimistic local update ─────────────────────────────
+      // Immediately update UI so the bidder sees their bid without waiting for Realtime
+      const bidId = data.bid?.id;
+      if (bidId) {
+        // Register bid_id for dedup so Realtime doesn't add it again
+        knownBidIdsRef.current.add(bidId);
+        // Auto-cleanup after 10s (Realtime should arrive well within that)
+        setTimeout(() => knownBidIdsRef.current.delete(bidId), 10_000);
+
+        // Add bid to the list optimistically
+        const optimisticBid: BidWithBidder = {
+          id: bidId,
+          auction_id: id!,
+          bidder_id: user!.id,
+          amount: amount,
+          is_autobid: enableAutobid,
+          max_autobid_amount: enableAutobid ? parseFloat(maxAutobidAmount) : null,
+          created_at: new Date().toISOString(),
+        };
+        setBids((prev) => [optimisticBid, ...(Array.isArray(prev) ? prev : [])]);
+      }
+
+      // Update auction current_bid immediately
+      setAuction((prev) => prev ? ({
+        ...prev,
+        current_bid: data.currentBid ?? amount,
+        ...(data.auctionExtended ? { end_time: data.newEndTime } : {}),
+      }) : null);
+
+      // Visual feedback: green pulse for own bid
+      setBidStatusAnimation('pulse-green');
+      setTimeout(() => setBidStatusAnimation('none'), 2000);
+
       if (data.auctionExtended) {
-        setAuction((prev) => prev ? ({ ...prev, end_time: data.newEndTime }) : null);
         toast({
           title: "Auktion verlängert!",
           description: "Die Auktion wurde um 1 Minute verlängert (Soft-Close)",

@@ -177,6 +177,10 @@ const AuctionDetail = () => {
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
+  // Commission hook MUST be called before any early returns (React Rules of Hooks)
+  const currentBidForCommission = auction ? (auction.current_bid || auction.starting_bid) : 0;
+  const commissionInfo = useCommissionFromTiers(currentBidForCommission);
+
   // Fetch dealer's postal code for distance calculation (React Query for cross-page caching)
   const { data: dealerPostalCode = null } = useQuery({
     queryKey: ['profilePostalCode', user?.id],
@@ -853,7 +857,6 @@ const AuctionDetail = () => {
   const rawPhotos = motorhome.photos;
   const photos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
   const currentBid = auction.current_bid || auction.starting_bid;
-  const commissionInfo = useCommissionFromTiers(currentBid);
   const reserveMet = auction.reserve_price ? currentBid >= auction.reserve_price : true;
   // Only show reserve price info to the seller or admin
   const canSeeReservePrice = user?.id === (motorhome as any).seller_id || isAdmin;

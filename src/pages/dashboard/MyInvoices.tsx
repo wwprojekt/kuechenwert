@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveData } from "@/hooks/useLiveData";
@@ -67,7 +67,6 @@ export default function MyInvoices() {
   const loadInvoices = useCallback(async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
       const { data: profileData } = await supabase
         .from('profiles')

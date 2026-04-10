@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +52,6 @@ export default function MyFavorites() {
   const loadFavorites = useCallback(async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("user_favorites")

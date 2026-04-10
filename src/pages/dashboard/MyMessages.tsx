@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveData } from "@/hooks/useLiveData";
@@ -54,7 +54,6 @@ export default function MyMessages() {
   const loadMessages = useCallback(async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("support_messages")

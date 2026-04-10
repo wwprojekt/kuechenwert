@@ -13,7 +13,7 @@ interface UseLiveDataOptions {
  * Hook that keeps data fresh via focus-refetch and optional polling.
  * Wraps a fetch function and calls it:
  * - On mount
- * - When the browser tab regains focus
+ * - When the browser tab regains focus (debounced to prevent double-fire)
  * - On a configurable polling interval (default 30s)
  *
  * Usage:
@@ -32,34 +32,49 @@ export function useLiveData(
   const fetchRef = useRef(fetchFn);
   fetchRef.current = fetchFn;
 
+  const lastFetchRef = useRef(0);
+
   const stableFetch = useCallback(() => fetchRef.current(), []);
+
+  // Debounced fetch: prevents double-fire from focus + visibilitychange
+  const debouncedFetch = useCallback(() => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < 2_000) return;
+    lastFetchRef.current = now;
+    stableFetch();
+  }, [stableFetch]);
 
   // Initial fetch
   useEffect(() => {
-    if (enabled) stableFetch();
+    if (enabled) {
+      lastFetchRef.current = Date.now();
+      stableFetch();
+    }
   }, [enabled, stableFetch]);
 
   // Focus / visibility refetch
   useEffect(() => {
     if (!enabled || !refetchOnFocus) return;
 
-    const handleFocus = () => stableFetch();
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") stableFetch();
+      if (document.visibilityState === "visible") debouncedFetch();
     };
 
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener("focus", debouncedFetch);
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("focus", debouncedFetch);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [enabled, refetchOnFocus, stableFetch]);
+  }, [enabled, refetchOnFocus, debouncedFetch]);
 
   // Polling
   useEffect(() => {
     if (!enabled || !pollingInterval) return;
-    const interval = setInterval(stableFetch, pollingInterval);
+    const interval = setInterval(() => {
+      lastFetchRef.current = Date.now();
+      stableFetch();
+    }, pollingInterval);
     return () => clearInterval(interval);
   }, [enabled, pollingInterval, stableFetch]);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -501,6 +502,23 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     setShowHistory(true);
   };
 
+  // Extract the actual error message from a Supabase FunctionsHttpError.
+  // error.context is the raw Response object – body can only be read ONCE,
+  // so we read as text first, then try JSON.parse.
+  const extractEdgeFunctionError = async (error: any): Promise<string> => {
+    if (error instanceof FunctionsHttpError && error.context) {
+      try {
+        const text = await error.context.text();
+        try {
+          const json = JSON.parse(text);
+          if (json?.error) return json.error;
+        } catch { /* not JSON, use raw text */ }
+        if (text) return text;
+      } catch { /* body unreadable */ }
+    }
+    return error?.message || 'Unbekannter Fehler';
+  };
+
   const handleReply = async () => {
     if (!selectedItem || !replyContent.trim()) return;
     setIsReplying(true);
@@ -516,8 +534,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         },
       });
       if (error) {
-        // Try to extract the actual error message from the response
-        const detail = data?.error || error.message || 'Unbekannter Fehler';
+        const detail = await extractEdgeFunctionError(error);
         throw new Error(detail);
       }
       toast.success("Antwort gesendet");
@@ -1329,7 +1346,7 @@ function ComposeTab() {
         },
       });
       if (error) {
-        const detail = data?.error || error.message || 'Unbekannter Fehler';
+        const detail = await extractEdgeFunctionError(error);
         throw new Error(detail);
       }
       if (scheduledAt) {

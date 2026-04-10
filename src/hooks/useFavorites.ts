@@ -46,7 +46,7 @@ export function useFavorites(): UseFavoritesResult {
     };
 
     loadFavorites();
-  }, [user]);
+  }, [user?.id]);
 
   const isFavorite = useCallback((motorhomeId: string): boolean => {
     return favorites.includes(motorhomeId);

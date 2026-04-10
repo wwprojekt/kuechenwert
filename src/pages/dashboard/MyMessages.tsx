@@ -68,7 +68,7 @@ export default function MyMessages() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useLiveData(loadMessages, { enabled: !!user, pollingInterval: 60_000 });
 

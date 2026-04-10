@@ -47,7 +47,7 @@ export default function MyDocuments() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useLiveData(loadDocuments, { enabled: !!user, pollingInterval: 0 });
 

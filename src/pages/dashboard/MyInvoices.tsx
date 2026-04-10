@@ -97,7 +97,7 @@ export default function MyInvoices() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useLiveData(loadInvoices, { enabled: !!user, pollingInterval: 60_000 });
 

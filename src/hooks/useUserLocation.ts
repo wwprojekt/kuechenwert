@@ -112,7 +112,7 @@ export function useUserLocation(): UseUserLocationResult {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   return {
     location,

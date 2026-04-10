@@ -199,7 +199,7 @@ const AuctionDetail = () => {
       }
     };
     fetchDealerPostalCode();
-  }, [user]);
+  }, [user?.id]);
 
   // Fetch auction details
   useEffect(() => {

@@ -82,7 +82,7 @@ export default function MyFavorites() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useLiveData(loadFavorites, { enabled: !!user, pollingInterval: 60_000 });
 

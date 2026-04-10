@@ -188,37 +188,38 @@ export default function AdminFinancials() {
   });
 
   // Delete invoice mutation
+  // WICHTIG: Invoice ZUERST löschen! Der DB-Trigger prevent_invoice_deletion
+  // kann das blockieren (Aufbewahrungspflicht). Wenn wir erst die Items löschen
+  // und dann die Invoice fehlschlägt, entstehen verwaiste Datensätze.
   const deleteInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      // First delete invoice_items
-      const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (itemsError) throw itemsError;
-
-      // Delete payment_reminders
-      const { error: remindersError } = await supabase
-        .from('payment_reminders')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (remindersError) throw remindersError;
-
-      // Delete payment history
-      const { error: historyError } = await supabase
-        .from('dealer_payment_history')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (historyError) throw historyError;
-
-      // Delete the invoice itself
+      // 1) Invoice ZUERST löschen – kann durch DB-Trigger blockiert werden
       const { error: invoiceError } = await supabase
         .from('invoices')
         .delete()
         .eq('id', invoiceId);
       if (invoiceError) throw invoiceError;
 
-      // Try to delete PDF from storage (non-critical)
+      // 2) Erst wenn Invoice weg ist, abhängige Daten aufräumen
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (itemsError) throw itemsError;
+
+      const { error: remindersError } = await supabase
+        .from('payment_reminders')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (remindersError) throw remindersError;
+
+      const { error: historyError } = await supabase
+        .from('dealer_payment_history')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (historyError) throw historyError;
+
+      // PDF aus Storage löschen (nicht kritisch)
       try {
         const invoice = invoices?.find((i: any) => i.id === invoiceId);
         if (invoice?.dealer_id && invoice?.invoice_number) {

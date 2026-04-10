@@ -43,6 +43,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const retryCount = useRef(0);
   const MAX_RETRIES = 3;
 
+  // Ref für session: Closures in Event-Listenern und Intervallen
+  // lesen hieraus den aktuellen Wert, OHNE dass session als useEffect-Dependency
+  // benötigt wird. Das verhindert das Re-Subscribe auf onAuthStateChange bei jedem
+  // Token-Refresh (was sonst einen INITIAL_SESSION → setSession-Loop verursacht).
+  const sessionRef = useRef<Session | null>(null);
+
+  /**
+   * Stabilisiert User-Referenz: setUser wird NUR aufgerufen wenn sich
+   * die User-ID tatsächlich ändert (Login/Logout). Verhindert, dass alle
+   * Hooks mit [user]-Dependency bei jedem Token-Refresh re-fetchen.
+   */
+  const updateAuthState = useCallback((newSession: Session | null) => {
+    sessionRef.current = newSession;
+    setSession(newSession);
+    setUser(prev => {
+      const newId = newSession?.user?.id ?? null;
+      const prevId = prev?.id ?? null;
+      if (newId === prevId) return prev; // Referenz beibehalten!
+      return newSession?.user ?? null;
+    });
+  }, []);
+
   /**
    * Versucht die Session wiederherzustellen, z.B. wenn ein Refresh Token
    * in einem anderen Tab rotiert wurde und dieser Tab einen veralteten Token hat.
@@ -68,8 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (recoveredSession && !error) {
         logger.log("[Auth] Session erfolgreich wiederhergestellt");
         retryCount.current = 0;
-        setSession(recoveredSession);
-        setUser(recoveredSession.user);
+        updateAuthState(recoveredSession);
         return true;
       }
 
@@ -78,8 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (refreshData?.session && !refreshError) {
         logger.log("[Auth] Session durch Refresh wiederhergestellt");
         retryCount.current = 0;
-        setSession(refreshData.session);
-        setUser(refreshData.session.user);
+        updateAuthState(refreshData.session);
         return true;
       }
     } catch (e) {
@@ -95,43 +115,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Rekursiver Retry
     return attemptSessionRecovery();
-  }, []);
+  }, [updateAuthState]);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST – wird nur EINMAL erstellt (keine session-Dependency!).
+    // onAuthStateChange feuert INITIAL_SESSION bei jeder neuen Subscription.
+    // Wenn session in deps wäre: setSession → re-run → neue Subscription → INITIAL_SESSION → loop.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
         logger.log("[Auth] Event:", event, "Session:", !!currentSession);
 
         if (event === "SIGNED_OUT") {
-          // Nur sofort ausloggen wenn der User es selbst ausgelöst hat
           if (intentionalSignOut.current) {
             intentionalSignOut.current = false;
             retryCount.current = 0;
-            setSession(null);
-            setUser(null);
+            updateAuthState(null);
             setLoading(false);
             return;
           }
 
-          // Unerwarteter Logout (z.B. Token-Refresh fehlgeschlagen)
-          // Versuche die Session wiederherzustellen
           logger.log("[Auth] Unerwarteter SIGNED_OUT - versuche Recovery...");
           const recovered = await attemptSessionRecovery();
           
           if (!recovered) {
             logger.log("[Auth] Recovery fehlgeschlagen - User wird ausgeloggt");
-            setSession(null);
-            setUser(null);
+            updateAuthState(null);
             setLoading(false);
           }
           return;
         }
 
-        // Alle anderen Events: Session normal aktualisieren
         retryCount.current = 0;
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        updateAuthState(currentSession);
         setLoading(false);
       }
     );
@@ -139,12 +154,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // THEN check for existing session
     supabase.auth.getSession()
       .then(({ data: { session: existingSession } }) => {
-        setSession(existingSession);
-        setUser(existingSession?.user ?? null);
+        updateAuthState(existingSession);
         setLoading(false);
       })
       .catch((e) => {
-        // Lock-Fehler beim initialen Session-Check sind harmlos
         if (isLockError(e)) {
           logger.log("[Auth] Lock-Fehler beim initialen Session-Check (harmlos)");
         } else {
@@ -153,18 +166,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       });
 
-    // Cross-Tab Session Sync: Wenn ein anderer Tab die Session aktualisiert,
-    // wird das storage Event gefeuert und wir können die Session synchronisieren
+    // Cross-Tab Session Sync
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && e.key.includes("auth-token")) {
         logger.log("[Auth] localStorage geändert (anderer Tab) - Session synchronisieren");
         supabase.auth.getSession()
           .then(({ data: { session: syncedSession } }) => {
-            setSession(syncedSession);
-            setUser(syncedSession?.user ?? null);
+            updateAuthState(syncedSession);
           })
           .catch((e) => {
-            // Lock-Fehler bei Cross-Tab-Sync sind harmlos
             if (isLockError(e)) {
               logger.log("[Auth] Lock-Fehler bei Cross-Tab-Sync (harmlos)");
             } else {
@@ -176,24 +186,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     window.addEventListener("storage", handleStorageChange);
 
-    // Proactive token refresh when tab becomes visible again.
-    // Dealers often leave tabs open for hours/days. When they return,
-    // the access token may be expired. Refreshing proactively prevents
-    // "Sitzung abgelaufen" errors when they try to bid.
+    // Proaktiver Token-Refresh bei Tab-Wechsel.
+    // Liest session aus sessionRef (nicht Closure!) → immer aktueller Wert.
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && session) {
-        // Check if access token expires within the next 5 minutes
-        const expiresAt = session.expires_at;
+      const currentSession = sessionRef.current;
+      if (document.visibilityState === 'visible' && currentSession) {
+        const expiresAt = currentSession.expires_at;
         const now = Math.floor(Date.now() / 1000);
-        const bufferSeconds = 300; // 5 minutes
+        const bufferSeconds = 300; // 5 Minuten
 
         if (expiresAt && (expiresAt - now) < bufferSeconds) {
           logger.log("[Auth] Tab wieder sichtbar, Token läuft bald ab → proaktiver Refresh");
           supabase.auth.refreshSession()
             .then(({ data, error }) => {
               if (!error && data.session) {
-                setSession(data.session);
-                setUser(data.session.user);
+                updateAuthState(data.session);
                 logger.log("[Auth] Proaktiver Token-Refresh erfolgreich");
               } else if (error) {
                 logger.warn("[Auth] Proaktiver Token-Refresh fehlgeschlagen:", error.message);
@@ -210,22 +217,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Periodischer Token-Refresh für aktive Tabs: Händler lassen Tabs stundenlang
-    // offen. Der Supabase auto-refresh kann in seltenen Fällen fehlschlagen
-    // (Browser throttling, Lock-Konflikte). Dieses Intervall ist ein Safety-Net.
+    // Periodischer Token-Refresh (Safety-Net für lang offene Tabs).
+    // Liest session aus sessionRef statt Closure.
     const periodicRefreshInterval = setInterval(() => {
-      if (document.visibilityState !== 'visible' || !session) return;
+      const currentSession = sessionRef.current;
+      if (document.visibilityState !== 'visible' || !currentSession) return;
       
-      const expiresAt = session.expires_at;
+      const expiresAt = currentSession.expires_at;
       const now = Math.floor(Date.now() / 1000);
-      // Refresh wenn Token in < 5 Minuten abläuft
       if (expiresAt && (expiresAt - now) < 300) {
         logger.log("[Auth] Periodischer Token-Refresh (Token läuft bald ab)");
         supabase.auth.refreshSession()
           .then(({ data, error }) => {
             if (!error && data.session) {
-              setSession(data.session);
-              setUser(data.session.user);
+              updateAuthState(data.session);
             }
           })
           .catch((e) => {
@@ -242,7 +247,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(periodicRefreshInterval);
     };
-  }, [attemptSessionRecovery, session]);
+  }, [attemptSessionRecovery, updateAuthState]);
 
   const signOut = async () => {
     intentionalSignOut.current = true;
@@ -254,8 +259,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.warn("[Auth] Fehler beim Abmelden:", e);
       }
     }
-    setUser(null);
-    setSession(null);
+    updateAuthState(null);
   };
 
   return (

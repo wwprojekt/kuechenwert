@@ -36,7 +36,7 @@ export function usePushNotifications() {
     } catch {
       setIsSubscribed(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -137,7 +137,7 @@ export function usePushNotifications() {
       setIsLoading(false);
       return false;
     }
-  }, [user]);
+  }, [user?.id]);
 
   return {
     isSupported,

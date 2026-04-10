@@ -285,7 +285,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
       }
     };
     checkVerification();
-  }, [user]);
+  }, [user?.id]);
 
   // Check if user arrived via registration magic link and needs to set a password
   const [showSetPassword, setShowSetPassword] = useState(false);
@@ -390,7 +390,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
       }
     };
     checkVerification();
-  }, [user]);
+  }, [user?.id]);
 
   const userInitials = user?.email
     ?.split("@")[0]

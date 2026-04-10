@@ -67,7 +67,7 @@ const DealerAuctions = () => {
       }
     };
     fetchDealerPlz();
-  }, [user]);
+  }, [user?.id]);
 
   const fetchAuctions = useCallback(async () => {
     try {

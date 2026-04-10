@@ -163,8 +163,10 @@ const RegisterHaendler = () => {
       return;
     }
 
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg", "image/heic", "image/heif"];
+    const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "heic", "heif"];
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
       toast({
         title: tr.errorFileTypeInvalid,
         description: tr.errorFileTypeInvalidDesc,
@@ -264,11 +266,21 @@ const RegisterHaendler = () => {
 
           if (!response.ok || !uploadResult.success) {
             logger.error("Document upload error:", uploadResult.error || response.statusText);
+            toast({
+              title: "Dokument-Upload fehlgeschlagen",
+              description: "Sie können das Dokument nach dem Login im Dashboard nachreichen.",
+              variant: "destructive",
+            });
           } else {
             logger.info("Document uploaded successfully:", uploadResult.url);
           }
         } catch (uploadErr) {
           logger.error("Document upload failed:", uploadErr);
+          toast({
+            title: "Dokument-Upload fehlgeschlagen",
+            description: "Sie können das Dokument nach dem Login im Dashboard nachreichen.",
+            variant: "destructive",
+          });
         } finally {
           setUploadingDocument(false);
         }
@@ -564,7 +576,7 @@ const RegisterHaendler = () => {
                       ref={documentInputRef}
                       id="document"
                       type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/jpeg,image/png,image/heic,image/heif,application/pdf"
                       onChange={handleDocumentUpload}
                       className="hidden"
                     />

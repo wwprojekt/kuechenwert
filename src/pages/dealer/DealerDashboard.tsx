@@ -388,21 +388,23 @@ const DealerDashboard = () => {
 
   return (
     <div className={`space-y-6 ${isLocked ? 'relative' : ''}`}>
-      {/* Pending/Rejected Dealer Banner */}
-      {hasDealerApplication && application && (isPendingDealer || isRejectedDealer) && (
-        <PendingDealerBanner
-          application={application}
-          onRefresh={() => refetchApp()}
-          countryCode={dealerCountry}
-        />
-      )}
-
-      {/* Document Upload – always shown when docs are missing (auto-hides at 100%) */}
+      {/* Pending Dealer Banner */}
       {hasDealerApplication && application && (
-        <PendingDealerDocumentUpload
-          dealerApplicationId={application.id}
-          countryCode={dealerCountry}
-        />
+        <>
+          <PendingDealerBanner
+            application={application}
+            onRefresh={() => refetchApp()}
+            countryCode={dealerCountry}
+          />
+
+          {/* Document Upload for pending/rejected dealers */}
+          {(isPendingDealer || isRejectedDealer) && (
+            <PendingDealerDocumentUpload
+              dealerApplicationId={application.id}
+              countryCode={dealerCountry}
+            />
+          )}
+        </>
       )}
 
       {/* Compact Header with Stats */}

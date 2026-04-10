@@ -318,11 +318,6 @@ export default function PendingDealerDocumentUpload({
     }
   };
 
-  // ---- Auto-hide when all required docs are uploaded ----
-  if (!docsLoading && completionPct === 100) {
-    return null;
-  }
-
   // ---- Render ----
 
   return (

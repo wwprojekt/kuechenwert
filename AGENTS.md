@@ -76,14 +76,21 @@ npm run build        # Production build via Vite → dist/
 - **PS→kW conversion**: PS chips and manual input both auto-calculate `power_kw` (PS × 0.7355)
 - **Chips show both units**: e.g. "140 PS (103 kW)" for professional feel
 
-## Vehicle Data Stats (08.04.2026)
-- **Wohnmobil**: 96 Hersteller, 1165 Modelle
-- **Wohnwagen**: 36 Hersteller, ~175 Modelle
-- **Basisfahrzeuge**: 29 Chassis-Optionen mit 157 PS-Werten (inkl. E-Ducato + eSprinter)
+## Vehicle Data Stats (08.04.2026, Session 5 Update)
+- **Wohnmobil**: 100 Hersteller, 1221 Modelle
+- **Wohnwagen**: 36 Hersteller, 201 Modelle
+- **Basisfahrzeuge**: 33 Chassis-Optionen mit 171 PS-Werten
 - **PS-Format**: Chips zeigen `XXkW/YYYPS` (z.B. "103kW/140PS")
-- **Letzte Erweiterung**: Knaus (Van Wave, Sky Wave, Sky I, CUVision), Pössl (Summit Shine, Roadstar X/XT, Campstar, Vanstar), Weinsberg (Edition PEPPER/FIRE, CUVolution), Etrusco (Base-Serie), Renault Master 130PS (2025), Fiat E-Ducato, Mercedes eSprinter
-- User data analysis: Most common free-form entries verified against model lists
-- Forster VB-Serie, Rimor Bliss/Europe, Sprite, Bailey, T@B added based on real user patterns
+- **Hersteller-Aliase**: 16 Aliase + `resolveManufacturer()` Funktion
+- **Session 5 Erweiterung** (daten-getriebene Analyse aller 270 wizard_sessions):
+  - NEUE Hersteller: Eurocamp, Fiat, Renault, Ahorn Camp
+  - NEUE Chassis: Renault Trafic, Hyundai Staria, Maxus Deliver 9/eDeliver 9
+  - Fendt: +Topas + Bianco Sportive (5× User-Suche!)
+  - Hobby WW: +Excellent Easy, De Luxe Easy, OnTour Easy/XL (8× häufigste Eingabe!)
+  - Eriba WW: +Troll, Puck, Pan, Triton, Car (komplett fehlende Klassiker)
+  - Adria: +6 Axess-Sublinien; Chausson: +C-Serie Alkoven; Rapido: +Randonneur
+  - Tabbert: +Princesse/Comtesse (Gebrauchtmarkt); Bürstner WW: +Black Forest
+  - PS neu: Ducato 200PS (2025), Transit 200PS, Iveco 90PS, VW T6 84PS
 
 ## Dealer Activation (08.04.2026 Session 2)
 

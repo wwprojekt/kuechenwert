@@ -21,7 +21,7 @@
  *    - The Edge Function has verify_jwt = false in config.toml
  * 
  * Expects multipart/form-data with:
- * - file: The document file (PDF, JPG, PNG, max 10MB)
+ * - file: The document file (PDF, JPG, PNG, HEIC – max 25MB, images auto-compressed on client)
  * - user_id: The UUID of the user
  * - file_type: Type identifier:
  *     "trade_license"    – Gewerbeschein
@@ -80,7 +80,7 @@ const ALLOWED_MIME_TYPES = [
 /** File extensions accepted even when MIME type is empty or octet-stream (iOS HEIC issue) */
 const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 /** Maximum age of a user account (in milliseconds) to allow registration mode upload */
 const REGISTRATION_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -255,7 +255,7 @@ Deno.serve(async (req: Request) => {
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: 'Datei zu groß. Maximal 10 MB erlaubt.' }), {
+      return new Response(JSON.stringify({ error: 'Datei zu groß. Maximal 25 MB erlaubt.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

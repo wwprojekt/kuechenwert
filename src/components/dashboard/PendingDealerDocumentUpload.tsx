@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { optimizeImage } from "@/lib/imageOptimization";
 import {
   Card,
   CardContent,
@@ -134,7 +135,8 @@ const ALLOWED_MIME_TYPES = [
 /** Extensions that are valid even when MIME type is empty or octet-stream (iOS HEIC issue) */
 const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE_IMAGE = 50 * 1024 * 1024; // 50 MB (will be auto-compressed)
+const MAX_FILE_SIZE_PDF = 25 * 1024 * 1024; // 25 MB
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -222,16 +224,33 @@ export default function PendingDealerDocumentUpload({
     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
     const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
     const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
-    // Accept if MIME is valid, or if extension is valid and MIME is empty/octet-stream
     if (!isMimeValid && !(isExtValid && (file.type === '' || file.type === 'application/octet-stream'))) {
       toast.error(tr.docInvalidType);
       return;
     }
 
-    // Validate size
-    if (file.size > MAX_FILE_SIZE) {
+    const isImage = file.type.startsWith("image/") || ["jpg", "jpeg", "png", "heic", "heif"].includes(fileExt);
+    const maxSize = isImage ? MAX_FILE_SIZE_IMAGE : MAX_FILE_SIZE_PDF;
+    if (file.size > maxSize) {
       toast.error(tr.docFileTooLarge);
       return;
+    }
+
+    // Auto-compress images > 1MB for fast uploads
+    let fileToUpload = file;
+    if (isImage && file.size > 1 * 1024 * 1024) {
+      try {
+        const result = await optimizeImage(file, {
+          maxWidth: 2048,
+          maxHeight: 2048,
+          quality: 0.85,
+          format: "jpeg",
+        });
+        logger.info(`Document auto-compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(result.file.size / 1024 / 1024).toFixed(1)}MB`);
+        fileToUpload = result.file;
+      } catch (err) {
+        logger.warn("Image compression failed, using original:", err);
+      }
     }
 
     setUploadingSlot(slotType);
@@ -240,7 +259,7 @@ export default function PendingDealerDocumentUpload({
     try {
       // Build FormData for the edge function
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("user_id", user.id);
       formData.append("file_type", slotType);
       formData.append("dealer_application_id", dealerApplicationId);

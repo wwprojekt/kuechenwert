@@ -104,10 +104,10 @@ class SecurityManager {
    * Validate file upload security
    */
   validateFileUpload(file: File): { valid: boolean; error?: string } {
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
+    // Check file size (max 25MB for documents, images are auto-compressed)
+    const maxSize = 25 * 1024 * 1024;
     if (file.size > maxSize) {
-      return { valid: false, error: 'File too large (max 10MB)' };
+      return { valid: false, error: 'File too large (max 25MB)' };
     }
 
     // Check file type
@@ -115,7 +115,9 @@ class SecurityManager {
       'image/jpeg',
       'image/png', 
       'image/webp',
-      'application/pdf', // For documents
+      'image/heic',
+      'image/heif',
+      'application/pdf',
     ];
 
     if (!allowedTypes.includes(file.type)) {

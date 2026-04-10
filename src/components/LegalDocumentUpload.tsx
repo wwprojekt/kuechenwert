@@ -92,21 +92,23 @@ export const LegalDocumentUpload = ({
     if (!file) return;
 
     // Validate file
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+    const allowedExts = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
       toast({
-        title: 'Datei zu groß',
-        description: 'Maximale Dateigröße: 10MB',
+        title: 'Ungültiger Dateityp',
+        description: 'Erlaubt: PDF, JPEG, PNG, HEIC',
         variant: 'destructive',
       });
       return;
     }
 
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    if (file.size > maxSize) {
       toast({
-        title: 'Ungültiger Dateityp',
-        description: 'Erlaubt: PDF, JPEG, PNG',
+        title: 'Datei zu groß',
+        description: 'Maximale Dateigröße: 25 MB',
         variant: 'destructive',
       });
       return;

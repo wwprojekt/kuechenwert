@@ -44,6 +44,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY, getPhonePlaceholder } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getTranslations, type TranslationKey } from "@/lib/dealerRegistrationTranslations";
+import { optimizeImage } from "@/lib/imageOptimization";
 
 /**
  * Creates a Zod validation schema that uses translated error messages
@@ -154,15 +155,6 @@ const RegisterHaendler = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: tr.errorFileTooLarge,
-        description: tr.errorFileTooLargeDesc,
-        variant: "destructive",
-      });
-      return;
-    }
-
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg", "image/heic", "image/heif"];
     const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "heic", "heif"];
     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
@@ -173,6 +165,35 @@ const RegisterHaendler = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    const isImage = file.type.startsWith("image/") || ["jpg", "jpeg", "png", "heic", "heif"].includes(fileExt);
+    const maxSize = isImage ? 50 * 1024 * 1024 : 25 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      toast({
+        title: tr.errorFileTooLarge,
+        description: isImage ? "Max. 50 MB für Bilder." : "Max. 25 MB für PDFs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Auto-compress images > 1MB for fast uploads
+    if (isImage && file.size > 1 * 1024 * 1024) {
+      try {
+        const result = await optimizeImage(file, {
+          maxWidth: 2048,
+          maxHeight: 2048,
+          quality: 0.85,
+          format: "jpeg",
+        });
+        logger.info(`Document auto-compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(result.file.size / 1024 / 1024).toFixed(1)}MB`);
+        setDocumentFile(result.file);
+        return;
+      } catch (err) {
+        logger.warn("Image compression failed, using original:", err);
+      }
     }
 
     setDocumentFile(file);

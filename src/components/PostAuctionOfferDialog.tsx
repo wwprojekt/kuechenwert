@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, MessageSquare } from "lucide-react";
-import { withSessionRetry, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 
 interface PostAuctionOfferDialogProps {
   auctionId: string;
@@ -152,9 +152,9 @@ export function PostAuctionOfferDialog({
         if (error) throw error;
       }, 'PostAuctionOffer.insert');
 
-      // Send notification via Edge Function (runs with service_role, bypasses RLS)
+      // E-Mail an Verkäufer (Edge Function; Auth: Bieter-JWT, siehe notify-offer-action)
       try {
-        await supabase.functions.invoke('notify-offer-action', {
+        const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
           body: {
             action: 'new_offer',
             auctionId,
@@ -163,6 +163,7 @@ export function PostAuctionOfferDialog({
             message: message.trim() || undefined,
           },
         });
+        if (notifyErr) console.error('Failed to send offer notification:', notifyErr);
       } catch (notifyErr) {
         console.error('Failed to send offer notification:', notifyErr);
       }

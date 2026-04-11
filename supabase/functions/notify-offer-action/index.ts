@@ -32,16 +32,102 @@ interface NotifyRequest {
   sellerResponse?: string;
 }
 
+type MotorhomeRow = { seller_id: string | null };
+
+function getSellerIdFromAuction(auctionData: { motorhome: MotorhomeRow | MotorhomeRow[] | null } | null): string | null {
+  const mh = auctionData?.motorhome;
+  if (!mh) return null;
+  return Array.isArray(mh) ? (mh[0]?.seller_id ?? null) : (mh.seller_id ?? null);
+}
+
+/**
+ * Erlaubt Aufrufe von echten Beteiligten (Händler = Bieter, Verkäufer = seller_id),
+ * nicht nur Admin/Service-Role. Vorher schlug jeder Händler-Aufruf mit 401 fehl → keine E-Mails.
+ */
+async function authorizeNotifyOfferRequest(
+  req: Request,
+  body: NotifyRequest,
+  corsHeaders: Record<string, string>,
+): Promise<{ authorized: true } | { authorized: false; response: Response }> {
+  const base = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (base.authorized) return base;
+
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return base;
+
+  const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data: { user }, error: userErr } = await supabaseAuth.auth.getUser(token);
+  if (userErr || !user) return base;
+
+  // Nur Admins dürfen admin_offer auslösen (Händler täuscht sonst fremde IDs vor)
+  if (body.action === 'admin_offer') {
+    return base;
+  }
+
+  const { data: auctionRow } = await supabase
+    .from('auctions')
+    .select('motorhome:motorhomes(seller_id)')
+    .eq('id', body.auctionId)
+    .maybeSingle();
+
+  const sellerId = getSellerIdFromAuction(auctionRow as { motorhome: MotorhomeRow | MotorhomeRow[] | null } | null);
+
+  if (body.action === 'new_offer') {
+    if (user.id !== body.buyerId) return base;
+    const { data: inv } = await supabase
+      .from('kaufchance_invitations')
+      .select('id')
+      .eq('auction_id', body.auctionId)
+      .eq('bidder_id', body.buyerId)
+      .maybeSingle();
+    if (!inv) return base;
+    const { data: offer } = await supabase
+      .from('post_auction_offers')
+      .select('id')
+      .eq('auction_id', body.auctionId)
+      .eq('buyer_id', body.buyerId)
+      .in('status', ['pending', 'countered'])
+      .maybeSingle();
+    if (!offer) return base;
+    return { authorized: true };
+  }
+
+  if (body.action === 'offer_rejected' || body.action === 'counter_offer') {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    const isAdmin = roles?.some((r: { role: string }) => r.role === 'admin');
+    if (isAdmin) return { authorized: true };
+    if (sellerId && user.id === sellerId) return { authorized: true };
+    return base;
+  }
+
+  return base;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
   }
 
-  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  const corsHeaders = getCorsHeaders(req);
+
+  let body: NotifyRequest;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  const authResult = await authorizeNotifyOfferRequest(req, body, corsHeaders);
   if (!authResult.authorized) return authResult.response;
 
   try {
-    const body: NotifyRequest = await req.json();
     const { action, auctionId, buyerId, offerAmount, counterAmount, message, sellerResponse } = body;
 
     console.log(`[notify-offer-action] action=${action}, auctionId=${auctionId}, buyerId=${buyerId}`);
@@ -53,16 +139,19 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', auctionId)
       .single();
 
-    if (auctionError || !auctionData?.motorhome) {
+    const mhJoined = auctionData?.motorhome;
+    const mh = Array.isArray(mhJoined) ? mhJoined[0] : mhJoined;
+
+    if (auctionError || !auctionData || !mh) {
       console.error('[notify-offer-action] Auction/motorhome not found:', auctionError);
       return new Response(JSON.stringify({ success: false, error: 'Auction not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    const sellerId = auctionData.motorhome.seller_id;
-    const motorhomeName = `${auctionData.motorhome.manufacturer || ''} ${auctionData.motorhome.model || ''}`.trim();
+    const sellerId = mh.seller_id;
+    const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
 
     // 2. Lade Käufer-Profil (service_role → kein RLS)
     const { data: buyerProfile } = await supabase
@@ -177,14 +266,14 @@ const handler = async (req: Request): Promise<Response> => {
       total: results.length,
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
 
   } catch (error: any) {
     console.error('[notify-offer-action] Error:', error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 };

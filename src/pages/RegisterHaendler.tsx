@@ -216,39 +216,76 @@ const RegisterHaendler = () => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
-      const registerResponse = await fetch(
-        `${supabaseUrl}/functions/v1/register-dealer`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseAnonKey,
-          },
-          body: JSON.stringify({
-            email: validated.email,
-            password: validated.password,
-            firstName: validated.contactPersonName.split(" ")[0],
-            lastName: validated.contactPersonName.split(" ").slice(1).join(" ") || "",
-            phone: validated.phone,
-            companyName: validated.companyName,
-            companyAddress: validated.companyAddress,
-            companyPostalCode: validated.companyPostalCode,
-            companyCity: validated.companyCity,
-            country: validated.country,
-            contactPersonName: validated.contactPersonName,
-            contactPersonPosition: validated.contactPersonPosition || null,
-            website: validated.website || null,
-            legalForm: validated.legalForm || null,
-            foundedYear: validated.foundedYear || null,
-            vatId: validated.vatId || null,
-          }),
+      const registerPayload = JSON.stringify({
+        email: validated.email,
+        password: validated.password,
+        firstName: validated.contactPersonName.split(" ")[0],
+        lastName: validated.contactPersonName.split(" ").slice(1).join(" ") || "",
+        phone: validated.phone,
+        companyName: validated.companyName,
+        companyAddress: validated.companyAddress,
+        companyPostalCode: validated.companyPostalCode,
+        companyCity: validated.companyCity,
+        country: validated.country,
+        contactPersonName: validated.contactPersonName,
+        contactPersonPosition: validated.contactPersonPosition || null,
+        website: validated.website || null,
+        legalForm: validated.legalForm || null,
+        foundedYear: validated.foundedYear || null,
+        vatId: validated.vatId || null,
+      });
+
+      const doRegisterFetch = async (signal?: AbortSignal) => {
+        const resp = await fetch(
+          `${supabaseUrl}/functions/v1/register-dealer`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseAnonKey,
+            },
+            body: registerPayload,
+            signal,
+          }
+        );
+        return resp;
+      };
+
+      let registerResponse: Response;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        registerResponse = await doRegisterFetch(controller.signal);
+        clearTimeout(timeout);
+      } catch (fetchErr: any) {
+        const isNetworkError =
+          fetchErr?.name === 'AbortError' ||
+          fetchErr?.message?.includes('Load failed') ||
+          fetchErr?.message?.includes('Failed to fetch') ||
+          fetchErr?.message?.includes('NetworkError');
+        if (isNetworkError) {
+          // Retry once for transient network failures (common on Safari)
+          try {
+            const retryController = new AbortController();
+            const retryTimeout = setTimeout(() => retryController.abort(), 30000);
+            registerResponse = await doRegisterFetch(retryController.signal);
+            clearTimeout(retryTimeout);
+          } catch {
+            throw new Error(tr.errorUserCreationFailed);
+          }
+        } else {
+          throw fetchErr;
         }
-      );
+      }
 
-      const registerResult = await registerResponse.json();
+      let registerResult: any;
+      try {
+        registerResult = await registerResponse!.json();
+      } catch {
+        throw new Error(tr.errorUserCreationFailed);
+      }
 
-      if (!registerResponse.ok) {
-        // Handle specific error codes from our Edge Function
+      if (!registerResponse!.ok) {
         if (registerResult.code === 'USER_EXISTS') {
           throw new Error(registerResult.error || tr.errorUserCreationFailed);
         }

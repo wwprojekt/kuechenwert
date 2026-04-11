@@ -100,6 +100,9 @@ export function isLockError(error: unknown): boolean {
     message.includes('was not released within') ||
     message.includes('Acquiring an exclusive Navigator LockManager lock') ||
     message.includes('Acquiring process lock') ||
+    message.includes('lock request is aborted') ||
+    message.includes('The lock request is aborted') ||
+    (error instanceof Error && error.name === 'AbortError') ||
     (error instanceof Error && 'isAcquireTimeout' in error && !!(error as any).isAcquireTimeout)
   );
 }
@@ -273,22 +276,33 @@ export async function ensureValidSession(): Promise<{
  * was z.B. dazu führt, dass isDealer=false wird und das Bieten-UI verschwindet.
  * 
  * Diese Funktion prüft die Token-Gültigkeit und refresht proaktiv wenn nötig.
+ * Dedupliziert parallele Aufrufe: wenn 10 Komponenten gleichzeitig aufrufen,
+ * wird nur EIN Auth-Request gemacht und alle 10 bekommen das gleiche Ergebnis.
  * 
  * @returns true wenn Session gültig, false wenn nicht wiederherstellbar
  */
-export async function ensureValidRLSSession(): Promise<boolean> {
+let _pendingRLSCheck: Promise<boolean> | null = null;
+
+export function ensureValidRLSSession(): Promise<boolean> {
+  if (_pendingRLSCheck) return _pendingRLSCheck;
+  
+  _pendingRLSCheck = _doEnsureValidRLSSession().finally(() => {
+    _pendingRLSCheck = null;
+  });
+  
+  return _pendingRLSCheck;
+}
+
+async function _doEnsureValidRLSSession(): Promise<boolean> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     
-    // Keine Session → Refresh versuchen
     if (!session) {
       const { data, error } = await supabase.auth.refreshSession();
       return !error && !!data.session;
     }
     
-    // Session vorhanden → Access Token auf Gültigkeit prüfen
     if (session.access_token && !isTokenValid(session.access_token, 60)) {
-      // Token abgelaufen oder läuft in < 60s ab → Refresh
       const { data, error } = await supabase.auth.refreshSession();
       if (error || !data.session) return false;
     }
@@ -296,7 +310,6 @@ export async function ensureValidRLSSession(): Promise<boolean> {
     return true;
   } catch (e) {
     if (isLockError(e)) {
-      // Lock-Error: wait briefly and retry once instead of blindly assuming valid
       await new Promise(resolve => setTimeout(resolve, 500));
       try {
         const { data: { session } } = await supabase.auth.getSession();

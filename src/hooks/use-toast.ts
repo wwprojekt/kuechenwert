@@ -185,6 +185,8 @@ function toast({ ...props }: Toast) {
     const businessEventTitles = [
       'Sie wurden überboten!',
       'Neues Gebot!',
+      'Gebot fehlgeschlagen',
+      'Ungültiges Gebot',
       'Auktion beendet',
       'Anmeldung erforderlich',
       'Sitzung abgelaufen',
@@ -193,6 +195,8 @@ function toast({ ...props }: Toast) {
       'Passwort bereits vergeben',
       'Zu viele Anfragen',
       'KI-Bewertung vorübergehend nicht verfügbar',
+      'Dokument-Upload fehlgeschlagen',
+      'Favorit konnte nicht',
     ];
     const businessEventDescriptions = [
       'Bieten Sie erneut!',
@@ -202,6 +206,10 @@ function toast({ ...props }: Toast) {
       'muss sich vom alten Passwort unterscheiden',
       'ist bereits Ihr aktuelles Passwort',
       'Bitte warten Sie einige Minuten',
+      'Mindestgebot',
+      'Gebot muss mindestens',
+      'Gebot zu niedrig',
+      'nach dem Login im Dashboard nachreichen',
     ];
     const isBusinessEvent = businessEventTitles.some(t => titleStr.includes(t))
       || businessEventDescriptions.some(d => errorMessage.includes(d));
@@ -217,6 +225,7 @@ function toast({ ...props }: Toast) {
       'Acquiring process lock',
       'isAcquireTimeout',
       'Sitzungssynchronisierung',
+      'lock request is aborted',
     ];
     const isLockError = lockErrorPatterns.some(p => errorMessage.includes(p) || titleStr.includes(p));
 

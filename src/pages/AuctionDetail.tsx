@@ -150,6 +150,20 @@ const AuctionDetail = () => {
   const prevHighestBidderRef = useRef<boolean | null>(null);
   const [neighborAuctions, setNeighborAuctions] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
 
+  // Auto-update bid input when realtime bid makes current input too low
+  const prevCurrentBidRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!auction) return;
+    const newCurrentBid = auction.current_bid || auction.starting_bid;
+    const prevBid = prevCurrentBidRef.current;
+    prevCurrentBidRef.current = newCurrentBid;
+    if (prevBid === null || prevBid === newCurrentBid) return;
+    const enteredAmount = parseFloat(bidAmount);
+    if (!isNaN(enteredAmount) && enteredAmount <= newCurrentBid) {
+      setBidAmount(String(newCurrentBid + 50));
+    }
+  }, [auction?.current_bid, auction?.starting_bid]);
+
   // Fetch neighboring auctions for prev/next navigation
   useEffect(() => {
     const fetchNeighbors = async () => {

@@ -570,9 +570,9 @@ export function installGlobalErrorHandlers(): void {
     // Ignoriere Browser-Extension-Fehler (LastPass, Bitwarden, 1Password etc.)
     if (message.includes('Object Not Found Matching Id')) return;
 
-    // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
-    // Firefox gibt "The lock request is aborted" als message + "AbortError" als name
     const reasonName = reason instanceof Error ? reason.name : '';
+
+    // Ignoriere Navigator Lock-Fehler (harmlos, Supabase Auth-JS Session-Synchronisierung)
     if (
       message.includes('lock request') ||
       message.includes('Lock broken by another request') ||
@@ -583,7 +583,7 @@ export function installGlobalErrorHandlers(): void {
       message.includes('Acquiring an exclusive Navigator LockManager lock') ||
       message.includes('Acquiring process lock') ||
       message.includes('isAcquireTimeout') ||
-      (reasonName === 'AbortError' && message.includes('lock'))
+      reasonName === 'AbortError'
     ) return;
     // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
     const stackStr = reason instanceof Error ? (reason.stack || '') : '';

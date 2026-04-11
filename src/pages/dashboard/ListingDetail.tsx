@@ -279,6 +279,12 @@ export default function ListingDetail() {
 
     setRespondingOfferId(offerId);
     try {
+      const { data: offerData } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount, auction_id')
+        .eq('id', offerId)
+        .single();
+
       const { error } = await supabase
         .from('post_auction_offers')
         .update({
@@ -288,6 +294,24 @@ export default function ListingDetail() {
         })
         .eq('id', offerId);
       if (error) throw error;
+
+      if (offerData) {
+        try {
+          const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
+            body: {
+              action: 'offer_rejected',
+              auctionId: offerData.auction_id,
+              buyerId: offerData.buyer_id,
+              offerAmount: Number(offerData.offer_amount),
+              sellerResponse: 'Angebot abgelehnt',
+            },
+          });
+          if (notifyErr) console.error('notify-offer-action:', notifyErr);
+        } catch (e) {
+          console.error('notify-offer-action:', e);
+        }
+      }
+
       toast({ title: 'Angebot abgelehnt' });
       loadKaufchanceOffers();
     } catch (err: any) {
@@ -313,6 +337,12 @@ export default function ListingDetail() {
 
     setRespondingOfferId(offerId);
     try {
+      const { data: offerData } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount, auction_id')
+        .eq('id', offerId)
+        .single();
+
       const { error } = await supabase
         .from('post_auction_offers')
         .update({
@@ -323,6 +353,25 @@ export default function ListingDetail() {
         })
         .eq('id', offerId);
       if (error) throw error;
+
+      if (offerData) {
+        try {
+          const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
+            body: {
+              action: 'counter_offer',
+              auctionId: offerData.auction_id,
+              buyerId: offerData.buyer_id,
+              offerAmount: Number(offerData.offer_amount),
+              counterAmount: amount,
+              sellerResponse: message || undefined,
+            },
+          });
+          if (notifyErr) console.error('notify-offer-action:', notifyErr);
+        } catch (e) {
+          console.error('notify-offer-action:', e);
+        }
+      }
+
       toast({
         title: 'Gegenangebot gesendet',
         description: `Gegenangebot von ${amount.toLocaleString('de-DE')} € wurde gesendet.`,

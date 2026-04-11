@@ -161,7 +161,7 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
             .single();
 
           if (offerData) {
-            await supabase.functions.invoke('notify-offer-action', {
+            const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
               body: {
                 action: actionType === 'reject' ? 'offer_rejected' : 'counter_offer',
                 auctionId: offerData.auction_id,
@@ -171,6 +171,7 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
                 sellerResponse: responseMessage.trim() || undefined,
               },
             });
+            if (notifyErr) console.error('notify-offer-action:', notifyErr);
           }
         } catch (notifyErr) {
           console.error('Failed to send buyer notification:', notifyErr);

@@ -79,9 +79,8 @@ const Kaufen = () => {
   });
   const { toast } = useToast();
 
-  const fetchAuctions = useCallback(async () => {
+  const fetchAuctions = useCallback(async (retryCount = 0) => {
       try {
-        // Fetch active auctions with motorhome details
         const { data: auctionData, error: auctionError } = await supabase
           .from("auctions")
           .select(`
@@ -98,7 +97,6 @@ const Kaufen = () => {
 
         setAuctions(auctionData || []);
 
-        // Fetch bid counts for all auctions in a single query
         if (auctionData && auctionData.length > 0) {
           const auctionIds = auctionData.map(a => a.id);
           const { data: bidsData } = await supabase
@@ -113,14 +111,19 @@ const Kaufen = () => {
           setBidCounts(counts);
         }
       } catch (error: unknown) {
+        if (retryCount < 2) {
+          logger.warn(`Auction fetch failed (attempt ${retryCount + 1}), retrying...`);
+          await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
+          return fetchAuctions(retryCount + 1);
+        }
         logger.error("Error fetching auctions:", error);
         toast({
           title: "Fehler",
-          description: "Auktionen konnten nicht geladen werden",
+          description: "Auktionen konnten nicht geladen werden. Bitte Seite neu laden.",
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        if (retryCount === 0 || retryCount >= 2) setIsLoading(false);
       }
   }, [toast]);
 

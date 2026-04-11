@@ -1,7 +1,0 @@
-Task ID: 877de626-b34c-41d8-bd6f-61b70b27d798
-Task Title: "neues inserat" button bringt mich auf die startseite zurück
-Project: AutoAnkauf24
-Status: pending
-Priority: medium
-
-This folder contains 1 attachment(s) for this task.

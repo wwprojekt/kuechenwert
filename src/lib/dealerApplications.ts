@@ -123,6 +123,10 @@ export async function approveDealerApplication(applicationId: string): Promise<v
       throw new Error('Application not found');
     }
 
+    if (application.status !== 'pending') {
+      throw new Error('Bewerbung wurde bereits bearbeitet');
+    }
+
     // Get profile data separately - don't fail if profile doesn't exist
     const { data: profile } = await supabase
       .from('profiles')
@@ -180,6 +184,10 @@ export async function rejectDealerApplication(applicationId: string, reason: str
 
   if (!application) {
     throw new Error('Application not found');
+  }
+
+  if (application.status !== 'pending') {
+    throw new Error('Bewerbung wurde bereits bearbeitet');
   }
 
   // Update application status FIRST - this is the critical operation

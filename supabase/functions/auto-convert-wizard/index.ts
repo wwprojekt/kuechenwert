@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -116,6 +117,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
 
+  const auth = await checkServiceRoleOrAdmin(req, headers);
+  if (!auth.authorized) return auth.response;
+
   try {
     const body: AutoConvertRequest = await req.json();
 
@@ -197,12 +201,17 @@ const handler = async (req: Request): Promise<Response> => {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      // Check if user exists in auth
-      const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
-      const existingAuthUser = authUsers?.users.find(u => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
+      const normalizedEmail = customerEmail.trim().toLowerCase();
 
-      if (existingAuthUser) {
-        sellerId = existingAuthUser.id;
+      // Check profiles table first (fast, indexed lookup)
+      const { data: existingProfile } = await adminClient
+        .from("profiles")
+        .select("id, email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        sellerId = existingProfile.id;
         
         // Ensure profile exists
         await adminClient.from("profiles").upsert({
@@ -226,32 +235,21 @@ const handler = async (req: Request): Promise<Response> => {
         }
         
       } else {
-        // Create user via Admin API (NOT via signUp()!)
-        // email_confirm: true → Supabase sendet KEINE automatische Bestätigungs-E-Mail
-        // Unsere Custom-Aktivierungs-E-Mail (send-registration-invite) wird später gesendet.
-        // Use provided password if available, otherwise generate random
-        const passwordToUse = body.password || (crypto.randomUUID() + "Aa1!");
-        const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-          email: customerEmail.trim().toLowerCase(),
-          password: passwordToUse,
-          email_confirm: true,
-          user_metadata: {
-            first_name: firstName,
-            last_name: lastName,
-            phone: customerPhone,
-          },
+        // Profile not found — check auth.users by email (targeted, paginated query)
+        const { data: authListResult } = await adminClient.auth.admin.listUsers({
+          page: 1,
+          perPage: 1,
         });
+        const existingAuthUser = authListResult?.users?.find(
+          (u: any) => u.email?.toLowerCase() === normalizedEmail
+        );
 
-        if (createError) {
-          throw new Error(`Failed to create user: ${createError.message}`);
-        } else {
-          sellerId = newUser.user.id;
-          isNewUser = true;
+        if (existingAuthUser) {
+          sellerId = existingAuthUser.id;
 
-          // Create profile
           await adminClient.from("profiles").upsert({
             id: sellerId,
-            email: customerEmail.trim().toLowerCase(),
+            email: normalizedEmail,
             first_name: firstName || null,
             last_name: lastName || null,
             phone: customerPhone || null,
@@ -262,11 +260,49 @@ const handler = async (req: Request): Promise<Response> => {
             address_country: addressCountry,
           }, { onConflict: "id" });
 
-          // Assign role
-          await adminClient.from("user_roles").upsert({
-            user_id: sellerId,
-            role: "seller",
-          }, { onConflict: "user_id" });
+          const { data: existingRoleForAuth } = await adminClient
+            .from("user_roles").select("role").eq("user_id", sellerId).maybeSingle();
+          if (!existingRoleForAuth) {
+            await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+          }
+        } else {
+          // Create user via Admin API (NOT via signUp()!)
+          const passwordToUse = body.password || (crypto.randomUUID() + "Aa1!");
+          const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+            email: normalizedEmail,
+            password: passwordToUse,
+            email_confirm: true,
+            user_metadata: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: customerPhone,
+            },
+          });
+
+          if (createError) {
+            throw new Error(`Failed to create user: ${createError.message}`);
+          } else {
+            sellerId = newUser.user.id;
+            isNewUser = true;
+
+            await adminClient.from("profiles").upsert({
+              id: sellerId,
+              email: normalizedEmail,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              phone: customerPhone || null,
+              account_type: "private",
+              address_street: addressStreet,
+              address_zip: addressZip,
+              address_city: addressCity,
+              address_country: addressCountry,
+            }, { onConflict: "id" });
+
+            await adminClient.from("user_roles").upsert({
+              user_id: sellerId,
+              role: "seller",
+            }, { onConflict: "user_id" });
+          }
         }
       }
     }

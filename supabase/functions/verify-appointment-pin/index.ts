@@ -52,6 +52,12 @@ serve(async (req) => {
           }
         );
       }
+
+      // Lockout expired — reset attempts
+      await supabaseClient
+        .from('pin_attempts')
+        .update({ locked_until: null, attempt_count: 0 })
+        .eq('appointment_id', appointment_id);
     }
 
     // Check attempt count

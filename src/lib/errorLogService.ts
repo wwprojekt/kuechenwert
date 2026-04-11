@@ -131,16 +131,17 @@ export function initBreadcrumbTracking(): void {
   // API-Call tracking (fetch interceptor)
   const origFetch = window.fetch;
   window.fetch = async function (input, init) {
-    const url = typeof input === 'string' ? input : (input as Request).url;
-    // Nur Supabase-Calls tracken, nicht alle Fetches
-    if (url.includes('supabase') || url.includes('/rest/') || url.includes('/functions/')) {
-      const method = init?.method || 'GET';
-      addBreadcrumb({
-        type: 'api',
-        message: `${method} ${new URL(url, window.location.origin).pathname}`,
-        data: { method, url: url.slice(0, 200) },
-      });
-    }
+    try {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('supabase') || url.includes('/rest/') || url.includes('/functions/')) {
+        const method = init?.method || 'GET';
+        addBreadcrumb({
+          type: 'api',
+          message: `${method} ${new URL(url, window.location.origin).pathname}`,
+          data: { method, url: url.slice(0, 200) },
+        });
+      }
+    } catch { /* breadcrumb failure must never block fetch */ }
     return origFetch.apply(this, [input, init]);
   };
 }

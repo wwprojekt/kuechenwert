@@ -222,8 +222,11 @@ class CommissionCalculatorService {
     totalCost: string;
     savings: string;
   } {
+    const baseAmount = calculation.volume_discount > 0
+      ? calculation.commission_amount / (1 - calculation.volume_discount / 100)
+      : calculation.commission_amount;
     return {
-      baseCommission: calculation.commission_amount.toLocaleString('de-DE', {
+      baseCommission: baseAmount.toLocaleString('de-DE', {
         style: 'currency',
         currency: 'EUR',
       }),

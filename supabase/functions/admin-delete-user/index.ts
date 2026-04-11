@@ -56,14 +56,29 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (getUserError || !authUser?.user) {
       edgeLogger.warn(`User ${userId} not found in auth.users: ${getUserError?.message}`);
-      // Even if not in auth.users, clean up application tables
     }
 
     const userEmail = authUser?.user?.email || "unknown";
     edgeLogger.info(`Deleting user ${userId} (${userEmail}) completely`);
 
-    // 2. Clean up application-level tables (order matters for foreign keys)
-    // These deletions are best-effort - we continue even if some fail
+    // 2. Delete from auth.users FIRST (critical step)
+    // If this fails, we abort without touching app data to avoid orphaned state.
+    if (authUser?.user) {
+      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
+
+      if (deleteAuthError) {
+        edgeLogger.error(`Failed to delete auth user ${userId}: ${deleteAuthError.message}`);
+        return new Response(
+          JSON.stringify({
+            error: `Auth-Benutzer konnte nicht gelöscht werden: ${deleteAuthError.message}`,
+          }),
+          { status: 500, headers }
+        );
+      }
+    }
+
+    // 3. Clean up application-level tables (order matters for foreign keys)
+    // Auth user is already deleted, so these are best-effort cleanup.
 
     // Delete dealer applications
     const { error: dealerAppError } = await supabase
@@ -90,21 +105,6 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", userId);
     if (profileError) {
       edgeLogger.warn(`Could not delete profile for ${userId}: ${profileError.message}`);
-    }
-
-    // 3. Delete from auth.users (this is the critical step)
-    if (authUser?.user) {
-      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
-
-      if (deleteAuthError) {
-        edgeLogger.error(`Failed to delete auth user ${userId}: ${deleteAuthError.message}`);
-        return new Response(
-          JSON.stringify({
-            error: `Auth-Benutzer konnte nicht gelöscht werden: ${deleteAuthError.message}`,
-          }),
-          { status: 500, headers }
-        );
-      }
     }
 
     edgeLogger.info(`Successfully deleted user ${userId} (${userEmail}) from all tables`);

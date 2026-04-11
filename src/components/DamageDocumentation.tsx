@@ -24,6 +24,7 @@ import {
   Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { optimizeImage, validateImageFile, OPTIMIZATION_PRESETS } from '@/lib/imageOptimization';
 
 interface DamageDocumentationProps {
@@ -94,7 +95,9 @@ export const DamageDocumentation = ({
   // Upload damage photo mutation
   const uploadDamagePhotoMutation = useMutation({
     mutationFn: async (file: File) => {
-      // Validate file
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error('Session ungültig');
+
       const validation = validateImageFile(file);
       if (!validation.valid) {
         throw new Error(validation.error);
@@ -167,6 +170,9 @@ export const DamageDocumentation = ({
   // Delete damage photo mutation
   const deleteDamagePhotoMutation = useMutation({
     mutationFn: async (photoId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error('Session ungültig');
+
       const { error } = await supabase
         .from('damage_photos')
         .delete()
@@ -174,7 +180,7 @@ export const DamageDocumentation = ({
       
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data: unknown, deletedPhotoId: string) => {
       queryClient.invalidateQueries({ queryKey: ['damage-photos', motorhomeId] });
       toast({
         title: 'Foto gelöscht',
@@ -182,7 +188,7 @@ export const DamageDocumentation = ({
       });
       
       // Check if any damage photos remain
-      const remainingPhotos = damagePhotos?.filter(p => p.id !== arguments[0]) || [];
+      const remainingPhotos = damagePhotos?.filter(p => p.id !== deletedPhotoId) || [];
       onDamageChange?.(remainingPhotos.length > 0);
     },
   });

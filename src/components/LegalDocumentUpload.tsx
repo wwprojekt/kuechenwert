@@ -3,7 +3,7 @@
  * Handles upload of HRB register, Gewerbenachweis, and other legal documents
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,8 @@ export const LegalDocumentUpload = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documents, setDocuments] = useState(existingDocuments);
+
+  useEffect(() => { setDocuments(existingDocuments); }, [existingDocuments]);
 
   const handleFileSelect = () => {
     if (!selectedDocumentType) {
@@ -285,7 +287,7 @@ export const LegalDocumentUpload = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
+            accept=".pdf,.jpg,.jpeg,.png,.heic,.heif"
             onChange={handleFileUpload}
             className="hidden"
           />

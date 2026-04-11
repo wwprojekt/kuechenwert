@@ -65,13 +65,25 @@ export const AppointmentBookingModal = ({
   };
 
   const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 9; hour <= 17; hour++) {
+    let slots: string[] = [];
+    for (let hour = 9; hour <= 16; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push(timeString);
       }
     }
+
+    if (selectedDate) {
+      const now = new Date();
+      const isToday = selectedDate.toDateString() === now.toDateString();
+      if (isToday) {
+        slots = slots.filter(slot => {
+          const [h, m] = slot.split(':').map(Number);
+          return h > now.getHours() || (h === now.getHours() && m > now.getMinutes());
+        });
+      }
+    }
+
     return slots;
   };
 
@@ -89,6 +101,20 @@ export const AppointmentBookingModal = ({
       const appointmentDateTime = new Date(selectedDate);
       const [hours, minutes] = selectedTime.split(':');
       appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      const { count: conflictCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('station_id', selectedStation)
+        .in('status', ['scheduled', 'verified'])
+        .gte('appointment_date', appointmentDateTime.toISOString())
+        .lt('appointment_date', new Date(appointmentDateTime.getTime() + 60 * 60 * 1000).toISOString());
+
+      if (conflictCount && conflictCount > 0) {
+        toast.error("Dieser Termin ist bereits vergeben. Bitte wählen Sie einen anderen Zeitpunkt.");
+        setLoading(false);
+        return;
+      }
 
       // Insert appointment and get the created record back (we need the ID)
       const { data: appointmentData, error } = await supabase

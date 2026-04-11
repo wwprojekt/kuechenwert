@@ -38,7 +38,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
     functional: false,
     analytics: false,
     marketing: false,
-    consentId: '',
+    consentId: `consent_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     consentVersion: CONSENT_VERSION,
     timestamp: 0,
   });

@@ -178,10 +178,8 @@ export async function updateLeadWizardProgress(stepData: WizardStepData): Promis
       .from("quick_leads")
       .update({
         last_wizard_step: stepData.step,
-        max_wizard_step: stepData.step,
         form_data_snapshot: sanitizedFormData,
         updated_at: new Date().toISOString(),
-        // Lead-Qualität auf "hot" setzen wenn Wizard fortgeschritten
         ...(stepData.step >= 4 ? { lead_quality: "hot" } : {}),
       })
       .eq("id", leadId);

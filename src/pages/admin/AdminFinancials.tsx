@@ -237,39 +237,34 @@ export default function AdminFinancials() {
   });
 
   // Delete invoice mutation
-  // WICHTIG: Invoice ZUERST löschen! Der DB-Trigger prevent_invoice_deletion
-  // kann das blockieren (Aufbewahrungspflicht). Wenn wir erst die Items löschen
-  // und dann die Invoice fehlschlägt, entstehen verwaiste Datensätze.
+  // Dependencies FIRST, then the main invoice record LAST to avoid FK violations.
   const deleteInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session abgelaufen");
-      const { error: invoiceError } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoiceId);
-      if (invoiceError) throw invoiceError;
 
-      // 2) Erst wenn Invoice weg ist, abhängige Daten aufräumen
+      // 1) Delete invoice_items (FK dependency)
       const { error: itemsError } = await supabase
         .from('invoice_items')
         .delete()
         .eq('invoice_id', invoiceId);
       if (itemsError) throw itemsError;
 
+      // 2) Delete payment_reminders (FK dependency)
       const { error: remindersError } = await supabase
         .from('payment_reminders')
         .delete()
         .eq('invoice_id', invoiceId);
       if (remindersError) throw remindersError;
 
+      // 3) Delete dealer_payment_history (FK dependency)
       const { error: historyError } = await supabase
         .from('dealer_payment_history')
         .delete()
         .eq('invoice_id', invoiceId);
       if (historyError) throw historyError;
 
-      // PDF aus Storage löschen (nicht kritisch)
+      // 4) PDF aus Storage löschen (nicht kritisch)
       try {
         const invoice = invoices?.find((i: any) => i.id === invoiceId);
         if (invoice?.dealer_id && invoice?.invoice_number) {
@@ -280,6 +275,13 @@ export default function AdminFinancials() {
       } catch {
         // Storage deletion is non-critical
       }
+
+      // 5) Delete the invoice LAST (after all dependencies are removed)
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
+      if (invoiceError) throw invoiceError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });

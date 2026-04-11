@@ -58,7 +58,8 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: settings } = await supabase
       .from('site_settings')
       .select('*')
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     const settingsData = settings || {
       site_name: 'CaravanWert',

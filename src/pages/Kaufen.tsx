@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { anonymizePostalCode } from "@/lib/plzCoordinates";
 import { trackEvent } from "@/lib/analyticsService";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
@@ -196,7 +197,7 @@ const Kaufen = () => {
       // Beds filter
       if (filters.beds) {
         const bedsNum = parseInt(filters.beds);
-        const motorhomeBeds = motorhome.beds || 0;
+        const motorhomeBeds = (motorhome as any).sleeping_places || 0;
         if (filters.beds === "6") {
           if (motorhomeBeds < 6) return false;
         } else {
@@ -566,6 +567,9 @@ const Kaufen = () => {
                           if (!user || !saveSearchName.trim()) return;
                           setIsSavingSearch(true);
                           try {
+                            const sessionValid = await ensureValidRLSSession();
+                            if (!sessionValid) return;
+
                             const criteria: Record<string, any> = {};
                             if (filters.brand) criteria.manufacturer = filters.brand;
                             if (filters.vehicleTypes.length > 0) criteria.body_type = filters.vehicleTypes[0];

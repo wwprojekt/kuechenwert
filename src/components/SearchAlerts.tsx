@@ -21,7 +21,8 @@ import {
   Bell, 
   Edit, 
   Trash2, 
-  AlertCircle
+  AlertCircle,
+  Mail
 } from 'lucide-react';
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Constants } from '@/integrations/supabase/types';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 
 interface SearchAlert {
   id: string;
@@ -80,6 +82,8 @@ export const SearchAlerts = () => {
     queryKey: ['search-alerts', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       
       const { data, error } = await supabase
         .from('search_alerts')
@@ -97,6 +101,8 @@ export const SearchAlerts = () => {
   const alertMutation = useMutation({
     mutationFn: async (alertData: typeof alertForm & { id?: string }) => {
       if (!user) throw new Error('Not authenticated');
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error('Session abgelaufen');
       
       const payload = {
         dealer_id: user.id,
@@ -143,6 +149,8 @@ export const SearchAlerts = () => {
   // Delete alert mutation
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error('Session abgelaufen');
       const { error } = await supabase
         .from('search_alerts')
         .update({ is_active: false })

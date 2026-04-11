@@ -139,17 +139,19 @@ class InvoiceGeneratorService {
       const fileName = `invoice_${invoice.invoice_number}.html`;
       
       const { error: uploadError } = await supabase.storage
-        .from('motorhome-photos')
-        .upload(`invoices/${fileName}`, pdfContent, {
+        .from('invoices')
+        .upload(fileName, pdfContent, {
           contentType: 'text/html',
           upsert: true
         });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('motorhome-photos')
-        .getPublicUrl(`invoices/${fileName}`);
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('invoices')
+        .createSignedUrl(fileName, 3600);
+      if (signedUrlError || !signedUrlData?.signedUrl) throw new Error('Failed to create signed URL for invoice');
+      const publicUrl = signedUrlData.signedUrl;
 
       // Update invoice with PDF URL
       await supabase
@@ -432,6 +434,8 @@ class InvoiceGeneratorService {
 
       const { invoiceId, amount, paymentMethod, reference, notes, processedBy } = payment;
 
+      if (amount <= 0) throw new Error('Zahlungsbetrag muss positiv sein');
+
       // Get current invoice
       const { data: invoice, error: fetchError } = await supabase
         .from('invoices')
@@ -479,6 +483,7 @@ class InvoiceGeneratorService {
         .update({
           amount_paid: newAmountPaid,
           payment_status: newStatus,
+          ...(newStatus === 'paid' ? { status: 'paid' } : {}),
           payment_method: paymentMethod,
           payment_reference: reference || null,
           updated_at: new Date().toISOString(),

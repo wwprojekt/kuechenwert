@@ -49,8 +49,8 @@ class ErrorLogger {
       sessionId: this.generateSessionId(),
     };
 
-    // Set up global error handlers
-    this.setupGlobalHandlers();
+    // Global error handlers are installed by errorLogService.ts (installGlobalErrorHandlers).
+    // Do NOT call setupGlobalHandlers() here to avoid duplicate listeners.
   }
 
   /**

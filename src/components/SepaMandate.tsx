@@ -77,9 +77,15 @@ export const SepaMandate = ({
   }, []);
 
   const validateIBAN = (iban: string): boolean => {
-    // Basic IBAN validation for German IBANs
-    const cleanIban = iban.replace(/\s/g, '');
-    return /^DE\d{20}$/.test(cleanIban);
+    const clean = iban.replace(/\s/g, '').toUpperCase();
+    if (!/^DE\d{20}$/.test(clean)) return false;
+    const rearranged = clean.slice(4) + clean.slice(0, 4);
+    const numeric = rearranged.replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
+    let remainder = '';
+    for (const char of numeric) {
+      remainder = String(Number(remainder + char) % 97);
+    }
+    return Number(remainder) === 1;
   };
 
   const formatIBAN = (value: string): string => {

@@ -1,11 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+
+function escapeHtml(unsafe: unknown): string {
+  const str = String(unsafe ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
+  const auth = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!auth.authorized) return auth.response;
 
   try {
     const { appointment_id } = await req.json();
@@ -85,9 +100,9 @@ function generateProtocolHTML(appointment: any): string {
   const station = appointment.purchase_stations || {};
   const profile = appointment.profiles || {};
 
-  const date = new Date(appointment.appointment_date).toLocaleString('de-DE');
+  const date = escapeHtml(new Date(appointment.appointment_date).toLocaleString('de-DE'));
   const mileage = motorhome.mileage != null
-    ? Number(motorhome.mileage).toLocaleString('de-DE')
+    ? escapeHtml(Number(motorhome.mileage).toLocaleString('de-DE'))
     : '—';
   
   return `
@@ -96,7 +111,7 @@ function generateProtocolHTML(appointment: any): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Übergabeprotokoll – ${motorhome.manufacturer || ''} ${motorhome.model || ''}</title>
+  <title>Übergabeprotokoll – ${escapeHtml(motorhome.manufacturer)} ${escapeHtml(motorhome.model)}</title>
   <style>
     @media print {
       body { margin: 0; padding: 20px; }
@@ -197,15 +212,15 @@ function generateProtocolHTML(appointment: any): string {
     <h1>Fahrzeugdaten</h1>
     <div class="info-row">
       <span class="label">Hersteller:</span>
-      <span class="value">${motorhome.manufacturer || '—'}</span>
+      <span class="value">${escapeHtml(motorhome.manufacturer) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Modell:</span>
-      <span class="value">${motorhome.model || '—'}</span>
+      <span class="value">${escapeHtml(motorhome.model) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Baujahr:</span>
-      <span class="value">${motorhome.year || '—'}</span>
+      <span class="value">${escapeHtml(motorhome.year) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Kilometerstand:</span>
@@ -214,7 +229,7 @@ function generateProtocolHTML(appointment: any): string {
     ${motorhome.vehicle_identification_number ? `
     <div class="info-row">
       <span class="label">Fahrzeug-Identifikationsnummer:</span>
-      <span class="value">${motorhome.vehicle_identification_number}</span>
+      <span class="value">${escapeHtml(motorhome.vehicle_identification_number)}</span>
     </div>
     ` : ''}
   </div>
@@ -227,16 +242,16 @@ function generateProtocolHTML(appointment: any): string {
     </div>
     <div class="info-row">
       <span class="label">Ankaufstation:</span>
-      <span class="value">${station.name || '—'}</span>
+      <span class="value">${escapeHtml(station.name) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Adresse:</span>
-      <span class="value">${station.address || ''}, ${station.city || ''}</span>
+      <span class="value">${escapeHtml(station.address)}, ${escapeHtml(station.city)}</span>
     </div>
     ${appointment.payment_amount ? `
     <div class="info-row">
       <span class="label">Kaufpreis:</span>
-      <span class="value">${Number(appointment.payment_amount).toLocaleString('de-DE')} €</span>
+      <span class="value">${escapeHtml(Number(appointment.payment_amount).toLocaleString('de-DE'))} €</span>
     </div>
     ` : ''}
     ${appointment.payment_method ? `
@@ -252,11 +267,11 @@ function generateProtocolHTML(appointment: any): string {
     <h1>Verkäuferdaten</h1>
     <div class="info-row">
       <span class="label">Name:</span>
-      <span class="value">${profile.first_name || ''} ${profile.last_name || ''}</span>
+      <span class="value">${escapeHtml(profile.first_name)} ${escapeHtml(profile.last_name)}</span>
     </div>
     <div class="info-row">
       <span class="label">E-Mail:</span>
-      <span class="value">${profile.email}</span>
+      <span class="value">${escapeHtml(profile.email)}</span>
     </div>
   </div>
   ` : ''}
@@ -264,7 +279,7 @@ function generateProtocolHTML(appointment: any): string {
   ${appointment.notes ? `
   <div class="section">
     <h1>Anmerkungen</h1>
-    <p>${appointment.notes}</p>
+    <p>${escapeHtml(appointment.notes)}</p>
   </div>
   ` : ''}
 
@@ -282,7 +297,7 @@ function generateProtocolHTML(appointment: any): string {
   <div class="footer">
     <p>CaravanWert GmbH | Musterstraße 123, 80331 München</p>
     <p>Tel: +49 800 123 4567 | E-Mail: info@caravanwert.de</p>
-    <p>Erstellt am: ${new Date().toLocaleString('de-DE')}</p>
+    <p>Erstellt am: ${escapeHtml(new Date().toLocaleString('de-DE'))}</p>
   </div>
 </body>
 </html>

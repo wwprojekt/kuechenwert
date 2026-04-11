@@ -96,7 +96,7 @@ class SecurityManager {
 
     return input
       .trim()
-      .replace(/[<>"']/g, '') // Remove potentially dangerous characters
+      .replace(/[<>"]/g, '')
       .substring(0, 1000); // Limit length
   }
 
@@ -194,8 +194,8 @@ class SecurityManager {
 
     try {
       // Try to decode the header and payload
-      const header = JSON.parse(atob(parts[0]));
-      const payload = JSON.parse(atob(parts[1]));
+      const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
       
       // Basic structure validation
       return !!(header.alg && payload.sub && payload.exp);

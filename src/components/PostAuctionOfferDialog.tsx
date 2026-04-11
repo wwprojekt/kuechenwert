@@ -123,6 +123,20 @@ export function PostAuctionOfferDialog({
         return;
       }
 
+      const { data: existingOffer } = await supabase
+        .from('post_auction_offers')
+        .select('id')
+        .eq('auction_id', auctionId)
+        .eq('buyer_id', user.id)
+        .in('status', ['pending', 'countered'])
+        .maybeSingle();
+
+      if (existingOffer) {
+        toast({ title: 'Angebot existiert bereits', description: 'Sie haben bereits ein offenes Angebot für diese Auktion.', variant: 'destructive' });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Set offer to expire in 24 hours
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);

@@ -57,6 +57,8 @@ const DealerDashboard = () => {
   const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, dealerCountry, refetch: refetchApp } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
   const audioNotifications = useAudioNotification({ enabled: true, volume: 0.8 });
+  const audioRef = useRef(audioNotifications);
+  useEffect(() => { audioRef.current = audioNotifications; }, [audioNotifications]);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const audioEnabledRef = useRef(audioEnabled);
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,7 +92,7 @@ const DealerDashboard = () => {
 
           // Audio abspielen wenn aktiviert
           if (audioEnabledRef.current) {
-            await audioNotifications.playNotification("bid");
+            await audioRef.current.playNotification("bid");
           }
 
           // Toast-Benachrichtigung anzeigen
@@ -105,7 +107,7 @@ const DealerDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient, toast, audioNotifications]);
+  }, [user, queryClient, toast]);
 
   // Fetch dealer level
   const { data: dealerLevel } = useQuery({

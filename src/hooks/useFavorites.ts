@@ -64,7 +64,10 @@ export function useFavorites(): UseFavoritesResult {
 
     try {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return;
+      if (!sessionValid) {
+        queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), prevFavorites || []);
+        return;
+      }
 
       await withSessionRetry(async () => {
         const { error } = await supabase.from("user_favorites").insert({
@@ -96,7 +99,10 @@ export function useFavorites(): UseFavoritesResult {
 
     try {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return;
+      if (!sessionValid) {
+        queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), prevFavorites || []);
+        return;
+      }
 
       await withSessionRetry(async () => {
         const { error } = await supabase

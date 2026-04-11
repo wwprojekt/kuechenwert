@@ -296,6 +296,8 @@ export default function AdminDealerStats() {
   const { data: bidStats = [], isLoading: bidsLoading } = useQuery({
     queryKey: ["adminDealerStatsBids"],
     queryFn: async (): Promise<BidStats[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data, error } = await supabase
         .from("bids")
         .select("bidder_id, amount, auction_id, created_at, is_autobid");
@@ -346,7 +348,8 @@ export default function AdminDealerStats() {
   const { data: wonAuctions = [], isLoading: wonsLoading } = useQuery({
     queryKey: ["adminDealerStatsWonAuctions"],
     queryFn: async (): Promise<WonAuction[]> => {
-      // Won auctions: auctions with status 'sold' where the highest bidder won
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data: soldAuctions, error: aErr } = await supabase
         .from("auctions")
         .select("id, current_bid")
@@ -463,6 +466,8 @@ export default function AdminDealerStats() {
   const { data: ratingStats = [], isLoading: ratingsLoading } = useQuery({
     queryKey: ["adminDealerStatsRatings"],
     queryFn: async (): Promise<RatingStats[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data, error } = await supabase
         .from("dealer_rating_summary")
         .select("dealer_id, average_rating, total_reviews");

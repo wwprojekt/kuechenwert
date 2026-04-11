@@ -103,8 +103,8 @@ serve(async (req) => {
       // Continue even if PDF generation fails
     }
     
-    // Update appointment
-    const { error: updateError } = await supabaseClient
+    // Update appointment (only if still in scheduled/verified state to prevent double-completion)
+    const { data: updatedAppointment, error: updateError } = await supabaseClient
       .from('appointments')
       .update({
         status: 'completed',
@@ -113,16 +113,29 @@ serve(async (req) => {
         payment_status: 'completed',
         handover_protocol_url: protocolUrl,
       })
-      .eq('id', appointment_id);
+      .eq('id', appointment_id)
+      .in('status', ['scheduled', 'verified'])
+      .select()
+      .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      if (updateError.code === 'PGRST116') {
+        return new Response(
+          JSON.stringify({ error: 'Termin wurde bereits abgeschlossen oder ist nicht im erwarteten Status' }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }, status: 409 }
+        );
+      }
+      throw updateError;
+    }
 
     // Update motorhome status
     const { error: motorhomeError } = await supabaseClient
       .from('motorhomes')
       .update({ 
         status: 'sold',
-        sold_at: new Date().toISOString()
+        sold_to: appointment.buyer_id || null,
+        sold_at: new Date().toISOString(),
+        sale_type: 'handover',
       })
       .eq('id', appointment.motorhome_id);
 

@@ -82,19 +82,23 @@ Deno.serve(async (req) => {
         }
 
         let reminderLevel = 1;
-        let reminderFee = 0;
         
         if (daysPastDue >= level3Days) {
           reminderLevel = 3;
-          reminderFee = level3Fee;
         } else if (daysPastDue >= level2Days) {
           reminderLevel = 2;
-          reminderFee = level2Fee;
         } else if (daysPastDue >= level1Days) {
           reminderLevel = 1;
-          reminderFee = level1Fee;
         } else {
           continue;
+        }
+
+        // Calculate cumulative fees for all levels up to current
+        let reminderFee = 0;
+        for (let level = 1; level <= reminderLevel; level++) {
+          if (level === 1) reminderFee += level1Fee;
+          else if (level === 2) reminderFee += level2Fee;
+          else if (level === 3) reminderFee += level3Fee;
         }
 
         // Check if reminder already sent for this level

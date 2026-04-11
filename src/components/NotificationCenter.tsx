@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 interface Notification {
   id: string;
@@ -69,6 +70,8 @@ export default function NotificationCenter() {
     queryKey: ["dealer_notifications", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data, error } = await supabase
         .from("dealer_notifications")
         .select("*")
@@ -142,6 +145,8 @@ export default function NotificationCenter() {
   // Mark a single notification as read
   const markAsRead = useCallback(
     async (notificationId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
       const { error } = await supabase
         .from("dealer_notifications")
         .update({ is_read: true })
@@ -157,6 +162,8 @@ export default function NotificationCenter() {
   // Mark all as read
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     const { error } = await supabase
       .from("dealer_notifications")
       .update({ is_read: true })
@@ -172,6 +179,8 @@ export default function NotificationCenter() {
   const deleteNotification = useCallback(
     async (notificationId: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
       const { error } = await supabase
         .from("dealer_notifications")
         .delete()
@@ -273,7 +282,7 @@ export default function NotificationCenter() {
                 return (
                   <div
                     key={notification.id}
-                    className={`flex items-start gap-3 px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors hover:bg-muted/50 ${
+                    className={`group flex items-start gap-3 px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors hover:bg-muted/50 ${
                       !notification.is_read ? "bg-primary/5" : ""
                     }`}
                     onClick={() => handleNotificationClick(notification)}

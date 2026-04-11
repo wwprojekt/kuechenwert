@@ -178,6 +178,13 @@ Deno.serve(async (req) => {
   try {
     const { auctionId } = await req.json();
 
+    if (!auctionId || typeof auctionId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'auctionId is required and must be a string' }),
+        { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

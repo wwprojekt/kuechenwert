@@ -241,7 +241,7 @@ export async function ensureValidSession(): Promise<{
         }
         // Zweiter Versuch fehlgeschlagen – versuche getSession als Fallback
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        if (session?.user && session.access_token && isTokenValid(session.access_token, 60)) {
           return { user: session.user, wasRefreshed: false, sessionExpired: false };
         }
         return { user: null, wasRefreshed: false, sessionExpired: false };
@@ -250,7 +250,7 @@ export async function ensureValidSession(): Promise<{
         // Letzter Fallback: getSession() ist lokal und braucht keinen Lock
         try {
           const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
+          if (session?.user && session.access_token && isTokenValid(session.access_token, 60)) {
             return { user: session.user, wasRefreshed: false, sessionExpired: false };
           }
         } catch {

@@ -107,6 +107,14 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return;
 
+      if (selectedOffer.expires_at && new Date(selectedOffer.expires_at) < new Date()) {
+        toast({ title: 'Angebot abgelaufen', description: 'Dieses Angebot ist bereits abgelaufen.', variant: 'destructive' });
+        setSelectedOffer(null);
+        setActionType(null);
+        setIsSubmitting(false);
+        return;
+      }
+
       if (actionType === "accept") {
         // Use the Edge Function for acceptance to trigger full purchase flow
         const { data: acceptResult, error: acceptError } = await invokeWithAuth('accept-kaufchance-offer', {

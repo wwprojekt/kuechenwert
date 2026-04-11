@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
+import { checkRateLimit, createRateLimitErrorResponse } from "../_shared/rate-limiter.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -54,6 +55,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+
+  // Rate limit: max 5 registrations per IP per 15 minutes
+  const rateLimitResult = await checkRateLimit(req, {
+    windowMs: 15 * 60 * 1000,
+    maxRequests: 5,
+    keyGenerator: (r) => {
+      const ip = r.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || r.headers.get('x-real-ip')
+        || 'unknown';
+      return `register-dealer:${ip}`;
+    },
+  });
+  if (!rateLimitResult.allowed) {
+    return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
+  }
 
   try {
     const body: RegisterDealerRequest = await req.json();

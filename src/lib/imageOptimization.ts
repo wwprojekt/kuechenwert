@@ -34,18 +34,6 @@ export interface ImageMetadata {
 }
 
 class ImageOptimizer {
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
-
-  constructor() {
-    this.canvas = document.createElement('canvas');
-    const context = this.canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Canvas 2D context not supported');
-    }
-    this.ctx = context;
-  }
-
   /**
    * Get image metadata without loading the full image
    */
@@ -121,7 +109,7 @@ class ImageOptimizer {
   }
 
   /**
-   * Optimize a single image
+   * Optimize a single image (uses a fresh canvas per call for concurrency safety)
    */
   async optimizeImage(
     file: File,
@@ -146,22 +134,19 @@ class ImageOptimizer {
         config
       );
 
-      // Set canvas dimensions
-      this.canvas.width = width;
-      this.canvas.height = height;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context not supported');
 
-      // Clear canvas and set high-quality rendering
-      this.ctx.clearRect(0, 0, width, height);
-      this.ctx.imageSmoothingEnabled = true;
-      this.ctx.imageSmoothingQuality = 'high';
+      canvas.width = width;
+      canvas.height = height;
 
-      // Draw image to canvas
-      this.ctx.drawImage(img, 0, 0, width, height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
 
-      // Convert to blob with specified format and quality
-      const blob = await this.canvasToBlob(config.format, config.quality);
+      const blob = await this.canvasToBlob(canvas, config.format, config.quality);
 
-      // Create optimized file
       const optimizedFile = new File(
         [blob],
         this.generateFileName(file.name, config.format),
@@ -188,11 +173,11 @@ class ImageOptimizer {
   /**
    * Convert canvas to blob with specified format and quality
    */
-  private canvasToBlob(format: string, quality: number): Promise<Blob> {
+  private canvasToBlob(canvas: HTMLCanvasElement, format: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const mimeType = `image/${format}`;
       
-      this.canvas.toBlob(
+      canvas.toBlob(
         (blob) => {
           if (blob) {
             resolve(blob);

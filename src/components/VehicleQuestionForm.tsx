@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { MessageCircle, Send } from "lucide-react";
 import { z } from "zod";
 
@@ -96,6 +97,11 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
     setIsSubmitting(true);
 
     try {
+      if (user) {
+        const sessionValid = await ensureValidRLSSession();
+        if (!sessionValid) return;
+      }
+
       const { error } = await supabase.from("vehicle_questions").insert({
         motorhome_id: motorhomeId,
         questioner_id: user?.id || null,

@@ -177,7 +177,13 @@ class AnalyticsService {
         os: deviceInfo.os,
         os_version: deviceInfo.osVersion,
         referrer_url: document.referrer || null,
-        referrer_domain: document.referrer ? new URL(document.referrer).hostname : null,
+        referrer_domain: (() => {
+          let referrerDomain: string | null = null;
+          try {
+            referrerDomain = document.referrer ? new URL(document.referrer).hostname : null;
+          } catch { referrerDomain = null; }
+          return referrerDomain;
+        })(),
         utm_source: utm.source,
         utm_medium: utm.medium,
         utm_campaign: utm.campaign,

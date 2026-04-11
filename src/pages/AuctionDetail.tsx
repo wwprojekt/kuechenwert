@@ -1173,7 +1173,7 @@ const AuctionDetail = () => {
                         </h3>
                         <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(motorhome as any).damage_summary}</p>
                       </div>
-                    ) : (motorhome as any).has_damage && (
+                    ) : !(motorhome as any).has_damage && (
                       <div className="mt-6 p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950/20 rounded-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2 text-green-700 dark:text-green-300">
                           <CheckCircle2 className="w-5 h-5" />

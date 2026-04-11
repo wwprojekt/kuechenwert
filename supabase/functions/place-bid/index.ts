@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
             type: 'new_bid',
             motorhomeModel: motorhomeName,
             auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
-            currentBid: `€${amount.toLocaleString()}`,
+            currentBid: `€${amount.toLocaleString('de-DE')}`,
           },
         }).catch((e) => console.error('Error sending seller notification:', e));
       }

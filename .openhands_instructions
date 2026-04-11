@@ -17,7 +17,7 @@ CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses 
 - **Internationalisierung:** flag-icons
 - **HTML Sanitization:** DOMPurify
 - **Testing:** Vitest + Testing Library + Playwright (E2E) + MSW (API Mocking)
-- **Pfad-Aliase:** Wahrscheinlich `@/*` → `./src/*` (wie WohnWert)
+- **Pfad-Aliase:** `@/*` → `./src/*`
 - **TypeScript:** Strict Mode
 
 ### Supabase-Integration
@@ -49,15 +49,43 @@ CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses 
    - Stelle sicher, dass deine Änderung konsistent mit dem Rest des Projekts ist
 
 4. **Testen nach Änderung:** Nach jeder Änderung:
-   - Führe `npm run test:run` aus um Unit-Tests zu prüfen
    - Führe `npm run build` aus um Build-Fehler zu erkennen
-   - Bei UI-Änderungen: `npm run test:e2e` für End-to-End Tests
+   - Bei kritischen Änderungen: `npm run test:run`
    - Prüfe ob nichts anderes durch die Änderung kaputt gegangen ist
 
 5. **Supabase-Änderungen:** Bei Datenbankänderungen:
    - Prüfe IMMER zuerst die aktuelle Tabellenstruktur über den MCP Supabase-Server
    - Ändere NIEMALS Tabellen ohne vorherige Analyse der Abhängigkeiten
    - Aktualisiere nach Schema-Änderungen IMMER die `types.ts` Datei
+
+## Aufgaben-Management (KRITISCH)
+
+### Vor jeder Aufgabe MUSS der Agent:
+1. Die TODO-Liste in `.openhands/microagents/project.md` lesen
+2. Prüfen ob die Aufgabe bereits als erledigt markiert ist
+3. Falls erledigt: Die Aufgabe NICHT erneut bearbeiten, sondern den Benutzer informieren
+
+### Nach jeder erledigten Aufgabe MUSS der Agent:
+1. Die Aufgabe in der TODO-Liste als erledigt markieren (`[x]` + Datum)
+2. Eine kurze Beschreibung der Änderung hinzufügen
+3. Die Datei committen
+
+### Bei neuen Bugs oder Aufgaben:
+1. Unter "Offene Aufgaben" in der TODO-Liste hinzufügen
+2. Mit Priorität und Beschreibung versehen
+
+## Edge Function Deployment (KRITISCH)
+
+Bei `supabase_deploy_edge_function` IMMER den `files`-Parameter mitgeben:
+```json
+{
+  "files": [
+    {"name": "index.ts", "content": "<Dateiinhalt>"},
+    {"name": "../_shared/email-builder.ts", "content": "<Dateiinhalt>"}
+  ]
+}
+```
+Lies die Microagent-Datei `.openhands/microagents/supabase-deploy.md` für Details.
 
 ## Coding-Standards
 - Schreibe sauberen, gut lesbaren Code mit klaren Kommentaren
@@ -70,7 +98,6 @@ CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses 
 - Nutze React Query für alle Server-State-Operationen
 - Nutze Zod für alle Formular-Validierungen
 - Nutze React Context für globalen App-State (src/contexts/)
-- Nutze MSW für API-Mocking in Tests
 
 ## Kommunikation
 - Erkläre was du tust und warum, bevor du es tust

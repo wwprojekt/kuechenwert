@@ -5,9 +5,9 @@
  * SUPABASE_SERVICE_ROLE_KEY contains the legacy JWT or the new sb_secret_... key.
  *
  * Strategy:
- * 1. Try direct string comparison with SUPABASE_SERVICE_ROLE_KEY (legacy approach)
- * 2. If that fails, decode the JWT payload and check if role === "service_role"
- * 3. If neither works, fall back to user-based admin check
+ * 1. Direct string comparison: Bearer token equals SUPABASE_SERVICE_ROLE_KEY (JWT or sb_secret)
+ * 2. Legacy Supabase service_role JWT: decode payload; role + ref must match this project (CLI/API invokes)
+ * 3. User JWT with admin role in user_roles
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
@@ -25,6 +25,16 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const json = atob(base64);
     return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function getProjectRefFromSupabaseUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    const m = host.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+    return m ? m[1] : null;
   } catch {
     return null;
   }
@@ -48,11 +58,23 @@ export async function checkServiceRoleOrAdmin(
     return { authorized: true };
   }
 
+  // ─── Method 2: Legacy service_role JWT (Dashboard/CLI „service_role“ key) while env uses sb_secret ───
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const expectedRef = getProjectRefFromSupabaseUrl(supabaseUrl);
+  if (token && expectedRef) {
+    const payload = decodeJwtPayload(token);
+    if (
+      payload?.role === 'service_role' &&
+      typeof payload.ref === 'string' &&
+      payload.ref === expectedRef
+    ) {
+      return { authorized: true };
+    }
+  }
+
   // ─── Method 3: Check if caller is an authenticated admin user ───
-  if (token) {
+  if (token && serviceRoleKey) {
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      // Use service_role key for auth.getUser(token) – avoids SUPABASE_ANON_KEY dependency
       const supabaseAuth = createClient(supabaseUrl, serviceRoleKey);
       const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
 

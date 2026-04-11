@@ -29,11 +29,8 @@ import {
 import { 
   Euro, 
   FileText, 
-  TrendingUp, 
   AlertTriangle, 
   CheckCircle, 
-  Clock,
-  Download,
   Send,
   CreditCard,
   Trash2,
@@ -45,7 +42,6 @@ import {
   Eye,
   Percent,
   ArrowUpRight,
-  ArrowDownRight,
   Calendar,
   Gavel,
   Scale
@@ -69,7 +65,7 @@ export default function AdminFinancials() {
   const dunningLevel1Fee = settings?.dunning_level1_fee ?? 5.00;
   const dunningLevel2Fee = settings?.dunning_level2_fee ?? 10.00;
   const dunningLevel3Fee = settings?.dunning_level3_fee ?? 15.00;
-  const dunningRestrictAtLevel = settings?.dunning_restrict_at_level ?? 2;
+  const _dunningRestrictAtLevel = settings?.dunning_restrict_at_level ?? 2;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -93,7 +89,7 @@ export default function AdminFinancials() {
     }
     // 2) Fallback: create a fresh signed URL from storage
     const storagePath = `${invoice.dealer_id}/${invoice.invoice_number}.pdf`;
-    const { data, error } = await supabase.storage
+    const { data } = await supabase.storage
       .from('invoices')
       .createSignedUrl(storagePath, 3600); // 1h validity
     if (data?.signedUrl) {
@@ -121,7 +117,7 @@ export default function AdminFinancials() {
   };
 
   // Fetch financial statistics
-  const { data: stats } = useQuery({
+  const { data: _stats } = useQuery({
     queryKey: ['financial-stats'],
     queryFn: getInvoiceStatistics,
     refetchInterval: 30000,
@@ -690,7 +686,6 @@ export default function AdminFinancials() {
                   filteredInvoices?.map((invoice: any) => {
                     const amountPaid = Number(invoice.amount_paid || 0);
                     const grossAmount = Number(invoice.gross_amount);
-                    const remaining = grossAmount - amountPaid;
                     const paymentProgress = grossAmount > 0 ? (amountPaid / grossAmount) * 100 : 0;
                     const dealerName = invoice.dealer?.company_name || 
                       `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim() || 'Unbekannt';

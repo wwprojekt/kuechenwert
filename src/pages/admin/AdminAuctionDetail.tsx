@@ -15,7 +15,6 @@ import {
   Gavel,
   Car,
   User,
-  Clock,
   TrendingUp,
   Euro,
   Calendar,

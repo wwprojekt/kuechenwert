@@ -28,8 +28,8 @@ interface ResendWebhookPayload {
 
 async function verifyWebhookSignature(req: Request, body: string): Promise<boolean> {
   if (!RESEND_WEBHOOK_SECRET) {
-    console.warn("RESEND_WEBHOOK_SECRET not set – skipping signature verification");
-    return true; // Allow if secret not configured yet
+    console.error("RESEND_WEBHOOK_SECRET not set – rejecting webhook (fail-closed)");
+    return false;
   }
 
   const svixId = req.headers.get('svix-id');

@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import MotorhomeCard from "./MotorhomeCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Listings = () => {
@@ -93,10 +94,12 @@ const Listings = () => {
             variant="outline" 
             size="lg" 
             className="border-2 hover-lift-sm h-11 sm:h-12 px-6 sm:px-8 text-sm sm:text-base w-full sm:w-auto"
-            onClick={() => window.location.href = '/kaufen'}
+            asChild
           >
-            Alle Angebote anzeigen
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <Link to="/kaufen">
+              Alle Angebote anzeigen
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>

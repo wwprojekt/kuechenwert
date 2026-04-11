@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph, list, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -21,6 +22,10 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
+  const authCheck = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!authCheck.authorized) return authCheck.response;
 
   try {
     const { email, name, motorhomeModel, amount, paymentMethod, handoverProtocolUrl, appointmentId }: PaymentEmailRequest = await req.json();

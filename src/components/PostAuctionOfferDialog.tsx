@@ -66,7 +66,14 @@ export function PostAuctionOfferDialog({
 
     try {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return;
+      if (!sessionValid) {
+        toast({
+          title: "Sitzung abgelaufen",
+          description: "Bitte melden Sie sich erneut an.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Validate auction is still in kaufchance status and not expired
       const { data: auction, error: auctionError } = await supabase

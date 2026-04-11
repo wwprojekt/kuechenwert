@@ -339,15 +339,22 @@ export default function MyKaufchancen() {
         showSessionExpired('/dashboard/kaufchancen');
         return;
       }
-      const { error } = await supabase
+      const { data: updateResult, error } = await supabase
         .from('post_auction_offers')
         .update({
           status: 'rejected',
           updated_at: new Date().toISOString(),
         })
         .eq('id', offer.id)
-        .eq('buyer_id', user!.id);
+        .eq('buyer_id', user!.id)
+        .eq('status', 'countered')
+        .select('id');
       if (error) throw error;
+      if (!updateResult || updateResult.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
+        loadMyOffers();
+        return;
+      }
       toast({
         title: 'Gegenangebot abgelehnt',
         description: 'Sie haben das Gegenangebot abgelehnt.',

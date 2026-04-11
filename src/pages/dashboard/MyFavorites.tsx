@@ -49,6 +49,7 @@ export default function MyFavorites() {
   const { removeFavorite } = useFavorites();
   const [favorites, setFavorites] = useState<FavoriteVehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const loadFavorites = useCallback(async () => {
     if (!user) return;
@@ -81,8 +82,10 @@ export default function MyFavorites() {
 
       if (error) throw error;
       setFavorites((data as unknown as FavoriteVehicle[]) || []);
+      setLoadError(false);
     } catch (error) {
       console.error("Error loading favorites:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -122,6 +125,17 @@ export default function MyFavorites() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
+      ) : loadError ? (
+        <Card className="p-8">
+          <div className="text-center">
+            <Heart className="w-12 h-12 text-destructive mx-auto mb-3" />
+            <h3 className="text-lg font-semibold mb-1">Laden fehlgeschlagen</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Favoriten konnten nicht geladen werden. Bitte versuchen Sie es erneut.
+            </p>
+            <Button size="sm" variant="outline" onClick={loadFavorites}>Erneut versuchen</Button>
+          </div>
+        </Card>
       ) : favorites.length === 0 ? (
         <Card className="p-8">
           <div className="text-center">

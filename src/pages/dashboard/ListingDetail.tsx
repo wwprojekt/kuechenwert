@@ -263,7 +263,7 @@ export default function ListingDetail() {
       queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
     } catch (err: any) {
       if (err instanceof SessionExpiredError) {
-        showSessionExpired(`/dashboard/listing/${id}`);
+        showSessionExpired(`/dashboard/listings/${id}`);
         return;
       }
       console.error('Error accepting offer:', err);

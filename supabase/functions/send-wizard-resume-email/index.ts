@@ -8,6 +8,7 @@ import {
   button,
 } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -33,6 +34,10 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
+  const authCheck = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!authCheck.authorized) return authCheck.response;
 
   try {
     const { sessionId, customMessage }: ResumeEmailRequest = await req.json();

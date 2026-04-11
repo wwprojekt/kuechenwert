@@ -143,10 +143,8 @@ const Kaufen = () => {
           event: "*",
           schema: "public",
           table: "auctions",
-          filter: "status=eq.active",
         },
         () => {
-          // Guard: Only refetch if component is still mounted
           if (!isSubscribed) return;
           fetchAuctions();
         }

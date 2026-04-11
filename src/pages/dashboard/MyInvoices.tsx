@@ -53,6 +53,7 @@ export default function MyInvoices() {
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
   const [customerNumber, setCustomerNumber] = useState<string | null>(null);
 
@@ -99,8 +100,10 @@ export default function MyInvoices() {
 
       if (error) throw error;
       setInvoices((data as unknown as Invoice[]) || []);
+      setLoadError(false);
     } catch (error) {
       console.error("Error loading invoices:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -281,6 +284,15 @@ export default function MyInvoices() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : loadError ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Laden fehlgeschlagen</h3>
+              <p className="text-muted-foreground mb-4">
+                Rechnungen konnten nicht geladen werden.
+              </p>
+              <Button variant="outline" onClick={loadInvoices}>Erneut versuchen</Button>
             </div>
           ) : invoices.length === 0 ? (
             <div className="text-center py-12">

@@ -212,19 +212,34 @@ Deno.serve(async (req) => {
       errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${e.message}`);
     }
 
-    // ─── 5. Update auction status to 'sold' ───
-    const { error: updateAuctionError } = await supabase
+    // ─── 5. Update auction status to 'sold' (with row count verification) ───
+    const { data: auctionUpdateData, error: updateAuctionError } = await supabase
       .from('auctions')
       .update({
         status: 'sold',
         current_bid: salePrice,
       })
       .eq('id', auction.id)
-      .eq('status', 'kaufchance'); // Optimistic lock
+      .eq('status', 'kaufchance')
+      .select('id');
 
     if (updateAuctionError) {
       console.error('Error updating auction status:', updateAuctionError);
-      errors.push(`Auktions-Status-Update fehlgeschlagen: ${updateAuctionError.message}`);
+      // Rollback: revert offer to previous status
+      await supabase.from('post_auction_offers').update({ status: offer.status }).eq('id', offerId);
+      return new Response(
+        JSON.stringify({ error: 'Auktions-Status-Update fehlgeschlagen. Bitte erneut versuchen.' }),
+        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!auctionUpdateData || auctionUpdateData.length === 0) {
+      console.error('Auction status was already changed (0 rows updated) — race condition');
+      await supabase.from('post_auction_offers').update({ status: offer.status }).eq('id', offerId);
+      return new Response(
+        JSON.stringify({ error: 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.' }),
+        { status: 409, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
     }
 
     // ─── 6. Update motorhome status to 'sold' ───

@@ -21,7 +21,7 @@ import { initMetaPixelConsentListener, trackMetaPageView } from "./lib/metaPixel
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
 // Uses lazyRetry() to auto-reload on stale chunk errors after deployments.
 // ---------------------------------------------------------------------------
-import Index from "./pages/Index";
+const Index = lazyRetry(() => import("./pages/Index"));
 
 // Auth pages
 const Login = lazyRetry(() => import("./pages/Login"));

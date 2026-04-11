@@ -44,6 +44,7 @@ export default function MyMessages() {
   const { toast } = useToast();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newMessage, setNewMessage] = useState({
@@ -66,8 +67,10 @@ export default function MyMessages() {
 
       if (error) throw error;
       setMessages(data || []);
+      setLoadError(false);
     } catch (error) {
       console.error("Error loading messages:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -210,6 +213,17 @@ export default function MyMessages() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
+      ) : loadError ? (
+        <Card className="p-12">
+          <div className="text-center">
+            <MessageSquare className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Laden fehlgeschlagen</h3>
+            <p className="text-muted-foreground mb-4">
+              Nachrichten konnten nicht geladen werden. Bitte versuchen Sie es erneut.
+            </p>
+            <Button onClick={loadMessages} variant="outline">Erneut versuchen</Button>
+          </div>
+        </Card>
       ) : messages.length === 0 ? (
         <Card className="p-12">
           <div className="text-center">

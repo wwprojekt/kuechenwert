@@ -13,6 +13,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
 import {
   buildEmailLayout,
   paragraph,
@@ -282,6 +283,9 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
+
+  const authCheck = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  if (!authCheck.authorized) return authCheck.response;
 
   const corsHeaders = getCorsHeaders(req);
 

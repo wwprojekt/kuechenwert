@@ -165,30 +165,38 @@ const AuctionDetail = () => {
     }
   }, [auction?.current_bid, auction?.starting_bid]);
 
-  // Fetch neighboring auctions for prev/next navigation
+  // Fetch neighboring auctions for prev/next navigation (windowed query)
   useEffect(() => {
     const fetchNeighbors = async () => {
-      if (!id) return;
+      if (!id || !auction?.end_time) return;
       try {
-        // Fetch all active auctions ordered by end_time (same order as /kaufen)
-        const { data, error } = await supabase
-          .from('auctions')
-          .select('id')
-          .eq('status', 'active')
-          .order('end_time', { ascending: true });
-        if (error || !data) return;
-        const idx = data.findIndex((a) => a.id === id);
-        if (idx === -1) return;
+        const endTime = auction.end_time;
+        const [prevRes, nextRes] = await Promise.all([
+          supabase
+            .from('auctions')
+            .select('id')
+            .eq('status', 'active')
+            .lt('end_time', endTime)
+            .order('end_time', { ascending: false })
+            .limit(1),
+          supabase
+            .from('auctions')
+            .select('id')
+            .eq('status', 'active')
+            .gt('end_time', endTime)
+            .order('end_time', { ascending: true })
+            .limit(1),
+        ]);
         setNeighborAuctions({
-          prev: idx > 0 ? data[idx - 1].id : null,
-          next: idx < data.length - 1 ? data[idx + 1].id : null,
+          prev: prevRes.data?.[0]?.id ?? null,
+          next: nextRes.data?.[0]?.id ?? null,
         });
       } catch {
         // Silently fail – navigation is a convenience feature
       }
     };
     fetchNeighbors();
-  }, [id]);
+  }, [id, auction?.end_time]);
 
   // Validate UUID format
   const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -344,10 +352,13 @@ const AuctionDetail = () => {
 
           setBids((prev) => [newBid, ...(Array.isArray(prev) ? prev : [])]);
 
-          setAuction((prev) => prev ? ({
-            ...prev,
-            current_bid: newBid.amount,
-          }) : null);
+          setAuction((prev) => {
+            if (!prev) return null;
+            if (newBid.amount > (prev.current_bid ?? 0)) {
+              return { ...prev, current_bid: newBid.amount };
+            }
+            return prev;
+          });
 
           // ─── Live Bidding Status & Sound ───────────────────────
           if (user) {
@@ -850,7 +861,7 @@ const AuctionDetail = () => {
   const userBids = user ? bids.filter(b => b.bidder_id === user.id) : [];
   const userHighestBid = userBids.length > 0 ? Math.max(...userBids.map(b => b.amount)) : 0;
   const hasBid = userBids.length > 0;
-  const isHighestBidder = hasBid && bids.length > 0 && bids[0]?.bidder_id === user?.id;
+  const isHighestBidder = hasBid && userHighestBid >= currentBid && currentBid > 0;
   const wasOutbid = hasBid && !isHighestBidder;
   // Keep ref in sync for realtime callback
   prevHighestBidderRef.current = isHighestBidder;

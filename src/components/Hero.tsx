@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Shield, Star, TrendingUp, Calculator } from "lucide-react";
 import { QuickAuctionForm } from "./QuickAuctionForm";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   const benefits = [
@@ -81,18 +82,18 @@ const Hero = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4 animate-fade-in animate-delay-400">
-              <a href="/verkaufen/wizard" className="w-full sm:w-auto">
+              <Link to="/verkaufen/wizard" className="w-full sm:w-auto">
                 <Button size="lg" className="gradient-hero hover:shadow-glow h-14 px-8 text-base font-semibold group w-full">
                   Jetzt kostenlos verkaufen
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />
                 </Button>
-              </a>
-              <a href="/wertrechner" className="w-full sm:w-auto">
+              </Link>
+              <Link to="/wertrechner" className="w-full sm:w-auto">
                 <Button variant="outline" size="lg" className="h-14 px-8 text-base font-semibold w-full border-2 group hover:border-primary">
                   <Calculator className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                   Wert berechnen
                 </Button>
-              </a>
+              </Link>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, divider } from '../_shared/email-builder.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -17,6 +18,9 @@ const handler = async (req: Request): Promise<Response> => {
       status: 405, headers: { "Content-Type": "application/json" },
     });
   }
+
+  const authCheck = await checkServiceRoleOrAdmin(req);
+  if (!authCheck.authorized) return authCheck.response;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

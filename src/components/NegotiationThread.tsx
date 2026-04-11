@@ -145,12 +145,17 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
           updateData.counter_offer_amount = amount;
         }
 
-        const { error } = await supabase
+        const { data: updateResult, error } = await supabase
           .from("post_auction_offers")
           .update(updateData)
-          .eq("id", selectedOffer.id);
+          .eq("id", selectedOffer.id)
+          .in("status", ["pending", "countered"])
+          .select("id");
 
         if (error) throw error;
+        if (!updateResult || updateResult.length === 0) {
+          throw new Error("Das Angebot wurde bereits bearbeitet. Bitte laden Sie die Seite neu.");
+        }
 
         // Send notification via Edge Function (runs with service_role, bypasses RLS)
         try {

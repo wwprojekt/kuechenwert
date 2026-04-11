@@ -1,0 +1,10 @@
+ALTER TABLE auctions ADD COLUMN IF NOT EXISTS kaufchance_min_price DECIMAL(10,2);
+ALTER TABLE post_auction_offers ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ;
+ALTER TABLE post_auction_offers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE post_auction_offers ADD COLUMN IF NOT EXISTS counter_offer_amount DECIMAL(10,2);
+ALTER TABLE post_auction_offers ADD COLUMN IF NOT EXISTS is_invited BOOLEAN DEFAULT FALSE;
+CREATE TABLE IF NOT EXISTS kaufchance_invitations (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, auction_id UUID REFERENCES auctions(id) ON DELETE CASCADE NOT NULL, bidder_id UUID REFERENCES auth.users(id) NOT NULL, highest_bid DECIMAL(10,2) NOT NULL, rank INTEGER NOT NULL, invited_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(auction_id, bidder_id));
+ALTER TABLE kaufchance_invitations ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_kaufchance_invitations_auction ON kaufchance_invitations(auction_id);
+CREATE INDEX IF NOT EXISTS idx_kaufchance_invitations_bidder ON kaufchance_invitations(bidder_id);
+CREATE INDEX IF NOT EXISTS idx_post_auction_offers_status ON post_auction_offers(status);

@@ -81,6 +81,42 @@ export default function AdminFinancials() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('invoices');
 
+  // Open invoice PDF – use stored pdf_url or generate fresh signed URL
+  const openInvoicePdf = async (invoice: any) => {
+    // 1) Try existing pdf_url
+    if (invoice.pdf_url) {
+      window.open(invoice.pdf_url, '_blank');
+      return;
+    }
+    // 2) Fallback: create a fresh signed URL from storage
+    const storagePath = `${invoice.dealer_id}/${invoice.invoice_number}.pdf`;
+    const { data, error } = await supabase.storage
+      .from('invoices')
+      .createSignedUrl(storagePath, 3600); // 1h validity
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+      return;
+    }
+    // 3) Try to regenerate via edge function
+    const { error: genError } = await supabase.functions.invoke('generate-invoice-pdf', {
+      body: { invoiceId: invoice.id },
+    });
+    if (!genError) {
+      // Refetch invoices so pdf_url is updated, then retry
+      await queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      toast({
+        title: 'PDF wird generiert',
+        description: 'Die Rechnung wird neu erstellt. Bitte versuchen Sie es gleich erneut.',
+      });
+      return;
+    }
+    toast({
+      title: 'PDF nicht verfügbar',
+      description: 'Für diese Rechnung ist kein PDF vorhanden. Bitte generieren Sie die Rechnung neu.',
+      variant: 'destructive',
+    });
+  };
+
   // Fetch financial statistics
   const { data: stats } = useQuery({
     queryKey: ['financial-stats'],
@@ -642,7 +678,7 @@ export default function AdminFinancials() {
                           <div className="flex items-center gap-6">
                             {/* Invoice Number + Customer */}
                             <div className="min-w-[160px]">
-                              <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}>
+                              <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => openInvoicePdf(invoice)}>
                                 {invoice.invoice_number}
                               </div>
                               <div className="text-xs text-muted-foreground">
@@ -683,7 +719,7 @@ export default function AdminFinancials() {
                           <Button 
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(`/invoices/${invoice.id}`, '_blank')}
+                            onClick={() => openInvoicePdf(invoice)}
                             title="Rechnung ansehen"
                           >
                             <Eye className="h-4 w-4" />

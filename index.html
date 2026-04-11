@@ -7,126 +7,39 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <!-- Preconnect for critical resources -->
+    <link rel="preconnect" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Preload hero image for fast LCP -->
+    <link rel="preload" as="image" href="/images/hero-motorhome.webp" fetchpriority="high" />
+
+    <!-- Google Fonts — display=swap ensures text is visible immediately -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Google Consent Mode v2 — minimal inline, MUST load before gtag -->
+    <script>
+      window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;
+      gtag('consent','default',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied','functionality_storage':'denied','personalization_storage':'denied','security_storage':'granted','wait_for_update':1500});
+      gtag('set','ads_data_redaction',true);gtag('set','url_passthrough',true);
+      try{var c=JSON.parse(localStorage.getItem('cookie-consent')||'null');if(c&&c.marketing){gtag('set','ads_data_redaction',false);gtag('consent','update',{'analytics_storage':c.analytics?'granted':'denied','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','functionality_storage':'granted','personalization_storage':'granted'})}else if(c&&c.analytics){gtag('consent','update',{'analytics_storage':'granted','functionality_storage':'granted','personalization_storage':'granted'})}}catch(e){}
+    </script>
     
-    <!-- Google Consent Mode v2 – MUSS vor gtag.js geladen werden -->
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      window.gtag = gtag;
-
-      // DSGVO: Standardmäßig alles verweigert bis Nutzer zustimmt
-      // Advanced Consent Mode: Anonymisierte Pings werden auch bei 'denied' gesendet,
-      // damit Google Conversions modellieren kann (ca. 70-80% Recovery)
-      gtag('consent', 'default', {
-        'ad_storage': 'denied',
-        'ad_user_data': 'denied',
-        'ad_personalization': 'denied',
-        'analytics_storage': 'denied',
-        'functionality_storage': 'denied',
-        'personalization_storage': 'denied',
-        'security_storage': 'granted',
-        'wait_for_update': 1500
-      });
-
-      // Advanced Consent Mode Einstellungen:
-      // ads_data_redaction: Wird dynamisch gesetzt – bei denied consent werden Anzeigen-Klick-IDs
-      // (gclid) aus Anfragen entfernt. Bei granted consent wird es auf false gesetzt,
-      // damit Google Ads Click-IDs (gclid, _gcl_aw Cookie) korrekt weitergegeben werden.
-      // url_passthrough=true: Anzeigen-Klick-Info wird über URL-Parameter weitergegeben statt Cookies
-      // (wichtig als Fallback wenn Cookies blockiert sind)
-      gtag('set', 'ads_data_redaction', true);
-      gtag('set', 'url_passthrough', true);
-
-      // Prüfe ob bereits Consent erteilt wurde (z.B. bei Seitenreload nach Cookie-Akzeptanz)
-      // Wenn ja, setze ads_data_redaction sofort auf false damit Click-IDs durchkommen
-      try {
-        var storedConsent = JSON.parse(localStorage.getItem('cookie-consent') || 'null');
-        if (storedConsent && storedConsent.marketing === true) {
-          gtag('set', 'ads_data_redaction', false);
-          gtag('consent', 'update', {
-            'analytics_storage': storedConsent.analytics ? 'granted' : 'denied',
-            'ad_storage': 'granted',
-            'ad_user_data': 'granted',
-            'ad_personalization': 'granted',
-            'functionality_storage': 'granted',
-            'personalization_storage': 'granted'
-          });
-        } else if (storedConsent && storedConsent.analytics === true) {
-          gtag('consent', 'update', {
-            'analytics_storage': 'granted',
-            'functionality_storage': 'granted',
-            'personalization_storage': 'granted'
-          });
-        }
-      } catch(e) {}
-    </script>
-
-    <!-- Google Tag (gtag.js) – Google Ads + GA4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4BCV8DS0B"></script>
-    <script>
-      gtag('js', new Date());
-
-      // Google Analytics 4 – CaravanWert Property
-      gtag('config', 'G-H4BCV8DS0B', {
-        send_page_view: true,
-        cookie_domain: 'caravanwert.de',
-        cookie_flags: 'SameSite=Lax;Secure',
-      });
-
-      // Google Ads – CaravanWert Konto (522-100-4970)
-      gtag('config', 'AW-18033517246', {
-        send_page_view: false,
-        allow_enhanced_conversions: true,
-      });
-    </script>
-
-    <!-- Meta Pixel Base Code – DSGVO-konform -->
-    <!-- Wird erst aktiviert wenn Marketing-Consent erteilt wird.
-         fbq('consent', 'revoke') verhindert jegliches Tracking bis Consent vorliegt.
-         Die Aktivierung erfolgt über metaPixelService.ts bei consent-updated Event. -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-
-      // DSGVO: Pixel initialisieren aber sofort Consent widerrufen
-      // Damit werden KEINE Daten gesendet bis explizit fbq('consent','grant') aufgerufen wird
-      fbq('consent', 'revoke');
-      fbq('init', '1846623132710484');
-    </script>
-    <!-- Clixtell Click-Fraud Protection -->
-    <script type='text/javascript'>
-      var script=document.createElement('script');
-      var prefix=document.location.protocol;
-      script.async=true;script.type='text/javascript';
-      var target=prefix + '//scripts.clixtell.com/track.js';
-      script.src=target;var elem=document.head;
-      elem.appendChild(script);
-    </script>
-
-    <!-- Preconnect for performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Primary Meta Tags (Fallback - wird von React/Helmet dynamisch überschrieben) -->
+    <!-- Primary Meta Tags -->
     <title>CaravanWert - Deutschlands führende Wohnmobil-Handelsplattform</title>
     <meta name="description" content="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!" />
     <meta name="keywords" content="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation" />
     <meta name="author" content="CaravanWert" />
     <meta name="robots" content="index, follow" />
     
-    <!-- Open Graph / Facebook (generische Fallback-Tags ohne seitenspezifische URLs) -->
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="CaravanWert" />
     <meta property="og:locale" content="de_DE" />
     
-    <!-- Twitter (generische Fallback-Tags) -->
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     
     <!-- Structured Data - Organization Schema -->
@@ -164,19 +77,67 @@
       ]
     }
     </script>
-
-    <!-- Cloudflare Turnstile Bot-Schutz (unsichtbar) -->
-    <link rel="preconnect" href="https://challenges.cloudflare.com" />
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   </head>
 
   <body>
-    <!-- Meta Pixel noscript-Fallback (muss im body stehen, nicht im head) -->
+    <!-- Meta Pixel noscript-Fallback -->
     <noscript>
       <img height="1" width="1" style="display:none"
            src="https://www.facebook.com/tr?id=1846623132710484&ev=PageView&noscript=1" />
     </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         DEFERRED THIRD-PARTY SCRIPTS — loaded AFTER first paint
+         These scripts are non-essential for initial page rendering.
+         Loading them after the app improves FCP/LCP by 1-3 seconds on mobile.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <script>
+      // Load third-party scripts after first paint to avoid blocking rendering
+      function loadDeferredScripts() {
+        // Google Tag (gtag.js) – GA4 + Google Ads
+        var g = document.createElement('script');
+        g.async = true;
+        g.src = 'https://www.googletagmanager.com/gtag/js?id=G-H4BCV8DS0B';
+        g.onload = function() {
+          gtag('js', new Date());
+          gtag('config', 'G-H4BCV8DS0B', {
+            send_page_view: true,
+            cookie_domain: 'caravanwert.de',
+            cookie_flags: 'SameSite=Lax;Secure',
+          });
+          gtag('config', 'AW-18033517246', {
+            send_page_view: false,
+            allow_enhanced_conversions: true,
+          });
+        };
+        document.head.appendChild(g);
+
+        // Meta Pixel – DSGVO-konform, revoked bis Consent
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('consent','revoke');
+        fbq('init','1846623132710484');
+
+        // Clixtell Click-Fraud Protection
+        var c = document.createElement('script');
+        c.async = true;
+        c.src = document.location.protocol + '//scripts.clixtell.com/track.js';
+        document.head.appendChild(c);
+
+        // Cloudflare Turnstile
+        var t = document.createElement('script');
+        t.async = true;
+        t.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        document.head.appendChild(t);
+      }
+
+      // Use requestIdleCallback if available, otherwise setTimeout
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadDeferredScripts, { timeout: 3000 });
+      } else {
+        setTimeout(loadDeferredScripts, 1500);
+      }
+    </script>
   </body>
 </html>

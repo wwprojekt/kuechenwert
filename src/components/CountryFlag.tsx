@@ -1,4 +1,12 @@
+import { useEffect } from "react";
 import { getCountryName } from "@/lib/geolocation";
+
+let flagIconsLoaded = false;
+function ensureFlagIcons() {
+  if (flagIconsLoaded) return;
+  flagIconsLoaded = true;
+  import("flag-icons/css/flag-icons.min.css");
+}
 
 interface CountryFlagProps {
   countryCode: string | null | undefined;
@@ -19,6 +27,8 @@ export function CountryFlag({
   className = "",
   size = "md"
 }: CountryFlagProps) {
+  useEffect(() => { ensureFlagIcons(); }, []);
+
   if (!countryCode) return null;
   
   const code = countryCode.toLowerCase();

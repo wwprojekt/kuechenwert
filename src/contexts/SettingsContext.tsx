@@ -178,11 +178,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider value={{ settings, loading, refreshSettings: loadSettings }}>
       {children}
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background transition-opacity">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      )}
     </SettingsContext.Provider>
   );
 }

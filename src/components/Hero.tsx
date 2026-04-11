@@ -12,12 +12,13 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-fit lg:min-h-[85vh] overflow-hidden">
-      {/* Background Image - Full width - Emotionales Wohnmobil-Lifestyle-Bild */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center lg:bg-right"
-        style={{
-          backgroundImage: `url('/images/hero-motorhome.webp')`,
-        }}
+      {/* Background Image — <img> for fast LCP discovery by browser */}
+      <img
+        src="/images/hero-motorhome.webp"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover lg:object-right"
       />
       
       {/* Overlay gradient - left side solid for text, fades to show image on right */}

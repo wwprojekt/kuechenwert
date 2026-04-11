@@ -47,6 +47,7 @@ export function FavoriteButton({ motorhomeId, variant = "icon", className }: Fav
         className
       )}
       title={isFav ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+      aria-label={isFav ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
     >
       <Heart className={cn("w-5 h-5", isFav && "fill-current")} />
     </button>

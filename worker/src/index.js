@@ -29,6 +29,11 @@ const SKIP_PATHS = [
   "/verkaufen/danke", "/test-render"
 ];
 
+const NOINDEX_PATHS = [
+  "/datenschutz", "/agb", "/impressum", "/widerruf",
+  "/verkaufen/danke", "/auth/confirm"
+];
+
 const CACHE_TTL = 60 * 60 * 24; // 24 hours
 
 // ─── IndexNow Configuration ──────────────────────────────────────────────────
@@ -107,7 +112,7 @@ function injectMeta(html, path) {
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     <meta name="twitter:image" content="https://caravanwert.de/og-image.png" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="robots" content="${NOINDEX_PATHS.some(p => path === p || path.startsWith(p + '/')) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />
   `;
 
   const noscriptContent = `

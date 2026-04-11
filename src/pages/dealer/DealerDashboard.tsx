@@ -660,6 +660,8 @@ const DealerDashboard = () => {
                             src={mainPhoto} 
                             alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

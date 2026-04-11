@@ -107,6 +107,7 @@ const AuctionDetail = () => {
   const { showSessionExpired } = useSessionExpired();
 
   const [auction, setAuction] = useState<AuctionWithMotorhome | null>(null);
+  const [auctionLoadState, setAuctionLoadState] = useState<'loading' | 'loaded' | 'not_found' | 'error'>('loading');
   const [bids, setBids] = useState<BidWithBidder[]>([]);
   const [bidAmount, setBidAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -210,78 +211,74 @@ const AuctionDetail = () => {
   });
 
   // Fetch auction details
-  useEffect(() => {
-    const fetchAuction = async () => {
-      if (!id || !isValidUUID(id)) {
-        toast({
-          title: "Ungültige Auktion",
-          description: "Die angegebene Auktions-ID ist ungültig.",
-          variant: "destructive",
-        });
-        navigate('/kaufen');
-        return;
-      }
+  const fetchAuction = useCallback(async () => {
+    if (!id || !isValidUUID(id)) {
+      toast({
+        title: "Ungültige Auktion",
+        description: "Die angegebene Auktions-ID ist ungültig.",
+        variant: "destructive",
+      });
+      navigate('/kaufen');
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from("auctions")
-        .select(`
+    const { data, error } = await supabase
+      .from("auctions")
+      .select(`
+        *,
+        motorhome:motorhomes!left(
           *,
-          motorhome:motorhomes!left(
-            *,
-            photos:motorhome_photos(*)
-          )
-        `)
-        .eq("id", id)
-        .maybeSingle();
+          photos:motorhome_photos(*)
+        )
+      `)
+      .eq("id", id)
+      .maybeSingle();
 
-      if (error) {
-        // Log detailed error for debugging
-        console.error("Auction fetch error:", error.message, error.code, error.details);
-        logger.error("AuctionDetail fetch failed:", { 
-          auctionId: id, 
-          error: error.message,
-          code: error.code,
-          details: error.details
-        });
-        const germanMessage = handleApiError(error, 'AuctionDetail', { auctionId: id });
-        toast({
-          title: "Fehler beim Laden",
-          description: germanMessage,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!data) {
-        toast({
-          title: "Nicht gefunden",
-          description: "Die angeforderte Auktion existiert nicht.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (error) {
+      console.error("Auction fetch error:", error.message, error.code, error.details);
+      logger.error("AuctionDetail fetch failed:", { 
+        auctionId: id, 
+        error: error.message,
+        code: error.code,
+        details: error.details
+      });
+      const germanMessage = handleApiError(error, 'AuctionDetail', { auctionId: id });
+      toast({
+        title: "Fehler beim Laden",
+        description: germanMessage,
+        variant: "destructive",
+      });
+      setAuctionLoadState('error');
+      return;
+    }
+    
+    if (!data) {
+      setAuctionLoadState('not_found');
+      return;
+    }
 
-      setAuction(data);
-      lastAuctionStatusRef.current = data.status;
+    setAuction(data);
+    setAuctionLoadState('loaded');
+    lastAuctionStatusRef.current = data.status;
 
-      // Google Ads: Fahrzeug angesehen (Remarketing)
-      if (data.motorhome) {
-        const mh = data.motorhome;
-        trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
-        trackMetaViewContent({
-          content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
-          content_category: mh.body_type || 'Wohnmobil',
-          content_ids: [mh.id],
-          content_type: 'vehicle',
-          value: data.current_bid || data.starting_bid || 0,
-          currency: 'EUR',
-        });
-        trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type, bidsCount: data.bids_count } });
-      }
-    };
-
-    fetchAuction();
+    if (data.motorhome) {
+      const mh = data.motorhome;
+      trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
+      trackMetaViewContent({
+        content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
+        content_category: mh.body_type || 'Wohnmobil',
+        content_ids: [mh.id],
+        content_type: 'vehicle',
+        value: data.current_bid || data.starting_bid || 0,
+        currency: 'EUR',
+      });
+      trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type, bidsCount: data.bids_count } });
+    }
   }, [id, toast, navigate]);
+
+  useEffect(() => {
+    fetchAuction();
+  }, [fetchAuction]);
 
   // Fetch bids
   useEffect(() => {
@@ -805,6 +802,33 @@ const AuctionDetail = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (auctionLoadState === 'not_found') {
+    return (
+      <PageLayout breadcrumbs={true} title="Nicht gefunden" description="Auktion nicht gefunden">
+        <div className="container py-20 text-center space-y-4">
+          <h1 className="text-2xl font-bold">Auktion nicht gefunden</h1>
+          <p className="text-muted-foreground">Diese Auktion existiert nicht oder wurde entfernt.</p>
+          <Button onClick={() => navigate('/kaufen')}>Zurück zum Marktplatz</Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (auctionLoadState === 'error') {
+    return (
+      <PageLayout breadcrumbs={true} title="Fehler" description="Auktion konnte nicht geladen werden">
+        <div className="container py-20 text-center space-y-4">
+          <h1 className="text-2xl font-bold">Fehler beim Laden</h1>
+          <p className="text-muted-foreground">Die Auktion konnte nicht geladen werden. Bitte versuchen Sie es erneut.</p>
+          <div className="flex justify-center gap-3">
+            <Button variant="outline" onClick={() => navigate('/kaufen')}>Zurück zum Marktplatz</Button>
+            <Button onClick={() => { setAuctionLoadState('loading'); fetchAuction(); }}>Erneut versuchen</Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (!auction || !auction.motorhome) {
     return (

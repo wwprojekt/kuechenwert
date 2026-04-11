@@ -120,7 +120,7 @@ const AuthConfirm = () => {
 
               // If no motorhomes found, try to link via wizard_session
               if (!existingMotorhomes || existingMotorhomes.length === 0) {
-                console.log("No motorhomes found for confirmed user, checking wizard sessions...");
+                // No motorhomes found for confirmed user, check wizard sessions
                 
                 const sessionValid = await ensureValidRLSSession();
                 if (!sessionValid) return;
@@ -142,13 +142,13 @@ const AuthConfirm = () => {
                       .from("wizard_sessions")
                       .update({ user_id: confirmedUser.id })
                       .eq("id", wizardSession.id);
-                    console.log("Linked wizard session to confirmed user");
+                    // Linked wizard session to confirmed user
                   }
 
                   // If session was converted but motorhome has wrong seller_id,
                   // the auto-convert should have handled this. But as a safety net,
                   // we trigger a re-check by invalidating queries on the dashboard.
-                  console.log("Wizard session found, dashboard will auto-refresh via realtime");
+                  // Wizard session found, dashboard will auto-refresh via realtime
                 }
               }
             }

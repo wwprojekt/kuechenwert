@@ -153,6 +153,8 @@ const UeberUns = () => {
                 src={dealerProfessional} 
                 alt={`${siteName} – Professioneller Wohnmobil-Verkauf`} 
                 className="relative rounded-2xl shadow-premium hover-lift"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           </div>
@@ -225,6 +227,8 @@ const UeberUns = () => {
                 src={handshakeDeal} 
                 alt="Vertrauensvoller Wohnmobil-Verkauf" 
                 className="relative rounded-2xl shadow-premium hover-lift"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             

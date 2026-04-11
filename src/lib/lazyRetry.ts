@@ -23,7 +23,7 @@ async function clearServiceWorkerCaches(): Promise<void> {
     if ("caches" in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map((name) => caches.delete(name)));
-      console.log("[lazyRetry] Cleared all SW caches:", cacheNames);
+      if (import.meta.env.DEV) console.log("[lazyRetry] Cleared all SW caches:", cacheNames);
     }
 
     // 2. Force Service Worker to check for updates
@@ -31,12 +31,12 @@ async function clearServiceWorkerCaches(): Promise<void> {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
         await registration.update();
-        console.log("[lazyRetry] Triggered SW update check");
+        if (import.meta.env.DEV) console.log("[lazyRetry] Triggered SW update check");
 
         // If there's a waiting worker, activate it immediately
         if (registration.waiting) {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          console.log("[lazyRetry] Activated waiting SW");
+          if (import.meta.env.DEV) console.log("[lazyRetry] Activated waiting SW");
         }
       }
     }

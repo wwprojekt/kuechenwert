@@ -25,7 +25,7 @@ export default function MyBids() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<'ending_soon' | 'bid_desc' | 'bid_asc' | 'my_bid_desc' | 'newest'>('ending_soon');
 
-  const { data: bids, isLoading } = useQuery({
+  const { data: bids, isLoading, isError } = useQuery({
     queryKey: ["myBids", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -166,6 +166,19 @@ export default function MyBids() {
       {isLoading ? (
         <Card className="p-6">
           <div className="text-center text-muted-foreground text-sm">Lädt...</div>
+        </Card>
+      ) : isError ? (
+        <Card className="p-8">
+          <div className="text-center">
+            <Gavel className="w-12 h-12 text-destructive mx-auto mb-3 opacity-50" />
+            <h3 className="text-lg font-semibold mb-1">Fehler beim Laden</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ihre Gebote konnten nicht geladen werden. Bitte versuchen Sie es erneut.
+            </p>
+            <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+              Erneut versuchen
+            </Button>
+          </div>
         </Card>
       ) : !groupedBids || Object.keys(groupedBids).length === 0 ? (
         <Card className="p-8">

@@ -28,9 +28,8 @@ import EmailVerificationBanner from '@/components/dashboard/EmailVerificationBan
 import SetPasswordDialog from '@/components/dashboard/SetPasswordDialog';
 import { supabase } from '@/integrations/supabase/client';
 
-// Import dashboard components (non-lazy for main views)
-import DealerDashboard from '@/pages/dealer/DealerDashboard';
-import DashboardOverview from '@/pages/dashboard/DashboardOverview';
+const DealerDashboard = lazyRetry(() => import('@/pages/dealer/DealerDashboard'));
+const DashboardOverview = lazyRetry(() => import('@/pages/dashboard/DashboardOverview'));
 
 /**
  * Module-level lazy imports for code splitting

@@ -54,7 +54,7 @@ const PageLayout = ({
   return (
     <>
       <Helmet>
-        <title>{title} | {siteName}</title>
+        <title>{title.includes(siteName) ? title : `${title} | ${siteName}`}</title>
         <meta name="description" content={description} />
         {keywords && <meta name="keywords" content={keywords} />}
         

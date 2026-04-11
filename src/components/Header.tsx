@@ -304,7 +304,8 @@ const Header = () => {
             <button
               className="p-2.5"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
+              aria-label={mobileMenuOpen ? "Menü schließen" : "Menü öffnen"}
+              aria-expanded={mobileMenuOpen}
             >
             {mobileMenuOpen ? (
               <X className="h-6 w-6" />

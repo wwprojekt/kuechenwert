@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 
 interface PhotosStepProps {
@@ -12,6 +13,8 @@ interface PhotosStepProps {
 }
 
 export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosStepProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+
   const photoUrls = useMemo(() => {
     return formData.photos.map((photo) => URL.createObjectURL(photo));
   }, [formData.photos]);
@@ -22,18 +25,44 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
     };
   }, [photoUrls]);
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+  const addValidFiles = useCallback(
+    (files: File[]) => {
       const validFiles = files.filter(
         (file) => file.type.startsWith("image/") && file.size <= 100 * 1024 * 1024
       );
+      if (validFiles.length === 0) return;
       const newPhotos = [...formData.photos, ...validFiles].slice(0, 30);
       updateFormData({ photos: newPhotos });
-      e.target.value = "";
     },
     [formData.photos, updateFormData]
   );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      addValidFiles(Array.from(e.target.files || []));
+      e.target.value = "";
+    },
+    [addValidFiles]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    addValidFiles(Array.from(e.dataTransfer.files));
+  }, [addValidFiles]);
 
   const removePhoto = useCallback(
     (index: number) => {
@@ -50,7 +79,7 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
       <div className="mb-4">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
           <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          Fotos Ihres Wohnmobils
+          Fotos Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'}
         </h2>
         <p className="text-muted-foreground">
           Fotos sind <strong>optional</strong> – Sie können sie jetzt hochladen oder jederzeit per E-Mail nachreichen
@@ -82,8 +111,18 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
         </button>
       )}
 
-      {/* Upload area – compact and friendly */}
-      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+      {/* Upload area – compact and friendly, supports drag & drop */}
+      <Card
+        className={cn(
+          "border-2 border-dashed transition-colors",
+          isDragging
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-primary/50"
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <label
           htmlFor="photo-upload"
           className="flex flex-col items-center justify-center py-5 md:py-8 px-4 cursor-pointer"

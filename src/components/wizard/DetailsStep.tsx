@@ -58,7 +58,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
       <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center gap-2 text-sm">
         <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
         <span className="text-blue-700 dark:text-blue-300">
-          Wir haben die häufigsten Werte vorausgefüllt. Passen Sie an oder klicken Sie direkt auf <strong>Weiter</strong>.
+          Alles ist <strong>optional und vorausgefüllt</strong> — Sie können direkt auf <strong>„Weiter"</strong> klicken oder Angaben anpassen.
         </span>
       </div>
 

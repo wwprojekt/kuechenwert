@@ -120,13 +120,21 @@ export const AccountLocationStep = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Motivational banner */}
+      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-2 text-sm">
+        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+        <span className="text-green-800 dark:text-green-200 font-medium">
+          Fast geschafft! Nur noch Standort angeben{!isAuthenticated ? " und Passwort wählen" : ""} — dann erhalten Sie Ihr Angebot.
+        </span>
+      </div>
+
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
           <MapPin className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Standort & Konto
         </h2>
         <p className="text-muted-foreground">
-          Letzter Schritt – geben Sie den Standort Ihres Wohnmobils an und erstellen Sie Ihr Konto
+          Letzter Schritt – geben Sie den Standort Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'} an{!isAuthenticated ? " und erstellen Sie Ihr Konto" : ""}
         </p>
       </div>
 
@@ -134,7 +142,7 @@ export const AccountLocationStep = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <MapPin className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold">Standort des Wohnmobils</h3>
+          <h3 className="text-base font-semibold">Standort des {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'}</h3>
         </div>
         <p className="text-sm text-muted-foreground -mt-2">
           Wichtig für die Entfernungsanzeige der Händler und den späteren Kaufvertrag.
@@ -243,10 +251,10 @@ export const AccountLocationStep = ({
         <div className="space-y-4 border-t pt-6">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
-            <h3 className="text-base font-semibold">Konto erstellen (Pflicht)</h3>
+            <h3 className="text-base font-semibold">Konto erstellen</h3>
           </div>
           <p className="text-sm text-muted-foreground -mt-2">
-            Legen Sie ein Passwort fest, um Ihr Inserat zu verwalten, Gebote zu verfolgen und Nachrichten zu empfangen.
+            Nur ein Passwort – damit können Sie Ihr Inserat verwalten, Gebote verfolgen und Nachrichten empfangen.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

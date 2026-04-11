@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Calendar, Gauge, Info, Check } from "lucide-react";
-import { popularManufacturers, wohnwagenManufacturers, manufacturerModels, wohnwagenManufacturerModels } from "@/lib/vehicle-data";
+import { popularManufacturers, wohnwagenManufacturers, manufacturerModels, wohnwagenManufacturerModels, resolveManufacturer } from "@/lib/vehicle-data";
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
@@ -57,19 +57,23 @@ const SearchableSelect = ({
   popular,
   value,
   onChange,
+  onCommit,
   placeholder,
   disabled,
   hasError,
   id,
+  escapeLabel,
 }: {
   options: string[];
   popular?: string[];
   value: string;
   onChange: (val: string) => void;
+  onCommit?: (val: string) => void;
   placeholder: string;
   disabled?: boolean;
   hasError?: boolean;
   id?: string;
+  escapeLabel?: string;
 }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -77,20 +81,25 @@ const SearchableSelect = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => {
+    const escapeMatch = escapeLabel ? options.find(o => o === escapeLabel) : undefined;
+    const filteredOptions = escapeMatch ? options.filter(o => o !== escapeLabel) : options;
+    const andereOption = escapeMatch;
+    const optionsWithoutAndere = filteredOptions;
+
     if (!query) {
       if (popular && popular.length > 0) {
         const popularSet = new Set(popular);
-        const rest = options.filter((o) => !popularSet.has(o));
-        return { popular: popular.filter((p) => options.includes(p)), rest };
+        const rest = optionsWithoutAndere.filter((o) => !popularSet.has(o));
+        return { popular: popular.filter((p) => options.includes(p)), rest, andere: andereOption };
       }
-      return { popular: [], rest: options };
+      return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
     }
     const lower = query.trim().toLowerCase();
-    if (!lower) return { popular: [], rest: options };
+    if (!lower) return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
     const startsWith: string[] = [];
     const contains: string[] = [];
     const fuzzy: { option: string; score: number }[] = [];
-    for (const o of options) {
+    for (const o of optionsWithoutAndere) {
       const oLower = o.toLowerCase();
       if (oLower.startsWith(lower)) startsWith.push(o);
       else if (oLower.includes(lower)) contains.push(o);
@@ -100,10 +109,10 @@ const SearchableSelect = ({
       }
     }
     fuzzy.sort((a, b) => b.score - a.score);
-    return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)] };
-  }, [options, popular, query]);
+    return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)], andere: andereOption };
+  }, [options, popular, query, escapeLabel]);
 
-  const hasResults = results.popular.length > 0 || results.rest.length > 0;
+  const hasResults = results.popular.length > 0 || results.rest.length > 0 || !!results.andere;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -121,6 +130,7 @@ const SearchableSelect = ({
 
   const handleSelect = (val: string) => {
     onChange(val);
+    onCommit?.(val);
     setQuery("");
     setOpen(false);
   };
@@ -149,13 +159,28 @@ const SearchableSelect = ({
           if (options.length > 0) setOpen(true);
           if (value) inputRef.current?.select();
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (open && results.rest.length === 1) {
+              handleSelect(results.rest[0]);
+            } else {
+              setOpen(false);
+              if (value) onCommit?.(value.trim());
+            }
+          }
+          if (e.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
         onBlur={() => {
-          // Trim whitespace when user leaves the field
-          if (value && value !== value.trim()) onChange(value.trim());
+          const trimmed = value?.trim();
+          if (trimmed && trimmed !== value) onChange(trimmed);
+          if (trimmed) onCommit?.(trimmed);
         }}
       />
-      {open && hasResults && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[260px] overflow-y-auto">
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
           {/* Popular section */}
           {results.popular.length > 0 && (
             <>
@@ -179,21 +204,54 @@ const SearchableSelect = ({
               )}
             </>
           )}
-          {/* Rest / search results */}
-          {results.rest.slice(0, 40).map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => handleSelect(o)}
-              className={cn(
-                "w-full text-left px-4 py-2.5 text-sm transition-colors",
-                "hover:bg-primary/5 active:bg-primary/10",
-                o === value && "bg-primary/10 font-medium text-primary"
+          {/* All results — no artificial limit */}
+          {results.rest.length > 0 && (
+            <>
+              {!!query && results.popular.length === 0 && (
+                <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Ergebnisse</div>
               )}
-            >
-              {o}
-            </button>
-          ))}
+              {!query && results.popular.length > 0 && (
+                <div className="px-3 pt-1 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Alle Hersteller</div>
+              )}
+              {results.rest.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => handleSelect(o)}
+                  className={cn(
+                    "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                    "hover:bg-primary/5 active:bg-primary/10",
+                    o === value && "bg-primary/10 font-medium text-primary"
+                  )}
+                >
+                  {o}
+                </button>
+              ))}
+            </>
+          )}
+          {/* "Andere" always visible at bottom as escape hatch */}
+          {results.andere && (
+            <>
+              <div className="border-t my-1" />
+              <button
+                type="button"
+                onClick={() => handleSelect(results.andere!)}
+                className={cn(
+                  "w-full text-left px-4 py-2.5 text-sm transition-colors text-muted-foreground",
+                  "hover:bg-primary/5 active:bg-primary/10",
+                  results.andere === value && "bg-primary/10 font-medium text-primary"
+                )}
+              >
+                {results.andere} – Nicht in der Liste
+              </button>
+            </>
+          )}
+          {/* Hint when no exact matches found but user is typing */}
+          {results.rest.length === 0 && results.popular.length === 0 && query.trim().length > 0 && (
+            <div className="px-4 py-3 text-sm text-muted-foreground">
+              <p>Kein Treffer für „{query}" — <strong className="text-foreground">einfach eintippen</strong> und mit Eingabetaste bestätigen.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -212,7 +270,9 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     const m = isWohnwagen
       ? wohnwagenManufacturerModels[formData.manufacturer]
       : manufacturerModels[formData.manufacturer];
-    return m || [];
+    if (!m || m.length === 0) return ["Sonstiges Modell"];
+    if (m.includes("Sonstiges Modell")) return m;
+    return [...m, "Sonstiges Modell"];
   }, [formData.manufacturer, isWohnwagen]);
 
   const yearOptions = useMemo(() => {
@@ -231,6 +291,13 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
       updateFormData({ manufacturer: value });
     }
   }, [formData.manufacturer, updateFormData]);
+
+  const resolveManufacturerOnCommit = useCallback((value: string) => {
+    const resolved = resolveManufacturer(value);
+    if (resolved !== value) {
+      updateFormData({ manufacturer: resolved, model: "" });
+    }
+  }, [updateFormData]);
 
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
@@ -275,8 +342,10 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
             popular={isWohnwagen ? POPULAR_WOHNWAGEN : POPULAR_WOHNMOBIL}
             value={formData.manufacturer}
             onChange={handleManufacturerChange}
-            placeholder="Hersteller eingeben..."
+            onCommit={resolveManufacturerOnCommit}
+            placeholder="z.B. Hymer, Dethleffs, Bürstner..."
             hasError={!!fieldErrors.manufacturer}
+            escapeLabel="Andere"
           />
           {fieldErrors.manufacturer && (
             <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>
@@ -293,9 +362,10 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
             options={models}
             value={formData.model}
             onChange={(val) => updateFormData({ model: val })}
-            placeholder={formData.manufacturer ? "Modell eingeben..." : "Erst Hersteller wählen"}
+            placeholder={formData.manufacturer ? `Modell von ${formData.manufacturer}...` : "Erst Hersteller wählen"}
             disabled={!formData.manufacturer}
             hasError={!!fieldErrors.model}
+            escapeLabel="Sonstiges Modell"
           />
           {fieldErrors.model && (
             <p className="text-sm text-red-600">{fieldErrors.model}</p>

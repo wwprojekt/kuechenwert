@@ -270,7 +270,11 @@ export function getPowerOptionsForBaseVehicle(baseVehicle: string): number[] {
 export const manufacturerAliases: Record<string, string> = {
   'Vw': 'Volkswagen',
   'VW': 'Volkswagen',
+  'vw': 'Volkswagen',
   'Mercedes': 'Mercedes-Benz',
+  'Benz': 'Mercedes-Benz',
+  'CI': 'CI International',
+  'ci': 'CI International',
   'Hymer-Eriba': 'Eriba',
   'Roller-Team': 'Roller Team',
   'Ahorn Camp': 'Ahorn',
@@ -278,21 +282,36 @@ export const manufacturerAliases: Record<string, string> = {
   'Hymrr': 'Hymer',
   'Mooevo': 'Mooveo',
   'Xgo': 'XGO',
+  'xgo': 'XGO',
   'Poessl': 'Pössl',
   'Possl': 'Pössl',
+  'pössl': 'Pössl',
   'Buerstner': 'Bürstner',
   'Burstner': 'Bürstner',
+  'bürstner': 'Bürstner',
   'Gluecksmobil': 'Glücksmobil',
   'Niesmann Bischoff': 'Niesmann+Bischoff',
   'Niesmann-Bischoff': 'Niesmann+Bischoff',
+  'Niesmann': 'Niesmann+Bischoff',
   'Bresler': 'Bresler Mobile',
   'Bresler Mobil': 'Bresler Mobile',
   'Schwaben Mobil': 'Schwabenmobil',
   'Schwaben-Mobil': 'Schwabenmobil',
+  'CS': 'CS Reisemobile',
+  'cs': 'CS Reisemobile',
+  'Karmann-Mobil': 'Karmann',
+  'Karmann Mobil': 'Karmann',
+  'la strada': 'La Strada',
+  'LaStrada': 'La Strada',
 };
 
-// Resolve a manufacturer name, applying alias and trimming
+// Resolve a manufacturer name, applying alias and trimming (case-sensitive first, then case-insensitive)
 export function resolveManufacturer(input: string): string {
   const trimmed = input.trim();
-  return manufacturerAliases[trimmed] ?? trimmed;
+  if (manufacturerAliases[trimmed]) return manufacturerAliases[trimmed];
+  const lower = trimmed.toLowerCase();
+  for (const [key, val] of Object.entries(manufacturerAliases)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+  return trimmed;
 }

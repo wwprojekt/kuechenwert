@@ -14,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, Hash } from "lucide-react";
+import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, Hash, Loader2 } from "lucide-react";
 import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -48,8 +49,10 @@ interface Invoice {
 
 export default function MyInvoices() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState<string | null>(null);
   const [customerNumber, setCustomerNumber] = useState<string | null>(null);
 
   const { sortField, sortDirection, handleSort, sortData } = useTableSort<Invoice>('invoice_date', 'desc');
@@ -100,6 +103,42 @@ export default function MyInvoices() {
   }, [user?.id]);
 
   useLiveData(loadInvoices, { enabled: !!user, pollingInterval: 60_000 });
+
+  const openInvoicePdf = async (invoice: Invoice) => {
+    setPdfLoading(invoice.id);
+    try {
+      // 1) Try stored pdf_url
+      if (invoice.pdf_url) {
+        window.open(invoice.pdf_url, '_blank');
+        return;
+      }
+      // 2) Fallback: generate fresh signed URL from storage
+      if (user?.id && invoice.invoice_number) {
+        const storagePath = `${user.id}/${invoice.invoice_number}.pdf`;
+        const { data } = await supabase.storage
+          .from('invoices')
+          .createSignedUrl(storagePath, 3600);
+        if (data?.signedUrl) {
+          window.open(data.signedUrl, '_blank');
+          return;
+        }
+      }
+      toast({
+        title: 'PDF nicht verfügbar',
+        description: 'Die Rechnung konnte nicht geladen werden. Bitte kontaktieren Sie den Support.',
+        variant: 'destructive',
+      });
+    } catch (err) {
+      console.error('Error opening invoice PDF:', err);
+      toast({
+        title: 'Fehler',
+        description: 'Die Rechnung konnte nicht geöffnet werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPdfLoading(null);
+    }
+  };
 
   const getStatusBadge = (invoice: Invoice) => {
     const status = invoice.payment_status || invoice.status;
@@ -319,18 +358,19 @@ export default function MyInvoices() {
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {invoice.pdf_url && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <a href={invoice.pdf_url} target="_blank" rel="noopener noreferrer">
-                                <Download className="w-4 h-4 mr-1" />
-                                PDF
-                              </a>
-                            </Button>
-                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pdfLoading === invoice.id}
+                            onClick={() => openInvoicePdf(invoice)}
+                          >
+                            {pdfLoading === invoice.id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-1" />
+                            )}
+                            PDF
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

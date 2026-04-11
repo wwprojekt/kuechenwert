@@ -25,7 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-assets
-screenshots
-tests
+/assets
+/screenshots
+/tests
 worker/__pycache__/

@@ -16,6 +16,7 @@
 - Use `SECURITY INVOKER` for all new database functions
 - Keep components small and focused (< 200 lines)
 - Keep diffs small and focused on one feature
+- **ALWAYS push to GitHub after every commit** (`git push origin main`)
 
 ## Don't
 - Do NOT call React Hooks after an early return
@@ -69,6 +70,8 @@ Before every commit:
 4. Diff is small and focused on one feature/fix
 5. Update the TODO list in `project.md` (mark completed tasks)
 6. Commit message format: `feat(scope): short description` or `fix(scope): short description`
+7. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
+8. If push fails: `git pull --rebase origin main && git push origin main`
 
 ## Good Examples (copy these patterns)
 - **Functional component with hooks**: `src/pages/AuctionDetail.tsx`

@@ -36,6 +36,21 @@ CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses 
 - `src/test/` - Test-Utilities und Setup
 - `src/assets/` - Statische Assets
 
+## Git-Workflow (KRITISCH)
+
+**JEDER Commit MUSS sofort auf GitHub gepusht werden.** Lokale Commits ohne Push sind NICHT akzeptabel.
+
+### Nach jedem `git commit`:
+1. Sofort `git push origin main` ausführen
+2. Wenn der Push fehlschlägt (z.B. wegen Remote-Änderungen): `git pull --rebase origin main && git push origin main`
+3. Erst wenn der Push erfolgreich war, ist die Aufgabe abgeschlossen
+
+### Commit-Regeln:
+- Verwende aussagekräftige Commit-Messages auf Englisch
+- Ein Commit pro logische Änderung (nicht alles in einen Commit)
+- NIEMALS `git push --force` verwenden
+- IMMER auf `main` Branch arbeiten, es sei denn der Benutzer sagt etwas anderes
+
 ## Grundprinzipien
 
 1. **KEINE Vermutungen oder Annahmen:** Du darfst NIEMALS Vermutungen oder Annahmen machen. Bevor du etwas veränderst, musst du IMMER zuerst verifizieren, dass deine Annahme korrekt ist. Lies den bestehenden Code, prüfe die Dokumentation, teste die aktuelle Funktionalität.

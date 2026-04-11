@@ -150,6 +150,40 @@ function detectCountryFromPhone(phone: string): string {
   return "DE";
 }
 
+/**
+ * Differenzierte Conversion-Werte nach Lead-Qualität.
+ * Basiert auf echten Datenbank-Auswertungen:
+ *   - Wizard: 41% konvertieren zu Auktionen → 15€
+ *   - Wertrechner: 2% konvertieren → 2.50€
+ *
+ * MUSS synchron mit CONVERSION_VALUES in gadsConversionService.ts bleiben!
+ */
+const CONVERSION_VALUE_MAP: Record<string, number> = {
+  // Primäre Conversions
+  wizard: 15.0,
+  wizard_abgeschlossen: 15.0,
+  wizard_completed: 15.0,
+  terminbuchung: 15.0,
+  kontakt: 10.0,
+  kontaktformular_gesendet: 10.0,
+  contact_form: 10.0,
+  wertermittlung: 5.0,
+  wertermittlung_lead: 5.0,
+  wertrechner: 2.5,
+  wertrechner_lead: 2.5,
+  // Sekundäre Conversions
+  landing_page_lead: 1.0,
+  wizard_gestartet: 1.0,
+  wizard_started: 1.0,
+  wizard_fahrzeugdaten: 1.0,
+  wizard_vehicle_data: 1.0,
+  dealer_register: 1.0,
+};
+
+function getConversionValue(leadType: string): number {
+  return CONVERSION_VALUE_MAP[leadType] ?? 5.0;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
@@ -237,8 +271,8 @@ const handler = async (req: Request): Promise<Response> => {
         if (model) eventParams.vehicle_model = model;
         if (estimated_min) eventParams.estimated_value_min = estimated_min;
         if (estimated_max) eventParams.estimated_value_max = estimated_max;
-        // Fester Conversion Value: 5 EUR pro Lead
-        eventParams.value = 5.0;
+        // Differenzierter Conversion Value nach Lead-Qualität
+        eventParams.value = getConversionValue(lead_type);
         eventParams.currency = "EUR";
 
         // GA4 Client-ID: Vom Client übernommen oder serverseitig generiert
@@ -331,8 +365,8 @@ const handler = async (req: Request): Promise<Response> => {
 
         // 2. Conversion-Daten vorbereiten
         const conversionDateTime = new Date().toISOString().replace("T", " ").replace("Z", "+00:00");
-        // Fester Conversion Value: 5 EUR pro Lead
-        const conversionValue = 5.0;
+        // Differenzierter Conversion Value nach Lead-Qualität
+        const conversionValue = getConversionValue(lead_type);
 
         // Conversion Action ID basierend auf Lead-Typ auswählen
         // WICHTIG: Die Keys müssen exakt den `type`-Werten entsprechen, die vom Frontend
@@ -346,7 +380,7 @@ const handler = async (req: Request): Promise<Response> => {
           'wertrechner': '7545833208',        // Wertrechner Lead
           'wizard': '7545833211',             // Wizard Abgeschlossen
           // === Aliase (für Abwärtskompatibilität und direkte API-Aufrufe) ===
-          'bewertung_abgeschlossen': '7544183183',
+          // 'bewertung_abgeschlossen' entfernt – Legacy-Conversion, erzeugte Duplikat mit wizard
           'landing_page_lead': '7545833199',
           'kontaktformular_gesendet': '7545833202',
           'contact_form': '7545833202',

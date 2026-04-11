@@ -154,6 +154,30 @@ export const CONVERSION_LABELS = {
 } as const;
 
 // ============================================================
+// CONVERSION-WERTE (€) – Differenziert nach Lead-Qualität
+//
+// Basiert auf echten Datenbank-Auswertungen:
+//   - Wizard: 169 abgeschlossen → 69 zu Auktionen konvertiert (41%)
+//   - Wertrechner: 360 Leads → 7 konvertiert (2%)
+//
+// Höhere Werte → Google Smart Bidding bietet aggressiver für diese Leads.
+// Niedrigere Werte → Google spart Budget bei niedrigwertigen Leads.
+// ============================================================
+export const CONVERSION_VALUES = {
+  // Primäre Conversions
+  WIZARD_ABGESCHLOSSEN: 15.0,     // Höchster Wert: 41% konvertieren zu Auktionen
+  TERMINBUCHUNG: 15.0,            // Gleichwertig: Termin = hohes Kaufinteresse
+  KONTAKTFORMULAR_GESENDET: 10.0, // Direkter Kontakt, gute Qualität
+  WERTERMITTLUNG_LEAD: 5.0,       // Mittlere Qualität
+  WERTRECHNER_LEAD: 2.5,          // Niedrigster Wert: nur 2% konvertieren
+
+  // Sekundäre Conversions (Micro-Conversions, nur Beobachtung)
+  LANDING_PAGE_LEAD: 1.0,
+  WIZARD_GESTARTET: 1.0,
+  WIZARD_FAHRZEUGDATEN: 1.0,
+} as const;
+
+// ============================================================
 // CUSTOM EVENTS (ohne Conversion-Label, nur für Remarketing/Analytics)
 // ============================================================
 
@@ -200,15 +224,16 @@ export async function trackLandingPageLead(landingPage: string, vehicleInfo?: st
  */
 export async function trackKontaktformularGesendet(transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('kontakt');
+  const value = CONVERSION_VALUES.KONTAKTFORMULAR_GESENDET;
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, 5.0, txId);
+  await sendConversion(CONVERSION_LABELS.KONTAKTFORMULAR_GESENDET, value, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'kontaktformular_gesendet',
-    value: 5.0,
+    value,
     currency: 'EUR',
     lead_source: 'kontaktformular',
   });
@@ -228,15 +253,16 @@ export async function trackKontaktformularGesendet(transactionId?: string): Prom
  */
 export async function trackWertermittlungLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wertermittlung');
+  const value = CONVERSION_VALUES.WERTERMITTLUNG_LEAD;
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, 5.0, txId);
+  await sendConversion(CONVERSION_LABELS.WERTERMITTLUNG_LEAD, value, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertermittlung_lead',
-    value: 5.0,
+    value,
     currency: 'EUR',
     lead_source: 'wertermittlung',
     vehicle_info: vehicleInfo || '',
@@ -257,15 +283,16 @@ export async function trackWertermittlungLead(vehicleInfo?: string, transactionI
  */
 export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wertrechner');
+  const value = CONVERSION_VALUES.WERTRECHNER_LEAD;
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, 5.0, txId);
+  await sendConversion(CONVERSION_LABELS.WERTRECHNER_LEAD, value, txId);
 
   // GA4 + Google Ads: generate_lead Event
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'wertrechner_lead',
-    value: 5.0,
+    value,
     currency: 'EUR',
     lead_source: 'wertrechner',
     vehicle_info: vehicleInfo || '',
@@ -286,14 +313,15 @@ export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?:
  */
 export async function trackTerminbuchung(station?: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('terminbuchung');
+  const value = CONVERSION_VALUES.TERMINBUCHUNG;
   // Google Ads Conversion (mit beacon transport für Navigation-Schutz)
-  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, 5.0, txId);
+  await sendConversion(CONVERSION_LABELS.TERMINBUCHUNG, value, txId);
 
   safeGtag('event', 'generate_lead', {
     transaction_id: txId,
     event_category: 'Lead',
     event_label: 'terminbuchung',
-    value: 5.0,
+    value,
     currency: 'EUR',
     lead_source: 'terminbuchung',
     station: station || '',
@@ -362,20 +390,20 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
  * Wizard vollständig abgeschlossen (Schritt 5: Kontaktdaten abgesendet)
  * PRIMÄRE CONVERSION: Nur WIZARD_ABGESCHLOSSEN (eine Conversion pro Lead)
  *
- * BEWERTUNG_ABGESCHLOSSEN wurde entfernt – es erzeugte eine doppelte Conversion
- * (2 × 5€ = 10€ statt 5€ pro Wizard-Lead), was die Smart-Bidding-Optimierung
- * verzerrt hat. Wizard-Leads und Wertrechner-Leads sollen gleichwertig sein.
+ * BEWERTUNG_ABGESCHLOSSEN wurde entfernt – es erzeugte eine doppelte Conversion.
+ * Conversion-Werte sind jetzt nach Lead-Qualität differenziert (siehe CONVERSION_VALUES).
  */
 export async function trackWizardCompleted(vehicleInfo: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wizard');
+  const value = CONVERSION_VALUES.WIZARD_ABGESCHLOSSEN;
   // Google Ads: Primäre Conversion – Wizard Abgeschlossen (mit beacon transport)
-  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 5.0, txId);
+  await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, value, txId);
 
   // GA4 Zielgruppe 'Wizard-Abbrecher' verwendet wizard_complete als Ausschluss
   safeGtag('event', 'wizard_complete', {
     event_category: 'Wizard',
     vehicle_info: vehicleInfo,
-    value: 5.0,
+    value,
     currency: 'EUR',
   });
 
@@ -385,11 +413,10 @@ export async function trackWizardCompleted(vehicleInfo: string, transactionId?: 
     event_category: 'Wizard',
     event_label: 'wizard_completed',
     vehicle_info: vehicleInfo,
-    value: 5.0,
+    value,
     currency: 'EUR',
     lead_source: 'wizard',
   });
-
 }
 
 /**

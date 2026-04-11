@@ -193,7 +193,6 @@ Before every commit:
 ## Known Remaining Items
 - Blog: Table + pages exist, 0 articles (content feature never populated)
 - Migration Edge Functions (import-table-data, import-photos, migrate-storage, backfill-email-content): One-time tools, harmless
-- 32 analysis Markdown files in root should be moved to docs/archive/
 - Baujahr ranges per model NOT implemented
 - Search is starts-with; could benefit from fuzzy matching
 

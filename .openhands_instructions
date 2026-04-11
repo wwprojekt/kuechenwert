@@ -76,7 +76,7 @@ CaravanWert ist eine Plattform zur Bewertung von Wohnwagen und Caravans. Dieses 
 ## Aufgaben-Management (KRITISCH)
 
 ### Vor jeder Aufgabe MUSS der Agent:
-1. Die TODO-Liste in `.openhands/microagents/project.md` lesen
+1. Die TODO-Liste in `.agents/skills/project.md` lesen
 2. Prüfen ob die Aufgabe bereits als erledigt markiert ist
 3. Falls erledigt: Die Aufgabe NICHT erneut bearbeiten, sondern den Benutzer informieren
 
@@ -100,7 +100,7 @@ Bei `supabase_deploy_edge_function` IMMER den `files`-Parameter mitgeben:
   ]
 }
 ```
-Lies die Microagent-Datei `.openhands/microagents/supabase-deploy.md` für Details.
+Lies die Microagent-Datei `.agents/skills/supabase-deploy/SKILL.md` für Details.
 
 ## Coding-Standards
 - Schreibe sauberen, gut lesbaren Code mit klaren Kommentaren

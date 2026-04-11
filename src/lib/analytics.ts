@@ -398,15 +398,9 @@ export const clearAnalyticsUser = () =>
   analytics.clearUser();
 
 // Google Analytics type declarations
-declare global {
-  interface Window {
-    gtag?: (
-      command: 'config' | 'event',
-      targetId: string,
-      config?: Record<string, any>
-    ) => void;
-  }
-}
+// HINWEIS: Die vollständige window.gtag-Deklaration befindet sich in
+// gadsConversionService.ts (unterstützt alle gtag-Befehle inkl. consent, set, js).
+// Hier keine eigene Declaration, um TypeScript-Konflikte zu vermeiden.
 
 // Initialize analytics services
 class AnalyticsInitializer {

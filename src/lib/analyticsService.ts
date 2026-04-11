@@ -206,9 +206,10 @@ class AnalyticsService {
    */
   trackPageView(pagePath: string, pageTitle?: string): void {
     const referrerPath = this.lastPagePath || undefined;
+    const isFirstPageView = !this.lastPagePath;
     this.lastPagePath = pagePath;
 
-    // Queue the page view
+    // Queue the page view for Supabase analytics DB
     this.pageViewQueue.push({
       pagePath,
       pageTitle: pageTitle || document.title,
@@ -216,11 +217,19 @@ class AnalyticsService {
       timestamp: new Date(),
     });
 
-    // HINWEIS: Kein manuelles gtag('event', 'page_view') hier senden!
-    // index.html hat bereits send_page_view: true in der GA4 config,
-    // was automatisch Page Views bei gtag('config') Aufrufen sendet.
-    // Ein zusätzliches manuelles Event würde zu doppelten Page Views führen.
-    // Die Supabase-Datenbank erhält weiterhin Page Views über die Queue.
+    // GA4: Manuell page_view Event senden für SPA-Navigationen.
+    // index.html hat send_page_view: true, was den INITIALEN Page View sendet.
+    // Bei einer SPA (React Router) werden nachfolgende Route-Wechsel NICHT
+    // automatisch an GA4 gemeldet – ohne dieses Event wäre GA4 blind für
+    // alle Seiten nach dem ersten Ladevorgang.
+    // Consent Mode wird automatisch von gtag respektiert (denied → anonymer Ping).
+    if (!isFirstPageView && typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'page_view', {
+        page_path: pagePath,
+        page_title: pageTitle || document.title,
+        page_location: window.location.origin + pagePath,
+      });
+    }
 
     // Flush if consent is given and session exists
     if (hasAnalyticsConsent() && this.sessionCreated) {

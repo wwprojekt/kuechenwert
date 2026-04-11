@@ -453,6 +453,17 @@ const VerkaufenWizard = () => {
                   <div className="min-h-[180px] md:min-h-[350px]">{renderStep()}</div>
                 </Card>
 
+                {/* Mobile vehicle summary (above trust signals on small screens) */}
+                {currentStep >= 3 && formData.manufacturer && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-sm lg:hidden">
+                    <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                    <span className="text-primary font-medium truncate">
+                      {formData.manufacturer} {formData.model}
+                      {formData.year ? ` · ${formData.year}` : ''}
+                    </span>
+                  </div>
+                )}
+
                 {/* Mobile Trust Signals (hidden on desktop where sidebar is visible) */}
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden py-2">
                   <span className="flex items-center gap-1">
@@ -469,14 +480,14 @@ const VerkaufenWizard = () => {
                   </span>
                 </div>
 
-                {/* Navigation Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between">
+                {/* Navigation Buttons — desktop inline, mobile sticky bottom */}
+                <div className="hidden sm:flex gap-4 justify-between">
                   <Button
                     variant="outline"
                     size="lg"
                     onClick={handlePrevious}
                     disabled={currentStep === 1}
-                    className="w-full sm:w-auto order-2 sm:order-1 min-h-[48px]"
+                    className="min-h-[48px]"
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" />
                     Zurück
@@ -490,7 +501,7 @@ const VerkaufenWizard = () => {
                         size="lg"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2 min-h-[52px] text-base"
+                        className="gradient-hero hover:gradient-hero-hover min-h-[52px] text-base"
                       >
                         {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
                         <Check className="w-4 h-4 ml-2" />
@@ -500,7 +511,7 @@ const VerkaufenWizard = () => {
                     <Button
                       size="lg"
                       onClick={handleNext}
-                      className="gradient-hero hover:gradient-hero-hover w-full sm:w-auto order-1 sm:order-2 min-h-[52px] text-base"
+                      className="gradient-hero hover:gradient-hero-hover min-h-[52px] text-base"
                     >
                       {getNextButtonLabel()}
                       <ChevronRight className="w-4 h-4 ml-2" />
@@ -509,7 +520,7 @@ const VerkaufenWizard = () => {
                 </div>
               </div>
 
-              {/* Sidebar - 1/3 width on desktop, hidden on mobile for steps 1-2 */}
+              {/* Sidebar - 1/3 width on desktop, hidden on mobile */}
               <div className="space-y-4 hidden lg:block">
                 {/* Vehicle Summary (shown from step 2 onwards) */}
                 {currentStep >= 2 && formData.manufacturer && (
@@ -588,7 +599,7 @@ const VerkaufenWizard = () => {
             </div>
 
             {/* Help Text */}
-            <div className="mt-8 text-center text-sm text-muted-foreground">
+            <div className="mt-8 pb-24 sm:pb-8 text-center text-sm text-muted-foreground">
               <p>
                 Benötigen Sie Hilfe?{" "}
                 <a href="/kontakt" className="text-primary hover:underline">
@@ -597,6 +608,45 @@ const VerkaufenWizard = () => {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile sticky bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-lg p-3 safe-bottom sm:hidden">
+        <div className="flex gap-2">
+          {currentStep > 1 && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handlePrevious}
+              className="min-h-[48px] px-3"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+          )}
+          {isLastStep ? (
+            <>
+              <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+              <Button
+                size="lg"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="gradient-hero hover:gradient-hero-hover flex-1 min-h-[48px] text-base"
+              >
+                {isSubmitting ? "Wird gesendet..." : "Angebot anfordern"}
+                <Check className="w-4 h-4 ml-2" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="lg"
+              onClick={handleNext}
+              className="gradient-hero hover:gradient-hero-hover flex-1 min-h-[48px] text-base"
+            >
+              {getNextButtonLabel()}
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
         </div>
       </div>
     </PageLayout>

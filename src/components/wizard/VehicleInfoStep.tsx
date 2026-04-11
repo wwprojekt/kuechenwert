@@ -63,6 +63,7 @@ const SearchableSelect = ({
   hasError,
   id,
   escapeLabel,
+  autoFocus,
 }: {
   options: string[];
   popular?: string[];
@@ -74,6 +75,7 @@ const SearchableSelect = ({
   hasError?: boolean;
   id?: string;
   escapeLabel?: string;
+  autoFocus?: boolean;
 }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -127,6 +129,13 @@ const SearchableSelect = ({
   useEffect(() => {
     if (!value) setQuery("");
   }, [value]);
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current && !disabled && !value) {
+      const timeout = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [autoFocus, disabled, value]);
 
   const handleSelect = (val: string) => {
     onChange(val);
@@ -346,6 +355,7 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
             placeholder="z.B. Hymer, Dethleffs, Bürstner..."
             hasError={!!fieldErrors.manufacturer}
             escapeLabel="Andere"
+            autoFocus
           />
           {fieldErrors.manufacturer && (
             <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>

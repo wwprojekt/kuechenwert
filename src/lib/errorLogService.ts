@@ -431,16 +431,15 @@ export function handleValidationError(
   // HINWEIS: Validierungsfehler werden NICHT mehr in error_logs geschrieben,
   // da sie normales Benutzerverhalten darstellen (z.B. "Weiter" klicken ohne Pflichtfeld).
   // Sie werden nur als Toast dem User angezeigt.
-  if (error && typeof error === 'object' && 'errors' in error) {
-    const zodError = error as { errors: Array<{ message: string; path: string[] }> };
-    if (zodError.errors.length > 0) {
-      const firstError = zodError.errors[0];
-      const translated = translateError(firstError.message);
+  if (error && typeof error === 'object' && 'issues' in error) {
+    const zodError = error as { issues: Array<{ message: string; path: (string | number)[] }> };
+    if (zodError.issues.length > 0) {
+      const firstIssue = zodError.issues[0];
+      const translated = translateError(firstIssue.message);
       
-      // Nur in die Konsole loggen für Debugging, nicht in die DB
       logger.debug(`[Validation] ${componentName || 'unknown'}: ${translated.message}`, {
-        field: firstError.path?.join('.'),
-        allErrors: zodError.errors.map(e => ({ message: e.message, path: e.path?.join('.') })),
+        field: firstIssue.path?.join('.'),
+        allErrors: zodError.issues.map(e => ({ message: e.message, path: e.path?.join('.') })),
       });
 
       return translated.message;

@@ -295,7 +295,20 @@ export async function ensureValidRLSSession(): Promise<boolean> {
     
     return true;
   } catch (e) {
-    if (isLockError(e)) return true; // Lock-Fehler = harmlos, Token vermutlich OK
+    if (isLockError(e)) {
+      // Lock-Error: wait briefly and retry once instead of blindly assuming valid
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token && isTokenValid(session.access_token, 60)) {
+          return true;
+        }
+        const { data, error } = await supabase.auth.refreshSession();
+        return !error && !!data.session;
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 }
@@ -313,7 +326,8 @@ export function isTokenValid(token: string, bufferSeconds: number = 30): boolean
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return false; // Malformed JWT
-    const payload = JSON.parse(atob(parts[1]));
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
     if (!payload.exp) return false;
     return payload.exp > (Date.now() / 1000) + bufferSeconds;
   } catch {

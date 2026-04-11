@@ -52,6 +52,16 @@ export interface DealerInfo {
   phone?: string;
 }
 
+function escapeHtml(unsafe: unknown): string {
+  const str = String(unsafe ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 class InvoiceGeneratorService {
   /**
    * Create invoice for completed auction
@@ -151,11 +161,11 @@ class InvoiceGeneratorService {
    * Generate German tax-compliant invoice HTML
    */
   private generateInvoiceHTML(invoice: any, settings: any): string {
-    const dealerName = invoice.dealer.company_name || 
-      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
+    const dealerName = escapeHtml(invoice.dealer.company_name || 
+      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`);
     
     const _motorhomeName = invoice.auction ? 
-      `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 
+      `${escapeHtml(invoice.auction.motorhome.manufacturer)} ${escapeHtml(invoice.auction.motorhome.model)}` : 
       'Provision';
 
     return `
@@ -235,15 +245,15 @@ class InvoiceGeneratorService {
 <body>
   <div class="header">
     <div class="company-info">
-      <h1>${settings?.site_name || 'CaravanWert'}</h1>
-      <p>${settings?.company_address || ''}${settings?.company_address ? '<br>' : ''}${settings?.company_postal_code || ''} ${settings?.company_city || ''}${(settings?.company_postal_code || settings?.company_city) ? '<br>' : ''}${settings?.company_country || 'Deutschland'}</p>
-      <p>Tel: ${settings?.support_phone || ''}<br>
-         E-Mail: ${settings?.contact_email || ''}</p>
-      <p><strong>USt-ID:</strong> ${settings?.ust_id || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]'}</p>
+      <h1>${escapeHtml(settings?.site_name || 'CaravanWert')}</h1>
+      <p>${escapeHtml(settings?.company_address || '')}${settings?.company_address ? '<br>' : ''}${escapeHtml(settings?.company_postal_code || '')} ${escapeHtml(settings?.company_city || '')}${(settings?.company_postal_code || settings?.company_city) ? '<br>' : ''}${escapeHtml(settings?.company_country || 'Deutschland')}</p>
+      <p>Tel: ${escapeHtml(settings?.support_phone || '')}<br>
+         E-Mail: ${escapeHtml(settings?.contact_email || '')}</p>
+      <p><strong>USt-ID:</strong> ${escapeHtml(settings?.ust_id || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]')}</p>
     </div>
     <div class="invoice-info">
       <h2 class="invoice-title">RECHNUNG</h2>
-      <p><strong>Rechnungsnr.:</strong> ${invoice.invoice_number}</p>
+      <p><strong>Rechnungsnr.:</strong> ${escapeHtml(invoice.invoice_number)}</p>
       <p><strong>Rechnungsdatum:</strong> ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')}</p>
       <p><strong>Fälligkeitsdatum:</strong> ${new Date(invoice.due_date).toLocaleDateString('de-DE')}</p>
     </div>
@@ -252,8 +262,8 @@ class InvoiceGeneratorService {
   <div class="customer-info">
     <h3>Rechnungsempfänger</h3>
     <p><strong>${dealerName}</strong></p>
-    ${invoice.ust_id_buyer ? `<p>USt-ID: ${invoice.ust_id_buyer}</p>` : ''}
-    <p>${invoice.dealer.email}</p>
+    ${invoice.ust_id_buyer ? `<p>USt-ID: ${escapeHtml(invoice.ust_id_buyer)}</p>` : ''}
+    <p>${escapeHtml(invoice.dealer.email)}</p>
   </div>
 
   <p>Sehr geehrte Damen und Herren,</p>
@@ -273,7 +283,7 @@ class InvoiceGeneratorService {
       ${invoice.items.map((item: any, index: number) => `
         <tr>
           <td>${index + 1}</td>
-          <td>${item.description}</td>
+          <td>${escapeHtml(item.description)}</td>
           <td class="text-right">${item.quantity}</td>
           <td class="text-right">€${item.unit_price.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</td>
           <td class="text-right">€${item.net_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</td>
@@ -301,20 +311,20 @@ class InvoiceGeneratorService {
     <p><strong>Zahlungsziel:</strong> ${invoice.payment_terms_days} Tage (bis ${new Date(invoice.due_date).toLocaleDateString('de-DE')})</p>
     <p><strong>Bankverbindung:</strong></p>
     <p>
-      IBAN: ${settings?.bank_iban || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]'}<br>
-      BIC: ${settings?.bank_bic || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]'}<br>
-      ${settings?.bank_name || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]'}<br>
-      Verwendungszweck: ${invoice.invoice_number}
+      IBAN: ${escapeHtml(settings?.bank_iban || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]')}<br>
+      BIC: ${escapeHtml(settings?.bank_bic || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]')}<br>
+      ${escapeHtml(settings?.bank_name || '[BITTE IN EINSTELLUNGEN HINTERLEGEN]')}<br>
+      Verwendungszweck: ${escapeHtml(invoice.invoice_number)}
     </p>
   </div>
 
   <p>Vielen Dank für Ihr Vertrauen!</p>
-  <p>Ihr ${settings?.site_name || 'CaravanWert'} Team</p>
+  <p>Ihr ${escapeHtml(settings?.site_name || 'CaravanWert')} Team</p>
 
   <div class="footer">
     <div class="text-center">
-      <p>${settings?.site_name || 'CaravanWert'} • ${settings?.managing_director ? `Geschäftsführer: ${settings.managing_director}` : '[Geschäftsführer BITTE ERGÄNZEN]'} • ${settings?.hrb_number || '[HRB BITTE ERGÄNZEN]'}</p>
-      <p>${settings?.tax_number ? `Steuernummer: ${settings.tax_number}` : '[Steuernummer BITTE ERGÄNZEN]'} • ${settings?.ust_id ? `USt-ID: ${settings.ust_id}` : '[USt-ID BITTE ERGÄNZEN]'}</p>
+      <p>${escapeHtml(settings?.site_name || 'CaravanWert')} • ${settings?.managing_director ? `Geschäftsführer: ${escapeHtml(settings.managing_director)}` : '[Geschäftsführer BITTE ERGÄNZEN]'} • ${escapeHtml(settings?.hrb_number || '[HRB BITTE ERGÄNZEN]')}</p>
+      <p>${settings?.tax_number ? `Steuernummer: ${escapeHtml(settings.tax_number)}` : '[Steuernummer BITTE ERGÄNZEN]'} • ${settings?.ust_id ? `USt-ID: ${escapeHtml(settings.ust_id)}` : '[USt-ID BITTE ERGÄNZEN]'}</p>
     </div>
   </div>
 </body>

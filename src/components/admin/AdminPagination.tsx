@@ -29,7 +29,7 @@ export function AdminPagination({
   const from = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, totalItems);
 
-  if (totalItems <= pageSizeOptions[0]) return null;
+  if (totalPages <= 1) return null;
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t">

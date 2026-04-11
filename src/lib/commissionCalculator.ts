@@ -299,19 +299,22 @@ export function computeCommissionFromTiers(
     t => t.is_active && saleAmount >= t.min_amount && saleAmount < t.max_amount
   );
 
+  const computeForTier = (t: CommissionTier) => {
+    const raw = t.rate_type === 'fixed'
+      ? t.rate_value
+      : saleAmount * (t.rate_value / 100);
+    const commission = Math.max(raw, t.min_commission);
+    return { commission, rate: t.rate_value, minCommission: t.min_commission };
+  };
+
   if (!tier) {
-    // Fallback: highest tier
     const sorted = [...tiers].filter(t => t.is_active).sort((a, b) => b.min_amount - a.min_amount);
     const fallback = sorted[0];
     if (!fallback) return null;
-    const raw = saleAmount * (fallback.rate_value / 100);
-    const commission = Math.max(raw, fallback.min_commission);
-    return { commission, rate: fallback.rate_value, minCommission: fallback.min_commission };
+    return computeForTier(fallback);
   }
 
-  const raw = saleAmount * (tier.rate_value / 100);
-  const commission = Math.max(raw, tier.min_commission);
-  return { commission, rate: tier.rate_value, minCommission: tier.min_commission };
+  return computeForTier(tier);
 }
 
 /**

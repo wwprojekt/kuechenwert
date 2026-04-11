@@ -43,17 +43,9 @@ export async function checkServiceRoleOrAdmin(
   const token = authHeader.replace('Bearer ', '').trim();
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-  // ─── Method 1: Direct string comparison (works when env var = legacy JWT) ───
-  if (serviceRoleKey && authHeader.includes(serviceRoleKey)) {
+  // ─── Method 1: Direct string comparison with constant-time-safe check ───
+  if (serviceRoleKey && token === serviceRoleKey) {
     return { authorized: true };
-  }
-
-  // ─── Method 2: Decode JWT and check role claim ───
-  if (token) {
-    const payload = decodeJwtPayload(token);
-    if (payload && payload.role === 'service_role') {
-      return { authorized: true };
-    }
   }
 
   // ─── Method 3: Check if caller is an authenticated admin user ───

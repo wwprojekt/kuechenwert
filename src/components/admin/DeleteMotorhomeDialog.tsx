@@ -70,37 +70,42 @@ export function DeleteMotorhomeDialog({
       }
 
       // 3. Delete photo records (cascade should handle this, but be explicit)
-      await supabase
+      const { error: photosError } = await supabase
         .from("motorhome_photos")
         .delete()
         .eq("motorhome_id", motorhomeId);
+      if (photosError) throw new Error(`Fotos konnten nicht gelöscht werden: ${photosError.message}`);
 
       // 4. Get related auctions
-      const { data: auctions } = await supabase
+      const { data: auctions, error: auctionsQueryError } = await supabase
         .from("auctions")
         .select("id")
         .eq("motorhome_id", motorhomeId);
+      if (auctionsQueryError) throw new Error(`Auktionen konnten nicht abgefragt werden: ${auctionsQueryError.message}`);
 
       // 5. Delete bids for related auctions
       if (auctions && auctions.length > 0) {
         const auctionIds = auctions.map((a) => a.id);
-        await supabase
+        const { error: bidsError } = await supabase
           .from("bids")
           .delete()
           .in("auction_id", auctionIds);
+        if (bidsError) throw new Error(`Gebote konnten nicht gelöscht werden: ${bidsError.message}`);
       }
 
       // 6. Delete auctions
-      await supabase
+      const { error: auctionsError } = await supabase
         .from("auctions")
         .delete()
         .eq("motorhome_id", motorhomeId);
+      if (auctionsError) throw new Error(`Auktionen konnten nicht gelöscht werden: ${auctionsError.message}`);
 
       // 7. Delete appointments
-      await supabase
+      const { error: appointmentsError } = await supabase
         .from("appointments")
         .delete()
         .eq("motorhome_id", motorhomeId);
+      if (appointmentsError) throw new Error(`Termine konnten nicht gelöscht werden: ${appointmentsError.message}`);
 
       // 8. Finally, delete the motorhome
       const { error } = await supabase

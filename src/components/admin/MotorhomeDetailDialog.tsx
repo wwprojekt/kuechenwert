@@ -132,7 +132,7 @@ export function MotorhomeDetailDialog({
   };
 
   const formatPrice = (price: number | null) => {
-    if (!price) return "—";
+    if (price == null) return "—";
     return new Intl.NumberFormat("de-DE", {
       style: "currency",
       currency: "EUR",

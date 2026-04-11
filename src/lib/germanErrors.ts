@@ -110,7 +110,7 @@ const API_ERROR_MAP: Record<string, string> = {
   '42501': 'Sie haben keine Berechtigung für diese Aktion.',
   '42P01': 'Ein interner Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
   'PGRST116': 'Der angeforderte Eintrag wurde nicht gefunden.',
-  'PGRST301': 'Zu viele Ergebnisse. Bitte verfeinern Sie Ihre Suche.',
+  'PGRST301': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   
   // Netzwerk-Fehler
   'Failed to fetch': 'Verbindungsproblem. Bitte versuchen Sie es erneut. Falls das Problem bestehen bleibt, prüfen Sie Ihre Internetverbindung.',

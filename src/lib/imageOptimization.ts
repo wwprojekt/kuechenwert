@@ -201,7 +201,7 @@ class ImageOptimizer {
           }
         },
         mimeType,
-        format === 'jpeg' ? quality : quality / 100
+        quality > 1 ? quality / 100 : quality
       );
     });
   }

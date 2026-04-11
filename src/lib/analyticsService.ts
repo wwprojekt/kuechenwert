@@ -67,8 +67,9 @@ class AnalyticsService {
     // Generate session ID
     this.sessionId = this.generateSessionId();
     
-    // Listen for consent changes
-    window.addEventListener('consent-updated', this.handleConsentUpdate.bind(this));
+    // Bind once so we can remove the same reference later
+    this.handleConsentUpdate = this.handleConsentUpdate.bind(this);
+    window.addEventListener('consent-updated', this.handleConsentUpdate);
     
     // Start flush interval (every 30 seconds)
     this.flushInterval = setInterval(() => this.flushQueues(), 30000);
@@ -362,7 +363,7 @@ class AnalyticsService {
     if (this.flushInterval) {
       clearInterval(this.flushInterval);
     }
-    window.removeEventListener('consent-updated', this.handleConsentUpdate.bind(this));
+    window.removeEventListener('consent-updated', this.handleConsentUpdate);
   }
 }
 

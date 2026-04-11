@@ -177,12 +177,7 @@ export function UserEditDialog({
           .maybeSingle();
 
         if (existingApp && existingApp.status === "pending") {
-          // Already has a pending application – nothing to do
-          toast({
-            title: "Hinweis",
-            description: "Dieser Benutzer hat bereits einen offenen Händlerantrag.",
-          });
-          return;
+          throw new Error("Dieser Benutzer hat bereits einen offenen Händlerantrag.");
         }
 
         // 2. If there is an old rejected/approved application, delete it first

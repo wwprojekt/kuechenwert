@@ -111,7 +111,7 @@ export function AdminNotificationBell() {
             <div className="p-1">
               {activeItems.map((item) => (
                 <Link
-                  key={item.path}
+                  key={`${item.path}-${item.label}`}
                   to={item.path}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted transition-colors"

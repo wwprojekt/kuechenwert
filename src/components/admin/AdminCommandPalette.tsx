@@ -66,19 +66,15 @@ function useQuickSearchData(query: string) {
           .limit(5),
         supabase
           .from("auctions")
-          .select("id, status, motorhome:motorhomes(manufacturer, model)")
+          .select("id, status, motorhome:motorhomes!inner(manufacturer, model)")
+          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'motorhomes' })
           .limit(5),
       ]);
-
-      const auctionsFiltered = (auctionRes.data || []).filter((a: any) => {
-        const vehicle = `${a.motorhome?.manufacturer || ""} ${a.motorhome?.model || ""}`.toLowerCase();
-        return vehicle.includes(query.toLowerCase());
-      });
 
       return {
         motorhomes: mhRes.data || [],
         profiles: profileRes.data || [],
-        auctions: auctionsFiltered,
+        auctions: auctionRes.data || [],
       };
     },
     enabled: query.length >= 2,

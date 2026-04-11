@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 
 export interface DealerApplication {
   id: string;
@@ -43,6 +44,8 @@ export function useDealerPending() {
     queryKey: ['dealerApplicationStatus', user?.id],
     queryFn: async (): Promise<DealerApplication | null> => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
       const { data } = await supabase
         .from('dealer_applications')
         .select('id, status, company_name, company_address, company_city, company_postal_code, contact_person_name, phone, submitted_at, reviewed_at, rejection_reason, legal_form, country')

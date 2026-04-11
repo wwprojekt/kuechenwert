@@ -6,6 +6,7 @@ import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminDateFilter } from "@/components/admin/AdminDateFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -772,6 +773,9 @@ export default function AdminLeads() {
   const { data: wizardSessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ["adminWizardSessions"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("wizard_sessions")
         .select("*")
@@ -813,6 +817,9 @@ export default function AdminLeads() {
   const { data: existingSellerData = { ids: [], emails: [] } } = useQuery({
     queryKey: ["existingSellerUserIds"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { ids: [], emails: [] };
+
       // Hole alle Seller-IDs die bereits mindestens ein Motorhome haben
       const { data: motorhomes, error: mError } = await supabase
         .from("motorhomes")
@@ -864,6 +871,8 @@ export default function AdminLeads() {
 
     // Markiere alle gefundenen Sessions als "already_customer"
     const markSessions = async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
       for (const session of sessionsToMark) {
         try {
           await supabase
@@ -1232,6 +1241,8 @@ export default function AdminLeads() {
 
   const markAsCalled = useMutation({
     mutationFn: async (sessionId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("wizard_sessions")
         .update({ admin_called_at: new Date().toISOString() })
@@ -1246,6 +1257,8 @@ export default function AdminLeads() {
 
   const updateAdminNotes = useMutation({
     mutationFn: async ({ sessionId, notes }: { sessionId: string; notes: string }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("wizard_sessions")
         .update({ admin_notes: notes })
@@ -1260,6 +1273,8 @@ export default function AdminLeads() {
 
   const markAsAbandoned = useMutation({
     mutationFn: async (sessionId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("wizard_sessions")
         .update({ status: "abandoned" })
@@ -1322,6 +1337,8 @@ export default function AdminLeads() {
 
   const deleteWizardSessions = useMutation({
     mutationFn: async (ids: string[]) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("wizard_sessions")
         .delete()
@@ -1461,6 +1478,8 @@ export default function AdminLeads() {
   // ---- Disposition Mutations ----
   const updateWizardDisposition = useMutation({
     mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("wizard_sessions")
         .update({ disposition } as any)
@@ -1598,9 +1617,9 @@ export default function AdminLeads() {
     setDetailDialogOpen(true);
     // Mark as viewed
     if (!session.is_viewed) {
-      supabase.from("wizard_sessions").update({ is_viewed: true }).eq("id", session.id).then(() => {
+      ensureValidRLSSession().then(valid => { if (!valid) return; supabase.from("wizard_sessions").update({ is_viewed: true }).eq("id", session.id).then(() => {
         queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
-      });
+      }); });
     }
   };
 
@@ -1954,6 +1973,8 @@ export default function AdminLeads() {
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={async () => {
+                  const sessionValid = await ensureValidRLSSession();
+                  if (!sessionValid) return;
                   const ids = Array.from(selectedSessionIds);
                   for (const id of ids) {
                     await supabase.from("wizard_sessions").update({ admin_called_at: new Date().toISOString() } as any).eq("id", id);

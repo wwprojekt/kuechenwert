@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 export type AuditAction =
   | "login"
@@ -47,6 +48,9 @@ export function useAuditLog() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
 
       await supabase.from("audit_logs" as any).insert({
         user_id: user.id,

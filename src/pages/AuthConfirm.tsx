@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import PageLayout from "@/components/PageLayout";
 
 type VerifyType = "signup" | "recovery" | "invite" | "magiclink" | "email_change" | "email";
@@ -121,6 +122,9 @@ const AuthConfirm = () => {
               if (!existingMotorhomes || existingMotorhomes.length === 0) {
                 console.log("No motorhomes found for confirmed user, checking wizard sessions...");
                 
+                const sessionValid = await ensureValidRLSSession();
+                if (!sessionValid) return;
+
                 // Look for wizard sessions with this user's email that have been converted
                 const { data: wizardSession } = await supabase
                   .from("wizard_sessions")

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -138,10 +139,6 @@ export default function AdminQuestions() {
     setIsSubmitting(true);
 
     try {
-      // Get current session for auth header
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Keine aktive Sitzung");
-
       const vehicleTitle = selectedQuestion.motorhome
         ? `${selectedQuestion.motorhome.manufacturer} ${selectedQuestion.motorhome.model}`
         : "Fahrzeug";
@@ -161,7 +158,7 @@ export default function AdminQuestions() {
       `;
 
       // Send email via send-admin-email edge function
-      const { data: emailData, error: emailError } = await supabase.functions.invoke("send-admin-email", {
+      const { data: emailData, error: emailError } = await invokeWithAuth("send-admin-email", {
         body: {
           to: selectedQuestion.questioner_email,
           subject: `Antwort auf Ihre Frage zum ${vehicleTitle}`,
@@ -169,7 +166,7 @@ export default function AdminQuestions() {
           recipient_name: selectedQuestion.questioner_name || undefined,
           reply_to_message_id: selectedQuestion.id,
           reply_to_message_type: "vehicle_question",
-          plain_answer: answer.trim(), // Reine Admin-Antwort ohne E-Mail-Kontext für DB-Speicherung
+          plain_answer: answer.trim(),
         },
       });
 

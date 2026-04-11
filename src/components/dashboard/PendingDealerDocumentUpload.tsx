@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { optimizeImage } from "@/lib/imageOptimization";
 import {
   Card,
@@ -138,8 +139,6 @@ const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif'];
 const MAX_FILE_SIZE_IMAGE = 50 * 1024 * 1024; // 50 MB (will be auto-compressed)
 const MAX_FILE_SIZE_PDF = 25 * 1024 * 1024; // 25 MB
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -180,6 +179,9 @@ export default function PendingDealerDocumentUpload({
   } = useQuery({
     queryKey: ["pendingDealerDocs", dealerApplicationId],
     queryFn: async (): Promise<LegalDocument[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("legal_documents")
         .select(
@@ -266,33 +268,18 @@ export default function PendingDealerDocumentUpload({
 
       setUploadProgress(30);
 
-      // Get the user's JWT token for authenticated upload
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error(tr.docNotLoggedIn);
-      }
-
-      // Call the edge function with user JWT
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/dealer-document-upload`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: formData,
-        }
-      );
+      const { data: result, error: invokeError } = await invokeWithAuth('dealer-document-upload', {
+        body: formData,
+      });
 
       setUploadProgress(80);
 
-      const result = await response.json();
+      if (invokeError) {
+        throw new Error(invokeError.message || tr.docUploadFailed);
+      }
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || tr.docUploadFailed);
+      if (!(result as any)?.success) {
+        throw new Error((result as any)?.error || tr.docUploadFailed);
       }
 
       setUploadProgress(100);
@@ -307,6 +294,10 @@ export default function PendingDealerDocumentUpload({
         queryKey: ["adminDealerDetail"],
       });
     } catch (error: any) {
+      if (error instanceof SessionExpiredError) {
+        toast.error(tr.docNotLoggedIn);
+        return;
+      }
       logger.error("Document upload error:", error);
       toast.error(error.message || tr.docUploadFailed);
     } finally {
@@ -322,6 +313,9 @@ export default function PendingDealerDocumentUpload({
 
   const handleDelete = async (doc: LegalDocument) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { error } = await supabase
         .from("legal_documents")
         .delete()

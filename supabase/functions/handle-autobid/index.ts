@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 /**
  * Edge Function: handle-autobid
@@ -28,8 +29,12 @@ Deno.serve(async (req) => {
     return handleCorsPreflightRequest(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
+  const auth = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!auth.authorized) return auth.response;
+
   try {
-    // Parse and validate request body with Zod
     const rawBody = await req.json();
     const validationResult = AutobidRequestSchema.safeParse(rawBody);
 

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,9 @@ export default function AdminAuditLog() {
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["adminAuditLogs"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("audit_logs" as any)
         .select("*")
@@ -106,6 +110,9 @@ export default function AdminAuditLog() {
   const { data: profiles } = useQuery({
     queryKey: ["auditLogProfiles"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, email");

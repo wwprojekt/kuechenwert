@@ -35,6 +35,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useEffect } from "react";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 /**
  * Dashboard Overview – role-aware.
@@ -100,6 +101,8 @@ export default function DashboardOverview() {
     queryKey: ["dashboardProfile", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
       const { data } = await supabase
         .from("profiles")
         .select("customer_number, company_name, first_name, last_name")
@@ -115,6 +118,8 @@ export default function DashboardOverview() {
     queryKey: ["pendingWizardSession", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
       const { data } = await supabase
         .from("wizard_sessions")
         .select("id, status, form_data, created_at, customer_name")

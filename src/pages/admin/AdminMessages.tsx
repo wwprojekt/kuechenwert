@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -79,6 +80,9 @@ export default function AdminMessages() {
 
   const fetchMessages = async () => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       // Fetch messages
       const { data: messagesData, error: messagesError } = await supabase
         .from("support_messages")

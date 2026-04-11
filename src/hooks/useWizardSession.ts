@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import type { WizardFormData } from "./useWizardForm";
 
 const ANONYMOUS_ID_KEY = "caravanwert_anonymous_id";
@@ -106,15 +107,18 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
         if (user) {
           // Authenticated users can query directly via RLS (user_id = auth.uid())
-          const { data } = await supabase
-            .from("wizard_sessions")
-            .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
-            .eq("user_id", user.id)
-            .eq("status", "in_progress")
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          existingSession = data;
+          const sessionValid = await ensureValidRLSSession();
+          if (sessionValid) {
+            const { data } = await supabase
+              .from("wizard_sessions")
+              .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
+              .eq("user_id", user.id)
+              .eq("status", "in_progress")
+              .order("updated_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            existingSession = data;
+          }
         }
 
         if (!existingSession) {
@@ -155,10 +159,13 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           if (Object.keys(updatePayload).length > 0) {
             if (user) {
               // Authenticated users update directly
-              await supabase
-                .from("wizard_sessions")
-                .update(updatePayload)
-                .eq("id", existingSession.id);
+              const updateSessionValid = await ensureValidRLSSession();
+              if (updateSessionValid) {
+                await supabase
+                  .from("wizard_sessions")
+                  .update(updatePayload)
+                  .eq("id", existingSession.id);
+              }
             } else {
               // Anonymous users update via secure RPC
               await supabase.rpc("update_wizard_session_by_anonymous_id", {
@@ -268,6 +275,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
           if (user) {
             // Authenticated users update directly via RLS
+            const saveSessionValid = await ensureValidRLSSession();
+            if (!saveSessionValid) return;
             const { error } = await supabase
               .from("wizard_sessions")
               .update(updatePayload)
@@ -338,6 +347,8 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         if (Object.keys(updatePayload).length > 0) {
           if (user) {
             // Authenticated user: direct update via RLS
+            const contactSessionValid = await ensureValidRLSSession();
+            if (!contactSessionValid) return;
             const { error } = await supabase
               .from("wizard_sessions")
               .update(updatePayload)
@@ -377,13 +388,16 @@ export const useWizardSession = (): UseWizardSessionReturn => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        await supabase
-          .from("wizard_sessions")
-          .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", sessionId);
+        const completeSessionValid = await ensureValidRLSSession();
+        if (completeSessionValid) {
+          await supabase
+            .from("wizard_sessions")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", sessionId);
+        }
       } else {
         const anonymousId = getAnonymousId();
         await supabase.rpc("update_wizard_session_by_anonymous_id", {

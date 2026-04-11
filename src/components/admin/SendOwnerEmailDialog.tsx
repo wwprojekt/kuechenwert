@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import {
   Mail,
@@ -169,7 +170,7 @@ export function SendOwnerEmailDialog({
         })
         .join("\n");
 
-      const { data, error } = await supabase.functions.invoke("send-admin-email", {
+      const { data, error } = await invokeWithAuth("send-admin-email", {
         body: {
           to: seller.email,
           subject: subject,

@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 // ============================================================================
 // User Badge Counts Hook
@@ -45,6 +46,8 @@ function useUserBadges() {
     queryKey: ['userSidebarBadges', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
 
       const [
         messagesRes,

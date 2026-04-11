@@ -34,6 +34,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import {
   Loader2,
   UserPlus,
@@ -101,13 +102,16 @@ export function DealerCreateDialog({
 
   const createDealerMutation = useMutation({
     mutationFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       // Validate required fields
       if (!formData.email?.trim()) throw new Error("E-Mail ist erforderlich");
       if (!formData.company_name?.trim()) throw new Error("Firmenname ist erforderlich");
       if (!formData.contact_person_name?.trim()) throw new Error("Ansprechpartner ist erforderlich");
 
       // Step 1: Create auth user via admin-create-user Edge Function
-      const { data: createUserResult, error: createUserError } = await supabase.functions.invoke(
+      const { data: createUserResult, error: createUserError } = await invokeWithAuth(
         "admin-create-user",
         {
           body: {

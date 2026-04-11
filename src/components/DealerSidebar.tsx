@@ -38,6 +38,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { SiteLogo } from "@/components/SiteLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useDealerPending } from "@/hooks/useDealerPending";
 
 // ============================================================================
@@ -51,6 +52,8 @@ function useDealerBadges() {
     queryKey: ['dealerSidebarBadges', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
 
       const [
         activeAuctionsRes,

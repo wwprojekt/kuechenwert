@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
 
 // ─── Base64URL utilities ─────────────────────────────────────────────────────
 
@@ -126,6 +127,9 @@ async function encryptPayload(
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return handleCorsPreflightRequest(req);
+
+  const auth = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!auth.authorized) return auth.response;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

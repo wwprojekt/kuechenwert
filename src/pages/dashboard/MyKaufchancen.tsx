@@ -334,6 +334,11 @@ export default function MyKaufchancen() {
     e.stopPropagation();
     setRespondingOfferId(offer.id);
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) {
+        showSessionExpired('/dashboard/kaufchancen');
+        return;
+      }
       const { error } = await supabase
         .from('post_auction_offers')
         .update({

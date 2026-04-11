@@ -6,6 +6,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { logger } from './logger';
 
 export interface CommissionTier {
@@ -183,6 +184,9 @@ class CommissionCalculatorService {
     calculation: CommissionCalculation
   ): Promise<void> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from('commission_calculations')
         .insert({

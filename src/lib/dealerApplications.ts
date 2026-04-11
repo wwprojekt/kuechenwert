@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithAuth, ensureValidRLSSession } from '@/lib/sessionGuard';
 
 export interface DealerApplicationData {
   id: string;
@@ -39,6 +40,9 @@ export interface DealerApplicationData {
  * Fetch all dealer applications (admin only)
  */
 export async function fetchDealerApplications(): Promise<DealerApplicationData[]> {
+  const sessionValid = await ensureValidRLSSession();
+  if (!sessionValid) return [];
+
   // Check current user and admin status
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -101,6 +105,9 @@ export async function fetchDealerApplications(): Promise<DealerApplicationData[]
  * Approve dealer application
  */
 export async function approveDealerApplication(applicationId: string): Promise<void> {
+  const sessionValid = await ensureValidRLSSession();
+  if (!sessionValid) throw new Error("Session abgelaufen");
+
   // Get application details first
     const { data: application, error: fetchError } = await supabase
       .from('dealer_applications')
@@ -134,7 +141,7 @@ export async function approveDealerApplication(applicationId: string): Promise<v
   // Send approval email - don't fail the whole operation if email fails
   try {
     if (profile?.email) {
-      await supabase.functions.invoke('send-dealer-notification', {
+      await invokeWithAuth('send-dealer-notification', {
         body: {
           email: profile.email,
           name: profile.first_name && profile.last_name 
@@ -154,6 +161,9 @@ export async function approveDealerApplication(applicationId: string): Promise<v
  * Reject dealer application
  */
 export async function rejectDealerApplication(applicationId: string, reason: string): Promise<void> {
+  const sessionValid = await ensureValidRLSSession();
+  if (!sessionValid) throw new Error("Session abgelaufen");
+
   // Get current user for reviewed_by
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -195,7 +205,7 @@ export async function rejectDealerApplication(applicationId: string, reason: str
   // Send rejection email - don't fail the whole operation if email fails
   try {
     if (profile?.email) {
-      await supabase.functions.invoke('send-dealer-notification', {
+      await invokeWithAuth('send-dealer-notification', {
         body: {
           email: profile.email,
           name: profile.first_name && profile.last_name 
@@ -216,6 +226,9 @@ export async function rejectDealerApplication(applicationId: string, reason: str
  * Delete dealer application (for rejected/unwanted applications)
  */
 export async function deleteDealerApplication(applicationId: string): Promise<void> {
+  const sessionValid = await ensureValidRLSSession();
+  if (!sessionValid) throw new Error("Session abgelaufen");
+
   const { error } = await supabase
     .from('dealer_applications')
     .delete()

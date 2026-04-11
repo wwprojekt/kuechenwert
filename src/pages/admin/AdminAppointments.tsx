@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, User, DollarSign, Key, CheckCircle2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -52,6 +53,9 @@ const AdminAppointments = () => {
 
   const fetchAppointments = async () => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const query = supabase
         .from('appointments')
         .select(`
@@ -95,6 +99,9 @@ const AdminAppointments = () => {
 
   const generateReleasePin = async (appointmentId: string) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { data, error } = await supabase.rpc('generate_release_pin');
       if (error) throw error;
 
@@ -121,6 +128,9 @@ const AdminAppointments = () => {
 
   const updateAppointmentStatus = async (appointmentId: string, status: string) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { error } = await supabase
         .from('appointments')
         .update({ status })
@@ -140,6 +150,9 @@ const AdminAppointments = () => {
 
   const updatePaymentStatus = async (appointmentId: string, paymentStatus: string) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { error } = await supabase
         .from('appointments')
         .update({ payment_status: paymentStatus })

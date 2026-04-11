@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -246,6 +247,9 @@ export default function AdminPostAuctionOffers() {
   const { data: offers = [], isLoading } = useQuery({
     queryKey: ["adminPostAuctionOffers"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("post_auction_offers")
         .select("*")
@@ -314,6 +318,10 @@ export default function AdminPostAuctionOffers() {
     queryKey: ["adminOfferProfiles", allProfileIds],
     queryFn: async () => {
       if (allProfileIds.length === 0) return {};
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return {};
+
       const { data } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, company_name, email, customer_number, phone")
@@ -375,6 +383,8 @@ export default function AdminPostAuctionOffers() {
 
   const deleteOffers = useMutation({
     mutationFn: async (ids: string[]) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error } = await supabase
         .from("post_auction_offers")
         .delete()
@@ -395,6 +405,8 @@ export default function AdminPostAuctionOffers() {
   // ---- Load Kaufchance Detail Data ----
 
   const loadKaufchanceDetail = useCallback(async (auction: AuctionInfo) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setKaufchanceDetailLoading(true);
     setSelectedKaufchanceAuction(auction);
     setKaufchanceDetailOpen(true);
@@ -470,7 +482,7 @@ export default function AdminPostAuctionOffers() {
   const handleAdminAcceptOffer = async (offerId: string) => {
     setAdminActionLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('accept-kaufchance-offer', {
+      const { data, error } = await invokeWithAuth('accept-kaufchance-offer', {
         body: { offerId },
       });
       if (error) throw error;
@@ -489,6 +501,8 @@ export default function AdminPostAuctionOffers() {
   };
 
   const handleAdminRejectOffer = async (offerId: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setAdminActionLoading(true);
     try {
       // Lade Offer-Daten vor dem Update für die Benachrichtigung
@@ -541,6 +555,8 @@ export default function AdminPostAuctionOffers() {
       toast({ title: 'Fehler', description: 'Bitte gültigen Betrag eingeben.', variant: 'destructive' });
       return;
     }
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setAdminActionLoading(true);
     try {
       // Lade Offer-Daten vor dem Update für die Benachrichtigung
@@ -619,6 +635,8 @@ export default function AdminPostAuctionOffers() {
   };
 
   const handleEndKaufchance = async (auctionId: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setEndingKaufchance(auctionId);
     try {
       const { data: auctionData, error: auctionFetchError } = await supabase
@@ -695,6 +713,8 @@ export default function AdminPostAuctionOffers() {
   // neuer Mindestpreis. Alte Bids und Offers werden archiviert/gelöscht.
   const handleBackToAuction = async () => {
     if (!backToAuctionAuctionId) return;
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     const auctionId = backToAuctionAuctionId;
     setBackToAuctionLoading(auctionId);
     try {
@@ -794,6 +814,8 @@ export default function AdminPostAuctionOffers() {
       return;
     }
 
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setAdminOfferLoading(true);
     try {
       const expiresAt = new Date();

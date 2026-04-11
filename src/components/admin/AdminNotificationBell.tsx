@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Link } from "react-router-dom";
 import { Bell, UserPlus, Mail, MessageCircle, Building2, FileWarning, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ export function useAdminNotificationCounts() {
   return useQuery({
     queryKey: ["adminNotificationCounts"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       const [
         wizardRes, leadsRes, valuationRes, supportRes, contactRes,
         dealerRes, questionsRes, unreadEmailsRes, reviewsRes,

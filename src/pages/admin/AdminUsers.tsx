@@ -5,6 +5,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,9 @@ export default function AdminUsers() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("profiles")
         .select(`
@@ -133,6 +137,9 @@ export default function AdminUsers() {
 
   const toggleSuspendMutation = useMutation({
     mutationFn: async ({ userId, suspend }: { userId: string; suspend: boolean }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -164,23 +171,7 @@ export default function AdminUsers() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Call admin-delete-user Edge Function to completely remove user
-      // This deletes from auth.users, profiles, user_roles, and dealer_applications
-
-      // Ensure session is fresh before calling Edge Function
-      const { data: sessionData } = await supabase.auth.getSession();
-      let token = sessionData?.session?.access_token;
-
-      if (!token) {
-        // Try to refresh the session
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          throw new Error("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.");
-        }
-        token = refreshData.session.access_token;
-      }
-
-      const response = await supabase.functions.invoke("admin-delete-user", {
+      const response = await invokeWithAuth("admin-delete-user", {
         body: { userId },
       });
 
@@ -188,7 +179,7 @@ export default function AdminUsers() {
         throw new Error(response.error.message || "Benutzer konnte nicht gelöscht werden");
       }
 
-      const result = response.data;
+      const result = response.data as any;
       if (result?.error) {
         throw new Error(result.error);
       }

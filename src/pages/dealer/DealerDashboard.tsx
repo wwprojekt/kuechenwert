@@ -43,6 +43,7 @@ import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -130,6 +131,8 @@ const DealerDashboard = () => {
     queryKey: ["dealerStats", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
 
       const [bidsRes, soldMotorhomesRes, commissionsRes] = await Promise.all([
         supabase

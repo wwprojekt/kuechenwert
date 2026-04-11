@@ -49,7 +49,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
-import { withSessionRetry, invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
@@ -223,6 +223,8 @@ export default function ListingDetail() {
   // ── Kaufchance: Angebote für den Seller laden ──
   const loadKaufchanceOffers = async () => {
     if (!resolvedAuction?.id || resolvedAuction?.status !== 'kaufchance') return;
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setKaufchanceLoading(true);
     try {
       // Kein buyer-Join: Verkäufer sieht anonymisierte Bieter ("Bieter 1", "Bieter 2" etc.)
@@ -272,6 +274,9 @@ export default function ListingDetail() {
   };
 
   const handleSellerRejectOffer = async (offerId: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
     setRespondingOfferId(offerId);
     try {
       const { error } = await supabase
@@ -294,6 +299,9 @@ export default function ListingDetail() {
   };
 
   const handleSellerCounterOffer = async (offerId: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
     const amountStr = counterOfferAmounts[offerId];
     const message = counterOfferMessages[offerId] || '';
     const amount = parseFloat(amountStr);

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -82,6 +83,9 @@ export const AppointmentBookingModal = ({
 
     setLoading(true);
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const appointmentDateTime = new Date(selectedDate);
       const [hours, minutes] = selectedTime.split(':');
       appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -136,7 +140,7 @@ export const AppointmentBookingModal = ({
 
       // Send confirmation email with correct payload matching Edge Function interface
       try {
-        await supabase.functions.invoke('send-appointment-confirmation', {
+        await invokeWithAuth('send-appointment-confirmation', {
           body: {
             email: user?.email,
             name: userName,

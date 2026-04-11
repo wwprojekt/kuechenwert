@@ -9,8 +9,8 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { invokeWithAuth, SessionExpiredError } from '@/lib/sessionGuard';
 import { 
   Sparkles, 
   Wand2, 
@@ -63,7 +63,7 @@ export const AIDescriptionGenerator = ({
     setIsGenerating(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-ai-description', {
+      const { data, error } = await invokeWithAuth('generate-ai-description', {
         body: {
           manufacturer: formData.manufacturer,
           model: formData.model,
@@ -85,7 +85,7 @@ export const AIDescriptionGenerator = ({
             has_garage: formData.has_garage,
           },
           additionalEquipment: formData.additional_equipment,
-        },
+        } as Record<string, unknown>,
       });
 
       if (error) {
@@ -111,6 +111,14 @@ export const AIDescriptionGenerator = ({
       }
 
     } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        toast({
+          title: 'Sitzung abgelaufen',
+          description: 'Bitte melden Sie sich erneut an',
+          variant: 'destructive',
+        });
+        return;
+      }
       logger.error('AI description generation error:', error);
       toast({
         title: 'Fehler bei der KI-Generierung',

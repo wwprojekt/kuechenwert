@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, MessageSquare } from "lucide-react";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession } from "@/lib/sessionGuard";
 
 interface PostAuctionOfferDialogProps {
   auctionId: string;
@@ -65,6 +65,9 @@ export function PostAuctionOfferDialog({
     setIsSubmitting(true);
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       // Validate auction is still in kaufchance status and not expired
       const { data: auction, error: auctionError } = await supabase
         .from('auctions')

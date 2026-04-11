@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithAuth, ensureValidRLSSession } from '@/lib/sessionGuard';
 import { logger } from './logger';
 
 export interface InvoiceData {
@@ -68,6 +69,9 @@ class InvoiceGeneratorService {
    */
   async createAuctionInvoice(auctionId: string, dealerId: string): Promise<string> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       // Use the database function to create invoice
       const { data, error } = await supabase
         .rpc('create_auction_invoice', {
@@ -100,6 +104,9 @@ class InvoiceGeneratorService {
    */
   async generateInvoicePDF(invoiceId: string): Promise<string> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       // Fetch invoice with related data
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -336,13 +343,15 @@ class InvoiceGeneratorService {
    */
   async sendInvoiceEmail(invoiceId: string): Promise<void> {
     try {
-      const { data: _data, error } = await supabase.functions.invoke('send-invoice-email', {
-        body: { invoiceId }
+      const { data: _data, error } = await invokeWithAuth('send-invoice-email', {
+        body: { invoiceId },
       });
 
       if (error) throw error;
 
       // Mark invoice as sent
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       await supabase
         .from('invoices')
         .update({ 
@@ -366,6 +375,9 @@ class InvoiceGeneratorService {
     paymentReference?: string
   ): Promise<void> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const now = new Date().toISOString();
       
       // Get invoice details first
@@ -415,6 +427,9 @@ class InvoiceGeneratorService {
    */
   async recordPayment(payment: PaymentRecord): Promise<{ newStatus: string; amountPaid: number }> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { invoiceId, amount, paymentMethod, reference, notes, processedBy } = payment;
 
       // Get current invoice
@@ -487,6 +502,8 @@ class InvoiceGeneratorService {
    */
   async getInvoicePaymentHistory(invoiceId: string): Promise<any[]> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data, error } = await supabase
         .from('dealer_payment_history')
         .select('*')
@@ -505,6 +522,8 @@ class InvoiceGeneratorService {
    * Get dealer invoices
    */
   async getDealerInvoices(dealerId: string): Promise<InvoiceData[]> {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return [];
     const { data, error } = await supabase
       .from('invoices')
       .select('*')
@@ -523,6 +542,8 @@ class InvoiceGeneratorService {
    * Get overdue invoices (includes pending and partial)
    */
   async getOverdueInvoices(): Promise<InvoiceData[]> {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return [];
     const { data, error } = await supabase
       .from('invoices')
       .select(`
@@ -553,6 +574,15 @@ class InvoiceGeneratorService {
     outstandingAmount: number;
   }> {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return {
+        totalInvoices: 0,
+        paidInvoices: 0,
+        partialInvoices: 0,
+        overdueInvoices: 0,
+        totalRevenue: 0,
+        outstandingAmount: 0,
+      };
       const { data: allInvoices, error } = await supabase
         .from('invoices')
         .select('payment_status, gross_amount, amount_paid, due_date');

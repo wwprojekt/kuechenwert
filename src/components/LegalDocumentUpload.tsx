@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 
 interface LegalDocumentUploadProps {
   dealerApplicationId: string;
@@ -118,6 +119,9 @@ export const LegalDocumentUpload = ({
     setUploadProgress(0);
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${dealerApplicationId}/${selectedDocumentType}_${Date.now()}.${fileExt}`;
@@ -186,6 +190,9 @@ export const LegalDocumentUpload = ({
 
   const handleDeleteDocument = async (documentId: string) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { error } = await supabase
         .from('legal_documents')
         .delete()

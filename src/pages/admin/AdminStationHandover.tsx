@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { CheckCircle2, AlertCircle, Key, DollarSign, FileText } from "lucide-react";
 
@@ -28,8 +29,8 @@ const AdminStationHandover = () => {
 
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-appointment-pin', {
-        body: { appointment_id: appointmentId }
+      const { data, error } = await invokeWithAuth('generate-appointment-pin', {
+        body: { appointment_id: appointmentId },
       });
 
       if (error) throw error;
@@ -59,6 +60,9 @@ const AdminStationHandover = () => {
       if (error) throw error;
 
       if (data.success) {
+        const sessionValid = await ensureValidRLSSession();
+        if (!sessionValid) { toast.error("Session abgelaufen"); return; }
+
         // Fetch appointment details
         const { data: appointment, error: fetchError } = await supabase
           .from('appointments')
@@ -90,7 +94,7 @@ const AdminStationHandover = () => {
 
     setIsProcessing(true);
     try {
-      const { data: _data, error } = await supabase.functions.invoke('complete-handover', {
+      const { data: _data, error } = await invokeWithAuth('complete-handover', {
         body: {
           appointment_id: appointmentId,
           payment_method: paymentMethod,
@@ -98,9 +102,9 @@ const AdminStationHandover = () => {
           protocol_data: {
             notes,
             completed_by: 'station_staff',
-            completed_at: new Date().toISOString()
-          }
-        }
+            completed_at: new Date().toISOString(),
+          },
+        },
       });
 
       if (error) throw error;

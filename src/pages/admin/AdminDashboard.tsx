@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Gavel, Car, Users, TrendingUp, Clock, UserPlus, Mail,
@@ -42,6 +43,9 @@ function useDashboardStats() {
   return useQuery({
     queryKey: ["adminDashboardStats"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { totalMotorhomes: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, totalLeads: 0, completedWizards: 0, totalValuations: 0 };
+
       const [
         motorhomesRes,
         auctionsRes,
@@ -82,6 +86,9 @@ function useActionItems() {
   return useQuery({
     queryKey: ["adminActionItems"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const items: ActionItem[] = [];
 
       // 1. Neue Wizard-Anfragen (abgeschlossen, noch nicht angesehen, ohne Disposition)
@@ -298,6 +305,9 @@ function useRevenueStats() {
   return useQuery({
     queryKey: ["adminRevenueStats"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { weekRevenue: 0, monthRevenue: 0, openInvoices: 0, overdueInvoices: 0, openAmount: 0, overdueAmount: 0 };
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 1).toISOString();
@@ -335,6 +345,9 @@ function useActivityTimeline() {
   return useQuery({
     queryKey: ["adminActivityTimeline"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const [bidsRes, leadsRes, emailsRes, dealerRes] = await Promise.all([
         supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(motorhome:motorhomes(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("wizard_sessions").select("id, customer_name, vehicle_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
@@ -395,6 +408,9 @@ function usePerformanceMetrics() {
   return useQuery({
     queryKey: ["adminPerformanceMetrics"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { totalLeads30d: 0, totalAuctions30d: 0, totalSold30d: 0, avgResponseHours: null, conversionRate: 0, avgSalePrice: 0 };
+
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       const [wizardRes, auctionRes, soldRes] = await Promise.all([
@@ -470,6 +486,9 @@ function useUrgentLeads() {
   return useQuery({
     queryKey: ["adminUrgentLeads"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data } = await supabase
         .from("wizard_sessions")
         .select("id, customer_name, customer_email, customer_phone, vehicle_summary, created_at, completed_at, status, is_viewed, resume_email_sent_at, admin_called_at, form_data")
@@ -495,6 +514,9 @@ function useRecentBids() {
   return useQuery({
     queryKey: ["adminRecentBids"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data } = await supabase
         .from("bids")
         .select(`
@@ -518,6 +540,9 @@ function useRecentlyChangedMotorhomes() {
   return useQuery({
     queryKey: ["adminRecentMotorhomes"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data } = await supabase
         .from("motorhomes")
         .select(`
@@ -565,6 +590,9 @@ function useUnreadCounts() {
   return useQuery({
     queryKey: ["adminUnreadCounts"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { openSupport: 0, newContacts: 0, newWizards: 0, newLeads: 0, newValuations: 0, pendingDealers: 0, openQuestions: 0, totalMessages: 0, totalAnfragen: 0 };
+
       const [
         supportRes,
         contactRes,

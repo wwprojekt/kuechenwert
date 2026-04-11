@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -197,6 +198,10 @@ export default function AdminReviews() {
         if (r.reviewer_id) allIds.add(r.reviewer_id);
       });
       if (allIds.size === 0) return {};
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return {};
+
       const { data } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, company_name, email")

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -148,7 +149,7 @@ export default function AdminAuctionDetail() {
   // Close auction mutation
   const closeAuctionMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke("close-auction", {
+      const { error } = await invokeWithAuth("close-auction", {
         body: { auctionId: id },
       });
       if (error) throw error;

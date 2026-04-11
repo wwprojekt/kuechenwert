@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from '@/lib/sessionGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -98,7 +99,7 @@ export default function AdminFinancials() {
       return;
     }
     // 3) Try to regenerate via edge function
-    const { error: genError } = await supabase.functions.invoke('generate-invoice-pdf', {
+    const { error: genError } = await invokeWithAuth('generate-invoice-pdf', {
       body: { invoiceId: invoice.id },
     });
     if (!genError) {
@@ -128,6 +129,9 @@ export default function AdminFinancials() {
   const { data: invoices, isLoading: invoicesLoading } = useQuery({
     queryKey: ['admin-invoices'],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -149,6 +153,9 @@ export default function AdminFinancials() {
   const { data: paymentHistory } = useQuery({
     queryKey: ['payment-history'],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from('dealer_payment_history')
         .select(`
@@ -168,6 +175,9 @@ export default function AdminFinancials() {
   const { data: overdueInvoices } = useQuery({
     queryKey: ['overdue-invoices'],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -190,6 +200,9 @@ export default function AdminFinancials() {
   const { data: dunningInvoices } = useQuery({
     queryKey: ['dunning-invoices'],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -229,7 +242,8 @@ export default function AdminFinancials() {
   // und dann die Invoice fehlschlägt, entstehen verwaiste Datensätze.
   const deleteInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      // 1) Invoice ZUERST löschen – kann durch DB-Trigger blockiert werden
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
       const { error: invoiceError } = await supabase
         .from('invoices')
         .delete()
@@ -291,8 +305,8 @@ export default function AdminFinancials() {
   // Send reminder mutation
   const sendReminderMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      const { data, error } = await supabase.functions.invoke('process-dunning', {
-        body: { invoiceId }
+      const { data, error } = await invokeWithAuth('process-dunning', {
+        body: { invoiceId },
       });
       if (error) throw error;
       return data;

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -74,6 +75,9 @@ export default function AdminAppointmentDetail() {
   const { data: appointment, isLoading, error } = useQuery({
     queryKey: ["adminAppointmentDetail", id],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       const { data, error } = await supabase
         .from("appointments")
         .select(`
@@ -123,6 +127,9 @@ export default function AdminAppointmentDetail() {
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("appointments")
         .update({ status: newStatus })
@@ -143,6 +150,9 @@ export default function AdminAppointmentDetail() {
   // Update payment status mutation
   const updatePaymentMutation = useMutation({
     mutationFn: async (paymentStatus: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("appointments")
         .update({ payment_status: paymentStatus })
@@ -164,7 +174,7 @@ export default function AdminAppointmentDetail() {
   const generatePinMutation = useMutation({
     mutationFn: async () => {
       setIsGeneratingPin(true);
-      const { data, error } = await supabase.functions.invoke("generate-appointment-pin", {
+      const { data, error } = await invokeWithAuth("generate-appointment-pin", {
         body: { appointmentId: id },
       });
 
@@ -187,7 +197,7 @@ export default function AdminAppointmentDetail() {
   // Complete handover mutation
   const completeHandoverMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke("complete-handover", {
+      const { error } = await invokeWithAuth("complete-handover", {
         body: { appointmentId: id },
       });
 

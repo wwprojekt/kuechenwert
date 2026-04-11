@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { approveDealerApplication, rejectDealerApplication, deleteDealerApplication } from "@/lib/dealerApplications";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -104,6 +105,9 @@ export default function AdminDealerDetail() {
   const { data: dealer, isLoading, error } = useQuery({
     queryKey: ["adminDealerDetail", id],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       // 1. Fetch the dealer application
       const { data, error } = await supabase
         .from("dealer_applications")
@@ -258,8 +262,8 @@ export default function AdminDealerDetail() {
       let emailConfirmed = true;
       if (data.user_id) {
         try {
-          const { data: authCheck } = await supabase.functions.invoke('get-dealer-auth-status', {
-            body: { userId: data.user_id }
+          const { data: authCheck } = await invokeWithAuth('get-dealer-auth-status', {
+            body: { userId: data.user_id },
           });
           if (authCheck && typeof authCheck.emailConfirmed === 'boolean') {
             emailConfirmed = authCheck.emailConfirmed;
@@ -341,6 +345,9 @@ export default function AdminDealerDetail() {
   // Suspend dealer mutation
   const suspendMutation = useMutation({
     mutationFn: async (suspend: boolean) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -366,6 +373,9 @@ export default function AdminDealerDetail() {
   // Verify document mutation
   const verifyDocMutation = useMutation({
     mutationFn: async ({ docId, verified }: { docId: string; verified: boolean }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("legal_documents")
         .update({
@@ -390,6 +400,9 @@ export default function AdminDealerDetail() {
   // Add note to document mutation
   const addDocNoteMutation = useMutation({
     mutationFn: async ({ docId, notes }: { docId: string; notes: string }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("legal_documents")
         .update({ notes })
@@ -578,8 +591,8 @@ export default function AdminDealerDetail() {
                 className="border-amber-400 text-amber-700 hover:bg-amber-100"
                 onClick={async () => {
                   try {
-                    await supabase.functions.invoke('resend-confirmation-email', {
-                      body: { email: dealer.profile?.email }
+                    await invokeWithAuth('resend-confirmation-email', {
+                      body: { email: dealer.profile?.email },
                     });
                     toast.success("Bestätigungsmail erneut gesendet");
                   } catch {

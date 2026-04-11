@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
-import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useState } from "react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -104,6 +104,9 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
     setIsSubmitting(true);
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       if (actionType === "accept") {
         // Use the Edge Function for acceptance to trigger full purchase flow
         const { data: acceptResult, error: acceptError } = await invokeWithAuth('accept-kaufchance-offer', {

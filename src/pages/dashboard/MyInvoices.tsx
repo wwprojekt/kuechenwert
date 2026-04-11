@@ -18,6 +18,7 @@ import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, 
 import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useToast } from "@/hooks/use-toast";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -69,6 +70,9 @@ export default function MyInvoices() {
 
   const loadInvoices = useCallback(async () => {
     if (!user) return;
+
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
 
     try {
       const { data: profileData } = await supabase

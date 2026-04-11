@@ -26,6 +26,7 @@ import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@
 import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
@@ -61,6 +62,9 @@ const VerkaufenWizard = () => {
 
       // Load profile data for prefill (only if form fields are still empty)
       try {
+        const sessionValid = await ensureValidRLSSession();
+        if (!sessionValid) return;
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name, phone, address_street, address_zip, address_city, address_country')

@@ -1,12 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { buildEmailLayout, paragraph, button, detailRow, infoBox, greeting } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return handleCorsPreflightRequest(req);
   }
   const corsHeaders = getCorsHeaders(req);
+
+  const auth = await checkServiceRoleOrAdmin(req, corsHeaders);
+  if (!auth.authorized) return auth.response;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

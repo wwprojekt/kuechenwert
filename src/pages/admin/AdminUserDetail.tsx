@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -72,6 +73,9 @@ export default function AdminUserDetail() {
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["adminUserDetail", id],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       // Fetch user profile with roles
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -153,6 +157,9 @@ export default function AdminUserDetail() {
   // Suspend/Unsuspend user mutation
   const toggleSuspendMutation = useMutation({
     mutationFn: async (suspend: boolean) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("profiles")
         .update({

@@ -13,6 +13,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { translateError, getPageTitle, getGermanErrorMessage, type ErrorCategory, type ErrorSeverity } from './germanErrors';
 import { logger } from './logger';
 
@@ -254,6 +255,7 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
     }
 
     // Aktuellen Nutzer und Rolle ermitteln
+    await ensureValidRLSSession();
     const { data: { user } } = await supabase.auth.getUser();
     let userRole = 'anonymous';
     let userEmail: string | undefined;

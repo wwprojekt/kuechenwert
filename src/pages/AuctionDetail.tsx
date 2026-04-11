@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/errorLogService";
-import { getFreshAccessToken, isTokenValid, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
@@ -182,6 +182,8 @@ const AuctionDetail = () => {
   const { data: dealerPostalCode = null } = useQuery({
     queryKey: ['profilePostalCode', user?.id],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_zip, address_zip")
@@ -529,48 +531,19 @@ const AuctionDetail = () => {
 
      setIsSubmitting(true);
     try {
-      // Get a guaranteed fresh JWT token (validates token structure + expiry)
-      let accessToken = await getFreshAccessToken();
-      if (!accessToken) {
-        showSessionExpired(`/auktion/${id}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Call server-side Edge Function for secure instant buy – with 401 retry
-      let { data, error } = await supabase.functions.invoke('instant-buy', {
+      const { data, error } = await invokeWithAuth('instant-buy', {
         body: { auctionId: id },
-        headers: { Authorization: `Bearer ${accessToken}` },
       });
-
-      // Automatic retry on 401
-      if (error instanceof FunctionsHttpError && error.context?.status === 401) {
-        logger.warn('instant-buy: 401 on first attempt, retrying with fresh token...');
-        accessToken = await getFreshAccessToken();
-        if (accessToken) {
-          const retry = await supabase.functions.invoke('instant-buy', {
-            body: { auctionId: id },
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          data = retry.data;
-          error = retry.error;
-        }
-      }
 
       if (error) {
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
         if (error instanceof FunctionsHttpError) {
-          if (error.context?.status === 401) {
-            showSessionExpired(`/auktion/${id}`);
-            setIsSubmitting(false);
-            return;
-          }
           try {
-            const body = await error.context.json();
+            const body = await (error as FunctionsHttpError).context.json();
             if (body?.error) errorMsg = body.error;
           } catch {
             try {
-              const text = await error.context.text();
+              const text = await (error as FunctionsHttpError).context.text();
               if (text) errorMsg = text;
             } catch { /* use default */ }
           }
@@ -614,6 +587,10 @@ const AuctionDetail = () => {
         navigate('/kaufen', { replace: true });
       }, 2000);
     } catch (error: unknown) {
+      if (error instanceof SessionExpiredError) {
+        showSessionExpired(`/auktion/${id}`);
+        return;
+      }
       const germanMessage = handleBusinessError(error, 'AuctionDetail.InstantBuy');
       toast({
         title: "Kauf fehlgeschlagen",
@@ -683,15 +660,6 @@ const AuctionDetail = () => {
         }
       }
 
-      // Get a guaranteed fresh JWT token (validates token structure + expiry)
-      let accessToken = await getFreshAccessToken();
-      if (!accessToken) {
-        showSessionExpired(`/auktion/${id}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Place bid via edge function – with automatic retry on 401
       const bidBody = {
         auctionId: id,
         amount: amount,
@@ -699,43 +667,23 @@ const AuctionDetail = () => {
         maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
       };
 
-      let { data, error } = await supabase.functions.invoke('place-bid', {
-        body: bidBody,
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const { data, error } = await invokeWithAuth('place-bid', {
+        body: bidBody as Record<string, unknown>,
       });
-
-      // Automatic retry on 401: refresh token once more and try again
-      if (error instanceof FunctionsHttpError && error.context?.status === 401) {
-        logger.warn('place-bid: 401 on first attempt, retrying with fresh token...');
-        accessToken = await getFreshAccessToken();
-        if (accessToken) {
-          const retry = await supabase.functions.invoke('place-bid', {
-            body: bidBody,
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          data = retry.data;
-          error = retry.error;
-        }
-      }
 
       if (error) {
         let errorMsg = error.message || 'Gebot konnte nicht abgegeben werden';
         let serverMinimumBid: number | undefined;
         let serverCurrentBid: number | undefined;
         if (error instanceof FunctionsHttpError) {
-          if (error.context?.status === 401) {
-            showSessionExpired(`/auktion/${id}`);
-            setIsSubmitting(false);
-            return;
-          }
           try {
-            const body = await error.context.json();
+            const body = await (error as FunctionsHttpError).context.json();
             if (body?.error) errorMsg = body.error;
             if (body?.minimum_bid) serverMinimumBid = body.minimum_bid;
             if (body?.current_bid) serverCurrentBid = body.current_bid;
           } catch {
             try {
-              const text = await error.context.text();
+              const text = await (error as FunctionsHttpError).context.text();
               if (text) errorMsg = text;
             } catch { /* use default */ }
           }
@@ -829,6 +777,10 @@ const AuctionDetail = () => {
       setMaxAutobidAmount("");
       setEnableAutobid(false);
     } catch (error: unknown) {
+      if (error instanceof SessionExpiredError) {
+        showSessionExpired(`/auktion/${id}`);
+        return;
+      }
       const germanMessage = handleBusinessError(error, 'AuctionDetail.PlaceBid');
       toast({
         title: "Gebot fehlgeschlagen",

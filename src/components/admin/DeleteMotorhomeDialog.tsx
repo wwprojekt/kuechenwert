@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
 
@@ -40,6 +41,9 @@ export function DeleteMotorhomeDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       // 1. Get all photos for this motorhome
       const { data: photos } = await supabase
         .from("motorhome_photos")

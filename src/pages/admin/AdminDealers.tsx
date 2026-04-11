@@ -70,6 +70,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
 import { DealerCreateDialog } from "@/components/admin/DealerCreateDialog";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -164,6 +165,9 @@ export default function AdminDealers() {
   const { data: activeDealers, isLoading: isLoadingDealers } = useQuery({
     queryKey: ["activeDealers"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       // 1. Fetch approved dealer applications
       const { data: applicationsData, error: applicationsError } = await supabase
         .from("dealer_applications")
@@ -197,14 +201,12 @@ export default function AdminDealers() {
   useEffect(() => {
     const fetchAuthStatus = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
         const allUserIds = [
           ...(applications?.map(a => a.user_id) || []),
           ...(activeDealers?.map(d => d.user_id) || []),
         ].filter((id, i, arr) => arr.indexOf(id) === i);
         if (allUserIds.length === 0) return;
-        const res = await supabase.functions.invoke('get-dealer-auth-status', {
+        const res = await invokeWithAuth('get-dealer-auth-status', {
           body: { user_ids: allUserIds },
         });
         if (res.data?.data) {
@@ -228,6 +230,9 @@ export default function AdminDealers() {
         ...(activeDealers?.map(d => d.id) || []),
       ].filter((id, i, arr) => arr.indexOf(id) === i);
       if (allAppIds.length === 0) return {};
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return {};
 
       const { data, error } = await supabase
         .from("legal_documents")
@@ -419,17 +424,11 @@ export default function AdminDealers() {
     mutationFn: async ({ userId, dealerApplicationId }: { userId: string; dealerApplicationId?: string }) => {
       setResendingUserId(userId);
       
-      // Session explizit refreshen um sicherzustellen dass der JWT gültig ist
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !session) {
-        throw new Error('Sitzung abgelaufen. Bitte melden Sie sich erneut an.');
-      }
-      
-      const { data, error } = await supabase.functions.invoke('resend-confirmation-email', {
+      const { data, error } = await invokeWithAuth('resend-confirmation-email', {
         body: { user_id: userId, dealer_application_id: dealerApplicationId },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
     onSuccess: (data) => {
@@ -461,12 +460,7 @@ export default function AdminDealers() {
     }) => {
       setRequestingDocUserId(dealerApplicationId);
       
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !session) {
-        throw new Error('Sitzung abgelaufen. Bitte melden Sie sich erneut an.');
-      }
-      
-      const { data, error } = await supabase.functions.invoke('request-dealer-documents', {
+      const { data, error } = await invokeWithAuth('request-dealer-documents', {
         body: {
           dealer_application_id: dealerApplicationId,
           dealer_email: dealerEmail,
@@ -475,7 +469,7 @@ export default function AdminDealers() {
         },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
     onSuccess: (data) => {
@@ -499,6 +493,9 @@ export default function AdminDealers() {
 
   const suspendMutation = useMutation({
     mutationFn: async ({ dealerId, suspend }: { dealerId: string; suspend: boolean }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
       const { error } = await supabase
         .from("profiles")
         .update({

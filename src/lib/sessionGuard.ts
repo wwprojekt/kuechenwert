@@ -465,7 +465,7 @@ export class SessionExpiredError extends Error {
  */
 export async function invokeWithAuth(
   functionName: string,
-  options?: { body?: Record<string, unknown> }
+  options?: { body?: Record<string, unknown> | FormData }
 ): Promise<{ data: unknown; error: null } | { data: null; error: Error }> {
   // Step 1: Get a validated fresh token
   let accessToken = await getFreshAccessToken();

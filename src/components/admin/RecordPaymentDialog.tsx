@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
@@ -92,6 +93,8 @@ export function RecordPaymentDialog({
   const recordPaymentMutation = useMutation({
     mutationFn: async () => {
       if (!invoice || !user) throw new Error("Missing invoice or user");
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
 
       const paymentAmount = parseFloat(amount);
       if (isNaN(paymentAmount) || paymentAmount <= 0) {

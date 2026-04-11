@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import {
   CommandDialog,
   CommandEmpty,
@@ -51,6 +52,8 @@ function useQuickSearchData(query: string) {
     queryKey: ["adminQuickSearch", query],
     queryFn: async () => {
       if (!query || query.length < 2) return { motorhomes: [], profiles: [], auctions: [] };
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return { motorhomes: [], profiles: [], auctions: [] };
 
       const q = `%${query}%`;
       const [mhRes, profileRes, auctionRes] = await Promise.all([

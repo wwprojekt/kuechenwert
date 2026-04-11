@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -279,6 +280,9 @@ export default function AdminDealerStats() {
   const { data: dealers = [], isLoading: dealersLoading, refetch: refetchDealers } = useQuery({
     queryKey: ["adminDealerStatsApplications"],
     queryFn: async (): Promise<DealerApplication[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("dealer_applications")
         .select("id, user_id, company_name, company_city, status, created_at, contact_person_name, phone")
@@ -393,6 +397,9 @@ export default function AdminDealerStats() {
   const { data: invoiceStats = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ["adminDealerStatsInvoices"],
     queryFn: async (): Promise<InvoiceStats[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("invoices")
         .select("dealer_id, gross_amount, payment_status, amount_paid");
@@ -432,6 +439,9 @@ export default function AdminDealerStats() {
   const { data: favoriteStats = [], isLoading: favsLoading } = useQuery({
     queryKey: ["adminDealerStatsFavorites"],
     queryFn: async (): Promise<FavoriteStats[]> => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       const { data, error } = await supabase
         .from("user_favorites")
         .select("user_id");

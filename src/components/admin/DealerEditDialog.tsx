@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { openPrivateDocument } from "@/lib/storageUtils";
 import { logger } from "@/lib/logger";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { EU_COUNTRIES, getLegalFormsByCountry, getCountryName } from "@/lib/euCountries";
@@ -145,6 +146,9 @@ export function DealerEditDialog({
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!dealer?.id) throw new Error("No dealer ID");
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
 
       const { error } = await supabase
         .from("dealer_applications")

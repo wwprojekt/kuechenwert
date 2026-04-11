@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, Users, Car, Gavel, DollarSign, ArrowUpRight, ArrowDownRight, Eye, Globe, Clock, MousePointer } from "lucide-react";
@@ -14,6 +15,9 @@ export default function AdminAnalytics() {
   const { data: platformStats, isLoading: isLoadingPlatform } = useQuery({
     queryKey: ["adminPlatformStats"],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       // Fetch data in parallel
       const [usersRes, motorhomesRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact" }),

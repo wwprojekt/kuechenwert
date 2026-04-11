@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { trackEvent } from "@/lib/analyticsService";
 
 interface UseFavoritesResult {
@@ -30,6 +30,8 @@ export function useFavorites(): UseFavoritesResult {
     queryKey: favoritesQueryKey(user?.id),
     queryFn: async (): Promise<string[]> => {
       if (!user) return [];
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
       const { data, error } = await supabase
         .from("user_favorites")
         .select("motorhome_id")
@@ -61,6 +63,9 @@ export function useFavorites(): UseFavoritesResult {
     queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), old => [...(old || []), motorhomeId]);
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       await withSessionRetry(async () => {
         const { error } = await supabase.from("user_favorites").insert({
           user_id: user.id,
@@ -90,6 +95,9 @@ export function useFavorites(): UseFavoritesResult {
     queryClient.setQueryData<string[]>(favoritesQueryKey(user.id), old => (old || []).filter(id => id !== motorhomeId));
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       await withSessionRetry(async () => {
         const { error } = await supabase
           .from("user_favorites")

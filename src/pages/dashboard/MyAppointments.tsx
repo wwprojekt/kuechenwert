@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveData } from "@/hooks/useLiveData";
 import { toast } from "sonner";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import {
@@ -51,6 +52,9 @@ const MyAppointments = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchAppointments = useCallback(async () => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
     try {
       const { data, error } = await supabase
         .from('appointments')
@@ -76,6 +80,9 @@ const MyAppointments = () => {
 
   const cancelAppointment = async (appointmentId: string) => {
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { error } = await supabase
         .from('appointments')
         .update({ status: 'cancelled' })

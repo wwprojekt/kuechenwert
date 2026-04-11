@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle, Send } from "lucide-react";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { z } from "zod";
@@ -53,6 +53,9 @@ export default function MyMessages() {
 
   const loadMessages = useCallback(async () => {
     if (!user) return;
+
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
 
     try {
       const { data, error } = await supabase

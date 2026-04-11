@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { getCurrentPosition, Coordinates } from "@/lib/geolocation";
 
 interface UseUserLocationResult {
@@ -46,6 +47,8 @@ export function useUserLocation(): UseUserLocationResult {
   useEffect(() => {
     if (user && !location) {
       const loadFromProfile = async () => {
+        const sessionValid = await ensureValidRLSSession();
+        if (!sessionValid) return;
         const { data } = await supabase
           .from("profiles")
           .select("latitude, longitude")
@@ -76,6 +79,9 @@ export function useUserLocation(): UseUserLocationResult {
   const saveToProfile = async (coords: Coordinates) => {
     if (!user) return;
     
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
     await supabase
       .from("profiles")
       .update({

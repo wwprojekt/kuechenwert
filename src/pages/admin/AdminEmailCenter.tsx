@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -372,6 +373,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const fetchInbox = useCallback(async () => {
     setLoading(true);
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { setLoading(false); return; }
+
       const { data: emails } = await supabase
         .from("admin_emails")
         .select("*")
@@ -511,6 +515,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
   // Contact history
   const fetchContactHistory = async (email: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
     const { data } = await supabase
       .from("admin_emails")
       .select("*")
@@ -525,7 +532,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     if (!selectedItem || !replyContent.trim()) return;
     setIsReplying(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-admin-email', {
+      const { data, error } = await invokeWithAuth('send-admin-email', {
         body: {
           to: selectedItem.from_email,
           subject: `Re: ${selectedItem.subject}`,
@@ -552,6 +559,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   };
 
   const handleToggleStar = async (item: InboxItem) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     if (item.source === 'email') {
       await supabase.from('admin_emails').update({ is_starred: !item.is_starred }).eq('id', item.id);
       fetchInbox();
@@ -559,6 +568,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   };
 
   const handleMarkRead = async (item: InboxItem) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     if (item.source === 'email' && !item.is_read) {
       await supabase.from('admin_emails').update({ is_read: true, read_at: new Date().toISOString(), status: 'read' }).eq('id', item.id);
       fetchInbox();
@@ -566,6 +577,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   };
 
   const handleArchive = async (item: InboxItem) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     if (item.source === 'email') {
       await supabase.from('admin_emails').update({ is_archived: true }).eq('id', item.id);
       toast.success("Archiviert");
@@ -576,6 +589,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setIsDeleting(true);
     try {
       if (deleteTarget.source === 'email') {
@@ -614,6 +629,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   };
 
   const handleBulkDelete = async () => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     setIsDeleting(true);
     try {
       const toDelete = items.filter(i => selectedIds.has(itemKey(i)));
@@ -777,7 +794,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                     } else if (att.id && (orig as AdminEmail).resend_id) {
                       // Fetch fresh download URL from Resend API via Edge Function
                       try {
-                        const { data, error } = await supabase.functions.invoke('fetch-attachment-url', {
+                        const { data, error } = await invokeWithAuth('fetch-attachment-url', {
                           body: { emailId: (orig as AdminEmail).resend_id, attachmentId: att.id },
                         });
                         if (error) {
@@ -1310,6 +1327,8 @@ function ComposeTab() {
   const searchRecipients = async (query: string) => {
     setTo(query);
     if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     const { data } = await supabase
       .from("profiles")
       .select("id, email, first_name, last_name, company_name")
@@ -1338,7 +1357,7 @@ function ComposeTab() {
     if (!to || !subject || !bodyHtml) { toast.error("Bitte füllen Sie alle Pflichtfelder aus"); return; }
     setIsSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-admin-email', {
+      const { data, error } = await invokeWithAuth('send-admin-email', {
         body: {
           to,
           subject,
@@ -1639,7 +1658,7 @@ function BroadcastTab() {
     if (!selectedGroup) { setRecipientCount(null); return; }
     setLoadingCount(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-recipient-count', {
+      const { data, error } = await invokeWithAuth('get-recipient-count', {
         body: { group: selectedGroup },
       });
       if (error) throw error;
@@ -1665,7 +1684,7 @@ function BroadcastTab() {
     }
     setIsTesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-broadcast-email', {
+      const { data, error } = await invokeWithAuth('send-broadcast-email', {
         body: {
           subject,
           body_html: bodyHtml,
@@ -1686,6 +1705,8 @@ function BroadcastTab() {
 
   const checkDuplicate = async () => {
     if (!group || !subject) return;
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
     try {
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
@@ -1716,7 +1737,7 @@ function BroadcastTab() {
     setShowConfirm(false);
     setIsSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-broadcast-email', {
+      const { data, error } = await invokeWithAuth('send-broadcast-email', {
         body: {
           subject,
           body_html: bodyHtml,
@@ -2124,6 +2145,9 @@ function SentTab() {
 
   const fetchSent = async () => {
     setLoading(true);
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) { setLoading(false); return; }
+
     const query = supabase
       .from('admin_emails')
       .select('*')
@@ -2337,6 +2361,9 @@ function StatsTab() {
   const fetchStats = async () => {
     setLoading(true);
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { setLoading(false); return; }
+
       const now = new Date();
       const todayStr = now.toISOString().split('T')[0];
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -2687,6 +2714,9 @@ function SystemEmailsTab() {
   const fetchSystemEmails = useCallback(async () => {
     setLoading(true);
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { setLoading(false); return; }
+
       // Fetch all outbound emails that are NOT manual (single, reply, broadcast)
       const { data, error } = await supabase
         .from('admin_emails')

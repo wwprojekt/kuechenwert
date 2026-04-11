@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 interface Auction {
   id: string;
@@ -57,6 +58,8 @@ const DealerAuctions = () => {
   useEffect(() => {
     const fetchDealerPlz = async () => {
       if (!user) return;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_zip, address_zip")

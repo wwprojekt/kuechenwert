@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import {
   Dialog,
   DialogContent,
@@ -111,6 +112,9 @@ export function CreateSellerPenaltyDialog({
   const { data: sellers, isLoading: sellersLoading } = useQuery({
     queryKey: ["admin-sellers-for-penalty", sellerSearchQuery],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       let query = supabase
         .from("profiles")
         .select("id, first_name, last_name, email, company_name")
@@ -136,6 +140,9 @@ export function CreateSellerPenaltyDialog({
   const { data: preSelectedSeller } = useQuery({
     queryKey: ["admin-seller-profile", preSelectedSellerId],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, email, company_name")

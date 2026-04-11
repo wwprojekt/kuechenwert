@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,7 +149,7 @@ async function sendRelistNotification(motorhomeId: string, endTime: Date) {
     const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
     const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
 
-    const { data, error } = await supabase.functions.invoke("send-auction-notification", {
+    const { data, error } = await invokeWithAuth("send-auction-notification", {
       body: {
         email: seller.email,
         name: sellerName,
@@ -307,6 +308,9 @@ export default function AdminAuctions() {
   // ---- Handle ?create=motorhomeId URL parameter ----
   const createAuctionMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session expired");
+
       // Prüfe ob IRGENDEINE Auktion für dieses Motorhome existiert (egal welcher Status)
       const { data: existing } = await supabase
         .from("auctions")
@@ -484,7 +488,7 @@ export default function AdminAuctions() {
   // ---- Mutations ----
   const checkExpiredAuctionsMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('check-expired-auctions', {
+      const { data, error } = await invokeWithAuth('check-expired-auctions', {
         body: {},
       });
       if (error) throw error;
@@ -518,7 +522,7 @@ export default function AdminAuctions() {
 
   const closeAuctionMutation = useMutation({
     mutationFn: async (auctionId: string) => {
-      const { data, error } = await supabase.functions.invoke('close-auction', {
+      const { data, error } = await invokeWithAuth('close-auction', {
         body: { auctionId },
       });
       if (error) throw error;
@@ -582,6 +586,9 @@ export default function AdminAuctions() {
   // ---- Relist Auction (ended/cancelled -> active) ----
   const relistAuctionMutation = useMutation({
     mutationFn: async (auction: { id: string; motorhome_id: string }) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session expired");
+
       const { data: mh } = await supabase
         .from('motorhomes')
         .select('postal_code, city')

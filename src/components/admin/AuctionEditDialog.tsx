@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import {
   Dialog,
   DialogContent,
@@ -134,7 +135,7 @@ async function sendRelistNotificationFromDialog(motorhomeId: string) {
     endTime.setDate(endTime.getDate() + 7);
     const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
 
-    const { data, error } = await supabase.functions.invoke("send-auction-notification", {
+    const { data, error } = await invokeWithAuth("send-auction-notification", {
       body: {
         email: seller.email,
         name: sellerName,

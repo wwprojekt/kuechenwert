@@ -9,7 +9,7 @@ import { translateError } from "@/lib/germanErrors";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData } from "@/lib/clickIdService";
 import { trackEvent } from "@/lib/analyticsService";
-import { ensureValidSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
+import { ensureValidSession, ensureValidRLSSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
@@ -879,6 +879,9 @@ export const useWizardForm = () => {
         if (formData.customerPhone) profileUpdate.phone = formData.customerPhone;
 
         if (Object.keys(profileUpdate).length > 0) {
+          const sessionValid = await ensureValidRLSSession();
+          if (!sessionValid) return;
+
           await supabase
             .from('profiles')
             .update(profileUpdate)

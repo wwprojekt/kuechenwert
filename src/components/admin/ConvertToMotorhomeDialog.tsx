@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import {
   Loader2,
   Car,
@@ -258,6 +259,8 @@ export function ConvertToMotorhomeDialog({
   const convertMutation = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error("Keine Session ausgewählt");
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
 
       // Validate required fields
       const manufacturer = String(formData.manufacturer || "").trim();
@@ -284,7 +287,7 @@ export function ConvertToMotorhomeDialog({
         const lastName = nameParts.slice(1).join(" ") || "";
 
         // Use Supabase admin function to create user
-        const { data: createUserData, error: createUserError } = await supabase.functions.invoke(
+        const { data: createUserData, error: createUserError } = await invokeWithAuth(
           "admin-create-user",
           {
             body: {

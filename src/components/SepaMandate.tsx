@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CreditCard, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -110,6 +111,9 @@ export const SepaMandate = ({
     setIsSubmitting(true);
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       // Generate mandate reference
       const { data: mandateRef, error: refError } = await supabase
         .rpc('generate_sepa_reference');

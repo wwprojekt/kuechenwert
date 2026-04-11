@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Building, Save, MapPin, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 export default function UserProfile() {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ export default function UserProfile() {
     queryKey: ["userProfile", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
 
       const { data, error } = await supabase
         .from("profiles")
@@ -98,6 +101,9 @@ export default function UserProfile() {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!user) throw new Error("Not authenticated");
+
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
 
       // Convert empty strings to null for fields with CHECK constraints
       const cleanedData = {

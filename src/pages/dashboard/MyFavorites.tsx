@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, Car, Calendar, Gauge, Trash2 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { CountryFlag } from "@/components/CountryFlag";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -51,6 +52,9 @@ export default function MyFavorites() {
 
   const loadFavorites = useCallback(async () => {
     if (!user) return;
+
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
 
     try {
       const { data, error } = await supabase

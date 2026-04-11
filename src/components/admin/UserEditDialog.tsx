@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft, MapPin } from "lucide-react";
 import { logger } from "@/lib/logger";
 
@@ -139,6 +140,8 @@ export function UserEditDialog({
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("No user ID");
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
 
       // Update profile including address fields
       const { error: profileError } = await supabase
@@ -222,7 +225,7 @@ export function UserEditDialog({
 
         // 5. Send notification email to the user (fire-and-forget)
         try {
-          await supabase.functions.invoke("send-dealer-notification", {
+          await invokeWithAuth("send-dealer-notification", {
             body: {
               email: user.email,
               name: contactName,

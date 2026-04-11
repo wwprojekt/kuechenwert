@@ -714,6 +714,9 @@ export default function AdminLeads() {
   const [wrongNumberValueDialogOpen, setWrongNumberValueDialogOpen] = useState(false);
   const [wrongNumberValueInput, setWrongNumberValueInput] = useState("");
   const [wrongNumberEmailTarget, setWrongNumberEmailTarget] = useState<DispositionItem | null>(null);
+  // Disposition email (no_answer, considering, done)
+  const [sendingDispositionEmail, setSendingDispositionEmail] = useState<string | null>(null);
+  const [dispositionEmailCounts, setDispositionEmailCounts] = useState<Record<string, { count: number; lastSent: string | null }>>({});
   // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
@@ -1152,6 +1155,41 @@ export default function AdminLeads() {
     setWrongNumberValueDialogOpen(false);
     if (wrongNumberEmailTarget) {
       handleSendWrongNumberEmail(wrongNumberEmailTarget, value);
+    }
+  };
+
+  // ---- Disposition Email (no_answer, considering, done) ----
+
+  const handleSendDispositionEmail = async (item: DispositionItem, dispositionType: string) => {
+    if (!item.email) {
+      toast({ title: "Keine E-Mail", description: "Dieser Lead hat keine E-Mail-Adresse.", variant: "destructive" });
+      return;
+    }
+    const itemKey = `${dispositionType}-${item.id}`;
+    setSendingDispositionEmail(itemKey);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-disposition-email", {
+        body: { lead_id: item.id, lead_type: item.type, disposition_type: dispositionType },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "E-Mail gesendet",
+        description: `${DISPOSITION_LABELS[dispositionType]}-E-Mail wurde an ${data?.recipient || item.email} gesendet. (${data?.email_count || 1}x)`,
+      });
+      // Update local count cache
+      setDispositionEmailCounts(prev => ({
+        ...prev,
+        [itemKey]: { count: data?.email_count || 1, lastSent: new Date().toISOString() },
+      }));
+    } catch (err: any) {
+      toast({
+        title: "Fehler beim Versenden",
+        description: err.message || "E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingDispositionEmail(null);
     }
   };
 
@@ -2586,6 +2624,7 @@ export default function AdminLeads() {
           const Icon = DISPOSITION_ICONS[dispositionKey];
           const label = DISPOSITION_LABELS[dispositionKey];
           const isWrongNumber = dispositionKey === "wrong_number";
+          const hasEmailButton = ["wrong_number", "no_answer", "considering", "done"].includes(dispositionKey);
           return (
             <TabsContent key={dispositionKey} value={dispositionKey}>
               <Card>
@@ -2598,7 +2637,7 @@ export default function AdminLeads() {
                       <TableHead>Fahrzeug</TableHead>
                       <TableHead>Quelle</TableHead>
                       <TableHead>Datum</TableHead>
-                      {isWrongNumber && <TableHead>E-Mail</TableHead>}
+                      {hasEmailButton && <TableHead>E-Mail</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Aktionen</TableHead>
                     </TableRow>
@@ -2606,7 +2645,7 @@ export default function AdminLeads() {
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isWrongNumber ? 8 : 7} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={hasEmailButton ? 8 : 7} className="text-center py-12 text-muted-foreground">
                           <Icon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                           Keine Leads mit Status "{label}"
                         </TableCell>
@@ -2685,6 +2724,44 @@ export default function AdminLeads() {
                                     {item.wrong_number_email_count > 0 && (
                                       <Badge variant={maxReached ? "destructive" : "secondary"} className="text-xs">
                                         {item.wrong_number_email_count}/3 gesendet
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </TableCell>
+                          )}
+                          {!isWrongNumber && hasEmailButton && (
+                            <TableCell>
+                              {(() => {
+                                const itemKey = `${dispositionKey}-${item.id}`;
+                                const cached = dispositionEmailCounts[itemKey];
+                                const isSending = sendingDispositionEmail === itemKey;
+                                const DISPOSITION_BUTTON_COLORS: Record<string, { active: string; label: string }> = {
+                                  no_answer: { active: "bg-amber-600 hover:bg-amber-700", label: "Nachfass-E-Mail senden" },
+                                  considering: { active: "bg-blue-600 hover:bg-blue-700", label: "Erinnerungs-E-Mail senden" },
+                                  done: { active: "bg-green-600 hover:bg-green-700", label: "Abschluss-E-Mail senden" },
+                                };
+                                const btnConfig = DISPOSITION_BUTTON_COLORS[dispositionKey] || { active: "bg-primary hover:bg-primary/90", label: "E-Mail senden" };
+                                return (
+                                  <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={(e) => { e.stopPropagation(); handleSendDispositionEmail(item, dispositionKey); }}
+                                      disabled={isSending || !item.email}
+                                      className={`text-xs ${!item.email ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed" : btnConfig.active}`}
+                                      title={!item.email ? "Keine E-Mail-Adresse vorhanden" : btnConfig.label}
+                                    >
+                                      {isSending ? (
+                                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Sende...</>
+                                      ) : (
+                                        <><Send className="w-3 h-3 mr-1" /> E-Mail senden</>
+                                      )}
+                                    </Button>
+                                    {cached && cached.count > 0 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {cached.count}/3 gesendet
                                       </Badge>
                                     )}
                                   </div>

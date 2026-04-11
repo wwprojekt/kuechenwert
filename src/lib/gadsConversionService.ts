@@ -121,7 +121,8 @@ export const CONVERSION_LABELS = {
   // *** PRIMÄRE CONVERSIONS (für Kampagnen-Optimierung / Gebotsoptimierung) ***
   // WICHTIG: Nur feuern wenn ECHTE Kontaktdaten (Email/Telefon) erfasst wurden!
   
-  // Bewertung abgeschlossen: Wizard komplett durchlaufen (nur in trackWizardCompleted)
+  // LEGACY – wird NICHT mehr gefeuert (erzeugte doppelte Conversion mit WIZARD_ABGESCHLOSSEN)
+  // In Google Ads auf SEKUNDÄR setzen oder deaktivieren!
   BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpdD',
   
   // Kontaktformular: /kontakt Formular abgesendet
@@ -359,16 +360,16 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
 
 /**
  * Wizard vollständig abgeschlossen (Schritt 5: Kontaktdaten abgesendet)
- * PRIMÄRE CONVERSION: Wizard Abgeschlossen + Bewertung abgeschlossen
+ * PRIMÄRE CONVERSION: Nur WIZARD_ABGESCHLOSSEN (eine Conversion pro Lead)
+ *
+ * BEWERTUNG_ABGESCHLOSSEN wurde entfernt – es erzeugte eine doppelte Conversion
+ * (2 × 5€ = 10€ statt 5€ pro Wizard-Lead), was die Smart-Bidding-Optimierung
+ * verzerrt hat. Wizard-Leads und Wertrechner-Leads sollen gleichwertig sein.
  */
 export async function trackWizardCompleted(vehicleInfo: string, transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('wizard');
   // Google Ads: Primäre Conversion – Wizard Abgeschlossen (mit beacon transport)
   await sendConversion(CONVERSION_LABELS.WIZARD_ABGESCHLOSSEN, 5.0, txId);
-
-  // Google Ads: Bestehende Conversion – Bewertung abgeschlossen (mit beacon transport)
-  // Eigene Transaction ID damit diese Conversion separat dedupliziert wird
-  await sendConversion(CONVERSION_LABELS.BEWERTUNG_ABGESCHLOSSEN, 5.0, `${txId}_bewertung`);
 
   // GA4 Zielgruppe 'Wizard-Abbrecher' verwendet wizard_complete als Ausschluss
   safeGtag('event', 'wizard_complete', {
@@ -431,9 +432,8 @@ export function trackBeratungRequested(pagePath: string): void {
 
 /**
  * Nutzer hat sich registriert.
- * NUR sign_up Event – KEINE BEWERTUNG_ABGESCHLOSSEN Conversion!
- * BEWERTUNG_ABGESCHLOSSEN wird ausschließlich in trackWizardCompleted() gefeuert.
- * Händler-Registrierungen und normale Registrierungen sind KEINE Bewertungen.
+ * NUR sign_up Event – KEINE Conversion!
+ * Registrierungen sind kein Lead (erst Wizard-Abschluss = Lead).
  */
 export function trackUserRegistered(method: string): void {
   const txId = generateTransactionId('signup');

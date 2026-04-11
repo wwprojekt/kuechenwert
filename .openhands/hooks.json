@@ -1,0 +1,15 @@
+{
+  "hooks": [
+    {
+      "type": "Stop",
+      "command": "bash .openhands/hooks/build_check.sh",
+      "description": "Erzwingt erfolgreichen Build und TypeScript-Check bevor der Agent aufhören darf"
+    },
+    {
+      "type": "PreToolUse",
+      "tools": ["CmdRunAction"],
+      "command": "bash .openhands/hooks/block_dangerous.sh",
+      "description": "Blockiert gefährliche Befehle wie rm -rf, DROP TABLE, git push --force"
+    }
+  ]
+}

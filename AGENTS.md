@@ -5,14 +5,82 @@
 - Supabase project ID: `zcrwqxsyptjwkuxfacvq` (eu-west-1)
 - Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
 
-## Build & Dev
+## Do
+- Use React functional components with hooks
+- Use TanStack React Query v5 for server state
+- Use Zod for all form validation
+- Use `ensureValidRLSSession()` before every RLS query
+- Use `invokeWithAuth()` for all authenticated Edge Function calls
+- Use shadcn/ui components from `src/components/ui/`
+- Use the shared email template `_shared/email-builder.ts` for all emails
+- Use `SECURITY INVOKER` for all new database functions
+- Keep components small and focused (< 200 lines)
+- Keep diffs small and focused on one feature
+
+## Don't
+- Do NOT call React Hooks after an early return
+- Do NOT use `getSession()` directly for RLS queries (returns expired tokens)
+- Do NOT access `profiles.role` (does not exist – use `user_roles` table)
+- Do NOT use `verify_jwt: true` for Edge Functions with custom auth
+- Do NOT hard-code colors – use Tailwind classes
+- Do NOT add new heavy dependencies without checking existing alternatives
+- Do NOT use `rm -rf` on project directories
+- Do NOT use `git push --force`
+
+## Commands
+
+### File-scoped (PREFERRED – faster and cheaper)
+```bash
+# TypeScript-Check einzelne Datei
+npx tsc --noEmit src/path/to/file.tsx
+
+# Lint einzelne Datei
+npx eslint --fix src/path/to/file.tsx
+
+# Test einzelne Datei
+npx vitest run src/path/to/file.test.tsx
+
+# Format einzelne Datei
+npx prettier --write src/path/to/file.tsx
+```
+
+### Project-wide (use sparingly)
 ```bash
 npm run dev          # Vite dev server (Port 8080)
 npm run build        # Production build via Vite → dist/
 npm run test:run     # Vitest single run
 npm run test:e2e     # Playwright E2E tests
-npm run lint         # ESLint
+npm run lint         # ESLint full project
 ```
+
+Note: Always lint, test, and typecheck updated files. Use project-wide build only before commit or when explicitly requested.
+
+## When Stuck
+- Ask a clarifying question or propose a short plan
+- Do NOT push large speculative changes without confirmation
+- If a fix attempt fails twice, stop and explain the problem instead of trying a third approach
+- Check the TODO list in `project.md` before starting any task
+
+## Commit Checklist
+Before every commit:
+1. `npx tsc --noEmit` – all green (no TypeScript errors)
+2. `npx eslint --fix` on changed files – all green
+3. `npm run build` – successful production build
+4. Diff is small and focused on one feature/fix
+5. Update the TODO list in `project.md` (mark completed tasks)
+6. Commit message format: `feat(scope): short description` or `fix(scope): short description`
+
+## Good Examples (copy these patterns)
+- **Functional component with hooks**: `src/pages/AuctionDetail.tsx`
+- **Form with Zod validation**: `src/components/wizard/steps/VehicleInfoStep.tsx`
+- **Edge Function with error handling**: `supabase/functions/place-bid/index.ts`
+- **Authenticated API call**: `src/lib/sessionGuard.ts` (`invokeWithAuth`)
+- **Realtime subscription**: `src/hooks/useAuctionRealtime.ts`
+
+## Bad Examples (avoid these patterns)
+- **Class-based components**: None currently, but do not introduce them
+- **Direct getSession() for RLS**: Any code using `supabase.auth.getSession()` before RLS queries without `ensureValidRLSSession()`
+- **God components**: Components over 300 lines – split into smaller sub-components
 
 ## Key Architecture Patterns
 
@@ -92,6 +160,17 @@ npm run lint         # ESLint
 
 ### Realtime
 - Pattern for live updates: Edge Function returns ID + data → Frontend optimistic update → Realtime dedup via ID-Set (ref) → Auto-cleanup after timeout
+
+## Project Structure
+- `src/App.tsx` – Main router with all routes
+- `src/pages/` – 40+ page components
+- `src/components/` – UI, Admin, Dashboard, Wizard, Skeletons
+- `src/hooks/` – 15+ custom hooks
+- `src/lib/` – 25+ utility modules (sessionGuard, vehicle-data, etc.)
+- `src/contexts/` – AuthContext, SettingsContext
+- `src/integrations/supabase/` – Client + TypeScript types
+- `supabase/functions/` – 57 Edge Functions
+- `supabase/migrations/` – 65+ migrations
 
 ## Vehicle Data Stats
 - **Wohnmobil**: 100 manufacturers, 1221 models

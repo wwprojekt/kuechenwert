@@ -123,9 +123,9 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
                 <button
                   type="button"
                   onClick={() => removePhoto(index)}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 md:p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-2 md:p-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4 md:w-3 md:h-3" />
                 </button>
                 {index === 0 && (
                   <span className="absolute bottom-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">

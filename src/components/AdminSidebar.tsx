@@ -371,7 +371,7 @@ export function AdminSidebar() {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start gap-3 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
           onClick={handleSignOut}
         >
           <LogOut className="w-5 h-5" />

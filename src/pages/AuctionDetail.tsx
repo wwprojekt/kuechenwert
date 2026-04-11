@@ -958,13 +958,13 @@ const AuctionDetail = () => {
                           <>
                             <button
                               onClick={() => setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1)}
-                              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             >
                               <ChevronRight className="w-5 h-5" />
                             </button>
@@ -1055,7 +1055,7 @@ const AuctionDetail = () => {
 
               {/* Comprehensive Vehicle Information */}
               <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                   <TabsTrigger value="overview">Übersicht</TabsTrigger>
                   <TabsTrigger value="technical">Technik</TabsTrigger>
                   <TabsTrigger value="features">Ausstattung</TabsTrigger>
@@ -1782,7 +1782,7 @@ const AuctionDetail = () => {
                               key={increment}
                               variant="outline"
                               size="sm"
-                              className="h-10 text-sm font-semibold hover:bg-primary/10 hover:border-primary/50 transition-all"
+                              className="h-11 text-sm font-semibold hover:bg-primary/10 hover:border-primary/50 transition-all"
                               onClick={() => {
                                 setBidAmount(rapidBidValue.toString());
                               }}

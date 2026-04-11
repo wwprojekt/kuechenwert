@@ -252,7 +252,7 @@ export default function AdminAuctionDetail() {
       icon={<Gavel className="w-6 h-6" />}
       actions={
         auction && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Bearbeiten
@@ -399,9 +399,9 @@ export default function AdminAuctionDetail() {
                   </Button>
                 }
               >
-                <div className="flex gap-6">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                   {/* Thumbnail */}
-                  <div className="w-32 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  <div className="w-full sm:w-32 h-40 sm:h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     {mainPhoto ? (
                       <img
                         src={mainPhoto.url}

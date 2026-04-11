@@ -130,17 +130,17 @@ export default function MyBids() {
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           {/* Filter Tabs */}
           <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full md:w-auto">
-            <TabsList className="grid grid-cols-4 w-full md:w-auto h-8">
-              <TabsTrigger value="all" className="text-xs px-2 py-1">
+            <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full md:w-auto h-auto">
+              <TabsTrigger value="all" className="text-xs sm:text-sm px-2 py-1.5">
                 Alle ({counts.all})
               </TabsTrigger>
-              <TabsTrigger value="active" className="text-xs px-2 py-1">
+              <TabsTrigger value="active" className="text-xs sm:text-sm px-2 py-1.5">
                 Aktiv ({counts.active})
               </TabsTrigger>
-              <TabsTrigger value="won" className="text-xs px-2 py-1">
+              <TabsTrigger value="won" className="text-xs sm:text-sm px-2 py-1.5">
                 Gewonnen ({counts.won})
               </TabsTrigger>
-              <TabsTrigger value="lost" className="text-xs px-2 py-1">
+              <TabsTrigger value="lost" className="text-xs sm:text-sm px-2 py-1.5">
                 Verloren ({counts.lost})
               </TabsTrigger>
             </TabsList>

@@ -371,7 +371,6 @@ const CookieBanner = () => {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={handleDeclineAll}
                 className="text-muted-foreground"
               >
@@ -380,14 +379,12 @@ const CookieBanner = () => {
               {showDetails && (
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={handleAcceptSelected}
                 >
                   Auswahl speichern
                 </Button>
               )}
               <Button
-                size="sm"
                 onClick={handleAcceptAll}
                 className="gradient-hero hover:shadow-glow"
               >

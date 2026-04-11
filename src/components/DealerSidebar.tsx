@@ -100,6 +100,8 @@ interface MenuItem {
   showCountBadge?: boolean;
   /** If true, this item remains accessible even when the account is locked (pending/rejected) */
   allowWhenLocked?: boolean;
+  /** If true, this item gets a special visual highlight in the sidebar */
+  highlight?: boolean;
 }
 
 interface MenuGroup {
@@ -112,7 +114,7 @@ const menuGroups: MenuGroup[] = [
     label: "Übersicht",
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
-      { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true },
+      { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true, highlight: true },
     ],
   },
   {
@@ -240,7 +242,9 @@ export function DealerSidebar() {
                           `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                             isActive
                               ? "bg-primary text-white shadow-sm"
-                              : "hover:bg-muted"
+                              : item.highlight
+                                ? "text-primary bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/20"
+                                : "hover:bg-muted"
                           }`
                         }
                       >
@@ -288,7 +292,7 @@ export function DealerSidebar() {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start gap-3 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
           onClick={handleSignOut}
         >
           <LogOut className="w-5 h-5" />

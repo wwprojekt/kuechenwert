@@ -173,7 +173,7 @@ const Login = () => {
                   className="h-12 text-base"
                 />
                 <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline py-2 -my-2">
                     Passwort vergessen?
                   </Link>
                 </div>

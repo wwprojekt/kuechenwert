@@ -558,7 +558,7 @@ export default function ListingDetail() {
       <Card className="border-2">
         <CardContent className="p-6">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
               <TabsTrigger value="basic">Basis</TabsTrigger>
               <TabsTrigger value="technical">Technik</TabsTrigger>
               <TabsTrigger value="dimensions">Maße</TabsTrigger>

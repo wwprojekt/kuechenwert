@@ -297,7 +297,7 @@ export function UserSidebar() {
           variant="ghost"
           className={`w-full ${
             collapsed ? "justify-center" : "justify-start"
-          } text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors`}
+          } text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors`}
           onClick={handleSignOut}
         >
           <LogOut className="w-4 h-4" />

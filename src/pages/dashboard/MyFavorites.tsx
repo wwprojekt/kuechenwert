@@ -222,11 +222,11 @@ export default function MyFavorites() {
                         </div>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          size="icon"
+                          className="h-9 w-9 text-muted-foreground hover:text-destructive"
                           onClick={(e) => handleRemove(e, favorite.motorhome_id)}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>

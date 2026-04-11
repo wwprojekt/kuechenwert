@@ -84,7 +84,7 @@ const Header = () => {
       </div>
 
       {/* Main Header */}
-      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm safe-top">
         <nav className="container flex h-20 items-center justify-between">
           <SiteLogo variant="icon-text" />
 
@@ -106,7 +106,7 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuItem asChild>
-                  <Link to="/verkaufen/wizard" className="cursor-pointer font-semibold text-primary">
+                  <Link to="/verkaufen/wizard" className="cursor-pointer font-semibold text-primary bg-primary/5 focus:bg-primary/10">
                     Jetzt verkaufen
                   </Link>
                 </DropdownMenuItem>
@@ -132,8 +132,10 @@ const Header = () => {
             </DropdownMenu>
             <Link 
               to="/kaufen" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/kaufen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
+              className={`text-sm font-semibold transition-smooth px-3 py-1.5 rounded-full ${
+                isActive('/kaufen') 
+                  ? 'bg-primary text-white shadow-sm' 
+                  : 'text-primary bg-primary/10 hover:bg-primary/15'
               }`}
             >
               Kaufen
@@ -273,7 +275,7 @@ const Header = () => {
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                     <LogOut className="h-4 w-4 mr-2" />
                     Abmelden
                   </DropdownMenuItem>
@@ -300,7 +302,7 @@ const Header = () => {
           <div className="lg:hidden flex items-center gap-1">
             {user && isDealer && <NotificationCenter />}
             <button
-              className="p-2"
+              className="p-2.5"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -319,7 +321,7 @@ const Header = () => {
             <div className="container py-4 flex flex-col gap-1">
               <Link
                 to="/verkaufen/wizard"
-                className="text-sm font-semibold transition-smooth py-3 text-primary"
+                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-primary text-white shadow-sm hover:bg-primary/90 transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Jetzt verkaufen
@@ -353,8 +355,10 @@ const Header = () => {
               </Link>
               <Link
                 to="/kaufen"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/kaufen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
+                className={`text-sm font-semibold transition-smooth py-2.5 px-4 rounded-lg ${
+                  isActive('/kaufen') 
+                    ? 'bg-primary text-white shadow-sm' 
+                    : 'text-primary bg-primary/10 hover:bg-primary/15'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -489,7 +493,7 @@ const Header = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
+                    className="w-full text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
                     onClick={handleSignOut}
                   >
                     <LogOut className="h-4 w-4 mr-2" />

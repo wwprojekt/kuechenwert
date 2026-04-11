@@ -245,7 +245,7 @@ export default function NotificationCenter() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs gap-1"
+                  className="h-9 text-xs gap-1"
                   onClick={markAllAsRead}
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
@@ -255,7 +255,7 @@ export default function NotificationCenter() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-9 w-9"
                 onClick={() => setIsOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -312,10 +312,10 @@ export default function NotificationCenter() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                          className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                           onClick={(e) => deleteNotification(notification.id, e)}
                         >
-                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                       </div>
                     </div>

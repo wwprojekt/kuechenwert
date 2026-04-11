@@ -264,7 +264,6 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
             {isSeller && offer.status === "pending" && (
               <div className="flex flex-wrap gap-2">
                 <Button
-                  size="sm"
                   className="bg-green-500 hover:bg-green-600"
                   onClick={() => {
                     setSelectedOffer(offer);
@@ -275,7 +274,6 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
                   Annehmen
                 </Button>
                 <Button
-                  size="sm"
                   variant="outline"
                   className="border-blue-500 text-blue-600 hover:bg-blue-50"
                   onClick={() => {
@@ -287,7 +285,6 @@ export function NegotiationThread({ offers, isSeller, onOfferUpdated }: Negotiat
                   Gegenangebot
                 </Button>
                 <Button
-                  size="sm"
                   variant="destructive"
                   onClick={() => {
                     setSelectedOffer(offer);

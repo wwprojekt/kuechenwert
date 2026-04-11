@@ -1140,7 +1140,7 @@ export default function AdminPostAuctionOffers() {
       )}
 
       {/* Table */}
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -1335,7 +1335,7 @@ export default function AdminPostAuctionOffers() {
                   </div>
                 ) : (
                   <Tabs defaultValue="overview" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                       <TabsTrigger value="overview">Übersicht</TabsTrigger>
                       <TabsTrigger value="bids">
                         Gebote ({kaufchanceBids.length})

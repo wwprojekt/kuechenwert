@@ -70,11 +70,11 @@ export function SiteLogo({
               alt={siteName}
               className={`${getIconSizeClass()} object-contain flex-shrink-0`}
             />
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold text-foreground leading-tight tracking-tight">
+            <div className="flex flex-col min-w-0">
+              <span className="text-2xl sm:text-3xl font-bold text-foreground leading-tight tracking-tight truncate">
                 {siteName}
               </span>
-              <span className="text-[10px] text-muted-foreground leading-tight font-medium whitespace-nowrap">
+              <span className="text-[10px] text-muted-foreground leading-tight font-medium truncate">
                 {siteTagline}
               </span>
             </div>

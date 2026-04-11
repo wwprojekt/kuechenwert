@@ -522,14 +522,14 @@ export const SearchAlerts = () => {
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleEditAlert(alert)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={() => deleteAlertMutation.mutate(alert.id)}
                     >
                       <Trash2 className="h-4 w-4" />

@@ -15,7 +15,7 @@ const Footer = () => {
   const [showCookieSettings, setShowCookieSettings] = useState(false);
 
   return (
-    <footer className="relative overflow-hidden">
+    <footer className="relative overflow-hidden safe-bottom">
       {/* Trust Section */}
       <div className="bg-gradient-to-b from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 border-t border-slate-200 dark:border-slate-700">
         <div className="container py-10">

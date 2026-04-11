@@ -39,7 +39,7 @@ export function FavoriteButton({ motorhomeId, variant = "icon", className }: Fav
       onClick={handleClick}
       disabled={isLoading}
       className={cn(
-        "p-2 rounded-full transition-all duration-200",
+        "p-2.5 rounded-full transition-all duration-200",
         isFav 
           ? "bg-red-500 text-white hover:bg-red-600" 
           : "bg-card/80 dark:bg-card/80 text-gray-600 dark:text-gray-400 hover:bg-card dark:hover:bg-card hover:text-red-500",

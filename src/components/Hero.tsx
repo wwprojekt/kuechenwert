@@ -40,8 +40,8 @@ const Hero = () => {
       <div className="container relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-fit lg:min-h-[75vh]">
           
-          {/* Left Column - Hero Text & Benefits (hidden on mobile, wizard shown first) */}
-          <div className="hidden lg:block space-y-6 lg:space-y-8 z-10">
+          {/* Left Column - Hero Text & Benefits */}
+          <div className="space-y-6 lg:space-y-8 z-10">
             {/* Badge */}
             <div className="inline-block animate-fade-in">
               <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm font-semibold text-primary shadow-sm">

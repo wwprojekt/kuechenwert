@@ -1286,7 +1286,7 @@ export default function AdminSettings() {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, _showApiKey: !formData._showApiKey })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground active:text-foreground"
                   >
                     {formData._showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

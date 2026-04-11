@@ -195,3 +195,7 @@ verify_jwt = false
 # --- Confirmation Email Resend ---
 [functions.resend-confirmation-email]
 verify_jwt = false
+
+# --- Disposition Follow-up Emails ---
+[functions.send-disposition-email]
+verify_jwt = false

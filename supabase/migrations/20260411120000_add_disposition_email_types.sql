@@ -19,14 +19,15 @@ CHECK (email_type = ANY (ARRAY[
   'auction_new_auction', 'auction_new_bid', 'auction_outbid',
   'auction_won', 'auction_lost', 'auction_auction_started',
   'auction_seller_sold', 'auction_seller_not_sold',
+  'auction_kaufchance_invite', 'auction_seller_kaufchance',
   'bid_confirmed', 'bid_outbid',
   'payment_confirmation', 'payment_reminder',
-  'invoice', 'inactivity', 'favorite_notification',
+  'invoice', 'inactivity', 'favorite_notification', 'favorite_price_change',
   'expert_valuation', 'registration_invite',
   'wrong_number_followup',
   -- NEW: Disposition follow-up email types
   'no_answer_followup', 'considering_followup', 'done_followup',
-  'purchase_inquiry_dealer', 'purchase_inquiry_customer',
+  'purchase_inquiry_dealer', 'purchase_inquiry_customer', 'purchase_contract',
   -- Dynamic types (lead notifications)
   'lead_admin_wertermittlung', 'lead_admin_wertrechner', 'lead_admin_wizard',
   'lead_admin_kontakt', 'lead_admin_dealer',

@@ -43,6 +43,7 @@ import {
   Percent,
   ArrowUpRight,
   Calendar,
+  Clock,
   Gavel,
   Scale
 } from 'lucide-react';

@@ -31,6 +31,7 @@ import {
   Mail,
   Phone,
   Trash2,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ import {
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
+import { CreateSellerPenaltyDialog } from "@/components/admin/CreateSellerPenaltyDialog";
 import { logger } from "@/lib/logger";
 
 export default function AdminAuctionDetail() {
@@ -71,6 +73,7 @@ export default function AdminAuctionDetail() {
   const queryClient = useQueryClient();
   const { logEvent } = useAuditLog();
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Fetch auction with all related data
   const { data: auction, isLoading, error } = useQuery({
@@ -563,13 +566,23 @@ export default function AdminAuctionDetail() {
                       </a>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(`/admin/users/${auction.motorhome?.seller?.id}`)}
-                  >
-                    Profil anzeigen
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => navigate(`/admin/users/${auction.motorhome?.seller?.id}`)}
+                    >
+                      Profil anzeigen
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowPenaltyDialog(true)}
+                      title="Vertragsstrafe erstellen (§ 8 Abs. 4 AGB)"
+                    >
+                      <Scale className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </DetailSection>
 
@@ -645,6 +658,17 @@ export default function AdminAuctionDetail() {
           auction={auction}
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
+        />
+      )}
+
+      {/* Seller Penalty Dialog */}
+      {auction && (
+        <CreateSellerPenaltyDialog
+          open={showPenaltyDialog}
+          onOpenChange={setShowPenaltyDialog}
+          preSelectedSellerId={auction.motorhome?.seller?.id}
+          preSelectedAuctionId={auction.id}
+          preSelectedMotorhomeId={auction.motorhome?.id}
         />
       )}
     </AdminDetailLayout>

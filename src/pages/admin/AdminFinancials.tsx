@@ -54,6 +54,7 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval 
 import { de } from 'date-fns/locale';
 import { getInvoiceStatistics } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
+import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
@@ -80,6 +81,8 @@ export default function AdminFinancials() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('invoices');
+  const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');
 
   // Open invoice PDF – use stored pdf_url or generate fresh signed URL
   const openInvoicePdf = async (invoice: any) => {
@@ -380,9 +383,13 @@ export default function AdminFinancials() {
       (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
       (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && new Date(invoice.due_date) < new Date());
     
+    const matchesType = typeFilter === 'all' ||
+      (typeFilter === 'commission' && (invoice.invoice_type === 'commission' || !invoice.invoice_type)) ||
+      (typeFilter === 'seller_penalty' && invoice.invoice_type === 'seller_penalty');
+
     const matchesDate = filterByDate(invoice);
     
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
   // Extended statistics
@@ -421,19 +428,29 @@ export default function AdminFinancials() {
             Komplette Finanzübersicht mit Rechnungs- und Zahlungsverwaltung
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-            queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
-            queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
-            queryClient.invalidateQueries({ queryKey: ['payment-history'] });
-          }}
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Aktualisieren
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setPenaltyDialogOpen(true)}
+          >
+            <Scale className="h-4 w-4 mr-2" />
+            Vertragsstrafe erstellen
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+              queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+              queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+              queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Aktualisieren
+          </Button>
+        </div>
       </div>
 
       {/* Extended Financial Statistics - Row 1 */}
@@ -617,6 +634,16 @@ export default function AdminFinancials() {
                     <SelectItem value="overdue">Überfällig</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Typen</SelectItem>
+                    <SelectItem value="commission">Provisionen</SelectItem>
+                    <SelectItem value="seller_penalty">Vertragsstrafen</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
                   <SelectTrigger className="w-44">
                     <SelectValue />
@@ -678,8 +705,16 @@ export default function AdminFinancials() {
                           <div className="flex items-center gap-6">
                             {/* Invoice Number + Customer */}
                             <div className="min-w-[160px]">
-                              <div className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => openInvoicePdf(invoice)}>
-                                {invoice.invoice_number}
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => openInvoicePdf(invoice)}>
+                                  {invoice.invoice_number}
+                                </span>
+                                {invoice.invoice_type === 'seller_penalty' && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    <Scale className="h-3 w-3 mr-0.5" />
+                                    Strafe
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {dealerName}
@@ -691,14 +726,30 @@ export default function AdminFinancials() {
                               )}
                             </div>
 
-                            {/* Vehicle */}
+                            {/* Vehicle / Penalty Reason */}
                             <div className="hidden lg:block min-w-[150px]">
-                              <div className="font-medium text-sm">
-                                {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
-                              </div>
+                              {invoice.invoice_type === 'seller_penalty' ? (
+                                <>
+                                  <div className="font-medium text-sm text-destructive">
+                                    {invoice.penalty_reason === 'anderweitiger_verkauf' ? 'Anderweitiger Verkauf' :
+                                     invoice.penalty_reason === 'vorzeitige_ruecknahme' ? 'Vorzeitige Rücknahme' :
+                                     invoice.penalty_reason === 'falsche_angaben' ? 'Falsche Angaben' :
+                                     'Vertragsstrafe'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="font-medium text-sm">
+                                    {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
+                                  </div>
+                                </>
+                              )}
                             </div>
 
                             {/* Status + Progress */}
@@ -1135,6 +1186,12 @@ export default function AdminFinancials() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Seller Penalty Dialog */}
+      <CreateSellerPenaltyDialog
+        open={penaltyDialogOpen}
+        onOpenChange={setPenaltyDialogOpen}
+      />
     </div>
   );
 }

@@ -1579,20 +1579,26 @@ export type Database = {
           auction_id: string | null
           created_at: string | null
           customer_number: string | null
+          dealer_country: string | null
           dealer_id: string
           due_date: string
           gross_amount: number
           id: string
           invoice_date: string
           invoice_number: string
+          invoice_type: string
+          motorhome_id: string | null
           net_amount: number
           notes: string | null
           paid_at: string | null
           payment_method: string | null
           payment_reference: string | null
+          payment_reminder_sent: boolean | null
           payment_status: string | null
           payment_terms_days: number | null
           pdf_url: string | null
+          penalty_reason: string | null
+          reverse_charge: boolean
           sent_at: string | null
           sepa_mandate_reference: string | null
           status: string
@@ -1606,20 +1612,26 @@ export type Database = {
           auction_id?: string | null
           created_at?: string | null
           customer_number?: string | null
+          dealer_country?: string | null
           dealer_id: string
           due_date: string
           gross_amount: number
           id?: string
           invoice_date?: string
           invoice_number: string
+          invoice_type?: string
+          motorhome_id?: string | null
           net_amount: number
           notes?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_reminder_sent?: boolean | null
           payment_status?: string | null
           payment_terms_days?: number | null
           pdf_url?: string | null
+          penalty_reason?: string | null
+          reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
           status?: string
@@ -1633,20 +1645,26 @@ export type Database = {
           auction_id?: string | null
           created_at?: string | null
           customer_number?: string | null
+          dealer_country?: string | null
           dealer_id?: string
           due_date?: string
           gross_amount?: number
           id?: string
           invoice_date?: string
           invoice_number?: string
+          invoice_type?: string
+          motorhome_id?: string | null
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_reminder_sent?: boolean | null
           payment_status?: string | null
           payment_terms_days?: number | null
           pdf_url?: string | null
+          penalty_reason?: string | null
+          reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
           status?: string
@@ -1668,6 +1686,13 @@ export type Database = {
             columns: ["dealer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_motorhome_id_fkey"
+            columns: ["motorhome_id"]
+            isOneToOne: false
+            referencedRelation: "motorhomes"
             referencedColumns: ["id"]
           },
         ]
@@ -3614,6 +3639,16 @@ export type Database = {
       cleanup_old_error_logs: { Args: never; Returns: undefined }
       create_auction_invoice: {
         Args: { auction_id_param: string; dealer_id_param: string }
+        Returns: string
+      }
+      create_seller_penalty_invoice: {
+        Args: {
+          seller_id_param: string
+          auction_id_param?: string
+          motorhome_id_param?: string
+          penalty_reason_param?: string
+          notes_param?: string
+        }
         Returns: string
       }
       generate_invoice_number: { Args: never; Returns: string }

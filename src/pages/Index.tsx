@@ -1,14 +1,16 @@
+import { lazy, Suspense } from "react";
 import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
 import MotorhomeShowcase from "@/components/MotorhomeShowcase";
 import HowItWorks from "@/components/HowItWorks";
 import Listings from "@/components/Listings";
-import Benefits from "@/components/Benefits";
-import Process from "@/components/Process";
-import FAQ from "@/components/FAQ";
-import CTA from "@/components/CTA";
 import { generateOrganizationSchema, generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
+
+const Benefits = lazy(() => import("@/components/Benefits"));
+const Process = lazy(() => import("@/components/Process"));
+const FAQ = lazy(() => import("@/components/FAQ"));
+const CTA = lazy(() => import("@/components/CTA"));
 
 const Index = () => {
   const { settings } = useSettings();
@@ -30,10 +32,12 @@ const Index = () => {
       <MotorhomeShowcase />
       <HowItWorks />
       <Listings />
-      <Benefits />
-      <Process />
-      <FAQ />
-      <CTA />
+      <Suspense fallback={null}>
+        <Benefits />
+        <Process />
+        <FAQ />
+        <CTA />
+      </Suspense>
     </PageLayout>
   );
 };

@@ -26,7 +26,6 @@ const IMAGE_CACHE_NAME = `caravanwert-images-${CACHE_VERSION}`;
 // Precaching it would serve a stale version with old chunk references.
 // Navigation requests use Network-First via handleNavigation() instead.
 const PRECACHE_ASSETS = [
-  '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
 ];

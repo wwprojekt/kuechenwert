@@ -182,8 +182,45 @@ Before every commit:
 - PS format: Chips show `XXkW/YYYPS`
 
 ## Edge Functions Status
-- **57 Edge Functions** all ACTIVE
+- **61 Edge Functions** all ACTIVE
 - Shared utilities: `_shared/cors.ts`, `_shared/auth.ts`, `_shared/email-builder.ts`, `_shared/rate-limiter.ts`, `_shared/edgeLogger.ts`, `_shared/turnstile.ts`
+
+### Security Classification (Auth Audit 2026-04-11)
+- **ADMIN** (24): `admin-create-user`, `admin-delete-user`, `backfill-email-content`, `check-expired-auctions`, `close-auction`, `complete-handover`, `fetch-attachment-url`, `generate-invoice-pdf`, `generate-purchase-contract`, `get-dealer-auth-status`, `get-recipient-count`, `process-abandoned-wizards`, `process-dunning`, `process-scheduled-emails`, `request-dealer-documents`, `resend-confirmation-email`, `send-admin-email`, `send-appointment-confirmation`, `send-auction-ending-notification`, `send-broadcast-email`, `send-dealer-auction-digest`, `send-dealer-notification`, `send-inactivity-email`, `send-invoice-email`
+- **USER_AUTH** (6): `accept-kaufchance-offer`, `dealer-document-upload`, `generate-ai-description`, `generate-appointment-pin`, `instant-buy`, `place-bid`
+- **RATE_LIMITED** (4): `ai-valuation`, `log-error`, `send-purchase-inquiry-notification`, `track-conversion`
+- **TURNSTILE** (1): `send-lead-notification`
+- **WEBHOOK** (1): `inbound-webhook` (Svix/Resend signature)
+- **INTERNAL_ONLY** (1): `handle-autobid` (called from `place-bid`, no own auth)
+- **PUBLIC_UNPROTECTED** (24): See risk list below
+
+### Public Unprotected Functions — Risk Assessment
+| Function | Risk | Mitigations |
+|----------|------|-------------|
+| `auto-convert-wizard` | HIGH — creates users, motorhomes, auctions | Requires valid `wizard_sessions` row |
+| `generate-handover-pdf` | MEDIUM — reads appointments, writes to storage | Requires valid appointment ID |
+| `notify-auction-winner` | MEDIUM — sends emails to users | Requires valid auction ID |
+| `notify-offer-action` | MEDIUM — sends Kaufchance emails | Requires valid auction ID |
+| `send-auction-notification` | MEDIUM — broad email primitive | Anti-spam via `admin_emails` dedup |
+| `send-push-notification` | MEDIUM — sends Web Push to users | Requires valid subscription data |
+| `upload-wizard-photos` | MEDIUM — uploads to storage | Requires valid `wizard_sessions` row |
+| `send-bid-notification` | LOW — outbid/new bid emails | Requires valid bid/auction IDs |
+| `send-disposition-email` | LOW — lead follow-up emails | Anti-spam via `admin_emails` dedup |
+| `send-expert-valuation` | LOW — valuation email to leads | Requires valid lead ID |
+| `send-favorite-notification` | LOW — price change alerts | Requires valid motorhome ID |
+| `send-payment-confirmation` | LOW — confirmation email | Requires valid data in body |
+| `send-welcome-email` | LOW — welcome email | Dedup via `admin_emails` |
+| `register-dealer` | LOW — intentionally public | Creates user + pending application |
+| `send-appointment-reminder` | LOW — cron: reminder emails | Reads only upcoming appointments |
+| `send-auction-summary` | LOW — cron: seller summaries | Reads active auctions only |
+| `send-auto-response` | LOW — auto-reply from inbound | Called from `inbound-webhook` |
+| `send-payment-reminder` | LOW — cron: payment reminders | Reads overdue invoices only |
+| `send-registration-invite` | LOW — magic link invite | Requires valid wizard session |
+| `send-wizard-resume-email` | LOW — resume link email | Requires valid session ID |
+| `send-wrong-number-email` | LOW — wrong number follow-up | Requires valid lead ID |
+| `notify-vehicle-question` | LOW — admin notification | Sends only to admin email |
+| `verify-appointment-pin` | LOW — PIN verification | `pin_attempts` lockout table |
+| `sitemap` | NONE — public XML sitemap | Read-only, public data |
 
 ## Dev Environment Notes
 - .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
@@ -195,6 +232,14 @@ Before every commit:
 - Migration Edge Functions (import-table-data, import-photos, migrate-storage, backfill-email-content): One-time tools, harmless
 - Baujahr ranges per model NOT implemented
 - Search is starts-with; could benefit from fuzzy matching
+- 24 Edge Functions are PUBLIC_UNPROTECTED (see Security Classification above) — cron-style functions should ideally require a shared secret header
+
+## Removed Dead Code (2026-04-11)
+- `src/lib/analytics.ts` — Duplicate of `analyticsService.ts`, never imported, `AnalyticsInitializer` was disabled
+- `src/components/wizard/ContactStep.tsx` — Legacy wizard step, replaced by `QuickContactStep` + `SaleChannelStep` + `AccountLocationStep`
+- `src/components/ProtectedRoute.tsx` + test — Only referenced in tests, never used in `App.tsx`
+- `src/pages/dealer/DealerLayout.tsx` — Replaced by `SmartDashboard`'s `DealerLayoutContent`
+- `src/components/DealerRoute.tsx` — Only imported by deleted `DealerLayout.tsx`
 
 ## Wertrechner Calibration
 - Algorithm + KI dual system: KI (OpenAI) is primary (~95% of cases), algorithm is fallback

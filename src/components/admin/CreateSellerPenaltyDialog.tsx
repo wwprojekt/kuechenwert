@@ -4,7 +4,7 @@
  * for AGB violations: anderweitiger Verkauf, vorzeitige Rücknahme, falsche Angaben
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -25,10 +25,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "sonner";
-import { AlertTriangle, Scale } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown, Scale } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const penaltyReasons = [
   {
@@ -51,14 +64,20 @@ const penaltyReasons = [
   },
 ] as const;
 
+const AUCTION_STATUS_LABELS: Record<string, string> = {
+  active: "Aktiv",
+  ended: "Beendet",
+  sold: "Verkauft",
+  cancelled: "Abgebrochen",
+  draft: "Entwurf",
+  kaufchance: "Kaufchance",
+};
+
 interface CreateSellerPenaltyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Pre-selected seller ID (e.g. from auction detail) */
   preSelectedSellerId?: string;
-  /** Pre-selected auction ID */
   preSelectedAuctionId?: string;
-  /** Pre-selected motorhome ID */
   preSelectedMotorhomeId?: string;
 }
 
@@ -75,58 +94,103 @@ export function CreateSellerPenaltyDialog({
   const [auctionId, setAuctionId] = useState(preSelectedAuctionId || "");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [sellerSearchOpen, setSellerSearchOpen] = useState(false);
+  const [sellerSearchQuery, setSellerSearchQuery] = useState("");
 
-  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setSellerId(preSelectedSellerId || "");
       setAuctionId(preSelectedAuctionId || "");
       setReason("");
       setNotes("");
+      setSellerSearchQuery("");
     }
   }, [open, preSelectedSellerId, preSelectedAuctionId]);
 
-  // Fetch sellers (profiles with motorhomes)
-  const { data: sellers } = useQuery({
-    queryKey: ["admin-sellers-for-penalty"],
+  // Server-side seller search with ilike (debounced by React Query staleTime)
+  const { data: sellers, isLoading: sellersLoading } = useQuery({
+    queryKey: ["admin-sellers-for-penalty", sellerSearchQuery],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("profiles")
         .select("id, first_name, last_name, email, company_name")
-        .order("last_name");
+        .order("last_name")
+        .limit(50);
+
+      if (sellerSearchQuery.length >= 2) {
+        const q = `%${sellerSearchQuery}%`;
+        query = query.or(
+          `first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},company_name.ilike.${q}`
+        );
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
     enabled: open && !preSelectedSellerId,
+    staleTime: 300,
   });
 
-  // Fetch auctions for selected seller
+  // Fetch the pre-selected seller's profile so we can show their name
+  const { data: preSelectedSeller } = useQuery({
+    queryKey: ["admin-seller-profile", preSelectedSellerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email, company_name")
+        .eq("id", preSelectedSellerId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!preSelectedSellerId,
+  });
+
+  // Fetch auctions for selected seller using !inner join so PostgREST
+  // filters parent rows (auctions) by the embedded motorhome's seller_id
   const { data: sellerAuctions } = useQuery({
     queryKey: ["admin-seller-auctions", sellerId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auctions")
         .select(
-          "id, status, motorhome:motorhomes(id, manufacturer, model, year)"
+          "id, status, motorhome:motorhomes!inner(id, manufacturer, model, year, seller_id)"
         )
         .eq("motorhome.seller_id", sellerId)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      // Filter out auctions where motorhome join returned null
-      return data?.filter((a: any) => a.motorhome) || [];
+      return data || [];
     },
     enabled: open && !!sellerId && !preSelectedAuctionId,
   });
 
-  // Get selected seller display name
-  const selectedSeller = sellers?.find((s) => s.id === sellerId);
+  function getSellerDisplayName(profile: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    company_name: string | null;
+  }) {
+    return (
+      profile.company_name ||
+      `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
+      profile.email ||
+      "Unbekannt"
+    );
+  }
+
+  const selectedSellerFromList = useMemo(
+    () => sellers?.find((s) => s.id === sellerId),
+    [sellers, sellerId]
+  );
+
   const sellerDisplayName = preSelectedSellerId
-    ? undefined // Will be shown from parent context
-    : selectedSeller
-      ? selectedSeller.company_name ||
-        `${selectedSeller.first_name || ""} ${selectedSeller.last_name || ""}`.trim() ||
-        selectedSeller.email
+    ? preSelectedSeller
+      ? getSellerDisplayName(preSelectedSeller)
+      : "Wird geladen..."
+    : selectedSellerFromList
+      ? getSellerDisplayName(selectedSellerFromList)
       : null;
 
   const createPenaltyMutation = useMutation({
@@ -135,12 +199,14 @@ export function CreateSellerPenaltyDialog({
         throw new Error("Verkäufer und Grund sind erforderlich");
       }
 
-      const effectiveAuctionId = auctionId && auctionId !== "none" ? auctionId : undefined;
+      const effectiveAuctionId =
+        auctionId && auctionId !== "none" ? auctionId : null;
 
-      // Resolve motorhome_id from auction if not pre-selected
-      let effectiveMotorhomeId = preSelectedMotorhomeId || undefined;
+      let effectiveMotorhomeId = preSelectedMotorhomeId || null;
       if (!effectiveMotorhomeId && effectiveAuctionId) {
-        const selected = sellerAuctions?.find((a: any) => a.id === effectiveAuctionId);
+        const selected = sellerAuctions?.find(
+          (a: any) => a.id === effectiveAuctionId
+        );
         if (selected?.motorhome?.id) {
           effectiveMotorhomeId = selected.motorhome.id;
         }
@@ -153,7 +219,7 @@ export function CreateSellerPenaltyDialog({
           auction_id_param: effectiveAuctionId,
           motorhome_id_param: effectiveMotorhomeId,
           penalty_reason_param: reason,
-          notes_param: notes || undefined,
+          notes_param: notes || null,
         }
       );
 
@@ -216,63 +282,111 @@ export function CreateSellerPenaltyDialog({
             </div>
           </div>
 
-          {/* Seller selection */}
+          {/* Seller selection – searchable combobox or pre-selected display */}
           {!preSelectedSellerId ? (
             <div className="space-y-2">
-              <Label htmlFor="seller">Verkäufer *</Label>
-              <Select value={sellerId} onValueChange={setSellerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Verkäufer auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {sellers?.map((seller) => (
-                    <SelectItem key={seller.id} value={seller.id}>
-                      {seller.company_name ||
-                        `${seller.first_name || ""} ${seller.last_name || ""}`.trim() ||
-                        seller.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Verkäufer *</Label>
+              <Popover
+                open={sellerSearchOpen}
+                onOpenChange={setSellerSearchOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={sellerSearchOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {sellerDisplayName || "Verkäufer suchen..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Name, E-Mail oder Firma..."
+                      value={sellerSearchQuery}
+                      onValueChange={setSellerSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {sellersLoading
+                          ? "Suche..."
+                          : sellerSearchQuery.length < 2
+                            ? "Mind. 2 Zeichen eingeben..."
+                            : "Kein Verkäufer gefunden."}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {sellers?.map((seller) => {
+                          const name = getSellerDisplayName(seller);
+                          return (
+                            <CommandItem
+                              key={seller.id}
+                              value={seller.id}
+                              onSelect={(val) => {
+                                setSellerId(val === sellerId ? "" : val);
+                                setSellerSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  sellerId === seller.id
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{name}</span>
+                                {seller.email && seller.email !== name && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {seller.email}
+                                  </span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           ) : (
-            sellerDisplayName && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                <Label className="text-muted-foreground">Verkäufer:</Label>
-                <span className="font-medium">{sellerDisplayName}</span>
-              </div>
-            )
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <Label className="text-muted-foreground">Verkäufer:</Label>
+              <span className="font-medium">{sellerDisplayName}</span>
+            </div>
           )}
 
           {/* Auction selection (optional) */}
           {!preSelectedAuctionId && sellerId && (
             <div className="space-y-2">
-              <Label htmlFor="auction">
+              <Label>
                 Zugehörige Auktion{" "}
                 <span className="text-muted-foreground">(optional)</span>
               </Label>
-              <Select
-                value={auctionId}
-                onValueChange={setAuctionId}
-              >
+              <Select value={auctionId} onValueChange={setAuctionId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Auktion zuordnen..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Keine Zuordnung —</SelectItem>
-                  {sellerAuctions?.map((auction: any) => (
-                    <SelectItem key={auction.id} value={auction.id}>
-                      {auction.motorhome?.manufacturer}{" "}
-                      {auction.motorhome?.model}{" "}
-                      {auction.motorhome?.year
-                        ? `(${auction.motorhome.year})`
-                        : ""}{" "}
-                      –{" "}
-                      <Badge variant="outline" className="ml-1">
-                        {auction.status}
-                      </Badge>
-                    </SelectItem>
-                  ))}
+                  {sellerAuctions?.map((auction: any) => {
+                    const statusLabel =
+                      AUCTION_STATUS_LABELS[auction.status] || auction.status;
+                    return (
+                      <SelectItem key={auction.id} value={auction.id}>
+                        {auction.motorhome?.manufacturer}{" "}
+                        {auction.motorhome?.model}{" "}
+                        {auction.motorhome?.year
+                          ? `(${auction.motorhome.year})`
+                          : ""}{" "}
+                        – {statusLabel}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -280,7 +394,7 @@ export function CreateSellerPenaltyDialog({
 
           {/* Penalty reason */}
           <div className="space-y-2">
-            <Label htmlFor="reason">Grund der Vertragsstrafe *</Label>
+            <Label>Grund der Vertragsstrafe *</Label>
             <Select value={reason} onValueChange={setReason}>
               <SelectTrigger>
                 <SelectValue placeholder="Grund auswählen..." />
@@ -302,12 +416,12 @@ export function CreateSellerPenaltyDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">
+            <Label htmlFor="penalty-notes">
               Interne Notizen{" "}
               <span className="text-muted-foreground">(optional)</span>
             </Label>
             <Textarea
-              id="notes"
+              id="penalty-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Zusätzliche Informationen zum Sachverhalt..."

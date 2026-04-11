@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14,74 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
-      auction_addenda: {
+      admin_emails: {
         Row: {
-          id: string
-          auction_id: string
-          seller_id: string
-          content: string
+          attachments: Json | null
+          bcc: string[] | null
+          body_html: string
+          body_text: string
+          broadcast_group: string | null
+          broadcast_id: string | null
+          cc: string[] | null
           created_at: string
+          direction: string
+          email_type: string
+          id: string
+          in_reply_to: string | null
+          is_archived: boolean
+          is_read: boolean
+          is_starred: boolean
+          raw_headers: Json | null
+          read_at: string | null
+          read_by: string | null
+          recipient_email: string
+          recipient_id: string | null
+          recipient_name: string | null
+          related_message_id: string | null
+          related_message_type: string | null
+          resend_id: string | null
+          scheduled_at: string | null
+          sender_email: string
+          sender_name: string | null
+          sent_by: string | null
+          status: string
+          subject: string
+          thread_id: string | null
+          updated_at: string
         }
         Insert: {
-          id?: string
-          auction_id: string
-          seller_id: string
-          content: string
+          attachments?: Json | null
+          bcc?: string[] | null
+          body_html?: string
+          body_text?: string
+          broadcast_group?: string | null
+          broadcast_id?: string | null
+          cc?: string[] | null
           created_at?: string
+          direction?: string
+          email_type?: string
+          id?: string
+          in_reply_to?: string | null
+          is_archived?: boolean
+          is_read?: boolean
+          is_starred?: boolean
+          raw_headers?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          recipient_email: string
+          recipient_id?: string | null
+          recipient_name?: string | null
+          related_message_id?: string | null
+          related_message_type?: string | null
+          resend_id?: string | null
+          scheduled_at?: string | null
+          sender_email?: string
+          sender_name?: string | null
+          sent_by?: string | null
+          status?: string
+          subject: string
+          thread_id?: string | null
+          updated_at?: string
         }
         Update: {
-          id?: string
-          auction_id?: string
-          seller_id?: string
-          content?: string
+          attachments?: Json | null
+          bcc?: string[] | null
+          body_html?: string
+          body_text?: string
+          broadcast_group?: string | null
+          broadcast_id?: string | null
+          cc?: string[] | null
           created_at?: string
+          direction?: string
+          email_type?: string
+          id?: string
+          in_reply_to?: string | null
+          is_archived?: boolean
+          is_read?: boolean
+          is_starred?: boolean
+          raw_headers?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          recipient_email?: string
+          recipient_id?: string | null
+          recipient_name?: string | null
+          related_message_id?: string | null
+          related_message_type?: string | null
+          resend_id?: string | null
+          scheduled_at?: string | null
+          sender_email?: string
+          sender_name?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          thread_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "auction_addenda_auction_id_fkey"
-            columns: ["auction_id"]
+            foreignKeyName: "admin_emails_in_reply_to_fkey"
+            columns: ["in_reply_to"]
             isOneToOne: false
-            referencedRelation: "auctions"
+            referencedRelation: "admin_emails"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "auction_addenda_seller_id_fkey"
-            columns: ["seller_id"]
+            foreignKeyName: "admin_emails_read_by_fkey"
+            columns: ["read_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_emails_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_emails_sent_by_fkey"
+            columns: ["sent_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      analytics_daily_summary: {
-        Row: {
-          date: string | null
-          desktop_sessions: number | null
-          mobile_sessions: number | null
-          page_views: number | null
-          sessions: number | null
-          tablet_sessions: number | null
-          unique_visitors: number | null
-        }
-        Insert: {
-          date?: string | null
-          desktop_sessions?: number | null
-          mobile_sessions?: number | null
-          page_views?: number | null
-          sessions?: number | null
-          tablet_sessions?: number | null
-          unique_visitors?: number | null
-        }
-        Update: {
-          date?: string | null
-          desktop_sessions?: number | null
-          mobile_sessions?: number | null
-          page_views?: number | null
-          sessions?: number | null
-          tablet_sessions?: number | null
-          unique_visitors?: number | null
-        }
-        Relationships: []
       }
       analytics_events: {
         Row: {
@@ -228,6 +293,7 @@ export type Database = {
           ended_at: string | null
           events_count: number | null
           exit_page: string | null
+          hostname: string | null
           id: string
           landing_page: string | null
           os: string | null
@@ -256,6 +322,7 @@ export type Database = {
           ended_at?: string | null
           events_count?: number | null
           exit_page?: string | null
+          hostname?: string | null
           id?: string
           landing_page?: string | null
           os?: string | null
@@ -284,6 +351,7 @@ export type Database = {
           ended_at?: string | null
           events_count?: number | null
           exit_page?: string | null
+          hostname?: string | null
           id?: string
           landing_page?: string | null
           os?: string | null
@@ -317,6 +385,7 @@ export type Database = {
           payment_status: string | null
           pin_generated_at: string | null
           release_pin: string | null
+          reminder_sent: boolean | null
           seller_id: string
           station_id: string
           status: string
@@ -335,6 +404,7 @@ export type Database = {
           payment_status?: string | null
           pin_generated_at?: string | null
           release_pin?: string | null
+          reminder_sent?: boolean | null
           seller_id: string
           station_id: string
           status?: string
@@ -353,6 +423,7 @@ export type Database = {
           payment_status?: string | null
           pin_generated_at?: string | null
           release_pin?: string | null
+          reminder_sent?: boolean | null
           seller_id?: string
           station_id?: string
           status?: string
@@ -371,6 +442,38 @@ export type Database = {
             columns: ["station_id"]
             isOneToOne: false
             referencedRelation: "purchase_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_addenda: {
+        Row: {
+          auction_id: string
+          content: string
+          created_at: string
+          id: string
+          seller_id: string
+        }
+        Insert: {
+          auction_id: string
+          content: string
+          created_at?: string
+          id?: string
+          seller_id: string
+        }
+        Update: {
+          auction_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_addenda_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
             referencedColumns: ["id"]
           },
         ]
@@ -431,47 +534,41 @@ export type Database = {
           },
         ]
       }
-      kaufchance_invitations: {
+      audit_logs: {
         Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
           id: string
-          auction_id: string
-          bidder_id: string
-          highest_bid: number
-          rank: number
-          invited_at: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
         }
         Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
           id?: string
-          auction_id: string
-          bidder_id: string
-          highest_bid: number
-          rank: number
-          invited_at?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
           id?: string
-          auction_id?: string
-          bidder_id?: string
-          highest_bid?: number
-          rank?: number
-          invited_at?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kaufchance_invitations_bidder_id_fkey"
-            columns: ["bidder_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       bids: {
         Row: {
@@ -849,6 +946,7 @@ export type Database = {
         Row: {
           admin_response: string | null
           created_at: string | null
+          deleted_at: string | null
           email: string
           id: string
           message: string
@@ -863,6 +961,7 @@ export type Database = {
         Insert: {
           admin_response?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           email: string
           id?: string
           message: string
@@ -877,6 +976,7 @@ export type Database = {
         Update: {
           admin_response?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           email?: string
           id?: string
           message?: string
@@ -982,57 +1082,6 @@ export type Database = {
           },
         ]
       }
-      dealer_notifications: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          link: string | null
-          auction_id: string | null
-          is_read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          link?: string | null
-          auction_id?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          title?: string
-          message?: string
-          link?: string | null
-          auction_id?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dealer_notifications_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       dealer_applications: {
         Row: {
           account_holder: string | null
@@ -1045,9 +1094,14 @@ export type Database = {
           company_city: string
           company_name: string
           company_postal_code: string
+          confirmation_link_last_sent_at: string | null
+          confirmation_link_sent_count: number | null
           contact_person_name: string
           contact_person_position: string | null
+          country: string
           created_at: string
+          document_request_last_sent_at: string | null
+          document_request_sent_count: number | null
           employee_count: string | null
           founded_year: number | null
           gewerbenachweis_url: string | null
@@ -1065,6 +1119,7 @@ export type Database = {
           sepa_mandate_reference: string | null
           sepa_mandate_signed: boolean | null
           status: string
+          status_changed_at: string | null
           submitted_at: string
           tax_id: string | null
           trade_license_document_url: string | null
@@ -1072,6 +1127,7 @@ export type Database = {
           updated_at: string
           user_id: string
           ust_id_verified: boolean | null
+          vat_id: string | null
           website: string | null
         }
         Insert: {
@@ -1085,9 +1141,14 @@ export type Database = {
           company_city: string
           company_name: string
           company_postal_code: string
+          confirmation_link_last_sent_at?: string | null
+          confirmation_link_sent_count?: number | null
           contact_person_name: string
           contact_person_position?: string | null
+          country?: string
           created_at?: string
+          document_request_last_sent_at?: string | null
+          document_request_sent_count?: number | null
           employee_count?: string | null
           founded_year?: number | null
           gewerbenachweis_url?: string | null
@@ -1105,6 +1166,7 @@ export type Database = {
           sepa_mandate_reference?: string | null
           sepa_mandate_signed?: boolean | null
           status?: string
+          status_changed_at?: string | null
           submitted_at?: string
           tax_id?: string | null
           trade_license_document_url?: string | null
@@ -1112,6 +1174,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           ust_id_verified?: boolean | null
+          vat_id?: string | null
           website?: string | null
         }
         Update: {
@@ -1125,9 +1188,14 @@ export type Database = {
           company_city?: string
           company_name?: string
           company_postal_code?: string
+          confirmation_link_last_sent_at?: string | null
+          confirmation_link_sent_count?: number | null
           contact_person_name?: string
           contact_person_position?: string | null
+          country?: string
           created_at?: string
+          document_request_last_sent_at?: string | null
+          document_request_sent_count?: number | null
           employee_count?: string | null
           founded_year?: number | null
           gewerbenachweis_url?: string | null
@@ -1145,6 +1213,7 @@ export type Database = {
           sepa_mandate_reference?: string | null
           sepa_mandate_signed?: boolean | null
           status?: string
+          status_changed_at?: string | null
           submitted_at?: string
           tax_id?: string | null
           trade_license_document_url?: string | null
@@ -1152,9 +1221,101 @@ export type Database = {
           updated_at?: string
           user_id?: string
           ust_id_verified?: boolean | null
+          vat_id?: string | null
           website?: string | null
         }
         Relationships: []
+      }
+      dealer_levels: {
+        Row: {
+          created_at: string | null
+          dealer_id: string
+          id: string
+          level: string
+          level_updated_at: string | null
+          points: number
+          total_bids: number
+          total_volume: number
+          updated_at: string | null
+          won_auctions: number
+        }
+        Insert: {
+          created_at?: string | null
+          dealer_id: string
+          id?: string
+          level?: string
+          level_updated_at?: string | null
+          points?: number
+          total_bids?: number
+          total_volume?: number
+          updated_at?: string | null
+          won_auctions?: number
+        }
+        Update: {
+          created_at?: string | null
+          dealer_id?: string
+          id?: string
+          level?: string
+          level_updated_at?: string | null
+          points?: number
+          total_bids?: number
+          total_volume?: number
+          updated_at?: string | null
+          won_auctions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_levels_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dealer_notifications: {
+        Row: {
+          auction_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          auction_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          auction_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_notifications_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dealer_payment_history: {
         Row: {
@@ -1209,53 +1370,6 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      dealer_levels: {
-        Row: {
-          id: string
-          dealer_id: string
-          level: string
-          total_bids: number
-          won_auctions: number
-          total_volume: number
-          points: number
-          level_updated_at: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          dealer_id: string
-          level?: string
-          total_bids?: number
-          won_auctions?: number
-          total_volume?: number
-          points?: number
-          level_updated_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          dealer_id?: string
-          level?: string
-          total_bids?: number
-          won_auctions?: number
-          total_volume?: number
-          points?: number
-          level_updated_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_levels_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1439,25 +1553,99 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          body_html: string
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          subject: string
+          updated_at: string
+          updated_by: string | null
+          variables: Json | null
+        }
+        Insert: {
+          body_html?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          subject: string
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          body_html?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_logs: {
         Row: {
           admin_notes: string | null
+          app_version: string | null
+          breadcrumbs: Json | null
           browser: string | null
           component_name: string | null
+          connection_type: string | null
           created_at: string
           device_type: string | null
+          environment: string | null
           error_category: string
           error_code: string
+          error_hash: string | null
           error_message: string
+          error_source: string | null
+          first_seen_at: string | null
+          http_status: number | null
           id: string
           is_resolved: boolean | null
+          last_seen_at: string | null
+          memory_usage: Json | null
           metadata: Json | null
+          occurrence_count: number | null
           original_error: string | null
           page_path: string
           page_title: string | null
           page_url: string
+          request_info: Json | null
           resolved_at: string | null
           resolved_by: string | null
+          screen_resolution: string | null
+          session_id: string | null
           severity: string
           stack_trace: string | null
           updated_at: string
@@ -1468,22 +1656,36 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          app_version?: string | null
+          breadcrumbs?: Json | null
           browser?: string | null
           component_name?: string | null
+          connection_type?: string | null
           created_at?: string
           device_type?: string | null
+          environment?: string | null
           error_category?: string
           error_code: string
+          error_hash?: string | null
           error_message: string
+          error_source?: string | null
+          first_seen_at?: string | null
+          http_status?: number | null
           id?: string
           is_resolved?: boolean | null
+          last_seen_at?: string | null
+          memory_usage?: Json | null
           metadata?: Json | null
+          occurrence_count?: number | null
           original_error?: string | null
           page_path: string
           page_title?: string | null
           page_url: string
+          request_info?: Json | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
           severity?: string
           stack_trace?: string | null
           updated_at?: string
@@ -1494,22 +1696,36 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          app_version?: string | null
+          breadcrumbs?: Json | null
           browser?: string | null
           component_name?: string | null
+          connection_type?: string | null
           created_at?: string
           device_type?: string | null
+          environment?: string | null
           error_category?: string
           error_code?: string
+          error_hash?: string | null
           error_message?: string
+          error_source?: string | null
+          first_seen_at?: string | null
+          http_status?: number | null
           id?: string
           is_resolved?: boolean | null
+          last_seen_at?: string | null
+          memory_usage?: Json | null
           metadata?: Json | null
+          occurrence_count?: number | null
           original_error?: string | null
           page_path?: string
           page_title?: string | null
           page_url?: string
+          request_info?: Json | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
           severity?: string
           stack_trace?: string | null
           updated_at?: string
@@ -1697,6 +1913,41 @@ export type Database = {
           },
         ]
       }
+      kaufchance_invitations: {
+        Row: {
+          auction_id: string
+          bidder_id: string
+          highest_bid: number
+          id: string
+          invited_at: string | null
+          rank: number
+        }
+        Insert: {
+          auction_id: string
+          bidder_id: string
+          highest_bid: number
+          id?: string
+          invited_at?: string | null
+          rank: number
+        }
+        Update: {
+          auction_id?: string
+          bidder_id?: string
+          highest_bid?: number
+          id?: string
+          invited_at?: string | null
+          rank?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_documents: {
         Row: {
           dealer_application_id: string
@@ -1718,13 +1969,13 @@ export type Database = {
           dealer_application_id: string
           document_name?: string | null
           document_type: string
-          document_url?: string
+          document_url: string
           file_size?: number | null
           file_url?: string | null
           id?: string
           mime_type?: string | null
           notes?: string | null
-          original_filename?: string
+          original_filename: string
           uploaded_at?: string | null
           verified?: boolean | null
           verified_at?: string | null
@@ -1763,9 +2014,11 @@ export type Database = {
           id: string
           is_published: boolean | null
           meta_description: string | null
+          published_at: string | null
           slug: string
           title: string
           updated_at: string | null
+          version: number
         }
         Insert: {
           content: string
@@ -1773,9 +2026,11 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           meta_description?: string | null
+          published_at?: string | null
           slug: string
           title: string
           updated_at?: string | null
+          version?: number
         }
         Update: {
           content?: string
@@ -1783,9 +2038,11 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           meta_description?: string | null
+          published_at?: string | null
           slug?: string
           title?: string
           updated_at?: string | null
+          version?: number
         }
         Relationships: []
       }
@@ -1834,11 +2091,14 @@ export type Database = {
             | null
           available_from: string | null
           awning_length_m: number | null
+          base_vehicle: string | null
           battery_capacity_ah: number | null
           beds_description: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
           city: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
+          contract_number: string | null
+          contract_url: string | null
           country: string | null
           created_at: string | null
           damage_summary: string | null
@@ -1932,11 +2192,14 @@ export type Database = {
             | null
           available_from?: string | null
           awning_length_m?: number | null
+          base_vehicle?: string | null
           battery_capacity_ah?: number | null
           beds_description?: string | null
           body_type: Database["public"]["Enums"]["motorhome_body_type"]
           city?: string | null
           condition: Database["public"]["Enums"]["motorhome_condition"]
+          contract_number?: string | null
+          contract_url?: string | null
           country?: string | null
           created_at?: string | null
           damage_summary?: string | null
@@ -2030,11 +2293,14 @@ export type Database = {
             | null
           available_from?: string | null
           awning_length_m?: number | null
+          base_vehicle?: string | null
           battery_capacity_ah?: number | null
           beds_description?: string | null
           body_type?: Database["public"]["Enums"]["motorhome_body_type"]
           city?: string | null
           condition?: Database["public"]["Enums"]["motorhome_condition"]
+          contract_number?: string | null
+          contract_url?: string | null
           country?: string | null
           created_at?: string | null
           damage_summary?: string | null
@@ -2136,10 +2402,16 @@ export type Database = {
           due_date: string
           id: string
           invoice_id: string
+          message_body: string | null
           notes: string | null
+          original_amount: number | null
+          reminder_date: string | null
+          reminder_fee: number | null
           reminder_level: number
           sent_at: string
           status: string
+          subject: string | null
+          total_amount: number | null
         }
         Insert: {
           amount_due: number
@@ -2147,10 +2419,16 @@ export type Database = {
           due_date: string
           id?: string
           invoice_id: string
+          message_body?: string | null
           notes?: string | null
+          original_amount?: number | null
+          reminder_date?: string | null
+          reminder_fee?: number | null
           reminder_level: number
           sent_at?: string
           status?: string
+          subject?: string | null
+          total_amount?: number | null
         }
         Update: {
           amount_due?: number
@@ -2158,10 +2436,16 @@ export type Database = {
           due_date?: string
           id?: string
           invoice_id?: string
+          message_body?: string | null
           notes?: string | null
+          original_amount?: number | null
+          reminder_date?: string | null
+          reminder_fee?: number | null
           reminder_level?: number
           sent_at?: string
           status?: string
+          subject?: string | null
+          total_amount?: number | null
         }
         Relationships: [
           {
@@ -2212,35 +2496,47 @@ export type Database = {
         Row: {
           auction_id: string
           buyer_id: string
+          counter_offer_amount: number | null
           created_at: string | null
+          expires_at: string | null
           id: string
+          is_invited: boolean | null
           message: string | null
           offer_amount: number
           responded_at: string | null
           seller_response: string | null
           status: string
+          updated_at: string | null
         }
         Insert: {
           auction_id: string
           buyer_id: string
+          counter_offer_amount?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
+          is_invited?: boolean | null
           message?: string | null
           offer_amount: number
           responded_at?: string | null
           seller_response?: string | null
           status?: string
+          updated_at?: string | null
         }
         Update: {
           auction_id?: string
           buyer_id?: string
+          counter_offer_amount?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
+          is_invited?: boolean | null
           message?: string | null
           offer_amount?: number
           responded_at?: string | null
           seller_response?: string | null
           status?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -2270,6 +2566,8 @@ export type Database = {
           customer_number: string | null
           description: string | null
           email: string
+          email_bounced: boolean | null
+          email_bounced_at: string | null
           first_name: string | null
           id: string
           is_suspended: boolean | null
@@ -2287,6 +2585,7 @@ export type Database = {
           tax_id: string | null
           trade_license: string | null
           updated_at: string
+          vat_id: string | null
           verified_at: string | null
           verified_by: string | null
           website: string | null
@@ -2308,6 +2607,8 @@ export type Database = {
           customer_number?: string | null
           description?: string | null
           email: string
+          email_bounced?: boolean | null
+          email_bounced_at?: string | null
           first_name?: string | null
           id: string
           is_suspended?: boolean | null
@@ -2325,6 +2626,7 @@ export type Database = {
           tax_id?: string | null
           trade_license?: string | null
           updated_at?: string
+          vat_id?: string | null
           verified_at?: string | null
           verified_by?: string | null
           website?: string | null
@@ -2346,6 +2648,8 @@ export type Database = {
           customer_number?: string | null
           description?: string | null
           email?: string
+          email_bounced?: boolean | null
+          email_bounced_at?: string | null
           first_name?: string | null
           id?: string
           is_suspended?: boolean | null
@@ -2363,47 +2667,108 @@ export type Database = {
           tax_id?: string | null
           trade_license?: string | null
           updated_at?: string
+          vat_id?: string | null
           verified_at?: string | null
           verified_by?: string | null
           website?: string | null
         }
         Relationships: []
       }
-      push_subscriptions: {
+      purchase_contracts: {
         Row: {
-          auth: string
+          auction_id: string | null
+          buyer_contract_url: string | null
+          buyer_customer_number: string | null
+          buyer_id: string | null
+          buyer_name: string | null
+          buyer_storage_path: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contract_number: string
+          contract_url: string | null
           created_at: string | null
-          endpoint: string
           id: string
-          p256dh: string
+          motorhome_id: string | null
+          notes: string | null
+          sale_price: number
+          seller_id: string | null
+          seller_name: string | null
+          status: string
+          storage_path: string | null
           updated_at: string | null
-          user_agent: string | null
-          user_id: string
+          vehicle_description: string | null
         }
         Insert: {
-          auth: string
+          auction_id?: string | null
+          buyer_contract_url?: string | null
+          buyer_customer_number?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          buyer_storage_path?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contract_number: string
+          contract_url?: string | null
           created_at?: string | null
-          endpoint: string
           id?: string
-          p256dh: string
+          motorhome_id?: string | null
+          notes?: string | null
+          sale_price: number
+          seller_id?: string | null
+          seller_name?: string | null
+          status?: string
+          storage_path?: string | null
           updated_at?: string | null
-          user_agent?: string | null
-          user_id: string
+          vehicle_description?: string | null
         }
         Update: {
-          auth?: string
+          auction_id?: string | null
+          buyer_contract_url?: string | null
+          buyer_customer_number?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          buyer_storage_path?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contract_number?: string
+          contract_url?: string | null
           created_at?: string | null
-          endpoint?: string
           id?: string
-          p256dh?: string
+          motorhome_id?: string | null
+          notes?: string | null
+          sale_price?: number
+          seller_id?: string | null
+          seller_name?: string | null
+          status?: string
+          storage_path?: string | null
           updated_at?: string | null
-          user_agent?: string | null
-          user_id?: string
+          vehicle_description?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "push_subscriptions_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "purchase_contracts_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_contracts_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_contracts_motorhome_id_fkey"
+            columns: ["motorhome_id"]
+            isOneToOne: false
+            referencedRelation: "motorhomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_contracts_seller_id_fkey"
+            columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2425,7 +2790,9 @@ export type Database = {
           model: string | null
           price_expectation: number | null
           station_id: string
-          vehicle_type: string | null
+          status: string
+          updated_at: string | null
+          vehicle_type: string
           year: number | null
         }
         Insert: {
@@ -2442,7 +2809,9 @@ export type Database = {
           model?: string | null
           price_expectation?: number | null
           station_id: string
-          vehicle_type?: string | null
+          status?: string
+          updated_at?: string | null
+          vehicle_type?: string
           year?: number | null
         }
         Update: {
@@ -2459,7 +2828,9 @@ export type Database = {
           model?: string | null
           price_expectation?: number | null
           station_id?: string
-          vehicle_type?: string | null
+          status?: string
+          updated_at?: string | null
+          vehicle_type?: string
           year?: number | null
         }
         Relationships: [
@@ -2523,26 +2894,59 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       quick_leads: {
         Row: {
+          admin_estimated_value: number | null
           admin_notes: string | null
           body_type: string | null
-          admin_estimated_value: number | null
           contacted_at: string | null
           created_at: string | null
+          deleted_at: string | null
           disposition: string | null
+          done_email_count: number | null
+          done_email_last_sent: string | null
           email: string | null
-          form_data_snapshot: Record<string, unknown> | null
+          form_data_snapshot: Json | null
           id: string
-          is_viewed: boolean | null
+          is_viewed: boolean
           last_wizard_step: number | null
           lead_quality: string | null
           manufacturer: string | null
           max_wizard_step: number | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
           model: string | null
           name: string | null
+          no_answer_email_count: number | null
+          no_answer_email_last_sent: string | null
           notes: string | null
           page_url: string | null
           phone: string | null
@@ -2553,23 +2957,31 @@ export type Database = {
           updated_at: string | null
           user_agent: string | null
           wizard_completed: boolean | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
         }
         Insert: {
+          admin_estimated_value?: number | null
           admin_notes?: string | null
           body_type?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
           email?: string | null
-          form_data_snapshot?: Record<string, unknown> | null
+          form_data_snapshot?: Json | null
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           last_wizard_step?: number | null
           lead_quality?: string | null
           manufacturer?: string | null
           max_wizard_step?: number | null
           model?: string | null
           name?: string | null
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           notes?: string | null
           page_url?: string | null
           phone?: string | null
@@ -2582,24 +2994,29 @@ export type Database = {
           wizard_completed?: boolean | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
-          admin_estimated_value?: number | null
         }
         Update: {
+          admin_estimated_value?: number | null
           admin_notes?: string | null
           body_type?: string | null
           contacted_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
           email?: string | null
-          form_data_snapshot?: Record<string, unknown> | null
+          form_data_snapshot?: Json | null
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           last_wizard_step?: number | null
           lead_quality?: string | null
           manufacturer?: string | null
           max_wizard_step?: number | null
           model?: string | null
           name?: string | null
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           notes?: string | null
           page_url?: string | null
           phone?: string | null
@@ -2612,7 +3029,6 @@ export type Database = {
           wizard_completed?: boolean | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
-          admin_estimated_value?: number | null
         }
         Relationships: []
       }
@@ -2893,6 +3309,9 @@ export type Database = {
       site_settings: {
         Row: {
           autobid_enabled: boolean
+          bank_bic: string | null
+          bank_iban: string | null
+          bank_name: string | null
           buy_now_enabled: boolean
           commission_rate_percent: number
           company_address: string | null
@@ -2903,13 +3322,26 @@ export type Database = {
           created_at: string
           dark_mode_enabled: boolean
           default_auction_duration_days: number
+          dunning_auto_enabled: boolean | null
+          dunning_level1_days: number | null
+          dunning_level1_fee: number | null
+          dunning_level2_days: number | null
+          dunning_level2_fee: number | null
+          dunning_level3_days: number | null
+          dunning_level3_fee: number | null
+          dunning_restrict_at_level: number | null
           favicon_url: string | null
           from_email: string
           google_analytics_id: string | null
           google_tag_manager_id: string | null
+          hrb_number: string | null
           id: string
+          invoice_footer_text: string | null
+          invoice_payment_terms_days: number | null
+          lead_forward_email: string | null
           logo_url: string | null
           maintenance_mode: boolean
+          managing_director: string | null
           meta_description: string
           meta_keywords: string
           meta_title: string
@@ -2917,6 +3349,7 @@ export type Database = {
           notify_new_auction: boolean
           notify_new_bid: boolean
           notify_new_registration: boolean
+          openai_api_key: string | null
           primary_color: string
           reserve_price_required: boolean
           secondary_color: string
@@ -2930,30 +3363,17 @@ export type Database = {
           smtp_user: string | null
           soft_close_extension_minutes: number
           support_phone: string
-          bank_iban: string | null
-          bank_bic: string | null
-          bank_name: string | null
-          ust_id: string | null
           tax_number: string | null
-          managing_director: string | null
-          hrb_number: string | null
-          invoice_footer_text: string | null
-          invoice_payment_terms_days: number | null
-          dunning_level1_days: number | null
-          dunning_level1_fee: number | null
-          dunning_level2_days: number | null
-          dunning_level2_fee: number | null
-          dunning_level3_days: number | null
-          dunning_level3_fee: number | null
-          dunning_restrict_at_level: number | null
-          dunning_auto_enabled: boolean | null
           tuv_badge_url: string | null
           updated_at: string
+          ust_id: string | null
           whatsapp_number: string | null
-          lead_forward_email: string | null
         }
         Insert: {
           autobid_enabled?: boolean
+          bank_bic?: string | null
+          bank_iban?: string | null
+          bank_name?: string | null
           buy_now_enabled?: boolean
           commission_rate_percent?: number
           company_address?: string | null
@@ -2964,13 +3384,26 @@ export type Database = {
           created_at?: string
           dark_mode_enabled?: boolean
           default_auction_duration_days?: number
+          dunning_auto_enabled?: boolean | null
+          dunning_level1_days?: number | null
+          dunning_level1_fee?: number | null
+          dunning_level2_days?: number | null
+          dunning_level2_fee?: number | null
+          dunning_level3_days?: number | null
+          dunning_level3_fee?: number | null
+          dunning_restrict_at_level?: number | null
           favicon_url?: string | null
           from_email?: string
           google_analytics_id?: string | null
           google_tag_manager_id?: string | null
+          hrb_number?: string | null
           id?: string
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
+          lead_forward_email?: string | null
           logo_url?: string | null
           maintenance_mode?: boolean
+          managing_director?: string | null
           meta_description?: string
           meta_keywords?: string
           meta_title?: string
@@ -2978,6 +3411,7 @@ export type Database = {
           notify_new_auction?: boolean
           notify_new_bid?: boolean
           notify_new_registration?: boolean
+          openai_api_key?: string | null
           primary_color?: string
           reserve_price_required?: boolean
           secondary_color?: string
@@ -2991,30 +3425,17 @@ export type Database = {
           smtp_user?: string | null
           soft_close_extension_minutes?: number
           support_phone?: string
-          bank_iban?: string | null
-          bank_bic?: string | null
-          bank_name?: string | null
-          ust_id?: string | null
           tax_number?: string | null
-          managing_director?: string | null
-          hrb_number?: string | null
-          invoice_footer_text?: string | null
-          invoice_payment_terms_days?: number | null
-          dunning_level1_days?: number | null
-          dunning_level1_fee?: number | null
-          dunning_level2_days?: number | null
-          dunning_level2_fee?: number | null
-          dunning_level3_days?: number | null
-          dunning_level3_fee?: number | null
-          dunning_restrict_at_level?: number | null
-          dunning_auto_enabled?: boolean | null
           tuv_badge_url?: string | null
           updated_at?: string
+          ust_id?: string | null
           whatsapp_number?: string | null
-          lead_forward_email?: string | null
         }
         Update: {
           autobid_enabled?: boolean
+          bank_bic?: string | null
+          bank_iban?: string | null
+          bank_name?: string | null
           buy_now_enabled?: boolean
           commission_rate_percent?: number
           company_address?: string | null
@@ -3025,13 +3446,26 @@ export type Database = {
           created_at?: string
           dark_mode_enabled?: boolean
           default_auction_duration_days?: number
+          dunning_auto_enabled?: boolean | null
+          dunning_level1_days?: number | null
+          dunning_level1_fee?: number | null
+          dunning_level2_days?: number | null
+          dunning_level2_fee?: number | null
+          dunning_level3_days?: number | null
+          dunning_level3_fee?: number | null
+          dunning_restrict_at_level?: number | null
           favicon_url?: string | null
           from_email?: string
           google_analytics_id?: string | null
           google_tag_manager_id?: string | null
+          hrb_number?: string | null
           id?: string
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
+          lead_forward_email?: string | null
           logo_url?: string | null
           maintenance_mode?: boolean
+          managing_director?: string | null
           meta_description?: string
           meta_keywords?: string
           meta_title?: string
@@ -3039,6 +3473,7 @@ export type Database = {
           notify_new_auction?: boolean
           notify_new_bid?: boolean
           notify_new_registration?: boolean
+          openai_api_key?: string | null
           primary_color?: string
           reserve_price_required?: boolean
           secondary_color?: string
@@ -3052,27 +3487,11 @@ export type Database = {
           smtp_user?: string | null
           soft_close_extension_minutes?: number
           support_phone?: string
-          bank_iban?: string | null
-          bank_bic?: string | null
-          bank_name?: string | null
-          ust_id?: string | null
           tax_number?: string | null
-          managing_director?: string | null
-          hrb_number?: string | null
-          invoice_footer_text?: string | null
-          invoice_payment_terms_days?: number | null
-          dunning_level1_days?: number | null
-          dunning_level1_fee?: number | null
-          dunning_level2_days?: number | null
-          dunning_level2_fee?: number | null
-          dunning_level3_days?: number | null
-          dunning_level3_fee?: number | null
-          dunning_restrict_at_level?: number | null
-          dunning_auto_enabled?: boolean | null
           tuv_badge_url?: string | null
           updated_at?: string
+          ust_id?: string | null
           whatsapp_number?: string | null
-          lead_forward_email?: string | null
         }
         Relationships: []
       }
@@ -3187,20 +3606,26 @@ export type Database = {
       }
       user_favorites: {
         Row: {
+          alert_enabled: boolean | null
           created_at: string | null
           id: string
+          last_notified_price: number | null
           motorhome_id: string | null
           user_id: string | null
         }
         Insert: {
+          alert_enabled?: boolean | null
           created_at?: string | null
           id?: string
+          last_notified_price?: number | null
           motorhome_id?: string | null
           user_id?: string | null
         }
         Update: {
+          alert_enabled?: boolean | null
           created_at?: string | null
           id?: string
+          last_notified_price?: number | null
           motorhome_id?: string | null
           user_id?: string | null
         }
@@ -3221,6 +3646,7 @@ export type Database = {
           audio_new_bid: boolean | null
           audio_outbid: boolean | null
           audio_volume: number | null
+          broadcast_emails_enabled: boolean | null
           created_at: string | null
           digest_frequency: string | null
           email_auction_ending: boolean | null
@@ -3249,6 +3675,7 @@ export type Database = {
           audio_new_bid?: boolean | null
           audio_outbid?: boolean | null
           audio_volume?: number | null
+          broadcast_emails_enabled?: boolean | null
           created_at?: string | null
           digest_frequency?: string | null
           email_auction_ending?: boolean | null
@@ -3277,6 +3704,7 @@ export type Database = {
           audio_new_bid?: boolean | null
           audio_outbid?: boolean | null
           audio_volume?: number | null
+          broadcast_emails_enabled?: boolean | null
           created_at?: string | null
           digest_frequency?: string | null
           email_auction_ending?: boolean | null
@@ -3343,7 +3771,9 @@ export type Database = {
           admin_estimated_value: number | null
           admin_notes: string | null
           admin_valued_at: string | null
+          admin_valued_by: string | null
           ai_confidence: number | null
+          ai_estimated_at: string | null
           ai_estimated_value: number | null
           algorithm_value_max: number | null
           algorithm_value_min: number | null
@@ -3353,19 +3783,24 @@ export type Database = {
           contacted_at: string | null
           created_at: string | null
           disposition: string | null
+          done_email_count: number | null
+          done_email_last_sent: string | null
           email: string
           estimated_value_max: number | null
           estimated_value_min: number | null
           id: string
-          is_viewed: boolean | null
+          is_viewed: boolean
           manufacturer: string | null
           message: string | null
           mileage: number | null
           model: string | null
           name: string
+          no_answer_email_count: number | null
+          no_answer_email_last_sent: string | null
           phone: string | null
           source: string
           status: string | null
+          vehicle_type: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
           year: number | null
@@ -3374,7 +3809,9 @@ export type Database = {
           admin_estimated_value?: number | null
           admin_notes?: string | null
           admin_valued_at?: string | null
+          admin_valued_by?: string | null
           ai_confidence?: number | null
+          ai_estimated_at?: string | null
           ai_estimated_value?: number | null
           algorithm_value_max?: number | null
           algorithm_value_min?: number | null
@@ -3384,19 +3821,24 @@ export type Database = {
           contacted_at?: string | null
           created_at?: string | null
           disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
           email: string
           estimated_value_max?: number | null
           estimated_value_min?: number | null
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
           model?: string | null
           name: string
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           phone?: string | null
           source: string
           status?: string | null
+          vehicle_type?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
           year?: number | null
@@ -3405,7 +3847,9 @@ export type Database = {
           admin_estimated_value?: number | null
           admin_notes?: string | null
           admin_valued_at?: string | null
+          admin_valued_by?: string | null
           ai_confidence?: number | null
+          ai_estimated_at?: string | null
           ai_estimated_value?: number | null
           algorithm_value_max?: number | null
           algorithm_value_min?: number | null
@@ -3415,19 +3859,24 @@ export type Database = {
           contacted_at?: string | null
           created_at?: string | null
           disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
           email?: string
           estimated_value_max?: number | null
           estimated_value_min?: number | null
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
           model?: string | null
           name?: string
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           phone?: string | null
           source?: string
           status?: string | null
+          vehicle_type?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
           year?: number | null
@@ -3487,21 +3936,26 @@ export type Database = {
       wizard_sessions: {
         Row: {
           admin_called_at: string | null
+          admin_estimated_value: number | null
           admin_notes: string | null
           anonymous_id: string | null
           completed_at: string | null
           created_at: string | null
           current_step: number
-          disposition: string | null
           customer_email: string | null
           customer_name: string | null
           customer_phone: string | null
+          disposition: string | null
+          done_email_count: number | null
+          done_email_last_sent: string | null
+          followup_email_sent_at: string | null
           form_data: Json
           id: string
-          is_viewed: boolean | null
+          is_viewed: boolean
           last_activity_at: string | null
           max_step_reached: number
-          followup_email_sent_at: string | null
+          no_answer_email_count: number | null
+          no_answer_email_last_sent: string | null
           resume_email_sent_at: string | null
           status: string
           step_name: string | null
@@ -3511,25 +3965,29 @@ export type Database = {
           vehicle_summary: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
-          admin_estimated_value: number | null
         }
         Insert: {
           admin_called_at?: string | null
+          admin_estimated_value?: number | null
           admin_notes?: string | null
           anonymous_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           current_step?: number
-          disposition?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
+          followup_email_sent_at?: string | null
           form_data?: Json
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           last_activity_at?: string | null
           max_step_reached?: number
-          followup_email_sent_at?: string | null
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
           status?: string
           step_name?: string | null
@@ -3539,25 +3997,29 @@ export type Database = {
           vehicle_summary?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
-          admin_estimated_value?: number | null
         }
         Update: {
           admin_called_at?: string | null
+          admin_estimated_value?: number | null
           admin_notes?: string | null
           anonymous_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           current_step?: number
-          disposition?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          disposition?: string | null
+          done_email_count?: number | null
+          done_email_last_sent?: string | null
+          followup_email_sent_at?: string | null
           form_data?: Json
           id?: string
-          is_viewed?: boolean | null
+          is_viewed?: boolean
           last_activity_at?: string | null
           max_step_reached?: number
-          followup_email_sent_at?: string | null
+          no_answer_email_count?: number | null
+          no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
           status?: string
           step_name?: string | null
@@ -3567,12 +4029,42 @@ export type Database = {
           vehicle_summary?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
-          admin_estimated_value?: number | null
         }
         Relationships: []
       }
     }
     Views: {
+      analytics_daily_summary: {
+        Row: {
+          date: string | null
+          desktop_sessions: number | null
+          mobile_sessions: number | null
+          page_views: number | null
+          sessions: number | null
+          tablet_sessions: number | null
+          unique_visitors: number | null
+        }
+        Relationships: []
+      }
+      error_logs_grouped: {
+        Row: {
+          affected_sessions: number | null
+          affected_users: number | null
+          component_name: string | null
+          error_category: string | null
+          error_code: string | null
+          error_hash: string | null
+          error_message: string | null
+          first_seen: string | null
+          has_unresolved: boolean | null
+          last_seen: string | null
+          page_path: string | null
+          severity: string | null
+          total_occurrences: number | null
+          unique_entries: number | null
+        }
+        Relationships: []
+      }
       error_logs_stats: {
         Row: {
           error_category: string | null
@@ -3586,19 +4078,135 @@ export type Database = {
         }
         Relationships: []
       }
+      public_site_settings: {
+        Row: {
+          autobid_enabled: boolean | null
+          buy_now_enabled: boolean | null
+          commission_rate_percent: number | null
+          company_address: string | null
+          company_city: string | null
+          company_country: string | null
+          company_postal_code: string | null
+          contact_email: string | null
+          created_at: string | null
+          dark_mode_enabled: boolean | null
+          default_auction_duration_days: number | null
+          favicon_url: string | null
+          google_analytics_id: string | null
+          google_tag_manager_id: string | null
+          hrb_number: string | null
+          id: string | null
+          invoice_footer_text: string | null
+          invoice_payment_terms_days: number | null
+          logo_url: string | null
+          maintenance_mode: boolean | null
+          managing_director: string | null
+          meta_description: string | null
+          meta_keywords: string | null
+          meta_title: string | null
+          min_bid_increment_percent: number | null
+          primary_color: string | null
+          reserve_price_required: boolean | null
+          secondary_color: string | null
+          site_description: string | null
+          site_name: string | null
+          site_tagline: string | null
+          sitemap_enabled: boolean | null
+          soft_close_extension_minutes: number | null
+          support_phone: string | null
+          tax_number: string | null
+          tuv_badge_url: string | null
+          updated_at: string | null
+          ust_id: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          autobid_enabled?: boolean | null
+          buy_now_enabled?: boolean | null
+          commission_rate_percent?: number | null
+          company_address?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_postal_code?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          dark_mode_enabled?: boolean | null
+          default_auction_duration_days?: number | null
+          favicon_url?: string | null
+          google_analytics_id?: string | null
+          google_tag_manager_id?: string | null
+          hrb_number?: string | null
+          id?: string | null
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
+          logo_url?: string | null
+          maintenance_mode?: boolean | null
+          managing_director?: string | null
+          meta_description?: string | null
+          meta_keywords?: string | null
+          meta_title?: string | null
+          min_bid_increment_percent?: number | null
+          primary_color?: string | null
+          reserve_price_required?: boolean | null
+          secondary_color?: string | null
+          site_description?: string | null
+          site_name?: string | null
+          site_tagline?: string | null
+          sitemap_enabled?: boolean | null
+          soft_close_extension_minutes?: number | null
+          support_phone?: string | null
+          tax_number?: string | null
+          tuv_badge_url?: string | null
+          updated_at?: string | null
+          ust_id?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          autobid_enabled?: boolean | null
+          buy_now_enabled?: boolean | null
+          commission_rate_percent?: number | null
+          company_address?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_postal_code?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          dark_mode_enabled?: boolean | null
+          default_auction_duration_days?: number | null
+          favicon_url?: string | null
+          google_analytics_id?: string | null
+          google_tag_manager_id?: string | null
+          hrb_number?: string | null
+          id?: string | null
+          invoice_footer_text?: string | null
+          invoice_payment_terms_days?: number | null
+          logo_url?: string | null
+          maintenance_mode?: boolean | null
+          managing_director?: string | null
+          meta_description?: string | null
+          meta_keywords?: string | null
+          meta_title?: string | null
+          min_bid_increment_percent?: number | null
+          primary_color?: string | null
+          reserve_price_required?: boolean | null
+          secondary_color?: string | null
+          site_description?: string | null
+          site_name?: string | null
+          site_tagline?: string | null
+          sitemap_enabled?: boolean | null
+          soft_close_extension_minutes?: number | null
+          support_phone?: string | null
+          tax_number?: string | null
+          tuv_badge_url?: string | null
+          updated_at?: string | null
+          ust_id?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      admin_delete_bid: {
-        Args: { p_bid_id: string }
-        Returns: {
-          success: boolean
-          error?: string
-          deleted_amount?: number
-          was_highest?: boolean
-          new_current_bid?: number
-          bidder_id?: string
-        }
-      }
+      admin_delete_bid: { Args: { p_bid_id: string }; Returns: Json }
       admin_search_listings: {
         Args: { search_term?: string }
         Returns: {
@@ -3636,29 +4244,114 @@ export type Database = {
         Returns: number
       }
       cleanup_expired_rate_limits: { Args: never; Returns: number }
+      cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_error_logs: { Args: never; Returns: undefined }
+      cleanup_old_notifications: { Args: never; Returns: undefined }
       create_auction_invoice: {
         Args: { auction_id_param: string; dealer_id_param: string }
         Returns: string
       }
-      create_seller_penalty_invoice: {
+      create_instant_buy_invoice: {
         Args: {
-          seller_id_param: string
-          auction_id_param?: string
-          motorhome_id_param?: string
-          penalty_reason_param?: string
-          notes_param?: string
+          auction_id_param: string
+          dealer_id_param: string
+          sale_price_param: number
         }
         Returns: string
       }
+      create_seller_penalty_invoice: {
+        Args: {
+          auction_id_param?: string
+          motorhome_id_param?: string
+          notes_param?: string
+          penalty_reason_param?: string
+          seller_id_param: string
+        }
+        Returns: string
+      }
+      create_wizard_session: {
+        Args: {
+          p_anonymous_id: string
+          p_customer_email?: string
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_total_steps?: number
+          p_user_id?: string
+        }
+        Returns: string
+      }
+      ensure_profile_exists: {
+        Args: {
+          p_email: string
+          p_first_name?: string
+          p_last_name?: string
+          p_phone?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      find_wizard_session_by_anonymous_id: {
+        Args: { p_anonymous_id: string }
+        Returns: {
+          admin_called_at: string | null
+          admin_estimated_value: number | null
+          admin_notes: string | null
+          anonymous_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          current_step: number
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          disposition: string | null
+          done_email_count: number | null
+          done_email_last_sent: string | null
+          followup_email_sent_at: string | null
+          form_data: Json
+          id: string
+          is_viewed: boolean
+          last_activity_at: string | null
+          max_step_reached: number
+          no_answer_email_count: number | null
+          no_answer_email_last_sent: string | null
+          resume_email_sent_at: string | null
+          status: string
+          step_name: string | null
+          total_steps: number
+          updated_at: string | null
+          user_id: string | null
+          vehicle_summary: string | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "wizard_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      generate_contract_number: { Args: never; Returns: string }
+      generate_customer_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_listing_number: { Args: never; Returns: string }
       generate_release_pin: { Args: never; Returns: string }
       generate_sepa_reference: { Args: never; Returns: string }
+      get_dealer_tax_info: {
+        Args: { p_dealer_id: string }
+        Returns: {
+          dealer_country: string
+          is_reverse_charge: boolean
+          tax_rate: number
+        }[]
+      }
       get_primary_role: {
         Args: { user_id_param: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_public_platform_stats: { Args: never; Returns: Json }
+      get_request_anonymous_id: { Args: never; Returns: string }
+      get_vapid_keys: { Args: never; Returns: Json }
       handle_autobid_atomic: {
         Args: {
           p_auction_id: string
@@ -3679,6 +4372,86 @@ export type Database = {
         Args: { dealer_id_param: string }
         Returns: boolean
       }
+      log_audit_event: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_entity_id?: string
+          p_entity_type: string
+        }
+        Returns: undefined
+      }
+      log_error:
+        | {
+            Args: {
+              p_browser?: string
+              p_component_name?: string
+              p_device_type?: string
+              p_error_category?: string
+              p_error_code: string
+              p_error_message: string
+              p_metadata?: Json
+              p_original_error?: string
+              p_page_path?: string
+              p_page_title?: string
+              p_page_url?: string
+              p_severity?: string
+              p_stack_trace?: string
+              p_user_agent?: string
+              p_user_email?: string
+              p_user_id?: string
+              p_user_role?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_app_version?: string
+              p_breadcrumbs?: Json
+              p_browser?: string
+              p_component_name?: string
+              p_connection_type?: string
+              p_device_type?: string
+              p_environment?: string
+              p_error_category?: string
+              p_error_code: string
+              p_error_hash?: string
+              p_error_message: string
+              p_error_source?: string
+              p_http_status?: number
+              p_memory_usage?: Json
+              p_metadata?: Json
+              p_original_error?: string
+              p_page_path?: string
+              p_page_title?: string
+              p_page_url?: string
+              p_request_info?: Json
+              p_screen_resolution?: string
+              p_session_id?: string
+              p_severity?: string
+              p_stack_trace?: string
+              p_user_agent?: string
+              p_user_email?: string
+              p_user_id?: string
+              p_user_role?: string
+            }
+            Returns: string
+          }
+      mark_all_notifications_read: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      place_bid_atomic: {
+        Args: {
+          p_auction_id: string
+          p_bid_amount: number
+          p_bidder_id: string
+          p_is_autobid?: boolean
+          p_max_autobid_amount?: number
+          p_min_increment?: number
+        }
+        Returns: Json
+      }
       process_approved_claim: {
         Args: { claim_id_param: string }
         Returns: undefined
@@ -3687,16 +4460,29 @@ export type Database = {
         Args: { motorhome_id_param: string }
         Returns: number
       }
+      reapply_dealer_application: {
+        Args: { application_id_param: string }
+        Returns: undefined
+      }
       restrict_dealer_account: {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
       }
+      update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }
       update_dealer_rating_summary: {
         Args: { dealer_id_param: string }
         Returns: undefined
       }
+      update_max_wizard_step: {
+        Args: { p_lead_id: string; p_step: number }
+        Returns: undefined
+      }
       update_motorhome_damage_status: {
         Args: { motorhome_id_param: string }
+        Returns: undefined
+      }
+      update_wizard_session_by_anonymous_id: {
+        Args: { p_anonymous_id: string; p_session_id: string; p_updates: Json }
         Returns: undefined
       }
     }
@@ -3734,7 +4520,10 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "Reparaturbedürftig"
+        | "ReparaturbedÃ¼rftig"
+        | "Sehr gepflegt"
+        | "Gepflegt"
+        | "Gebrauchsspuren"
       refrigerator_type: "Kompressor" | "Absorber" | "Thermoelektrisch"
       sale_channel: "instant_price" | "auction" | "station"
       transmission_type: "Schaltgetriebe" | "Automatik"
@@ -3901,7 +4690,10 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "Reparaturbedürftig",
+        "ReparaturbedÃ¼rftig",
+        "Sehr gepflegt",
+        "Gepflegt",
+        "Gebrauchsspuren",
       ],
       refrigerator_type: ["Kompressor", "Absorber", "Thermoelektrisch"],
       sale_channel: ["instant_price", "auction", "station"],
@@ -3909,3 +4701,4 @@ export const Constants = {
     },
   },
 } as const
+

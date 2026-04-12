@@ -13,6 +13,7 @@ import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw, Trendin
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -387,7 +388,7 @@ export default function MyKaufchancen() {
   const handleRaiseOffer = async (e: React.MouseEvent, offer: MyOffer) => {
     e.preventDefault();
     e.stopPropagation();
-    const newAmount = parseFloat(raiseAmounts[offer.id]);
+    const newAmount = parseGermanNumber(raiseAmounts[offer.id]);
     if (isNaN(newAmount) || newAmount <= offer.offer_amount) {
       toast({ title: 'Ungültiger Betrag', description: `Neuer Betrag muss höher als ${offer.offer_amount.toLocaleString('de-DE')} € sein.`, variant: 'destructive' });
       return;
@@ -681,12 +682,12 @@ export default function MyKaufchancen() {
                           {offer.status === 'pending' && (
                             <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 placeholder={`> ${offer.offer_amount.toLocaleString('de-DE')} €`}
                                 value={raiseAmounts[offer.id] || ''}
-                                onChange={(e) => setRaiseAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                onChange={(e) => setRaiseAmounts(prev => ({ ...prev, [offer.id]: formatBidDisplay(e.target.value) }))}
                                 className="flex-1 h-7 text-xs"
-                                min={offer.offer_amount + 1}
                               />
                               <Button
                                 size="sm"

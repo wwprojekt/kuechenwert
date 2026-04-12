@@ -51,6 +51,7 @@ import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
@@ -330,7 +331,7 @@ export default function ListingDetail() {
 
     const amountStr = counterOfferAmounts[offerId];
     const message = counterOfferMessages[offerId] || '';
-    const amount = parseFloat(amountStr);
+    const amount = parseGermanNumber(amountStr);
 
     if (!amountStr || isNaN(amount) || amount <= 0) {
       toast({ title: 'Fehler', description: 'Bitte geben Sie einen gültigen Betrag ein.', variant: 'destructive' });
@@ -391,7 +392,7 @@ export default function ListingDetail() {
 
   const handleSellerLowerCounter = async (offerId: string) => {
     const newAmountStr = lowerCounterAmounts[offerId];
-    const newAmount = parseFloat(newAmountStr);
+    const newAmount = parseGermanNumber(newAmountStr);
     const currentOffer = kaufchanceOffers.find(o => o.id === offerId);
     if (!currentOffer || !currentOffer.counter_offer_amount) return;
 
@@ -1200,10 +1201,11 @@ export default function ListingDetail() {
                               <p className="text-xs font-medium">Oder Gegenangebot senden:</p>
                               <div className="flex gap-2">
                                 <Input
-                                  type="number"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder="Betrag in €"
                                   value={counterOfferAmounts[offer.id] || ''}
-                                  onChange={(e) => setCounterOfferAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                  onChange={(e) => setCounterOfferAmounts(prev => ({ ...prev, [offer.id]: formatBidDisplay(e.target.value) }))}
                                   className="flex-1"
                                 />
                               </div>
@@ -1236,10 +1238,11 @@ export default function ListingDetail() {
                             </p>
                             <div className="flex gap-2">
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 placeholder={`< ${Number(offer.counter_offer_amount).toLocaleString('de-DE')} €`}
                                 value={lowerCounterAmounts[offer.id] || ''}
-                                onChange={(e) => setLowerCounterAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                onChange={(e) => setLowerCounterAmounts(prev => ({ ...prev, [offer.id]: formatBidDisplay(e.target.value) }))}
                                 className="flex-1"
                               />
                               <Button

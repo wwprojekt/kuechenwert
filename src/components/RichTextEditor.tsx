@@ -3,6 +3,15 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
 import { logger } from '@/lib/logger';
 import {
   Bold,
@@ -27,6 +36,8 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -89,10 +100,17 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
   };
 
   const addLink = () => {
-    const url = window.prompt('URL eingeben:');
-    if (url) {
+    setLinkUrl('');
+    setLinkDialogOpen(true);
+  };
+
+  const confirmAddLink = () => {
+    if (linkUrl) {
+      const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
       editor?.chain().focus().setLink({ href: url }).run();
     }
+    setLinkDialogOpen(false);
+    setLinkUrl('');
   };
 
   if (!editor) return null;
@@ -194,6 +212,30 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </div>
       </div>
       <EditorContent editor={editor} />
+
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link einfügen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="link-url">URL</Label>
+            <Input
+              id="link-url"
+              type="url"
+              placeholder="https://example.com"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmAddLink(); } }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={confirmAddLink} disabled={!linkUrl.trim()}>Einfügen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

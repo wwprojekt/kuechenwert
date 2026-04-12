@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, MessageSquare } from "lucide-react";
 import { withSessionRetry, ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
+import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 
 interface PostAuctionOfferDialogProps {
   auctionId: string;
@@ -52,7 +53,7 @@ export function PostAuctionOfferDialog({
       return;
     }
 
-    const amount = parseFloat(offerAmount);
+    const amount = parseGermanNumber(offerAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({
         title: "Ungültiger Betrag",
@@ -226,13 +227,12 @@ export function PostAuctionOfferDialog({
               <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="offer-amount"
-                type="number"
-                placeholder="Betrag eingeben"
+                type="text"
+                inputMode="decimal"
+                placeholder={`z.B. ${(currentBid > 0 ? currentBid - 500 : 1000).toLocaleString('de-DE')}`}
                 value={offerAmount}
-                onChange={(e) => setOfferAmount(e.target.value)}
+                onChange={(e) => setOfferAmount(formatBidDisplay(e.target.value))}
                 className="pl-9"
-                min={1}
-                step={100}
               />
             </div>
             <p className="text-xs text-muted-foreground">

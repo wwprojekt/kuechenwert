@@ -6,7 +6,21 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
+import { parseGermanNumber, formatBidDisplay } from '@/lib/parseGermanNumber';
 import PageLayout from "@/components/PageLayout";
+
+async function parseFunctionsErrorBody(error: FunctionsHttpError): Promise<Record<string, any>> {
+  const ctx = error.context;
+  if (!ctx) return {};
+  if (typeof ctx === 'string') {
+    try { return JSON.parse(ctx); } catch { return { error: ctx }; }
+  }
+  if (typeof ctx === 'object' && typeof ctx.text !== 'function') return ctx;
+  try {
+    const text = await ctx.text();
+    try { return JSON.parse(text); } catch { return text ? { error: text } : {}; }
+  } catch { return {}; }
+}
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,39 +142,6 @@ const AuctionDetail = () => {
   const [maxAutobidAmount, setMaxAutobidAmount] = useState("");
   const [highBidConfirm, setHighBidConfirm] = useState<{ amount: number; currentBid: number } | null>(null);
 
-  /**
-   * Parses German-formatted numbers: "50.000" → 50000, "1.234,56" → 1234.56
-   * Mobile users naturally type "50.000" for fifty-thousand.
-   * JavaScript's parseFloat("50.000") returns 50 — this function prevents that.
-   */
-  const parseGermanNumber = (raw: string): number => {
-    if (!raw) return NaN;
-    let s = raw.trim();
-    // Pure integer (no separators) → fast path
-    if (/^\d+$/.test(s)) return Number(s);
-    const hasComma = s.includes(',');
-    const hasDot = s.includes('.');
-    if (hasDot && !hasComma) {
-      // Could be "50.000" (DE thousand sep) or "50.5" (EN decimal)
-      // If there are multiple dots OR 3 digits after the only dot → thousand separator
-      const parts = s.split('.');
-      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-        s = s.replace(/\./g, '');
-      }
-    } else if (hasComma && !hasDot) {
-      // "50,00" → decimal comma
-      s = s.replace(',', '.');
-    } else if (hasDot && hasComma) {
-      // "1.234,56" → DE full format
-      s = s.replace(/\./g, '').replace(',', '.');
-    }
-    return Number(s);
-  };
-
-  const formatBidDisplay = (raw: string): string => {
-    // Allow only digits, dots, and commas while typing
-    return raw.replace(/[^\d.,]/g, '');
-  };
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const { isFavorite, toggleFavorite, isLoading: isFavLoading } = useFavorites();
   const hotbidSoundPlayed = useRef(false);
@@ -614,15 +595,8 @@ const AuctionDetail = () => {
       if (error) {
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
         if (error instanceof FunctionsHttpError) {
-          try {
-            const body = await (error as FunctionsHttpError).context.json();
-            if (body?.error) errorMsg = body.error;
-          } catch {
-            try {
-              const text = await (error as FunctionsHttpError).context.text();
-              if (text) errorMsg = text;
-            } catch { /* use default */ }
-          }
+          const body = await parseFunctionsErrorBody(error);
+          if (body.error) errorMsg = body.error;
         } else if (error instanceof FunctionsRelayError) {
           errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
         } else if (error instanceof FunctionsFetchError) {
@@ -774,17 +748,10 @@ const AuctionDetail = () => {
         let serverMinimumBid: number | undefined;
         let serverCurrentBid: number | undefined;
         if (error instanceof FunctionsHttpError) {
-          try {
-            const body = await (error as FunctionsHttpError).context.json();
-            if (body?.error) errorMsg = body.error;
-            if (body?.minimum_bid) serverMinimumBid = body.minimum_bid;
-            if (body?.current_bid) serverCurrentBid = body.current_bid;
-          } catch {
-            try {
-              const text = await (error as FunctionsHttpError).context.text();
-              if (text) errorMsg = text;
-            } catch { /* use default */ }
-          }
+          const body = await parseFunctionsErrorBody(error);
+          if (body.error) errorMsg = body.error;
+          if (body.minimum_bid) serverMinimumBid = body.minimum_bid;
+          if (body.current_bid) serverCurrentBid = body.current_bid;
         } else if (error instanceof FunctionsRelayError) {
           errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
         } else if (error instanceof FunctionsFetchError) {

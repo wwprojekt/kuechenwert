@@ -226,6 +226,7 @@ export default function AdminPostAuctionOffers() {
   const [savingMinPrice, setSavingMinPrice] = useState<string | null>(null);
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   const [endingKaufchance, setEndingKaufchance] = useState<string | null>(null);
+  const [endKaufchanceConfirm, setEndKaufchanceConfirm] = useState<{ auctionId: string; vehicleName: string } | null>(null);
   const [extendingKaufchance, setExtendingKaufchance] = useState<string | null>(null);
   const [backToAuctionLoading, setBackToAuctionLoading] = useState<string | null>(null);
   const [backToAuctionDialogOpen, setBackToAuctionDialogOpen] = useState(false);
@@ -1207,11 +1208,7 @@ export default function AdminPostAuctionOffers() {
                           variant="outline"
                           className="text-destructive border-destructive/30 hover:bg-destructive/10"
                           disabled={endingKaufchance === auction.id}
-                          onClick={() => {
-                            if (window.confirm(`Kaufchance für "${vehicleName}" wirklich beenden? Alle ausstehenden Angebote werden abgelehnt.`)) {
-                              handleEndKaufchance(auction.id);
-                            }
-                          }}
+                          onClick={() => setEndKaufchanceConfirm({ auctionId: auction.id, vehicleName })}
                         >
                           {endingKaufchance === auction.id ? (
                             <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -2038,11 +2035,7 @@ export default function AdminPostAuctionOffers() {
                           variant="destructive"
                           className="w-full"
                           disabled={endingKaufchance === auction.id}
-                          onClick={() => {
-                            if (window.confirm(`Kaufchance für "${vehicleName}" wirklich endgültig beenden?`)) {
-                              handleEndKaufchance(auction.id);
-                            }
-                          }}
+                          onClick={() => setEndKaufchanceConfirm({ auctionId: auction.id, vehicleName })}
                         >
                           {endingKaufchance === auction.id ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -2370,6 +2363,35 @@ export default function AdminPostAuctionOffers() {
             >
               {deleteOffers.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!endKaufchanceConfirm} onOpenChange={(open) => { if (!open) setEndKaufchanceConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="w-5 h-5 text-destructive" />
+              Kaufchance beenden
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Kaufchance für "{endKaufchanceConfirm?.vehicleName}" wirklich beenden? Alle ausstehenden Angebote werden abgelehnt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (endKaufchanceConfirm) {
+                  handleEndKaufchance(endKaufchanceConfirm.auctionId);
+                  setEndKaufchanceConfirm(null);
+                }
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <Ban className="w-4 h-4 mr-2" />
+              Ja, beenden
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

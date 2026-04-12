@@ -90,6 +90,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -116,6 +126,7 @@ const AuctionDetail = () => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [enableAutobid, setEnableAutobid] = useState(false);
   const [maxAutobidAmount, setMaxAutobidAmount] = useState("");
+  const [highBidConfirm, setHighBidConfirm] = useState<{ amount: number; currentBid: number } | null>(null);
 
   /**
    * Parses German-formatted numbers: "50.000" → 50000, "1.234,56" → 1234.56
@@ -667,10 +678,10 @@ const AuctionDetail = () => {
     }
   };
 
-  const handlePlaceBid = async () => {
+  const handlePlaceBid = async (skipHighBidCheck = false) => {
     const amount = parseGermanNumber(bidAmount);
     const currentBid = auction.current_bid || auction.starting_bid;
-    const minimumBid = currentBid + 50; // Minimum increment €50
+    const minimumBid = currentBid + 50;
 
     if (isNaN(amount) || amount <= 0) {
       toast({
@@ -690,6 +701,19 @@ const AuctionDetail = () => {
       return;
     }
 
+    if (amount % 50 !== 0) {
+      const roundedDown = Math.floor(amount / 50) * 50;
+      const roundedUp = roundedDown + 50;
+      const suggestion = roundedUp >= minimumBid ? roundedUp : roundedDown >= minimumBid ? roundedDown : minimumBid;
+      toast({
+        title: "Gebot muss ein Vielfaches von €50 sein",
+        description: `Bitte bieten Sie z.B. €${suggestion.toLocaleString()} statt €${amount.toLocaleString()}`,
+        variant: "destructive",
+      });
+      setBidAmount(String(suggestion));
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Anmeldung erforderlich",
@@ -700,12 +724,10 @@ const AuctionDetail = () => {
       return;
     }
 
-    // Warn if bid is unusually high (more than 2x current bid)
-    if (amount > currentBid * 2) {
-      const confirmed = window.confirm(
-        `Ihr Gebot von €${amount.toLocaleString()} ist mehr als doppelt so hoch wie das aktuelle Gebot von €${currentBid.toLocaleString()}. Möchten Sie fortfahren?`
-      );
-      if (!confirmed) return;
+    // Warn if bid is unusually high (more than 2x current bid) — uses AlertDialog instead of window.confirm
+    if (!skipHighBidCheck && amount > currentBid * 2) {
+      setHighBidConfirm({ amount, currentBid });
+      return;
     }
 
     setIsSubmitting(true);
@@ -720,6 +742,17 @@ const AuctionDetail = () => {
             description: "Maximalgebot muss höher als Ihr aktuelles Gebot sein",
             variant: "destructive",
           });
+          setIsSubmitting(false);
+          return;
+        }
+        if (maxAmount % 50 !== 0) {
+          const rounded = Math.ceil(maxAmount / 50) * 50;
+          toast({
+            title: "Maximalgebot muss ein Vielfaches von €50 sein",
+            description: `Bitte verwenden Sie z.B. €${rounded.toLocaleString()}`,
+            variant: "destructive",
+          });
+          setMaxAutobidAmount(String(rounded));
           setIsSubmitting(false);
           return;
         }
@@ -1937,7 +1970,7 @@ const AuctionDetail = () => {
                     </div>
 
                     <Button
-                      onClick={handlePlaceBid}
+                      onClick={() => handlePlaceBid()}
                       disabled={isSubmitting || !bidAmount || (enableAutobid && !maxAutobidAmount)}
                       className="w-full h-12 text-lg gradient-hero hover:gradient-hero-hover"
                     >
@@ -2208,6 +2241,39 @@ const AuctionDetail = () => {
           </div>
         </div>
       </div>
+      {/* High-bid confirmation dialog — replaces window.confirm() which fails on mobile */}
+      <AlertDialog open={!!highBidConfirm} onOpenChange={(open) => { if (!open) setHighBidConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Ungewöhnlich hohes Gebot
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {highBidConfirm && (
+                <>
+                  Ihr Gebot von <strong>€{highBidConfirm.amount.toLocaleString()}</strong> ist mehr als
+                  doppelt so hoch wie das aktuelle Gebot von <strong>€{highBidConfirm.currentBid.toLocaleString()}</strong>.
+                  <br /><br />
+                  Möchten Sie wirklich fortfahren?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setHighBidConfirm(null);
+                handlePlaceBid(true);
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Ja, Gebot abgeben
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 };

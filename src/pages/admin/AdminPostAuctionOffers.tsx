@@ -869,32 +869,32 @@ export default function AdminPostAuctionOffers() {
     }
   };
 
-  // ---- Admin: Im Namen des Verkäufers alle pending Angebote ablehnen ----
+  // ---- Admin: Im Namen des Verkäufers alle offenen Angebote ablehnen ----
   const handleAdminRejectAllPending = async (auctionId: string) => {
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
     setSellerActionLoading(true);
     try {
-      const { data: pendingOffers, error: fetchErr } = await supabase
+      const { data: actionableOffers, error: fetchErr } = await supabase
         .from('post_auction_offers')
-        .select('id, buyer_id, offer_amount, auction_id')
+        .select('id, buyer_id, offer_amount, auction_id, status')
         .eq('auction_id', auctionId)
-        .eq('status', 'pending');
+        .in('status', ['pending', 'countered']);
       if (fetchErr) throw fetchErr;
-      if (!pendingOffers || pendingOffers.length === 0) {
+      if (!actionableOffers || actionableOffers.length === 0) {
         toast({ title: 'Hinweis', description: 'Keine offenen Angebote vorhanden.' });
         setSellerActionLoading(false);
         return;
       }
 
+      const offerIds = actionableOffers.map(o => o.id);
       const { error } = await supabase
         .from('post_auction_offers')
         .update({ status: 'rejected', seller_response: sellerActionMessage || 'Abgelehnt durch Admin im Namen des Verkäufers', updated_at: new Date().toISOString() })
-        .eq('auction_id', auctionId)
-        .eq('status', 'pending');
+        .in('id', offerIds);
       if (error) throw error;
 
-      for (const offer of pendingOffers) {
+      for (const offer of actionableOffers) {
         try {
           await supabase.functions.invoke('notify-offer-action', {
             body: {
@@ -910,7 +910,7 @@ export default function AdminPostAuctionOffers() {
         }
       }
 
-      toast({ title: 'Alle Angebote abgelehnt', description: `${pendingOffers.length} Angebot(e) im Namen des Verkäufers abgelehnt.` });
+      toast({ title: 'Alle Angebote abgelehnt', description: `${actionableOffers.length} Angebot(e) im Namen des Verkäufers abgelehnt.` });
       setSellerActionMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       if (selectedKaufchanceAuction) loadKaufchanceDetail(selectedKaufchanceAuction);
@@ -921,7 +921,7 @@ export default function AdminPostAuctionOffers() {
     }
   };
 
-  // ---- Admin: Im Namen des Verkäufers Gegenangebot an alle pending Bieter senden ----
+  // ---- Admin: Im Namen des Verkäufers Gegenangebot an alle offenen Bieter senden ----
   const handleAdminSellerCounterAll = async (auctionId: string) => {
     const amount = parseFloat(sellerActionCounterAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -932,19 +932,19 @@ export default function AdminPostAuctionOffers() {
     if (!sessionValid) return;
     setSellerActionLoading(true);
     try {
-      const { data: pendingOffers, error: fetchErr } = await supabase
+      const { data: actionableOffers, error: fetchErr } = await supabase
         .from('post_auction_offers')
-        .select('id, buyer_id, offer_amount, auction_id')
+        .select('id, buyer_id, offer_amount, auction_id, status')
         .eq('auction_id', auctionId)
-        .eq('status', 'pending');
+        .in('status', ['pending', 'countered']);
       if (fetchErr) throw fetchErr;
-      if (!pendingOffers || pendingOffers.length === 0) {
+      if (!actionableOffers || actionableOffers.length === 0) {
         toast({ title: 'Hinweis', description: 'Keine offenen Angebote vorhanden.' });
         setSellerActionLoading(false);
         return;
       }
 
-      for (const offer of pendingOffers) {
+      for (const offer of actionableOffers) {
         const { error } = await supabase
           .from('post_auction_offers')
           .update({
@@ -972,7 +972,7 @@ export default function AdminPostAuctionOffers() {
         }
       }
 
-      toast({ title: 'Gegenangebote gesendet', description: `${amount.toLocaleString('de-DE')} € an ${pendingOffers.length} Bieter im Namen des Verkäufers gesendet.` });
+      toast({ title: 'Gegenangebote gesendet', description: `${amount.toLocaleString('de-DE')} € an ${actionableOffers.length} Bieter im Namen des Verkäufers gesendet.` });
       setSellerActionCounterAmount("");
       setSellerActionMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });

@@ -561,13 +561,16 @@ export const useWizardForm = () => {
           supabase.functions.invoke("auto-convert-wizard", {
             body: {
               sessionId: savedSessionId,
-              userId: null,  // User wird in auto-convert-wizard erstellt
+              userId: null,
               password: registerPassword,
-              // Signal: User hat bereits ein Passwort im Wizard gesetzt
               hasPassword: true,
             },
-          }).then(() => {
-            logger.info("Auto-convert successful (background)");
+          }).then((res) => {
+            if (res.error) {
+              logger.error("Auto-convert returned error (background):", res.error);
+            } else {
+              logger.info("Auto-convert successful (background)");
+            }
           }).catch((convertErr) => {
             logger.error("Auto-convert failed (background):", convertErr);
           });

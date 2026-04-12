@@ -97,8 +97,8 @@ export function SendOwnerEmailDialog({
       label: "Fotos hochladen",
       icon: <Camera className="w-4 h-4" />,
       color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-      subject: `Fotos benötigt – ${vehicleLabel}`,
-      body: `um Ihr Fahrzeug ${vehicleLabel} optimal an Händler vermitteln zu können, benötigen wir aussagekräftige Fotos.\n\nBitte laden Sie mindestens 5 Fotos hoch:\n• Außenansicht (Front, Seite, Heck)\n• Innenraum (Wohnbereich, Küche, Bad)\n• Cockpit und Armaturenbrett\n• Eventuelle Schäden oder Gebrauchsspuren\n\nSo geht's: Loggen Sie sich in Ihr Dashboard ein und klicken Sie auf „Fotos hochladen".\n\nInserate mit Fotos erhalten durchschnittlich 3x mehr Anfragen von Händlern.`,
+      subject: `${vehicleLabel} – Fotos für die Vermarktung benötigt`,
+      body: `um Ihr Fahrzeug ${vehicleLabel} bestmöglich an geprüfte Händler vermitteln zu können, benötigen wir noch aussagekräftige Fotos.\n\nBitte laden Sie mindestens 5–10 Fotos hoch:\n• Außenansicht von vorne, seitlich und hinten\n• Innenraum – Wohnbereich, Küche und Bad\n• Cockpit und Armaturenbrett\n• Schlafbereich und Stauraum\n• Eventuelle Gebrauchsspuren oder Schäden (Transparenz schafft Vertrauen)\n\nSo einfach geht's:\n1. Melden Sie sich unter https://caravanwert.de/login an\n2. Öffnen Sie Ihr Dashboard unter „Meine Inserate"\n3. Klicken Sie bei Ihrem Fahrzeug auf „Bearbeiten" und laden Sie die Fotos hoch\n\nGute Fotos machen den Unterschied: Inserate mit hochwertigen Bildern erzielen erfahrungsgemäß deutlich bessere Ergebnisse und schnellere Vermittlungen.\n\nBei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.`,
     },
     {
       id: "documents",

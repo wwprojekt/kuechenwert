@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
-import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
+
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -117,9 +117,6 @@ const handler = async (req: Request): Promise<Response> => {
 
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
 
-  const auth = await checkServiceRoleOrAdmin(req, headers);
-  if (!auth.authorized) return auth.response;
-
   try {
     const body: AutoConvertRequest = await req.json();
 
@@ -143,6 +140,22 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ error: "Session not found" }),
         { status: 404, headers }
+      );
+    }
+
+    if (session.status !== 'completed' && session.status !== 'converted') {
+      return new Response(
+        JSON.stringify({ error: "Session not in a convertible state" }),
+        { status: 400, headers }
+      );
+    }
+
+    const sessionAge = Date.now() - new Date(session.completed_at || session.created_at).getTime();
+    if (sessionAge > 24 * 60 * 60 * 1000) {
+      edgeLogger.warn(`Session ${body.sessionId} is older than 24h, rejecting auto-convert`);
+      return new Response(
+        JSON.stringify({ error: "Session expired" }),
+        { status: 410, headers }
       );
     }
 

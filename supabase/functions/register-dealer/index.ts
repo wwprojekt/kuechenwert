@@ -94,11 +94,14 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers }
       );
     }
-    if (body.agbAccepted !== true) {
+    if (body.agbAccepted === false) {
       return new Response(
         JSON.stringify({ error: "Sie müssen die AGB und Datenschutzbestimmungen akzeptieren" }),
         { status: 400, headers }
       );
+    }
+    if (body.agbAccepted !== true) {
+      edgeLogger.warn(`Dealer registration without explicit AGB acceptance (legacy frontend): ${body.email}`);
     }
 
     const email = body.email.trim().toLowerCase();

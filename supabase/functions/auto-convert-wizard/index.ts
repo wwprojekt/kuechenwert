@@ -248,14 +248,19 @@ const handler = async (req: Request): Promise<Response> => {
         }
         
       } else {
-        // Profile not found — check auth.users by email (targeted, paginated query)
-        const { data: authListResult } = await adminClient.auth.admin.listUsers({
-          page: 1,
-          perPage: 1,
-        });
-        const existingAuthUser = authListResult?.users?.find(
-          (u: any) => u.email?.toLowerCase() === normalizedEmail
-        );
+        // Profile not found — check auth.users by email (paginated search)
+        let existingAuthUser: { id: string } | null = null;
+        let page = 1;
+        const perPage = 500;
+        while (!existingAuthUser) {
+          const { data: authListResult } = await adminClient.auth.admin.listUsers({ page, perPage });
+          const found = authListResult?.users?.find(
+            (u: any) => u.email?.toLowerCase() === normalizedEmail
+          );
+          if (found) { existingAuthUser = { id: found.id }; break; }
+          if (!authListResult?.users || authListResult.users.length < perPage) break;
+          page++;
+        }
 
         if (existingAuthUser) {
           sellerId = existingAuthUser.id;

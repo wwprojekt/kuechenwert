@@ -71,11 +71,17 @@ const VerkaufenDanke = () => {
 
         if (response.ok) {
           const result = await response.json();
-          setUploadedCount(result.count || photos.length);
-          setUploadState("success");
-          logger.info(
-            `Uploaded ${result.count} wizard photos for session ${sessionId} (Danke-Seite)`
-          );
+          const actualCount = typeof result.count === 'number' ? result.count : photos.length;
+          if (actualCount === 0) {
+            logger.error(`upload-wizard-photos returned count=0 for session ${sessionId}, ${photos.length} photos were sent`);
+            setUploadState("error");
+          } else {
+            setUploadedCount(actualCount);
+            setUploadState("success");
+            logger.info(
+              `Uploaded ${actualCount} wizard photos for session ${sessionId} (Danke-Seite)`
+            );
+          }
         } else {
           const errorText = await response.text();
           logger.error("Failed to upload wizard photos (Danke-Seite):", errorText);

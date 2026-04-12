@@ -27,7 +27,8 @@ RUN pnpm install --frozen-lockfile
 
 # Install sharp separately for post-build image optimization
 # (not in lockfile to avoid pnpm-lock.yaml drift)
-RUN npm install --no-save sharp@0.33.5
+# --legacy-peer-deps avoids ERESOLVE conflicts with pnpm-managed deps
+RUN npm install --no-save --legacy-peer-deps sharp@0.33.5
 
 # Copy source code
 COPY . .

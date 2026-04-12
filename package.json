@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/optimize-images.mjs",
+    "build:no-optimize": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -103,7 +104,6 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "sharp": "^0.33.5",
     "vite": "^5.4.19",
     "vitest": "^2.1.5"
   }

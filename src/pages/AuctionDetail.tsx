@@ -116,6 +116,40 @@ const AuctionDetail = () => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [enableAutobid, setEnableAutobid] = useState(false);
   const [maxAutobidAmount, setMaxAutobidAmount] = useState("");
+
+  /**
+   * Parses German-formatted numbers: "50.000" → 50000, "1.234,56" → 1234.56
+   * Mobile users naturally type "50.000" for fifty-thousand.
+   * JavaScript's parseFloat("50.000") returns 50 — this function prevents that.
+   */
+  const parseGermanNumber = (raw: string): number => {
+    if (!raw) return NaN;
+    let s = raw.trim();
+    // Pure integer (no separators) → fast path
+    if (/^\d+$/.test(s)) return Number(s);
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasDot && !hasComma) {
+      // Could be "50.000" (DE thousand sep) or "50.5" (EN decimal)
+      // If there are multiple dots OR 3 digits after the only dot → thousand separator
+      const parts = s.split('.');
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        s = s.replace(/\./g, '');
+      }
+    } else if (hasComma && !hasDot) {
+      // "50,00" → decimal comma
+      s = s.replace(',', '.');
+    } else if (hasDot && hasComma) {
+      // "1.234,56" → DE full format
+      s = s.replace(/\./g, '').replace(',', '.');
+    }
+    return Number(s);
+  };
+
+  const formatBidDisplay = (raw: string): string => {
+    // Allow only digits, dots, and commas while typing
+    return raw.replace(/[^\d.,]/g, '');
+  };
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const { isFavorite, toggleFavorite, isLoading: isFavLoading } = useFavorites();
   const hotbidSoundPlayed = useRef(false);
@@ -166,7 +200,7 @@ const AuctionDetail = () => {
     const prevBid = prevCurrentBidRef.current;
     prevCurrentBidRef.current = newCurrentBid;
     if (prevBid === null || prevBid === newCurrentBid) return;
-    const enteredAmount = parseFloat(bidAmount);
+    const enteredAmount = parseGermanNumber(bidAmount);
     if (!isNaN(enteredAmount) && enteredAmount <= newCurrentBid) {
       setBidAmount(String(newCurrentBid + 50));
     }
@@ -634,7 +668,7 @@ const AuctionDetail = () => {
   };
 
   const handlePlaceBid = async () => {
-    const amount = parseFloat(bidAmount);
+    const amount = parseGermanNumber(bidAmount);
     const currentBid = auction.current_bid || auction.starting_bid;
     const minimumBid = currentBid + 50; // Minimum increment €50
 
@@ -679,7 +713,7 @@ const AuctionDetail = () => {
     try {
       // Validate autobid settings first (no network needed)
       if (enableAutobid) {
-        const maxAmount = parseFloat(maxAutobidAmount);
+        const maxAmount = parseGermanNumber(maxAutobidAmount);
         if (isNaN(maxAmount) || maxAmount <= amount) {
           toast({
             title: "Ungültiges Maximalgebot",
@@ -695,7 +729,7 @@ const AuctionDetail = () => {
         auctionId: id,
         amount: amount,
         isAutobid: enableAutobid,
-        maxAutobidAmount: enableAutobid ? parseFloat(maxAutobidAmount) : undefined,
+        maxAutobidAmount: enableAutobid ? parseGermanNumber(maxAutobidAmount) : undefined,
       };
 
       const { data, error } = await invokeWithAuth('place-bid', {
@@ -759,7 +793,7 @@ const AuctionDetail = () => {
           bidder_id: user!.id,
           amount: amount,
           is_autobid: enableAutobid,
-          max_autobid_amount: enableAutobid ? parseFloat(maxAutobidAmount) : null,
+          max_autobid_amount: enableAutobid ? parseGermanNumber(maxAutobidAmount) : null,
           created_at: new Date().toISOString(),
         };
         setBids((prev) => [optimisticBid, ...(Array.isArray(prev) ? prev : [])]);
@@ -801,7 +835,7 @@ const AuctionDetail = () => {
       toast({
         title: "Gebot erfolgreich!",
         description: enableAutobid 
-          ? `Ihr Gebot von €${amount.toLocaleString()} wurde abgegeben mit Autobid bis €${parseFloat(maxAutobidAmount).toLocaleString()}`
+          ? `Ihr Gebot von €${amount.toLocaleString()} wurde abgegeben mit Autobid bis €${parseGermanNumber(maxAutobidAmount).toLocaleString()}`
           : `Ihr Gebot von €${amount.toLocaleString()} wurde abgegeben`,
       });
 
@@ -1817,12 +1851,11 @@ const AuctionDetail = () => {
                         Ihr Gebot (Mindestens €{(currentBid + 50).toLocaleString()})
                       </label>
                       <Input
-                        type="number"
-                        placeholder="Betrag eingeben"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={`z.B. ${(currentBid + 500).toLocaleString('de-DE')}`}
                         value={bidAmount}
-                        onChange={(e) => setBidAmount(e.target.value)}
-                        min={currentBid + 50}
-                        step={50}
+                        onChange={(e) => setBidAmount(formatBidDisplay(e.target.value))}
                         className="text-lg h-12"
                       />
                     </div>
@@ -1856,9 +1889,9 @@ const AuctionDetail = () => {
                     </div>
 
                     {/* Commission Display */}
-                    {bidAmount && parseFloat(bidAmount) > 0 && (
+                    {bidAmount && parseGermanNumber(bidAmount) > 0 && (
                       <CommissionDisplay 
-                        bidAmount={parseFloat(bidAmount)} 
+                        bidAmount={parseGermanNumber(bidAmount)} 
                         variant="detailed"
                         className="animate-fade-in"
                       />
@@ -1889,12 +1922,11 @@ const AuctionDetail = () => {
                             Maximalgebot (Muss höher als aktuelles Gebot sein)
                           </label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             placeholder="Ihr maximales Gebot"
                             value={maxAutobidAmount}
-                            onChange={(e) => setMaxAutobidAmount(e.target.value)}
-                            min={parseFloat(bidAmount || "0") + 50}
-                            step={50}
+                            onChange={(e) => setMaxAutobidAmount(formatBidDisplay(e.target.value))}
                             className="h-10"
                           />
                           <p className="text-xs text-muted-foreground mt-2">

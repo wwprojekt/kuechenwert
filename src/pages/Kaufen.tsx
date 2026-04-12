@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
-import MotorhomeCard from "@/components/MotorhomeCard";
+import VehicleCard from "@/components/VehicleCard";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,11 +24,11 @@ import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
-type MotorhomeRow = Database["public"]["Tables"]["motorhomes"]["Row"];
-type PhotoRow = Database["public"]["Tables"]["motorhome_photos"]["Row"];
+type MotorhomeRow = Database["public"]["Tables"]["vehicles"]["Row"];
+type PhotoRow = Database["public"]["Tables"]["vehicle_photos"]["Row"];
 
-interface AuctionWithMotorhome extends AuctionRow {
-  motorhome: MotorhomeRow & {
+interface AuctionWithVehicle extends AuctionRow {
+  vehicle: MotorhomeRow & {
     photos: PhotoRow[];
   };
 }
@@ -56,7 +56,7 @@ const Kaufen = () => {
   const [saveSearchName, setSaveSearchName] = useState('');
   const [saveSearchFrequency, setSaveSearchFrequency] = useState('immediate');
   const [isSavingSearch, setIsSavingSearch] = useState(false);
-  const [auctions, setAuctions] = useState<AuctionWithMotorhome[]>([]);
+  const [auctions, setAuctions] = useState<AuctionWithVehicle[]>([]);
   const [bidCounts, setBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('ending_soon');
@@ -85,9 +85,9 @@ const Kaufen = () => {
           .from("auctions")
           .select(`
             *,
-            motorhome:motorhomes(
+            vehicle:vehicles(
               *,
-              photos:motorhome_photos(*)
+              photos:vehicle_photos(*)
             )
           `)
           .eq("status", "active")
@@ -161,8 +161,8 @@ const Kaufen = () => {
   const availableBrands = useMemo(() => {
     const brandSet = new Set<string>();
     auctions.forEach((auction) => {
-      if (auction.motorhome?.manufacturer) {
-        brandSet.add(auction.motorhome.manufacturer);
+      if (auction.vehicle?.manufacturer) {
+        brandSet.add(auction.vehicle.manufacturer);
       }
     });
     return Array.from(brandSet).sort();
@@ -171,8 +171,8 @@ const Kaufen = () => {
   // Apply filters to auctions
   const filteredAuctions = useMemo(() => {
     return auctions.filter((auction) => {
-      const motorhome = auction.motorhome;
-      if (!motorhome) return false;
+      const vehicle = auction.vehicle;
+      if (!vehicle) return false;
 
       // Price filter
       const currentPrice = auction.current_bid || auction.starting_bid || 0;
@@ -181,24 +181,24 @@ const Kaufen = () => {
       }
 
       // Year filter
-      if (motorhome.year < filters.yearRange[0] || motorhome.year > filters.yearRange[1]) {
+      if (vehicle.year < filters.yearRange[0] || vehicle.year > filters.yearRange[1]) {
         return false;
       }
 
       // Vehicle type filter
-      if (filters.vehicleTypes.length > 0 && !filters.vehicleTypes.includes(motorhome.body_type)) {
+      if (filters.vehicleTypes.length > 0 && !filters.vehicleTypes.includes(vehicle.body_type)) {
         return false;
       }
 
       // Brand filter
-      if (filters.brand && motorhome.manufacturer !== filters.brand) {
+      if (filters.brand && vehicle.manufacturer !== filters.brand) {
         return false;
       }
 
       // Beds filter
       if (filters.beds) {
         const bedsNum = parseInt(filters.beds);
-        const motorhomeBeds = (motorhome as any).sleeping_places || 0;
+        const motorhomeBeds = (vehicle as any).sleeping_places || 0;
         if (filters.beds === "6") {
           if (motorhomeBeds < 6) return false;
         } else {
@@ -209,8 +209,8 @@ const Kaufen = () => {
       // Search filter
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
-        const manufacturer = (motorhome.manufacturer || "").toLowerCase();
-        const model = (motorhome.model || "").toLowerCase();
+        const manufacturer = (vehicle.manufacturer || "").toLowerCase();
+        const model = (vehicle.model || "").toLowerCase();
         if (!manufacturer.includes(query) && !model.includes(query)) {
           return false;
         }
@@ -218,34 +218,34 @@ const Kaufen = () => {
 
       // Country filter (Phase 3)
       if (filters.countries.length > 0) {
-        const motorhomeCountry = (motorhome as any).country || 'DE';
+        const motorhomeCountry = (vehicle as any).country || 'DE';
         if (!filters.countries.includes(motorhomeCountry)) {
           return false;
         }
       }
 
       // Mileage filter (Phase 3)
-      if (filters.mileageMin !== null && motorhome.mileage < filters.mileageMin) {
+      if (filters.mileageMin !== null && vehicle.mileage < filters.mileageMin) {
         return false;
       }
-      if (filters.mileageMax !== null && motorhome.mileage > filters.mileageMax) {
+      if (filters.mileageMax !== null && vehicle.mileage > filters.mileageMax) {
         return false;
       }
 
       // Transmission filter (Phase 3)
-      if (filters.transmission && motorhome.transmission !== filters.transmission) {
+      if (filters.transmission && vehicle.transmission !== filters.transmission) {
         return false;
       }
 
       // Accident free filter (Phase 3)
-      if (filters.accidentFree === true && motorhome.accident_free !== true) {
+      if (filters.accidentFree === true && vehicle.accident_free !== true) {
         return false;
       }
 
       // Buy Now filter (Phase 3)
       if (filters.buyNowOnly) {
-        const hasInstantPrice = motorhome.instant_price && 
-          Number(motorhome.instant_price) > 0;
+        const hasInstantPrice = vehicle.instant_price && 
+          Number(vehicle.instant_price) > 0;
         if (!hasInstantPrice) {
           return false;
         }
@@ -272,16 +272,16 @@ const Kaufen = () => {
         sorted.sort((a, b) => (b.current_bid || b.starting_bid || 0) - (a.current_bid || a.starting_bid || 0));
         break;
       case 'year_desc':
-        sorted.sort((a, b) => (b.motorhome?.year || 0) - (a.motorhome?.year || 0));
+        sorted.sort((a, b) => (b.vehicle?.year || 0) - (a.vehicle?.year || 0));
         break;
       case 'year_asc':
-        sorted.sort((a, b) => (a.motorhome?.year || 0) - (b.motorhome?.year || 0));
+        sorted.sort((a, b) => (a.vehicle?.year || 0) - (b.vehicle?.year || 0));
         break;
       case 'mileage_asc':
-        sorted.sort((a, b) => (a.motorhome?.mileage || 0) - (b.motorhome?.mileage || 0));
+        sorted.sort((a, b) => (a.vehicle?.mileage || 0) - (b.vehicle?.mileage || 0));
         break;
       case 'mileage_desc':
-        sorted.sort((a, b) => (b.motorhome?.mileage || 0) - (a.motorhome?.mileage || 0));
+        sorted.sort((a, b) => (b.vehicle?.mileage || 0) - (a.vehicle?.mileage || 0));
         break;
     }
     return sorted;
@@ -623,33 +623,33 @@ const Kaufen = () => {
                 <>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {paginatedAuctions.map((auction) => {
-                      const firstPhoto = [...(auction.motorhome?.photos || [])].sort((a: any, b: any) => 
+                      const firstPhoto = [...(auction.vehicle?.photos || [])].sort((a: any, b: any) => 
                         a.display_order - b.display_order
                       )[0]?.url;
                       
                       return (
-                        <MotorhomeCard
+                        <VehicleCard
                           key={auction.id}
-                          id={auction.motorhome?.id || auction.motorhome_id}
-                          title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
-                          manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
-                          model={auction.motorhome?.model || ''}
-                          year={auction.motorhome?.year || 0}
-                          mileage={auction.motorhome?.mileage || 0}
+                          id={auction.vehicle?.id || auction.vehicle_id}
+                          title={`${auction.vehicle?.manufacturer || ''} ${auction.vehicle?.model || ''}`}
+                          manufacturer={auction.vehicle?.manufacturer || 'Unbekannt'}
+                          model={auction.vehicle?.model || ''}
+                          year={auction.vehicle?.year || 0}
+                          mileage={auction.vehicle?.mileage || 0}
                           image={firstPhoto || ''}
-                          listingNumber={auction.motorhome?.listing_number}
-                          bodyType={auction.motorhome?.body_type}
-                          country={auction.motorhome?.country}
-                          location={auction.motorhome?.postal_code ? anonymizePostalCode(auction.motorhome.postal_code) : undefined}
+                          listingNumber={auction.vehicle?.listing_number}
+                          bodyType={auction.vehicle?.body_type}
+                          country={auction.vehicle?.country}
+                          location={auction.vehicle?.postal_code ? anonymizePostalCode(auction.vehicle.postal_code) : undefined}
                           isAuction={true}
                           currentBid={auction.current_bid}
                           startingBid={auction.starting_bid}
-                          instantPrice={auction.motorhome?.instant_price}
-                          saleChannel={auction.motorhome?.sale_channel}
+                          instantPrice={auction.vehicle?.instant_price}
+                          saleChannel={auction.vehicle?.sale_channel}
                           endTime={auction.end_time}
                           bidCount={bidCounts[auction.id] || 0}
-                          status={auction.motorhome?.status}
-                          accountType={auction.motorhome?.account_type}
+                          status={auction.vehicle?.status}
+                          accountType={auction.vehicle?.account_type}
                           linkTo={`/auktion/${auction.id}`}
                         />
                       );

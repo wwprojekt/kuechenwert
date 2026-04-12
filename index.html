@@ -11,11 +11,11 @@
     <!-- Preconnect for critical resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="dns-prefetch" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" />
+    <link rel="dns-prefetch" href="https://iaotiligvhlhzlrpgdyk.supabase.co" />
 
     <!-- Preload hero image for fast LCP — responsive: mobile gets small version -->
-    <link rel="preload" as="image" href="/images/hero-motorhome.webp"
-          imagesrcset="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
+    <link rel="preload" as="image" href="/images/hero-motorcycle.webp"
+          imagesrcset="/images/hero-motorcycle-sm.webp 400w, /images/hero-motorcycle-md.webp 800w, /images/hero-motorcycle.webp 1920w"
           imagesizes="100vw" fetchpriority="high" />
 
     <!-- Google Fonts — loaded NON-BLOCKING via media trick.
@@ -26,24 +26,16 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" /></noscript>
 
-    <!-- Google Consent Mode v2 — minimal inline, MUST load before gtag -->
-    <script>
-      window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;
-      gtag('consent','default',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied','functionality_storage':'denied','personalization_storage':'denied','security_storage':'granted','wait_for_update':1500});
-      gtag('set','ads_data_redaction',true);gtag('set','url_passthrough',true);
-      try{var c=JSON.parse(localStorage.getItem('cookie-consent')||'null');if(c&&c.marketing){gtag('set','ads_data_redaction',false);gtag('consent','update',{'analytics_storage':c.analytics?'granted':'denied','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','functionality_storage':'granted','personalization_storage':'granted'})}else if(c&&c.analytics){gtag('consent','update',{'analytics_storage':'granted','functionality_storage':'granted','personalization_storage':'granted'})}}catch(e){}
-    </script>
-    
     <!-- Primary Meta Tags -->
-    <title>CaravanWert - Deutschlands führende Wohnmobil-Handelsplattform</title>
-    <meta name="description" content="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!" />
-    <meta name="keywords" content="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation" />
-    <meta name="author" content="CaravanWert" />
+    <title>BikeWert - Deutschlands führende Motorrad-Handelsplattform</title>
+    <meta name="description" content="Verkaufen Sie Ihr Motorrad schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!" />
+    <meta name="keywords" content="Motorrad verkaufen, Motorrad Ankauf, Quad verkaufen, Roller verkaufen, Motorrad Ankaufstation" />
+    <meta name="author" content="BikeWert" />
     <meta name="robots" content="index, follow" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="CaravanWert" />
+    <meta property="og:site_name" content="BikeWert" />
     <meta property="og:locale" content="de_DE" />
     
     <!-- Twitter -->
@@ -54,18 +46,14 @@
     {
       "@context": "https://schema.org",
       "@type": ["Organization", "LocalBusiness"],
-      "name": "CaravanWert",
-      "description": "Deutschlands führende Wohnmobil-Handelsplattform",
-      "url": "https://caravanwert.de",
-      "logo": "https://caravanwert.de/og-image.png",
-      "image": "https://caravanwert.de/og-image.png",
-      "telephone": "+49-511-51532476",
-      "email": "kontakt@caravanwert.de",
+      "name": "BikeWert",
+      "description": "Deutschlands führende Motorrad-Handelsplattform",
+      "url": "https://bikewert.de",
+      "logo": "https://bikewert.de/og-image.png",
+      "image": "https://bikewert.de/og-image.png",
+      "email": "kontakt@bikewert.de",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Hannoversche Straße 106",
-        "addressLocality": "Hannover",
-        "postalCode": "30627",
         "addressCountry": "DE"
       },
       "areaServed": {
@@ -74,24 +62,15 @@
       },
       "contactPoint": {
         "@type": "ContactPoint",
-        "telephone": "+49-511-51532476",
         "contactType": "Customer Service",
         "areaServed": "DE",
         "availableLanguage": "German"
-      },
-      "sameAs": [
-        "https://www.instagram.com/caravanwert.de"
-      ]
+      }
     }
     </script>
   </head>
 
   <body>
-    <!-- Meta Pixel noscript-Fallback -->
-    <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://www.facebook.com/tr?id=1846623132710484&ev=PageView&noscript=1" />
-    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
@@ -101,45 +80,14 @@
          Loading them after the app improves FCP/LCP by 1-3 seconds on mobile.
          ═══════════════════════════════════════════════════════════════════ -->
     <script>
-      // Load third-party scripts after first paint to avoid blocking rendering
       function loadDeferredScripts() {
-        // Google Tag (gtag.js) – GA4 + Google Ads
-        var g = document.createElement('script');
-        g.async = true;
-        g.src = 'https://www.googletagmanager.com/gtag/js?id=G-H4BCV8DS0B';
-        g.onload = function() {
-          gtag('js', new Date());
-          gtag('config', 'G-H4BCV8DS0B', {
-            send_page_view: true,
-            cookie_domain: 'caravanwert.de',
-            cookie_flags: 'SameSite=Lax;Secure',
-          });
-          gtag('config', 'AW-18033517246', {
-            send_page_view: false,
-            allow_enhanced_conversions: true,
-          });
-        };
-        document.head.appendChild(g);
-
-        // Meta Pixel – DSGVO-konform, revoked bis Consent
-        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-        fbq('consent','revoke');
-        fbq('init','1846623132710484');
-
-        // Clixtell Click-Fraud Protection
-        var c = document.createElement('script');
-        c.async = true;
-        c.src = document.location.protocol + '//scripts.clixtell.com/track.js';
-        document.head.appendChild(c);
-
-        // Cloudflare Turnstile
+        // Cloudflare Turnstile (needs new site key for bikewert.de)
         var t = document.createElement('script');
         t.async = true;
         t.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         document.head.appendChild(t);
       }
 
-      // Use requestIdleCallback if available, otherwise setTimeout
       if ('requestIdleCallback' in window) {
         requestIdleCallback(loadDeferredScripts, { timeout: 3000 });
       } else {

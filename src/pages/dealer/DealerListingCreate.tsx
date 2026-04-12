@@ -87,7 +87,7 @@ export default function DealerListingCreate() {
 
       const result = await withSessionRetry(async () => {
         const { data, error } = await supabase
-          .from("motorhomes")
+          .from("vehicles")
           .insert(insertData)
           .select("id")
           .single();
@@ -97,15 +97,15 @@ export default function DealerListingCreate() {
 
       // Create draft auction so admin can activate it
       const { error: auctionError } = await supabase.from("auctions").insert({
-        motorhome_id: result.id,
+        vehicle_id: result.id,
         starting_bid: 50,
         reserve_price: reservePrice ? Number(reservePrice) : null,
         status: "draft",
       });
 
       if (auctionError) {
-        // Cleanup orphaned motorhome on auction creation failure
-        await supabase.from("motorhomes").delete().eq("id", result.id);
+        // Cleanup orphaned vehicle on auction creation failure
+        await supabase.from("vehicles").delete().eq("id", result.id);
         throw new Error("Auktion konnte nicht erstellt werden: " + auctionError.message);
       }
 

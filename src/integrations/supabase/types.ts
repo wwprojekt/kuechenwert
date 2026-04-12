@@ -378,7 +378,7 @@ export type Database = {
           duration_minutes: number | null
           handover_protocol_url: string | null
           id: string
-          motorhome_id: string
+          vehicle_id: string
           notes: string | null
           payment_amount: number | null
           payment_method: string | null
@@ -397,7 +397,7 @@ export type Database = {
           duration_minutes?: number | null
           handover_protocol_url?: string | null
           id?: string
-          motorhome_id: string
+          vehicle_id: string
           notes?: string | null
           payment_amount?: number | null
           payment_method?: string | null
@@ -416,7 +416,7 @@ export type Database = {
           duration_minutes?: number | null
           handover_protocol_url?: string | null
           id?: string
-          motorhome_id?: string
+          vehicle_id?: string
           notes?: string | null
           payment_amount?: number | null
           payment_method?: string | null
@@ -431,10 +431,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "appointments_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "appointments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
           {
@@ -486,7 +486,7 @@ export type Database = {
           id: string
           kaufchance_expires_at: string | null
           kaufchance_min_price: number | null
-          motorhome_id: string
+          vehicle_id: string
           reserve_price: number | null
           soft_close_extension_minutes: number
           start_time: string | null
@@ -501,7 +501,7 @@ export type Database = {
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
-          motorhome_id: string
+          vehicle_id: string
           reserve_price?: number | null
           soft_close_extension_minutes?: number
           start_time?: string | null
@@ -516,7 +516,7 @@ export type Database = {
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
-          motorhome_id?: string
+          vehicle_id?: string
           reserve_price?: number | null
           soft_close_extension_minutes?: number
           start_time?: string | null
@@ -526,10 +526,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "auctions_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "auctions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: true
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -759,7 +759,7 @@ export type Database = {
           dealer_id: string
           description: string
           id: string
-          motorhome_id: string
+          vehicle_id: string
           priority: string
           resolution_notes: string | null
           resolved_at: string | null
@@ -783,7 +783,7 @@ export type Database = {
           dealer_id: string
           description: string
           id?: string
-          motorhome_id: string
+          vehicle_id: string
           priority?: string
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -807,7 +807,7 @@ export type Database = {
           dealer_id?: string
           description?: string
           id?: string
-          motorhome_id?: string
+          vehicle_id?: string
           priority?: string
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -834,10 +834,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "claims_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "claims_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -1044,7 +1044,7 @@ export type Database = {
           display_order: number | null
           file_size: number | null
           id: string
-          motorhome_id: string
+          vehicle_id: string
           photo_url: string
           uploaded_by: string | null
         }
@@ -1056,7 +1056,7 @@ export type Database = {
           display_order?: number | null
           file_size?: number | null
           id?: string
-          motorhome_id: string
+          vehicle_id: string
           photo_url: string
           uploaded_by?: string | null
         }
@@ -1068,16 +1068,16 @@ export type Database = {
           display_order?: number | null
           file_size?: number | null
           id?: string
-          motorhome_id?: string
+          vehicle_id?: string
           photo_url?: string
           uploaded_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "damage_photos_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "damage_photos_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -1803,7 +1803,7 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           invoice_type: string
-          motorhome_id: string | null
+          vehicle_id: string | null
           net_amount: number
           notes: string | null
           paid_at: string | null
@@ -1836,7 +1836,7 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           invoice_type?: string
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           net_amount: number
           notes?: string | null
           paid_at?: string | null
@@ -1869,7 +1869,7 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           invoice_type?: string
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
@@ -1905,10 +1905,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "invoices_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -2046,13 +2046,13 @@ export type Database = {
         }
         Relationships: []
       }
-      motorhome_photos: {
+      vehicle_photos: {
         Row: {
           created_at: string | null
           display_order: number | null
           id: string
           is_primary: boolean | null
-          motorhome_id: string
+          vehicle_id: string
           url: string
         }
         Insert: {
@@ -2060,7 +2060,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_primary?: boolean | null
-          motorhome_id: string
+          vehicle_id: string
           url: string
         }
         Update: {
@@ -2068,20 +2068,20 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_primary?: boolean | null
-          motorhome_id?: string
+          vehicle_id?: string
           url?: string
         }
         Relationships: [
           {
-            foreignKeyName: "motorhome_photos_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "vehicle_photos_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
       }
-      motorhomes: {
+      vehicles: {
         Row: {
           accident_free: boolean | null
           account_type: string | null
@@ -2094,9 +2094,9 @@ export type Database = {
           base_vehicle: string | null
           battery_capacity_ah: number | null
           beds_description: string | null
-          body_type: Database["public"]["Enums"]["motorhome_body_type"]
+          body_type: Database["public"]["Enums"]["vehicle_body_type"]
           city: string | null
-          condition: Database["public"]["Enums"]["motorhome_condition"]
+          condition: Database["public"]["Enums"]["vehicle_condition"]
           contract_number: string | null
           contract_url: string | null
           country: string | null
@@ -2195,9 +2195,9 @@ export type Database = {
           base_vehicle?: string | null
           battery_capacity_ah?: number | null
           beds_description?: string | null
-          body_type: Database["public"]["Enums"]["motorhome_body_type"]
+          body_type: Database["public"]["Enums"]["vehicle_body_type"]
           city?: string | null
-          condition: Database["public"]["Enums"]["motorhome_condition"]
+          condition: Database["public"]["Enums"]["vehicle_condition"]
           contract_number?: string | null
           contract_url?: string | null
           country?: string | null
@@ -2296,9 +2296,9 @@ export type Database = {
           base_vehicle?: string | null
           battery_capacity_ah?: number | null
           beds_description?: string | null
-          body_type?: Database["public"]["Enums"]["motorhome_body_type"]
+          body_type?: Database["public"]["Enums"]["vehicle_body_type"]
           city?: string | null
-          condition?: Database["public"]["Enums"]["motorhome_condition"]
+          condition?: Database["public"]["Enums"]["vehicle_condition"]
           contract_number?: string | null
           contract_url?: string | null
           country?: string | null
@@ -2387,7 +2387,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "motorhomes_seller_id_fkey"
+            foreignKeyName: "vehicles_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2688,7 +2688,7 @@ export type Database = {
           contract_url: string | null
           created_at: string | null
           id: string
-          motorhome_id: string | null
+          vehicle_id: string | null
           notes: string | null
           sale_price: number
           seller_id: string | null
@@ -2711,7 +2711,7 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           id?: string
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           notes?: string | null
           sale_price: number
           seller_id?: string | null
@@ -2734,7 +2734,7 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           id?: string
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           notes?: string | null
           sale_price?: number
           seller_id?: string | null
@@ -2760,10 +2760,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "purchase_contracts_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "purchase_contracts_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
           {
@@ -3109,7 +3109,7 @@ export type Database = {
           alert_id: string
           id: string
           matched_at: string | null
-          motorhome_id: string
+          vehicle_id: string
           notification_sent: boolean | null
           notification_sent_at: string | null
         }
@@ -3117,7 +3117,7 @@ export type Database = {
           alert_id: string
           id?: string
           matched_at?: string | null
-          motorhome_id: string
+          vehicle_id: string
           notification_sent?: boolean | null
           notification_sent_at?: string | null
         }
@@ -3125,7 +3125,7 @@ export type Database = {
           alert_id?: string
           id?: string
           matched_at?: string | null
-          motorhome_id?: string
+          vehicle_id?: string
           notification_sent?: boolean | null
           notification_sent_at?: string | null
         }
@@ -3138,10 +3138,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "search_alert_matches_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "search_alert_matches_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -3610,7 +3610,7 @@ export type Database = {
           created_at: string | null
           id: string
           last_notified_price: number | null
-          motorhome_id: string | null
+          vehicle_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -3618,7 +3618,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_notified_price?: number | null
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -3626,15 +3626,15 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_notified_price?: number | null
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_favorites_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "user_favorites_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -3891,7 +3891,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_public: boolean | null
-          motorhome_id: string | null
+          vehicle_id: string | null
           question: string
           questioner_email: string
           questioner_id: string | null
@@ -3904,7 +3904,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_public?: boolean | null
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           question: string
           questioner_email: string
           questioner_id?: string | null
@@ -3917,7 +3917,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_public?: boolean | null
-          motorhome_id?: string | null
+          vehicle_id?: string | null
           question?: string
           questioner_email?: string
           questioner_id?: string | null
@@ -3925,10 +3925,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "vehicle_questions_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "vehicle_questions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -4236,7 +4236,7 @@ export type Database = {
         }[]
       }
       check_search_criteria_match: {
-        Args: { criteria: Json; motorhome_record: Record<string, unknown> }
+        Args: { criteria: Json; vehicle_record: Record<string, unknown> }
         Returns: boolean
       }
       clean_old_analytics_data: {
@@ -4262,7 +4262,7 @@ export type Database = {
       create_seller_penalty_invoice: {
         Args: {
           auction_id_param?: string
-          motorhome_id_param?: string
+          vehicle_id_param?: string
           notes_param?: string
           penalty_reason_param?: string
           seller_id_param: string
@@ -4456,8 +4456,8 @@ export type Database = {
         Args: { claim_id_param: string }
         Returns: undefined
       }
-      process_search_alerts_for_motorhome: {
-        Args: { motorhome_id_param: string }
+      process_search_alerts_for_vehicle: {
+        Args: { vehicle_id_param: string }
         Returns: number
       }
       reapply_dealer_application: {
@@ -4477,8 +4477,8 @@ export type Database = {
         Args: { p_lead_id: string; p_step: number }
         Returns: undefined
       }
-      update_motorhome_damage_status: {
-        Args: { motorhome_id_param: string }
+      update_vehicle_damage_status: {
+        Args: { vehicle_id_param: string }
         Returns: undefined
       }
       update_wizard_session_by_anonymous_id: {
@@ -4506,7 +4506,7 @@ export type Database = {
         | "Euro 6d"
       fuel_type: "Diesel" | "Benzin" | "Elektro" | "Hybrid"
       heating_type: "Gas" | "Diesel" | "Elektrisch" | "Kombiniert"
-      motorhome_body_type:
+      vehicle_body_type:
         | "Teilintegriert"
         | "Alkoven"
         | "Vollintegriert"
@@ -4515,7 +4515,7 @@ export type Database = {
         | "Wohnwagen"
         | "Faltcaravan"
         | "Mobilheim"
-      motorhome_condition:
+      vehicle_condition:
         | "Neuwertig"
         | "Sehr gut"
         | "Gut"
@@ -4675,7 +4675,7 @@ export const Constants = {
       ],
       fuel_type: ["Diesel", "Benzin", "Elektro", "Hybrid"],
       heating_type: ["Gas", "Diesel", "Elektrisch", "Kombiniert"],
-      motorhome_body_type: [
+      vehicle_body_type: [
         "Teilintegriert",
         "Alkoven",
         "Vollintegriert",
@@ -4685,7 +4685,7 @@ export const Constants = {
         "Faltcaravan",
         "Mobilheim",
       ],
-      motorhome_condition: [
+      vehicle_condition: [
         "Neuwertig",
         "Sehr gut",
         "Gut",

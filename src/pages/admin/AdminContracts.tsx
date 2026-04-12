@@ -73,7 +73,7 @@ interface PurchaseContract {
   id: string;
   contract_number: string;
   auction_id: string | null;
-  motorhome_id: string | null;
+  vehicle_id: string | null;
   buyer_id: string | null;
   seller_id: string | null;
   sale_price: number;

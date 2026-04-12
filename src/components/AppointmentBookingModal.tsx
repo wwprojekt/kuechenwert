@@ -19,7 +19,7 @@ import { trackMetaSchedule } from "@/lib/metaPixelService";
 interface AppointmentBookingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  motorhomeId: string;
+  vehicleId: string;
   stationId?: string;
 }
 
@@ -33,7 +33,7 @@ interface PurchaseStation {
 export const AppointmentBookingModal = ({
   open,
   onOpenChange,
-  motorhomeId,
+  vehicleId,
   stationId,
 }: AppointmentBookingModalProps) => {
   const { user } = useAuth();
@@ -120,7 +120,7 @@ export const AppointmentBookingModal = ({
       const { data: appointmentData, error } = await supabase
         .from('appointments')
         .insert({
-          motorhome_id: motorhomeId,
+          vehicle_id: vehicleId,
           station_id: selectedStation,
           seller_id: user?.id,
           appointment_date: appointmentDateTime.toISOString(),
@@ -148,15 +148,15 @@ export const AppointmentBookingModal = ({
         }
       }
 
-      // Fetch motorhome details for the email
-      let motorhomeModel = 'Wohnmobil';
-      const { data: motorhome } = await supabase
-        .from('motorhomes')
+      // Fetch vehicle details for the email
+      let vehicleModel = 'Wohnmobil';
+      const { data: vehicle } = await supabase
+        .from('vehicles')
         .select('manufacturer, model, year')
-        .eq('id', motorhomeId)
+        .eq('id', vehicleId)
         .single();
-      if (motorhome) {
-        motorhomeModel = [motorhome.manufacturer, motorhome.model, motorhome.year].filter(Boolean).join(' ');
+      if (vehicle) {
+        vehicleModel = [vehicle.manufacturer, vehicle.model, vehicle.year].filter(Boolean).join(' ');
       }
 
       // Get station details for the email
@@ -173,7 +173,7 @@ export const AppointmentBookingModal = ({
             appointmentDate: format(appointmentDateTime, "PPP 'um' HH:mm 'Uhr'", { locale: de }),
             stationName,
             stationAddress,
-            motorhomeModel,
+            vehicleModel,
             appointmentId: appointmentData?.id || '',
           },
         });

@@ -105,7 +105,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
-      { title: "Wohnmobile", url: "/admin/motorhomes", icon: Car },
+      { title: "Wohnmobile", url: "/admin/vehicles", icon: Car },
       { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
       { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon, badgeKey: "offers" },
     ],

@@ -14,8 +14,8 @@ const Hero = () => {
     <section className="relative min-h-fit lg:min-h-[85vh] overflow-hidden">
       {/* Background Image — <img> for fast LCP discovery by browser */}
       <img
-        src="/images/hero-motorhome.webp"
-        srcSet="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
+        src="/images/hero-vehicle.webp"
+        srcSet="/images/hero-vehicle-sm.webp 400w, /images/hero-vehicle-md.webp 800w, /images/hero-vehicle.webp 1920w"
         sizes="100vw"
         alt=""
         width={1920}
@@ -109,7 +109,7 @@ const Hero = () => {
         </div>
       </div>
 
-      {/* Bottom Visual Elements - Motorhome Silhouettes */}
+      {/* Bottom Visual Elements - Vehicle Silhouettes */}
       <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none overflow-hidden">
         <div className="absolute bottom-0 left-1/4 w-48 h-24 bg-gradient-to-t from-primary/5 to-transparent rounded-t-3xl transform -skew-x-6" />
         <div className="absolute bottom-0 right-1/4 w-64 h-20 bg-gradient-to-t from-primary/3 to-transparent rounded-t-2xl transform skew-x-3" />

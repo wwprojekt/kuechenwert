@@ -1,6 +1,6 @@
 /**
- * Motorhome Showcase Component
- * Displays high-quality motorhome images with trust indicators
+ * Vehicle Showcase Component
+ * Displays high-quality vehicle images with trust indicators
  */
 
 import { Link } from "react-router-dom";
@@ -9,25 +9,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, CheckCircle, Award, Users, ArrowRight } from "lucide-react";
 
-const MotorhomeShowcase = () => {
+const VehicleShowcase = () => {
   const showcaseItems = [
     {
       id: 1,
-      image: "/images/motorhome-integrated.webp",
+      image: "/images/vehicle-integrated.webp",
       title: "Integrierte Wohnmobile",
       subtitle: "Faire Preise",
       badge: "Beliebt",
     },
     {
       id: 2,
-      image: "/images/motorhome-alcove.webp",
+      image: "/images/vehicle-alcove.webp",
       title: "Alkoven-Wohnmobile",
       subtitle: "Schneller Verkauf",
       badge: "Top",
     },
     {
       id: 3,
-      image: "/images/motorhome-van.webp",
+      image: "/images/vehicle-van.webp",
       title: "Campervans & Kastenwagen",
       subtitle: "Hohe Nachfrage",
       badge: "Gefragt",
@@ -147,4 +147,4 @@ const MotorhomeShowcase = () => {
   );
 };
 
-export default MotorhomeShowcase;
+export default VehicleShowcase;

@@ -6,7 +6,7 @@ const ROUTE_LABELS: Record<string, string> = {
   admin: "Admin",
   leads: "Leads & Anfragen",
   auctions: "Auktionen",
-  motorhomes: "Wohnmobile",
+  vehicles: "Wohnmobile",
   users: "Benutzer",
   dealers: "Händler",
   "dealer-stats": "Händler-Statistik",

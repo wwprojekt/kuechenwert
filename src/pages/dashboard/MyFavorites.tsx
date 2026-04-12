@@ -15,9 +15,9 @@ import { de } from "date-fns/locale";
 
 interface FavoriteVehicle {
   id: string;
-  motorhome_id: string;
+  vehicle_id: string;
   created_at: string;
-  motorhome: {
+  vehicle: {
     id: string;
     manufacturer: string;
     model: string;
@@ -62,9 +62,9 @@ export default function MyFavorites() {
         .from("user_favorites")
         .select(`
           id,
-          motorhome_id,
+          vehicle_id,
           created_at,
-          motorhome:motorhomes (
+          vehicle:vehicles (
             id,
             manufacturer,
             model,
@@ -73,7 +73,7 @@ export default function MyFavorites() {
             status,
             country,
             listing_number,
-            photos:motorhome_photos (url, display_order),
+            photos:vehicle_photos (url, display_order),
             auctions (id, status, current_bid, end_time)
           )
         `)
@@ -93,15 +93,15 @@ export default function MyFavorites() {
 
   useLiveData(loadFavorites, { enabled: !!user, pollingInterval: 60_000 });
 
-  const handleRemove = async (e: React.MouseEvent, motorhomeId: string) => {
+  const handleRemove = async (e: React.MouseEvent, vehicleId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    await removeFavorite(motorhomeId);
-    setFavorites(prev => prev.filter(f => f.motorhome_id !== motorhomeId));
+    await removeFavorite(vehicleId);
+    setFavorites(prev => prev.filter(f => f.vehicle_id !== vehicleId));
   };
 
   const getAuctionLink = (favorite: FavoriteVehicle): string => {
-    const auctionsData = favorite.motorhome.auctions;
+    const auctionsData = favorite.vehicle.auctions;
     const auctionsArray = Array.isArray(auctionsData) ? auctionsData : auctionsData ? [auctionsData] : [];
     const activeAuction = auctionsArray.find(
       a => a.status === 'active' || a.status === 'scheduled'
@@ -152,11 +152,11 @@ export default function MyFavorites() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {favorites.map((favorite) => {
-            const motorhome = favorite.motorhome;
-            const photosData = motorhome.photos;
+            const vehicle = favorite.vehicle;
+            const photosData = vehicle.photos;
             const photosArray = Array.isArray(photosData) ? photosData : photosData ? [photosData] : [];
             const firstPhoto = [...photosArray].sort((a, b) => a.display_order - b.display_order)[0];
-            const mAuctionsData = motorhome.auctions;
+            const mAuctionsData = vehicle.auctions;
             const mAuctionsArray = Array.isArray(mAuctionsData) ? mAuctionsData : mAuctionsData ? [mAuctionsData] : [];
             const activeAuction = mAuctionsArray.find(a => a.status === 'active');
 
@@ -173,7 +173,7 @@ export default function MyFavorites() {
                       {firstPhoto ? (
                         <img
                           src={firstPhoto.url}
-                          alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                          alt={`${vehicle.manufacturer} ${vehicle.model}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
@@ -181,7 +181,7 @@ export default function MyFavorites() {
                           <Car className="w-6 h-6 text-muted-foreground" />
                         </div>
                       )}
-                      {motorhome.status === 'sold' && (
+                      {vehicle.status === 'sold' && (
                         <Badge className="absolute top-1.5 left-1.5 bg-green-500 text-[10px] px-1.5 py-0.5">
                           Verkauft
                         </Badge>
@@ -193,24 +193,24 @@ export default function MyFavorites() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
-                            {motorhome.manufacturer} {motorhome.model}
+                            {vehicle.manufacturer} {vehicle.model}
                           </h3>
-                          {motorhome.country && (
-                            <CountryFlag countryCode={motorhome.country} size="sm" />
+                          {vehicle.country && (
+                            <CountryFlag countryCode={vehicle.country} size="sm" />
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                           <span className="flex items-center gap-0.5">
                             <Calendar className="w-3 h-3" />
-                            {motorhome.year}
+                            {vehicle.year}
                           </span>
                           <span className="flex items-center gap-0.5">
                             <Gauge className="w-3 h-3" />
-                            {motorhome.mileage?.toLocaleString('de-DE')} km
+                            {vehicle.mileage?.toLocaleString('de-DE')} km
                           </span>
-                          {motorhome.listing_number && (
+                          {vehicle.listing_number && (
                             <span className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">
-                              #{motorhome.listing_number}
+                              #{vehicle.listing_number}
                             </span>
                           )}
                         </div>
@@ -238,7 +238,7 @@ export default function MyFavorites() {
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                          onClick={(e) => handleRemove(e, favorite.motorhome_id)}
+                          onClick={(e) => handleRemove(e, favorite.vehicle_id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

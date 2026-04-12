@@ -49,7 +49,7 @@ interface Claim {
   resolved_at?: string;
   approved_amount?: number;
   commission_charged_to_seller: boolean;
-  motorhome: {
+  vehicle: {
     manufacturer: string;
     model: string;
     listing_number: string;
@@ -89,10 +89,10 @@ export default function DealerClaims() {
         .from('auctions')
         .select(`
           *,
-          motorhome:motorhomes(manufacturer, model, listing_number)
+          vehicle:vehicles(manufacturer, model, listing_number)
         `)
         .eq('status', 'sold')
-        .in('motorhome.sold_to', [user.id])
+        .in('vehicle.sold_to', [user.id])
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -111,7 +111,7 @@ export default function DealerClaims() {
         .from('claims')
         .select(`
           *,
-          motorhome:motorhomes(manufacturer, model, listing_number),
+          vehicle:vehicles(manufacturer, model, listing_number),
           photos:claim_photos(*)
         `)
         .eq('dealer_id', user.id)
@@ -128,10 +128,10 @@ export default function DealerClaims() {
     mutationFn: async (claimData: typeof claimForm) => {
       if (!user || !selectedAuction) throw new Error('Missing required data');
       
-      // Get auction and motorhome details
+      // Get auction and vehicle details
       const { data: auction, error: auctionError } = await supabase
         .from('auctions')
-        .select('motorhome_id')
+        .select('vehicle_id')
         .eq('id', selectedAuction)
         .single();
       
@@ -142,7 +142,7 @@ export default function DealerClaims() {
         .insert({
           auction_id: selectedAuction,
           dealer_id: user.id,
-          motorhome_id: auction.motorhome_id,
+          vehicle_id: auction.vehicle_id,
           claim_type: claimData.claim_type,
           title: claimData.title,
           description: claimData.description,
@@ -242,8 +242,8 @@ export default function DealerClaims() {
                   <SelectContent>
                     {(Array.isArray(wonAuctions) ? wonAuctions : []).map((auction: any) => (
                       <SelectItem key={auction.id} value={auction.id}>
-                        {auction.motorhome && typeof auction.motorhome === 'object' && !Array.isArray(auction.motorhome)
-                          ? `${auction.motorhome.manufacturer} ${auction.motorhome.model} (${auction.motorhome.listing_number})`
+                        {auction.vehicle && typeof auction.vehicle === 'object' && !Array.isArray(auction.vehicle)
+                          ? `${auction.vehicle.manufacturer} ${auction.vehicle.model} (${auction.vehicle.listing_number})`
                           : 'Unbekanntes Fahrzeug'}
                       </SelectItem>
                     ))}
@@ -367,8 +367,8 @@ export default function DealerClaims() {
                     </div>
                     
                     <p className="text-sm text-muted-foreground mb-3">
-                      {claim.motorhome && typeof claim.motorhome === 'object' && !Array.isArray(claim.motorhome)
-                        ? `${claim.motorhome.manufacturer} ${claim.motorhome.model} (${claim.motorhome.listing_number})`
+                      {claim.vehicle && typeof claim.vehicle === 'object' && !Array.isArray(claim.vehicle)
+                        ? `${claim.vehicle.manufacturer} ${claim.vehicle.model} (${claim.vehicle.listing_number})`
                         : 'Fahrzeug unbekannt'}
                     </p>
                     

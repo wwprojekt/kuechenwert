@@ -1,6 +1,6 @@
 /**
  * Admin Auction Detail Page
- * Comprehensive view of auction with bids, motorhome info, and actions
+ * Comprehensive view of auction with bids, vehicle info, and actions
  */
 
 import { useState } from "react";
@@ -83,9 +83,9 @@ export default function AdminAuctionDetail() {
         .from("auctions")
         .select(`
           *,
-          motorhome:motorhomes (
+          vehicle:vehicles (
             *,
-            motorhome_photos(id, url, display_order),
+            vehicle_photos(id, url, display_order),
             seller:profiles!left (
               id,
               first_name,
@@ -234,8 +234,8 @@ export default function AdminAuctionDetail() {
   const bidCount = sortedBids.length;
   const uniqueBidders = new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
 
-  // Get main photo – ensure motorhome_photos is always an array
-  const rawPhotos = auction?.motorhome?.motorhome_photos;
+  // Get main photo – ensure vehicle_photos is always an array
+  const rawPhotos = auction?.vehicle?.vehicle_photos;
   const photosArray = Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : [];
   const mainPhoto = [...photosArray].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
@@ -243,8 +243,8 @@ export default function AdminAuctionDetail() {
 
   return (
     <AdminDetailLayout
-      title={auction ? `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}` : "Auktion"}
-      subtitle={auction?.motorhome ? `${auction.motorhome.year} • ${auction.motorhome.body_type}` : undefined}
+      title={auction ? `${auction.vehicle?.manufacturer} ${auction.vehicle?.model}` : "Auktion"}
+      subtitle={auction?.vehicle ? `${auction.vehicle.year} • ${auction.vehicle.body_type}` : undefined}
       status={auction ? getStatusBadge(auction.status) : undefined}
       backUrl="/admin/auctions"
       backLabel="Alle Auktionen"
@@ -384,7 +384,7 @@ export default function AdminAuctionDetail() {
                 )}
               </DetailSection>
 
-              {/* Motorhome Info */}
+              {/* Vehicle Info */}
               <DetailSection
                 title="Fahrzeugdaten"
                 icon={<Car className="w-5 h-5" />}
@@ -392,7 +392,7 @@ export default function AdminAuctionDetail() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate(`/admin/motorhomes/${auction.motorhome?.id}`)}
+                    onClick={() => navigate(`/admin/vehicles/${auction.vehicle?.id}`)}
                   >
                     Details anzeigen
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -405,7 +405,7 @@ export default function AdminAuctionDetail() {
                     {mainPhoto ? (
                       <img
                         src={mainPhoto.url}
-                        alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                        alt={`${auction.vehicle?.manufacturer} ${auction.vehicle?.model}`}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -415,14 +415,14 @@ export default function AdminAuctionDetail() {
                     )}
                   </div>
                   <InfoGrid columns={3}>
-                    <InfoItem label="Hersteller" value={auction.motorhome?.manufacturer} />
-                    <InfoItem label="Modell" value={auction.motorhome?.model} />
-                    <InfoItem label="Baujahr" value={auction.motorhome?.year} />
-                    <InfoItem label="Kilometerstand" value={auction.motorhome?.mileage ? `${auction.motorhome.mileage.toLocaleString()} km` : "—"} />
-                    <InfoItem label="Zustand" value={auction.motorhome?.condition} />
-                    <InfoItem label="Aufbauart" value={auction.motorhome?.body_type} />
-                    <InfoItem label="PLZ (Standort)" value={auction.motorhome?.postal_code || "—"} />
-                    <InfoItem label="Stadt" value={auction.motorhome?.city || "—"} />
+                    <InfoItem label="Hersteller" value={auction.vehicle?.manufacturer} />
+                    <InfoItem label="Modell" value={auction.vehicle?.model} />
+                    <InfoItem label="Baujahr" value={auction.vehicle?.year} />
+                    <InfoItem label="Kilometerstand" value={auction.vehicle?.mileage ? `${auction.vehicle.mileage.toLocaleString()} km` : "—"} />
+                    <InfoItem label="Zustand" value={auction.vehicle?.condition} />
+                    <InfoItem label="Aufbauart" value={auction.vehicle?.body_type} />
+                    <InfoItem label="PLZ (Standort)" value={auction.vehicle?.postal_code || "—"} />
+                    <InfoItem label="Stadt" value={auction.vehicle?.city || "—"} />
                   </InfoGrid>
                 </div>
               </DetailSection>
@@ -541,28 +541,28 @@ export default function AdminAuctionDetail() {
                 <div className="space-y-4">
                   <div>
                     <p className="font-semibold text-lg">
-                      {auction.motorhome?.seller?.first_name} {auction.motorhome?.seller?.last_name}
+                      {auction.vehicle?.seller?.first_name} {auction.vehicle?.seller?.last_name}
                     </p>
-                    {auction.motorhome?.seller?.company_name && (
-                      <p className="text-sm text-muted-foreground">{auction.motorhome.seller.company_name}</p>
+                    {auction.vehicle?.seller?.company_name && (
+                      <p className="text-sm text-muted-foreground">{auction.vehicle.seller.company_name}</p>
                     )}
                   </div>
                   <Separator />
                   <div className="space-y-3">
                     <a
-                      href={`mailto:${auction.motorhome?.seller?.email}`}
+                      href={`mailto:${auction.vehicle?.seller?.email}`}
                       className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                     >
                       <Mail className="w-4 h-4" />
-                      {auction.motorhome?.seller?.email}
+                      {auction.vehicle?.seller?.email}
                     </a>
-                    {auction.motorhome?.seller?.phone && (
+                    {auction.vehicle?.seller?.phone && (
                       <a
-                        href={`tel:${auction.motorhome.seller.phone}`}
+                        href={`tel:${auction.vehicle.seller.phone}`}
                         className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                       >
                         <Phone className="w-4 h-4" />
-                        {auction.motorhome.seller.phone}
+                        {auction.vehicle.seller.phone}
                       </a>
                     )}
                   </div>
@@ -570,7 +570,7 @@ export default function AdminAuctionDetail() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => navigate(`/admin/users/${auction.motorhome?.seller?.id}`)}
+                      onClick={() => navigate(`/admin/users/${auction.vehicle?.seller?.id}`)}
                     >
                       Profil anzeigen
                     </Button>
@@ -666,9 +666,9 @@ export default function AdminAuctionDetail() {
         <CreateSellerPenaltyDialog
           open={showPenaltyDialog}
           onOpenChange={setShowPenaltyDialog}
-          preSelectedSellerId={auction.motorhome?.seller?.id}
+          preSelectedSellerId={auction.vehicle?.seller?.id}
           preSelectedAuctionId={auction.id}
-          preSelectedMotorhomeId={auction.motorhome?.id}
+          preSelectedVehicleId={auction.vehicle?.id}
         />
       )}
     </AdminDetailLayout>

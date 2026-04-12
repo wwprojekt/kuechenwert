@@ -1,5 +1,5 @@
 /**
- * Dialog to edit motorhome details in the admin panel
+ * Dialog to edit vehicle details in the admin panel
  * Comprehensive edit form with all database fields organized in tabs
  */
 
@@ -129,8 +129,8 @@ interface MotorhomeData {
   description: string | null;
 }
 
-interface MotorhomeEditDialogProps {
-  motorhome: MotorhomeData | null;
+interface VehicleEditDialogProps {
+  vehicle: MotorhomeData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -211,31 +211,31 @@ const STATUSES = [
   { value: "archived", label: "Archiviert" },
 ];
 
-export function MotorhomeEditDialog({
-  motorhome,
+export function VehicleEditDialog({
+  vehicle,
   open,
   onOpenChange,
-}: MotorhomeEditDialogProps) {
+}: VehicleEditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<MotorhomeData>>({});
 
   useEffect(() => {
-    if (motorhome) {
+    if (vehicle) {
       setFormData({
-        ...motorhome,
-        tuev_valid_until: motorhome.tuev_valid_until ? String(motorhome.tuev_valid_until).substring(0, 7) : null,
-        last_tuev_date: motorhome.last_tuev_date ? String(motorhome.last_tuev_date).substring(0, 7) : null,
+        ...vehicle,
+        tuev_valid_until: vehicle.tuev_valid_until ? String(vehicle.tuev_valid_until).substring(0, 7) : null,
+        last_tuev_date: vehicle.last_tuev_date ? String(vehicle.last_tuev_date).substring(0, 7) : null,
       });
     }
-  }, [motorhome]);
+  }, [vehicle]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<MotorhomeData>) => {
-      if (!motorhome?.id) throw new Error("No motorhome ID");
+      if (!vehicle?.id) throw new Error("No vehicle ID");
 
       const { error } = await supabase
-        .from("motorhomes")
+        .from("vehicles")
         .update({
           // Basis
           manufacturer: data.manufacturer,
@@ -330,13 +330,13 @@ export function MotorhomeEditDialog({
           // Beschreibung
           description: data.description,
         })
-        .eq("id", motorhome.id);
+        .eq("id", vehicle.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhome"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVehicle"] });
       toast({
         title: "Gespeichert",
         description: "Wohnmobil wurde erfolgreich aktualisiert.",
@@ -364,7 +364,7 @@ export function MotorhomeEditDialog({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (!motorhome) return null;
+  if (!vehicle) return null;
 
   // Helper for select fields with optional "clear" option
   const renderSelect = (

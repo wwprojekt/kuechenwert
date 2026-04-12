@@ -28,7 +28,7 @@ export type AuditEntityType =
   | "user"
   | "auction"
   | "bid"
-  | "motorhome"
+  | "vehicle"
   | "dealer"
   | "invoice"
   | "email"

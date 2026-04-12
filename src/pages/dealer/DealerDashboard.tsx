@@ -136,13 +136,13 @@ const DealerDashboard = () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
-      const [bidsRes, soldMotorhomesRes, commissionsRes] = await Promise.all([
+      const [bidsRes, soldVehiclesRes, commissionsRes] = await Promise.all([
         supabase
           .from("bids")
-          .select("*, auctions(status, current_bid, end_time, motorhome:motorhomes(manufacturer, model, listing_number, body_type, year))")
+          .select("*, auctions(status, current_bid, end_time, vehicle:vehicles(manufacturer, model, listing_number, body_type, year))")
           .eq("bidder_id", user.id),
         supabase
-          .from("motorhomes")
+          .from("vehicles")
           .select("id, manufacturer, model, sold_at, auctions(id, status, current_bid, starting_bid, end_time)")
           .eq("sold_to", user.id),
         supabase
@@ -152,9 +152,9 @@ const DealerDashboard = () => {
       ]);
 
       const activeBids = bidsRes.data?.filter(bid => bid.auctions?.status === "active") || [];
-      const wonMothorhomes = soldMotorhomesRes.data || [];
+      const wonMothorhomes = soldVehiclesRes.data || [];
       const totalSpent = wonMothorhomes.reduce((sum, mh: any) => {
-        // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
+        // auctions is a single object (not array) because vehicle_id has UNIQUE constraint
         const auction = Array.isArray(mh.auctions) ? mh.auctions[0] : mh.auctions;
         return sum + Number(auction?.current_bid || 0);
       }, 0);
@@ -185,14 +185,14 @@ const DealerDashboard = () => {
         .from("auctions")
         .select(`
           *,
-          motorhome:motorhomes!left(
+          vehicle:vehicles!left(
             id,
             manufacturer,
             model,
             year,
             body_type,
             listing_number,
-            photos:motorhome_photos(url, display_order)
+            photos:vehicle_photos(url, display_order)
           )
         `)
         .eq("status", "active")
@@ -237,12 +237,12 @@ const DealerDashboard = () => {
     const bidAmounts: number[] = [];
 
     for (const bid of stats.allBids) {
-      const motorhome = (bid as any).auctions?.motorhome;
-      if (motorhome?.manufacturer) {
-        manufacturerCount[motorhome.manufacturer] = (manufacturerCount[motorhome.manufacturer] || 0) + 1;
+      const vehicle = (bid as any).auctions?.vehicle;
+      if (vehicle?.manufacturer) {
+        manufacturerCount[vehicle.manufacturer] = (manufacturerCount[vehicle.manufacturer] || 0) + 1;
       }
-      if (motorhome?.body_type) {
-        bodyTypeCount[motorhome.body_type] = (bodyTypeCount[motorhome.body_type] || 0) + 1;
+      if (vehicle?.body_type) {
+        bodyTypeCount[vehicle.body_type] = (bodyTypeCount[vehicle.body_type] || 0) + 1;
       }
       bidAmounts.push(bid.amount);
     }
@@ -270,11 +270,11 @@ const DealerDashboard = () => {
   // Check if an auction matches dealer preferences
   const isRecommended = (auction: any): boolean => {
     if (!dealerPreferences) return false;
-    const motorhome = auction.motorhome;
-    if (!motorhome) return false;
+    const vehicle = auction.vehicle;
+    if (!vehicle) return false;
 
-    const matchesManufacturer = dealerPreferences.topManufacturers.includes(motorhome.manufacturer);
-    const matchesBodyType = motorhome.body_type && dealerPreferences.topBodyTypes.includes(motorhome.body_type);
+    const matchesManufacturer = dealerPreferences.topManufacturers.includes(vehicle.manufacturer);
+    const matchesBodyType = vehicle.body_type && dealerPreferences.topBodyTypes.includes(vehicle.body_type);
     const currentBid = auction.current_bid || auction.starting_bid || 0;
     const matchesPrice = currentBid >= dealerPreferences.minPrice && currentBid <= dealerPreferences.maxPrice;
 
@@ -290,9 +290,9 @@ const DealerDashboard = () => {
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const manufacturer = (auction.motorhome?.manufacturer || "").toLowerCase();
-        const model = (auction.motorhome?.model || "").toLowerCase();
-        const listingNumber = (auction.motorhome?.listing_number || "").toLowerCase();
+        const manufacturer = (auction.vehicle?.manufacturer || "").toLowerCase();
+        const model = (auction.vehicle?.model || "").toLowerCase();
+        const listingNumber = (auction.vehicle?.listing_number || "").toLowerCase();
         if (!manufacturer.includes(q) && !model.includes(q) && !listingNumber.includes(q)) {
           return false;
         }
@@ -565,7 +565,7 @@ const DealerDashboard = () => {
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
-                          {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+                          {auction.vehicle?.manufacturer} {auction.vehicle?.model}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>Ihr Gebot: <strong>€{userBid?.amount?.toLocaleString('de-DE')}</strong></span>
@@ -643,7 +643,7 @@ const DealerDashboard = () => {
                 const isExpired = timeLeft <= 0;
                 const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
                 const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
-                const auctionPhotos = Array.isArray(auction.motorhome?.photos) ? auction.motorhome.photos : auction.motorhome?.photos ? [auction.motorhome.photos] : [];
+                const auctionPhotos = Array.isArray(auction.vehicle?.photos) ? auction.vehicle.photos : auction.vehicle?.photos ? [auction.vehicle.photos] : [];
                 const mainPhoto = auctionPhotos.find((p: any) => p.display_order === 0)?.url || 
                                   auctionPhotos[0]?.url;
                 
@@ -658,7 +658,7 @@ const DealerDashboard = () => {
                         {mainPhoto ? (
                           <img 
                             src={mainPhoto} 
-                            alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            alt={`${auction.vehicle?.manufacturer} ${auction.vehicle?.model}`}
                             className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"
@@ -703,8 +703,8 @@ const DealerDashboard = () => {
 
                         {/* Favorite Heart – rechts oben */}
                         <div className="absolute top-2 right-2">
-                          {auction.motorhome?.id && (
-                            <FavoriteButton motorhomeId={auction.motorhome.id} />
+                          {auction.vehicle?.id && (
+                            <FavoriteButton vehicleId={auction.vehicle.id} />
                           )}
                         </div>
                         
@@ -721,10 +721,10 @@ const DealerDashboard = () => {
                       <CardContent className="p-4">
                         <div className="mb-2">
                           <h3 className="font-semibold text-sm line-clamp-1">
-                            {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+                            {auction.vehicle?.manufacturer} {auction.vehicle?.model}
                           </h3>
                           <p className="text-xs text-muted-foreground">
-                            {auction.motorhome?.year} • #{auction.motorhome?.listing_number}
+                            {auction.vehicle?.year} • #{auction.vehicle?.listing_number}
                           </p>
                         </div>
                         
@@ -1078,7 +1078,7 @@ const DealerDashboard = () => {
                         </div>
                         <div>
                           <div className="font-medium">
-                            {bid.auctions?.motorhome?.manufacturer} {bid.auctions?.motorhome?.model}
+                            {bid.auctions?.vehicle?.manufacturer} {bid.auctions?.vehicle?.model}
                           </div>
                           <div className="text-sm text-muted-foreground flex items-center gap-2">
                             <span>Ihr Gebot: €{bid.amount.toLocaleString('de-DE')}</span>

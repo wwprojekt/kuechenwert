@@ -39,11 +39,11 @@ export default function MyBids() {
             status,
             current_bid,
             end_time,
-            motorhome:motorhomes (
+            vehicle:vehicles (
               manufacturer,
               model,
               year,
-              photos:motorhome_photos (
+              photos:vehicle_photos (
                 url,
                 display_order
               )
@@ -214,8 +214,8 @@ export default function MyBids() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedBids.map((group: any) => {
-            const motorhome = group.auction?.motorhome;
-            const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
+            const vehicle = group.auction?.vehicle;
+            const safePhotos = Array.isArray(vehicle?.photos) ? vehicle.photos : vehicle?.photos ? [vehicle.photos] : [];
             const firstPhoto = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
             const bidCount = group.bids.length;
             const isActive = group.auction.status === "active";
@@ -248,7 +248,7 @@ export default function MyBids() {
                       {firstPhoto ? (
                         <img
                           src={firstPhoto}
-                          alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                          alt={`${vehicle?.manufacturer} ${vehicle?.model}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
@@ -271,10 +271,10 @@ export default function MyBids() {
                     <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
                       <div>
                         <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
-                          {motorhome?.manufacturer} {motorhome?.model}
+                          {vehicle?.manufacturer} {vehicle?.model}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Baujahr {motorhome?.year}
+                          Baujahr {vehicle?.year}
                         </p>
                       </div>
 

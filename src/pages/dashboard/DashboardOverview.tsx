@@ -51,8 +51,8 @@ export default function DashboardOverview() {
 
   const isDealer = primaryRole === "dealer";
 
-  // ── Realtime: Auto-refresh when admin creates/updates motorhome ──
-  // NOTE: We listen WITHOUT a filter on motorhomes because Supabase Realtime
+  // ── Realtime: Auto-refresh when admin creates/updates vehicle ──
+  // NOTE: We listen WITHOUT a filter on vehicles because Supabase Realtime
   // filters on INSERT events can be unreliable (the filter is applied to the
   // NEW row, but RLS or timing issues may prevent delivery). Instead we listen
   // to ALL changes on the table and always invalidate – the React Query cache
@@ -67,7 +67,7 @@ export default function DashboardOverview() {
         {
           event: "*",
           schema: "public",
-          table: "motorhomes",
+          table: "vehicles",
         },
         () => {
           // Invalidate all seller-relevant queries so data refreshes automatically
@@ -81,7 +81,7 @@ export default function DashboardOverview() {
         {
           event: "*",
           schema: "public",
-          table: "motorhome_photos",
+          table: "vehicle_photos",
         },
         () => {
           // Also refresh when photos are added/removed
@@ -137,20 +137,20 @@ export default function DashboardOverview() {
     staleTime: 0,
   });
 
-  // ── Seller: Fetch motorhome + auction data for timeline ──────
+  // ── Seller: Fetch vehicle + auction data for timeline ──────
   const { data: sellerData } = useQuery({
     queryKey: ["sellerTimeline", user?.id],
     queryFn: async () => {
       if (!user) return null;
 
-      // Get all motorhomes with their auctions and photos
-      const { data: motorhomes, error } = await supabase
-        .from("motorhomes")
+      // Get all vehicles with their auctions and photos
+      const { data: vehicles, error } = await supabase
+        .from("vehicles")
         .select(
           `
           *,
           auction:auctions(*),
-          photos:motorhome_photos(url, display_order)
+          photos:vehicle_photos(url, display_order)
         `
         )
         .eq("seller_id", user.id)
@@ -158,9 +158,9 @@ export default function DashboardOverview() {
 
       if (error) throw error;
 
-      // For each motorhome with an active auction, get bid stats
+      // For each vehicle with an active auction, get bid stats
       const enriched = await Promise.all(
-        (motorhomes || []).map(async (mh) => {
+        (vehicles || []).map(async (mh) => {
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           let bidStats = null;
 
@@ -201,7 +201,7 @@ export default function DashboardOverview() {
     // Polling fallback: refetch every 30s in case Realtime subscription
     // doesn't fire (e.g. table not enabled for Realtime in Supabase config,
     // or RLS blocks the subscription). This ensures the seller sees new
-    // motorhomes within 30 seconds even without Realtime.
+    // vehicles within 30 seconds even without Realtime.
     refetchInterval: 30 * 1000,
     // Don't poll when the tab is in the background to save resources
     refetchIntervalInBackground: false,
@@ -221,27 +221,27 @@ export default function DashboardOverview() {
           .select("*", { count: "exact" })
           .eq("bidder_id", user.id),
         supabase
-          .from("motorhomes")
+          .from("vehicles")
           .select("*", { count: "exact" })
           .eq("sold_to", user.id),
         supabase
-          .from("motorhomes")
+          .from("vehicles")
           .select("id, instant_price")
           .eq("sold_to", user.id),
       ]);
 
       // Fetch actual purchase prices from auctions (current_bid)
-      const motorhomeIds = inventoryRes.data?.map(m => m.id) || [];
+      const vehicleIds = inventoryRes.data?.map(m => m.id) || [];
       let auctionPriceMap: Record<string, number> = {};
-      if (motorhomeIds.length > 0) {
+      if (vehicleIds.length > 0) {
         const { data: auctionsData } = await supabase
           .from('auctions')
-          .select('motorhome_id, current_bid')
-          .in('motorhome_id', motorhomeIds)
+          .select('vehicle_id, current_bid')
+          .in('vehicle_id', vehicleIds)
           .in('status', ['sold', 'ended']);
         auctionPriceMap = (auctionsData || []).reduce((acc: Record<string, number>, a: any) => {
-          if (!acc[a.motorhome_id] || Number(a.current_bid) > acc[a.motorhome_id]) {
-            acc[a.motorhome_id] = Number(a.current_bid) || 0;
+          if (!acc[a.vehicle_id] || Number(a.current_bid) > acc[a.vehicle_id]) {
+            acc[a.vehicle_id] = Number(a.current_bid) || 0;
           }
           return acc;
         }, {});
@@ -287,9 +287,9 @@ export default function DashboardOverview() {
         .select(
           `
           *,
-          motorhome:motorhomes!inner (
+          vehicle:vehicles!inner (
             id, manufacturer, model, year,
-            photos:motorhome_photos (url, display_order)
+            photos:vehicle_photos (url, display_order)
           )
         `
         )
@@ -301,12 +301,12 @@ export default function DashboardOverview() {
     enabled: !!user && isDealer,
   });
 
-  // ── Helper: Determine timeline step for a motorhome ──────────
+  // ── Helper: Determine timeline step for a vehicle ──────────
   const getTimelineStep = (mh: any) => {
     const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
 
     if (!auction) {
-      // No auction yet – motorhome status is 'available' (default), 'pending', or 'sold'
+      // No auction yet – vehicle status is 'available' (default), 'pending', or 'sold'
       if (mh.status === "available" || !mh.status) {
         return {
           step: 1,
@@ -417,7 +417,7 @@ export default function DashboardOverview() {
   // SELLER DASHBOARD
   // ═══════════════════════════════════════════════════════════════
   if (!isDealer) {
-    const motorhomes = sellerData || [];
+    const vehicles = sellerData || [];
     const displayName =
       profile?.first_name || profile?.company_name || "Verkäufer";
 
@@ -454,8 +454,8 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* No motorhomes: Check for pending wizard session or show empty state */}
-        {motorhomes.length === 0 && pendingWizardSession && (
+        {/* No vehicles: Check for pending wizard session or show empty state */}
+        {vehicles.length === 0 && pendingWizardSession && (
           <Card className="border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
             <CardContent className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -489,7 +489,7 @@ export default function DashboardOverview() {
           </Card>
         )}
 
-        {motorhomes.length === 0 && !pendingWizardSession && (
+        {vehicles.length === 0 && !pendingWizardSession && (
           <Card className="border-2 border-dashed border-primary/30">
             <CardContent className="p-8 sm:p-12 text-center">
               <div className="relative mx-auto w-20 h-20 mb-6">
@@ -518,8 +518,8 @@ export default function DashboardOverview() {
           </Card>
         )}
 
-        {/* Motorhome cards with timeline */}
-        {motorhomes.map((mh: any) => {
+        {/* Vehicle cards with timeline */}
+        {vehicles.map((mh: any) => {
           const timeline = getTimelineStep(mh);
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           const firstPhoto = mh.photos
@@ -832,7 +832,7 @@ export default function DashboardOverview() {
         })}
 
         {/* Helpful info card */}
-        {motorhomes.length > 0 && (
+        {vehicles.length > 0 && (
           <Card className="border border-border/50 bg-muted/20">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-start gap-3">
@@ -1079,7 +1079,7 @@ export default function DashboardOverview() {
           ) : (
             <div className="space-y-3">
               {dealerActivity.map((auction: any, index: number) => {
-                const firstPhoto = auction.motorhome?.photos
+                const firstPhoto = auction.vehicle?.photos
                   ?.sort(
                     (a: any, b: any) => a.display_order - b.display_order
                   )[0]?.url;
@@ -1096,7 +1096,7 @@ export default function DashboardOverview() {
                         {firstPhoto ? (
                           <img
                             src={firstPhoto}
-                            alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            alt={`${auction.vehicle?.manufacturer} ${auction.vehicle?.model}`}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                           />
                         ) : (
@@ -1107,12 +1107,12 @@ export default function DashboardOverview() {
                       </div>
                       <div>
                         <p className="font-semibold text-foreground group-hover:text-primary transition-colors text-sm sm:text-base">
-                          {auction.motorhome?.manufacturer}{" "}
-                          {auction.motorhome?.model}
+                          {auction.vehicle?.manufacturer}{" "}
+                          {auction.vehicle?.model}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-0.5">
                           <Clock className="w-3 h-3" />
-                          Baujahr {auction.motorhome?.year}
+                          Baujahr {auction.vehicle?.year}
                         </p>
                       </div>
                     </div>

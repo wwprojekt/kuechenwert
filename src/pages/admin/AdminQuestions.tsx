@@ -49,21 +49,21 @@ import { de } from "date-fns/locale";
 
 interface VehicleQuestion {
   id: string;
-  motorhome_id: string;
+  vehicle_id: string;
   questioner_name: string | null;
   questioner_email: string;
   question: string;
   answer: string | null;
   answered_at: string | null;
   created_at: string;
-  motorhome?: {
+  vehicle?: {
     id: string;
     manufacturer: string;
     model: string;
     year: number;
     body_type: string;
     listing_number: string | null;
-    motorhome_photos?: Array<{ url: string; display_order: number }>;
+    vehicle_photos?: Array<{ url: string; display_order: number }>;
     auctions?: Array<{ id: string; status: string }>;
   };
 }
@@ -89,14 +89,14 @@ export default function AdminQuestions() {
         .from("vehicle_questions")
         .select(`
           *,
-          motorhome:motorhomes (
+          vehicle:vehicles (
             id,
             manufacturer,
             model,
             year,
             body_type,
             listing_number,
-            motorhome_photos(url, display_order),
+            vehicle_photos(url, display_order),
             auctions(id, status)
           )
         `)
@@ -121,14 +121,14 @@ export default function AdminQuestions() {
   }, []);
 
   const getFirstPhoto = (question: VehicleQuestion): string | null => {
-    const photos = question.motorhome?.motorhome_photos;
+    const photos = question.vehicle?.vehicle_photos;
     if (!photos || !Array.isArray(photos) || photos.length === 0) return null;
     const sorted = [...photos].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return sorted[0]?.url || null;
   };
 
   const getAuctionId = (question: VehicleQuestion): string | null => {
-    const auctions = question.motorhome?.auctions;
+    const auctions = question.vehicle?.auctions;
     if (!auctions || !Array.isArray(auctions) || auctions.length === 0) return null;
     return auctions[0]?.id || null;
   };
@@ -139,12 +139,12 @@ export default function AdminQuestions() {
     setIsSubmitting(true);
 
     try {
-      const vehicleTitle = selectedQuestion.motorhome
-        ? `${selectedQuestion.motorhome.manufacturer} ${selectedQuestion.motorhome.model}`
+      const vehicleTitle = selectedQuestion.vehicle
+        ? `${selectedQuestion.vehicle.manufacturer} ${selectedQuestion.vehicle.model}`
         : "Fahrzeug";
 
-      const listingInfo = selectedQuestion.motorhome?.listing_number
-        ? ` (Inserat #${selectedQuestion.motorhome.listing_number})`
+      const listingInfo = selectedQuestion.vehicle?.listing_number
+        ? ` (Inserat #${selectedQuestion.vehicle.listing_number})`
         : "";
 
       // Build the email HTML body with the answer and vehicle context
@@ -334,7 +334,7 @@ export default function AdminQuestions() {
                           {photo ? (
                             <img
                               src={photo}
-                              alt={`${question.motorhome?.manufacturer} ${question.motorhome?.model}`}
+                              alt={`${question.vehicle?.manufacturer} ${question.vehicle?.model}`}
                               className="w-14 h-10 object-cover rounded border"
                             />
                           ) : (
@@ -344,14 +344,14 @@ export default function AdminQuestions() {
                           )}
                           <div className="min-w-0">
                             <p className="font-medium truncate">
-                              {question.motorhome?.manufacturer} {question.motorhome?.model}
+                              {question.vehicle?.manufacturer} {question.vehicle?.model}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {question.motorhome?.year && (
-                                <span>{question.motorhome.year}</span>
+                              {question.vehicle?.year && (
+                                <span>{question.vehicle.year}</span>
                               )}
-                              {question.motorhome?.listing_number && (
-                                <span className="font-mono">#{question.motorhome.listing_number}</span>
+                              {question.vehicle?.listing_number && (
+                                <span className="font-mono">#{question.vehicle.listing_number}</span>
                               )}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
@@ -369,14 +369,14 @@ export default function AdminQuestions() {
                                   Auktion
                                 </Button>
                               )}
-                              {question.motorhome?.id && (
+                              {question.vehicle?.id && (
                                 <Button
                                   variant="link"
                                   size="sm"
                                   className="h-auto p-0 text-xs text-muted-foreground"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/admin/motorhomes/${question.motorhome!.id}`);
+                                    navigate(`/admin/vehicles/${question.vehicle!.id}`);
                                   }}
                                 >
                                   <ExternalLink className="w-3 h-3 mr-1" />
@@ -514,14 +514,14 @@ export default function AdminQuestions() {
           </DialogHeader>
 
           {/* Vehicle Info Card in Dialog */}
-          {selectedQuestion?.motorhome && (
+          {selectedQuestion?.vehicle && (
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
               {(() => {
                 const photo = selectedQuestion ? getFirstPhoto(selectedQuestion) : null;
                 return photo ? (
                   <img
                     src={photo}
-                    alt={`${selectedQuestion.motorhome?.manufacturer} ${selectedQuestion.motorhome?.model}`}
+                    alt={`${selectedQuestion.vehicle?.manufacturer} ${selectedQuestion.vehicle?.model}`}
                     className="w-24 h-16 object-cover rounded border flex-shrink-0"
                   />
                 ) : (
@@ -532,17 +532,17 @@ export default function AdminQuestions() {
               })()}
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-base">
-                  {selectedQuestion.motorhome.manufacturer} {selectedQuestion.motorhome.model}
+                  {selectedQuestion.vehicle.manufacturer} {selectedQuestion.vehicle.model}
                 </p>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
-                  {selectedQuestion.motorhome.year && (
-                    <span>Baujahr {selectedQuestion.motorhome.year}</span>
+                  {selectedQuestion.vehicle.year && (
+                    <span>Baujahr {selectedQuestion.vehicle.year}</span>
                   )}
-                  {selectedQuestion.motorhome.body_type && (
-                    <span>{selectedQuestion.motorhome.body_type}</span>
+                  {selectedQuestion.vehicle.body_type && (
+                    <span>{selectedQuestion.vehicle.body_type}</span>
                   )}
-                  {selectedQuestion.motorhome.listing_number && (
-                    <span className="font-mono">#{selectedQuestion.motorhome.listing_number}</span>
+                  {selectedQuestion.vehicle.listing_number && (
+                    <span className="font-mono">#{selectedQuestion.vehicle.listing_number}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
@@ -560,12 +560,12 @@ export default function AdminQuestions() {
                       </Button>
                     ) : null;
                   })()}
-                  {selectedQuestion.motorhome.id && (
+                  {selectedQuestion.vehicle.id && (
                     <Button
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs text-muted-foreground"
-                      onClick={() => navigate(`/admin/motorhomes/${selectedQuestion.motorhome!.id}`)}
+                      onClick={() => navigate(`/admin/vehicles/${selectedQuestion.vehicle!.id}`)}
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
                       Fahrzeugdetails

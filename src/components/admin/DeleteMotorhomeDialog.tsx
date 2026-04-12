@@ -1,5 +1,5 @@
 /**
- * Confirmation dialog for deleting a motorhome in the admin panel
+ * Confirmation dialog for deleting a vehicle in the admin panel
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,36 +19,36 @@ import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
 
-interface MotorhomeToDelete {
+interface VehicleToDelete {
   id: string;
   manufacturer: string;
   model: string;
 }
 
-interface DeleteMotorhomeDialogProps {
-  motorhome: MotorhomeToDelete | null;
+interface DeleteVehicleDialogProps {
+  vehicle: VehicleToDelete | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function DeleteMotorhomeDialog({
-  motorhome,
+export function DeleteVehicleDialog({
+  vehicle,
   open,
   onOpenChange,
-}: DeleteMotorhomeDialogProps) {
+}: DeleteVehicleDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    mutationFn: async (motorhomeId: string) => {
+    mutationFn: async (vehicleId: string) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session abgelaufen");
 
-      // 1. Get all photos for this motorhome
+      // 1. Get all photos for this vehicle
       const { data: photos } = await supabase
-        .from("motorhome_photos")
+        .from("vehicle_photos")
         .select("url")
-        .eq("motorhome_id", motorhomeId);
+        .eq("vehicle_id", vehicleId);
 
       // 2. Delete photos from storage
       if (photos && photos.length > 0) {
@@ -56,14 +56,14 @@ export function DeleteMotorhomeDialog({
           .map((p) => {
             // Extract file path from URL
             const url = p.url;
-            const match = url.match(/motorhome-photos\/(.+)$/);
+            const match = url.match(/vehicle-photos\/(.+)$/);
             return match ? match[1] : null;
           })
           .filter((p): p is string => p !== null);
 
         if (filePaths.length > 0) {
           const { error: storageError } = await supabase.storage
-            .from("motorhome-photos")
+            .from("vehicle-photos")
             .remove(filePaths);
 
           if (storageError) {
@@ -75,16 +75,16 @@ export function DeleteMotorhomeDialog({
 
       // 3. Delete photo records (cascade should handle this, but be explicit)
       const { error: photosError } = await supabase
-        .from("motorhome_photos")
+        .from("vehicle_photos")
         .delete()
-        .eq("motorhome_id", motorhomeId);
+        .eq("vehicle_id", vehicleId);
       if (photosError) throw new Error(`Fotos konnten nicht gelöscht werden: ${photosError.message}`);
 
       // 4. Get related auctions
       const { data: auctions, error: auctionsQueryError } = await supabase
         .from("auctions")
         .select("id")
-        .eq("motorhome_id", motorhomeId);
+        .eq("vehicle_id", vehicleId);
       if (auctionsQueryError) throw new Error(`Auktionen konnten nicht abgefragt werden: ${auctionsQueryError.message}`);
 
       // 5. Delete bids for related auctions
@@ -101,26 +101,26 @@ export function DeleteMotorhomeDialog({
       const { error: auctionsError } = await supabase
         .from("auctions")
         .delete()
-        .eq("motorhome_id", motorhomeId);
+        .eq("vehicle_id", vehicleId);
       if (auctionsError) throw new Error(`Auktionen konnten nicht gelöscht werden: ${auctionsError.message}`);
 
       // 7. Delete appointments
       const { error: appointmentsError } = await supabase
         .from("appointments")
         .delete()
-        .eq("motorhome_id", motorhomeId);
+        .eq("vehicle_id", vehicleId);
       if (appointmentsError) throw new Error(`Termine konnten nicht gelöscht werden: ${appointmentsError.message}`);
 
-      // 8. Finally, delete the motorhome
+      // 8. Finally, delete the vehicle
       const { error } = await supabase
-        .from("motorhomes")
+        .from("vehicles")
         .delete()
-        .eq("id", motorhomeId);
+        .eq("id", vehicleId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVehicles"] });
       toast({
         title: "Gelöscht",
         description: "Wohnmobil wurde erfolgreich gelöscht.",
@@ -138,12 +138,12 @@ export function DeleteMotorhomeDialog({
   });
 
   const handleDelete = () => {
-    if (motorhome?.id) {
-      deleteMutation.mutate(motorhome.id);
+    if (vehicle?.id) {
+      deleteMutation.mutate(vehicle.id);
     }
   };
 
-  if (!motorhome) return null;
+  if (!vehicle) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -153,7 +153,7 @@ export function DeleteMotorhomeDialog({
           <AlertDialogDescription>
             Sind Sie sicher, dass Sie das Wohnmobil{" "}
             <strong>
-              {motorhome.manufacturer} {motorhome.model}
+              {vehicle.manufacturer} {vehicle.model}
             </strong>{" "}
             löschen möchten?
             <br />

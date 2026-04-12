@@ -20,7 +20,7 @@ export const emailSchema = z
   .email("Ungültige E-Mail-Adresse")
   .max(255, "E-Mail-Adresse zu lang");
 
-// Motorhome basic details validation
+// Vehicle basic details validation
 export const motorhomeBasicSchema = z.object({
   manufacturer: z.string().trim().min(1, "Hersteller ist erforderlich").max(100),
   model: z.string().trim().min(1, "Modell ist erforderlich").max(100),
@@ -103,7 +103,7 @@ export const motorhomeAdditionalSchema = z.object({
   reserve_price: z.coerce.number().min(0).max(10000000).optional().or(z.literal("")),
 });
 
-// Combined schema for complete motorhome
+// Combined schema for complete vehicle
 export const motorhomeCompleteSchema = motorhomeBasicSchema
   .merge(motorhomeTechnicalSchema)
   .merge(motorhomeDimensionsSchema)

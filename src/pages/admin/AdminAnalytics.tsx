@@ -19,9 +19,9 @@ export default function AdminAnalytics() {
       if (!sessionValid) return null;
 
       // Fetch data in parallel
-      const [usersRes, motorhomesRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
+      const [usersRes, vehiclesRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact" }),
-        supabase.from("motorhomes").select("*, seller:profiles!left(*)"),
+        supabase.from("vehicles").select("*, seller:profiles!left(*)"),
         supabase.from("auctions").select("*"),
         supabase.from("bids").select("*"),
         supabase.from("appointments").select("*"),
@@ -29,13 +29,13 @@ export default function AdminAnalytics() {
 
       // Calculate stats
       const totalUsers = usersRes.count || 0;
-      const totalMotorhomes = motorhomesRes.count || 0;
+      const totalVehicles = vehiclesRes.count || 0;
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
       const totalBids = bidsRes.count || 0;
       
       // Revenue calculation
-      const soldMotorhomes = motorhomesRes.data?.filter(m => m.status === "sold") || [];
-      const totalRevenue = soldMotorhomes.reduce((sum, m) => sum + Number(m.instant_price || m.reserve_price || 0), 0);
+      const soldVehicles = vehiclesRes.data?.filter(m => m.status === "sold") || [];
+      const totalRevenue = soldVehicles.reduce((sum, m) => sum + Number(m.instant_price || m.reserve_price || 0), 0);
       
       // Average bid amount
       const avgBidAmount = bidsRes.data && bidsRes.data.length > 0
@@ -71,19 +71,19 @@ export default function AdminAnalytics() {
           format(new Date(b.created_at), "yyyy-MM-dd") === dateStr
         ).length || 0;
         
-        const dayMotorhomes = motorhomesRes.data?.filter(m => 
+        const dayVehicles = vehiclesRes.data?.filter(m => 
           format(new Date(m.created_at), "yyyy-MM-dd") === dateStr
         ).length || 0;
 
         dailyStats.push({
           date: format(date, "dd.MM", { locale: de }),
           bids: dayBids,
-          motorhomes: dayMotorhomes,
+          vehicles: dayVehicles,
         });
       }
 
-      // Motorhome by body type
-      const bodyTypeStats = motorhomesRes.data?.reduce((acc: any, m) => {
+      // Vehicle by body type
+      const bodyTypeStats = vehiclesRes.data?.reduce((acc: any, m) => {
         const type = m.body_type || "Unbekannt";
         acc[type] = (acc[type] || 0) + 1;
         return acc;
@@ -95,7 +95,7 @@ export default function AdminAnalytics() {
       }));
 
       // Top sellers
-      const sellerStats = motorhomesRes.data?.reduce((acc: any, m) => {
+      const sellerStats = vehiclesRes.data?.reduce((acc: any, m) => {
         if (m.seller) {
           const sellerId = m.seller_id;
           if (!acc[sellerId]) {
@@ -115,7 +115,7 @@ export default function AdminAnalytics() {
 
       return {
         totalUsers,
-        totalMotorhomes,
+        totalVehicles,
         activeAuctions,
         totalBids,
         totalRevenue,
@@ -359,7 +359,7 @@ export default function AdminAnalytics() {
                     <Tooltip />
                     <Legend />
                     <Line type="monotone" dataKey="bids" stroke="#195d3e" strokeWidth={2} name="Gebote" />
-                    <Line type="monotone" dataKey="motorhomes" stroke="#d2281c" strokeWidth={2} name="Inserate" />
+                    <Line type="monotone" dataKey="vehicles" stroke="#d2281c" strokeWidth={2} name="Inserate" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -437,7 +437,7 @@ export default function AdminAnalytics() {
                     <Car className="w-8 h-8 text-primary" />
                     <div>
                       <p className="text-sm text-muted-foreground">Wohnmobile gesamt</p>
-                      <p className="text-2xl font-bold">{platformStats?.totalMotorhomes}</p>
+                      <p className="text-2xl font-bold">{platformStats?.totalVehicles}</p>
                     </div>
                   </div>
                 </div>

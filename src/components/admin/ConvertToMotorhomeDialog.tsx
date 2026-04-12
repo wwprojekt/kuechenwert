@@ -1,6 +1,6 @@
 /**
- * Dialog to convert a completed wizard session into a motorhome listing.
- * Admin can review/edit all wizard data, choose sale channel, and create the motorhome.
+ * Dialog to convert a completed wizard session into a vehicle listing.
+ * Admin can review/edit all wizard data, choose sale channel, and create the vehicle.
  * Automatically creates a user account for the customer if needed.
  */
 
@@ -65,7 +65,7 @@ interface WizardSessionData {
 
 type LeadSourceType = "wizard" | "quick" | "valuation";
 
-interface ConvertToMotorhomeDialogProps {
+interface ConvertToVehicleDialogProps {
   session: WizardSessionData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -115,10 +115,10 @@ const TRANSMISSIONS = [
 ];
 
 // ============================================================================
-// Helper: Map wizard form_data fields to motorhome DB fields
+// Helper: Map wizard form_data fields to vehicle DB fields
 // ============================================================================
 
-function mapWizardToMotorhome(formData: Record<string, unknown>) {
+function mapWizardToVehicle(formData: Record<string, unknown>) {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
   return {
@@ -215,12 +215,12 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
 // Component
 // ============================================================================
 
-export function ConvertToMotorhomeDialog({
+export function ConvertToVehicleDialog({
   session,
   open,
   onOpenChange,
   sourceType = "wizard",
-}: ConvertToMotorhomeDialogProps) {
+}: ConvertToVehicleDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -234,12 +234,12 @@ export function ConvertToMotorhomeDialog({
   const [customerCity, setCustomerCity] = useState("");
 
   // Success state for showing invite button after conversion
-  const [conversionResult, setConversionResult] = useState<{ motorhomeId: string; saleChannel: unknown } | null>(null);
+  const [conversionResult, setConversionResult] = useState<{ vehicleId: string; saleChannel: unknown } | null>(null);
 
   // Initialize form from wizard session data
   useEffect(() => {
     if (session) {
-      const mapped = mapWizardToMotorhome(session.form_data || {});
+      const mapped = mapWizardToVehicle(session.form_data || {});
       setFormData(mapped);
       setCustomerName(session.customer_name || String(session.form_data?.customerName || ""));
       setCustomerEmail(session.customer_email || String(session.form_data?.customerEmail || ""));
@@ -255,7 +255,7 @@ export function ConvertToMotorhomeDialog({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ---- Main Mutation: Create account + motorhome ----
+  // ---- Main Mutation: Create account + vehicle ----
   const convertMutation = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error("Keine Session ausgewählt");
@@ -325,7 +325,7 @@ export function ConvertToMotorhomeDialog({
         }
       }
 
-      // Build motorhome insert payload
+      // Build vehicle insert payload
       const motorhomePayload: Record<string, unknown> = {
         seller_id: sellerId,
         manufacturer,
@@ -386,7 +386,7 @@ export function ConvertToMotorhomeDialog({
         city: formData.city ? String(formData.city) : null,
         country: formData.country || null,
         status: "available",
-        // Fields from mapWizardToMotorhome that were previously missing
+        // Fields from mapWizardToVehicle that were previously missing
         non_smoker: formData.non_smoker ?? null,
         service_history_available: formData.service_history_available ?? null,
         beds_description: formData.beds_description || null,
@@ -406,9 +406,9 @@ export function ConvertToMotorhomeDialog({
         license_plate: formData.license_plate || null,
       };
 
-      // Insert motorhome
-      const { data: motorhome, error: insertError } = await supabase
-        .from("motorhomes")
+      // Insert vehicle
+      const { data: vehicle, error: insertError } = await supabase
+        .from("vehicles")
         .insert(motorhomePayload as any)
         .select("id")
         .single();
@@ -419,11 +419,11 @@ export function ConvertToMotorhomeDialog({
       if ((formData.sale_channel || "auction") === "auction") {
         const reservePrice = formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null);
 
-        // Prüfe ob bereits eine Auktion für dieses Motorhome existiert (UNIQUE Constraint)
+        // Prüfe ob bereits eine Auktion für dieses Vehicle existiert (UNIQUE Constraint)
         const { data: existingAuction } = await supabase
           .from("auctions")
           .select("id")
-          .eq("motorhome_id", motorhome.id)
+          .eq("vehicle_id", vehicle.id)
           .maybeSingle();
 
         if (existingAuction) {
@@ -450,7 +450,7 @@ export function ConvertToMotorhomeDialog({
           const { error: auctionError } = await supabase
             .from("auctions")
             .insert({
-              motorhome_id: motorhome.id,
+              vehicle_id: vehicle.id,
               starting_bid: 50,
               reserve_price: reservePrice,
               status: "draft",
@@ -458,7 +458,7 @@ export function ConvertToMotorhomeDialog({
 
           if (auctionError) {
             logger.error("Auktion konnte nicht erstellt werden:", auctionError);
-            // Nicht abbrechen - Motorhome wurde bereits erstellt
+            // Nicht abbrechen - Vehicle wurde bereits erstellt
           }
         }
       }
@@ -477,12 +477,12 @@ export function ConvertToMotorhomeDialog({
 
         if (profileError) {
           logger.warn("Adresse konnte nicht gespeichert werden:", profileError.message);
-          // Nicht abbrechen - Motorhome wurde bereits erstellt
+          // Nicht abbrechen - Vehicle wurde bereits erstellt
         }
       }
 
       // Mark source lead as converted
-      const convertNote = `[${new Date().toLocaleDateString("de-DE")}] Als Wohnmobil angelegt (ID: ${motorhome.id})`;
+      const convertNote = `[${new Date().toLocaleDateString("de-DE")}] Als Wohnmobil angelegt (ID: ${vehicle.id})`;
 
       if (sourceType === "wizard") {
         await supabase
@@ -509,14 +509,14 @@ export function ConvertToMotorhomeDialog({
           .eq("id", session.id);
       }
 
-      return { motorhomeId: motorhome.id, saleChannel: formData.sale_channel };
+      return { vehicleId: vehicle.id, saleChannel: formData.sale_channel };
     },
     onSuccess: (result) => {
       // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
       queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVehicles"] });
       // Also invalidate seller-side queries so the customer dashboard updates
       // (covers the case where admin and seller are on the same browser or
       //  the seller has the dashboard open – Realtime handles the rest)
@@ -527,7 +527,7 @@ export function ConvertToMotorhomeDialog({
     },
     onError: (error: Error) => {
       const germanMessage = handleAndLogError(error, {
-        componentName: 'ConvertToMotorhomeDialog',
+        componentName: 'ConvertToVehicleDialog',
         category: 'api',
         severity: 'high',
         metadata: {
@@ -546,14 +546,14 @@ export function ConvertToMotorhomeDialog({
 
   // ---- Invite Mutation: Send registration link ----
   const inviteMutation = useMutation({
-    mutationFn: async (motorhomeId: string) => {
+    mutationFn: async (vehicleId: string) => {
       const { data, error } = await supabase.functions.invoke(
         "send-registration-invite",
         {
           body: {
             email: customerEmail.trim(),
             customerName: customerName.trim() || undefined,
-            motorhomeId,
+            vehicleId,
             sessionId: session?.id,
           },
         }
@@ -571,7 +571,7 @@ export function ConvertToMotorhomeDialog({
     },
     onError: (error: Error) => {
       const germanMessage = handleAndLogError(error, {
-        componentName: 'ConvertToMotorhomeDialog',
+        componentName: 'ConvertToVehicleDialog',
         category: 'api',
         severity: 'medium',
         metadata: {
@@ -1174,7 +1174,7 @@ export function ConvertToMotorhomeDialog({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => inviteMutation.mutate(conversionResult.motorhomeId)}
+                    onClick={() => inviteMutation.mutate(conversionResult.vehicleId)}
                     disabled={inviteMutation.isPending || inviteMutation.isSuccess}
                     className="bg-blue-600 hover:bg-blue-700"
                   >

@@ -21,10 +21,10 @@ interface Appointment {
   payment_amount: number | null;
   release_pin: string | null;
   notes: string | null;
-  motorhome_id: string;
+  vehicle_id: string;
   station_id: string;
   seller_id: string;
-  motorhomes: {
+  vehicles: {
     manufacturer: string;
     model: string;
     year: number;
@@ -60,7 +60,7 @@ const AdminAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          motorhomes (manufacturer, model, year),
+          vehicles (manufacturer, model, year),
           purchase_stations (name, city)
         `)
         .order('appointment_date', { ascending: false });
@@ -258,7 +258,7 @@ const AdminAppointments = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      {appointment.motorhomes?.manufacturer} {appointment.motorhomes?.model}
+                      {appointment.vehicles?.manufacturer} {appointment.vehicles?.model}
                       {getStatusBadge(appointment.status)}
                     </CardTitle>
                     <CardDescription>

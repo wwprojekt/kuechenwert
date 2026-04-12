@@ -34,12 +34,12 @@ import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
-type MotorhomeRow = Database["public"]["Tables"]["motorhomes"]["Row"];
+type MotorhomeRow = Database["public"]["Tables"]["vehicles"]["Row"];
 type BidRow = Database["public"]["Tables"]["bids"]["Row"];
-type PhotoRow = Database["public"]["Tables"]["motorhome_photos"]["Row"];
+type PhotoRow = Database["public"]["Tables"]["vehicle_photos"]["Row"];
 
-interface AuctionWithMotorhome extends AuctionRow {
-  motorhome: MotorhomeRow & {
+interface AuctionWithVehicle extends AuctionRow {
+  vehicle: MotorhomeRow & {
     photos: PhotoRow[];
   };
 }
@@ -106,7 +106,7 @@ const AuctionDetail = () => {
   const navigate = useNavigate();
   const { showSessionExpired } = useSessionExpired();
 
-  const [auction, setAuction] = useState<AuctionWithMotorhome | null>(null);
+  const [auction, setAuction] = useState<AuctionWithVehicle | null>(null);
   const [auctionLoadState, setAuctionLoadState] = useState<'loading' | 'loaded' | 'not_found' | 'error'>('loading');
   const [bids, setBids] = useState<BidWithBidder[]>([]);
   const [bidAmount, setBidAmount] = useState("");
@@ -241,9 +241,9 @@ const AuctionDetail = () => {
       .from("auctions")
       .select(`
         *,
-        motorhome:motorhomes!left(
+        vehicle:vehicles!left(
           *,
-          photos:motorhome_photos(*)
+          photos:vehicle_photos(*)
         )
       `)
       .eq("id", id)
@@ -276,8 +276,8 @@ const AuctionDetail = () => {
     setAuctionLoadState('loaded');
     lastAuctionStatusRef.current = data.status;
 
-    if (data.motorhome) {
-      const mh = data.motorhome;
+    if (data.vehicle) {
+      const mh = data.vehicle;
       trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
       trackMetaViewContent({
         content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
@@ -415,7 +415,7 @@ const AuctionDetail = () => {
 
           setAuction((prev) => {
             if (!prev) return prev;
-            const changes: Partial<AuctionWithMotorhome> = {};
+            const changes: Partial<AuctionWithVehicle> = {};
 
             if (updated.end_time && updated.end_time !== prev.end_time) {
               changes.end_time = updated.end_time;
@@ -551,7 +551,7 @@ const AuctionDetail = () => {
       return;
     }
 
-    if (!motorhome.instant_price) {
+    if (!vehicle.instant_price) {
       toast({
         title: "Fehler",
         description: "Sofortkauf nicht verfügbar",
@@ -595,22 +595,22 @@ const AuctionDetail = () => {
         const safeGtag = window.gtag || ((...args: unknown[]) => window.dataLayer?.push(args));
         safeGtag('event', 'conversion', {
           send_to: 'AW-18033517246/JO7oCPuNkY4cEL7FhpdD',
-          value: motorhome.instant_price,
+          value: vehicle.instant_price,
           currency: 'EUR',
         });
         safeGtag('event', 'purchase', {
           event_category: 'Auction',
-          event_label: `instant_buy_${motorhome.manufacturer}_${motorhome.model}`,
-          value: motorhome.instant_price,
+          event_label: `instant_buy_${vehicle.manufacturer}_${vehicle.model}`,
+          value: vehicle.instant_price,
           currency: 'EUR',
           transaction_id: id,
-          items: [{ id: motorhome.id, name: `${motorhome.manufacturer} ${motorhome.model}`, category: 'Wohnmobil', price: motorhome.instant_price }],
+          items: [{ id: vehicle.id, name: `${vehicle.manufacturer} ${vehicle.model}`, category: 'Wohnmobil', price: vehicle.instant_price }],
         });
       } catch { /* tracking should never break the purchase flow */ }
 
       toast({
         title: "Kauf erfolgreich!",
-        description: `Sie haben dieses Wohnmobil für €${motorhome.instant_price.toLocaleString()} gekauft. Wir werden uns in Kürze bei Ihnen melden.`,
+        description: `Sie haben dieses Wohnmobil für €${vehicle.instant_price.toLocaleString()} gekauft. Wir werden uns in Kürze bei Ihnen melden.`,
       });
 
       // Navigate to listings to show sold status
@@ -789,14 +789,14 @@ const AuctionDetail = () => {
         const safeGtag = window.gtag || ((...args: unknown[]) => window.dataLayer?.push(args));
         safeGtag('event', 'add_to_cart', {
           event_category: 'Auction',
-          event_label: `bid_placed_${auction.motorhome?.manufacturer}_${auction.motorhome?.model}`,
+          event_label: `bid_placed_${auction.vehicle?.manufacturer}_${auction.vehicle?.model}`,
           value: amount,
           currency: 'EUR',
-          items: [{ id: auction.motorhome?.id, name: `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`, category: 'Wohnmobil', price: amount }],
+          items: [{ id: auction.vehicle?.id, name: `${auction.vehicle?.manufacturer} ${auction.vehicle?.model}`, category: 'Wohnmobil', price: amount }],
         });
       } catch { /* tracking should never break the bid flow */ }
 
-      trackEvent('bid_placed', { category: 'business', label: `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`, value: amount, properties: { auctionId: auction.id, autobid: enableAutobid } });
+      trackEvent('bid_placed', { category: 'business', label: `${auction.vehicle?.manufacturer} ${auction.vehicle?.model}`, value: amount, properties: { auctionId: auction.id, autobid: enableAutobid } });
 
       toast({
         title: "Gebot erfolgreich!",
@@ -851,7 +851,7 @@ const AuctionDetail = () => {
     );
   }
 
-  if (!auction || !auction.motorhome) {
+  if (!auction || !auction.vehicle) {
     return (
       <PageLayout breadcrumbs={true} title="Lädt..." description="Auktion wird geladen">
         <AuctionDetailSkeleton />
@@ -859,13 +859,13 @@ const AuctionDetail = () => {
     );
   }
 
-  const motorhome = auction.motorhome;
-  const rawPhotos = motorhome.photos;
+  const vehicle = auction.vehicle;
+  const rawPhotos = vehicle.photos;
   const photos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
   const currentBid = auction.current_bid || auction.starting_bid;
   const reserveMet = auction.reserve_price ? currentBid >= auction.reserve_price : true;
   // Only show reserve price info to the seller or admin
-  const canSeeReservePrice = user?.id === (motorhome as any).seller_id || isAdmin;
+  const canSeeReservePrice = user?.id === (vehicle as any).seller_id || isAdmin;
 
   // ─── Live Bidding Status (computed) ─────────────────────────
   const userBids = user ? bids.filter(b => b.bidder_id === user.id) : [];
@@ -880,14 +880,14 @@ const AuctionDetail = () => {
   const productSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: `${motorhome.manufacturer} ${motorhome.model}`,
-    description: motorhome.description || `${motorhome.manufacturer} ${motorhome.model} - Baujahr ${motorhome.year}`,
+    name: `${vehicle.manufacturer} ${vehicle.model}`,
+    description: vehicle.description || `${vehicle.manufacturer} ${vehicle.model} - Baujahr ${vehicle.year}`,
     brand: {
       '@type': 'Brand',
-      name: motorhome.manufacturer,
+      name: vehicle.manufacturer,
     },
-    model: motorhome.model,
-    productionDate: motorhome.year?.toString(),
+    model: vehicle.model,
+    productionDate: vehicle.year?.toString(),
     image: photos[0]?.url || 'https://caravanwert.de/favicon.png',
     offers: {
       '@type': 'Offer',
@@ -906,9 +906,9 @@ const AuctionDetail = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`${motorhome.manufacturer} ${motorhome.model}`}
-      description={`Auktion für ${motorhome.manufacturer} ${motorhome.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
-      keywords={`auktion, ${motorhome.manufacturer}, ${motorhome.model}, wohnmobil`}
+      title={`${vehicle.manufacturer} ${vehicle.model}`}
+      description={`Auktion für ${vehicle.manufacturer} ${vehicle.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
+      keywords={`auktion, ${vehicle.manufacturer}, ${vehicle.model}, wohnmobil`}
       canonicalPath={`/auktion/${id}`}
       ogImage={photos[0]?.url}
       structuredData={productSchema}
@@ -973,12 +973,12 @@ const AuctionDetail = () => {
                     navigate(`/login?redirect=/auktion/${id}`);
                     return;
                   }
-                  await toggleFavorite(motorhome.id);
+                  await toggleFavorite(vehicle.id);
                 }}
-                className={`gap-2 ${isFavorite(motorhome.id) ? 'text-red-600 border-red-200' : ''}`}
+                className={`gap-2 ${isFavorite(vehicle.id) ? 'text-red-600 border-red-200' : ''}`}
               >
-                <Heart className={`w-4 h-4 ${isFavorite(motorhome.id) ? 'fill-current' : ''}`} />
-                {isFavorite(motorhome.id) ? 'Beobachtet' : 'Beobachten'}
+                <Heart className={`w-4 h-4 ${isFavorite(vehicle.id) ? 'fill-current' : ''}`} />
+                {isFavorite(vehicle.id) ? 'Beobachtet' : 'Beobachten'}
               </Button>
             </div>
           </div>
@@ -994,7 +994,7 @@ const AuctionDetail = () => {
                       <>
                         <img
                           src={photos[currentPhotoIndex]?.url}
-                          alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                          alt={`${vehicle.manufacturer} ${vehicle.model}`}
                           className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
                         />
                         
@@ -1032,7 +1032,7 @@ const AuctionDetail = () => {
                             <div className="relative w-full h-full flex items-center justify-center">
                               <img
                                 src={photos[currentPhotoIndex]?.url}
-                                alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                                alt={`${vehicle.manufacturer} ${vehicle.model}`}
                                 className="max-w-full max-h-full object-contain"
                               />
                               <button
@@ -1117,53 +1117,53 @@ const AuctionDetail = () => {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Aufbauart</span>
-                          <span className="font-semibold">{motorhome.body_type}</span>
+                          <span className="font-semibold">{vehicle.body_type}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Zustand</span>
-                          <Badge variant={motorhome.condition === 'Neuwertig' ? 'default' : 'secondary'}>
-                            {motorhome.condition}
+                          <Badge variant={vehicle.condition === 'Neuwertig' ? 'default' : 'secondary'}>
+                            {vehicle.condition}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Erstzulassung</span>
                           <span className="font-semibold">
-                            {motorhome.first_registration ? new Date(motorhome.first_registration).toLocaleDateString('de-DE') : 'Nicht angegeben'}
+                            {vehicle.first_registration ? new Date(vehicle.first_registration).toLocaleDateString('de-DE') : 'Nicht angegeben'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Baujahr</span>
-                          <span className="font-semibold">{motorhome.year}</span>
+                          <span className="font-semibold">{vehicle.year}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Kilometerstand</span>
-                          <span className="font-semibold">{motorhome.mileage.toLocaleString()} km</span>
+                          <span className="font-semibold">{vehicle.mileage.toLocaleString()} km</span>
                         </div>
                       </div>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Kraftstoff</span>
-                          <span className="font-semibold">{motorhome.fuel_type || 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{vehicle.fuel_type || 'Nicht angegeben'}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Getriebe</span>
-                          <span className="font-semibold">{motorhome.transmission || 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{vehicle.transmission || 'Nicht angegeben'}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Leistung</span>
                           <span className="font-semibold">
-                            {motorhome.engine_power_hp
-                              ? `${motorhome.engine_power_hp} PS${(motorhome as any).power_kw ? ` (${(motorhome as any).power_kw} kW)` : ''}`
+                            {vehicle.engine_power_hp
+                              ? `${vehicle.engine_power_hp} PS${(vehicle as any).power_kw ? ` (${(vehicle as any).power_kw} kW)` : ''}`
                               : 'Nicht angegeben'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Gesamtgewicht</span>
-                          <span className="font-semibold">{motorhome.weight_kg ? `${motorhome.weight_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{vehicle.weight_kg ? `${vehicle.weight_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Nutzlast</span>
-                          <span className="font-semibold">{motorhome.payload_kg ? `${motorhome.payload_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
+                          <span className="font-semibold">{vehicle.payload_kg ? `${vehicle.payload_kg.toLocaleString()} kg` : 'Nicht angegeben'}</span>
                         </div>
                       </div>
                     </div>
@@ -1171,31 +1171,31 @@ const AuctionDetail = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                         <span className="text-muted-foreground text-sm">Vorbesitzer</span>
-                        <span className="font-semibold text-sm">{motorhome.previous_owners != null ? motorhome.previous_owners : 'k.A.'}</span>
+                        <span className="font-semibold text-sm">{vehicle.previous_owners != null ? vehicle.previous_owners : 'k.A.'}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                         <span className="text-muted-foreground text-sm">Sitzplätze</span>
-                        <span className="font-semibold text-sm">{motorhome.seats || 'k.A.'}</span>
+                        <span className="font-semibold text-sm">{vehicle.seats || 'k.A.'}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                         <span className="text-muted-foreground text-sm">Schlafplätze</span>
-                        <span className="font-semibold text-sm">{motorhome.sleeping_places || 'k.A.'}</span>
+                        <span className="font-semibold text-sm">{vehicle.sleeping_places || 'k.A.'}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                         <span className="text-muted-foreground text-sm">Achsen</span>
-                        <span className="font-semibold text-sm">{motorhome.number_of_axles || 'k.A.'}</span>
+                        <span className="font-semibold text-sm">{vehicle.number_of_axles || 'k.A.'}</span>
                       </div>
                     </div>
 
                     {/* Fahrzeugbeschreibung */}
-                    {motorhome.description && (
+                    {vehicle.description && (
                       <div className="mt-6">
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
                           <FileText className="w-5 h-5 text-primary" />
                           Beschreibung
                         </h3>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                          {motorhome.description}
+                          {vehicle.description}
                         </p>
                       </div>
                     )}
@@ -1224,15 +1224,15 @@ const AuctionDetail = () => {
                     )}
 
                     {/* Known Defects Section - Prominent Display */}
-                    {(motorhome as any).damage_summary ? (
+                    {(vehicle as any).damage_summary ? (
                       <div className="mt-6 p-4 border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2 text-orange-700 dark:text-orange-300">
                           <AlertTriangle className="w-5 h-5" />
                           Bekannte Mängel
                         </h3>
-                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(motorhome as any).damage_summary}</p>
+                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(vehicle as any).damage_summary}</p>
                       </div>
-                    ) : !(motorhome as any).has_damage && (
+                    ) : !(vehicle as any).has_damage && (
                       <div className="mt-6 p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950/20 rounded-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2 text-green-700 dark:text-green-300">
                           <CheckCircle2 className="w-5 h-5" />
@@ -1247,8 +1247,8 @@ const AuctionDetail = () => {
 
                   {/* Vehicle Question Form */}
                   <VehicleQuestionForm 
-                    motorhomeId={motorhome.id} 
-                    vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+                    vehicleId={vehicle.id} 
+                    vehicleTitle={`${vehicle.manufacturer} ${vehicle.model}`}
                   />
                 </TabsContent>
 
@@ -1263,21 +1263,21 @@ const AuctionDetail = () => {
                         <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">Baujahr</p>
-                          <p className="font-semibold">{motorhome.year}</p>
+                          <p className="font-semibold">{vehicle.year}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Gauge className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">Kilometerstand</p>
-                          <p className="font-semibold">{motorhome.mileage.toLocaleString()} km</p>
+                          <p className="font-semibold">{vehicle.mileage.toLocaleString()} km</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Fuel className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">Kraftstoff</p>
-                          <p className="font-semibold">{motorhome.fuel_type || 'Nicht angegeben'}</p>
+                          <p className="font-semibold">{vehicle.fuel_type || 'Nicht angegeben'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
@@ -1285,8 +1285,8 @@ const AuctionDetail = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Leistung</p>
                           <p className="font-semibold">
-                            {motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : 'Nicht angegeben'}
-                            {motorhome.power_kw && ` (${motorhome.power_kw} kW)`}
+                            {vehicle.engine_power_hp ? `${vehicle.engine_power_hp} PS` : 'Nicht angegeben'}
+                            {vehicle.power_kw && ` (${vehicle.power_kw} kW)`}
                           </p>
                         </div>
                       </div>
@@ -1294,40 +1294,40 @@ const AuctionDetail = () => {
                         <Cog className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">Getriebe</p>
-                          <p className="font-semibold">{motorhome.transmission || 'Nicht angegeben'}</p>
+                          <p className="font-semibold">{vehicle.transmission || 'Nicht angegeben'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Shield className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">Schadstoffklasse</p>
-                          <p className="font-semibold">{motorhome.emission_class || 'Nicht angegeben'}</p>
+                          <p className="font-semibold">{vehicle.emission_class || 'Nicht angegeben'}</p>
                         </div>
                       </div>
-                      {(motorhome as any).engine_displacement_ccm && (
+                      {(vehicle as any).engine_displacement_ccm && (
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                           <Cog className="w-5 h-5 text-primary flex-shrink-0" />
                           <div>
                             <p className="text-xs text-muted-foreground">Hubraum</p>
-                            <p className="font-semibold">{(motorhome as any).engine_displacement_ccm.toLocaleString()} ccm</p>
+                            <p className="font-semibold">{(vehicle as any).engine_displacement_ccm.toLocaleString()} ccm</p>
                           </div>
                         </div>
                       )}
-                      {(motorhome as any).main_tires && (
+                      {(vehicle as any).main_tires && (
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                           <Car className="w-5 h-5 text-primary flex-shrink-0" />
                           <div>
                             <p className="text-xs text-muted-foreground">Hauptreifen</p>
-                            <p className="font-semibold">{(motorhome as any).main_tires}</p>
+                            <p className="font-semibold">{(vehicle as any).main_tires}</p>
                           </div>
                         </div>
                       )}
-                      {(motorhome as any).second_tires && (
+                      {(vehicle as any).second_tires && (
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                           <Car className="w-5 h-5 text-primary flex-shrink-0" />
                           <div>
                             <p className="text-xs text-muted-foreground">Zweiter Reifensatz</p>
-                            <p className="font-semibold">{(motorhome as any).second_tires}</p>
+                            <p className="font-semibold">{(vehicle as any).second_tires}</p>
                           </div>
                         </div>
                       )}
@@ -1342,15 +1342,15 @@ const AuctionDetail = () => {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Länge:</span>
-                            <span>{motorhome.length_m ? `${(motorhome.length_m / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{vehicle.length_m ? `${(vehicle.length_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Breite:</span>
-                            <span>{motorhome.width_m ? `${(motorhome.width_m / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{vehicle.width_m ? `${(vehicle.width_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Höhe:</span>
-                            <span>{motorhome.height_m ? `${(motorhome.height_m / 100).toFixed(2)} m` : '—'}</span>
+                            <span>{vehicle.height_m ? `${(vehicle.height_m / 100).toFixed(2)} m` : '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1363,11 +1363,11 @@ const AuctionDetail = () => {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Frischwasser:</span>
-                            <span>{motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : '—'}</span>
+                            <span>{vehicle.water_tank_liters ? `${vehicle.water_tank_liters} L` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Grauwasser:</span>
-                            <span>{motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : '—'}</span>
+                            <span>{vehicle.grey_water_capacity_liters ? `${vehicle.grey_water_capacity_liters} L` : '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1380,11 +1380,11 @@ const AuctionDetail = () => {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Solar:</span>
-                            <span>{motorhome.has_solar ? `${motorhome.solar_power_watts || '—'} W` : 'Nein'}</span>
+                            <span>{vehicle.has_solar ? `${vehicle.solar_power_watts || '—'} W` : 'Nein'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Batterie:</span>
-                            <span>{motorhome.battery_capacity_ah ? `${motorhome.battery_capacity_ah} Ah` : '—'}</span>
+                            <span>{vehicle.battery_capacity_ah ? `${vehicle.battery_capacity_ah} Ah` : '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1416,8 +1416,8 @@ const AuctionDetail = () => {
                                 <Icon className="w-4 h-4 text-muted-foreground" />
                                 <span className="text-sm">{label}</span>
                               </div>
-                              <Badge variant={motorhome[key] ? 'default' : 'secondary'}>
-                                {motorhome[key] ? 'Ja' : 'Nein'}
+                              <Badge variant={vehicle[key] ? 'default' : 'secondary'}>
+                                {vehicle[key] ? 'Ja' : 'Nein'}
                               </Badge>
                             </div>
                           ))}
@@ -1426,14 +1426,14 @@ const AuctionDetail = () => {
                               <Bed className="w-4 h-4 text-muted-foreground" />
                               <span className="text-sm">Schlafplätze</span>
                             </div>
-                            <Badge variant="default">{motorhome.sleeping_places}</Badge>
+                            <Badge variant="default">{vehicle.sleeping_places}</Badge>
                           </div>
                           <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
                             <div className="flex items-center gap-2">
                               <Home className="w-4 h-4 text-muted-foreground" />
                               <span className="text-sm">Klimaanlage</span>
                             </div>
-                            <Badge variant="secondary">{motorhome.air_conditioning_type}</Badge>
+                            <Badge variant="secondary">{vehicle.air_conditioning_type}</Badge>
                           </div>
                         </div>
                       </div>
@@ -1457,8 +1457,8 @@ const AuctionDetail = () => {
                                 <Icon className="w-4 h-4 text-muted-foreground" />
                                 <span className="text-sm">{label}</span>
                               </div>
-                              <Badge variant={motorhome[key] ? 'default' : 'secondary'}>
-                                {motorhome[key] ? 'Ja' : 'Nein'}
+                              <Badge variant={vehicle[key] ? 'default' : 'secondary'}>
+                                {vehicle[key] ? 'Ja' : 'Nein'}
                               </Badge>
                             </div>
                           ))}
@@ -1482,8 +1482,8 @@ const AuctionDetail = () => {
                             <CheckCircle className="w-5 h-5 text-green-600" />
                             <span className="font-semibold">Unfallfreiheit</span>
                           </div>
-                          <Badge variant={motorhome.accident_free ? 'default' : 'destructive'}>
-                            {motorhome.accident_free ? 'Unfallfrei' : 'Unfall vorhanden'}
+                          <Badge variant={vehicle.accident_free ? 'default' : 'destructive'}>
+                            {vehicle.accident_free ? 'Unfallfrei' : 'Unfall vorhanden'}
                           </Badge>
                         </div>
                         
@@ -1492,8 +1492,8 @@ const AuctionDetail = () => {
                             <Shield className="w-5 h-5 text-blue-600" />
                             <span className="font-semibold">Raucherfahrzeug</span>
                           </div>
-                          <Badge variant={motorhome.non_smoker ? 'default' : 'secondary'}>
-                            {motorhome.non_smoker ? 'Nichtraucher' : 'Raucherfahrzeug'}
+                          <Badge variant={vehicle.non_smoker ? 'default' : 'secondary'}>
+                            {vehicle.non_smoker ? 'Nichtraucher' : 'Raucherfahrzeug'}
                           </Badge>
                         </div>
                       </div>
@@ -1504,8 +1504,8 @@ const AuctionDetail = () => {
                             <Award className="w-5 h-5 text-purple-600" />
                             <span className="font-semibold">Serviceheft</span>
                           </div>
-                          <Badge variant={motorhome.service_history_available ? 'default' : 'secondary'}>
-                            {motorhome.service_history_available ? 'Verfügbar' : 'Nicht verfügbar'}
+                          <Badge variant={vehicle.service_history_available ? 'default' : 'secondary'}>
+                            {vehicle.service_history_available ? 'Verfügbar' : 'Nicht verfügbar'}
                           </Badge>
                         </div>
                         
@@ -1515,8 +1515,8 @@ const AuctionDetail = () => {
                             <span className="font-semibold">TÜV/HU</span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {motorhome.tuev_valid_until 
-                              ? `Gültig bis: ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
+                            {vehicle.tuev_valid_until 
+                              ? `Gültig bis: ${new Date(vehicle.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
                               : 'Nicht angegeben'
                             }
                           </p>
@@ -1534,11 +1534,11 @@ const AuctionDetail = () => {
               <Card className="p-6 lg:sticky lg:top-24 space-y-6">
                 <div>
                   <h1 className="text-2xl font-bold mb-2">
-                    {motorhome.manufacturer} {motorhome.model}
+                    {vehicle.manufacturer} {vehicle.model}
                   </h1>
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <span>{motorhome.body_type} • {motorhome.year}</span>
-                    {motorhome.account_type === 'dealer' ? (
+                    <span>{vehicle.body_type} • {vehicle.year}</span>
+                    {vehicle.account_type === 'dealer' ? (
                       <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
                         Händler
                       </Badge>
@@ -1549,9 +1549,9 @@ const AuctionDetail = () => {
                     )}
                   </div>
                   {/* Anonymized Location & Distance */}
-                  {motorhome.postal_code && (() => {
-                    const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);
-                    const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
+                  {vehicle.postal_code && (() => {
+                    const anonymizedPlz = anonymizePostalCode(vehicle.postal_code);
+                    const vehicleCoords = getPlzCoordinates(vehicle.postal_code);
                     const dealerCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
                     const distanceKm = vehicleCoords && dealerCoords
                       ? calculateDistance(
@@ -1562,7 +1562,7 @@ const AuctionDetail = () => {
                     return (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="inline-flex items-center gap-1">Standort: {motorhome.country && <CountryFlag countryCode={motorhome.country} showCode={true} size="sm" />}{motorhome.country ? '-' : ''}{anonymizedPlz}</span>
+                        <span className="inline-flex items-center gap-1">Standort: {vehicle.country && <CountryFlag countryCode={vehicle.country} showCode={true} size="sm" />}{vehicle.country ? '-' : ''}{anonymizedPlz}</span>
                         {distanceKm !== null && (
                           <span className="flex items-center gap-1 ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                             <Navigation className="w-3 h-3" />
@@ -1594,25 +1594,25 @@ const AuctionDetail = () => {
                   
                   {/* Vehicle Condition Badges */}
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.accident_free && (
+                    {vehicle.accident_free && (
                       <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
                         <CheckCircle className="w-3 h-3" />
                         Unfallfrei
                       </Badge>
                     )}
-                    {motorhome.non_smoker && (
+                    {vehicle.non_smoker && (
                       <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
                         <Shield className="w-3 h-3" />
                         Nichtraucher
                       </Badge>
                     )}
-                    {motorhome.service_history_available && (
+                    {vehicle.service_history_available && (
                       <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
                         <Award className="w-3 h-3" />
                         Serviceheft
                       </Badge>
                     )}
-                    {motorhome.tuv_new && (
+                    {vehicle.tuv_new && (
                       <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
                         <CheckCircle className="w-3 h-3" />
                         TÜV neu
@@ -1756,16 +1756,16 @@ const AuctionDetail = () => {
                 <Separator />
 
                 {/* Instant Buy Section - only for dealers */}
-                {motorhome.instant_price && 
-                 Number(motorhome.instant_price) > 0 &&
-                 motorhome.status !== 'sold' && canSeePrices && (
+                {vehicle.instant_price && 
+                 Number(vehicle.instant_price) > 0 &&
+                 vehicle.status !== 'sold' && canSeePrices && (
                   <>
                     <div className="space-y-3 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Sofortkauf</p>
                           <p className="text-2xl font-bold text-primary">
-                            €{motorhome.instant_price.toLocaleString()}
+                            €{vehicle.instant_price.toLocaleString()}
                           </p>
                         </div>
                         <Zap className="w-8 h-8 text-primary" />
@@ -1787,12 +1787,12 @@ const AuctionDetail = () => {
                 )}
 
                 {/* Sold Badge */}
-                {motorhome.status === 'sold' ? (
+                {vehicle.status === 'sold' ? (
                   <div className="text-center py-4">
                     <Badge className="text-lg bg-green-500 text-white">
                       Verkauft
                     </Badge>
-                    {motorhome.sale_type === 'instant' && (
+                    {vehicle.sale_type === 'instant' && (
                       <p className="text-sm text-muted-foreground mt-2">
                         Per Sofortkauf verkauft
                       </p>
@@ -1958,7 +1958,7 @@ const AuctionDetail = () => {
                           <PostAuctionOfferDialog
                             auctionId={auction.id}
                             currentBid={currentBid}
-                            vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+                            vehicleTitle={`${vehicle.manufacturer} ${vehicle.model}`}
                           >
                             <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
                               <Zap className="w-4 h-4 mr-2" />

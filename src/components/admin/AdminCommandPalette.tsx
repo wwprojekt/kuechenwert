@@ -22,7 +22,7 @@ import {
 const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
   { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "wizard sessions anfragen kontakt" },
-  { title: "Wohnmobile", path: "/admin/motorhomes", icon: Car, keywords: "fahrzeuge motorhome" },
+  { title: "Wohnmobile", path: "/admin/vehicles", icon: Car, keywords: "fahrzeuge vehicle" },
   { title: "Auktionen", path: "/admin/auctions", icon: Gavel, keywords: "gebote bieten versteigerung" },
   { title: "Nachauktions-Angebote", path: "/admin/offers", icon: Gavel, keywords: "kaufchance angebote" },
   { title: "E-Mail-Center", path: "/admin/email", icon: Mail, keywords: "nachrichten posteingang" },
@@ -51,14 +51,14 @@ function useQuickSearchData(query: string) {
   return useQuery({
     queryKey: ["adminQuickSearch", query],
     queryFn: async () => {
-      if (!query || query.length < 2) return { motorhomes: [], profiles: [], auctions: [] };
+      if (!query || query.length < 2) return { vehicles: [], profiles: [], auctions: [] };
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { motorhomes: [], profiles: [], auctions: [] };
+      if (!sessionValid) return { vehicles: [], profiles: [], auctions: [] };
 
       const q = `%${query}%`;
       const [mhRes, profileRes, auctionRes] = await Promise.all([
         supabase
-          .from("motorhomes")
+          .from("vehicles")
           .select("id, manufacturer, model, year, status")
           .or(`manufacturer.ilike.${q},model.ilike.${q}`)
           .limit(5),
@@ -69,13 +69,13 @@ function useQuickSearchData(query: string) {
           .limit(5),
         supabase
           .from("auctions")
-          .select("id, status, motorhome:motorhomes!inner(manufacturer, model)")
-          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'motorhomes' })
+          .select("id, status, vehicle:vehicles!inner(manufacturer, model)")
+          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'vehicles' })
           .limit(5),
       ]);
 
       return {
-        motorhomes: mhRes.data || [],
+        vehicles: mhRes.data || [],
         profiles: profileRes.data || [],
         auctions: auctionRes.data || [],
       };
@@ -134,10 +134,10 @@ export function AdminCommandPalette() {
           <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
 
           {/* Daten-Ergebnisse */}
-          {searchData?.motorhomes && searchData.motorhomes.length > 0 && (
+          {searchData?.vehicles && searchData.vehicles.length > 0 && (
             <CommandGroup heading="Wohnmobile">
-              {searchData.motorhomes.map((m: any) => (
-                <CommandItem key={m.id} onSelect={() => go(`/admin/motorhomes/${m.id}`)}>
+              {searchData.vehicles.map((m: any) => (
+                <CommandItem key={m.id} onSelect={() => go(`/admin/vehicles/${m.id}`)}>
                   <Car className="mr-2 h-4 w-4 text-green-600" />
                   <span>{m.manufacturer} {m.model}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{m.year}</span>
@@ -165,14 +165,14 @@ export function AdminCommandPalette() {
               {searchData.auctions.map((a: any) => (
                 <CommandItem key={a.id} onSelect={() => go(`/admin/auctions/${a.id}`)}>
                   <Gavel className="mr-2 h-4 w-4 text-purple-600" />
-                  <span>{a.motorhome?.manufacturer} {a.motorhome?.model}</span>
+                  <span>{a.vehicle?.manufacturer} {a.vehicle?.model}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{a.status}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
           )}
 
-          {(searchData?.motorhomes?.length || 0) > 0 || (searchData?.profiles?.length || 0) > 0 || (searchData?.auctions?.length || 0) > 0 ? (
+          {(searchData?.vehicles?.length || 0) > 0 || (searchData?.profiles?.length || 0) > 0 || (searchData?.auctions?.length || 0) > 0 ? (
             <CommandSeparator />
           ) : null}
 

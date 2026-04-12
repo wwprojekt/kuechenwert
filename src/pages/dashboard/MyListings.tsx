@@ -24,16 +24,16 @@ export default function MyListings() {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'bid_desc' | 'bid_asc'>('newest');
 
-  const { data: motorhomes, isLoading } = useQuery({
+  const { data: vehicles, isLoading } = useQuery({
     queryKey: ["myListings", user?.id],
     queryFn: async () => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("vehicles")
         .select(`
           *,
-          photos:motorhome_photos (
+          photos:vehicle_photos (
             url,
             display_order
           ),
@@ -54,9 +54,9 @@ export default function MyListings() {
     enabled: !!user,
   });
 
-  const getSaleChannelBadge = (motorhome: any) => {
-    const channel = motorhome.sale_channel;
-    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
+  const getSaleChannelBadge = (vehicle: any) => {
+    const channel = vehicle.sale_channel;
+    const hasInstantBuy = vehicle.instant_price && Number(vehicle.instant_price) > 0;
     switch (channel) {
       case "auction":
         return hasInstantBuy
@@ -92,7 +92,7 @@ export default function MyListings() {
         <Card className="p-8">
           <div className="text-center text-muted-foreground">Lädt...</div>
         </Card>
-      ) : !motorhomes || motorhomes.length === 0 ? (
+      ) : !vehicles || vehicles.length === 0 ? (
         <Card className="p-12">
           <div className="text-center">
             <Car className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -128,7 +128,7 @@ export default function MyListings() {
           </Select>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[...motorhomes].sort((a, b) => {
+          {[...vehicles].sort((a, b) => {
             switch (sortBy) {
               case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
               case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -145,20 +145,20 @@ export default function MyListings() {
               }
               default: return 0;
             }
-          }).map((motorhome) => {
-            const firstPhoto = motorhome.photos
+          }).map((vehicle) => {
+            const firstPhoto = vehicle.photos
               ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
-            const auction = Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction;
+            const auction = Array.isArray(vehicle.auction) ? vehicle.auction[0] : vehicle.auction;
 
             return (
-              <Link key={motorhome.id} to={`/dashboard/listings/${motorhome.id}`} className="no-underline">
+              <Link key={vehicle.id} to={`/dashboard/listings/${vehicle.id}`} className="no-underline">
               <Card className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer">
                 {/* Image */}
                 <div className="relative h-48 bg-muted">
                   {firstPhoto ? (
                     <img
                       src={firstPhoto}
-                      alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                      alt={`${vehicle.manufacturer} ${vehicle.model}`}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -167,7 +167,7 @@ export default function MyListings() {
                     </div>
                   )}
                   <div className="absolute top-3 right-3">
-                    {getSaleChannelBadge(motorhome)}
+                    {getSaleChannelBadge(vehicle)}
                   </div>
                 </div>
 
@@ -175,10 +175,10 @@ export default function MyListings() {
                 <div className="p-6 space-y-4">
                   <div>
                     <h3 className="font-bold text-lg line-clamp-1">
-                      {motorhome.manufacturer} {motorhome.model}
+                      {vehicle.manufacturer} {vehicle.model}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {motorhome.year} • {motorhome.mileage.toLocaleString()} km • {motorhome.body_type}
+                      {vehicle.year} • {vehicle.mileage.toLocaleString()} km • {vehicle.body_type}
                     </p>
                   </div>
 
@@ -213,17 +213,17 @@ export default function MyListings() {
                   )}
 
                   {/* Price Info */}
-                  {motorhome.instant_price && Number(motorhome.instant_price) > 0 && (
+                  {vehicle.instant_price && Number(vehicle.instant_price) > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Sofortpreis:</span>
                       <span className="font-semibold text-lg">
-                        €{Number(motorhome.instant_price).toLocaleString()}
+                        €{Number(vehicle.instant_price).toLocaleString()}
                       </span>
                     </div>
                   )}
 
                   {/* Photo missing warning */}
-                  {(!motorhome.photos || motorhome.photos.length === 0) && (
+                  {(!vehicle.photos || vehicle.photos.length === 0) && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                       <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                       <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -235,12 +235,12 @@ export default function MyListings() {
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
                     <Button
-                      className={`flex-1 gap-2 ${(!motorhome.photos || motorhome.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
-                      variant={(!motorhome.photos || motorhome.photos.length === 0) ? 'default' : 'outline'}
+                      className={`flex-1 gap-2 ${(!vehicle.photos || vehicle.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                      variant={(!vehicle.photos || vehicle.photos.length === 0) ? 'default' : 'outline'}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigate(`/dashboard/listings/${motorhome.id}/edit?tab=photos`);
+                        navigate(`/dashboard/listings/${vehicle.id}/edit?tab=photos`);
                       }}
                     >
                       <ImagePlus className="w-4 h-4" />
@@ -252,7 +252,7 @@ export default function MyListings() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigate(`/dashboard/listings/${motorhome.id}/edit`);
+                        navigate(`/dashboard/listings/${vehicle.id}/edit`);
                       }}
                     >
                       <Edit className="w-4 h-4 mr-2" />

@@ -10,7 +10,7 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 
-interface MotorhomeCardProps {
+interface VehicleCardProps {
   // Core vehicle info
   id: string;
   title: string;
@@ -126,7 +126,7 @@ function getTimerStyles(level: UrgencyLevel): { bg: string; text: string; glow: 
   }
 }
 
-const MotorhomeCard = ({
+const VehicleCard = ({
   id,
   title,
   manufacturer,
@@ -152,7 +152,7 @@ const MotorhomeCard = ({
   badge,
   accountType,
   linkTo
-}: MotorhomeCardProps) => {
+}: VehicleCardProps) => {
   const { user } = useAuth();
   const { isDealer, isAdmin } = useUserRole();
   const canSeePrices = isDealer || isAdmin;
@@ -258,7 +258,7 @@ const MotorhomeCard = ({
 
           {/* Favorite Button */}
           <div className="absolute top-3 right-3 z-10">
-            <FavoriteButton motorhomeId={id} />
+            <FavoriteButton vehicleId={id} />
           </div>
 
           {/* Color-coded Timer for auctions */}
@@ -449,4 +449,4 @@ const MotorhomeCard = ({
   );
 };
 
-export default MotorhomeCard;
+export default VehicleCard;

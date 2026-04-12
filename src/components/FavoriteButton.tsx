@@ -4,19 +4,19 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 
 interface FavoriteButtonProps {
-  motorhomeId: string;
+  vehicleId: string;
   variant?: "icon" | "button";
   className?: string;
 }
 
-export function FavoriteButton({ motorhomeId, variant = "icon", className }: FavoriteButtonProps) {
+export function FavoriteButton({ vehicleId, variant = "icon", className }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite, isLoading } = useFavorites();
-  const isFav = isFavorite(motorhomeId);
+  const isFav = isFavorite(vehicleId);
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await toggleFavorite(motorhomeId);
+    await toggleFavorite(vehicleId);
   };
 
   if (variant === "button") {

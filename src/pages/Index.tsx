@@ -1,6 +1,6 @@
 import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
-import MotorhomeShowcase from "@/components/MotorhomeShowcase";
+import VehicleShowcase from "@/components/VehicleShowcase";
 import HowItWorks from "@/components/HowItWorks";
 import Listings from "@/components/Listings";
 import Benefits from "@/components/Benefits";
@@ -27,7 +27,7 @@ const Index = () => {
       structuredData={[organizationSchema, serviceSchema]}
     >
       <Hero />
-      <MotorhomeShowcase />
+      <VehicleShowcase />
       <HowItWorks />
       <Listings />
       <Benefits />

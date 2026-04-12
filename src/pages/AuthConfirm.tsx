@@ -104,23 +104,23 @@ const AuthConfirm = () => {
         setStatus("success");
         setMessage(getSuccessMessage(type));
 
-        // After signup confirmation: ensure motorhome is linked to this user.
+        // After signup confirmation: ensure vehicle is linked to this user.
         // This is a fallback in case auto-convert-wizard ran before the user was
         // fully confirmed, or if there was a race condition with user creation.
         if (type === "signup" || type === "email") {
           try {
             const { data: { user: confirmedUser } } = await supabase.auth.getUser();
             if (confirmedUser) {
-              // Check if user already has motorhomes
-              const { data: existingMotorhomes } = await supabase
-                .from("motorhomes")
+              // Check if user already has vehicles
+              const { data: existingVehicles } = await supabase
+                .from("vehicles")
                 .select("id")
                 .eq("seller_id", confirmedUser.id)
                 .limit(1);
 
-              // If no motorhomes found, try to link via wizard_session
-              if (!existingMotorhomes || existingMotorhomes.length === 0) {
-                // No motorhomes found for confirmed user, check wizard sessions
+              // If no vehicles found, try to link via wizard_session
+              if (!existingVehicles || existingVehicles.length === 0) {
+                // No vehicles found for confirmed user, check wizard sessions
                 
                 const sessionValid = await ensureValidRLSSession();
                 if (!sessionValid) return;
@@ -145,7 +145,7 @@ const AuthConfirm = () => {
                     // Linked wizard session to confirmed user
                   }
 
-                  // If session was converted but motorhome has wrong seller_id,
+                  // If session was converted but vehicle has wrong seller_id,
                   // the auto-convert should have handled this. But as a safety net,
                   // we trigger a re-check by invalidating queries on the dashboard.
                   // Wizard session found, dashboard will auto-refresh via realtime
@@ -153,7 +153,7 @@ const AuthConfirm = () => {
               }
             }
           } catch (linkError) {
-            console.error("Error during post-confirmation motorhome linking:", linkError);
+            console.error("Error during post-confirmation vehicle linking:", linkError);
             // Non-critical: don't block the redirect
           }
         }

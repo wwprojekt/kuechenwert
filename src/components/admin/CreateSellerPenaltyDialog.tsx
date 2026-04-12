@@ -79,7 +79,7 @@ interface CreateSellerPenaltyDialogProps {
   onOpenChange: (open: boolean) => void;
   preSelectedSellerId?: string;
   preSelectedAuctionId?: string;
-  preSelectedMotorhomeId?: string;
+  preSelectedVehicleId?: string;
 }
 
 export function CreateSellerPenaltyDialog({
@@ -87,7 +87,7 @@ export function CreateSellerPenaltyDialog({
   onOpenChange,
   preSelectedSellerId,
   preSelectedAuctionId,
-  preSelectedMotorhomeId,
+  preSelectedVehicleId,
 }: CreateSellerPenaltyDialogProps) {
   const queryClient = useQueryClient();
 
@@ -155,16 +155,16 @@ export function CreateSellerPenaltyDialog({
   });
 
   // Fetch auctions for selected seller using !inner join so PostgREST
-  // filters parent rows (auctions) by the embedded motorhome's seller_id
+  // filters parent rows (auctions) by the embedded vehicle's seller_id
   const { data: sellerAuctions } = useQuery({
     queryKey: ["admin-seller-auctions", sellerId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auctions")
         .select(
-          "id, status, motorhome:motorhomes!inner(id, manufacturer, model, year, seller_id)"
+          "id, status, vehicle:vehicles!inner(id, manufacturer, model, year, seller_id)"
         )
-        .eq("motorhome.seller_id", sellerId)
+        .eq("vehicle.seller_id", sellerId)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -209,13 +209,13 @@ export function CreateSellerPenaltyDialog({
       const effectiveAuctionId =
         auctionId && auctionId !== "none" ? auctionId : null;
 
-      let effectiveMotorhomeId = preSelectedMotorhomeId || null;
-      if (!effectiveMotorhomeId && effectiveAuctionId) {
+      let effectiveVehicleId = preSelectedVehicleId || null;
+      if (!effectiveVehicleId && effectiveAuctionId) {
         const selected = sellerAuctions?.find(
           (a: any) => a.id === effectiveAuctionId
         );
-        if (selected?.motorhome?.id) {
-          effectiveMotorhomeId = selected.motorhome.id;
+        if (selected?.vehicle?.id) {
+          effectiveVehicleId = selected.vehicle.id;
         }
       }
 
@@ -224,7 +224,7 @@ export function CreateSellerPenaltyDialog({
         {
           seller_id_param: sellerId,
           auction_id_param: effectiveAuctionId,
-          motorhome_id_param: effectiveMotorhomeId,
+          vehicle_id_param: effectiveVehicleId,
           penalty_reason_param: reason,
           notes_param: notes || null,
         }
@@ -385,10 +385,10 @@ export function CreateSellerPenaltyDialog({
                       AUCTION_STATUS_LABELS[auction.status] || auction.status;
                     return (
                       <SelectItem key={auction.id} value={auction.id}>
-                        {auction.motorhome?.manufacturer}{" "}
-                        {auction.motorhome?.model}{" "}
-                        {auction.motorhome?.year
-                          ? `(${auction.motorhome.year})`
+                        {auction.vehicle?.manufacturer}{" "}
+                        {auction.vehicle?.model}{" "}
+                        {auction.vehicle?.year
+                          ? `(${auction.vehicle.year})`
                           : ""}{" "}
                         – {statusLabel}
                       </SelectItem>

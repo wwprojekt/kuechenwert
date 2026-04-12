@@ -33,8 +33,8 @@ interface Auction {
   current_bid: number | null;
   reserve_price: number | null;
   end_time: string | null;
-  motorhome_id?: string;
-  motorhome?: {
+  vehicle_id?: string;
+  vehicle?: {
     id?: string;
     manufacturer?: string;
     model?: string;
@@ -60,20 +60,20 @@ interface AuctionEditDialogProps {
  * Helper: Send registration invite to seller when auction is activated.
  * Non-blocking – errors are logged but don't prevent the status update.
  */
-async function sendRegistrationInviteOnActivation(motorhomeId: string) {
+async function sendRegistrationInviteOnActivation(vehicleId: string) {
   try {
-    const { data: motorhome, error: mhError } = await supabase
-      .from("motorhomes")
+    const { data: vehicle, error: mhError } = await supabase
+      .from("vehicles")
       .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name)")
-      .eq("id", motorhomeId)
+      .eq("id", vehicleId)
       .maybeSingle();
 
-    if (mhError || !motorhome) {
-      logger.warn("Could not load motorhome for invite check:", mhError?.message);
+    if (mhError || !vehicle) {
+      logger.warn("Could not load vehicle for invite check:", mhError?.message);
       return;
     }
 
-    const seller = motorhome.seller as any;
+    const seller = vehicle.seller as any;
     if (!seller?.email) {
       logger.info("No seller email found, skipping invite");
       return;
@@ -84,7 +84,7 @@ async function sendRegistrationInviteOnActivation(motorhomeId: string) {
       body: {
         email: seller.email,
         customerName: customerName || undefined,
-        motorhomeId: motorhome.id,
+        vehicleId: vehicle.id,
       },
     });
 
@@ -110,27 +110,27 @@ async function sendRegistrationInviteOnActivation(motorhomeId: string) {
  * Helper: Send relist notification to seller when auction is re-activated (ended/cancelled -> active).
  * Non-blocking – errors are logged but don't prevent the status update.
  */
-async function sendRelistNotificationFromDialog(motorhomeId: string) {
+async function sendRelistNotificationFromDialog(vehicleId: string) {
   try {
-    const { data: motorhome, error: mhError } = await supabase
-      .from("motorhomes")
+    const { data: vehicle, error: mhError } = await supabase
+      .from("vehicles")
       .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name, customer_number)")
-      .eq("id", motorhomeId)
+      .eq("id", vehicleId)
       .maybeSingle();
 
-    if (mhError || !motorhome) {
-      logger.warn("Could not load motorhome for relist notification:", mhError?.message);
+    if (mhError || !vehicle) {
+      logger.warn("Could not load vehicle for relist notification:", mhError?.message);
       return;
     }
 
-    const seller = motorhome.seller as any;
+    const seller = vehicle.seller as any;
     if (!seller?.email) {
       logger.info("No seller email found, skipping relist notification");
       return;
     }
 
     const sellerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ") || "";
-    const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
+    const vehicleName = [vehicle.manufacturer, vehicle.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
     const endTime = new Date();
     endTime.setDate(endTime.getDate() + 7);
     const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
@@ -140,7 +140,7 @@ async function sendRelistNotificationFromDialog(motorhomeId: string) {
         email: seller.email,
         name: sellerName,
         type: "seller_relisted",
-        motorhomeModel: vehicleName,
+        vehicleModel: vehicleName,
         auctionUrl: "https://caravanwert.de/dashboard",
         endTime: formattedEndTime,
         customerNumber: seller.customer_number || undefined,
@@ -199,8 +199,8 @@ export function AuctionEditDialog({
         end_time: auction.end_time
           ? format(new Date(auction.end_time), "yyyy-MM-dd'T'HH:mm")
           : "",
-        postal_code: auction.motorhome?.postal_code || "",
-        city: auction.motorhome?.city || "",
+        postal_code: auction.vehicle?.postal_code || "",
+        city: auction.vehicle?.city || "",
       });
     }
   }, [auction]);
@@ -215,20 +215,20 @@ export function AuctionEditDialog({
       postal_code: string;
       city: string;
     }) => {
-      // Save location to motorhome if provided
-      const motorhomeId = auction?.motorhome_id || auction?.motorhome?.id;
-      if (motorhomeId && (data.postal_code || data.city)) {
+      // Save location to vehicle if provided
+      const vehicleId = auction?.vehicle_id || auction?.vehicle?.id;
+      if (vehicleId && (data.postal_code || data.city)) {
         const locationUpdate: any = {};
         if (data.postal_code) locationUpdate.postal_code = data.postal_code;
         if (data.city) locationUpdate.city = data.city;
 
         const { error: mhError } = await supabase
-          .from("motorhomes")
+          .from("vehicles")
           .update(locationUpdate)
-          .eq("id", motorhomeId);
+          .eq("id", vehicleId);
 
         if (mhError) {
-          logger.error("Failed to update motorhome location:", mhError);
+          logger.error("Failed to update vehicle location:", mhError);
         }
       }
 
@@ -263,20 +263,20 @@ export function AuctionEditDialog({
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVehicles"] });
       toast.success("Auktion erfolgreich aktualisiert");
       handleOpenChange(false);
 
       // If status changed to "active", send appropriate notification
       if (result.previousStatus !== "active" && result.newStatus === "active") {
-        const motorhomeId = auction?.motorhome_id || auction?.motorhome?.id;
-        if (motorhomeId) {
+        const vehicleId = auction?.vehicle_id || auction?.vehicle?.id;
+        if (vehicleId) {
           if (result.previousStatus === "ended" || result.previousStatus === "cancelled") {
             // Relist: Send info email instead of registration invite
-            sendRelistNotificationFromDialog(motorhomeId);
+            sendRelistNotificationFromDialog(vehicleId);
           } else {
             // First activation (draft -> active): Send registration invite
-            sendRegistrationInviteOnActivation(motorhomeId);
+            sendRegistrationInviteOnActivation(vehicleId);
           }
         }
       }
@@ -340,7 +340,7 @@ export function AuctionEditDialog({
 
   // Check if status is being changed to active (for the info message)
   const isActivating = auction.status !== "active" && formData.status === "active";
-  const sellerEmail = auction.motorhome?.seller?.email;
+  const sellerEmail = auction.vehicle?.seller?.email;
   const missingLocation = isActivating && !formData.postal_code.trim();
 
   return (
@@ -349,7 +349,7 @@ export function AuctionEditDialog({
         <DialogHeader>
           <DialogTitle>Auktion bearbeiten</DialogTitle>
           <DialogDescription>
-            {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+            {auction.vehicle?.manufacturer} {auction.vehicle?.model}
           </DialogDescription>
         </DialogHeader>
 

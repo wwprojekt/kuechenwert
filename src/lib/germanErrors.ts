@@ -428,7 +428,7 @@ export function getPageTitle(path: string): string {
     '/admin': 'Admin-Übersicht',
     '/admin/analytics': 'Admin-Analytics',
     '/admin/auctions': 'Admin-Auktionen',
-    '/admin/motorhomes': 'Admin-Wohnmobile',
+    '/admin/vehicles': 'Admin-Wohnmobile',
     '/admin/users': 'Admin-Benutzer',
     '/admin/dealers': 'Admin-Händler',
     '/admin/settings': 'Admin-Einstellungen',
@@ -458,7 +458,7 @@ export function getPageTitle(path: string): string {
   if (path.startsWith('/blog/')) return 'Blog-Artikel';
   if (path.startsWith('/ratgeber/')) return 'Ratgeber-Artikel';
   if (path.startsWith('/admin/auctions/')) return 'Admin-Auktionsdetail';
-  if (path.startsWith('/admin/motorhomes/')) return 'Admin-Wohnmobildetail';
+  if (path.startsWith('/admin/vehicles/')) return 'Admin-Wohnmobildetail';
   if (path.startsWith('/admin/users/')) return 'Admin-Benutzerdetail';
   if (path.startsWith('/admin/dealers/')) return 'Admin-Händlerdetail';
   if (path.startsWith('/admin/appointments/')) return 'Admin-Termindetail';

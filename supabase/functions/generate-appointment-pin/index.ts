@@ -97,6 +97,7 @@ serve(async (req) => {
     };
 
     // Send PIN via email using Resend
+    let emailSent = true;
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
     if (RESEND_API_KEY && fullAppointment.profiles?.email) {
       try {
@@ -140,6 +141,7 @@ serve(async (req) => {
 
         if (!emailResponse.ok) {
           console.error('Email send failed:', await emailResponse.text());
+          emailSent = false;
         } else {
           console.log('PIN email sent successfully to:', fullAppointment.profiles.email);
           const pinResult = await emailResponse.json();
@@ -165,14 +167,15 @@ serve(async (req) => {
         }
       } catch (emailError) {
         console.error('Error sending email:', emailError);
-        // Don't throw - PIN was generated, email is optional
+        emailSent = false;
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'PIN wurde erfolgreich generiert und per E-Mail verschickt',
+        message: emailSent ? 'PIN wurde erfolgreich generiert und per E-Mail verschickt' : 'PIN wurde generiert, E-Mail-Versand fehlgeschlagen',
+        email_sent: emailSent,
       }),
       {
         headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },

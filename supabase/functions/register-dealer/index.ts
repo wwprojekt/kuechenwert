@@ -255,7 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // ── Step 5: Send admin notification about new dealer application ────
     try {
-      await fetch(
+      const adminNotifyRes = await fetch(
         `${SUPABASE_URL}/functions/v1/send-lead-notification`,
         {
           method: "POST",
@@ -270,11 +270,15 @@ const handler = async (req: Request): Promise<Response> => {
             phone: body.phone || undefined,
             companyName: body.companyName,
             country: body.country || "DE",
-            skipUserEmail: true, // Only notify admin, not the user (we already sent our branded email)
+            skipUserEmail: true,
           }),
         }
       );
-      edgeLogger.info(`Sent admin notification for new dealer application: ${email}`);
+      if (!adminNotifyRes.ok) {
+        edgeLogger.error("Admin notification failed:", adminNotifyRes.status, await adminNotifyRes.text());
+      } else {
+        edgeLogger.info(`Sent admin notification for new dealer application: ${email}`);
+      }
     } catch (adminEmailErr) {
       edgeLogger.error("Error sending admin notification:", adminEmailErr);
       // Non-critical

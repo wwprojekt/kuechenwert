@@ -72,7 +72,7 @@ interface Claim {
   id: string;
   auction_id: string;
   dealer_id: string;
-  motorhome_id: string;
+  vehicle_id: string;
   claim_type: string;
   title: string;
   description: string;
@@ -215,10 +215,11 @@ export default function AdminClaims() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return {};
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, company_name")
         .in("id", dealerIds);
+      if (error) throw error;
       const map: Record<string, DealerProfile> = {};
       (data || []).forEach((p: any) => { map[p.id] = p; });
       return map;

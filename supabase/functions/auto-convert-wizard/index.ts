@@ -244,7 +244,8 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: existingRoleForExisting } = await adminClient
           .from("user_roles").select("role").eq("user_id", sellerId).maybeSingle();
         if (!existingRoleForExisting) {
-          await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+          const { error: roleInsertErr } = await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+          if (roleInsertErr) edgeLogger.error("Failed to insert seller role:", roleInsertErr.message);
         }
         
       } else {
@@ -281,7 +282,8 @@ const handler = async (req: Request): Promise<Response> => {
           const { data: existingRoleForAuth } = await adminClient
             .from("user_roles").select("role").eq("user_id", sellerId).maybeSingle();
           if (!existingRoleForAuth) {
-            await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+            const { error: roleErr2 } = await adminClient.from("user_roles").insert({ user_id: sellerId, role: "seller" });
+            if (roleErr2) edgeLogger.error("Failed to insert seller role:", roleErr2.message);
           }
         } else {
           // Create user via Admin API (NOT via signUp()!)
@@ -353,11 +355,12 @@ const handler = async (req: Request): Promise<Response> => {
         .maybeSingle();
 
       if (!existingRole) {
-        await adminClient.from("user_roles").insert({
+        const { error: finalRoleErr } = await adminClient.from("user_roles").insert({
           user_id: sellerId,
           role: "seller",
         });
-        edgeLogger.info(`Assigned seller role to ${sellerId}`);
+        if (finalRoleErr) edgeLogger.error("Failed to assign seller role:", finalRoleErr.message);
+        else edgeLogger.info(`Assigned seller role to ${sellerId}`);
       } else {
         edgeLogger.info(`Kept existing role '${existingRole.role}' for ${sellerId}`);
       }
@@ -448,12 +451,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     // 4. Create Auction if needed
     if (motorhomePayload.sale_channel === "auction") {
-      await adminClient.from("auctions").insert({
+      const { error: auctionInsertErr } = await adminClient.from("auctions").insert({
         motorhome_id: motorhome.id,
         starting_bid: 50,
         reserve_price: motorhomePayload.reserve_price,
         status: "draft",
       });
+      if (auctionInsertErr) {
+        throw new Error(`Failed to create auction: ${auctionInsertErr.message}`);
+      }
     }
 
     // 5. Update Wizard Session

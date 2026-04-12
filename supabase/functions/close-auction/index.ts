@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
             .single();
 
           if (bidderProfile?.email) {
-            await supabase.functions.invoke('send-auction-notification', {
+            const { error: invokeErr } = await supabase.functions.invoke('send-auction-notification', {
               body: {
                 email: bidderProfile.email,
                 name: bidderProfile.company_name || bidderProfile.first_name || bidderProfile.email.split('@')[0],
@@ -381,6 +381,7 @@ Deno.serve(async (req) => {
                 }),
               },
             });
+            if (invokeErr) throw invokeErr;
             console.log(`Kaufchance invitation email sent to bidder ${rank}:`, bidderProfile.email);
           }
         } catch (e: any) {
@@ -399,7 +400,7 @@ Deno.serve(async (req) => {
             .single();
 
           if (sellerProfile?.email) {
-            await supabase.functions.invoke('send-auction-notification', {
+            const { error: sellerInvokeErr } = await supabase.functions.invoke('send-auction-notification', {
               body: {
                 email: sellerProfile.email,
                 name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
@@ -418,6 +419,7 @@ Deno.serve(async (req) => {
                 }),
               },
             });
+            if (sellerInvokeErr) throw sellerInvokeErr;
             console.log('Kaufchance notification sent to seller:', sellerProfile.email);
           }
         } catch (e: any) {
@@ -493,13 +495,14 @@ Deno.serve(async (req) => {
 
       // Send winner notification
       try {
-        await supabase.functions.invoke('notify-auction-winner', {
+        const { error: winnerInvokeErr } = await supabase.functions.invoke('notify-auction-winner', {
           body: {
             auctionId,
             winnerId: soldTo,
             amount: highestBid!.amount,
           },
         });
+        if (winnerInvokeErr) throw winnerInvokeErr;
       } catch (notifyError: any) {
         console.error('Error sending winner notification:', notifyError);
         errors.push(`Gewinner-Benachrichtigung fehlgeschlagen: ${notifyError.message}`);

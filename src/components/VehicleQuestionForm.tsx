@@ -17,7 +17,7 @@ const questionSchema = z.object({
 });
 
 interface VehicleQuestionFormProps {
-  motorhomeId: string;
+  vehicleId: string;
   vehicleTitle: string;
 }
 
@@ -55,7 +55,7 @@ function incrementRateLimit(): void {
   }
 }
 
-export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuestionFormProps) {
+export function VehicleQuestionForm({ vehicleId, vehicleTitle }: VehicleQuestionFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,7 +103,7 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
       }
 
       const { error } = await supabase.from("vehicle_questions").insert({
-        motorhome_id: motorhomeId,
+        vehicle_id: vehicleId,
         questioner_id: user?.id || null,
         questioner_name: formData.name || (user?.email?.split("@")[0] || null),
         questioner_email: formData.email || user?.email || "",
@@ -123,6 +123,8 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
           questioner_email: formData.email || user?.email || "",
           question: formData.question.trim(),
         },
+      }).then(({ error }) => {
+        if (error) console.error("Admin-Benachrichtigung invoke-Fehler:", error);
       }).catch((err) => console.error("Admin-Benachrichtigung fehlgeschlagen:", err));
 
       toast({

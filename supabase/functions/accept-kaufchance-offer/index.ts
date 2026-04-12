@@ -455,13 +455,14 @@ Deno.serve(async (req) => {
 
     // Notify winner (buyer)
     try {
-      await supabase.functions.invoke('notify-auction-winner', {
+      const { error: winnerErr } = await supabase.functions.invoke('notify-auction-winner', {
         body: {
           auctionId: auction.id,
           winnerId: buyerId,
           amount: salePrice,
         },
       });
+      if (winnerErr) throw winnerErr;
     } catch (e: any) {
       errors.push(`Gewinner-Benachrichtigung fehlgeschlagen: ${e.message}`);
     }
@@ -476,7 +477,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (sellerProfile?.email) {
-          await supabase.functions.invoke('send-auction-notification', {
+          const { error: sellerErr } = await supabase.functions.invoke('send-auction-notification', {
             body: {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
@@ -486,6 +487,7 @@ Deno.serve(async (req) => {
               currentBid: `€${salePrice.toLocaleString()}`,
             },
           });
+          if (sellerErr) throw sellerErr;
         }
       } catch (e: any) {
         errors.push(`Seller-Benachrichtigung fehlgeschlagen: ${e.message}`);

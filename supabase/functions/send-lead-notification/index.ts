@@ -210,9 +210,11 @@ const handler = async (req: Request): Promise<Response> => {
       }),
     });
 
+    let userEmailFailed = false;
     if (!userEmailResponse.ok) {
       const error = await userEmailResponse.text();
       console.error("User email failed:", error);
+      userEmailFailed = true;
     } else {
       console.log("User confirmation sent successfully");
       const userResult = await userEmailResponse.json();
@@ -280,7 +282,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Notifications sent" }),
+      JSON.stringify({
+        success: true,
+        message: "Notifications sent",
+        warnings: userEmailFailed ? ["User confirmation email failed"] : undefined,
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

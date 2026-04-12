@@ -293,16 +293,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Alle Benachrichtigungen parallel senden
     const results = await Promise.allSettled(notifications);
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length > 0) {
-      console.error('[notify-offer-action] Some notifications failed:', failed);
+    let failed = 0;
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error('[notify-offer-action] Notification rejected:', r.reason);
+        failed++;
+      } else if (r.status === 'fulfilled' && r.value?.error) {
+        console.error('[notify-offer-action] Notification invoke error:', r.value.error);
+        failed++;
+      }
+    }
+    if (failed > 0) {
+      console.error(`[notify-offer-action] ${failed}/${results.length} notifications failed`);
     }
 
-    console.log(`[notify-offer-action] Done. Sent ${results.length - failed.length}/${results.length} notifications.`);
+    console.log(`[notify-offer-action] Done. Sent ${results.length - failed}/${results.length} notifications.`);
 
     return new Response(JSON.stringify({
       success: true,
-      sent: results.length - failed.length,
+      sent: results.length - failed,
       total: results.length,
     }), {
       status: 200,

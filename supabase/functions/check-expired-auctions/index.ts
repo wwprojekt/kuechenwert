@@ -130,10 +130,11 @@ Deno.serve(async (req) => {
                 .single();
 
               if (auctionData?.motorhome_id) {
-                await supabase
+                const { error: mhError } = await supabase
                   .from('motorhomes')
                   .update({ status: 'active', updated_at: now })
                   .eq('id', auctionData.motorhome_id);
+                if (mhError) console.error(`Failed to update motorhome status for ${auctionData.motorhome_id}:`, mhError);
               }
 
               console.log(`Successfully closed kaufchance ${kaufchance.id}`);

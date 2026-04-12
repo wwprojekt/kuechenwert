@@ -198,6 +198,10 @@ const handler = async (req: Request): Promise<Response> => {
                   is_read: true,
                 });
                 firstNudgeSent++;
+              } else {
+                const errText = await emailResponse.text();
+                console.error(`First nudge email failed for ${profile.email}:`, errText);
+                failed++;
               }
               continue; // Don't also send inactivity email
             }

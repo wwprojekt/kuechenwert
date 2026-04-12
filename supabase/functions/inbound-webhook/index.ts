@@ -396,7 +396,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // ── Trigger Auto-Responder ──────────────────────────────────────
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/send-auto-response`, {
+      const autoRes = await fetch(`${SUPABASE_URL}/functions/v1/send-auto-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -407,7 +407,11 @@ const handler = async (req: Request): Promise<Response> => {
           sender_name: finalSenderName,
         }),
       });
-      console.log("Auto-response triggered for:", senderEmail);
+      if (!autoRes.ok) {
+        console.error("Auto-response failed:", autoRes.status, await autoRes.text());
+      } else {
+        console.log("Auto-response triggered for:", senderEmail);
+      }
     } catch (autoErr) {
       console.error("Auto-response trigger failed:", autoErr);
       // Don't fail the webhook because of auto-response

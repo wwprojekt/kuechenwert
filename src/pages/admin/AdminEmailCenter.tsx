@@ -562,7 +562,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
     if (item.source === 'email') {
-      await supabase.from('admin_emails').update({ is_starred: !item.is_starred }).eq('id', item.id);
+      const { error } = await supabase.from('admin_emails').update({ is_starred: !item.is_starred }).eq('id', item.id);
+      if (error) { toast.error("Stern-Status konnte nicht geändert werden"); return; }
       fetchInbox();
     }
   };
@@ -571,7 +572,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
     if (item.source === 'email' && !item.is_read) {
-      await supabase.from('admin_emails').update({ is_read: true, read_at: new Date().toISOString(), status: 'read' }).eq('id', item.id);
+      const { error } = await supabase.from('admin_emails').update({ is_read: true, read_at: new Date().toISOString(), status: 'read' }).eq('id', item.id);
+      if (error) { toast.error("Gelesen-Status konnte nicht gesetzt werden"); return; }
       fetchInbox();
     }
   };
@@ -580,7 +582,8 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
     if (item.source === 'email') {
-      await supabase.from('admin_emails').update({ is_archived: true }).eq('id', item.id);
+      const { error } = await supabase.from('admin_emails').update({ is_archived: true }).eq('id', item.id);
+      if (error) { toast.error("Archivierung fehlgeschlagen"); return; }
       toast.success("Archiviert");
       setSelectedItem(null);
       fetchInbox();

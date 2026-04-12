@@ -23,7 +23,7 @@ import { de } from "date-fns/locale";
 
 interface ActionItem {
   id: string;
-  type: "wizard" | "lead" | "message" | "dealer" | "question" | "motorhome";
+  type: "wizard" | "lead" | "message" | "dealer" | "question" | "vehicle";
   title: string;
   subtitle: string;
   time: string;
@@ -44,17 +44,17 @@ function useDashboardStats() {
     queryKey: ["adminDashboardStats"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { totalMotorhomes: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, totalLeads: 0, completedWizards: 0, totalValuations: 0 };
+      if (!sessionValid) return { totalVehicles: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, totalLeads: 0, completedWizards: 0, totalValuations: 0 };
 
       const [
-        motorhomesRes,
+        vehiclesRes,
         auctionsRes,
         usersRes,
         leadsRes,
         wizardRes,
         valuationRes,
       ] = await Promise.all([
-        supabase.from("motorhomes").select("*", { count: "exact", head: true }),
+        supabase.from("vehicles").select("*", { count: "exact", head: true }),
         supabase.from("auctions").select("status"),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("quick_leads").select("*", { count: "exact", head: true }),
@@ -62,10 +62,16 @@ function useDashboardStats() {
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }),
       ]);
 
+      const errors = [vehiclesRes.error, auctionsRes.error, usersRes.error, leadsRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
+      if (errors.length > 0) {
+        console.error("Dashboard stats errors:", errors);
+        throw new Error(`${errors.length} Dashboard-Abfragen fehlgeschlagen`);
+      }
+
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
 
       return {
-        totalMotorhomes: motorhomesRes.count || 0,
+        totalVehicles: vehiclesRes.count || 0,
         activeAuctions,
         totalAuctions: auctionsRes.data?.length || 0,
         totalUsers: usersRes.count || 0,
@@ -349,7 +355,7 @@ function useActivityTimeline() {
       if (!sessionValid) return [];
 
       const [bidsRes, leadsRes, emailsRes, dealerRes] = await Promise.all([
-        supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(motorhome:motorhomes(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(vehicle:vehicles(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("wizard_sessions").select("id, customer_name, vehicle_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
         supabase.from("admin_emails").select("id, subject, direction, created_at, from_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
         supabase.from("dealer_applications").select("id, company_name, created_at, status").order("created_at", { ascending: false }).limit(3),
@@ -360,7 +366,7 @@ function useActivityTimeline() {
 
       for (const b of bidsRes.data || []) {
         const bidder = (b as any).bidder;
-        const vehicle = (b as any).auction?.motorhome;
+        const vehicle = (b as any).auction?.vehicle;
         items.push({
           id: `bid-${b.id}`, type: "bid",
           title: `Gebot: ${Number(b.amount).toLocaleString("de-DE")} €`,
@@ -462,16 +468,17 @@ function useActiveAuctions() {
   return useQuery({
     queryKey: ["adminActiveAuctions"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("auctions")
         .select(`
           id, end_time, current_bid, starting_bid, status,
-          motorhome:motorhomes(id, manufacturer, model, year, motorhome_photos(url, display_order)),
+          vehicle:vehicles(id, manufacturer, model, year, vehicle_photos(url, display_order)),
           bids(count)
         `)
         .eq("status", "active")
         .order("end_time", { ascending: true })
         .limit(8);
+      if (error) throw error;
       return data || [];
     },
     refetchInterval: 15000,
@@ -521,7 +528,7 @@ function useRecentBids() {
         .from("bids")
         .select(`
           id, amount, created_at, is_autobid,
-          auction:auctions(id, motorhome:motorhomes(manufacturer, model)),
+          auction:auctions(id, vehicle:vehicles(manufacturer, model)),
           bidder:profiles!bids_bidder_id_fkey(first_name, last_name, company_name)
         `)
         .order("created_at", { ascending: false })
@@ -533,21 +540,21 @@ function useRecentBids() {
 }
 
 // ============================================================================
-// Recently Changed Motorhomes Hook
+// Recently Changed Vehicles Hook
 // ============================================================================
 
-function useRecentlyChangedMotorhomes() {
+function useRecentlyChangedVehicles() {
   return useQuery({
-    queryKey: ["adminRecentMotorhomes"],
+    queryKey: ["adminRecentVehicles"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return [];
 
       const { data } = await supabase
-        .from("motorhomes")
+        .from("vehicles")
         .select(`
           id, manufacturer, model, year, status, updated_at, created_at, seller_id,
-          motorhome_photos(url, display_order)
+          vehicle_photos(url, display_order)
         `)
         .order("updated_at", { ascending: false })
         .limit(8);
@@ -826,7 +833,7 @@ function UrgencyBadge({ days }: { days: number }) {
 export default function AdminDashboard() {
   const { data: stats } = useDashboardStats();
   const { data: actionItems, isLoading: actionsLoading } = useActionItems();
-  const { data: recentMotorhomes } = useRecentlyChangedMotorhomes();
+  const { data: recentVehicles } = useRecentlyChangedVehicles();
   const { data: counts } = useUnreadCounts();
   const { data: activeAuctions } = useActiveAuctions();
   const { data: urgentLeads } = useUrgentLeads();
@@ -934,12 +941,12 @@ export default function AdminDashboard() {
         />
         <QuickStatCard
           title="Wohnmobile"
-          value={stats?.totalMotorhomes || 0}
+          value={stats?.totalVehicles || 0}
           subtitle={`${stats?.activeAuctions || 0} in Auktion`}
           icon={Car}
           color="text-green-600"
           bgColor="bg-green-100"
-          link="/admin/motorhomes"
+          link="/admin/vehicles"
         />
         <QuickStatCard
           title="Laufende Auktionen"
@@ -971,7 +978,7 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Main Content: Action Items + Recent Motorhomes */}
+      {/* Main Content: Action Items + Recent Vehicles */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         {/* Left: Action Items (3/5) */}
         <div className="lg:col-span-3 space-y-4">
@@ -1006,7 +1013,7 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Right: Recently Changed Motorhomes (2/5) */}
+        {/* Right: Recently Changed Vehicles (2/5) */}
         <div className="lg:col-span-2 space-y-4">
           <Card className="border-2">
             <CardHeader className="pb-3">
@@ -1015,7 +1022,7 @@ export default function AdminDashboard() {
                   <Car className="w-5 h-5 text-green-600" />
                   Letzte Wohnmobil-Aktivität
                 </CardTitle>
-                <Link to="/admin/motorhomes">
+                <Link to="/admin/vehicles">
                   <Button variant="ghost" size="sm" className="text-xs h-7">
                     Alle <ArrowRight className="w-3 h-3 ml-1" />
                   </Button>
@@ -1023,21 +1030,21 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              {!recentMotorhomes || recentMotorhomes.length === 0 ? (
+              {!recentVehicles || recentVehicles.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Keine Wohnmobile vorhanden.
                 </p>
               ) : (
                 <div className="space-y-1">
-                  {recentMotorhomes.map((m) => {
-                    const firstPhoto = [...(m.motorhome_photos || [])]
+                  {recentVehicles.map((m) => {
+                    const firstPhoto = [...(m.vehicle_photos || [])]
                       .sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
                     const sellerName = m.seller
                       ? `${m.seller.first_name || ""} ${m.seller.last_name || ""}`.trim() || m.seller.email
                       : "Unbekannt";
 
                     return (
-                      <Link key={m.id} to={`/admin/motorhomes/${m.id}`} className="block">
+                      <Link key={m.id} to={`/admin/vehicles/${m.id}`} className="block">
                         <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group">
                           <div className="w-12 h-9 rounded-md overflow-hidden bg-muted flex-shrink-0">
                             {firstPhoto ? (

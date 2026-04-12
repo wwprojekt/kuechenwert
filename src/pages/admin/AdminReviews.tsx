@@ -314,6 +314,9 @@ export default function AdminReviews() {
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["adminDealerReviews"] });
     },
+    onError: (error: Error) => {
+      toast({ title: "Fehler", description: error.message || "Bewertungen konnten nicht moderiert werden", variant: "destructive" });
+    },
   });
 
   const deleteReviews = useMutation({

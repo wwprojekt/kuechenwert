@@ -88,9 +88,9 @@ export default function AdminUserDetail() {
 
       if (profileError) throw profileError;
 
-      // Fetch user's motorhomes
-      const { data: motorhomes } = await supabase
-        .from("motorhomes")
+      // Fetch user's vehicles
+      const { data: vehicles, error: vehiclesErr } = await supabase
+        .from("vehicles")
         .select(`
           id,
           manufacturer,
@@ -99,14 +99,15 @@ export default function AdminUserDetail() {
           status,
           sale_channel,
           created_at,
-          motorhome_photos(url, display_order)
+          vehicle_photos(url, display_order)
         `)
         .eq("seller_id", id)
         .order("created_at", { ascending: false })
         .limit(5);
+      if (vehiclesErr) throw vehiclesErr;
 
       // Fetch user's bids
-      const { data: bids } = await supabase
+      const { data: bids, error: bidsErr } = await supabase
         .from("bids")
         .select(`
           id,
@@ -115,36 +116,40 @@ export default function AdminUserDetail() {
           auction:auctions(
             id,
             status,
-            motorhome:motorhomes(manufacturer, model, year)
+            vehicle:vehicles(manufacturer, model, year)
           )
         `)
         .eq("bidder_id", id)
         .order("created_at", { ascending: false })
         .limit(10);
+      if (bidsErr) throw bidsErr;
 
       // Fetch user's favorites count
-      const { count: favoritesCount } = await supabase
+      const { count: favoritesCount, error: favErr } = await supabase
         .from("user_favorites")
         .select("*", { count: "exact", head: true })
         .eq("user_id", id);
+      if (favErr) throw favErr;
 
       // Fetch user's messages count
-      const { count: messagesCount } = await supabase
+      const { count: messagesCount, error: msgErr } = await supabase
         .from("support_messages")
         .select("*", { count: "exact", head: true })
         .eq("user_id", id);
+      if (msgErr) throw msgErr;
 
       // Fetch dealer application if exists
-      const { data: dealerApplication } = await supabase
+      const { data: dealerApplication, error: dealerAppErr } = await supabase
         .from("dealer_applications")
         .select("*")
         .eq("user_id", id)
         .maybeSingle();
+      if (dealerAppErr) throw dealerAppErr;
 
       return {
         ...profile,
         roles: (Array.isArray(profile.user_roles) ? profile.user_roles : profile.user_roles ? [profile.user_roles] : []).map((r: any) => r.role),
-        motorhomes: motorhomes || [],
+        vehicles: vehicles || [],
         bids: bids || [],
         favoritesCount: favoritesCount || 0,
         messagesCount: messagesCount || 0,
@@ -303,7 +308,7 @@ export default function AdminUserDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               label="Inserate"
-              value={user.motorhomes?.length || 0}
+              value={user.vehicles?.length || 0}
               icon={<Car className="w-5 h-5" />}
             />
             <StatsCard
@@ -422,13 +427,13 @@ export default function AdminUserDetail() {
               {/* Tabs for Activity */}
               <Tabs defaultValue="listings" className="space-y-4">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="listings">Inserate ({user.motorhomes?.length || 0})</TabsTrigger>
+                  <TabsTrigger value="listings">Inserate ({user.vehicles?.length || 0})</TabsTrigger>
                   <TabsTrigger value="bids">Gebote ({user.bids?.length || 0})</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="listings">
                   <DetailSection title="Inserate" icon={<Car className="w-5 h-5" />}>
-                    {Array.isArray(user.motorhomes) && user.motorhomes.length > 0 ? (
+                    {Array.isArray(user.vehicles) && user.vehicles.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -440,20 +445,20 @@ export default function AdminUserDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {user.motorhomes.map((motorhome: any) => {
-                            const safePhotos = Array.isArray(motorhome.motorhome_photos) ? motorhome.motorhome_photos : motorhome.motorhome_photos ? [motorhome.motorhome_photos] : [];
+                          {user.vehicles.map((vehicle: any) => {
+                            const safePhotos = Array.isArray(vehicle.vehicle_photos) ? vehicle.vehicle_photos : vehicle.vehicle_photos ? [vehicle.vehicle_photos] : [];
                             const mainPhoto = [...safePhotos].sort(
                               (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
                             )[0];
                             return (
-                              <TableRow key={motorhome.id}>
+                              <TableRow key={vehicle.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="w-12 h-9 rounded bg-muted overflow-hidden">
                                       {mainPhoto ? (
                                         <img
                                           src={mainPhoto.url}
-                                          alt={`${motorhome.manufacturer} ${motorhome.model} Foto`}
+                                          alt={`${vehicle.manufacturer} ${vehicle.model} Foto`}
                                           className="w-full h-full object-cover"
                                         />
                                       ) : (
@@ -464,26 +469,26 @@ export default function AdminUserDetail() {
                                     </div>
                                     <div>
                                       <p className="font-medium">
-                                        {motorhome.manufacturer} {motorhome.model}
+                                        {vehicle.manufacturer} {vehicle.model}
                                       </p>
-                                      <p className="text-xs text-muted-foreground">{motorhome.year}</p>
+                                      <p className="text-xs text-muted-foreground">{vehicle.year}</p>
                                     </div>
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">{motorhome.status}</Badge>
+                                  <Badge variant="outline">{vehicle.status}</Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {motorhome.sale_channel === "auction" ? "Auktion" : motorhome.sale_channel === "station" ? "Ankaufstation" : motorhome.sale_channel}
+                                  {vehicle.sale_channel === "auction" ? "Auktion" : vehicle.sale_channel === "station" ? "Ankaufstation" : vehicle.sale_channel}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {format(new Date(motorhome.created_at), "dd.MM.yyyy")}
+                                  {format(new Date(vehicle.created_at), "dd.MM.yyyy")}
                                 </TableCell>
                                 <TableCell>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => navigate(`/admin/motorhomes/${motorhome.id}`)}
+                                    onClick={() => navigate(`/admin/vehicles/${vehicle.id}`)}
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                   </Button>
@@ -520,10 +525,10 @@ export default function AdminUserDetail() {
                             <TableRow key={bid.id}>
                               <TableCell>
                                 <p className="font-medium">
-                                  {bid.auction?.motorhome?.manufacturer} {bid.auction?.motorhome?.model}
+                                  {bid.auction?.vehicle?.manufacturer} {bid.auction?.vehicle?.model}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {bid.auction?.motorhome?.year}
+                                  {bid.auction?.vehicle?.year}
                                 </p>
                               </TableCell>
                               <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>

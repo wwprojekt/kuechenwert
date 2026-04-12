@@ -377,13 +377,14 @@ Deno.serve(async (req) => {
 
     // ─── 9. WINNER NOTIFICATION ─────────────────────────────────
     try {
-      await supabaseAdmin.functions.invoke('notify-auction-winner', {
+      const { error: winnerInvokeErr } = await supabaseAdmin.functions.invoke('notify-auction-winner', {
         body: {
           auctionId,
           winnerId: user.id,
           amount: instantPrice,
         },
       });
+      if (winnerInvokeErr) throw winnerInvokeErr;
       console.log('Winner notification sent to buyer:', user.id);
     } catch (notifyError: any) {
       console.error('Error sending winner notification:', notifyError);
@@ -544,7 +545,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (sellerProfile?.email) {
-          await supabaseAdmin.functions.invoke('send-auction-notification', {
+          const { error: sellerNotifyErr } = await supabaseAdmin.functions.invoke('send-auction-notification', {
             body: {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
@@ -554,6 +555,7 @@ Deno.serve(async (req) => {
               currentBid: `€${instantPrice.toLocaleString()}`,
             },
           });
+          if (sellerNotifyErr) throw sellerNotifyErr;
           console.log('Seller notification sent to:', sellerProfile.email);
         }
       } catch (e: any) {

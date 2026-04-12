@@ -27,12 +27,11 @@ export function SiteLogo({
   className = "",
   asLink = true,
 }: SiteLogoProps) {
-  const { settings } = useSettings();
+  const { settings, loading } = useSettings();
 
-  // Use settings logo_url or fallback to /logo.webp
   const logoUrl = settings?.logo_url || "/logo.webp";
   const siteName = settings?.site_name || "CaravanWert";
-  const siteTagline = settings?.site_tagline || "Ihre Plattform für den Wohnmobil-Verkauf";
+  const siteTagline = settings?.site_tagline || "Deutschlands führende Wohnmobil-Handelsplattform";
 
   // Determine icon size based on variant
   const getIconSizeClass = () => {
@@ -52,6 +51,43 @@ export function SiteLogo({
   };
 
   const renderContent = () => {
+    if (loading && !settings) {
+      const sizeClass = getIconSizeClass();
+      switch (variant) {
+        case "icon-only":
+          return <div className={`${sizeClass} rounded-full bg-muted animate-pulse`} />;
+        case "icon-text":
+          return (
+            <div className="flex items-center gap-3">
+              <div className={`${sizeClass} rounded-full bg-muted animate-pulse flex-shrink-0`} />
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <div className="h-7 w-40 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-56 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          );
+        case "icon-text-compact":
+          return (
+            <div className="flex items-center gap-2.5">
+              <div className={`${sizeClass} rounded-full bg-muted animate-pulse flex-shrink-0`} />
+              <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+            </div>
+          );
+        case "footer":
+          return (
+            <div className="flex items-center gap-3">
+              <div className={`${sizeClass} rounded-full bg-slate-700 animate-pulse flex-shrink-0`} />
+              <div className="flex flex-col gap-1.5">
+                <div className="h-8 w-40 bg-slate-700 rounded animate-pulse" />
+                <div className="h-3 w-56 bg-slate-700 rounded animate-pulse" />
+              </div>
+            </div>
+          );
+        default:
+          return <div className={`${sizeClass} rounded-full bg-muted animate-pulse`} />;
+      }
+    }
+
     switch (variant) {
       case "icon-only":
         return (

@@ -1226,10 +1226,17 @@ const Wertrechner = () => {
                     {submitMutation.isPending ? "Wird geladen..." : "Wert jetzt anzeigen"}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
-                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Ihre Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                    Mit dem Absenden stimmen Sie unseren{" "}
+                    <a href="/datenschutz" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                      Datenschutzbestimmungen
+                    </a>{" "}
+                    und{" "}
+                    <a href="/agb" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                      AGB
+                    </a>{" "}
+                    zu. Ihre Daten werden verschlüsselt übertragen und nicht an Dritte weitergegeben.
+                  </p>
                 </form>
               </div>
             )}

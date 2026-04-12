@@ -370,10 +370,14 @@ const Wertermittlung = () => {
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
 
-                    <p className="text-xs text-muted-foreground text-center">
-                      Mit dem Absenden stimmen Sie unserer{" "}
+                    <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                      Mit dem Absenden stimmen Sie unseren{" "}
                       <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Datenschutzerklärung
+                        Datenschutzbestimmungen
+                      </a>{" "}
+                      und{" "}
+                      <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        AGB
                       </a>{" "}
                       zu.
                     </p>

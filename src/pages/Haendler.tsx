@@ -24,9 +24,9 @@ const Haendler = () => {
         .from("auctions")
         .select(`
           id, current_bid, starting_bid, end_time,
-          vehicle:vehicles!left(
+          motorhome:motorhomes!left(
             manufacturer, model, year, body_type, mileage, city,
-            photos:vehicle_photos(url, display_order)
+            photos:motorhome_photos(url, display_order)
           )
         `)
         .eq("status", "active")
@@ -281,7 +281,7 @@ const Haendler = () => {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {liveAuctions.map((auction: any) => {
-                const m = auction.vehicle;
+                const m = auction.motorhome;
                 if (!m) return null;
                 const photos = m.photos?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
                 const photoUrl = photos?.[0]?.url;

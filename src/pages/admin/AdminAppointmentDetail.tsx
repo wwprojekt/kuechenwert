@@ -1,6 +1,6 @@
 /**
  * Admin Appointment Detail Page
- * Comprehensive view of appointment with timeline, vehicle info, and actions
+ * Comprehensive view of appointment with timeline, motorhome info, and actions
  */
 
 import { useState } from "react";
@@ -82,7 +82,7 @@ export default function AdminAppointmentDetail() {
         .from("appointments")
         .select(`
           *,
-          vehicle:vehicles (
+          motorhome:motorhomes (
             id,
             manufacturer,
             model,
@@ -92,7 +92,7 @@ export default function AdminAppointmentDetail() {
             condition,
             instant_price,
             reserve_price,
-            vehicle_photos(url, display_order)
+            motorhome_photos(url, display_order)
           ),
           station:purchase_stations (
             id,
@@ -268,7 +268,7 @@ export default function AdminAppointmentDetail() {
     return statusConfig[status] || { label: status, variant: "outline" };
   };
 
-  const mainPhoto = [...(appointment?.vehicle?.vehicle_photos || [])].sort(
+  const mainPhoto = [...(appointment?.motorhome?.motorhome_photos || [])].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
   )[0];
 
@@ -282,7 +282,7 @@ export default function AdminAppointmentDetail() {
   return (
     <AdminDetailLayout
       title={`Termin #${appointment?.id?.slice(0, 8) || ""}`}
-      subtitle={appointment?.vehicle ? `${appointment.vehicle.manufacturer} ${appointment.vehicle.model}` : undefined}
+      subtitle={appointment?.motorhome ? `${appointment.motorhome.manufacturer} ${appointment.motorhome.model}` : undefined}
       status={appointment ? getStatusBadge(appointment.status) : undefined}
       backUrl="/admin/appointments"
       backLabel="Alle Termine"
@@ -450,7 +450,7 @@ export default function AdminAppointmentDetail() {
                 </div>
               </DetailSection>
 
-              {/* Vehicle Info */}
+              {/* Motorhome Info */}
               <DetailSection
                 title="Fahrzeug"
                 icon={<Car className="w-5 h-5" />}
@@ -458,7 +458,7 @@ export default function AdminAppointmentDetail() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate(`/admin/vehicles/${appointment.vehicle?.id}`)}
+                    onClick={() => navigate(`/admin/motorhomes/${appointment.motorhome?.id}`)}
                   >
                     Details
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -471,7 +471,7 @@ export default function AdminAppointmentDetail() {
                     {mainPhoto ? (
                       <img
                         src={mainPhoto.url}
-                        alt={`${appointment.vehicle?.manufacturer} ${appointment.vehicle?.model}`}
+                        alt={`${appointment.motorhome?.manufacturer} ${appointment.motorhome?.model}`}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -482,15 +482,15 @@ export default function AdminAppointmentDetail() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">
-                      {appointment.vehicle?.manufacturer} {appointment.vehicle?.model}
+                      {appointment.motorhome?.manufacturer} {appointment.motorhome?.model}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      {appointment.vehicle?.year} • {appointment.vehicle?.body_type}
+                      {appointment.motorhome?.year} • {appointment.motorhome?.body_type}
                     </p>
                     <InfoGrid columns={3}>
-                      <InfoItem label="Zustand" value={appointment.vehicle?.condition} />
-                      <InfoItem label="Kilometerstand" value={appointment.vehicle?.mileage ? `${appointment.vehicle.mileage.toLocaleString()} km` : "—"} />
-                      <InfoItem label="Preis" value={formatPrice(appointment.vehicle?.instant_price || appointment.vehicle?.reserve_price)} />
+                      <InfoItem label="Zustand" value={appointment.motorhome?.condition} />
+                      <InfoItem label="Kilometerstand" value={appointment.motorhome?.mileage ? `${appointment.motorhome.mileage.toLocaleString()} km` : "—"} />
+                      <InfoItem label="Preis" value={formatPrice(appointment.motorhome?.instant_price || appointment.motorhome?.reserve_price)} />
                     </InfoGrid>
                   </div>
                 </div>

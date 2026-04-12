@@ -115,7 +115,7 @@ class InvoiceGeneratorService {
           dealer:profiles(*),
           auction:auctions(
             *,
-            vehicle:vehicles(*)
+            motorhome:motorhomes(*)
           ),
           items:invoice_items(*)
         `)
@@ -173,8 +173,8 @@ class InvoiceGeneratorService {
     const dealerName = escapeHtml(invoice.dealer.company_name || 
       `${invoice.dealer.first_name} ${invoice.dealer.last_name}`);
     
-    const _vehicleName = invoice.auction ? 
-      `${escapeHtml(invoice.auction.vehicle.manufacturer)} ${escapeHtml(invoice.auction.vehicle.model)}` : 
+    const _motorhomeName = invoice.auction ? 
+      `${escapeHtml(invoice.auction.motorhome.manufacturer)} ${escapeHtml(invoice.auction.motorhome.model)}` : 
       'Provision';
 
     return `

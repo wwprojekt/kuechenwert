@@ -325,7 +325,7 @@ const en: Translations = {
   pageSubtitle: 'Become part of our dealer network and benefit from exclusive auctions',
   pageBadge: 'Dealer Registration',
   benefitExclusiveTitle: 'Exclusive Auctions',
-  benefitExclusiveDesc: 'Buy vehicles directly from private sellers',
+  benefitExclusiveDesc: 'Buy motorhomes directly from private sellers',
   benefitNetworkTitle: 'Free to Start',
   benefitNetworkDesc: 'No subscription – pay only on successful purchase',
   benefitDirectTitle: 'Quick Activation',

@@ -75,7 +75,7 @@ interface Photo {
 }
 
 interface SellerPhotoManagerProps {
-  vehicleId: string;
+  motorhomeId: string;
   photos: Photo[];
   queryKey: string[];
   disabled?: boolean;
@@ -208,7 +208,7 @@ function SortablePhotoItem({
 // ---------------------------------------------------------------------------
 
 export function SellerPhotoManager({
-  vehicleId,
+  motorhomeId,
   photos: initialPhotos,
   queryKey,
   disabled = false,
@@ -287,7 +287,7 @@ export function SellerPhotoManager({
       const results = await Promise.all(
         updates.map(({ id, display_order, is_primary }) =>
           supabase
-            .from("vehicle_photos")
+            .from("motorhome_photos")
             .update({ display_order, is_primary })
             .eq("id", id)
         )
@@ -339,11 +339,11 @@ export function SellerPhotoManager({
   const deletePhotoMutation = useMutation({
     mutationFn: async (photo: Photo) => {
       // Extract storage path from URL
-      const match = photo.url.match(/vehicle-photos\/(.+)$/);
+      const match = photo.url.match(/motorhome-photos\/(.+)$/);
       if (match) {
         const storagePath = match[1];
         const { error: storageError } = await supabase.storage
-          .from("vehicle-photos")
+          .from("motorhome-photos")
           .remove([storagePath]);
 
         if (storageError) {
@@ -354,7 +354,7 @@ export function SellerPhotoManager({
       // Delete DB record
       await withSessionRetry(async () => {
         const { error: dbError } = await supabase
-          .from("vehicle_photos")
+          .from("motorhome_photos")
           .delete()
           .eq("id", photo.id);
         if (dbError) throw dbError;
@@ -419,11 +419,11 @@ export function SellerPhotoManager({
             uploadFile = file;
             fileExt = file.name.split(".").pop() || 'jpg';
           }
-          const fileName = `${vehicleId}/${Date.now()}_${i}.${fileExt}`;
+          const fileName = `${motorhomeId}/${Date.now()}_${i}.${fileExt}`;
 
           // Upload to storage
           const { error: uploadError } = await supabase.storage
-            .from("vehicle-photos")
+            .from("motorhome-photos")
             .upload(fileName, uploadFile);
 
           if (uploadError) {
@@ -435,14 +435,14 @@ export function SellerPhotoManager({
           // Get public URL
           const {
             data: { publicUrl },
-          } = supabase.storage.from("vehicle-photos").getPublicUrl(fileName);
+          } = supabase.storage.from("motorhome-photos").getPublicUrl(fileName);
 
           // Insert DB record
           const newOrder = photos.length + newPhotos.length;
           const { data: photoRecord, error: dbError } = await supabase
-            .from("vehicle_photos")
+            .from("motorhome_photos")
             .insert({
-              vehicle_id: vehicleId,
+              motorhome_id: motorhomeId,
               url: publicUrl,
               display_order: newOrder,
               is_primary: photos.length === 0 && newPhotos.length === 0,
@@ -482,7 +482,7 @@ export function SellerPhotoManager({
         setTotalUploadCount(0);
       }
     },
-    [vehicleId, photos.length, queryClient, queryKey, toast]
+    [motorhomeId, photos.length, queryClient, queryKey, toast]
   );
 
   const handleFileInputChange = useCallback(

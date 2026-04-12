@@ -31,13 +31,13 @@ export default function ListingEdit() {
   const tabParam = searchParams.get("tab");
   const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "basic";
 
-  const { data: vehicle, isLoading } = useQuery({
+  const { data: motorhome, isLoading } = useQuery({
     queryKey: ["motorhomeEdit", id],
     queryFn: async () => {
       if (!id) return null;
 
       const { data, error } = await supabase
-        .from("vehicles")
+        .from("motorhomes")
         .select("*")
         .eq("id", id)
         .eq("seller_id", user?.id)
@@ -57,7 +57,7 @@ export default function ListingEdit() {
       const { data, error } = await supabase
         .from("auctions")
         .select("id, status")
-        .eq("vehicle_id", id)
+        .eq("motorhome_id", id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -77,9 +77,9 @@ export default function ListingEdit() {
       if (!id) return [];
 
       const { data, error } = await supabase
-        .from("vehicle_photos")
+        .from("motorhome_photos")
         .select("*")
-        .eq("vehicle_id", id)
+        .eq("motorhome_id", id)
         .order("display_order", { ascending: true });
 
       if (error) throw error;
@@ -155,74 +155,74 @@ export default function ListingEdit() {
   });
 
   useEffect(() => {
-    if (vehicle) {
+    if (motorhome) {
       setFormData({
-        description: vehicle.description || "",
-        instant_price: vehicle.instant_price?.toString() || "",
-        reserve_price: vehicle.reserve_price?.toString() || "",
+        description: motorhome.description || "",
+        instant_price: motorhome.instant_price?.toString() || "",
+        reserve_price: motorhome.reserve_price?.toString() || "",
         
         // Technical
-        fuel_type: vehicle.fuel_type || "",
-        power_kw: vehicle.power_kw?.toString() || "",
-        engine_power_hp: vehicle.engine_power_hp?.toString() || "",
-        transmission: vehicle.transmission || "",
-        emission_class: vehicle.emission_class || "",
-        first_registration: vehicle.first_registration || "",
-        last_tuev_date: vehicle.last_tuev_date ? vehicle.last_tuev_date.substring(0, 7) : "",
-        tuev_valid_until: vehicle.tuev_valid_until ? vehicle.tuev_valid_until.substring(0, 7) : "",
-        previous_owners: vehicle.previous_owners?.toString() || "",
-        accident_free: vehicle.accident_free ?? true,
-        non_smoker: vehicle.non_smoker ?? true,
-        service_history_available: vehicle.service_history_available ?? false,
-        fuel_tank_capacity_liters: vehicle.fuel_tank_capacity_liters?.toString() || "",
+        fuel_type: motorhome.fuel_type || "",
+        power_kw: motorhome.power_kw?.toString() || "",
+        engine_power_hp: motorhome.engine_power_hp?.toString() || "",
+        transmission: motorhome.transmission || "",
+        emission_class: motorhome.emission_class || "",
+        first_registration: motorhome.first_registration || "",
+        last_tuev_date: motorhome.last_tuev_date ? motorhome.last_tuev_date.substring(0, 7) : "",
+        tuev_valid_until: motorhome.tuev_valid_until ? motorhome.tuev_valid_until.substring(0, 7) : "",
+        previous_owners: motorhome.previous_owners?.toString() || "",
+        accident_free: motorhome.accident_free ?? true,
+        non_smoker: motorhome.non_smoker ?? true,
+        service_history_available: motorhome.service_history_available ?? false,
+        fuel_tank_capacity_liters: motorhome.fuel_tank_capacity_liters?.toString() || "",
         
         // Dimensions
-        length_m: vehicle.length_m?.toString() || "",
-        width_m: vehicle.width_m?.toString() || "",
-        height_m: vehicle.height_m?.toString() || "",
-        weight_kg: vehicle.weight_kg?.toString() || "",
-        payload_kg: vehicle.payload_kg?.toString() || "",
-        number_of_axles: vehicle.number_of_axles ?? 2,
-        seats: vehicle.seats?.toString() || "",
-        sleeping_places: vehicle.sleeping_places?.toString() || "",
-        beds_description: vehicle.beds_description || "",
+        length_m: motorhome.length_m?.toString() || "",
+        width_m: motorhome.width_m?.toString() || "",
+        height_m: motorhome.height_m?.toString() || "",
+        weight_kg: motorhome.weight_kg?.toString() || "",
+        payload_kg: motorhome.payload_kg?.toString() || "",
+        number_of_axles: motorhome.number_of_axles ?? 2,
+        seats: motorhome.seats?.toString() || "",
+        sleeping_places: motorhome.sleeping_places?.toString() || "",
+        beds_description: motorhome.beds_description || "",
         
         // Interior
-        has_kitchen: vehicle.has_kitchen ?? true,
-        refrigerator_type: vehicle.refrigerator_type || "",
-        heating_type: vehicle.heating_type || "",
-        air_conditioning_type: vehicle.air_conditioning_type || "Keine",
-        has_bathroom: vehicle.has_bathroom ?? false,
-        has_toilet: vehicle.has_toilet ?? false,
-        has_shower: vehicle.has_shower ?? false,
-        water_tank_liters: vehicle.water_tank_liters?.toString() || "",
-        grey_water_capacity_liters: vehicle.grey_water_capacity_liters?.toString() || "",
+        has_kitchen: motorhome.has_kitchen ?? true,
+        refrigerator_type: motorhome.refrigerator_type || "",
+        heating_type: motorhome.heating_type || "",
+        air_conditioning_type: motorhome.air_conditioning_type || "Keine",
+        has_bathroom: motorhome.has_bathroom ?? false,
+        has_toilet: motorhome.has_toilet ?? false,
+        has_shower: motorhome.has_shower ?? false,
+        water_tank_liters: motorhome.water_tank_liters?.toString() || "",
+        grey_water_capacity_liters: motorhome.grey_water_capacity_liters?.toString() || "",
         
         // Equipment
-        has_solar: vehicle.has_solar ?? false,
-        solar_power_watts: vehicle.solar_power_watts?.toString() || "",
-        battery_capacity_ah: vehicle.battery_capacity_ah?.toString() || "",
-        has_inverter: vehicle.has_inverter ?? false,
-        has_awning: vehicle.has_awning ?? false,
-        awning_length_m: vehicle.awning_length_m?.toString() || "",
-        has_awning_tent: (vehicle as any).has_awning_tent ?? false,
-        has_roof_ac: (vehicle as any).has_roof_ac ?? false,
-        has_stand_ac: (vehicle as any).has_stand_ac ?? false,
-        has_bike_rack: vehicle.has_bike_rack ?? false,
-        has_garage: vehicle.has_garage ?? false,
-        has_tv: vehicle.has_tv ?? false,
-        has_backup_camera: vehicle.has_backup_camera ?? false,
-        has_parking_sensors: vehicle.has_parking_sensors ?? false,
-        has_cruise_control: vehicle.has_cruise_control ?? false,
-        has_central_locking: vehicle.has_central_locking ?? false,
+        has_solar: motorhome.has_solar ?? false,
+        solar_power_watts: motorhome.solar_power_watts?.toString() || "",
+        battery_capacity_ah: motorhome.battery_capacity_ah?.toString() || "",
+        has_inverter: motorhome.has_inverter ?? false,
+        has_awning: motorhome.has_awning ?? false,
+        awning_length_m: motorhome.awning_length_m?.toString() || "",
+        has_awning_tent: (motorhome as any).has_awning_tent ?? false,
+        has_roof_ac: (motorhome as any).has_roof_ac ?? false,
+        has_stand_ac: (motorhome as any).has_stand_ac ?? false,
+        has_bike_rack: motorhome.has_bike_rack ?? false,
+        has_garage: motorhome.has_garage ?? false,
+        has_tv: motorhome.has_tv ?? false,
+        has_backup_camera: motorhome.has_backup_camera ?? false,
+        has_parking_sensors: motorhome.has_parking_sensors ?? false,
+        has_cruise_control: motorhome.has_cruise_control ?? false,
+        has_central_locking: motorhome.has_central_locking ?? false,
         
         // Additional
-        additional_equipment: vehicle.additional_equipment || "",
-        vehicle_identification_number: vehicle.vehicle_identification_number || "",
-        license_plate: vehicle.license_plate || "",
+        additional_equipment: motorhome.additional_equipment || "",
+        vehicle_identification_number: motorhome.vehicle_identification_number || "",
+        license_plate: motorhome.license_plate || "",
       });
     }
-  }, [vehicle]);
+  }, [motorhome]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -311,7 +311,7 @@ export default function ListingEdit() {
 
       await withSessionRetry(async () => {
         const { error } = await supabase
-          .from("vehicles")
+          .from("motorhomes")
           .update(updateData)
           .eq("id", id)
           .eq("seller_id", user.id);
@@ -355,7 +355,7 @@ export default function ListingEdit() {
     );
   }
 
-  if (!vehicle) {
+  if (!motorhome) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">Inserat nicht gefunden</p>
@@ -382,7 +382,7 @@ export default function ListingEdit() {
           </Button>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Inserat bearbeiten</h1>
           <p className="text-muted-foreground mt-1">
-            {vehicle.manufacturer} {vehicle.model}
+            {motorhome.manufacturer} {motorhome.model}
           </p>
         </div>
       </div>
@@ -773,7 +773,7 @@ export default function ListingEdit() {
               {/* Photos Tab */}
               <TabsContent value="photos" className="space-y-6 mt-6">
                 <SellerPhotoManager
-                  vehicleId={id!}
+                  motorhomeId={id!}
                   photos={photos}
                   queryKey={["motorhomePhotos", id!]}
                   disabled={isAuctionLive}

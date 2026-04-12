@@ -139,7 +139,7 @@ export default function AdminFinancials() {
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
           auction:auctions(
-            vehicle:vehicles(manufacturer, model)
+            motorhome:motorhomes(manufacturer, model)
           ),
           reminders:payment_reminders(reminder_level, reminder_date)
         `)
@@ -227,7 +227,7 @@ export default function AdminFinancials() {
       { key: "customer_number", label: "Kundennummer" },
       { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
       { key: "dealer", label: "Kd.-Nr.", format: (value: any) => value?.customer_number || '' },
-      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.vehicle ? `${value.vehicle.manufacturer} ${value.vehicle.model}` : "" },
+      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
       { key: "gross_amount", label: "Betrag", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
       { key: "amount_paid", label: "Bezahlt", format: (value: any) => `€${Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
       { key: "gross_amount", label: "Restbetrag", format: (value: any, row: any) => `€${(Number(row.gross_amount) - Number(row.amount_paid || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
@@ -783,7 +783,7 @@ export default function AdminFinancials() {
                               ) : (
                                 <>
                                   <div className="font-medium text-sm">
-                                    {invoice.auction?.vehicle?.manufacturer} {invoice.auction?.vehicle?.model}
+                                    {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}

@@ -39,30 +39,30 @@ const DealerInventory = () => {
 
   const fetchInventory = useCallback(async () => {
     try {
-      // Get vehicles that the dealer has won/purchased
+      // Get motorhomes that the dealer has won/purchased
       const { data, error } = await supabase
-        .from('vehicles')
-        .select('*, vehicle_photos(*)')
+        .from('motorhomes')
+        .select('*, motorhome_photos(*)')
         .eq('sold_to', user?.id)
         .order('sold_at', { ascending: false });
 
       if (error) throw error;
 
       // Also fetch the auction data to get the actual purchase price (current_bid)
-      const vehicleIds = data?.map(item => item.id) || [];
+      const motorhomeIds = data?.map(item => item.id) || [];
       let auctionPriceMap: Record<string, number> = {};
       
-      if (vehicleIds.length > 0) {
+      if (motorhomeIds.length > 0) {
         const { data: auctionsData } = await supabase
           .from('auctions')
-          .select('vehicle_id, current_bid')
-          .in('vehicle_id', vehicleIds)
+          .select('motorhome_id, current_bid')
+          .in('motorhome_id', motorhomeIds)
           .in('status', ['sold', 'ended']);
         
         auctionPriceMap = (auctionsData || []).reduce((acc, a) => {
           // Use the highest bid as purchase price
-          if (!acc[a.vehicle_id] || Number(a.current_bid) > acc[a.vehicle_id]) {
-            acc[a.vehicle_id] = Number(a.current_bid) || 0;
+          if (!acc[a.motorhome_id] || Number(a.current_bid) > acc[a.motorhome_id]) {
+            acc[a.motorhome_id] = Number(a.current_bid) || 0;
           }
           return acc;
         }, {} as Record<string, number>);
@@ -78,7 +78,7 @@ const DealerInventory = () => {
         purchased_at: item.sold_at,
         // Bug 2.3 fix: Use auction current_bid as purchase price, fallback to instant_price
         purchase_price: auctionPriceMap[item.id] || item.instant_price || 0,
-        photos: item.vehicle_photos || [],
+        photos: item.motorhome_photos || [],
       })) || [];
 
       setInventory(formattedData);

@@ -30,7 +30,7 @@ interface KaufchanceAuction {
   end_time: string;
   kaufchance_expires_at: string | null;
   kaufchance_min_price: number | null;
-  vehicle: {
+  motorhome: {
     id: string;
     manufacturer: string;
     model: string;
@@ -56,7 +56,7 @@ interface MyOffer {
     id: string;
     current_bid: number | null;
     status: string;
-    vehicle: {
+    motorhome: {
       manufacturer: string;
       model: string;
       photos: Array<{ url: string; display_order: number }>;
@@ -114,13 +114,13 @@ export default function MyKaufchancen() {
             end_time,
             kaufchance_expires_at,
             kaufchance_min_price,
-            vehicle:vehicles (
+            motorhome:motorhomes (
               id,
               manufacturer,
               model,
               year,
               listing_number,
-              photos:vehicle_photos (url, display_order)
+              photos:motorhome_photos (url, display_order)
             )
           `)
           .in("id", auctionIds)
@@ -171,10 +171,10 @@ export default function MyKaufchancen() {
             id,
             current_bid,
             status,
-            vehicle:vehicles (
+            motorhome:motorhomes (
               manufacturer,
               model,
-              photos:vehicle_photos (url, display_order)
+              photos:motorhome_photos (url, display_order)
             )
           )
         `)
@@ -482,8 +482,8 @@ export default function MyKaufchancen() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {kaufchancen.map((auction) => {
-                const vehicle = auction.vehicle;
-                const safePhotos = Array.isArray(vehicle.photos) ? vehicle.photos : vehicle.photos ? [vehicle.photos] : [];
+                const motorhome = auction.motorhome;
+                const safePhotos = Array.isArray(motorhome.photos) ? motorhome.photos : motorhome.photos ? [motorhome.photos] : [];
                 const firstPhoto = [...safePhotos].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
@@ -499,7 +499,7 @@ export default function MyKaufchancen() {
                           {firstPhoto ? (
                             <img
                               src={firstPhoto.url}
-                              alt={`${vehicle.manufacturer} ${vehicle.model}`}
+                              alt={`${motorhome.manufacturer} ${motorhome.model}`}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
@@ -519,16 +519,16 @@ export default function MyKaufchancen() {
                           <div>
                             <div className="flex items-center gap-1.5">
                               <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
-                                {vehicle.manufacturer} {vehicle.model}
+                                {motorhome.manufacturer} {motorhome.model}
                               </h3>
-                              {vehicle.listing_number && (
+                              {motorhome.listing_number && (
                                 <span className="font-mono text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded flex-shrink-0">
-                                  #{vehicle.listing_number}
+                                  #{motorhome.listing_number}
                                 </span>
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Baujahr {vehicle.year}
+                              Baujahr {motorhome.year}
                             </p>
                           </div>
 
@@ -559,7 +559,7 @@ export default function MyKaufchancen() {
                             <PostAuctionOfferDialog
                               auctionId={auction.id}
                               currentBid={auction.current_bid || 0}
-                              vehicleTitle={`${vehicle.manufacturer} ${vehicle.model}`}
+                              vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
                               onOfferSent={loadData}
                             />
                           </div>
@@ -592,8 +592,8 @@ export default function MyKaufchancen() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {myOffers.map((offer) => {
                 const auction = offer.auction;
-                const vehicle = auction?.vehicle;
-                const safePhotos2 = Array.isArray(vehicle?.photos) ? vehicle.photos : vehicle?.photos ? [vehicle.photos] : [];
+                const motorhome = auction?.motorhome;
+                const safePhotos2 = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
                 const firstPhoto = [...safePhotos2].sort((a, b) => a.display_order - b.display_order)[0];
 
                 return (
@@ -609,7 +609,7 @@ export default function MyKaufchancen() {
                           {firstPhoto ? (
                             <img
                               src={firstPhoto.url}
-                              alt={`${vehicle?.manufacturer} ${vehicle?.model}`}
+                              alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
@@ -626,7 +626,7 @@ export default function MyKaufchancen() {
                         <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
                           <div>
                             <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
-                              {vehicle?.manufacturer} {vehicle?.model}
+                              {motorhome?.manufacturer} {motorhome?.model}
                             </h3>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
                               {format(new Date(offer.created_at), "dd.MM.yyyy HH:mm", { locale: de })}

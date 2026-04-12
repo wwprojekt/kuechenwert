@@ -28,7 +28,7 @@ import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { optimizeImage, validateImageFile, OPTIMIZATION_PRESETS } from '@/lib/imageOptimization';
 
 interface DamageDocumentationProps {
-  vehicleId: string;
+  motorhomeId: string;
   variant?: 'upload' | 'display';
   onDamageChange?: (hasDamage: boolean) => void;
 }
@@ -61,7 +61,7 @@ const locationOptions = [
 ];
 
 export const DamageDocumentation = ({ 
-  vehicleId, 
+  motorhomeId, 
   variant = 'display',
   onDamageChange 
 }: DamageDocumentationProps) => {
@@ -79,12 +79,12 @@ export const DamageDocumentation = ({
 
   // Fetch damage photos
   const { data: damagePhotos, isLoading } = useQuery({
-    queryKey: ['damage-photos', vehicleId],
+    queryKey: ['damage-photos', motorhomeId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('damage_photos')
         .select('*')
-        .eq('vehicle_id', vehicleId)
+        .eq('motorhome_id', motorhomeId)
         .order('display_order');
       
       if (error) throw error;
@@ -117,23 +117,23 @@ export const DamageDocumentation = ({
       }
       
       // Upload to storage
-      const fileName = `${vehicleId}/damage_${Date.now()}.${fileExt}`;
+      const fileName = `${motorhomeId}/damage_${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('vehicle-photos')
+        .from('motorhome-photos')
         .upload(fileName, uploadFile);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('vehicle-photos')
+        .from('motorhome-photos')
         .getPublicUrl(fileName);
 
       // Save damage photo record
       const { error: insertError } = await supabase
         .from('damage_photos')
         .insert({
-          vehicle_id: vehicleId,
+          motorhome_id: motorhomeId,
           photo_url: publicUrl,
           damage_description: newDamageForm.description,
           damage_severity: newDamageForm.severity,
@@ -146,7 +146,7 @@ export const DamageDocumentation = ({
       return publicUrl;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['damage-photos', vehicleId] });
+      queryClient.invalidateQueries({ queryKey: ['damage-photos', motorhomeId] });
       setNewDamageForm({
         description: '',
         severity: 'minor',
@@ -181,7 +181,7 @@ export const DamageDocumentation = ({
       if (error) throw error;
     },
     onSuccess: (_data: unknown, deletedPhotoId: string) => {
-      queryClient.invalidateQueries({ queryKey: ['damage-photos', vehicleId] });
+      queryClient.invalidateQueries({ queryKey: ['damage-photos', motorhomeId] });
       toast({
         title: 'Foto gelöscht',
         description: 'Das Schadensfoto wurde entfernt',
@@ -487,14 +487,14 @@ export const DamageDocumentation = ({
  * Damage Summary Component
  * Shows damage summary for listing cards
  */
-export const DamageSummary = ({ vehicleId }: { vehicleId: string }) => {
+export const DamageSummary = ({ motorhomeId }: { motorhomeId: string }) => {
   const { data: damagePhotos } = useQuery({
-    queryKey: ['damage-photos', vehicleId],
+    queryKey: ['damage-photos', motorhomeId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('damage_photos')
         .select('damage_severity')
-        .eq('vehicle_id', vehicleId);
+        .eq('motorhome_id', motorhomeId);
       
       if (error) throw error;
       return data;

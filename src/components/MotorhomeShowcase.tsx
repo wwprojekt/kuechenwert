@@ -1,6 +1,6 @@
 /**
- * Vehicle Showcase Component
- * Displays high-quality vehicle images with trust indicators
+ * Motorhome Showcase Component
+ * Displays high-quality motorhome images with trust indicators
  */
 
 import { Link } from "react-router-dom";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, CheckCircle, Award, Users, ArrowRight } from "lucide-react";
 
-const VehicleShowcase = () => {
+const MotorhomeShowcase = () => {
   const showcaseItems = [
     {
       id: 1,
@@ -147,4 +147,4 @@ const VehicleShowcase = () => {
   );
 };
 
-export default VehicleShowcase;
+export default MotorhomeShowcase;

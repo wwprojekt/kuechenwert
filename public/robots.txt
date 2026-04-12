@@ -1,5 +1,5 @@
-# robots.txt for BikeWert
-# https://bikewert.de
+# robots.txt for CaravanWert
+# https://caravanwert.de
 
 # Default: Allow all crawlers, block private areas
 User-agent: *
@@ -14,5 +14,12 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /verkaufen/danke
 
+# Google Ads bots (critical for Google Ads compliance)
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+
 # Sitemap location
-Sitemap: https://bikewert.de/sitemap.xml
+Sitemap: https://caravanwert.de/sitemap.xml

@@ -66,13 +66,13 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         const filePath = `blog/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('vehicle-photos')
+          .from('motorhome-photos')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('vehicle-photos')
+          .from('motorhome-photos')
           .getPublicUrl(filePath);
 
         editor?.chain().focus().setImage({ src: publicUrl }).run();

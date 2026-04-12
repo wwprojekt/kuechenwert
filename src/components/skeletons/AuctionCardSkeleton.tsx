@@ -1,6 +1,6 @@
 /**
- * Skeleton loading state for auction/vehicle cards
- * Matches the layout of VehicleCard component
+ * Skeleton loading state for auction/motorhome cards
+ * Matches the layout of MotorhomeCard component
  */
 
 import { Card, CardContent } from "@/components/ui/card";

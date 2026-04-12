@@ -30,7 +30,7 @@ interface Auction {
   reserve_price: number;
   buy_now_price: number | null;
   end_time: string;
-  vehicle: {
+  motorhome: {
     id: string;
     manufacturer: string;
     model: string;
@@ -38,7 +38,7 @@ interface Auction {
     mileage: number;
     postal_code: string | null;
     city: string | null;
-    vehicle_photos: Array<{ url: string; display_order: number }>;
+    motorhome_photos: Array<{ url: string; display_order: number }>;
   };
   bids: Array<{
     bidder_id: string;
@@ -78,7 +78,7 @@ const DealerAuctions = () => {
         .from('auctions')
         .select(`
           *,
-          vehicle:vehicles(
+          motorhome:motorhomes(
             id,
             manufacturer,
             model,
@@ -87,7 +87,7 @@ const DealerAuctions = () => {
             postal_code,
             city,
             seller_id,
-            vehicle_photos(url, display_order)
+            motorhome_photos(url, display_order)
           ),
           bids(bidder_id, amount)
         `)
@@ -100,7 +100,7 @@ const DealerAuctions = () => {
       }
       // Filter out dealer's own listings – they can't bid on their own vehicles
       const filtered = (data || []).filter(
-        (a: any) => !a.vehicle?.seller_id || a.vehicle.seller_id !== user?.id
+        (a: any) => !a.motorhome?.seller_id || a.motorhome.seller_id !== user?.id
       );
       logger.log(`Fetched ${data?.length || 0} active auctions, showing ${filtered.length} (excluding own)`);
       setAuctions(filtered);
@@ -144,8 +144,8 @@ const DealerAuctions = () => {
   };
 
   const filteredAuctions = auctions.filter(auction => {
-    if (!auction.vehicle || typeof auction.vehicle !== 'object' || Array.isArray(auction.vehicle)) return false;
-    const matchesSearch = `${auction.vehicle.manufacturer || ''} ${auction.vehicle.model || ''}`
+    if (!auction.motorhome || typeof auction.motorhome !== 'object' || Array.isArray(auction.motorhome)) return false;
+    const matchesSearch = `${auction.motorhome.manufacturer || ''} ${auction.motorhome.model || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
@@ -245,7 +245,7 @@ const DealerAuctions = () => {
       ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedAuctions.map((auction) => {
-            const safePhotos = Array.isArray(auction.vehicle.vehicle_photos) ? auction.vehicle.vehicle_photos : auction.vehicle.vehicle_photos ? [auction.vehicle.vehicle_photos] : [];
+            const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
             const firstPhoto = safePhotos.sort((a, b) => a.display_order - b.display_order)[0]?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
@@ -263,7 +263,7 @@ const DealerAuctions = () => {
                     {firstPhoto ? (
                       <img
                         src={firstPhoto}
-                        alt={`${auction.vehicle.manufacturer} ${auction.vehicle.model}`}
+                        alt={`${auction.motorhome.manufacturer} ${auction.motorhome.model}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
@@ -298,7 +298,7 @@ const DealerAuctions = () => {
 
                     {/* Favorite Heart – rechts oben */}
                     <div className="absolute top-2 right-2">
-                      <FavoriteButton vehicleId={auction.vehicle.id} />
+                      <FavoriteButton motorhomeId={auction.motorhome.id} />
                     </div>
 
                     {/* Time Left */}
@@ -321,16 +321,16 @@ const DealerAuctions = () => {
                   <CardContent className="p-3 sm:p-4">
                     <div className="mb-2">
                       <h3 className="font-semibold text-sm line-clamp-1">
-                        {auction.vehicle.manufacturer} {auction.vehicle.model}
+                        {auction.motorhome.manufacturer} {auction.motorhome.model}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        {auction.vehicle.year} • {auction.vehicle.mileage.toLocaleString('de-DE')} km
+                        {auction.motorhome.year} • {auction.motorhome.mileage.toLocaleString('de-DE')} km
                       </p>
                     </div>
 
                     {/* Location & Distance */}
-                    {auction.vehicle.postal_code && (() => {
-                      const vehicleCoords = getPlzCoordinates(auction.vehicle.postal_code);
+                    {auction.motorhome.postal_code && (() => {
+                      const vehicleCoords = getPlzCoordinates(auction.motorhome.postal_code);
                       const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
                       const dist = vehicleCoords && dCoords
                         ? calculateDistance(
@@ -341,7 +341,7 @@ const DealerAuctions = () => {
                       return (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                           <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
-                          <span>{anonymizePostalCode(auction.vehicle.postal_code)}</span>
+                          <span>{anonymizePostalCode(auction.motorhome.postal_code)}</span>
                           {dist !== null && (
                             <span className="flex items-center gap-0.5 ml-auto text-primary">
                               <Navigation className="w-3 h-3" />

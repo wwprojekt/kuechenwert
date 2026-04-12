@@ -1,6 +1,6 @@
 /**
  * AI Description Generator Component
- * OpenAI-powered vehicle description generation
+ * OpenAI-powered motorhome description generation
  */
 
 import { useState } from 'react';

@@ -33,7 +33,7 @@ interface Appointment {
   payment_amount: number | null;
   release_pin: string | null;
   notes: string | null;
-  vehicles: {
+  motorhomes: {
     manufacturer: string;
     model: string;
     year: number;
@@ -60,7 +60,7 @@ const MyAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          vehicles (manufacturer, model, year),
+          motorhomes (manufacturer, model, year),
           purchase_stations (name, city, address, phone)
         `)
         .eq('seller_id', user?.id)
@@ -159,7 +159,7 @@ const MyAppointments = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2 flex-wrap">
-                      {appointment.vehicles?.manufacturer} {appointment.vehicles?.model}
+                      {appointment.motorhomes?.manufacturer} {appointment.motorhomes?.model}
                       {getStatusBadge(appointment.status)}
                     </CardTitle>
                     <CardDescription>

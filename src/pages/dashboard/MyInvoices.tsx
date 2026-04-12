@@ -41,7 +41,7 @@ interface Invoice {
   created_at: string | null;
   auction?: {
     id: string;
-    vehicle?: {
+    motorhome?: {
       manufacturer: string;
       model: string;
     };
@@ -61,7 +61,7 @@ export default function MyInvoices() {
 
   const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
     invoice_number: (i) => i.invoice_number || '',
-    vehicle: (i) => `${i.auction?.vehicle?.manufacturer || ''} ${i.auction?.vehicle?.model || ''}`.toLowerCase(),
+    vehicle: (i) => `${i.auction?.motorhome?.manufacturer || ''} ${i.auction?.motorhome?.model || ''}`.toLowerCase(),
     invoice_date: (i) => i.invoice_date || '',
     due_date: (i) => i.due_date || '',
     gross_amount: (i) => i.gross_amount || 0,
@@ -89,7 +89,7 @@ export default function MyInvoices() {
           *,
           auction:auctions (
             id,
-            vehicle:vehicles (
+            motorhome:motorhomes (
               manufacturer,
               model
             )
@@ -330,9 +330,9 @@ export default function MyInvoices() {
                         {invoice.invoice_number}
                       </TableCell>
                       <TableCell>
-                        {invoice.auction?.vehicle ? (
+                        {invoice.auction?.motorhome ? (
                           <span>
-                            {invoice.auction.vehicle.manufacturer} {invoice.auction.vehicle.model}
+                            {invoice.auction.motorhome.manufacturer} {invoice.auction.motorhome.model}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>

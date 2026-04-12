@@ -34,9 +34,9 @@ import {
   Search, Package, Radio, XCircle, CheckCircle2, ArrowUpDown,
   ArrowUp, ArrowDown, ImageOff, Camera, Download, AlertTriangle,
 } from "lucide-react";
-import { VehicleDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
-import { VehicleEditDialog } from "@/components/admin/MotorhomeEditDialog";
-import { DeleteVehicleDialog } from "@/components/admin/DeleteMotorhomeDialog";
+import { MotorhomeDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
+import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
+import { DeleteMotorhomeDialog } from "@/components/admin/DeleteMotorhomeDialog";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -56,7 +56,7 @@ interface AuctionInfo {
   end_time: string | null;
 }
 
-interface VehicleWithRelations {
+interface MotorhomeWithRelations {
   id: string;
   manufacturer: string;
   model: string;
@@ -123,7 +123,7 @@ interface VehicleWithRelations {
     email: string;
     phone: string | null;
   } | null;
-  vehicle_photos?: Array<{ url: string; display_order: number }>;
+  motorhome_photos?: Array<{ url: string; display_order: number }>;
   auctions?: AuctionInfo | AuctionInfo[] | null;
 }
 
@@ -154,8 +154,8 @@ function getActiveAuction(auctions: AuctionInfo | AuctionInfo[] | null | undefin
   return auctions;
 }
 
-/** Determines the "real" combined status of a vehicle. */
-function getRealStatus(m: VehicleWithRelations): string {
+/** Determines the "real" combined status of a motorhome. */
+function getRealStatus(m: MotorhomeWithRelations): string {
   if (m.status === "sold") return "verkauft";
   if (m.status === "reserved") return "reserviert";
 
@@ -226,9 +226,9 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
 // Component
 // ============================================================================
 
-export default function AdminVehicles() {
+export default function AdminMotorhomes() {
   const navigate = useNavigate();
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithRelations | null>(null);
+  const [selectedMotorhome, setSelectedMotorhome] = useState<MotorhomeWithRelations | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -245,11 +245,11 @@ export default function AdminVehicles() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // ---- Data Query ----
-  const { data: vehicles, isLoading } = useQuery({
-    queryKey: ["adminVehicles"],
+  const { data: motorhomes, isLoading } = useQuery({
+    queryKey: ["adminMotorhomes"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("vehicles")
+        .from("motorhomes")
         .select(`
           *,
           seller:profiles!left (
@@ -258,7 +258,7 @@ export default function AdminVehicles() {
             email,
             phone
           ),
-          vehicle_photos(url, display_order),
+          motorhome_photos(url, display_order),
           auctions(
             id,
             status,
@@ -271,7 +271,7 @@ export default function AdminVehicles() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as VehicleWithRelations[];
+      return data as MotorhomeWithRelations[];
     },
   });
 
@@ -287,7 +287,7 @@ export default function AdminVehicles() {
       { key: "mileage", label: "Kilometerstand", format: (v: any) => v ? `${Number(v).toLocaleString()} km` : "" },
       { key: "condition", label: "Zustand" },
       { key: "sale_channel", label: "Verkaufsweg" },
-      { key: "status", label: "Fahrzeug-Status" },
+      { key: "status", label: "Motorhome-Status" },
       {
         key: "seller",
         label: "Verkäufer",
@@ -299,7 +299,7 @@ export default function AdminVehicles() {
         format: (v: any) => v?.email || "",
       },
       {
-        key: "vehicle_photos",
+        key: "motorhome_photos",
         label: "Fotos",
         format: (v: any) => v ? String(v.length) : "0",
       },
@@ -308,11 +308,11 @@ export default function AdminVehicles() {
   });
 
   // ---- Filtering & Sorting ----
-  const { filteredVehicles, tabCounts } = useMemo(() => {
-    if (!vehicles) return { filteredVehicles: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, nicht_verkauft: 0, verkauft: 0 } };
+  const { filteredMotorhomes, tabCounts } = useMemo(() => {
+    if (!motorhomes) return { filteredMotorhomes: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, nicht_verkauft: 0, verkauft: 0 } };
 
-    // Calculate real status for each vehicle
-    const withRealStatus = vehicles.map((m) => ({
+    // Calculate real status for each motorhome
+    const withRealStatus = motorhomes.map((m) => ({
       ...m,
       _realStatus: getRealStatus(m),
     }));
@@ -359,9 +359,9 @@ export default function AdminVehicles() {
 
     // Photo filter
     if (photoFilter === "no_photos") {
-      filtered = filtered.filter((m) => !m.vehicle_photos || m.vehicle_photos.length === 0);
+      filtered = filtered.filter((m) => !m.motorhome_photos || m.motorhome_photos.length === 0);
     } else if (photoFilter === "has_photos") {
-      filtered = filtered.filter((m) => m.vehicle_photos && m.vehicle_photos.length > 0);
+      filtered = filtered.filter((m) => m.motorhome_photos && m.motorhome_photos.length > 0);
     }
 
     // Sorting
@@ -384,21 +384,21 @@ export default function AdminVehicles() {
       return sortDir === "asc" ? cmp : -cmp;
     });
 
-    return { filteredVehicles: filtered, tabCounts };
-  }, [vehicles, activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter, sortKey, sortDir]);
+    return { filteredMotorhomes: filtered, tabCounts };
+  }, [motorhomes, activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter, sortKey, sortDir]);
 
   // ---- Quick Stats ----
   const stats = useMemo(() => {
-    if (!vehicles) return { total: 0, noPhotos: 0, inAuction: 0, kaufchance: 0, nichtVerkauft: 0, sold: 0 };
+    if (!motorhomes) return { total: 0, noPhotos: 0, inAuction: 0, kaufchance: 0, nichtVerkauft: 0, sold: 0 };
     return {
-      total: vehicles.length,
-      noPhotos: vehicles.filter((m) => !m.vehicle_photos || m.vehicle_photos.length === 0).length,
-      inAuction: vehicles.filter((m) => getRealStatus(m) === "in_auktion").length,
-      kaufchance: vehicles.filter((m) => getRealStatus(m) === "kaufchance").length,
-      nichtVerkauft: vehicles.filter((m) => getRealStatus(m) === "nicht_verkauft").length,
-      sold: vehicles.filter((m) => m.status === "sold").length,
+      total: motorhomes.length,
+      noPhotos: motorhomes.filter((m) => !m.motorhome_photos || m.motorhome_photos.length === 0).length,
+      inAuction: motorhomes.filter((m) => getRealStatus(m) === "in_auktion").length,
+      kaufchance: motorhomes.filter((m) => getRealStatus(m) === "kaufchance").length,
+      nichtVerkauft: motorhomes.filter((m) => getRealStatus(m) === "nicht_verkauft").length,
+      sold: motorhomes.filter((m) => m.status === "sold").length,
     };
-  }, [vehicles]);
+  }, [motorhomes]);
 
   // ---- Sort handler ----
   const handleSort = (key: SortKey) => {
@@ -416,28 +416,28 @@ export default function AdminVehicles() {
   };
 
   // ---- Actions ----
-  const handleViewDetails = (vehicle: VehicleWithRelations) => {
-    navigate(`/admin/vehicles/${vehicle.id}`);
+  const handleViewDetails = (motorhome: MotorhomeWithRelations) => {
+    navigate(`/admin/motorhomes/${motorhome.id}`);
   };
 
-  const handleEdit = (vehicle: VehicleWithRelations) => {
-    setSelectedVehicle(vehicle);
+  const handleEdit = (motorhome: MotorhomeWithRelations) => {
+    setSelectedMotorhome(motorhome);
     setShowEditDialog(true);
   };
 
-  const handleDelete = (vehicle: VehicleWithRelations) => {
-    setSelectedVehicle(vehicle);
+  const handleDelete = (motorhome: MotorhomeWithRelations) => {
+    setSelectedMotorhome(motorhome);
     setShowDeleteDialog(true);
   };
 
-  const handleCreateAuction = (vehicle: VehicleWithRelations) => {
-    navigate(`/admin/auctions?create=${vehicle.id}`);
+  const handleCreateAuction = (motorhome: MotorhomeWithRelations) => {
+    navigate(`/admin/auctions?create=${motorhome.id}`);
   };
 
   // ---- Sale channel badge ----
-  const getSaleChannelBadge = (vehicle: VehicleWithRelations) => {
-    const channel = vehicle.sale_channel;
-    const hasInstantBuy = vehicle.instant_price && Number(vehicle.instant_price) > 0;
+  const getSaleChannelBadge = (motorhome: MotorhomeWithRelations) => {
+    const channel = motorhome.sale_channel;
+    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
     switch (channel) {
       case "auction":
         return hasInstantBuy
@@ -460,7 +460,7 @@ export default function AdminVehicles() {
   useEffect(() => { setMhPage(1); }, [activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter]);
 
   // ---- Render Table ----
-  const renderTable = (items: (VehicleWithRelations & { _realStatus: string })[]) => {
+  const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => {
     const totalItems = items.length;
     const pageItems = items.slice((mhPage - 1) * MH_PAGE_SIZE, mhPage * MH_PAGE_SIZE);
     return (
@@ -521,24 +521,24 @@ export default function AdminVehicles() {
               </TableCell>
             </TableRow>
           ) : (
-            pageItems.map((vehicle) => {
-              const firstPhoto = vehicle.vehicle_photos
+            pageItems.map((motorhome) => {
+              const firstPhoto = motorhome.motorhome_photos
                 ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
-              const photoCount = vehicle.vehicle_photos?.length || 0;
-              const auction = getActiveAuction(vehicle.auctions);
+              const photoCount = motorhome.motorhome_photos?.length || 0;
+              const auction = getActiveAuction(motorhome.auctions);
 
               return (
                 <TableRow
-                  key={vehicle.id}
+                  key={motorhome.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleViewDetails(vehicle)}
+                  onClick={() => handleViewDetails(motorhome)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="w-14 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
                       {firstPhoto ? (
                         <img
                           src={firstPhoto}
-                          alt={`${vehicle.manufacturer} ${vehicle.model}`}
+                          alt={`${motorhome.manufacturer} ${motorhome.model}`}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -551,30 +551,30 @@ export default function AdminVehicles() {
                   <TableCell>
                     <div>
                       <p className="font-medium text-sm">
-                        {vehicle.manufacturer} {vehicle.model}
+                        {motorhome.manufacturer} {motorhome.model}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {vehicle.body_type}
+                        {motorhome.body_type}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
                       <p className="text-sm">
-                        {vehicle.seller?.first_name} {vehicle.seller?.last_name}
+                        {motorhome.seller?.first_name} {motorhome.seller?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {vehicle.seller?.email}
+                        {motorhome.seller?.email}
                       </p>
-                      {vehicle.seller?.phone && (
+                      {motorhome.seller?.phone && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Phone className="w-3 h-3" />
                           <a
-                            href={`tel:${vehicle.seller.phone}`}
+                            href={`tel:${motorhome.seller.phone}`}
                             className="hover:text-primary transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {vehicle.seller.phone}
+                            {motorhome.seller.phone}
                           </a>
                         </p>
                       )}
@@ -582,7 +582,7 @@ export default function AdminVehicles() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      {getStatusBadge(vehicle._realStatus)}
+                      {getStatusBadge(motorhome._realStatus)}
                       {auction && auction.status === "active" && auction.current_bid != null && (
                         <span className="text-xs text-muted-foreground">
                           {Number(auction.current_bid).toLocaleString("de-DE")} €
@@ -590,10 +590,10 @@ export default function AdminVehicles() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{vehicle.year}</TableCell>
-                  <TableCell className="text-sm">{vehicle.mileage.toLocaleString()} km</TableCell>
-                  <TableCell>{getConditionBadge(vehicle.condition)}</TableCell>
-                  <TableCell>{getSaleChannelBadge(vehicle)}</TableCell>
+                  <TableCell className="text-sm">{motorhome.year}</TableCell>
+                  <TableCell className="text-sm">{motorhome.mileage.toLocaleString()} km</TableCell>
+                  <TableCell>{getConditionBadge(motorhome.condition)}</TableCell>
+                  <TableCell>{getSaleChannelBadge(motorhome)}</TableCell>
                   <TableCell>
                     {photoCount === 0 ? (
                       <Badge variant="destructive" className="text-xs gap-1">
@@ -608,8 +608,8 @@ export default function AdminVehicles() {
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {vehicle.created_at
-                      ? format(new Date(vehicle.created_at), "dd.MM.yy", { locale: de })
+                    {motorhome.created_at
+                      ? format(new Date(motorhome.created_at), "dd.MM.yy", { locale: de })
                       : "-"}
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -620,22 +620,22 @@ export default function AdminVehicles() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewDetails(vehicle)}>
+                        <DropdownMenuItem onClick={() => handleViewDetails(motorhome)}>
                           <Eye className="w-4 h-4 mr-2" />
                           Details anzeigen
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(vehicle)}>
+                        <DropdownMenuItem onClick={() => handleEdit(motorhome)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Bearbeiten
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleCreateAuction(vehicle)}>
+                        <DropdownMenuItem onClick={() => handleCreateAuction(motorhome)}>
                           <Gavel className="w-4 h-4 mr-2" />
                           Auktion erstellen
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => handleDelete(vehicle)}
+                          onClick={() => handleDelete(motorhome)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -676,8 +676,8 @@ export default function AdminVehicles() {
           </p>
         </div>
         <ExportButton
-          onExportCSV={() => exportCSV(filteredVehicles)}
-          onExportExcel={() => exportExcel(filteredVehicles)}
+          onExportCSV={() => exportCSV(filteredMotorhomes)}
+          onExportExcel={() => exportExcel(filteredMotorhomes)}
           isExporting={isExporting}
           size="sm"
         />
@@ -811,7 +811,7 @@ export default function AdminVehicles() {
             {/* Results count */}
             <div className="flex items-center justify-between mt-2 mb-1">
               <p className="text-sm text-muted-foreground">
-                {filteredVehicles.length} Ergebnis{filteredVehicles.length !== 1 ? "se" : ""}
+                {filteredMotorhomes.length} Ergebnis{filteredMotorhomes.length !== 1 ? "se" : ""}
                 {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all") && (
                   <span> (gefiltert)</span>
                 )}
@@ -835,7 +835,7 @@ export default function AdminVehicles() {
             {/* Tab Contents */}
             {TABS.map((tab) => (
               <TabsContent key={tab.key} value={tab.key} className="mt-2">
-                {renderTable(filteredVehicles)}
+                {renderTable(filteredMotorhomes)}
               </TabsContent>
             ))}
           </>
@@ -843,20 +843,20 @@ export default function AdminVehicles() {
       </Tabs>
 
       {/* Dialogs */}
-      <VehicleDetailDialog
-        vehicle={selectedVehicle}
+      <MotorhomeDetailDialog
+        motorhome={selectedMotorhome}
         open={showDetailDialog}
         onOpenChange={setShowDetailDialog}
       />
 
-      <VehicleEditDialog
-        vehicle={selectedVehicle}
+      <MotorhomeEditDialog
+        motorhome={selectedMotorhome}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />
 
-      <DeleteVehicleDialog
-        vehicle={selectedVehicle}
+      <DeleteMotorhomeDialog
+        motorhome={selectedMotorhome}
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
       />

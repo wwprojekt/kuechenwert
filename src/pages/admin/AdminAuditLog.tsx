@@ -70,7 +70,7 @@ const ENTITY_LABELS: Record<string, string> = {
   user: "Benutzer",
   auction: "Auktion",
   bid: "Gebot",
-  vehicle: "Wohnmobil",
+  motorhome: "Wohnmobil",
   dealer: "Händler",
   invoice: "Rechnung",
   email: "E-Mail",

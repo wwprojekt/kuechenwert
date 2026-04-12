@@ -138,8 +138,8 @@ export const createMockUser = (overrides = {}) => ({
   ...overrides,
 });
 
-export const createMockVehicle = (overrides = {}) => ({
-  id: 'test-vehicle-id',
+export const createMockMotorhome = (overrides = {}) => ({
+  id: 'test-motorhome-id',
   seller_id: 'test-user-id',
   manufacturer: 'Test Manufacturer',
   model: 'Test Model',
@@ -161,7 +161,7 @@ export const createMockVehicle = (overrides = {}) => ({
 
 export const createMockAuction = (overrides = {}) => ({
   id: 'test-auction-id',
-  vehicle_id: 'test-vehicle-id',
+  motorhome_id: 'test-motorhome-id',
   starting_bid: 45000,
   current_bid: null,
   reserve_price: 45000,
@@ -187,7 +187,7 @@ export const createMockBid = (overrides = {}) => ({
 
 export const createMockAppointment = (overrides = {}) => ({
   id: 'test-appointment-id',
-  vehicle_id: 'test-vehicle-id',
+  motorhome_id: 'test-motorhome-id',
   seller_id: 'test-user-id',
   station_id: 'test-station-id',
   appointment_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // tomorrow
@@ -224,7 +224,7 @@ export const createMockFormData = (overrides = {}) => ({
   mileage: 50000,
   condition: 'Sehr gut',
   bodyType: 'Teilintegriert',
-  description: 'Test description for vehicle',
+  description: 'Test description for motorhome',
   photos: [],
   saleChannel: 'auction',
   instantPrice: null,

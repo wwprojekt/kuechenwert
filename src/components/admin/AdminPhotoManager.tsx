@@ -1,7 +1,7 @@
 /**
  * Admin Photo Manager Component
  * 
- * Provides full photo management for vehicles in the admin panel:
+ * Provides full photo management for motorhomes in the admin panel:
  * - Drag & Drop file upload from desktop (external files)
  * - Drag & Drop reordering of photos (internal sorting)
  * - Upload new photos via file picker
@@ -73,7 +73,7 @@ interface Photo {
 }
 
 interface AdminPhotoManagerProps {
-  vehicleId: string;
+  motorhomeId: string;
   photos: Photo[];
   queryKey: string[];
 }
@@ -187,7 +187,7 @@ function SortablePhotoItem({
 // ---------------------------------------------------------------------------
 
 export function AdminPhotoManager({
-  vehicleId,
+  motorhomeId,
   photos: initialPhotos,
   queryKey,
 }: AdminPhotoManagerProps) {
@@ -266,7 +266,7 @@ export function AdminPhotoManager({
       const results = await Promise.all(
         updates.map(({ id, display_order, is_primary }) =>
           supabase
-            .from("vehicle_photos")
+            .from("motorhome_photos")
             .update({ display_order, is_primary })
             .eq("id", id)
         )
@@ -296,12 +296,12 @@ export function AdminPhotoManager({
 
   const deletePhotoMutation = useMutation({
     mutationFn: async (photo: Photo) => {
-      // 1. Extract storage path from URL (consistent with DeleteVehicleDialog)
-      const match = photo.url.match(/vehicle-photos\/(.+)$/);
+      // 1. Extract storage path from URL (consistent with DeleteMotorhomeDialog)
+      const match = photo.url.match(/motorhome-photos\/(.+)$/);
       if (match) {
         const storagePath = match[1];
         const { error: storageError } = await supabase.storage
-          .from("vehicle-photos")
+          .from("motorhome-photos")
           .remove([storagePath]);
 
         if (storageError) {
@@ -312,7 +312,7 @@ export function AdminPhotoManager({
 
       // 2. Delete DB record
       const { error: dbError } = await supabase
-        .from("vehicle_photos")
+        .from("motorhome_photos")
         .delete()
         .eq("id", photo.id);
 
@@ -387,11 +387,11 @@ export function AdminPhotoManager({
             uploadFile = file;
             fileExt = file.name.split(".").pop() || 'jpg';
           }
-          const fileName = `${vehicleId}/${Date.now()}_${i}.${fileExt}`;
+          const fileName = `${motorhomeId}/${Date.now()}_${i}.${fileExt}`;
 
           // Upload to storage
           const { error: uploadError } = await supabase.storage
-            .from("vehicle-photos")
+            .from("motorhome-photos")
             .upload(fileName, uploadFile);
 
           if (uploadError) {
@@ -403,14 +403,14 @@ export function AdminPhotoManager({
           // Get public URL
           const {
             data: { publicUrl },
-          } = supabase.storage.from("vehicle-photos").getPublicUrl(fileName);
+          } = supabase.storage.from("motorhome-photos").getPublicUrl(fileName);
 
           // Insert DB record
           const newOrder = photos.length + newPhotos.length;
           const { data: photoRecord, error: dbError } = await supabase
-            .from("vehicle_photos")
+            .from("motorhome_photos")
             .insert({
-              vehicle_id: vehicleId,
+              motorhome_id: motorhomeId,
               url: publicUrl,
               display_order: newOrder,
               is_primary: photos.length === 0 && newPhotos.length === 0,
@@ -445,7 +445,7 @@ export function AdminPhotoManager({
         setTotalUploadCount(0);
       }
     },
-    [vehicleId, photos.length, queryClient, queryKey]
+    [motorhomeId, photos.length, queryClient, queryKey]
   );
 
   // Wrapper for file input onChange events

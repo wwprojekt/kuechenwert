@@ -1,5 +1,5 @@
 /**
- * Dialog to view vehicle details in the admin panel
+ * Dialog to view motorhome details in the admin panel
  */
 
 import {
@@ -108,18 +108,18 @@ interface MotorhomeWithSeller {
   photos?: Array<{ count: number }>;
 }
 
-interface VehicleDetailDialogProps {
-  vehicle: MotorhomeWithSeller | null;
+interface MotorhomeDetailDialogProps {
+  motorhome: MotorhomeWithSeller | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function VehicleDetailDialog({ 
-  vehicle, 
+export function MotorhomeDetailDialog({ 
+  motorhome, 
   open, 
   onOpenChange 
-}: VehicleDetailDialogProps) {
-  if (!vehicle) return null;
+}: MotorhomeDetailDialogProps) {
+  if (!motorhome) return null;
 
   const formatDate = (date: string | null) => {
     if (!date) return "—";
@@ -145,7 +145,7 @@ export function VehicleDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Car className="w-5 h-5" />
-            {vehicle.manufacturer} {vehicle.model}
+            {motorhome.manufacturer} {motorhome.model}
           </DialogTitle>
         </DialogHeader>
 
@@ -155,29 +155,29 @@ export function VehicleDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Grundinformationen</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem icon={Car} label="Aufbauart" value={vehicle.body_type} />
-                <InfoItem icon={Calendar} label="Baujahr" value={String(vehicle.year)} />
-                <InfoItem icon={Gauge} label="Kilometerstand" value={`${vehicle.mileage.toLocaleString()} km`} />
-                <InfoItem label="Zustand" value={vehicle.condition} />
+                <InfoItem icon={Car} label="Aufbauart" value={motorhome.body_type} />
+                <InfoItem icon={Calendar} label="Baujahr" value={String(motorhome.year)} />
+                <InfoItem icon={Gauge} label="Kilometerstand" value={`${motorhome.mileage.toLocaleString()} km`} />
+                <InfoItem label="Zustand" value={motorhome.condition} />
                 <InfoItem label="Verkaufsweg" value={
-                  vehicle.sale_channel === "auction" && vehicle.instant_price
+                  motorhome.sale_channel === "auction" && motorhome.instant_price
                     ? "Händler-Auktion + Sofortkauf"
-                    : vehicle.sale_channel === "auction"
+                    : motorhome.sale_channel === "auction"
                     ? "Händler-Auktion"
-                    : vehicle.sale_channel === "station"
+                    : motorhome.sale_channel === "station"
                     ? "Ankaufstation"
-                    : vehicle.sale_channel
+                    : motorhome.sale_channel
                 } />
-                {vehicle.instant_price ? (
-                  <InfoItem label="Sofortkauf-Preis" value={formatPrice(vehicle.instant_price)} />
+                {motorhome.instant_price ? (
+                  <InfoItem label="Sofortkauf-Preis" value={formatPrice(motorhome.instant_price)} />
                 ) : (
-                  <InfoItem label="Mindestpreis" value={formatPrice(vehicle.reserve_price)} />
+                  <InfoItem label="Mindestpreis" value={formatPrice(motorhome.reserve_price)} />
                 )}
               </div>
-              {vehicle.description && (
+              {motorhome.description && (
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground font-medium">Beschreibung:</p>
-                  <p className="text-sm mt-1">{vehicle.description}</p>
+                  <p className="text-sm mt-1">{motorhome.description}</p>
                 </div>
               )}
             </section>
@@ -193,9 +193,9 @@ export function VehicleDetailDialog({
               <div className="grid grid-cols-2 gap-4">
                 <InfoItem 
                   label="Name" 
-                  value={vehicle.seller ? `${vehicle.seller.first_name || ''} ${vehicle.seller.last_name || ''}`.trim() || "—" : "—"} 
+                  value={motorhome.seller ? `${motorhome.seller.first_name || ''} ${motorhome.seller.last_name || ''}`.trim() || "—" : "—"} 
                 />
-                <InfoItem label="E-Mail" value={vehicle.seller?.email || "—"} />
+                <InfoItem label="E-Mail" value={motorhome.seller?.email || "—"} />
               </div>
             </section>
 
@@ -205,18 +205,18 @@ export function VehicleDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Technische Daten</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem icon={Fuel} label="Kraftstoff" value={vehicle.fuel_type || "—"} />
-                <InfoItem label="Leistung" value={vehicle.engine_power_hp ? `${vehicle.engine_power_hp} PS` : "—"} />
-                <InfoItem label="Getriebe" value={vehicle.transmission || "—"} />
-                <InfoItem label="Abgasnorm" value={vehicle.emission_class || "—"} />
-                <InfoItem label="Erstzulassung" value={formatDate(vehicle.first_registration)} />
-                <InfoItem label="TÜV bis" value={formatMonthYear(vehicle.tuev_valid_until)} />
-                <InfoItem label="Vorbesitzer" value={vehicle.previous_owners?.toString() || "—"} />
+                <InfoItem icon={Fuel} label="Kraftstoff" value={motorhome.fuel_type || "—"} />
+                <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
+                <InfoItem label="Getriebe" value={motorhome.transmission || "—"} />
+                <InfoItem label="Abgasnorm" value={motorhome.emission_class || "—"} />
+                <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} />
+                <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} />
+                <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString() || "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {vehicle.accident_free && <Badge variant="outline">Unfallfrei</Badge>}
-                {vehicle.non_smoker && <Badge variant="outline">Nichtraucher</Badge>}
-                {vehicle.service_history_available && <Badge variant="outline">Scheckheft</Badge>}
+                {motorhome.accident_free && <Badge variant="outline">Unfallfrei</Badge>}
+                {motorhome.non_smoker && <Badge variant="outline">Nichtraucher</Badge>}
+                {motorhome.service_history_available && <Badge variant="outline">Scheckheft</Badge>}
               </div>
             </section>
 
@@ -229,17 +229,17 @@ export function VehicleDetailDialog({
                 Abmessungen & Kapazität
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem label="Länge" value={vehicle.length_m ? `${vehicle.length_m} cm` : "—"} />
-                <InfoItem label="Breite" value={vehicle.width_m ? `${vehicle.width_m} cm` : "—"} />
-                <InfoItem label="Höhe" value={vehicle.height_m ? `${vehicle.height_m} cm` : "—"} />
-                <InfoItem icon={Weight} label="Gesamtgewicht" value={vehicle.weight_kg ? `${vehicle.weight_kg} kg` : "—"} />
-                <InfoItem label="Zuladung" value={vehicle.payload_kg ? `${vehicle.payload_kg} kg` : "—"} />
-                <InfoItem label="Achsen" value={vehicle.number_of_axles?.toString() || "—"} />
-                <InfoItem icon={Users} label="Sitzplätze" value={vehicle.seats?.toString() || "—"} />
-                <InfoItem icon={Bed} label="Schlafplätze" value={vehicle.sleeping_places?.toString() || "—"} />
+                <InfoItem label="Länge" value={motorhome.length_m ? `${motorhome.length_m} cm` : "—"} />
+                <InfoItem label="Breite" value={motorhome.width_m ? `${motorhome.width_m} cm` : "—"} />
+                <InfoItem label="Höhe" value={motorhome.height_m ? `${motorhome.height_m} cm` : "—"} />
+                <InfoItem icon={Weight} label="Gesamtgewicht" value={motorhome.weight_kg ? `${motorhome.weight_kg} kg` : "—"} />
+                <InfoItem label="Zuladung" value={motorhome.payload_kg ? `${motorhome.payload_kg} kg` : "—"} />
+                <InfoItem label="Achsen" value={motorhome.number_of_axles?.toString() || "—"} />
+                <InfoItem icon={Users} label="Sitzplätze" value={motorhome.seats?.toString() || "—"} />
+                <InfoItem icon={Bed} label="Schlafplätze" value={motorhome.sleeping_places?.toString() || "—"} />
               </div>
-              {vehicle.beds_description && (
-                <p className="text-sm text-muted-foreground mt-2">Betten: {vehicle.beds_description}</p>
+              {motorhome.beds_description && (
+                <p className="text-sm text-muted-foreground mt-2">Betten: {motorhome.beds_description}</p>
               )}
             </section>
 
@@ -249,16 +249,16 @@ export function VehicleDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Innenausstattung</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem label="Heizung" value={vehicle.heating_type || "—"} />
-                <InfoItem icon={Wind} label="Klimaanlage" value={vehicle.air_conditioning_type || "—"} />
-                <InfoItem icon={Droplets} label="Frischwasser" value={vehicle.water_tank_liters ? `${vehicle.water_tank_liters} L` : "—"} />
-                <InfoItem label="Grauwasser" value={vehicle.grey_water_capacity_liters ? `${vehicle.grey_water_capacity_liters} L` : "—"} />
+                <InfoItem label="Heizung" value={motorhome.heating_type || "—"} />
+                <InfoItem icon={Wind} label="Klimaanlage" value={motorhome.air_conditioning_type || "—"} />
+                <InfoItem icon={Droplets} label="Frischwasser" value={motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : "—"} />
+                <InfoItem label="Grauwasser" value={motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {vehicle.has_kitchen && <Badge variant="outline">Küche</Badge>}
-                {vehicle.has_bathroom && <Badge variant="outline">Bad</Badge>}
-                {vehicle.has_toilet && <Badge variant="outline">Toilette</Badge>}
-                {vehicle.has_shower && <Badge variant="outline">Dusche</Badge>}
+                {motorhome.has_kitchen && <Badge variant="outline">Küche</Badge>}
+                {motorhome.has_bathroom && <Badge variant="outline">Bad</Badge>}
+                {motorhome.has_toilet && <Badge variant="outline">Toilette</Badge>}
+                {motorhome.has_shower && <Badge variant="outline">Dusche</Badge>}
               </div>
             </section>
 
@@ -268,67 +268,67 @@ export function VehicleDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Ausstattung</h3>
               <div className="flex flex-wrap gap-2">
-                {vehicle.has_solar && (
+                {motorhome.has_solar && (
                   <Badge variant="outline" className="gap-1">
                     <Sun className="w-3 h-3" />
-                    Solar {vehicle.solar_power_watts ? `(${vehicle.solar_power_watts}W)` : ''}
+                    Solar {motorhome.solar_power_watts ? `(${motorhome.solar_power_watts}W)` : ''}
                   </Badge>
                 )}
-                {vehicle.has_awning && (
+                {motorhome.has_awning && (
                   <Badge variant="outline">
-                    Markise {vehicle.awning_length_m ? `(${vehicle.awning_length_m}cm)` : ''}
+                    Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
                   </Badge>
                 )}
-                {vehicle.has_awning_tent && (
+                {motorhome.has_awning_tent && (
                   <Badge variant="outline" className="gap-1">
                     <Tent className="w-3 h-3" /> Vorzelt
                   </Badge>
                 )}
-                {(vehicle.has_roof_ac || vehicle.has_stand_ac) && (
+                {(motorhome.has_roof_ac || motorhome.has_stand_ac) && (
                   <Badge variant="outline" className="gap-1">
                     <Snowflake className="w-3 h-3" /> Dachklima/Standklima
                   </Badge>
                 )}
-                {vehicle.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
-                {vehicle.has_tv && (
+                {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
+                {motorhome.has_tv && (
                   <Badge variant="outline" className="gap-1">
                     <Tv className="w-3 h-3" /> TV/SAT
                   </Badge>
                 )}
-                {vehicle.has_backup_camera && (
+                {motorhome.has_backup_camera && (
                   <Badge variant="outline" className="gap-1">
                     <Camera className="w-3 h-3" /> Rückfahrkamera
                   </Badge>
                 )}
-                {vehicle.has_parking_sensors && (
+                {motorhome.has_parking_sensors && (
                   <Badge variant="outline" className="gap-1">
                     <ParkingCircle className="w-3 h-3" /> Parksensoren
                   </Badge>
                 )}
-                {vehicle.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
-                {vehicle.has_central_locking && (
+                {motorhome.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
+                {motorhome.has_central_locking && (
                   <Badge variant="outline" className="gap-1">
                     <Lock className="w-3 h-3" /> Zentralverriegelung
                   </Badge>
                 )}
-                {vehicle.has_bike_rack && (
+                {motorhome.has_bike_rack && (
                   <Badge variant="outline" className="gap-1">
                     <Bike className="w-3 h-3" /> Fahrradträger
                   </Badge>
                 )}
-                {vehicle.has_garage && (
+                {motorhome.has_garage && (
                   <Badge variant="outline" className="gap-1">
                     <Warehouse className="w-3 h-3" /> Heckgarage
                   </Badge>
                 )}
               </div>
-              {vehicle.battery_capacity_ah && (
-                <p className="text-sm text-muted-foreground mt-2">Batterie: {vehicle.battery_capacity_ah} Ah</p>
+              {motorhome.battery_capacity_ah && (
+                <p className="text-sm text-muted-foreground mt-2">Batterie: {motorhome.battery_capacity_ah} Ah</p>
               )}
-              {vehicle.additional_equipment && (
+              {motorhome.additional_equipment && (
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground font-medium">Zusatzausstattung:</p>
-                  <p className="text-sm mt-1">{vehicle.additional_equipment}</p>
+                  <p className="text-sm mt-1">{motorhome.additional_equipment}</p>
                 </div>
               )}
             </section>
@@ -339,10 +339,10 @@ export function VehicleDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Weitere Informationen</h3>
               <div className="grid grid-cols-2 gap-4">
-                <InfoItem label="Fahrgestellnr." value={vehicle.vehicle_identification_number || "—"} />
-                <InfoItem label="Kennzeichen" value={vehicle.license_plate || "—"} />
-                <InfoItem label="Fotos" value={`${vehicle.photos?.[0]?.count || 0} Stück`} />
-                <InfoItem label="Erstellt am" value={formatDate(vehicle.created_at)} />
+                <InfoItem label="Fahrgestellnr." value={motorhome.vehicle_identification_number || "—"} />
+                <InfoItem label="Kennzeichen" value={motorhome.license_plate || "—"} />
+                <InfoItem label="Fotos" value={`${motorhome.photos?.[0]?.count || 0} Stück`} />
+                <InfoItem label="Erstellt am" value={formatDate(motorhome.created_at)} />
               </div>
             </section>
           </div>

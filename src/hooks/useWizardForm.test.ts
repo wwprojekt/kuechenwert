@@ -267,7 +267,7 @@ describe('useWizardForm', () => {
       .mockResolvedValue({ error: null });
 
     vi.mocked(require('@/integrations/supabase/client').supabase.from().insert)
-      .mockResolvedValue({ data: { id: 'test-vehicle-id' }, error: null });
+      .mockResolvedValue({ data: { id: 'test-motorhome-id' }, error: null });
 
     const { result } = renderHook(() => useWizardForm());
 

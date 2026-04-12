@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import VehicleCard from "./MotorhomeCard";
+import MotorhomeCard from "./MotorhomeCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -14,9 +14,9 @@ const Listings = () => {
         .from('auctions')
         .select(`
           *,
-          vehicle:vehicles(
+          motorhome:motorhomes(
             *,
-            photos:vehicle_photos(*)
+            photos:motorhome_photos(*)
           )
         `)
         .eq('status', 'active')
@@ -50,34 +50,34 @@ const Listings = () => {
             ))
           ) : auctions && auctions.length > 0 ? (
             auctions.map((auction) => {
-              const vehicle = auction.vehicle;
-              if (!vehicle) return null;
+              const motorhome = auction.motorhome;
+              if (!motorhome) return null;
 
-              const sortedPhotos = [...(vehicle.photos || [])].sort(
+              const sortedPhotos = [...(motorhome.photos || [])].sort(
                 (a: any, b: any) => (a.display_order ?? 999) - (b.display_order ?? 999)
               );
               const primaryPhoto = sortedPhotos[0]?.url || '';
               
               return (
-                <VehicleCard
+                <MotorhomeCard
                   key={auction.id}
-                  id={vehicle.id}
-                  title={vehicle.description || `${vehicle.manufacturer} ${vehicle.model}`}
-                  manufacturer={vehicle.manufacturer}
-                  model={vehicle.model}
-                  year={vehicle.year}
-                  mileage={vehicle.mileage}
+                  id={motorhome.id}
+                  title={motorhome.description || `${motorhome.manufacturer} ${motorhome.model}`}
+                  manufacturer={motorhome.manufacturer}
+                  model={motorhome.model}
+                  year={motorhome.year}
+                  mileage={motorhome.mileage}
                   image={primaryPhoto}
-                  beds={vehicle.sleeping_places}
-                  passengers={vehicle.seats}
-                  bodyType={vehicle.body_type}
+                  beds={motorhome.sleeping_places}
+                  passengers={motorhome.seats}
+                  bodyType={motorhome.body_type}
                   isAuction={true}
                   currentBid={auction.current_bid}
                   startingBid={auction.starting_bid}
-                  instantPrice={vehicle.instant_price}
-                  saleChannel={vehicle.sale_channel}
+                  instantPrice={motorhome.instant_price}
+                  saleChannel={motorhome.sale_channel}
                   endTime={auction.end_time}
-                  status={vehicle.status}
+                  status={motorhome.status}
                   linkTo={`/auktion/${auction.id}`}
                 />
               );

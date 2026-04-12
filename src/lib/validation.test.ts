@@ -12,9 +12,9 @@ import {
   motorhomeEquipmentSchema 
 } from './validation';
 
-describe('Vehicle Validation Schemas', () => {
+describe('Motorhome Validation Schemas', () => {
   describe('motorhomeBasicSchema', () => {
-    it('should validate correct basic vehicle data', () => {
+    it('should validate correct basic motorhome data', () => {
       const validData = {
         manufacturer: 'Hymer',
         model: 'B-Klasse',

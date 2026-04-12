@@ -557,7 +557,7 @@ export const useWizardForm = () => {
 
         // --- Background tasks (fire-and-forget, nicht blockierend) ---
         if (savedSessionId) {
-          // 1. auto-convert-wizard: Erstellt Profil, Vehicle, sendet Aktivierungs-E-Mail
+          // 1. auto-convert-wizard: Erstellt Profil, Motorhome, sendet Aktivierungs-E-Mail
           supabase.functions.invoke("auto-convert-wizard", {
             body: {
               sessionId: savedSessionId,
@@ -603,7 +603,7 @@ export const useWizardForm = () => {
         return true;
       }
 
-      // Ensure profile exists before vehicle insert (handles race condition
+      // Ensure profile exists before motorhome insert (handles race condition
       // where handle_new_user trigger may have failed silently)
       try {
         const nameParts = (formData.customerName || "").split(" ");
@@ -626,13 +626,13 @@ export const useWizardForm = () => {
           const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
-            .from('vehicle-photos')
+            .from('motorhome-photos')
             .upload(fileName, file);
 
           if (uploadError) throw uploadError;
 
           const { data: { publicUrl } } = supabase.storage
-            .from('vehicle-photos')
+            .from('motorhome-photos')
             .getPublicUrl(fileName);
 
           return publicUrl;
@@ -643,7 +643,7 @@ export const useWizardForm = () => {
       }
 
       // Defensive Validierung: Pflichtfelder prüfen bevor DB-Insert versucht wird
-      // Verhindert kryptische DB-Enum-Fehler (z.B. "invalid input value for enum vehicle_body_type: ''")
+      // Verhindert kryptische DB-Enum-Fehler (z.B. "invalid input value for enum motorhome_body_type: ''")
       const VALID_BODY_TYPES = ['Teilintegriert', 'Alkoven', 'Vollintegriert', 'Kastenwagen', 'Campingbus', 'Wohnwagen', 'Faltcaravan', 'Mobilheim'];
       if (!formData.bodyType || !VALID_BODY_TYPES.includes(formData.bodyType)) {
         throw new Error('Bitte wählen Sie eine gültige Aufbauart aus. Gehen Sie zurück zu Schritt 1.');
@@ -749,21 +749,21 @@ export const useWizardForm = () => {
         city: formData.city || null,
       };
 
-      const { data: vehicle, error: motorhomeError } = await withNetworkRetry(
+      const { data: motorhome, error: motorhomeError } = await withNetworkRetry(
         () => supabase
-          .from('vehicles')
+          .from('motorhomes')
           .insert([motorhomeInsert])
           .select()
           .single(),
         2,
-        'vehicles-insert'
+        'motorhomes-insert'
       );
 
       if (motorhomeError) {
         // If RLS error, the session might have expired between validation and insert.
         // Fall back to lead-only submission so the user's data is not lost.
         if (isSessionOrRLSError(motorhomeError)) {
-          logger.warn('Wizard submit: RLS error on vehicles insert, falling back to lead-only submission', {
+          logger.warn('Wizard submit: RLS error on motorhomes insert, falling back to lead-only submission', {
             error: motorhomeError.message,
             userId: user.id,
           });
@@ -809,13 +809,13 @@ export const useWizardForm = () => {
       // Insert photos
       if (photoUrls.length > 0) {
         const photoRecords = photoUrls.map((url, index) => ({
-          vehicle_id: vehicle.id,
+          motorhome_id: motorhome.id,
           url: url,
           display_order: index,
         }));
 
         const { error: photosError } = await supabase
-          .from('vehicle_photos')
+          .from('motorhome_photos')
           .insert(photoRecords);
 
         if (photosError) throw photosError;
@@ -826,7 +826,7 @@ export const useWizardForm = () => {
         const { error: auctionError } = await supabase
           .from('auctions')
           .insert({
-            vehicle_id: vehicle.id,
+            motorhome_id: motorhome.id,
             starting_bid: 50,
             reserve_price: formData.reservePrice,
             status: 'draft',

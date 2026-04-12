@@ -152,7 +152,7 @@ export const wohnwagenManufacturerModels: Record<string, string[]> = {
 // Sorted manufacturer list for Wohnwagen
 export const wohnwagenManufacturers = Object.keys(wohnwagenManufacturerModels).sort();
 
-// Body type options matching the vehicle_body_type enum
+// Body type options matching the motorhome_body_type enum
 export const bodyTypes = [
   'Teilintegriert',
   'Alkoven',
@@ -241,7 +241,7 @@ export const baseVehicles: BaseVehicleOption[] = [
   // Maxus Deliver 9 / eDeliver 9 (Chinese import, growing in EU)
   { label: 'Maxus Deliver 9', powerOptions: [136, 150] },
   { label: 'Maxus eDeliver 9', powerOptions: [136, 204] },
-  // AL-KO / SAF Chassis (used for large vehicles, PS varies by cab)
+  // AL-KO / SAF Chassis (used for large motorhomes, PS varies by cab)
   { label: 'AL-KO Chassis', powerOptions: [] },
   // Hymer-eigenes Chassis (SLC)
   { label: 'SLC Chassis (Hymer)', powerOptions: [] },

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ConvertToVehicleDialog } from "@/components/admin/ConvertToMotorhomeDialog";
+import { ConvertToVehicleDialog } from "@/components/admin/ConvertToVehicleDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";

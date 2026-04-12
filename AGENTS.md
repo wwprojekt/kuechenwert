@@ -1,9 +1,8 @@
-# AGENTS.md – BikeWert Repository Knowledge
+# AGENTS.md – CaravanWert Repository Knowledge
 
 ## Project Overview
-- German-language Motorrad/Quad/Roller sales platform with auction system
-- Forked from CaravanWert (RV marketplace), rebranded for motorcycle/bike market
-- Supabase project ID: `iaotiligvhlhzlrpgdyk` (eu-west-1)
+- German-language Wohnmobil/Wohnwagen sales platform with auction system
+- Supabase project ID: `zcrwqxsyptjwkuxfacvq` (eu-west-1)
 - Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
 
 ## Do
@@ -18,8 +17,6 @@
 - Keep components small and focused (< 200 lines)
 - Keep diffs small and focused on one feature
 - **ALWAYS push to GitHub after every commit** (`git push origin main`)
-- **ALWAYS verify imports resolve to actual files** before committing: when renaming exports or files, check that every import path matches an existing file on disk (not just the export name)
-- **NEVER rename exports without also renaming the file** or fixing all import paths in the same commit
 
 ## Don't
 - Do NOT call React Hooks after an early return
@@ -97,7 +94,7 @@ Before every commit:
 - Form state in `useWizardForm.ts` with Zod validation per step
 - Vehicle data (manufacturers/models) in `src/lib/vehicle-data.ts`
 - **Step numbering mismatch**: Schema names (step1Schema–step8Schema) don't match step numbers in validateStep
-- **Step 3 is fully optional** (no validation): Smart defaults pre-fill appropriate values
+- **Step 3 is fully optional** (no validation): Smart defaults pre-fill Diesel + Schaltung + Keine Mängel
 
 ### Auction System
 - Atomic bidding via `place_bid_atomic` RPC (pg_advisory_xact_lock)
@@ -121,7 +118,7 @@ Before every commit:
 | `profiles` | `auth.uid() = id` | Own profile missing |
 | `bids` | `USING(true)` | OK (public) |
 | `auctions` | `USING(true)` | OK (public) |
-| `vehicles` | `USING(true)` | OK (public) |
+| `motorhomes` | `USING(true)` | OK (public) |
 
 ### Defense-in-Depth Session Protection
 1. Supabase auto-refresh (client built-in)
@@ -138,8 +135,8 @@ Before every commit:
 - Dealer approval syncs company data to profiles via `approve_dealer_application()` RPC
 
 ### Email System
-- All emails via Resend API (kontakt@bikewert.de)
-- Shared template: `_shared/email-builder.ts` (professional HTML with BikeWert branding)
+- All emails via Resend API (info@caravanwert.de)
+- Shared template: `_shared/email-builder.ts` (professional HTML with CaravanWert branding)
 - Anti-spam: Per-type dedup via `dealer_notifications` and `admin_emails` tables
 - Rate limits: Resend Free Plan ~100/day, 3000/month
 
@@ -163,8 +160,6 @@ Before every commit:
 - `profiles.role` does NOT exist – roles ALWAYS via `user_roles` table
 - `search_path` must be set correctly in all functions (security)
 - All DB functions should use `SECURITY INVOKER` unless specifically needed otherwise
-- Main vehicle table is `vehicles` (renamed from `motorhomes`)
-- Photo table is `vehicle_photos` (renamed from `motorhome_photos`)
 
 ### Realtime
 - Pattern for live updates: Edge Function returns ID + data → Frontend optimistic update → Realtime dedup via ID-Set (ref) → Auto-cleanup after timeout
@@ -181,10 +176,10 @@ Before every commit:
 - `supabase/migrations/` – 65+ migrations
 
 ## Vehicle Data Stats
-- **Motorrad**: Major brands include Honda, Yamaha, Kawasaki, Suzuki, BMW, Ducati, KTM, Harley-Davidson, Triumph, Aprilia, etc.
-- **Quad/ATV**: Major brands include Polaris, Can-Am, Yamaha, Honda, Suzuki, Kawasaki, CF Moto, etc.
-- **Roller**: Major brands include Vespa, Piaggio, Honda, Yamaha, Kymco, Peugeot, etc.
-- Vehicle data (manufacturers/models) in `src/lib/vehicle-data.ts`
+- **Wohnmobil**: 100 manufacturers, 1221 models
+- **Wohnwagen**: 36 manufacturers, 201 models
+- **Basisfahrzeuge**: 33 chassis options with 171 PS values
+- PS format: Chips show `XXkW/YYYPS`
 
 ## Edge Functions Status
 - **61 Edge Functions** all ACTIVE
@@ -202,7 +197,7 @@ Before every commit:
 ### Public Unprotected Functions — Risk Assessment
 | Function | Risk | Mitigations |
 |----------|------|-------------|
-| `auto-convert-wizard` | HIGH — creates users, vehicles, auctions | Requires valid `wizard_sessions` row |
+| `auto-convert-wizard` | HIGH — creates users, motorhomes, auctions | Requires valid `wizard_sessions` row |
 | `generate-handover-pdf` | MEDIUM — reads appointments, writes to storage | Requires valid appointment ID |
 | `notify-auction-winner` | MEDIUM — sends emails to users | Requires valid auction ID |
 | `notify-offer-action` | MEDIUM — sends Kaufchance emails | Requires valid auction ID |
@@ -212,7 +207,7 @@ Before every commit:
 | `send-bid-notification` | LOW — outbid/new bid emails | Requires valid bid/auction IDs |
 | `send-disposition-email` | LOW — lead follow-up emails | Anti-spam via `admin_emails` dedup |
 | `send-expert-valuation` | LOW — valuation email to leads | Requires valid lead ID |
-| `send-favorite-notification` | LOW — price change alerts | Requires valid vehicle ID |
+| `send-favorite-notification` | LOW — price change alerts | Requires valid motorhome ID |
 | `send-payment-confirmation` | LOW — confirmation email | Requires valid data in body |
 | `send-welcome-email` | LOW — welcome email | Dedup via `admin_emails` |
 | `register-dealer` | LOW — intentionally public | Creates user + pending application |
@@ -238,14 +233,21 @@ Before every commit:
 - Baujahr ranges per model NOT implemented
 - Search is starts-with; could benefit from fuzzy matching
 - 24 Edge Functions are PUBLIC_UNPROTECTED (see Security Classification above) — cron-style functions should ideally require a shared secret header
-- Ongoing rebrand: Many source files still reference "motorhome"/"Wohnmobil" — systematic rename to "vehicle"/"Motorrad" in progress
+
+## Removed Dead Code (2026-04-11)
+- `src/lib/analytics.ts` — Duplicate of `analyticsService.ts`, never imported, `AnalyticsInitializer` was disabled
+- `src/components/wizard/ContactStep.tsx` — Legacy wizard step, replaced by `QuickContactStep` + `SaleChannelStep` + `AccountLocationStep`
+- `src/components/ProtectedRoute.tsx` + test — Only referenced in tests, never used in `App.tsx`
+- `src/pages/dealer/DealerLayout.tsx` — Replaced by `SmartDashboard`'s `DealerLayoutContent`
+- `src/components/DealerRoute.tsx` — Only imported by deleted `DealerLayout.tsx`
 
 ## Wertrechner Calibration
 - Algorithm + KI dual system: KI (OpenAI) is primary (~95% of cases), algorithm is fallback
 - Fallback label: "Algorithmische Schätzung" (gray) instead of misleading "KI-Wertschätzung" (teal)
 - Confidence ranges: ±5% at ≥85%, ±10% at ≥70%, ±15% at ≥50%, ±20% at <50%
 
-## Analytics & Tracking
+## Google Tracking
 - Custom analytics: `analytics_sessions`, `analytics_page_views`, `analytics_events`
-- No third-party tracking configured yet (GA4, Meta Pixel removed during fork)
-- Cloudflare Turnstile for bot protection (needs new site key for bikewert.de)
+- Google Ads: GCLID/GBRAID/WBRAID click-ID capture via `track-conversion` Edge Function
+- Meta Pixel: Consent-managed
+- **GA4_API_SECRET**: Must be created in GA4 Admin → Data Streams → Measurement Protocol API secrets

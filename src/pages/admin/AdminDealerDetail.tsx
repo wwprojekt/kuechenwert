@@ -224,7 +224,7 @@ export default function AdminDealerDetail() {
               id,
               status,
               current_bid,
-              vehicle:vehicles(manufacturer, model, year)
+              motorhome:motorhomes(manufacturer, model, year)
             )
           `)
           .eq("bidder_id", data.user_id)
@@ -241,9 +241,9 @@ export default function AdminDealerDetail() {
             status,
             current_bid,
             end_time,
-            vehicle:vehicles(id, manufacturer, model, year, sold_to)
+            motorhome:motorhomes(id, manufacturer, model, year, sold_to)
           `)
-          .eq("vehicle.sold_to", data.user_id)
+          .eq("motorhome.sold_to", data.user_id)
           .order("end_time", { ascending: false })
           .limit(5);
 
@@ -978,10 +978,10 @@ export default function AdminDealerDetail() {
                             <TableRow key={bid.id}>
                               <TableCell>
                                 <p className="font-medium">
-                                  {bid.auction?.vehicle?.manufacturer} {bid.auction?.vehicle?.model}
+                                  {bid.auction?.motorhome?.manufacturer} {bid.auction?.motorhome?.model}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {bid.auction?.vehicle?.year}
+                                  {bid.auction?.motorhome?.year}
                                 </p>
                               </TableCell>
                               <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>

@@ -8,13 +8,14 @@
     <link rel="icon" type="image/webp" href="/favicon.webp" />
     <link rel="apple-touch-icon" href="/favicon.png" />
 
-    <!-- Preconnect for critical resources (max 4, crossorigin for CORS origins) -->
+    <!-- Preconnect for critical resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" crossorigin />
 
-    <!-- Preload hero image for fast LCP -->
-    <link rel="preload" as="image" href="/images/hero-motorhome.webp" fetchpriority="high" />
+    <!-- Preload hero image for fast LCP — responsive: mobile gets small version -->
+    <link rel="preload" as="image" href="/images/hero-motorhome.webp"
+          imagesrcset="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
+          imagesizes="100vw" fetchpriority="high" />
 
     <!-- Google Fonts — loaded NON-BLOCKING via media trick.
          Browser loads CSS with media="print" (non-render-blocking),

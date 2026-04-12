@@ -97,6 +97,7 @@ const MotorhomeShowcase = () => {
                 <div className="absolute inset-0">
                   <img 
                     src={item.image} 
+                    srcSet={`${item.image.replace('.webp', '-sm.webp')} 400w, ${item.image} 800w`}
                     alt={item.title}
                     width={800}
                     height={600}

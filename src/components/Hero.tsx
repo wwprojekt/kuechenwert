@@ -15,6 +15,8 @@ const Hero = () => {
       {/* Background Image — <img> for fast LCP discovery by browser */}
       <img
         src="/images/hero-motorhome.webp"
+        srcSet="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
+        sizes="100vw"
         alt=""
         width={1920}
         height={1080}

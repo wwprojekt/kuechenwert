@@ -71,6 +71,8 @@ const Header = () => {
             <div className="flex items-center gap-4">
               <Link to="/ueber-uns" className="hover:text-white transition-colors">Über uns</Link>
               <span className="text-slate-600">•</span>
+              <Link to="/ratgeber" className="hover:text-white transition-colors">Ratgeber</Link>
+              <span className="text-slate-600">•</span>
               <Link to="/faq" className="hover:text-white transition-colors">FAQ</Link>
               <span className="text-slate-600">•</span>
               <Link to="/haendler" className="hover:text-white transition-colors flex items-center gap-1.5">
@@ -136,14 +138,6 @@ const Header = () => {
               }`}
             >
               Ankaufstationen
-            </Link>
-            <Link 
-              to="/ratgeber" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/ratgeber') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-              }`}
-            >
-              Ratgeber
             </Link>
             <Link 
               to="/kontakt" 

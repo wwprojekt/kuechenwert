@@ -28,7 +28,7 @@ const Listings = () => {
     }
   });
   return (
-    <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-muted/30">
+    <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-muted/30 cv-auto">
       <div className="container px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-10 lg:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">

@@ -49,7 +49,7 @@ const MotorhomeShowcase = () => {
   ];
 
   return (
-    <section className="py-12 lg:py-16 bg-gradient-to-b from-slate-50/30 via-slate-50/50 to-slate-50/30 overflow-hidden">
+    <section className="py-12 lg:py-16 bg-gradient-to-b from-slate-50/30 via-slate-50/50 to-slate-50/30 overflow-hidden cv-auto">
       <div className="container px-4 sm:px-6 lg:px-8">
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-8 mb-12">

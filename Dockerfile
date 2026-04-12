@@ -25,6 +25,10 @@ COPY package.json pnpm-lock.yaml ./
 # Install all dependencies (including dev dependencies for build)
 RUN pnpm install --frozen-lockfile
 
+# Install sharp separately for post-build image optimization
+# (not in lockfile to avoid pnpm-lock.yaml drift)
+RUN npm install --no-save sharp@0.33.5
+
 # Copy source code
 COPY . .
 

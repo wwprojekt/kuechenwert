@@ -37,7 +37,7 @@ const channels = [
 
 const HowItWorks = () => {
   return (
-    <section id="wie-es-funktioniert" className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background">
+    <section id="wie-es-funktioniert" className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background cv-auto">
       <div className="container px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4">
           <div className="inline-block animate-fade-in">

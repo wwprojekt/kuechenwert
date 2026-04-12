@@ -68,7 +68,7 @@ import {
   InfoItem,
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
-import { VehicleEditDialog } from "@/components/admin/VehicleEditDialog";
+import { VehicleEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { AdminPhotoManager } from "@/components/admin/AdminPhotoManager";
 import { SendOwnerEmailDialog } from "@/components/admin/SendOwnerEmailDialog";
 import { logger } from "@/lib/logger";

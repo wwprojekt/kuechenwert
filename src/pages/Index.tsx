@@ -1,6 +1,6 @@
 import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
-import VehicleShowcase from "@/components/VehicleShowcase";
+import VehicleShowcase from "@/components/MotorhomeShowcase";
 import HowItWorks from "@/components/HowItWorks";
 import Listings from "@/components/Listings";
 import Benefits from "@/components/Benefits";

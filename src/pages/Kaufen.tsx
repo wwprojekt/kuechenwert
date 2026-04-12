@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
-import VehicleCard from "@/components/VehicleCard";
+import VehicleCard from "@/components/MotorhomeCard";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";

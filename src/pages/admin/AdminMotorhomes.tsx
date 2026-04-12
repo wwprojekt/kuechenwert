@@ -34,9 +34,9 @@ import {
   Search, Package, Radio, XCircle, CheckCircle2, ArrowUpDown,
   ArrowUp, ArrowDown, ImageOff, Camera, Download, AlertTriangle,
 } from "lucide-react";
-import { VehicleDetailDialog } from "@/components/admin/VehicleDetailDialog";
-import { VehicleEditDialog } from "@/components/admin/VehicleEditDialog";
-import { DeleteVehicleDialog } from "@/components/admin/DeleteVehicleDialog";
+import { VehicleDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
+import { VehicleEditDialog } from "@/components/admin/MotorhomeEditDialog";
+import { DeleteVehicleDialog } from "@/components/admin/DeleteMotorhomeDialog";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";

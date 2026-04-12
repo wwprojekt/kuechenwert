@@ -1010,7 +1010,17 @@ const Wertrechner = () => {
                             updateField("manufacturer", e.target.value);
                             setShowManufacturerDropdown(true);
                           }}
-                          onFocus={() => setShowManufacturerDropdown(true)}
+                          onFocus={() => {
+                            setShowManufacturerDropdown(true);
+                            if (isMobile && manufacturerRef.current) {
+                              setTimeout(() => {
+                                manufacturerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              }, 300);
+                            }
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setShowManufacturerDropdown(false), 200);
+                          }}
                           className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
                           autoFocus={!isMobile}
                           autoComplete="off"

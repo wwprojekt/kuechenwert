@@ -1772,10 +1772,11 @@ export default function AdminPostAuctionOffers() {
                                         <Separator />
                                         <div className="space-y-1">
                                           <Input
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             placeholder="Gegenangebot €"
                                             value={adminCounterAmount}
-                                            onChange={(e) => setAdminCounterAmount(e.target.value)}
+                                            onChange={(e) => setAdminCounterAmount(e.target.value.replace(/\D/g, ''))}
                                             className="h-8 text-sm"
                                           />
                                           <Button
@@ -1815,10 +1816,11 @@ export default function AdminPostAuctionOffers() {
                         </p>
                         <div className="flex gap-2">
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             placeholder={auction.kaufchance_min_price ? `Aktuell: ${Number(auction.kaufchance_min_price).toLocaleString('de-DE')} €` : 'Betrag in €'}
                             value={adminMinPriceInputs[auction.id] || ''}
-                            onChange={(e) => setAdminMinPriceInputs(prev => ({ ...prev, [auction.id]: e.target.value }))}
+                            onChange={(e) => setAdminMinPriceInputs(prev => ({ ...prev, [auction.id]: e.target.value.replace(/\D/g, '') }))}
                             className="flex-1"
                           />
                           <Button
@@ -1886,10 +1888,11 @@ export default function AdminPostAuctionOffers() {
                             <div className="w-40">
                               <Label className="text-xs">Betrag (€)</Label>
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
                                 placeholder="Betrag"
                                 value={adminOfferAmount}
-                                onChange={(e) => setAdminOfferAmount(e.target.value)}
+                                onChange={(e) => setAdminOfferAmount(e.target.value.replace(/\D/g, ''))}
                               />
                             </div>
                           </div>
@@ -1928,10 +1931,11 @@ export default function AdminPostAuctionOffers() {
                             <Label className="text-xs font-medium">Preisvorstellung / Gegenangebot an alle Bieter:</Label>
                             <div className="flex gap-2">
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
                                 placeholder="Betrag in €"
                                 value={sellerActionCounterAmount}
-                                onChange={(e) => setSellerActionCounterAmount(e.target.value)}
+                                onChange={(e) => setSellerActionCounterAmount(e.target.value.replace(/\D/g, ''))}
                                 className="flex-1"
                               />
                               <Button
@@ -2236,10 +2240,11 @@ export default function AdminPostAuctionOffers() {
                             <div className="space-y-2">
                               <p className="text-xs font-medium">Gegenangebot im Namen des Verkäufers:</p>
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
                                 placeholder="Betrag in €"
                                 value={adminCounterAmount}
-                                onChange={(e) => setAdminCounterAmount(e.target.value)}
+                                onChange={(e) => setAdminCounterAmount(e.target.value.replace(/\D/g, ''))}
                               />
                               <Textarea
                                 placeholder="Nachricht (optional)"
@@ -2302,10 +2307,11 @@ export default function AdminPostAuctionOffers() {
               <div className="relative">
                 <Input
                   id="backToAuctionReservePrice"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Leer lassen = alter Preis beibehalten"
                   value={backToAuctionReservePrice}
-                  onChange={(e) => setBackToAuctionReservePrice(e.target.value)}
+                  onChange={(e) => setBackToAuctionReservePrice(e.target.value.replace(/\D/g, ''))}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">&euro;</span>

@@ -308,11 +308,11 @@ export default function DealerClaims() {
                   <Label htmlFor="claim_amount">Schadenshöhe (€, optional)</Label>
                   <Input
                     id="claim_amount"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={claimForm.claim_amount}
-                    onChange={(e) => setClaimForm({ ...claimForm, claim_amount: e.target.value })}
+                    onChange={(e) => setClaimForm({ ...claimForm, claim_amount: e.target.value.replace(/\D/g, '') })}
                     placeholder="Geschätzter Schaden in Euro"
-                    min={0}
                   />
                 </div>
               </div>

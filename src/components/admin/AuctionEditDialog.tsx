@@ -433,12 +433,11 @@ export function AuctionEditDialog({
             <Label htmlFor="starting_bid">Startgebot (€)</Label>
             <Input
               id="starting_bid"
-              type="number"
-              min="0"
-              step="1"
+              type="text"
+              inputMode="numeric"
               value={formData.starting_bid}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, starting_bid: e.target.value }))
+                setFormData((prev) => ({ ...prev, starting_bid: e.target.value.replace(/\D/g, '') }))
               }
               placeholder="50"
             />
@@ -448,12 +447,11 @@ export function AuctionEditDialog({
             <Label htmlFor="reserve_price">Mindestpreis (€)</Label>
             <Input
               id="reserve_price"
-              type="number"
-              min="0"
-              step="1"
+              type="text"
+              inputMode="numeric"
               value={formData.reserve_price}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, reserve_price: e.target.value }))
+                setFormData((prev) => ({ ...prev, reserve_price: e.target.value.replace(/\D/g, '') }))
               }
               placeholder="Optional"
             />

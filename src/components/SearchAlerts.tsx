@@ -373,14 +373,17 @@ export const SearchAlerts = () => {
                   <div className="space-y-2">
                     <Label>Maximaler Preis (optional)</Label>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={alertForm.criteria.max_price || ''}
-                      onChange={(e) => setAlertForm({
-                        ...alertForm,
-                        criteria: { ...alertForm.criteria, max_price: e.target.value ? parseFloat(e.target.value) : undefined }
-                      })}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        setAlertForm({
+                          ...alertForm,
+                          criteria: { ...alertForm.criteria, max_price: digits ? parseInt(digits) : undefined }
+                        });
+                      }}
                       placeholder="z.B. 75000"
-                      min={0}
                     />
                   </div>
                   

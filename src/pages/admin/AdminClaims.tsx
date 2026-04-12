@@ -711,10 +711,11 @@ export default function AdminClaims() {
                       <div>
                         <Label>Genehmigter Betrag (€)</Label>
                         <Input
-                          type="number"
-                          placeholder="0.00"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="z.B. 5000"
                           value={approvedAmount}
-                          onChange={(e) => setApprovedAmount(e.target.value)}
+                          onChange={(e) => setApprovedAmount(e.target.value.replace(/\D/g, ''))}
                           className="mt-1"
                         />
                       </div>

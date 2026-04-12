@@ -31,6 +31,8 @@ import {
   Caravan,
   TrendingUp,
   Car,
+  Search,
+  SkipForward,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -50,6 +52,18 @@ const leadSchema = z.object({
   email: z.string().trim().email("Ungültige E-Mail-Adresse"),
   phone: z.string().trim().min(5, "Bitte geben Sie Ihre Telefonnummer ein"),
 });
+
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+};
 
 // ─── Wohnmobil Body Types ───────────────────────────────────────────────────
 const WOHNMOBIL_BODY_TYPES = [
@@ -75,14 +89,14 @@ const CONDITIONS = [
   { value: "poor", label: "Reparaturbedürftig", description: "Mängel vorhanden, Reparaturen nötig", emoji: "🔧", factor: 0.45 },
 ];
 
-// ─── Wohnmobil Hersteller ───────────────────────────────────────────────────
+// ─── Wohnmobil Hersteller (erweitert mit Basisfahrzeug-Marken für Van-Besitzer) ──
 const WOHNMOBIL_MANUFACTURERS = [
   "Adria", "Ahorn Camp", "Bavaria", "Benimar", "Bürstner", "Carado", "Carthago",
-  "Challenger", "Chausson", "Concorde", "Dethleffs", "Elnagh", "Etrusco",
-  "Eura Mobil", "Fendt", "Forster", "Frankia", "Globecar", "Hobby", "Hymer",
-  "Knaus", "Laika", "LMC", "Malibu", "McLouis", "Morelo", "Niesmann+Bischoff",
+  "Challenger", "Chausson", "Citroën", "Concorde", "Dethleffs", "Elnagh", "Etrusco",
+  "Eura Mobil", "Fendt", "Fiat", "Ford", "Forster", "Frankia", "Globecar", "Hobby", "Hymer",
+  "Knaus", "Laika", "LMC", "Malibu", "McLouis", "Mercedes-Benz", "Morelo", "Niesmann+Bischoff",
   "Pilote", "Pössl", "Rapido", "Roller Team", "Sunlight", "Sun Living",
-  "Volkswagen", "Weinsberg", "Westfalia",
+  "Volkswagen", "Weinsberg", "Westfalia", "Andere",
 ];
 
 // ─── Wohnwagen Hersteller ───────────────────────────────────────────────────
@@ -93,6 +107,10 @@ const WOHNWAGEN_MANUFACTURERS = [
   "Rapido", "Soma", "Sterckeman", "Sun Living", "Sunlight", "Swift",
   "Tabbert", "TEC", "Trigano", "Weinsberg", "Wilk", "Wingamm", "Andere",
 ];
+
+// Popular manufacturers for chip-based quick selection
+const POPULAR_WOHNMOBIL_WR = ["Hymer", "Hobby", "Bürstner", "Dethleffs", "Fendt", "Pössl", "Knaus", "Volkswagen", "Adria", "Weinsberg", "Carado", "Sunlight"];
+const POPULAR_WOHNWAGEN_WR = ["Hobby", "Fendt", "Dethleffs", "Bürstner", "Knaus", "Tabbert", "Adria", "Weinsberg", "Eriba", "LMC"];
 
 // ─── Wohnmobil Marken-Tiers ────────────────────────────────────────────────
 const WOHNMOBIL_BRAND_TIERS: Record<string, string> = {
@@ -106,7 +124,8 @@ const WOHNMOBIL_BRAND_TIERS: Record<string, string> = {
   "Benimar": "mittelklasse", "Laika": "mittelklasse", "Elnagh": "mittelklasse",
   "Globecar": "mittelklasse", "Pössl": "mittelklasse", "Malibu": "mittelklasse",
   "Westfalia": "mittelklasse", "Volkswagen": "mittelklasse", "Fendt": "mittelklasse",
-  "Bavaria": "mittelklasse",
+  "Bavaria": "mittelklasse", "Mercedes-Benz": "mittelklasse", "Ford": "mittelklasse",
+  "Fiat": "mittelklasse", "Citroën": "mittelklasse",
   "Sunlight": "economy", "Sun Living": "economy", "Etrusco": "economy",
   "Forster": "economy", "Roller Team": "economy", "McLouis": "economy",
   "Carado": "economy", "Weinsberg": "economy", "Ahorn Camp": "economy",
@@ -153,7 +172,6 @@ const WOHNWAGEN_DEPRECIATION_CURVES: Record<string, number[]> = {
   mobilheim:   [0.10, 0.06, 0.05, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.04, 0.05, 0.05, 0.06],
 };
 
-// Kilometer-Anpassungsfaktor (relativ zum Alter) – nur für Wohnmobile
 const getMileageAdjustment = (age: number, mileage: number): number => {
   if (age <= 0) return 1.0;
   const expectedKm = age * 10000;
@@ -179,17 +197,14 @@ const calculateValue = (
   const age = currentYear - year;
   const isWohnwagen = vehicleType === "Wohnwagen";
 
-  // 1. Basispreis nach Aufbautyp
   const bodyTypes = isWohnwagen ? WOHNWAGEN_BODY_TYPES : WOHNMOBIL_BODY_TYPES;
   const basePrice = bodyTypes.find((b) => b.value === bodyType)?.basePrice || (isWohnwagen ? 25000 : 80000);
 
-  // 2. Marken-Multiplikator
   const brandTiers = isWohnwagen ? WOHNWAGEN_BRAND_TIERS : WOHNMOBIL_BRAND_TIERS;
   const brandTier = manufacturer ? (brandTiers[manufacturer] || "mittelklasse") : "mittelklasse";
   const tierMult = TIER_MULTIPLIERS[brandTier] || 1.0;
   const adjustedBase = basePrice * tierMult;
 
-  // 3. Degressive Altersabschreibung
   const depreciationCurves = isWohnwagen ? WOHNWAGEN_DEPRECIATION_CURVES : WOHNMOBIL_DEPRECIATION_CURVES;
   const curve = depreciationCurves[bodyType] || (isWohnwagen ? [0.14, 0.06, 0.05, 0.04, 0.03] : [0.16, 0.07, 0.06, 0.04, 0.03]);
   let remaining = 1.0;
@@ -199,15 +214,12 @@ const calculateValue = (
   }
   const ageAdjusted = adjustedBase * remaining;
 
-  // 4. Kilometer-Anpassung (nur für Wohnmobile – Wohnwagen haben keinen Motor/Tacho)
   const kmFactor = isWohnwagen ? 1.0 : getMileageAdjustment(age, mileage);
   const kmAdjusted = ageAdjusted * kmFactor;
 
-  // 5. Zustandsfaktor
   const conditionFactor = CONDITIONS.find((c) => c.value === condition)?.factor || 0.80;
   const finalValue = kmAdjusted * conditionFactor;
 
-  // 6. Ergebnis-Spanne (±12%)
   const min = Math.round(finalValue * 0.88);
   const max = Math.round(finalValue * 1.12);
   const minFloor = isWohnwagen ? 500 : 2000;
@@ -223,11 +235,9 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Generate years for dropdown
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: currentYear - 1979 }, (_, i) => currentYear - i);
 
-// Loading messages for fake calculation
 const LOADING_MESSAGES = [
   { text: "Fahrzeugdaten werden analysiert...", duration: 800 },
   { text: "Marktdaten werden abgeglichen...", duration: 1000 },
@@ -235,7 +245,6 @@ const LOADING_MESSAGES = [
   { text: "Wert wird berechnet...", duration: 800 },
 ];
 
-// Step indicator component – 6 Steps mit Kategorie
 const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: number; totalSteps: number; vehicleType: string }) => {
   const isWohnwagen = vehicleType === "Wohnwagen";
   const steps = [
@@ -249,17 +258,21 @@ const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: 
     { label: "Kontakt", icon: User },
   ];
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
+  const progressPercent = Math.round(progress);
   return (
     <div className="mb-8 space-y-3">
-      {/* Progress bar */}
       <div className="relative h-2 bg-muted rounded-full overflow-hidden">
         <div
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-teal-400 rounded-full transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
-      {/* Step circles */}
-      <div className="flex items-center justify-between">
+      {/* Mobile: percent display */}
+      <div className="flex items-center justify-center sm:hidden">
+        <span className="text-xs font-semibold text-primary">{progressPercent}%</span>
+      </div>
+      {/* Desktop: step circles with labels */}
+      <div className="hidden sm:flex items-center justify-between">
         {steps.map((s, i) => {
           const stepNum = i + 1;
           const isActive = stepNum === currentStep;
@@ -281,7 +294,7 @@ const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: 
               </div>
               <span
                 className={cn(
-                  "text-[11px] font-medium transition-colors hidden sm:block",
+                  "text-[11px] font-medium transition-colors",
                   isActive ? "text-primary font-semibold" : isCompleted ? "text-primary/70" : "text-muted-foreground"
                 )}
               >
@@ -295,7 +308,6 @@ const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: 
   );
 };
 
-// Trust badges component
 const TrustBadges = () => (
   <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-4 text-xs sm:text-sm text-muted-foreground">
     <div className="flex items-center gap-1.5">
@@ -313,24 +325,19 @@ const TrustBadges = () => (
   </div>
 );
 
-// Animated value counter
 const AnimatedValue = ({ value }: { value: number }) => {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
     const duration = 1500;
     const steps = 40;
-    const increment = value / steps;
-    let current = 0;
     let step = 0;
 
     const timer = setInterval(() => {
       step++;
-      // Ease-out curve
       const progress = step / steps;
       const eased = 1 - Math.pow(1 - progress, 3);
-      current = Math.round(value * eased);
-      setDisplayValue(current);
+      setDisplayValue(Math.round(value * eased));
 
       if (step >= steps) {
         setDisplayValue(value);
@@ -344,7 +351,6 @@ const AnimatedValue = ({ value }: { value: number }) => {
   return <span>{formatCurrency(displayValue)}</span>;
 };
 
-// Calculation animation component
 const CalculationAnimation = ({ onComplete }: { onComplete: () => void }) => {
   const [messageIndex, setMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -392,29 +398,43 @@ const CalculationAnimation = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
+// Session storage key
+const STORAGE_KEY = "wertrechner_data";
+
+function loadSession(): { formData: Record<string, string>; step: number } | null {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    if (!parsed.vehicleType) parsed.vehicleType = "";
+    return { formData: parsed, step: parsed._step || 1 };
+  } catch {
+    return null;
+  }
+}
+
 const Wertrechner = () => {
   const { toast } = useToast();
   const { settings } = useSettings();
   const siteName = settings?.site_name || "CaravanWert";
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
-  // Determine initial state from URL params (e.g. from LandingLeadForm)
   const prefillBodyType = searchParams.get("bodyType") || "";
   const prefillManufacturer = searchParams.get("manufacturer") || "";
   const prefillVehicleType = searchParams.get("vehicleType") || "";
   const fromLanding = searchParams.get("from") === "landing";
 
-  const [step, setStep] = useState(() => {
-    // If coming from landing page with prefilled data, skip to step 4 (Baujahr/km)
+  const [step, setStepRaw] = useState(() => {
     if (fromLanding && prefillBodyType && prefillVehicleType) return 4;
     if (fromLanding && prefillBodyType) return 4;
+    const session = loadSession();
+    if (session && session.step >= 1 && session.step <= 6) return session.step;
     return 1;
   });
   const [showCalculation, setShowCalculation] = useState(false);
   const [formData, setFormData] = useState(() => {
-    // If coming from landing page, use URL params as initial data
     if (fromLanding && prefillBodyType) {
-      // Determine vehicleType from bodyType if not explicitly provided
       const wohnwagenBodyValues = WOHNWAGEN_BODY_TYPES.map(b => b.value);
       const detectedVehicleType = prefillVehicleType || (wohnwagenBodyValues.includes(prefillBodyType) ? "Wohnwagen" : "Wohnmobil");
       return {
@@ -430,16 +450,11 @@ const Wertrechner = () => {
         phone: "",
       };
     }
-    // Otherwise restore from session storage
-    try {
-      const saved = sessionStorage.getItem("wertrechner_data");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure vehicleType exists for backwards compatibility
-        if (!parsed.vehicleType) parsed.vehicleType = "";
-        return parsed;
-      }
-    } catch {}
+    const session = loadSession();
+    if (session) {
+      const { _step, ...rest } = session.formData as any;
+      return rest as typeof formData;
+    }
     return {
       vehicleType: "",
       bodyType: "",
@@ -465,33 +480,57 @@ const Wertrechner = () => {
     return "";
   });
   const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
+  const [showManufacturerSearch, setShowManufacturerSearch] = useState(false);
   const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
   const [manufacturerFilter, setManufacturerFilter] = useState(formData.manufacturer || "");
   const manufacturerRef = useRef<HTMLDivElement>(null);
 
-  const totalSteps = 6; // 1=Kategorie, 2=Typ, 3=Marke, 4=Baujahr/KM, 5=Zustand, 6=Kontakt
-
+  const totalSteps = 6;
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
-  // Dynamic body types based on vehicle type
   const currentBodyTypes = useMemo(() => {
     return isWohnwagen ? WOHNWAGEN_BODY_TYPES : WOHNMOBIL_BODY_TYPES;
   }, [isWohnwagen]);
 
-  // Dynamic manufacturers based on vehicle type
   const currentManufacturers = useMemo(() => {
     return isWohnwagen ? WOHNWAGEN_MANUFACTURERS : WOHNMOBIL_MANUFACTURERS;
   }, [isWohnwagen]);
 
-  // Save to session storage on change
+  const popularList = isWohnwagen ? POPULAR_WOHNWAGEN_WR : POPULAR_WOHNMOBIL_WR;
+
+  // Browser history-based step navigation
+  const setStep = useCallback((newStep: number | ((prev: number) => number)) => {
+    setStepRaw((prev) => {
+      const next = typeof newStep === 'function' ? newStep(prev) : newStep;
+      if (next !== prev && next >= 1 && next <= 7) {
+        window.history.pushState({ wertrechnerStep: next }, '');
+      }
+      return next;
+    });
+  }, []);
+
+  // Browser back button goes to previous step
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state?.wertrechnerStep) {
+        setStepRaw(e.state.wertrechnerStep);
+      } else {
+        setStepRaw((prev) => prev > 1 ? prev - 1 : prev);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    window.history.replaceState({ wertrechnerStep: step }, '');
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save form data + step to session storage
   useEffect(() => {
     try {
-      sessionStorage.setItem("wertrechner_data", JSON.stringify(formData));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...formData, _step: step }));
     } catch {}
-  }, [formData]);
+  }, [formData, step]);
 
-  // Close manufacturer dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (manufacturerRef.current && !manufacturerRef.current.contains(e.target as Node)) {
@@ -504,11 +543,18 @@ const Wertrechner = () => {
 
   const result = estimatedValue ? { estimatedValue: (estimatedValue.min + estimatedValue.max) / 2 } : null;
 
+  // Pre-calculate value for blurred preview on Step 6
+  const previewValue = useMemo(() => {
+    const year = parseInt(formData.year, 10);
+    const mileage = isWohnwagen ? 0 : parseInt(formData.mileage, 10);
+    if (!formData.bodyType || isNaN(year)) return null;
+    if (!isWohnwagen && isNaN(mileage)) return null;
+    return calculateValue(formData.bodyType, year, mileage, formData.condition, formData.manufacturer, formData.vehicleType);
+  }, [formData.bodyType, formData.year, formData.mileage, formData.condition, formData.manufacturer, formData.vehicleType, isWohnwagen]);
+
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
       if (isHoneypotBot) {
-        // Fake-Erfolg: Bot denkt es hat funktioniert
         return { min: 10000, max: 20000, brandTier: 'standard' as const };
       }
 
@@ -588,7 +634,6 @@ const Wertrechner = () => {
 
       toast({ title: "Vielen Dank!", description: "Hier ist Ihre Wertschätzung." });
 
-      // KI-Schätzung im Hintergrund abrufen (non-blocking)
       setAiLoading(true);
       setAiFailed(false);
       (async () => {
@@ -625,8 +670,6 @@ const Wertrechner = () => {
     },
     onError: (error: unknown) => {
       const germanMessage = handleApiError(error, 'Wertrechner');
-      // Bei Netzwerkfehlern (Load failed, Failed to fetch) eine spezifischere Meldung zeigen
-      // die dem User klar macht, dass er es einfach erneut versuchen kann.
       const isNetwork = error instanceof Error && (
         error.message.includes('Load failed') ||
         error.message.includes('Failed to fetch') ||
@@ -692,7 +735,7 @@ const Wertrechner = () => {
   const handleCalculationComplete = useCallback(() => {
     setShowCalculation(false);
     setStep(6);
-  }, []);
+  }, [setStep]);
 
   const handleLeadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -710,7 +753,7 @@ const Wertrechner = () => {
     switch (step) {
       case 1: return !!formData.vehicleType;
       case 2: return !!formData.bodyType;
-      case 3: return true; // Hersteller/Modell optional
+      case 3: return true;
       case 4: {
         const y = parseInt(formData.year, 10);
         const cy = new Date().getFullYear();
@@ -738,22 +781,20 @@ const Wertrechner = () => {
     } else if (canProceed()) {
       setStep(step + 1);
     }
-  }, [step, calculateAndProceed, canProceed]);
+  }, [step, calculateAndProceed, canProceed, setStep]);
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (step > 1) setStep(step - 1);
-  };
+  }, [step, setStep]);
 
   const handleSelectionWithAutoNext = useCallback((field: string, value: string, shouldAutoNext: boolean = true) => {
     if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current);
-    // For vehicleType, the full reset is handled in the setTimeout block below
     if (field !== "vehicleType") {
       updateField(field, value);
     }
     if (shouldAutoNext) {
       autoNextTimerRef.current = setTimeout(() => {
         if (field === "condition") {
-          // Trigger calculation animation
           const year = parseInt(formData.year, 10);
           const mileage = isWohnwagen ? 0 : parseInt(formData.mileage, 10);
           const cy = new Date().getFullYear();
@@ -763,7 +804,6 @@ const Wertrechner = () => {
             setShowCalculation(true);
           }
         } else if (field === "vehicleType") {
-          // Reset bodyType, manufacturer, model when switching vehicleType
           setFormData((prev: typeof formData) => ({
             ...prev,
             vehicleType: value,
@@ -772,15 +812,15 @@ const Wertrechner = () => {
             model: "",
           }));
           setManufacturerFilter("");
+          setShowManufacturerSearch(false);
           setStep((s) => s + 1);
         } else {
           setStep((s) => s + 1);
         }
       }, 400);
     }
-  }, [step, formData, isWohnwagen]);
+  }, [step, formData, isWohnwagen, setStep]);
 
-  // Handle Enter key for text steps
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && canProceed() && step < 6) {
       e.preventDefault();
@@ -788,11 +828,9 @@ const Wertrechner = () => {
     }
   }, [canProceed, nextStep, step]);
 
-  // Dynamic vehicle type label
   const vehicleLabel = isWohnwagen ? "Wohnwagens" : "Wohnmobils";
   const vehicleLabelNominativ = isWohnwagen ? "Wohnwagen" : "Wohnmobil";
 
-  // Summary chips showing previous selections
   const SummaryChips = () => {
     const chips: string[] = [];
     if (formData.vehicleType) chips.push(formData.vehicleType);
@@ -834,7 +872,6 @@ const Wertrechner = () => {
           <p className="text-lg text-muted-foreground mb-4">
             Erhalten Sie in nur 2 Minuten eine kostenlose Wertschätzung für Ihr Wohnmobil oder Ihren Wohnwagen.
           </p>
-          {/* Social proof */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm font-medium text-primary">
             <TrendingUp className="w-4 h-4" />
             <span>Professionelle Fahrzeugbewertung</span>
@@ -844,17 +881,14 @@ const Wertrechner = () => {
 
       <div className="container py-8 sm:py-12">
         <div className="max-w-2xl mx-auto">
-          {/* Step Indicator */}
           {step <= 6 && !showCalculation && <StepIndicator currentStep={step} totalSteps={totalSteps} vehicleType={formData.vehicleType} />}
 
           <Card className="p-6 sm:p-8 shadow-xl border-0 ring-1 ring-border/40 rounded-2xl">
-            {/* Summary chips */}
             {step > 1 && step <= 6 && !showCalculation && <SummaryChips />}
 
-            {/* Calculation Animation */}
             {showCalculation && <CalculationAnimation onComplete={handleCalculationComplete} />}
 
-            {/* Step 1: Fahrzeugkategorie (NEU) */}
+            {/* Step 1: Fahrzeugkategorie */}
             {!showCalculation && step === 1 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
@@ -955,77 +989,157 @@ const Wertrechner = () => {
               </div>
             )}
 
-            {/* Step 3: Manufacturer/Model */}
+            {/* Step 3: Manufacturer/Model – with popular chips + skip */}
             {!showCalculation && step === 3 && (
               <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-1">Hersteller & Modell</h2>
                   <p className="text-muted-foreground">
-                    Optional – verbessert die Genauigkeit Ihrer Bewertung
+                    Verbessert die Genauigkeit – oder überspringen
                   </p>
                 </div>
                 <div className="space-y-5">
-                  {/* Manufacturer dropdown */}
-                  <div className="animate-fade-in" style={{ animationDelay: "50ms" }} ref={manufacturerRef}>
-                    <div className="space-y-2">
-                      <Label htmlFor="manufacturer" className="text-sm font-semibold">Hersteller</Label>
-                      <div>
-                        <Input
-                          id="manufacturer"
-                          placeholder="Hersteller auswählen oder eingeben..."
-                          value={manufacturerFilter}
-                          onChange={(e) => {
-                            setManufacturerFilter(e.target.value);
-                            updateField("manufacturer", e.target.value);
-                            setShowManufacturerDropdown(true);
+                  {/* Popular manufacturer chips */}
+                  {!formData.manufacturer && !showManufacturerSearch && (
+                    <div className="space-y-3 animate-fade-in">
+                      <Label className="text-sm font-semibold">Beliebte Hersteller</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {popularList.filter(p => currentManufacturers.includes(p)).map((mfr) => (
+                          <button
+                            key={mfr}
+                            type="button"
+                            onClick={() => {
+                              updateField("manufacturer", mfr);
+                              setManufacturerFilter(mfr);
+                            }}
+                            className={cn(
+                              "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
+                              "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
+                              "border-border bg-background text-foreground"
+                            )}
+                          >
+                            {mfr}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowManufacturerSearch(true)}
+                        className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium py-1"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        Anderer Hersteller? Suche öffnen
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Selected manufacturer badge */}
+                  {formData.manufacturer && !showManufacturerSearch && (
+                    <div className="space-y-2 animate-fade-in">
+                      <Label className="text-sm font-semibold">Hersteller</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-12 flex items-center px-3 rounded-lg border-2 border-primary bg-primary/5">
+                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                          <span className="font-medium text-primary">{formData.manufacturer}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateField("manufacturer", "");
+                            setManufacturerFilter("");
+                            setShowManufacturerSearch(false);
                           }}
-                          onFocus={() => setShowManufacturerDropdown(true)}
-                          className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
-                          autoFocus
-                          autoComplete="off"
-                        />
-                        {showManufacturerDropdown && filteredManufacturers.length > 0 && (
-                          <div className="w-full mt-1 bg-background border-2 border-slate-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
-                            {filteredManufacturers.map((m) => (
-                              <button
-                                key={m}
-                                type="button"
-                                className={cn(
-                                  "w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
-                                  formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
-                                )}
-                                onClick={() => {
-                                  updateField("manufacturer", m);
-                                  setManufacturerFilter(m);
-                                  setShowManufacturerDropdown(false);
-                                }}
-                              >
-                                {m}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                          className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors text-xs text-muted-foreground"
+                        >
+                          Ändern
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
-                    <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
-                    <Input
-                      id="model"
-                      placeholder={isWohnwagen ? "z.B. De Luxe, Bianco, Touring..." : "z.B. B-Klasse MC, Trend, Ixeo..."}
-                      value={formData.model}
-                      onChange={(e) => updateField("model", e.target.value)}
-                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Sie können diesen Schritt überspringen, wenn Sie unsicher sind
-                  </p>
+                  )}
+
+                  {/* Manufacturer search input */}
+                  {showManufacturerSearch && !formData.manufacturer && (
+                    <div className="animate-fade-in" ref={manufacturerRef}>
+                      <div className="space-y-2">
+                        <Label htmlFor="manufacturer" className="text-sm font-semibold">Hersteller suchen</Label>
+                        <div>
+                          <Input
+                            id="manufacturer"
+                            placeholder="Hersteller eingeben..."
+                            value={manufacturerFilter}
+                            onChange={(e) => {
+                              setManufacturerFilter(e.target.value);
+                              setShowManufacturerDropdown(true);
+                            }}
+                            onFocus={() => setShowManufacturerDropdown(true)}
+                            className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                            autoFocus={!isMobile}
+                            autoComplete="off"
+                          />
+                          {showManufacturerDropdown && filteredManufacturers.length > 0 && (
+                            <div className={cn("w-full mt-1 bg-background border-2 border-slate-200 rounded-xl shadow-xl overflow-y-auto", isMobile ? "max-h-[200px]" : "max-h-52")}>
+                              {filteredManufacturers.map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  className={cn(
+                                    "w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
+                                    formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
+                                  )}
+                                  onClick={() => {
+                                    updateField("manufacturer", m);
+                                    setManufacturerFilter(m);
+                                    setShowManufacturerDropdown(false);
+                                    setShowManufacturerSearch(false);
+                                  }}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowManufacturerSearch(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          ← Zurück zur Auswahl
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Model input – only when manufacturer is selected */}
+                  {formData.manufacturer && (
+                    <div className="space-y-2 animate-fade-in">
+                      <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
+                      <Input
+                        id="model"
+                        placeholder={isWohnwagen ? "z.B. De Luxe, Bianco, Touring..." : "z.B. B-Klasse MC, Trend, Ixeo..."}
+                        value={formData.model}
+                        onChange={(e) => updateField("model", e.target.value)}
+                        className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                        autoFocus={!isMobile}
+                      />
+                    </div>
+                  )}
+
+                  {/* Skip button */}
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-primary font-medium transition-colors rounded-xl hover:bg-primary/5"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                    Überspringen – Hersteller ist optional
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Step 4: Year/Mileage (Mileage nur bei Wohnmobil) */}
+            {/* Step 4: Year/Mileage */}
             {!showCalculation && step === 4 && (
               <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div className="text-center">
@@ -1039,7 +1153,6 @@ const Wertrechner = () => {
                   </p>
                 </div>
                 <div className="space-y-5">
-                  {/* Year as dropdown */}
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "50ms" }}>
                     <Label htmlFor="year" className="text-sm font-semibold">Baujahr *</Label>
                     <select
@@ -1052,7 +1165,7 @@ const Wertrechner = () => {
                         "hover:border-primary/30 hover:shadow transition-all cursor-pointer shadow-sm",
                         !formData.year && "text-muted-foreground"
                       )}
-                      autoFocus
+                      autoFocus={!isMobile}
                     >
                       <option value="">Baujahr auswählen...</option>
                       {YEARS.map((y) => (
@@ -1060,7 +1173,6 @@ const Wertrechner = () => {
                       ))}
                     </select>
                   </div>
-                  {/* Mileage with formatting – nur bei Wohnmobil */}
                   {!isWohnwagen && (
                     <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
                       <Label htmlFor="mileage" className="text-sm font-semibold">Kilometerstand *</Label>
@@ -1139,7 +1251,7 @@ const Wertrechner = () => {
               </div>
             )}
 
-            {/* Step 6: Contact Details */}
+            {/* Step 6: Contact Details with dynamic blurred preview */}
             {!showCalculation && step === 6 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
@@ -1152,11 +1264,14 @@ const Wertrechner = () => {
                   </p>
                 </div>
 
-                {/* Blurred preview teaser */}
+                {/* Dynamic blurred preview – shows real calculated numbers */}
                 <div className="relative rounded-xl overflow-hidden">
                   <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center blur-md select-none" aria-hidden="true">
                     <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                      XX.XXX - XX.XXX
+                      {previewValue
+                        ? `${formatCurrency(previewValue.min)} – ${formatCurrency(previewValue.max)}`
+                        : "XX.XXX – XX.XXX"
+                      }
                     </div>
                     <p className="text-muted-foreground">Geschätzter Marktwert</p>
                   </div>
@@ -1182,7 +1297,7 @@ const Wertrechner = () => {
                       value={formData.name}
                       onChange={(e) => updateField("name", e.target.value)}
                       className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
-                      autoFocus
+                      autoFocus={!isMobile}
                       required
                     />
                   </div>
@@ -1252,7 +1367,6 @@ const Wertrechner = () => {
                   <p className="text-muted-foreground">Basierend auf Ihren Angaben und aktuellen Marktdaten</p>
                 </div>
 
-                {/* Warte auf KI-Ergebnis bevor Wert angezeigt wird */}
                 {aiLoading ? (
                   <div className="rounded-xl p-10 text-center bg-gradient-to-br from-primary/5 to-primary/10">
                     <div className="flex flex-col items-center gap-4">
@@ -1271,7 +1385,6 @@ const Wertrechner = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Hauptwert-Anzeige */}
                     <div className={cn(
                       "relative overflow-hidden rounded-2xl p-8 text-center border shadow-md",
                       aiEstimate
@@ -1297,7 +1410,6 @@ const Wertrechner = () => {
                         </span>
                       </div>
                       {aiEstimate ? (() => {
-                        // Fix 3: Spanne skaliert mit Konfidenz
                         const spread = aiEstimate.confidence >= 85 ? 0.05
                           : aiEstimate.confidence >= 70 ? 0.10
                           : aiEstimate.confidence >= 50 ? 0.15
@@ -1353,7 +1465,6 @@ const Wertrechner = () => {
                       </p>
                       <Link
                         to={(() => {
-                          // Mapping: Wertrechner bodyType -> Wizard bodyType
                           const bodyTypeMap: Record<string, string> = {
                             integriert: "Vollintegriert",
                             teilintegriert: "Teilintegriert",
@@ -1364,7 +1475,6 @@ const Wertrechner = () => {
                             faltcaravan: "Faltcaravan",
                             mobilheim: "Mobilheim",
                           };
-                          // Mapping: Wertrechner condition -> Wizard condition
                           const conditionMap: Record<string, string> = {
                             new: "Neuwertig",
                             excellent: "Sehr gepflegt",
@@ -1397,7 +1507,6 @@ const Wertrechner = () => {
                       </p>
                     </div>
 
-                    {/* Zusammenfassung */}
                     <div className="border-t pt-6">
                       <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -1435,7 +1544,7 @@ const Wertrechner = () => {
             )}
 
             {/* Navigation */}
-            {!showCalculation && step < 6 && (
+            {!showCalculation && step < 6 && step !== 3 && (
               <div className="flex justify-between mt-8 pt-6 border-t border-border/40">
                 {step > 1 ? (
                   <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
@@ -1446,6 +1555,20 @@ const Wertrechner = () => {
                   <div />
                 )}
                 <Button onClick={nextStep} disabled={!canProceed()} className="gradient-hero px-8 rounded-xl h-11 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
+                  Weiter
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+
+            {/* Step 3 navigation – separate because skip button is inline */}
+            {!showCalculation && step === 3 && (
+              <div className="flex justify-between mt-6 pt-4 border-t border-border/40">
+                <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Zurück
+                </Button>
+                <Button onClick={nextStep} className="gradient-hero px-8 rounded-xl h-11 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
                   Weiter
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -1466,17 +1589,18 @@ const Wertrechner = () => {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    setStep(1);
+                    setStepRaw(1);
                     setEstimatedValue(null);
                     setLeadSubmitted(false);
                     setMileageDisplay("");
                     setManufacturerFilter("");
+                    setShowManufacturerSearch(false);
                     setAiEstimate(null);
                     setAiLoading(false);
                     setFormData({
                       vehicleType: "", bodyType: "", manufacturer: "", model: "", year: "", mileage: "", condition: "", name: "", email: "", phone: "",
                     });
-                    try { sessionStorage.removeItem("wertrechner_data"); } catch {}
+                    try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
                   }}
                   className="w-full text-muted-foreground hover:text-foreground"
                 >
@@ -1487,10 +1611,8 @@ const Wertrechner = () => {
             )}
           </Card>
 
-          {/* Trust badges below card */}
           {step <= 6 && !showCalculation && <TrustBadges />}
 
-          {/* Alternative CTA */}
           {step < 6 && !showCalculation && (
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground mb-3">

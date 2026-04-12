@@ -54,8 +54,9 @@ const fuzzyScore = (query: string, target: string): number => {
 };
 
 /**
- * Searchable Combobox – used for the "Anderer Hersteller" search input
- * and for model selection. Dropdown is capped to fit mobile viewports.
+ * Searchable Combobox – typing only updates internal search query.
+ * Parent onChange/onCommit are called only when user selects from
+ * dropdown, presses Enter, or blurs with a non-empty value.
  */
 const SearchableSelect = ({
   options,
@@ -84,17 +85,19 @@ const SearchableSelect = ({
 }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
   const results = useMemo(() => {
+    const searchTerm = isFocused ? query : "";
     const escapeMatch = escapeLabel ? options.find(o => o === escapeLabel) : undefined;
     const filteredOptions = escapeMatch ? options.filter(o => o !== escapeLabel) : options;
     const andereOption = escapeMatch;
     const optionsWithoutAndere = filteredOptions;
 
-    if (!query) {
+    if (!searchTerm) {
       if (popular && popular.length > 0) {
         const popularSet = new Set(popular);
         const rest = optionsWithoutAndere.filter((o) => !popularSet.has(o));
@@ -102,7 +105,7 @@ const SearchableSelect = ({
       }
       return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
     }
-    const lower = query.trim().toLowerCase();
+    const lower = searchTerm.trim().toLowerCase();
     if (!lower) return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
     const startsWith: string[] = [];
     const contains: string[] = [];
@@ -118,7 +121,7 @@ const SearchableSelect = ({
     }
     fuzzy.sort((a, b) => b.score - a.score);
     return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)], andere: andereOption };
-  }, [options, popular, query, escapeLabel]);
+  }, [options, popular, query, escapeLabel, isFocused]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -130,9 +133,10 @@ const SearchableSelect = ({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Sync query to value when value changes externally (e.g. chip selection)
   useEffect(() => {
-    if (!value) setQuery("");
-  }, [value]);
+    if (!isFocused) setQuery(value || "");
+  }, [value, isFocused]);
 
   // Only autoFocus on desktop – mobile keyboard auto-open kills UX
   useEffect(() => {
@@ -142,16 +146,27 @@ const SearchableSelect = ({
     }
   }, [autoFocus, disabled, value, isMobile]);
 
-  const handleSelect = (val: string) => {
+  const commitValue = useCallback((val: string) => {
     const trimmed = val.trim();
+    if (!trimmed) return;
     onChange(trimmed);
     onCommit?.(trimmed);
-    setQuery("");
+  }, [onChange, onCommit]);
+
+  const handleSelect = useCallback((val: string) => {
+    const trimmed = val.trim();
+    setQuery(trimmed);
     setOpen(false);
+    setIsFocused(false);
+    onChange(trimmed);
+    onCommit?.(trimmed);
     if (isMobile) inputRef.current?.blur();
-  };
+  }, [onChange, onCommit, isMobile]);
 
   const dropdownMaxH = isMobile ? "max-h-[200px]" : "max-h-[300px]";
+
+  // Show the typed query while focused, otherwise the committed value
+  const displayValue = isFocused ? query : (value || "");
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -159,7 +174,7 @@ const SearchableSelect = ({
         ref={inputRef}
         id={id}
         type="text"
-        value={value || query}
+        value={displayValue}
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"
@@ -168,14 +183,16 @@ const SearchableSelect = ({
           hasError && "border-red-500 ring-red-500/20 ring-2"
         )}
         onChange={(e) => {
-          const val = e.target.value;
-          setQuery(val);
-          onChange(val);
+          setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => {
+          setIsFocused(true);
+          setQuery(value || "");
           if (options.length > 0) setOpen(true);
-          if (value) inputRef.current?.select();
+          if (value) {
+            setTimeout(() => inputRef.current?.select(), 0);
+          }
           if (isMobile && wrapperRef.current) {
             setTimeout(() => {
               wrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -189,17 +206,24 @@ const SearchableSelect = ({
               handleSelect(results.rest[0]);
             } else {
               setOpen(false);
-              if (value) onCommit?.(value.trim());
+              setIsFocused(false);
+              commitValue(query);
+              inputRef.current?.blur();
             }
           }
           if (e.key === 'Escape') {
             setOpen(false);
+            setIsFocused(false);
+            setQuery(value || "");
+            inputRef.current?.blur();
           }
         }}
         onBlur={() => {
-          const trimmed = value?.trim();
-          if (trimmed && trimmed !== value) onChange(trimmed);
-          if (trimmed) onCommit?.(trimmed);
+          setIsFocused(false);
+          const trimmed = query.trim();
+          if (trimmed && trimmed !== value) {
+            commitValue(trimmed);
+          }
         }}
       />
       {open && (
@@ -229,7 +253,7 @@ const SearchableSelect = ({
           )}
           {results.rest.length > 0 && (
             <>
-              {!!query && results.popular.length === 0 && (
+              {!!query && results.popular.length === 0 && isFocused && (
                 <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Ergebnisse</div>
               )}
               {!query && results.popular.length > 0 && (
@@ -269,7 +293,7 @@ const SearchableSelect = ({
               </button>
             </>
           )}
-          {results.rest.length === 0 && results.popular.length === 0 && query.trim().length > 0 && (
+          {results.rest.length === 0 && results.popular.length === 0 && query.trim().length > 0 && isFocused && (
             <div className="px-4 py-3 text-sm text-muted-foreground">
               <p>Kein Treffer für „{query}" — <strong className="text-foreground">einfach eintippen</strong> und mit Eingabetaste bestätigen.</p>
             </div>
@@ -313,31 +337,20 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     return years;
   }, []);
 
-  const handleManufacturerChange = useCallback((value: string) => {
+  const handleManufacturerCommit = useCallback((value: string) => {
     const trimmed = value.trim();
-    if (trimmed !== formData.manufacturer) {
-      updateFormData({ manufacturer: trimmed, model: "" });
-    } else {
-      updateFormData({ manufacturer: trimmed });
+    const resolved = resolveManufacturer(trimmed);
+    const final = resolved !== trimmed ? resolved : trimmed;
+    if (final !== formData.manufacturer) {
+      updateFormData({ manufacturer: final, model: "" });
     }
+    if (final) setShowManufacturerSearch(false);
   }, [formData.manufacturer, updateFormData]);
 
   const handleManufacturerChipSelect = useCallback((value: string) => {
     updateFormData({ manufacturer: value, model: "" });
     setShowManufacturerSearch(false);
   }, [updateFormData]);
-
-  const resolveManufacturerOnCommit = useCallback((value: string) => {
-    const trimmed = value.trim();
-    const resolved = resolveManufacturer(trimmed);
-    if (resolved !== trimmed) {
-      updateFormData({ manufacturer: resolved, model: "" });
-    } else if (trimmed !== value) {
-      updateFormData({ manufacturer: trimmed });
-    }
-  }, [updateFormData]);
-
-  const isManufacturerFromPopular = popularList.includes(formData.manufacturer);
 
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
@@ -436,8 +449,8 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                   options={manufacturers}
                   popular={popularList}
                   value={formData.manufacturer}
-                  onChange={handleManufacturerChange}
-                  onCommit={resolveManufacturerOnCommit}
+                  onChange={handleManufacturerCommit}
+                  onCommit={handleManufacturerCommit}
                   placeholder="Hersteller suchen oder eintippen..."
                   hasError={!!fieldErrors.manufacturer}
                   escapeLabel="Andere"
@@ -459,8 +472,8 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         )}
       </div>
 
-      {/* === REMAINING FIELDS (only visible once manufacturer is selected) === */}
-      {formData.manufacturer && (
+      {/* === REMAINING FIELDS (only after manufacturer is committed, not during search typing) === */}
+      {formData.manufacturer && !showManufacturerSearch && (
         <div className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Modell */}
@@ -472,8 +485,8 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 id="model"
                 options={models}
                 value={formData.model}
-                onChange={(val) => updateFormData({ model: val.trim() })}
-                onCommit={(val) => updateFormData({ model: val.trim() })}
+                onChange={(val) => updateFormData({ model: val })}
+                onCommit={(val) => updateFormData({ model: val })}
                 placeholder={`Modell von ${formData.manufacturer}...`}
                 hasError={!!fieldErrors.model}
                 escapeLabel="Sonstiges Modell"
@@ -519,13 +532,14 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 </Label>
                 <Input
                   id="mileage"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
                   placeholder="z.B. 45000"
                   value={formData.mileage || ""}
-                  onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
-                  min={0}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    updateFormData({ mileage: digits ? parseInt(digits) : null });
+                  }}
                   className={cn("h-12 text-base", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
                 />
                 {fieldErrors.mileage && (

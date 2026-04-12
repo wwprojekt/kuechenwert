@@ -281,10 +281,10 @@ export default function DealerListingCreate() {
                 <div className="space-y-2">
                   <Label>Kilometerstand *</Label>
                   <Input
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="numeric"
                     value={mileage}
-                    onChange={(e) => setMileage(e.target.value)}
+                    onChange={(e) => setMileage(e.target.value.replace(/\D/g, ''))}
                     placeholder="z.B. 45000"
                   />
                 </div>
@@ -310,11 +310,10 @@ export default function DealerListingCreate() {
             <div className="space-y-2">
               <Label>Mindestpreis in € (optional)</Label>
               <Input
-                type="number"
-                min="0"
-                step="100"
+                type="text"
+                inputMode="numeric"
                 value={reservePrice}
-                onChange={(e) => setReservePrice(e.target.value)}
+                onChange={(e) => setReservePrice(e.target.value.replace(/\D/g, ''))}
                 placeholder="z.B. 25000"
               />
               <p className="text-xs text-muted-foreground">

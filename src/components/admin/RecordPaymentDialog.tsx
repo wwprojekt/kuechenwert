@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { parseGermanNumber } from "@/lib/parseGermanNumber";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
@@ -96,7 +97,7 @@ export function RecordPaymentDialog({
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session abgelaufen");
 
-      const paymentAmount = parseFloat(amount);
+      const paymentAmount = parseGermanNumber(amount);
       if (isNaN(paymentAmount) || paymentAmount <= 0) {
         throw new Error("Ungültiger Betrag");
       }
@@ -228,14 +229,12 @@ export function RecordPaymentDialog({
                 <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={remainingAmount}
+                  type="text"
+                  inputMode="decimal"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))}
                   className="pl-9"
-                  placeholder="0.00"
+                  placeholder="z.B. 25.432,50"
                   required
                 />
               </div>
@@ -291,13 +290,13 @@ export function RecordPaymentDialog({
           </div>
 
           {/* Partial Payment Warning */}
-          {parseFloat(amount) > 0 && parseFloat(amount) < remainingAmount - 0.01 && (
+          {parseGermanNumber(amount) > 0 && parseGermanNumber(amount) < remainingAmount - 0.01 && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Dies ist eine Teilzahlung. Der verbleibende Betrag von{" "}
                 <strong>
-                  €{(remainingAmount - parseFloat(amount)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}
+                  €{(remainingAmount - parseGermanNumber(amount)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}
                 </strong>{" "}
                 bleibt offen.
               </AlertDescription>
@@ -314,7 +313,7 @@ export function RecordPaymentDialog({
             </Button>
             <Button
               type="submit"
-              disabled={recordPaymentMutation.isPending || !amount || parseFloat(amount) <= 0}
+              disabled={recordPaymentMutation.isPending || !amount || parseGermanNumber(amount) <= 0}
             >
               {recordPaymentMutation.isPending ? "Wird gespeichert..." : "Zahlung erfassen"}
             </Button>

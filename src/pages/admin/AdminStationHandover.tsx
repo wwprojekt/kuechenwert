@@ -262,10 +262,11 @@ const AdminStationHandover = () => {
                 <Label htmlFor="paymentAmount">Betrag (€)</Label>
                 <Input
                   id="paymentAmount"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="0.00"
+                  onChange={(e) => setPaymentAmount(e.target.value.replace(/\D/g, ''))}
+                  placeholder="z.B. 25000"
                 />
               </div>
             </div>

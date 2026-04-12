@@ -458,10 +458,11 @@ export default function ListingEdit() {
                     <Label htmlFor="instant_price">Sofortkauf-Preis (optional)</Label>
                     <Input
                       id="instant_price"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={formData.instant_price}
                       onChange={(e) => {
-                        const val = e.target.value;
+                        const val = e.target.value.replace(/\D/g, '');
                         setFormData({ ...formData, instant_price: val, ...(val ? { reserve_price: val } : {}) });
                       }}
                       placeholder="z.B. 45000"
@@ -476,9 +477,10 @@ export default function ListingEdit() {
                     <Label htmlFor="reserve_price">Mindestpreis (optional)</Label>
                     <Input
                       id="reserve_price"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={formData.reserve_price}
-                      onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value.replace(/\D/g, '') })}
                       placeholder="z.B. 40000"
                       disabled={!!formData.instant_price || hasAuction}
                     />

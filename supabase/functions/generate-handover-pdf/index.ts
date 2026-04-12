@@ -48,8 +48,26 @@ serve(async (req) => {
 
     if (fetchError) throw fetchError;
 
-    // Generate HTML for the handover protocol
-    const html = generateProtocolHTML(appointment);
+    const { data: settings } = await supabaseClient
+      .from('site_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    const companyInfo = {
+      siteName: settings?.site_name || 'CaravanWert',
+      legalName: 'WohnWert GmbH',
+      address: settings?.address || settings?.company_address || 'Hannoversche Str. 106',
+      zip: settings?.zip_code || settings?.company_postal_code || '30627',
+      city: settings?.city || settings?.company_city || 'Hannover',
+      phone: settings?.support_phone || '0511 / 51532476',
+      email: settings?.contact_email || 'info@caravanwert.de',
+      managingDirector: settings?.managing_director || 'Mona Kareem-Ameen',
+      hrbNumber: settings?.hrb_number || '210321',
+      court: 'Amtsgericht Hildesheim',
+    };
+
+    const html = generateProtocolHTML(appointment, companyInfo);
 
     // Upload as a proper HTML file that can be viewed and printed in the browser
     // HTML files render correctly in the browser and can be printed to PDF via Ctrl+P
@@ -95,7 +113,20 @@ serve(async (req) => {
   }
 });
 
-function generateProtocolHTML(appointment: any): string {
+interface CompanyInfo {
+  siteName: string;
+  legalName: string;
+  address: string;
+  zip: string;
+  city: string;
+  phone: string;
+  email: string;
+  managingDirector: string;
+  hrbNumber: string;
+  court: string;
+}
+
+function generateProtocolHTML(appointment: any, company: CompanyInfo): string {
   const motorhome = appointment.motorhomes || {};
   const station = appointment.purchase_stations || {};
   const profile = appointment.profiles || {};
@@ -295,9 +326,9 @@ function generateProtocolHTML(appointment: any): string {
   </div>
 
   <div class="footer">
-    <p>CaravanWert GmbH | Musterstraße 123, 80331 München</p>
-    <p>Tel: +49 800 123 4567 | E-Mail: info@caravanwert.de</p>
-    <p>Erstellt am: ${escapeHtml(new Date().toLocaleString('de-DE'))}</p>
+    <p>${escapeHtml(company.siteName)} – Marke/Plattform der ${escapeHtml(company.legalName)} | ${escapeHtml(company.address)}, ${escapeHtml(company.zip)} ${escapeHtml(company.city)}</p>
+    <p>Tel: ${escapeHtml(company.phone)} | E-Mail: ${escapeHtml(company.email)} | GF: ${escapeHtml(company.managingDirector)}</p>
+    <p>${escapeHtml(company.court)}, HRB ${escapeHtml(company.hrbNumber)} | Erstellt am: ${escapeHtml(new Date().toLocaleString('de-DE'))}</p>
   </div>
 </body>
 </html>

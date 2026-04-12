@@ -201,7 +201,8 @@ Deno.serve(async (req) => {
     const siteZip = settings?.company_postal_code || '30627';
     const managingDirector = settings?.managing_director || '';
     const hrbNumber = settings?.hrb_number || '';
-    const contactEmail = settings?.contact_email || 'kontakt@caravanwert.de';
+    const contactEmail = settings?.contact_email || 'info@caravanwert.de';
+    const sitePhone = settings?.support_phone || '0511 / 51532476';
 
     const sellerName = `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || 'Verkäufer';
     const sellerAddress = [seller.address_street, `${seller.address_zip || ''} ${seller.address_city || ''}`.trim()].filter(Boolean).join(', ') || 'Adresse nicht hinterlegt';
@@ -280,12 +281,12 @@ Deno.serve(async (req) => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(6);
       doc.setFont('helvetica', 'normal');
-      const footerLeft = [siteName];
+      const footerLeft = [`${siteName} – WohnWert GmbH`];
       if (managingDirector) footerLeft.push(`GF: ${managingDirector}`);
-      if (hrbNumber) footerLeft.push(`HRB ${hrbNumber}`);
+      if (hrbNumber) footerLeft.push(`AG Hildesheim, HRB ${hrbNumber}`);
       doc.text(footerLeft.join(' · '), ml, footerY + 5);
       doc.text(`Seite ${pageNum} von ${totalPages}`, pw - mr, footerY + 5, { align: 'right' });
-      doc.text(`Vermittelt über ${siteName} · ${contactEmail}`, pw / 2, footerY + 10, { align: 'center' });
+      doc.text([contactEmail, sitePhone].filter(Boolean).join(' · '), pw / 2, footerY + 10, { align: 'center' });
     };
 
     const sectionTitle = (title: string) => {
@@ -360,7 +361,7 @@ Deno.serve(async (req) => {
     y += 4;
     doc.setFontSize(7);
     doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
-    doc.text(`Vermittelt über ${siteName} · ${siteAddress}, ${siteZip} ${siteCity}`, pw / 2, y, { align: 'center' });
+    doc.text(`Vermittelt über ${siteName} (WohnWert GmbH) · ${siteAddress}, ${siteZip} ${siteCity}`, pw / 2, y, { align: 'center' });
     y += 8;
 
     // ── §1 Vertragsparteien ────────────────────────────────────────

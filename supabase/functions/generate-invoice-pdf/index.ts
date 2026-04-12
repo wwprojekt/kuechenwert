@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
     const cityS = settings?.city || 'Hannover';
     const zipS = settings?.zip_code || '30627';
     const countryS = settings?.country || 'Deutschland';
-    const contactEmail = settings?.contact_email || 'kontakt@caravanwert.de';
-    const phoneS = settings?.support_phone || '';
+    const contactEmail = settings?.contact_email || 'info@caravanwert.de';
+    const phoneS = settings?.support_phone || '0511 / 51532476';
     const website = 'www.caravanwert.de';
     const bankIban = settings?.bank_iban || '';
     const bankBic = settings?.bank_bic || '';
@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
     const fy=283;
     doc.setFillColor(BRAND.r,BRAND.g,BRAND.b); doc.rect(0,fy,pw,14,'F');
     doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    const fl=[siteName]; if(md) fl.push(`GF: ${md}`); if(hrb) fl.push(`HRB ${hrb}`);
+    const fl=[`${siteName} – WohnWert GmbH`]; if(md) fl.push(`GF: ${md}`); if(hrb) fl.push(`AG Hildesheim, HRB ${hrb}`);
     doc.text(fl.join(' • '),ml,fy+5);
     doc.setFont('helvetica','normal');
     const fr=[]; if(taxNumber) fr.push(`StNr: ${taxNumber}`); if(ustId) fr.push(`USt-ID: ${ustId}`);

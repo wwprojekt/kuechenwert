@@ -475,6 +475,13 @@ const handler = async (req: Request): Promise<Response> => {
       edgeLogger.error("Failed to send registration invite:", await inviteRes.text());
     }
 
+    try {
+      await adminClient.rpc('record_agb_acceptance', { p_user_id: sellerId, p_context: 'wizard' });
+      edgeLogger.info(`Recorded AGB acceptance for wizard user ${sellerId}`);
+    } catch (agbErr) {
+      edgeLogger.error("Failed to record AGB acceptance:", agbErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

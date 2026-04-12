@@ -102,6 +102,12 @@ Deno.serve(async (req) => {
       : (invoice.auction?.motorhome
         ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 'Vermittlungsprovision');
 
+    let agbVersionStr = '';
+    if (isPenalty) {
+      const { data: lp } = await supabase.from('legal_pages').select('updated_at').eq('slug','agb').eq('is_published',true).maybeSingle();
+      agbVersionStr = lp?.updated_at ? `AGB ${new Date(lp.updated_at).toLocaleDateString('de-DE')}` : 'AGB Stand 10.04.2026';
+    }
+
     const invDate = fmtDate(invoice.invoice_date || invoice.created_at);
     const dueDateStr = fmtDate(invoice.due_date);
     const payDays = invoice.payment_terms_days || 14;
@@ -279,6 +285,11 @@ Deno.serve(async (req) => {
       ? 'Bitte begleichen Sie den Betrag fristgerecht.'
       : 'Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!';
     doc.text(closingLine,ml,y); y+=4.5;
+    if (isPenalty && agbVersionStr) {
+      doc.setFontSize(7); doc.setTextColor(TEXT_LIGHT.r,TEXT_LIGHT.g,TEXT_LIGHT.b);
+      doc.text(`Grundlage: ${agbVersionStr}, akzeptiert bei Registrierung.`,ml,y); y+=4.5;
+      doc.setFontSize(8.5); doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b);
+    }
     doc.text('Mit freundlichen Grüßen',ml,y); y+=5;
     doc.setTextColor(ACCENT.r,ACCENT.g,ACCENT.b); doc.setFont('helvetica','bold');
     doc.text(`Ihr ${siteName} Team`,ml,y);

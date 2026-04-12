@@ -47,6 +47,7 @@ interface RegisterDealerRequest {
   legalForm?: string;
   foundedYear?: string;
   vatId?: string;
+  agbAccepted?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -90,6 +91,12 @@ const handler = async (req: Request): Promise<Response> => {
     if (!body.companyName?.trim()) {
       return new Response(
         JSON.stringify({ error: "Firmenname ist erforderlich" }),
+        { status: 400, headers }
+      );
+    }
+    if (body.agbAccepted !== true) {
+      return new Response(
+        JSON.stringify({ error: "Sie müssen die AGB und Datenschutzbestimmungen akzeptieren" }),
         { status: 400, headers }
       );
     }
@@ -170,6 +177,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     const userId = newUser.user.id;
     edgeLogger.info(`Created dealer user ${userId} for ${email}`);
+
+    // ── Record AGB acceptance (server-side for legal audit trail) ─────
+    try {
+      await supabase.rpc('record_agb_acceptance', {
+        p_user_id: userId,
+        p_context: 'dealer_registration',
+        p_ip_address: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null,
+        p_user_agent: req.headers.get('user-agent') || null,
+      });
+      edgeLogger.info(`Recorded AGB acceptance for dealer ${userId}`);
+    } catch (agbErr) {
+      edgeLogger.error("Failed to record AGB acceptance:", agbErr);
+    }
 
     // ── Step 3: Generate email confirmation link ────────────────────────
     // We use type: "signup" so that when the user clicks the link,

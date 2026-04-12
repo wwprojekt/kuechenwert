@@ -233,6 +233,7 @@ const RegisterHaendler = () => {
         legalForm: validated.legalForm || null,
         foundedYear: validated.foundedYear || null,
         vatId: validated.vatId || null,
+        agbAccepted: true,
       });
 
       const doRegisterFetch = async (signal?: AbortSignal) => {

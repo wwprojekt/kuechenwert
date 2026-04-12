@@ -893,7 +893,8 @@ export const useWizardForm = () => {
 
       clearDraft();
 
-      // Google Ads: Enhanced Conversions + Wizard abgeschlossen (authentifizierter Pfad)
+      try { await supabase.rpc('record_agb_acceptance', { p_user_id: user.id, p_context: 'wizard' }); } catch {}
+
       const txId3 = (window as any).__lastTransactionId || generateTransactionId('wizard');
       await setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone });
       trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId3);

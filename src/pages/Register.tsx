@@ -66,7 +66,7 @@ const Register = () => {
       const validated = signUpSchema.parse(formData);
       const redirectUrl = `${window.location.origin}/`;
 
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.password,
         options: {
@@ -82,7 +82,10 @@ const Register = () => {
 
       if (error) throw error;
 
-      // Google Ads: Enhanced Conversions + Registrierung
+      if (signUpData?.user) {
+        try { await supabase.rpc('record_agb_acceptance', { p_user_id: signUpData.user.id, p_context: 'registration' }); } catch {}
+      }
+
       await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone });
       trackUserRegistered('email');
       trackMetaCompleteRegistration({ content_name: 'Nutzer-Registrierung' });

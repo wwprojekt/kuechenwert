@@ -72,7 +72,7 @@ interface Claim {
   id: string;
   auction_id: string;
   dealer_id: string;
-  vehicle_id: string;
+  motorhome_id: string;
   claim_type: string;
   title: string;
   description: string;

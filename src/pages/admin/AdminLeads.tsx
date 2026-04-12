@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ConvertToVehicleDialog } from "@/components/admin/ConvertToVehicleDialog";
+import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -599,7 +599,7 @@ function QuickLeadStatusBadge({ status, leadQuality, contactedAt }: { status: st
 }
 
 /**
- * Helper to map a QuickLead to a WizardSessionData shape for the ConvertToVehicleDialog.
+ * Helper to map a QuickLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
  */
 function quickLeadToSessionData(lead: QuickLead): {
   id: string;
@@ -630,7 +630,7 @@ function quickLeadToSessionData(lead: QuickLead): {
 }
 
 /**
- * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToVehicleDialog.
+ * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
  */
 function valuationLeadToSessionData(lead: ValuationLead): {
   id: string;
@@ -718,7 +718,7 @@ export default function AdminLeads() {
   // Disposition email (no_answer, considering, done)
   const [sendingDispositionEmail, setSendingDispositionEmail] = useState<string | null>(null);
   const [dispositionEmailCounts, setDispositionEmailCounts] = useState<Record<string, { count: number; lastSent: string | null }>>({});
-  // Convert to vehicle dialog
+  // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
   const [convertSourceType, setConvertSourceType] = useState<"wizard" | "quick" | "valuation">("wizard");
@@ -813,21 +813,21 @@ export default function AdminLeads() {
     refetchInterval: 30000,
   });
 
-  // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Vehicles ----
+  // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Motorhomes ----
   const { data: existingSellerData = { ids: [], emails: [] } } = useQuery({
     queryKey: ["existingSellerUserIds"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return { ids: [], emails: [] };
 
-      // Hole alle Seller-IDs die bereits mindestens ein Vehicle haben
-      const { data: vehicles, error: mError } = await supabase
-        .from("vehicles")
+      // Hole alle Seller-IDs die bereits mindestens ein Motorhome haben
+      const { data: motorhomes, error: mError } = await supabase
+        .from("motorhomes")
         .select("seller_id")
         .not("seller_id", "is", null);
       if (mError) throw mError;
 
-      const sellerIds = [...new Set((vehicles || []).map((m: { seller_id: string }) => m.seller_id).filter(Boolean))];
+      const sellerIds = [...new Set((motorhomes || []).map((m: { seller_id: string }) => m.seller_id).filter(Boolean))];
 
       // Hole die E-Mails dieser Seller für E-Mail-basierte Erkennung
       let sellerEmails: string[] = [];
@@ -851,7 +851,7 @@ export default function AdminLeads() {
   const existingSellerEmails = useMemo(() => new Set(existingSellerData.emails), [existingSellerData.emails]);
 
   // ---- Auto-Disposition: Bestandskunden automatisch markieren ----
-  // Wenn eine Wizard Session eine user_id hat und dieser User bereits Vehicles hat,
+  // Wenn eine Wizard Session eine user_id hat und dieser User bereits Motorhomes hat,
   // wird die Session automatisch als "already_customer" markiert (einmalig).
   useEffect(() => {
     if (!wizardSessions.length || existingSellerIds.size === 0) return;
@@ -4031,9 +4031,9 @@ export default function AdminLeads() {
       </AlertDialog>
 
       {/* ================================================================== */}
-      {/* Convert to Vehicle Dialog */}
+      {/* Convert to Motorhome Dialog */}
       {/* ================================================================== */}
-      <ConvertToVehicleDialog
+      <ConvertToMotorhomeDialog
         session={convertSession}
         open={convertDialogOpen}
         onOpenChange={(open) => {

@@ -99,7 +99,7 @@ interface PostAuctionOffer {
 
 interface AuctionInfo {
   id: string;
-  vehicle_id: string | null;
+  motorhome_id: string | null;
   status: string | null;
   current_bid: number | null;
   kaufchance_expires_at: string | null;
@@ -107,7 +107,7 @@ interface AuctionInfo {
   reserve_price: number | null;
   starting_bid: number | null;
   end_time: string | null;
-  vehicle: {
+  motorhome: {
     id: string;
     manufacturer: string;
     model: string;
@@ -273,9 +273,9 @@ export default function AdminPostAuctionOffers() {
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          id, vehicle_id, status, current_bid, starting_bid, end_time,
+          id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          vehicle:vehicles (id, manufacturer, model, seller_id, reserve_price, year)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .in("id", auctionIds);
       if (error) throw error;
@@ -293,9 +293,9 @@ export default function AdminPostAuctionOffers() {
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          id, vehicle_id, status, current_bid, starting_bid, end_time,
+          id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          vehicle:vehicles (id, manufacturer, model, seller_id, reserve_price, year)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .eq("status", "kaufchance")
         .order("kaufchance_expires_at", { ascending: true });
@@ -312,10 +312,10 @@ export default function AdminPostAuctionOffers() {
       if (o.buyer_id) ids.add(o.buyer_id);
     });
     Object.values(auctionMap).forEach((a: AuctionInfo) => {
-      if (a.vehicle?.seller_id) ids.add(a.vehicle.seller_id);
+      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
     });
     kaufchanceAuctions.forEach((a: any) => {
-      if (a.vehicle?.seller_id) ids.add(a.vehicle.seller_id);
+      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
     });
     return Array.from(ids).sort();
   }, [offers, auctionMap, kaufchanceAuctions]);
@@ -371,8 +371,8 @@ export default function AdminPostAuctionOffers() {
         const buyerName = buyer
           ? `${buyer.first_name || ""} ${buyer.last_name || ""} ${buyer.company_name || ""} ${buyer.email || ""}`.toLowerCase()
           : "";
-        const vehicleName = auction?.vehicle
-          ? `${auction.vehicle.manufacturer} ${auction.vehicle.model}`.toLowerCase()
+        const vehicleName = auction?.motorhome
+          ? `${auction.motorhome.manufacturer} ${auction.motorhome.model}`.toLowerCase()
           : "";
         return (
           buyerName.includes(q) ||
@@ -656,7 +656,7 @@ export default function AdminPostAuctionOffers() {
     try {
       const { data: auctionData, error: auctionFetchError } = await supabase
         .from('auctions')
-        .select('vehicle_id')
+        .select('motorhome_id')
         .eq('id', auctionId)
         .single();
       if (auctionFetchError) throw auctionFetchError;
@@ -667,12 +667,12 @@ export default function AdminPostAuctionOffers() {
         .eq('id', auctionId);
       if (auctionError) throw auctionError;
 
-      if (auctionData?.vehicle_id) {
-        const { error: vhErr } = await supabase
-          .from('vehicles')
+      if (auctionData?.motorhome_id) {
+        const { error: mhErr } = await supabase
+          .from('motorhomes')
           .update({ status: 'not_sold', updated_at: new Date().toISOString() })
-          .eq('id', auctionData.vehicle_id);
-        if (vhErr) throw vhErr;
+          .eq('id', auctionData.motorhome_id);
+        if (mhErr) throw mhErr;
       }
 
       // Alle ausstehenden Angebote ablehnen
@@ -724,7 +724,7 @@ export default function AdminPostAuctionOffers() {
   };
 
   // ---- Zurück in Auktion: Bestehende Auktion recyceln (UPDATE statt INSERT) ----
-  // WICHTIG: Die auctions-Tabelle hat einen UNIQUE Constraint auf vehicle_id,
+  // WICHTIG: Die auctions-Tabelle hat einen UNIQUE Constraint auf motorhome_id,
   // daher kann keine zweite Auktion für dasselbe Wohnmobil erstellt werden.
   // Stattdessen wird die bestehende Auktion zurückgesetzt: neuer Status, neue Zeiten,
   // neuer Mindestpreis. Alte Bids und Offers werden archiviert/gelöscht.
@@ -738,41 +738,38 @@ export default function AdminPostAuctionOffers() {
       // 1. Lade aktuelle Auktionsdaten
       const { data: currentAuction, error: fetchErr } = await supabase
         .from('auctions')
-        .select('vehicle_id, reserve_price, starting_bid, vehicle:vehicles(reserve_price, postal_code, city)')
+        .select('motorhome_id, reserve_price, starting_bid, motorhome:motorhomes(reserve_price, postal_code, city)')
         .eq('id', auctionId)
         .single();
       if (fetchErr) throw fetchErr;
 
-      const vehicleId = currentAuction?.vehicle_id;
-      if (!vehicleId) throw new Error('Kein Wohnmobil mit dieser Auktion verknüpft.');
+      const motorhomeId = currentAuction?.motorhome_id;
+      if (!motorhomeId) throw new Error('Kein Wohnmobil mit dieser Auktion verknüpft.');
 
       // Prüfe PLZ (wie bei normaler Aktivierung)
-      const mh = currentAuction?.vehicle as any;
+      const mh = currentAuction?.motorhome as any;
       if (!mh?.postal_code) {
         throw new Error('Das Wohnmobil hat keine PLZ. Bitte zuerst die Fahrzeugdaten vervollständigen.');
       }
 
       // 2. Alle ausstehenden Kaufchance-Angebote ablehnen
-      const { error: rejectErr } = await supabase
+      await supabase
         .from('post_auction_offers')
         .update({ status: 'rejected', seller_response: 'Kaufchance beendet – zurück in Auktion', updated_at: new Date().toISOString() })
         .eq('auction_id', auctionId)
         .in('status', ['pending', 'countered']);
-      if (rejectErr) throw rejectErr;
 
       // 3. Alle Kaufchance-Einladungen löschen
-      const { error: invDelErr } = await supabase
+      await supabase
         .from('kaufchance_invitations')
         .delete()
         .eq('auction_id', auctionId);
-      if (invDelErr) throw invDelErr;
 
       // 4. Alle alten Bids löschen (damit die neue Auktion sauber startet)
-      const { error: bidsDelErr } = await supabase
+      await supabase
         .from('bids')
         .delete()
         .eq('auction_id', auctionId);
-      if (bidsDelErr) throw bidsDelErr;
 
       // 5. Neuen Mindestpreis bestimmen
       const newReservePrice = backToAuctionReservePrice
@@ -800,12 +797,12 @@ export default function AdminPostAuctionOffers() {
         .eq('id', auctionId);
       if (updateErr) throw updateErr;
 
-      // 7. Fahrzeug-Status auf 'active' setzen
-      const { error: vhActiveErr } = await supabase
-        .from('vehicles')
+      // 7. Motorhome-Status auf 'active' setzen
+      const { error: mhActiveErr } = await supabase
+        .from('motorhomes')
         .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', vehicleId);
-      if (vhActiveErr) throw vhActiveErr;
+        .eq('id', motorhomeId);
+      if (mhActiveErr) throw mhActiveErr;
 
       toast({
         title: 'Zurück in Auktion',
@@ -1115,11 +1112,11 @@ export default function AdminPostAuctionOffers() {
             </h2>
             <div className="space-y-4">
               {kaufchanceAuctions.map((auction: AuctionInfo) => {
-                const vehicle = auction.vehicle;
-                const vehicleName = vehicle
-                  ? `${vehicle.manufacturer} ${vehicle.model}`
+                const motorhome = auction.motorhome;
+                const vehicleName = motorhome
+                  ? `${motorhome.manufacturer} ${motorhome.model}`
                   : 'Unbekannt';
-                const seller = vehicle?.seller_id ? profileMap[vehicle.seller_id] : null;
+                const seller = motorhome?.seller_id ? profileMap[motorhome.seller_id] : null;
                 const sellerName = seller
                   ? (seller.company_name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email || 'Unbekannt')
                   : 'Unbekannt';
@@ -1137,7 +1134,7 @@ export default function AdminPostAuctionOffers() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold">{vehicleName}</h3>
-                          {vehicle?.year && <span className="text-sm text-muted-foreground">({vehicle.year})</span>}
+                          {motorhome?.year && <span className="text-sm text-muted-foreground">({motorhome.year})</span>}
                           {isExpired ? (
                             <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
                           ) : (
@@ -1154,8 +1151,8 @@ export default function AdminPostAuctionOffers() {
                           {auction.reserve_price && (
                             <span>Reservepreis: <strong className="text-amber-600">{Number(auction.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
-                          {vehicle?.reserve_price && !auction.reserve_price && (
-                            <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(vehicle.reserve_price).toLocaleString('de-DE')} €</strong></span>
+                          {motorhome?.reserve_price && !auction.reserve_price && (
+                            <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
                           {auction.kaufchance_expires_at && (
@@ -1195,7 +1192,7 @@ export default function AdminPostAuctionOffers() {
                           onClick={() => openBackToAuctionDialog(
                             auction.id,
                             vehicleName,
-                            auction.reserve_price || vehicle?.reserve_price || null
+                            auction.reserve_price || motorhome?.reserve_price || null
                           )}
                         >
                           {backToAuctionLoading === auction.id ? (
@@ -1357,7 +1354,7 @@ export default function AdminPostAuctionOffers() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-sm">{auction?.vehicle ? `${auction.vehicle.manufacturer} ${auction.vehicle.model}` : "Unbekannte Auktion"}</p>
+                        <p className="text-sm">{auction?.motorhome ? `${auction.motorhome.manufacturer} ${auction.motorhome.model}` : "Unbekannte Auktion"}</p>
                         {auction?.status && (
                           <p className="text-xs text-muted-foreground">
                             Status: {auction.status}
@@ -1441,14 +1438,14 @@ export default function AdminPostAuctionOffers() {
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           {selectedKaufchanceAuction && (() => {
             const auction = selectedKaufchanceAuction;
-            const vehicle = auction.vehicle;
-            const vehicleName = vehicle ? `${vehicle.manufacturer} ${vehicle.model}` : 'Unbekannt';
-            const seller = vehicle?.seller_id ? profileMap[vehicle.seller_id] : null;
+            const motorhome = auction.motorhome;
+            const vehicleName = motorhome ? `${motorhome.manufacturer} ${motorhome.model}` : 'Unbekannt';
+            const seller = motorhome?.seller_id ? profileMap[motorhome.seller_id] : null;
             const sellerName = seller
               ? (seller.company_name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email || 'Unbekannt')
               : 'Unbekannt';
             const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
-            const effectiveReservePrice = auction.reserve_price || vehicle?.reserve_price || null;
+            const effectiveReservePrice = auction.reserve_price || motorhome?.reserve_price || null;
             const displayBids = showAllBids ? kaufchanceBids : kaufchanceBids.slice(0, 10);
 
             return (
@@ -1457,7 +1454,7 @@ export default function AdminPostAuctionOffers() {
                   <DialogTitle className="flex items-center gap-2 text-xl">
                     <Gavel className="w-5 h-5 text-amber-600" />
                     Kaufchance: {vehicleName}
-                    {vehicle?.year && <span className="text-muted-foreground font-normal">({vehicle.year})</span>}
+                    {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
                   </DialogTitle>
                   <DialogDescription className="flex items-center gap-3 flex-wrap">
                     {isExpired ? (
@@ -2072,7 +2069,7 @@ export default function AdminPostAuctionOffers() {
           {selectedOffer && (() => {
             const auction = auctionMap[selectedOffer.auction_id];
             const buyer = profileMap[selectedOffer.buyer_id];
-            const seller = auction?.vehicle?.seller_id ? profileMap[auction.vehicle.seller_id] : null;
+            const seller = auction?.motorhome?.seller_id ? profileMap[auction.motorhome.seller_id] : null;
             const isExpired = selectedOffer.expires_at && isPast(new Date(selectedOffer.expires_at)) && selectedOffer.status === "pending";
             const canAct = (selectedOffer.status === 'pending' && !isExpired) || selectedOffer.status === 'countered';
 
@@ -2144,7 +2141,7 @@ export default function AdminPostAuctionOffers() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Verkäufer:</span>
                           <div className="text-right">
-                            <p className="font-medium">{getProfileName(auction!.vehicle!.seller_id)}</p>
+                            <p className="font-medium">{getProfileName(auction!.motorhome!.seller_id)}</p>
                             {seller.email && <p className="text-xs text-muted-foreground">{seller.email}</p>}
                             {seller.phone && (
                               <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline flex items-center justify-end gap-1">

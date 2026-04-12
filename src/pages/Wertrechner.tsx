@@ -31,8 +31,7 @@ import {
   Caravan,
   TrendingUp,
   Car,
-  Search,
-  SkipForward,
+  X,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -480,7 +479,6 @@ const Wertrechner = () => {
     return "";
   });
   const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
-  const [showManufacturerSearch, setShowManufacturerSearch] = useState(false);
   const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
   const [manufacturerFilter, setManufacturerFilter] = useState(formData.manufacturer || "");
@@ -812,7 +810,6 @@ const Wertrechner = () => {
             model: "",
           }));
           setManufacturerFilter("");
-          setShowManufacturerSearch(false);
           setStep((s) => s + 1);
         } else {
           setStep((s) => s + 1);
@@ -989,152 +986,124 @@ const Wertrechner = () => {
               </div>
             )}
 
-            {/* Step 3: Manufacturer/Model – with popular chips + skip */}
+            {/* Step 3: Manufacturer/Model */}
             {!showCalculation && step === 3 && (
               <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-1">Hersteller & Modell</h2>
                   <p className="text-muted-foreground">
-                    Verbessert die Genauigkeit – oder überspringen
+                    Optional – verbessert die Genauigkeit Ihrer Bewertung
                   </p>
                 </div>
                 <div className="space-y-5">
-                  {/* Popular manufacturer chips */}
-                  {!formData.manufacturer && !showManufacturerSearch && (
-                    <div className="space-y-3 animate-fade-in">
-                      <Label className="text-sm font-semibold">Beliebte Hersteller</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {popularList.filter(p => currentManufacturers.includes(p)).map((mfr) => (
-                          <button
-                            key={mfr}
-                            type="button"
-                            onClick={() => {
-                              updateField("manufacturer", mfr);
-                              setManufacturerFilter(mfr);
-                            }}
-                            className={cn(
-                              "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
-                              "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
-                              "border-border bg-background text-foreground"
+                  {/* Manufacturer combobox */}
+                  <div ref={manufacturerRef}>
+                    <Label htmlFor="manufacturer" className="text-sm font-semibold mb-2 block">Hersteller</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 relative">
+                        <Input
+                          id="manufacturer"
+                          placeholder="Hersteller auswählen oder eingeben..."
+                          value={manufacturerFilter}
+                          onChange={(e) => {
+                            setManufacturerFilter(e.target.value);
+                            updateField("manufacturer", e.target.value);
+                            setShowManufacturerDropdown(true);
+                          }}
+                          onFocus={() => setShowManufacturerDropdown(true)}
+                          className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                          autoFocus={!isMobile}
+                          autoComplete="off"
+                        />
+                        {showManufacturerDropdown && (
+                          <div className={cn("absolute z-50 top-full left-0 right-0 mt-1 bg-background border-2 border-slate-200 rounded-xl shadow-xl overflow-y-auto", isMobile ? "max-h-[250px]" : "max-h-[300px]")}>
+                            {/* Popular section (only when no search query) */}
+                            {!manufacturerFilter.trim() && (
+                              <>
+                                <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Beliebt</div>
+                                {popularList.filter(p => currentManufacturers.includes(p)).map((m) => (
+                                  <button
+                                    key={`pop-${m}`}
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    className={cn(
+                                      "w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-primary/5 active:bg-primary/10",
+                                      formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
+                                    )}
+                                    onClick={() => {
+                                      updateField("manufacturer", m);
+                                      setManufacturerFilter(m);
+                                      setShowManufacturerDropdown(false);
+                                    }}
+                                  >
+                                    {m}
+                                  </button>
+                                ))}
+                                <div className="border-t my-1" />
+                                <div className="px-3 pt-1 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Alle Hersteller</div>
+                              </>
                             )}
-                          >
-                            {mfr}
-                          </button>
-                        ))}
+                            {/* Filtered/all manufacturers */}
+                            {filteredManufacturers
+                              .filter(m => manufacturerFilter.trim() ? true : !popularList.includes(m))
+                              .map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                className={cn(
+                                  "w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-primary/5 active:bg-primary/10",
+                                  formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
+                                )}
+                                onClick={() => {
+                                  updateField("manufacturer", m);
+                                  setManufacturerFilter(m);
+                                  setShowManufacturerDropdown(false);
+                                }}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                            {filteredManufacturers.length === 0 && manufacturerFilter.trim() && (
+                              <div className="px-4 py-3 text-sm text-muted-foreground">
+                                Kein Treffer – Eingabe wird trotzdem übernommen
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowManufacturerSearch(true)}
-                        className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium py-1"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                        Anderer Hersteller? Suche öffnen
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Selected manufacturer badge */}
-                  {formData.manufacturer && !showManufacturerSearch && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label className="text-sm font-semibold">Hersteller</Label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-12 flex items-center px-3 rounded-lg border-2 border-primary bg-primary/5">
-                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                          <span className="font-medium text-primary">{formData.manufacturer}</span>
-                        </div>
+                      {formData.manufacturer && (
                         <button
                           type="button"
                           onClick={() => {
                             updateField("manufacturer", "");
+                            updateField("model", "");
                             setManufacturerFilter("");
-                            setShowManufacturerSearch(false);
                           }}
-                          className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors text-xs text-muted-foreground"
+                          className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors flex-shrink-0"
+                          aria-label="Hersteller zurücksetzen"
                         >
-                          Ändern
+                          <X className="w-4 h-4" />
                         </button>
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
-                  {/* Manufacturer search input */}
-                  {showManufacturerSearch && !formData.manufacturer && (
-                    <div className="animate-fade-in" ref={manufacturerRef}>
-                      <div className="space-y-2">
-                        <Label htmlFor="manufacturer" className="text-sm font-semibold">Hersteller suchen</Label>
-                        <div>
-                          <Input
-                            id="manufacturer"
-                            placeholder="Hersteller eingeben..."
-                            value={manufacturerFilter}
-                            onChange={(e) => {
-                              setManufacturerFilter(e.target.value);
-                              setShowManufacturerDropdown(true);
-                            }}
-                            onFocus={() => setShowManufacturerDropdown(true)}
-                            className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
-                            autoFocus={!isMobile}
-                            autoComplete="off"
-                          />
-                          {showManufacturerDropdown && filteredManufacturers.length > 0 && (
-                            <div className={cn("w-full mt-1 bg-background border-2 border-slate-200 rounded-xl shadow-xl overflow-y-auto", isMobile ? "max-h-[200px]" : "max-h-52")}>
-                              {filteredManufacturers.map((m) => (
-                                <button
-                                  key={m}
-                                  type="button"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  className={cn(
-                                    "w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-sm border-b border-border/30 last:border-0",
-                                    formData.manufacturer === m && "bg-primary/10 font-semibold text-primary"
-                                  )}
-                                  onClick={() => {
-                                    updateField("manufacturer", m);
-                                    setManufacturerFilter(m);
-                                    setShowManufacturerDropdown(false);
-                                    setShowManufacturerSearch(false);
-                                  }}
-                                >
-                                  {m}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowManufacturerSearch(false)}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          ← Zurück zur Auswahl
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  {/* Model input */}
+                  <div className="space-y-2 animate-fade-in">
+                    <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
+                    <Input
+                      id="model"
+                      placeholder={isWohnwagen ? "z.B. De Luxe, Bianco, Touring..." : "z.B. B-Klasse MC, Trend, Ixeo..."}
+                      value={formData.model}
+                      onChange={(e) => updateField("model", e.target.value)}
+                      className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
 
-                  {/* Model input – only when manufacturer is selected */}
-                  {formData.manufacturer && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
-                      <Input
-                        id="model"
-                        placeholder={isWohnwagen ? "z.B. De Luxe, Bianco, Touring..." : "z.B. B-Klasse MC, Trend, Ixeo..."}
-                        value={formData.model}
-                        onChange={(e) => updateField("model", e.target.value)}
-                        className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
-                        autoFocus={!isMobile}
-                      />
-                    </div>
-                  )}
-
-                  {/* Skip button */}
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-primary font-medium transition-colors rounded-xl hover:bg-primary/5"
-                  >
-                    <SkipForward className="w-4 h-4" />
-                    Überspringen – Hersteller ist optional
-                  </button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Sie können diesen Schritt überspringen, wenn Sie unsicher sind
+                  </p>
                 </div>
               </div>
             )}
@@ -1544,7 +1513,7 @@ const Wertrechner = () => {
             )}
 
             {/* Navigation */}
-            {!showCalculation && step < 6 && step !== 3 && (
+            {!showCalculation && step < 6 && (
               <div className="flex justify-between mt-8 pt-6 border-t border-border/40">
                 {step > 1 ? (
                   <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
@@ -1555,20 +1524,6 @@ const Wertrechner = () => {
                   <div />
                 )}
                 <Button onClick={nextStep} disabled={!canProceed()} className="gradient-hero px-8 rounded-xl h-11 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  Weiter
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            )}
-
-            {/* Step 3 navigation – separate because skip button is inline */}
-            {!showCalculation && step === 3 && (
-              <div className="flex justify-between mt-6 pt-4 border-t border-border/40">
-                <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Zurück
-                </Button>
-                <Button onClick={nextStep} className="gradient-hero px-8 rounded-xl h-11 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
                   Weiter
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -1594,7 +1549,6 @@ const Wertrechner = () => {
                     setLeadSubmitted(false);
                     setMileageDisplay("");
                     setManufacturerFilter("");
-                    setShowManufacturerSearch(false);
                     setAiEstimate(null);
                     setAiLoading(false);
                     setFormData({

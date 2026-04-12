@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Calendar, Gauge, Info, Check, Search, X } from "lucide-react";
+import { Calendar, Gauge, Info, Check, X } from "lucide-react";
 import { popularManufacturers, wohnwagenManufacturers, manufacturerModels, wohnwagenManufacturerModels, resolveManufacturer } from "@/lib/vehicle-data";
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -308,7 +308,6 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
   const vehicleType = formData.vehicleType || "Wohnmobil";
   const isWohnwagen = vehicleType === "Wohnwagen";
   const isMobile = useIsMobile();
-  const [showManufacturerSearch, setShowManufacturerSearch] = useState(false);
 
   const manufacturers = useMemo(() => {
     return isWohnwagen ? wohnwagenManufacturers : popularManufacturers;
@@ -344,13 +343,7 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     if (final !== formData.manufacturer) {
       updateFormData({ manufacturer: final, model: "" });
     }
-    if (final) setShowManufacturerSearch(false);
   }, [formData.manufacturer, updateFormData]);
-
-  const handleManufacturerChipSelect = useCallback((value: string) => {
-    updateFormData({ manufacturer: value, model: "" });
-    setShowManufacturerSearch(false);
-  }, [updateFormData]);
 
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
@@ -388,92 +381,39 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
           Hersteller <span className="text-red-500">*</span>
         </Label>
 
-        {/* Selected manufacturer badge (when already chosen) */}
-        {formData.manufacturer && !showManufacturerSearch ? (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-12 flex items-center px-3 rounded-lg border-2 border-primary bg-primary/5">
-              <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-              <span className="font-medium text-primary">{formData.manufacturer}</span>
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <SearchableSelect
+              id="manufacturer"
+              options={manufacturers}
+              popular={popularList}
+              value={formData.manufacturer}
+              onChange={handleManufacturerCommit}
+              onCommit={handleManufacturerCommit}
+              placeholder="Hersteller auswählen oder eingeben..."
+              hasError={!!fieldErrors.manufacturer}
+              escapeLabel="Andere"
+              autoFocus
+            />
+          </div>
+          {formData.manufacturer && (
             <button
               type="button"
-              onClick={() => {
-                updateFormData({ manufacturer: "", model: "" });
-                setShowManufacturerSearch(false);
-              }}
-              className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors"
-              aria-label="Hersteller ändern"
+              onClick={() => updateFormData({ manufacturer: "", model: "" })}
+              className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors flex-shrink-0"
+              aria-label="Hersteller zurücksetzen"
             >
               <X className="w-4 h-4" />
             </button>
-          </div>
-        ) : (
-          <>
-            {/* Popular manufacturer chips – directly tappable, no keyboard needed */}
-            {!showManufacturerSearch && (
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-1.5">
-                  {popularList.filter(p => manufacturers.includes(p)).map((mfr) => (
-                    <button
-                      key={mfr}
-                      type="button"
-                      onClick={() => handleManufacturerChipSelect(mfr)}
-                      className={cn(
-                        "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
-                        "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
-                        formData.manufacturer === mfr
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-background text-foreground"
-                      )}
-                    >
-                      {mfr}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowManufacturerSearch(true)}
-                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium py-1"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                  Anderer Hersteller? Suche öffnen
-                </button>
-              </div>
-            )}
-
-            {/* Search input for non-popular manufacturers */}
-            {showManufacturerSearch && (
-              <div className="space-y-1.5">
-                <SearchableSelect
-                  id="manufacturer"
-                  options={manufacturers}
-                  popular={popularList}
-                  value={formData.manufacturer}
-                  onChange={handleManufacturerCommit}
-                  onCommit={handleManufacturerCommit}
-                  placeholder="Hersteller suchen oder eintippen..."
-                  hasError={!!fieldErrors.manufacturer}
-                  escapeLabel="Andere"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowManufacturerSearch(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  ← Zurück zur Auswahl
-                </button>
-              </div>
-            )}
-          </>
-        )}
+          )}
+        </div>
         {fieldErrors.manufacturer && (
           <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>
         )}
       </div>
 
-      {/* === REMAINING FIELDS (only after manufacturer is committed, not during search typing) === */}
-      {formData.manufacturer && !showManufacturerSearch && (
+      {/* === REMAINING FIELDS (only after manufacturer is committed) === */}
+      {formData.manufacturer && (
         <div className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Modell */}

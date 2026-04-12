@@ -18,6 +18,8 @@
 - Keep components small and focused (< 200 lines)
 - Keep diffs small and focused on one feature
 - **ALWAYS push to GitHub after every commit** (`git push origin main`)
+- **ALWAYS verify imports resolve to actual files** before committing: when renaming exports or files, check that every import path matches an existing file on disk (not just the export name)
+- **NEVER rename exports without also renaming the file** or fixing all import paths in the same commit
 
 ## Don't
 - Do NOT call React Hooks after an early return

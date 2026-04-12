@@ -126,6 +126,11 @@ const API_ERROR_MAP: Record<string, string> = {
   'Payload too large': 'Die Datei ist zu groß. Bitte wählen Sie eine kleinere Datei.',
   'new row violates row-level security': 'Sie haben keine Berechtigung für diese Aktion. Bitte melden Sie sich an.',
   
+  // Server/Infrastruktur-Fehler
+  'Service temporarily unavailable': 'Der Service ist vorübergehend nicht erreichbar. Bitte versuchen Sie es in wenigen Sekunden erneut.',
+  'Service Unavailable': 'Der Service ist vorübergehend nicht erreichbar. Bitte versuchen Sie es in wenigen Sekunden erneut.',
+  '503': 'Der Service ist vorübergehend nicht erreichbar. Bitte versuchen Sie es in wenigen Sekunden erneut.',
+
   // Edge Function Fehler
   'FunctionsFetchError': 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.',
   'FunctionsHttpError': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',

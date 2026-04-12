@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, withNetworkRetry } from "@/lib/sessionGuard";
 import { MessageCircle, Send } from "lucide-react";
 import { z } from "zod";
 
@@ -102,13 +102,17 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
         if (!sessionValid) return;
       }
 
-      const { error } = await supabase.from("vehicle_questions").insert({
-        motorhome_id: motorhomeId,
-        questioner_id: user?.id || null,
-        questioner_name: formData.name || (user?.email?.split("@")[0] || null),
-        questioner_email: formData.email || user?.email || "",
-        question: formData.question.trim(),
-      });
+      const { error } = await withNetworkRetry(
+        () => supabase.from("vehicle_questions").insert({
+          motorhome_id: motorhomeId,
+          questioner_id: user?.id || null,
+          questioner_name: formData.name || (user?.email?.split("@")[0] || null),
+          questioner_email: formData.email || user?.email || "",
+          question: formData.question.trim(),
+        }),
+        2,
+        'VehicleQuestion INSERT'
+      );
 
       if (error) throw error;
 
@@ -133,9 +137,17 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
       setFormData({ name: "", email: "", question: "" });
     } catch (error) {
       console.error("Error submitting question:", error);
+      const isNetwork = error instanceof Error && (
+        error.message.includes('Load failed') ||
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('NetworkError') ||
+        error.message.includes('Service temporarily unavailable')
+      );
       toast({
-        title: "Fehler",
-        description: "Frage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+        title: isNetwork ? "Verbindungsproblem" : "Fehler",
+        description: isNetwork
+          ? "Die Verbindung wurde unterbrochen. Bitte tippen Sie erneut auf \"Frage senden\"."
+          : "Frage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
         variant: "destructive",
       });
     } finally {

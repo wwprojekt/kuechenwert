@@ -11,7 +11,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -353,6 +353,23 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>1.</strong> Gegenangebot annehmen \u2013 Kaufvertrag wird erstellt<br><strong>2.</strong> Eigenes Gegenangebot machen \u2013 Weiter verhandeln<br><strong>3.</strong> Ablehnen \u2013 Verhandlung beenden')}
           ${button('Gegenangebot ansehen', auctionUrl, settingsData)}
           ${paragraph(`<em>Reagieren Sie zeitnah, um die Kaufchance nicht zu verpassen!</em>`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
+        `;
+        break;
+
+      case "kaufchance_expired":
+        subject = `Kaufchance abgelaufen: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Die Kaufchance-Phase f\u00fcr das folgende Fahrzeug ist leider abgelaufen, ohne dass eine Einigung erzielt wurde.')}
+          ${infoBox('Details', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Status', 'Kaufchance abgelaufen')}
+          `, 'warning', settingsData)}
+          ${paragraph('Offene Angebote wurden automatisch als abgelaufen markiert.')}
+          ${paragraph('Entdecken Sie weitere verf\u00fcgbare Fahrzeuge auf unserer Plattform:')}
+          ${button('Fahrzeuge entdecken', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;

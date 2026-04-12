@@ -122,13 +122,16 @@ Deno.serve(async (req) => {
                 error: updateError.message,
               });
             } else {
-              // Also update the motorhome status back to 'active' (available again)
+              // Load auction with motorhome data for notifications
               const { data: auctionData } = await supabase
                 .from('auctions')
-                .select('motorhome_id')
+                .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model)')
                 .eq('id', kaufchance.id)
                 .single();
 
+              const mh = Array.isArray(auctionData?.motorhome) ? auctionData.motorhome[0] : auctionData?.motorhome;
+
+              // Update motorhome status back to 'active' (available again)
               if (auctionData?.motorhome_id) {
                 const { error: mhError } = await supabase
                   .from('motorhomes')
@@ -137,7 +140,82 @@ Deno.serve(async (req) => {
                 if (mhError) console.error(`Failed to update motorhome status for ${auctionData.motorhome_id}:`, mhError);
               }
 
-              console.log(`Successfully closed kaufchance ${kaufchance.id}`);
+              // Set all pending/countered offers to 'expired'
+              const { error: expireOffersErr } = await supabase
+                .from('post_auction_offers')
+                .update({
+                  status: 'expired',
+                  seller_response: 'Kaufchance-Frist abgelaufen',
+                  updated_at: now,
+                })
+                .eq('auction_id', kaufchance.id)
+                .in('status', ['pending', 'countered']);
+
+              if (expireOffersErr) {
+                console.error(`Failed to expire offers for kaufchance ${kaufchance.id}:`, expireOffersErr);
+              }
+
+              // Send anonymous notifications to involved parties
+              const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
+
+              // Notify invited bidders (no seller identity revealed)
+              try {
+                const { data: invitations } = await supabase
+                  .from('kaufchance_invitations')
+                  .select('bidder_id')
+                  .eq('auction_id', kaufchance.id);
+
+                if (invitations) {
+                  for (const inv of invitations) {
+                    const { data: profile } = await supabase
+                      .from('profiles')
+                      .select('email, first_name, company_name')
+                      .eq('id', inv.bidder_id)
+                      .single();
+
+                    if (profile?.email) {
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: profile.email,
+                          name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                          type: 'kaufchance_expired',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: 'https://caravanwert.de/kaufen',
+                        },
+                      }).catch((e: any) => console.error(`Failed to notify bidder ${inv.bidder_id}:`, e));
+                    }
+                  }
+                }
+              } catch (notifyErr) {
+                console.error(`Failed to notify bidders for kaufchance ${kaufchance.id}:`, notifyErr);
+              }
+
+              // Notify seller (no buyer identity revealed)
+              if (mh?.seller_id) {
+                try {
+                  const { data: sellerProfile } = await supabase
+                    .from('profiles')
+                    .select('email, first_name')
+                    .eq('id', mh.seller_id)
+                    .single();
+
+                  if (sellerProfile?.email) {
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: sellerProfile.email,
+                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        type: 'kaufchance_expired',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: 'https://caravanwert.de/dashboard',
+                      },
+                    }).catch((e: any) => console.error(`Failed to notify seller ${mh.seller_id}:`, e));
+                  }
+                } catch (sellerNotifyErr) {
+                  console.error(`Failed to notify seller for kaufchance ${kaufchance.id}:`, sellerNotifyErr);
+                }
+              }
+
+              console.log(`Successfully closed kaufchance ${kaufchance.id} (offers expired, parties notified)`);
               results.push({
                 auctionId: kaufchance.id,
                 type: 'kaufchance_expired',

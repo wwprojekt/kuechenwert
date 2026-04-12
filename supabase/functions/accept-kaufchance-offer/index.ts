@@ -122,6 +122,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if Kaufchance has expired
+    if (auction.kaufchance_expires_at) {
+      const expiresAt = new Date(auction.kaufchance_expires_at).getTime();
+      if (Date.now() > expiresAt) {
+        return new Response(
+          JSON.stringify({ error: 'Die Kaufchance-Frist ist abgelaufen. Angebote können nicht mehr angenommen werden.' }),
+          { status: 410, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // ─── Authorization check: only seller, buyer (for counter-offers), or admin can accept ───
     const isAdmin = await (async () => {
       const { data: roleData } = await supabase
@@ -189,27 +200,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ─── 4. Reject all other pending/countered offers for this auction ───
-    try {
-      const { error: rejectError } = await supabase
-        .from('post_auction_offers')
-        .update({
-          status: 'rejected',
-          seller_response: 'Ein anderes Angebot wurde angenommen.',
-          responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('auction_id', offer.auction_id)
-        .neq('id', offerId)
-        .in('status', ['pending', 'countered']);
+    // ─── 4. Snapshot other offers before rejecting (for rollback) ───
+    const { data: otherOffers } = await supabase
+      .from('post_auction_offers')
+      .select('id, status')
+      .eq('auction_id', offer.auction_id)
+      .neq('id', offerId)
+      .in('status', ['pending', 'countered']);
 
-      if (rejectError) {
-        console.error('Error rejecting other offers:', rejectError);
-        errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${rejectError.message}`);
+    const otherOfferIds = otherOffers?.map((o: { id: string }) => o.id) || [];
+    const otherOfferSnapshots = otherOffers || [];
+
+    // Reject other offers
+    if (otherOfferIds.length > 0) {
+      try {
+        const { error: rejectError } = await supabase
+          .from('post_auction_offers')
+          .update({
+            status: 'rejected',
+            seller_response: 'Ein anderes Angebot wurde angenommen.',
+            responded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', otherOfferIds);
+
+        if (rejectError) {
+          console.error('Error rejecting other offers:', rejectError);
+          errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${rejectError.message}`);
+        }
+      } catch (e: any) {
+        console.error('Error rejecting other offers:', e);
+        errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${e.message}`);
       }
-    } catch (e: any) {
-      console.error('Error rejecting other offers:', e);
-      errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${e.message}`);
     }
 
     // ─── 5. Update auction status to 'sold' (with row count verification) ───
@@ -223,22 +245,31 @@ Deno.serve(async (req) => {
       .eq('status', 'kaufchance')
       .select('id');
 
-    if (updateAuctionError) {
-      console.error('Error updating auction status:', updateAuctionError);
-      // Rollback: revert offer to previous status
-      await supabase.from('post_auction_offers').update({ status: offer.status }).eq('id', offerId);
-      return new Response(
-        JSON.stringify({ error: 'Auktions-Status-Update fehlgeschlagen. Bitte erneut versuchen.' }),
-        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
-      );
-    }
+    if (updateAuctionError || !auctionUpdateData || auctionUpdateData.length === 0) {
+      const reason = updateAuctionError
+        ? `Error: ${updateAuctionError.message}`
+        : 'Race condition: 0 rows updated';
+      console.error('Auction update failed, rolling back all offer changes:', reason);
 
-    if (!auctionUpdateData || auctionUpdateData.length === 0) {
-      console.error('Auction status was already changed (0 rows updated) — race condition');
-      await supabase.from('post_auction_offers').update({ status: offer.status }).eq('id', offerId);
+      // Full rollback: revert accepted offer AND re-open rejected offers
+      await supabase.from('post_auction_offers')
+        .update({ status: offer.status, responded_at: null, updated_at: new Date().toISOString() })
+        .eq('id', offerId);
+
+      for (const snap of otherOfferSnapshots) {
+        await supabase.from('post_auction_offers')
+          .update({ status: snap.status, seller_response: null, responded_at: null, updated_at: new Date().toISOString() })
+          .eq('id', snap.id);
+      }
+
+      const errorMsg = updateAuctionError
+        ? 'Auktions-Status-Update fehlgeschlagen. Bitte erneut versuchen.'
+        : 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.';
+      const statusCode = updateAuctionError ? 500 : 409;
+
       return new Response(
-        JSON.stringify({ error: 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.' }),
-        { status: 409, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: errorMsg }),
+        { status: statusCode, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 

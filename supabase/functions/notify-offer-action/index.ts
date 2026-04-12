@@ -187,6 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
       case 'new_offer':
       case 'admin_offer': {
         // Verkäufer benachrichtigen: Neues Angebot eingegangen
+        // WICHTIG: buyerName wird NICHT an Verkäufer gesendet (Anonymität bis Kaufvertrag)
         if (sellerProfile?.email) {
           notifications.push(
             supabase.functions.invoke('send-auction-notification', {
@@ -197,15 +198,14 @@ const handler = async (req: Request): Promise<Response> => {
                 motorhomeModel: motorhomeName,
                 auctionUrl: 'https://caravanwert.de/dashboard',
                 offerAmount: formattedOffer,
-                buyerName: buyerDisplayName,
                 currentBid: currentBidFormatted,
               },
             })
           );
-          console.log(`[notify-offer-action] → seller_new_offer to ${sellerProfile.email}`);
+          console.log(`[notify-offer-action] → seller_new_offer to ${sellerProfile.email} (buyer anonymized)`);
         }
 
-        // Admin-CC: Alle Admins über neues Angebot informieren
+        // Admin-CC: Admins sehen den echten Händlernamen (für Verwaltung)
         try {
           const { data: adminRoles } = await supabase
             .from('user_roles')

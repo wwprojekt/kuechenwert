@@ -13,21 +13,21 @@ const VehicleShowcase = () => {
   const showcaseItems = [
     {
       id: 1,
-      image: "/images/vehicle-integrated.webp",
+      image: "/images/motorhome-integrated.webp",
       title: "Integrierte Wohnmobile",
       subtitle: "Faire Preise",
       badge: "Beliebt",
     },
     {
       id: 2,
-      image: "/images/vehicle-alcove.webp",
+      image: "/images/motorhome-alcove.webp",
       title: "Alkoven-Wohnmobile",
       subtitle: "Schneller Verkauf",
       badge: "Top",
     },
     {
       id: 3,
-      image: "/images/vehicle-van.webp",
+      image: "/images/motorhome-van.webp",
       title: "Campervans & Kastenwagen",
       subtitle: "Hohe Nachfrage",
       badge: "Gefragt",

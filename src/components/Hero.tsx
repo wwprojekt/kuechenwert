@@ -14,8 +14,8 @@ const Hero = () => {
     <section className="relative min-h-fit lg:min-h-[85vh] overflow-hidden">
       {/* Background Image — <img> for fast LCP discovery by browser */}
       <img
-        src="/images/hero-vehicle.webp"
-        srcSet="/images/hero-vehicle-sm.webp 400w, /images/hero-vehicle-md.webp 800w, /images/hero-vehicle.webp 1920w"
+        src="/images/hero-motorhome.webp"
+        srcSet="/images/hero-motorhome.webp 1920w"
         sizes="100vw"
         alt=""
         width={1920}

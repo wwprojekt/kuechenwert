@@ -44,6 +44,22 @@ const Hero = () => {
 
       {/* Main Content */}
       <div className="container relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        {/* Mobile: Sofort sichtbare CTA-Buttons */}
+        <div className="flex gap-3 mb-6 lg:hidden z-10 relative animate-fade-in">
+          <Link to="/verkaufen/wizard" className="flex-1">
+            <Button size="lg" className="gradient-hero h-12 text-sm font-semibold group w-full">
+              Jetzt verkaufen
+              <ArrowRight className="ml-1.5 h-4 w-4 group-hover:translate-x-1 transition-smooth" />
+            </Button>
+          </Link>
+          <Link to="/wertrechner" className="flex-1">
+            <Button size="lg" className="h-12 text-sm font-semibold w-full bg-amber-500 hover:bg-amber-600 text-white shadow-md">
+              <Calculator className="mr-1.5 h-4 w-4" />
+              Wertrechner
+            </Button>
+          </Link>
+        </div>
+
         <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-fit lg:min-h-[75vh]">
           
           {/* Left Column - Hero Text & Benefits */}

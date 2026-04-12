@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap } from "lucide-react";
+import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap, Calculator } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -94,10 +94,10 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button 
-                  className={`text-sm font-medium transition-smooth flex items-center gap-1 ${
-                    isActive('/verkaufen') || isActive('/wertermittlung') || isActive('/wertrechner') 
-                      ? 'text-primary' 
-                      : 'text-foreground/80 hover:text-primary'
+                  className={`text-sm font-semibold transition-smooth flex items-center gap-1 px-3.5 py-1.5 rounded-full ${
+                    isActive('/verkaufen') || isActive('/verkaufen/wizard') || isActive('/wertermittlung')
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-primary/20 text-primary hover:bg-primary/30'
                   }`}
                 >
                   Verkaufen
@@ -139,6 +139,17 @@ const Header = () => {
               }`}
             >
               Kaufen
+            </Link>
+            <Link 
+              to="/wertrechner" 
+              className={`text-sm font-semibold transition-smooth px-3 py-1.5 rounded-full flex items-center gap-1.5 ${
+                isActive('/wertrechner') 
+                  ? 'bg-amber-500 text-white shadow-sm' 
+                  : 'text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-400 dark:bg-amber-500/15 dark:hover:bg-amber-500/25'
+              }`}
+            >
+              <Calculator className="h-3.5 w-3.5" />
+              Wertrechner
             </Link>
             <Link 
               to="/preise" 
@@ -347,12 +358,11 @@ const Header = () => {
               </Link>
               <Link
                 to="/wertrechner"
-                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
-                  isActive('/wertrechner') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
-                }`}
+                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-amber-500 text-white shadow-sm hover:bg-amber-600 transition-all mt-1"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                → Wertrechner
+                <Calculator className="h-4 w-4" />
+                Wertrechner
               </Link>
               <Link
                 to="/kaufen"

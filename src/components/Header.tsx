@@ -91,7 +91,7 @@ const Header = () => {
           <SiteLogo variant="icon-text" />
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-6">
             <Link 
               to="/verkaufen/wizard" 
               className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
@@ -104,7 +104,7 @@ const Header = () => {
             </Link>
             <Link 
               to="/kaufen" 
-              className={`text-sm font-semibold transition-smooth px-3 py-1.5 rounded-full ${
+              className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
                 isActive('/kaufen') 
                   ? 'bg-primary text-white shadow-sm' 
                   : 'text-primary bg-primary/10 hover:bg-primary/15'
@@ -114,13 +114,10 @@ const Header = () => {
             </Link>
             <Link 
               to="/wertrechner" 
-              className={`text-sm font-semibold transition-smooth px-3 py-1.5 rounded-full flex items-center gap-1.5 ${
-                isActive('/wertrechner') 
-                  ? 'bg-amber-500 text-white shadow-sm' 
-                  : 'text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-400 dark:bg-amber-500/15 dark:hover:bg-amber-500/25'
+              className={`text-sm font-medium transition-smooth ${
+                isActive('/wertrechner') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
               }`}
             >
-              <Calculator className="h-3.5 w-3.5" />
               Wertrechner
             </Link>
             <Link 

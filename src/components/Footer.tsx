@@ -116,7 +116,7 @@ const Footer = () => {
             <div className="space-y-6 md:col-span-2 lg:col-span-6">
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                {settings?.site_description || 'Ihre Plattform für den Wohnmobil-Verkauf. Schnell, transparent und kostenlos für Privatverkäufer.'}
+                {settings?.site_description || 'Verkaufen Sie Ihr Wohnmobil schnell und sicher über unsere innovative Auktions- und Direktverkaufsplattform.'}
               </p>
               
               {/* Social Links - only show if URLs are configured in settings */}
@@ -335,29 +335,27 @@ const Footer = () => {
             <div className="lg:col-span-2">
               <h3 className="font-semibold text-white mb-5 text-sm">Kontakt</h3>
               <ul className="space-y-4">
-                {settings?.support_phone && (
-                  <li>
+                <li>
+                  {(() => { const phone = settings?.support_phone || '+49 511 51532476'; return (
                     <a 
-                      href={`tel:${settings.support_phone.replace(/\s/g, '')}`}
-                      onClick={() => { trackPhoneClick(settings.support_phone || '', location.pathname); trackMetaPhoneClick(); }}
+                      href={`tel:${phone.replace(/\s/g, '')}`}
+                      onClick={() => { trackPhoneClick(phone, location.pathname); trackMetaPhoneClick(); }}
                       className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
                     >
                       <div className="h-9 w-9 rounded-lg bg-slate-800 group-hover:bg-primary flex items-center justify-center flex-shrink-0 transition-colors">
                         <Phone className="h-4 w-4" />
                       </div>
                       <div className="text-sm">
-                        <div className="font-medium">
-                          {settings.support_phone}
-                        </div>
+                        <div className="font-medium">{phone}</div>
                         <div className="text-xs text-slate-500">Mo-Fr 8:00-18:00</div>
                       </div>
                     </a>
-                  </li>
-                )}
-                {settings?.contact_email && (
-                  <li>
+                  ); })()}
+                </li>
+                <li>
+                  {(() => { const email = settings?.contact_email || 'info@caravanwert.de'; return (
                     <a 
-                      href={`mailto:${settings.contact_email}`}
+                      href={`mailto:${email}`}
                       onClick={() => trackEmailClick(location.pathname)}
                       className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
                     >
@@ -365,14 +363,12 @@ const Footer = () => {
                         <Mail className="h-4 w-4" />
                       </div>
                       <div className="text-sm">
-                        <div className="font-medium">
-                          {settings.contact_email}
-                        </div>
+                        <div className="font-medium">{email}</div>
                         <div className="text-xs text-slate-500">24h Antwortzeit</div>
                       </div>
                     </a>
-                  </li>
-                )}
+                  ); })()}
+                </li>
                 <li>
                   <div className="flex items-center gap-3 text-slate-400">
                     <div className="h-9 w-9 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
@@ -381,9 +377,9 @@ const Footer = () => {
                     <div className="text-sm">
                       <div className="font-medium">{settings?.site_name || 'CaravanWert'} GmbH</div>
                       <div className="text-xs text-slate-500">
-                        {settings?.company_city && !settings.company_city.toLowerCase().includes('bitte') 
+                        {(settings?.company_city && !settings.company_city.toLowerCase().includes('bitte'))
                           ? `${settings.company_city}, ${settings.company_country || 'Deutschland'}` 
-                          : 'Deutschland'}
+                          : 'Hannover, Deutschland'}
                       </div>
                     </div>
                   </div>

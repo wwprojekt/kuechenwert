@@ -54,18 +54,18 @@ const Header = () => {
       <div className="w-full bg-slate-900 text-slate-300 py-2.5 hidden md:block border-b border-slate-800">
         <div className="container flex items-center justify-between text-sm">
           <div className="flex items-center gap-6">
-            {settings?.support_phone && (
-              <a href={`tel:${settings.support_phone.replace(/\s/g, '')}`} onClick={() => { trackPhoneClick(settings.support_phone || '', location.pathname); trackMetaPhoneClick(); }} className="flex items-center gap-2 hover:text-white transition-colors">
+            {(() => { const phone = settings?.support_phone || '+49 511 51532476'; return (
+              <a href={`tel:${phone.replace(/\s/g, '')}`} onClick={() => { trackPhoneClick(phone, location.pathname); trackMetaPhoneClick(); }} className="flex items-center gap-2 hover:text-white transition-colors">
                 <Phone className="h-3.5 w-3.5" />
-                <span>{settings.support_phone}</span>
+                <span>{phone}</span>
               </a>
-            )}
-            {settings?.contact_email && (
-              <a href={`mailto:${settings.contact_email}`} onClick={() => trackEmailClick(location.pathname)} className="flex items-center gap-2 hover:text-white transition-colors">
+            ); })()}
+            {(() => { const email = settings?.contact_email || 'info@caravanwert.de'; return (
+              <a href={`mailto:${email}`} onClick={() => trackEmailClick(location.pathname)} className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail className="h-3.5 w-3.5" />
-                <span>{settings.contact_email}</span>
+                <span>{email}</span>
               </a>
-            )}
+            ); })()}
           </div>
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-4">

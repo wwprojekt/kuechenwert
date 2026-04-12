@@ -98,7 +98,7 @@ const AuctionDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { settings } = useSettings();
-  const { primaryRole, isDealer } = useUserRole();
+  const { primaryRole, isDealer, isLoading: isRoleLoading } = useUserRole();
   const isAdmin = primaryRole === 'admin';
   const canSeePrices = isDealer || isAdmin;
   const siteName = settings?.site_name || 'CaravanWert';
@@ -1799,7 +1799,18 @@ const AuctionDetail = () => {
                     )}
                   </div>
                 ) : auction.status === "active" && timeRemaining !== "Beendet" ? (
-                  (primaryRole === 'dealer' || isAdmin) ? (
+                  isRoleLoading && user ? (
+                    <div className="space-y-4 animate-pulse">
+                      <div className="h-12 bg-muted rounded-md" />
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="h-11 bg-muted rounded-md" />
+                        <div className="h-11 bg-muted rounded-md" />
+                        <div className="h-11 bg-muted rounded-md" />
+                      </div>
+                      <div className="h-12 bg-muted rounded-md" />
+                      <p className="text-xs text-center text-muted-foreground">Wird geladen...</p>
+                    </div>
+                  ) : (primaryRole === 'dealer' || isAdmin) ? (
                     <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">

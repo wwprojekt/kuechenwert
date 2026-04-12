@@ -357,6 +357,20 @@ export default function MyKaufchancen() {
         loadData();
         return;
       }
+      // Notify seller that buyer rejected the counter-offer
+      try {
+        await invokeWithAuth('notify-offer-action', {
+          body: {
+            action: 'offer_rejected',
+            auctionId: offer.auction_id,
+            buyerId: user!.id,
+            offerAmount: Number(offer.offer_amount),
+            sellerResponse: 'Käufer hat das Gegenangebot abgelehnt',
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify seller about rejected counter:', notifyErr);
+      }
       toast({
         title: 'Gegenangebot abgelehnt',
         description: 'Sie haben das Gegenangebot abgelehnt.',
@@ -395,6 +409,20 @@ export default function MyKaufchancen() {
         toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
         loadData();
         return;
+      }
+      // Notify seller about raised offer
+      try {
+        await invokeWithAuth('notify-offer-action', {
+          body: {
+            action: 'new_offer',
+            auctionId: offer.auction_id,
+            buyerId: user!.id,
+            offerAmount: newAmount,
+            message: `Angebot erhöht von ${offer.offer_amount.toLocaleString('de-DE')} € auf ${newAmount.toLocaleString('de-DE')} €`,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify seller about raised offer:', notifyErr);
       }
       toast({ title: 'Angebot erhöht', description: `Ihr Angebot wurde auf ${newAmount.toLocaleString('de-DE')} € erhöht.` });
       setRaiseAmounts(prev => ({ ...prev, [offer.id]: '' }));

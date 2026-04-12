@@ -352,7 +352,7 @@ export default function MyKaufchancen() {
       if (error) throw error;
       if (!updateResult || updateResult.length === 0) {
         toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
-        loadMyOffers();
+        loadData();
         return;
       }
       toast({

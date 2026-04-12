@@ -239,6 +239,11 @@ export default function AdminPostAuctionOffers() {
   const [adminOfferMessage, setAdminOfferMessage] = useState("");
   const [adminOfferLoading, setAdminOfferLoading] = useState(false);
 
+  // Admin: Im Namen des Verkäufers handeln
+  const [sellerActionCounterAmount, setSellerActionCounterAmount] = useState("");
+  const [sellerActionMessage, setSellerActionMessage] = useState("");
+  const [sellerActionLoading, setSellerActionLoading] = useState(false);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -861,6 +866,121 @@ export default function AdminPostAuctionOffers() {
       toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
     } finally {
       setAdminOfferLoading(false);
+    }
+  };
+
+  // ---- Admin: Im Namen des Verkäufers alle pending Angebote ablehnen ----
+  const handleAdminRejectAllPending = async (auctionId: string) => {
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+    setSellerActionLoading(true);
+    try {
+      const { data: pendingOffers, error: fetchErr } = await supabase
+        .from('post_auction_offers')
+        .select('id, buyer_id, offer_amount, auction_id')
+        .eq('auction_id', auctionId)
+        .eq('status', 'pending');
+      if (fetchErr) throw fetchErr;
+      if (!pendingOffers || pendingOffers.length === 0) {
+        toast({ title: 'Hinweis', description: 'Keine offenen Angebote vorhanden.' });
+        setSellerActionLoading(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('post_auction_offers')
+        .update({ status: 'rejected', seller_response: sellerActionMessage || 'Abgelehnt durch Admin im Namen des Verkäufers', updated_at: new Date().toISOString() })
+        .eq('auction_id', auctionId)
+        .eq('status', 'pending');
+      if (error) throw error;
+
+      for (const offer of pendingOffers) {
+        try {
+          await supabase.functions.invoke('notify-offer-action', {
+            body: {
+              action: 'offer_rejected',
+              auctionId: offer.auction_id,
+              buyerId: offer.buyer_id,
+              offerAmount: Number(offer.offer_amount),
+              sellerResponse: sellerActionMessage || 'Abgelehnt durch Admin im Namen des Verkäufers',
+            },
+          });
+        } catch (e) {
+          console.error('Failed to notify buyer:', e);
+        }
+      }
+
+      toast({ title: 'Alle Angebote abgelehnt', description: `${pendingOffers.length} Angebot(e) im Namen des Verkäufers abgelehnt.` });
+      setSellerActionMessage("");
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      if (selectedKaufchanceAuction) loadKaufchanceDetail(selectedKaufchanceAuction);
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setSellerActionLoading(false);
+    }
+  };
+
+  // ---- Admin: Im Namen des Verkäufers Gegenangebot an alle pending Bieter senden ----
+  const handleAdminSellerCounterAll = async (auctionId: string) => {
+    const amount = parseFloat(sellerActionCounterAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Fehler', description: 'Bitte gültigen Betrag eingeben.', variant: 'destructive' });
+      return;
+    }
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+    setSellerActionLoading(true);
+    try {
+      const { data: pendingOffers, error: fetchErr } = await supabase
+        .from('post_auction_offers')
+        .select('id, buyer_id, offer_amount, auction_id')
+        .eq('auction_id', auctionId)
+        .eq('status', 'pending');
+      if (fetchErr) throw fetchErr;
+      if (!pendingOffers || pendingOffers.length === 0) {
+        toast({ title: 'Hinweis', description: 'Keine offenen Angebote vorhanden.' });
+        setSellerActionLoading(false);
+        return;
+      }
+
+      for (const offer of pendingOffers) {
+        const { error } = await supabase
+          .from('post_auction_offers')
+          .update({
+            status: 'countered',
+            counter_offer_amount: amount,
+            seller_response: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', offer.id);
+        if (error) console.error('Failed to counter offer:', error);
+
+        try {
+          await supabase.functions.invoke('notify-offer-action', {
+            body: {
+              action: 'counter_offer',
+              auctionId: offer.auction_id,
+              buyerId: offer.buyer_id,
+              offerAmount: Number(offer.offer_amount),
+              counterAmount: amount,
+              sellerResponse: sellerActionMessage || undefined,
+            },
+          });
+        } catch (e) {
+          console.error('Failed to notify buyer:', e);
+        }
+      }
+
+      toast({ title: 'Gegenangebote gesendet', description: `${amount.toLocaleString('de-DE')} € an ${pendingOffers.length} Bieter im Namen des Verkäufers gesendet.` });
+      setSellerActionCounterAmount("");
+      setSellerActionMessage("");
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      if (selectedKaufchanceAuction) loadKaufchanceDetail(selectedKaufchanceAuction);
+    } catch (err: any) {
+      toast({ title: 'Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setSellerActionLoading(false);
     }
   };
 
@@ -1554,7 +1674,7 @@ export default function AdminPostAuctionOffers() {
                             ? (buyer.company_name || `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || buyer.email || 'Unbekannt')
                             : 'Unbekannt';
                           const offerExpired = offer.expires_at && isPast(new Date(offer.expires_at)) && offer.status === 'pending';
-                          const canAct = offer.status === 'pending' && !offerExpired;
+                          const canAct = (offer.status === 'pending' && !offerExpired) || offer.status === 'countered';
 
                           return (
                             <Card key={offer.id} className={`p-4 ${offerExpired ? 'opacity-60' : ''}`}>
@@ -1616,7 +1736,7 @@ export default function AdminPostAuctionOffers() {
                                       onClick={() => handleAdminAcceptOffer(offer.id)}
                                     >
                                       <CheckCircle2 className="w-4 h-4 mr-1" />
-                                      Annehmen
+                                      {offer.status === 'countered' ? `Annehmen (${Number(offer.counter_offer_amount).toLocaleString('de-DE')} €)` : 'Annehmen'}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1627,26 +1747,30 @@ export default function AdminPostAuctionOffers() {
                                       <XCircle className="w-4 h-4 mr-1" />
                                       Ablehnen
                                     </Button>
-                                    <Separator />
-                                    <div className="space-y-1">
-                                      <Input
-                                        type="number"
-                                        placeholder="Gegenangebot €"
-                                        value={adminCounterAmount}
-                                        onChange={(e) => setAdminCounterAmount(e.target.value)}
-                                        className="h-8 text-sm"
-                                      />
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 h-8"
-                                        disabled={adminActionLoading || !adminCounterAmount}
-                                        onClick={() => handleAdminCounterOffer(offer.id)}
-                                      >
-                                        <Send className="w-3.5 h-3.5 mr-1" />
-                                        Gegenangebot
-                                      </Button>
-                                    </div>
+                                    {offer.status === 'pending' && (
+                                      <>
+                                        <Separator />
+                                        <div className="space-y-1">
+                                          <Input
+                                            type="number"
+                                            placeholder="Gegenangebot €"
+                                            value={adminCounterAmount}
+                                            onChange={(e) => setAdminCounterAmount(e.target.value)}
+                                            className="h-8 text-sm"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 h-8"
+                                            disabled={adminActionLoading || !adminCounterAmount}
+                                            onClick={() => handleAdminCounterOffer(offer.id)}
+                                          >
+                                            <Send className="w-3.5 h-3.5 mr-1" />
+                                            Gegenangebot
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1771,6 +1895,57 @@ export default function AdminPostAuctionOffers() {
                         </div>
                       </Card>
 
+                      {/* Im Namen des Verkäufers handeln */}
+                      <Card className="p-4 border-2 border-purple-200">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-purple-700">
+                          <User className="w-4 h-4" /> Im Namen des Verkäufers handeln
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Antworten Sie auf alle offenen Angebote im Namen des Verkäufers (z.B. nach telefonischer Absprache mit dem Verkäufer).
+                        </p>
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Preisvorstellung / Gegenangebot an alle Bieter:</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                placeholder="Betrag in €"
+                                value={sellerActionCounterAmount}
+                                onChange={(e) => setSellerActionCounterAmount(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant="outline"
+                                className="border-purple-500 text-purple-700 hover:bg-purple-50"
+                                disabled={sellerActionLoading || !sellerActionCounterAmount}
+                                onClick={() => handleAdminSellerCounterAll(auction.id)}
+                              >
+                                {sellerActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+                                Gegenangebot senden
+                              </Button>
+                            </div>
+                          </div>
+                          <Textarea
+                            placeholder="Nachricht an Bieter (optional, z.B. 'Der Verkäufer erwartet mindestens ...')"
+                            value={sellerActionMessage}
+                            onChange={(e) => setSellerActionMessage(e.target.value)}
+                            rows={2}
+                            className="resize-none"
+                          />
+                          <Separator />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="w-full"
+                            disabled={sellerActionLoading}
+                            onClick={() => handleAdminRejectAllPending(auction.id)}
+                          >
+                            {sellerActionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                            Alle offenen Angebote ablehnen (im Namen des Verkäufers)
+                          </Button>
+                        </div>
+                      </Card>
+
                       {/* Frist verlängern */}
                       <Card className="p-4">
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -1873,7 +2048,7 @@ export default function AdminPostAuctionOffers() {
             const buyer = profileMap[selectedOffer.buyer_id];
             const seller = auction?.motorhome?.seller_id ? profileMap[auction.motorhome.seller_id] : null;
             const isExpired = selectedOffer.expires_at && isPast(new Date(selectedOffer.expires_at)) && selectedOffer.status === "pending";
-            const canAct = selectedOffer.status === 'pending' && !isExpired;
+            const canAct = (selectedOffer.status === 'pending' && !isExpired) || selectedOffer.status === 'countered';
 
             return (
               <>
@@ -2024,7 +2199,9 @@ export default function AdminPostAuctionOffers() {
                             onClick={() => handleAdminAcceptOffer(selectedOffer.id)}
                           >
                             <CheckCircle2 className="w-4 h-4 mr-1" />
-                            Annehmen (Verkauf abschließen)
+                            {selectedOffer.status === 'countered'
+                              ? `Annehmen (${Number(selectedOffer.counter_offer_amount).toLocaleString('de-DE')} €)`
+                              : 'Annehmen (Verkauf abschließen)'}
                           </Button>
                           <Button
                             size="sm"
@@ -2037,37 +2214,41 @@ export default function AdminPostAuctionOffers() {
                             Ablehnen
                           </Button>
                         </div>
-                        <Separator />
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium">Gegenangebot im Namen des Verkäufers:</p>
-                          <Input
-                            type="number"
-                            placeholder="Betrag in €"
-                            value={adminCounterAmount}
-                            onChange={(e) => setAdminCounterAmount(e.target.value)}
-                          />
-                          <Textarea
-                            placeholder="Nachricht (optional)"
-                            value={adminCounterMessage}
-                            onChange={(e) => setAdminCounterMessage(e.target.value)}
-                            rows={2}
-                            className="resize-none"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full border-blue-500 text-blue-700 hover:bg-blue-50"
-                            disabled={adminActionLoading || !adminCounterAmount}
-                            onClick={() => handleAdminCounterOffer(selectedOffer.id)}
-                          >
-                            {adminActionLoading ? (
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            ) : (
-                              <Send className="w-4 h-4 mr-1" />
-                            )}
-                            Gegenangebot senden
-                          </Button>
-                        </div>
+                        {selectedOffer.status === 'pending' && (
+                          <>
+                            <Separator />
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium">Gegenangebot im Namen des Verkäufers:</p>
+                              <Input
+                                type="number"
+                                placeholder="Betrag in €"
+                                value={adminCounterAmount}
+                                onChange={(e) => setAdminCounterAmount(e.target.value)}
+                              />
+                              <Textarea
+                                placeholder="Nachricht (optional)"
+                                value={adminCounterMessage}
+                                onChange={(e) => setAdminCounterMessage(e.target.value)}
+                                rows={2}
+                                className="resize-none"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full border-blue-500 text-blue-700 hover:bg-blue-50"
+                                disabled={adminActionLoading || !adminCounterAmount}
+                                onClick={() => handleAdminCounterOffer(selectedOffer.id)}
+                              >
+                                {adminActionLoading ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4 mr-1" />
+                                )}
+                                Gegenangebot senden
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </Card>
                   )}

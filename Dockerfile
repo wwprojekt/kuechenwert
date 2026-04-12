@@ -9,12 +9,13 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install dependencies for native modules
+# Install dependencies for native modules + image optimization tools
 RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    libc6-compat
+    libc6-compat \
+    libwebp-tools
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -24,11 +25,6 @@ COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN pnpm install --frozen-lockfile
-
-# Install sharp in isolated directory for post-build image optimization
-# (separate from pnpm workspace to avoid lockfile/protocol conflicts)
-RUN mkdir -p /opt/sharp && cd /opt/sharp && npm init -y && npm install sharp@0.33.5
-ENV NODE_PATH=/opt/sharp/node_modules
 
 # Copy source code
 COPY . .

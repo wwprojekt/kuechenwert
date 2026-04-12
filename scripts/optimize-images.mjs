@@ -1,21 +1,16 @@
 /**
- * Post-build image optimization.
- * Compresses all images in dist/ and creates responsive variants.
- * sharp must be installed before this script runs (see Dockerfile).
+ * Post-build image optimization using native cwebp CLI tool.
+ * No Node.js image libraries needed — uses libwebp-tools from Alpine.
+ *
+ * - Compresses all .webp files in dist/ with quality 72
+ * - Creates responsive variants (-sm 400px, -md 800px) for key images
  */
-import sharp from 'sharp';
+import { execSync } from 'child_process';
 import { readdir, stat } from 'fs/promises';
 import { join, extname, basename } from 'path';
 
-const WEBP_QUALITY = 72;
-const JPEG_QUALITY = 75;
-
-const RESPONSIVE_BREAKPOINTS = [
-  { suffix: '-sm', width: 400 },
-  { suffix: '-md', width: 800 },
-];
-
-const DIRS_TO_OPTIMIZE = ['dist/images', 'dist/assets'];
+const QUALITY = 72;
+const DIRS = ['dist/images', 'dist/assets'];
 
 const NEEDS_RESPONSIVE = [
   'hero-motorhome',
@@ -25,64 +20,97 @@ const NEEDS_RESPONSIVE = [
   'caravan-touring',
 ];
 
+const BREAKPOINTS = [
+  { suffix: '-sm', width: 400 },
+  { suffix: '-md', width: 800 },
+];
+
+function hasCwebp() {
+  try {
+    execSync('cwebp -version', { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function run(cmd) {
+  try {
+    execSync(cmd, { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function dirExists(dir) {
   try { return (await stat(dir)).isDirectory(); }
   catch { return false; }
 }
 
-async function optimizeImage(filePath) {
-  const ext = extname(filePath).toLowerCase();
-  if (!['.webp', '.jpg', '.jpeg', '.png'].includes(ext)) return;
-
-  const fileStat = await stat(filePath);
-  const originalSize = fileStat.size;
-  if (originalSize < 5000) return;
-
-  const metadata = await sharp(filePath).metadata();
-
-  let pipeline = sharp(filePath);
-  if (ext === '.webp') pipeline = pipeline.webp({ quality: WEBP_QUALITY, effort: 6 });
-  else if (ext === '.jpg' || ext === '.jpeg') pipeline = pipeline.jpeg({ quality: JPEG_QUALITY, mozjpeg: true });
-  else if (ext === '.png') pipeline = pipeline.png({ compressionLevel: 9 });
-
-  const buffer = await pipeline.toBuffer();
-  if (buffer.length < originalSize) {
-    await sharp(buffer).toFile(filePath);
-    const saved = ((originalSize - buffer.length) / 1024).toFixed(1);
-    console.log(`  ✓ ${basename(filePath)}: ${(originalSize/1024).toFixed(1)}KB → ${(buffer.length/1024).toFixed(1)}KB (-${saved}KB)`);
-  } else {
-    console.log(`  ○ ${basename(filePath)}: already optimal`);
+async function processDir(dir) {
+  if (!(await dirExists(dir))) {
+    console.log(`  Skip ${dir} (not found)`);
+    return;
   }
 
-  // Create responsive variants for key images
-  const name = basename(filePath, ext);
-  if (!NEEDS_RESPONSIVE.some(n => name.includes(n)) || metadata.width <= 500) return;
+  console.log(`📁 ${dir}/`);
+  const files = await readdir(dir);
 
-  for (const bp of RESPONSIVE_BREAKPOINTS) {
-    if (metadata.width <= bp.width) continue;
-    const outPath = filePath.replace(ext, `${bp.suffix}${ext}`);
-    let resPipeline = sharp(filePath).resize({ width: bp.width, withoutEnlargement: true });
-    if (ext === '.webp') resPipeline = resPipeline.webp({ quality: WEBP_QUALITY, effort: 6 });
-    else if (ext === '.jpg' || ext === '.jpeg') resPipeline = resPipeline.jpeg({ quality: JPEG_QUALITY, mozjpeg: true });
-    else if (ext === '.png') resPipeline = resPipeline.png({ compressionLevel: 9 });
+  for (const file of files) {
+    const ext = extname(file).toLowerCase();
+    if (ext !== '.webp') continue;
 
-    const resBuffer = await resPipeline.toBuffer();
-    await sharp(resBuffer).toFile(outPath);
-    console.log(`  + ${basename(outPath)}: ${(resBuffer.length/1024).toFixed(1)}KB (${bp.width}px)`);
+    const filePath = join(dir, file);
+    const fileStat = await stat(filePath);
+    if (fileStat.size < 5000) continue;
+
+    const originalKB = (fileStat.size / 1024).toFixed(1);
+
+    // Compress in-place: decode webp → re-encode with lower quality
+    const tmpPath = filePath + '.tmp.png';
+    if (run(`dwebp "${filePath}" -o "${tmpPath}"`) &&
+        run(`cwebp -q ${QUALITY} -m 6 "${tmpPath}" -o "${filePath}"`)) {
+      const newStat = await stat(filePath);
+      const newKB = (newStat.size / 1024).toFixed(1);
+      const saved = (fileStat.size - newStat.size) / 1024;
+      if (saved > 1) {
+        console.log(`  ✓ ${file}: ${originalKB}KB → ${newKB}KB (-${saved.toFixed(1)}KB)`);
+      } else {
+        console.log(`  ○ ${file}: already optimal (${originalKB}KB)`);
+      }
+    }
+    run(`rm -f "${tmpPath}"`);
+
+    // Create responsive variants for key images
+    const name = basename(file, ext);
+    if (!NEEDS_RESPONSIVE.some(n => name.includes(n))) continue;
+
+    for (const bp of BREAKPOINTS) {
+      const outFile = file.replace(ext, `${bp.suffix}${ext}`);
+      const outPath = join(dir, outFile);
+
+      if (run(`dwebp "${filePath}" -o "${tmpPath}"`) &&
+          run(`cwebp -q ${QUALITY} -m 6 -resize ${bp.width} 0 "${tmpPath}" -o "${outPath}"`)) {
+        const outStat = await stat(outPath);
+        console.log(`  + ${outFile}: ${(outStat.size / 1024).toFixed(1)}KB (${bp.width}px)`);
+      }
+      run(`rm -f "${tmpPath}"`);
+    }
   }
 }
 
 async function main() {
   console.log('\n🖼️  Optimizing images...\n');
 
-  for (const dir of DIRS_TO_OPTIMIZE) {
-    if (!(await dirExists(dir))) { console.log(`  Skip ${dir} (not found)`); continue; }
-    console.log(`📁 ${dir}/`);
-    const files = await readdir(dir);
-    for (const file of files) {
-      const filePath = join(dir, file);
-      if ((await stat(filePath)).isFile()) await optimizeImage(filePath);
-    }
+  if (!hasCwebp()) {
+    console.log('⚠️  cwebp not found — skipping image optimization');
+    console.log('   Install with: apk add libwebp-tools\n');
+    return;
+  }
+
+  for (const dir of DIRS) {
+    await processDir(dir);
     console.log('');
   }
 

@@ -14,12 +14,21 @@ const TEXT_LIGHT = { r: 107, g: 114, b: 128 };
 const GREEN_BG = { r: 240, g: 253, b: 250 };
 const GREEN_BORDER = { r: 153, g: 246, b: 228 };
 const GREEN_TEXT = { r: 15, g: 118, b: 110 };
+const RED_BG = { r: 254, g: 242, b: 242 };
+const RED_BORDER = { r: 252, g: 165, b: 165 };
+const RED_TEXT = { r: 185, g: 28, b: 28 };
 const AMBER_BG = { r: 255, g: 251, b: 235 };
 const AMBER_BORDER = { r: 245, g: 158, b: 11 };
 const AMBER_TEXT = { r: 146, g: 64, b: 14 };
 const BLUE_BG = { r: 239, g: 246, b: 255 };
 const BLUE_BORDER = { r: 147, g: 197, b: 253 };
 const BLUE_TEXT = { r: 30, g: 64, b: 175 };
+
+const PENALTY_REASON_LABELS: Record<string,string> = {
+  anderweitiger_verkauf: 'Anderweitiger Verkauf während Auktion',
+  vorzeitige_ruecknahme: 'Vorzeitige Rücknahme des Fahrzeugs',
+  falsche_angaben: 'Falsche/irreführende Angaben',
+};
 
 function fmtCur(a: number|string): string {
   return Number(a).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -84,8 +93,14 @@ Deno.serve(async (req) => {
     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
     const isRC = invoice.reverse_charge === true;
 
-    const mhName = invoice.auction?.motorhome
-      ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 'Vermittlungsprovision';
+    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const penaltyReasonLabel = isPenalty
+      ? (PENALTY_REASON_LABELS[invoice.penalty_reason] || invoice.penalty_reason || 'Vertragsstrafe')
+      : '';
+    const mhName = isPenalty
+      ? 'Vertragsstrafe'
+      : (invoice.auction?.motorhome
+        ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 'Vermittlungsprovision');
 
     const invDate = fmtDate(invoice.invoice_date || invoice.created_at);
     const dueDateStr = fmtDate(invoice.due_date);
@@ -150,20 +165,28 @@ Deno.serve(async (req) => {
 
     y=Math.max(ry,my)+2;
 
-    // Vehicle reference box
-    doc.setFillColor(GREEN_BG.r,GREEN_BG.g,GREEN_BG.b);
-    doc.setDrawColor(GREEN_BORDER.r,GREEN_BORDER.g,GREEN_BORDER.b);
+    // Reference box (vehicle or penalty)
+    const refBg = isPenalty ? RED_BG : GREEN_BG;
+    const refBorder = isPenalty ? RED_BORDER : GREEN_BORDER;
+    const refText = isPenalty ? RED_TEXT : GREEN_TEXT;
+    const refTitle = isPenalty ? 'VERTRAGSSTRAFE' : 'FAHRZEUGREFERENZ';
+    const refDetail = isPenalty ? penaltyReasonLabel : mhName;
+    doc.setFillColor(refBg.r,refBg.g,refBg.b);
+    doc.setDrawColor(refBorder.r,refBorder.g,refBorder.b);
     doc.roundedRect(ml,y,cw,14,2,2,'FD');
-    doc.setTextColor(GREEN_TEXT.r,GREEN_TEXT.g,GREEN_TEXT.b); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    doc.text('FAHRZEUGREFERENZ',ml+6,y+5);
+    doc.setTextColor(refText.r,refText.g,refText.b); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(refTitle,ml+6,y+5);
     doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(10);
-    doc.text(mhName,ml+6,y+11);
+    doc.text(refDetail,ml+6,y+11);
     y+=18;
 
     // Intro
     doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
     doc.text('Sehr geehrte Damen und Herren,',ml,y); y+=4;
-    doc.text('hiermit stellen wir Ihnen folgende Leistungen in Rechnung:',ml,y); y+=8;
+    const introLine = isPenalty
+      ? 'hiermit stellen wir Ihnen folgende Vertragsstrafe gemäß § 8 Abs. 4 unserer AGB in Rechnung:'
+      : 'hiermit stellen wir Ihnen folgende Leistungen in Rechnung:';
+    doc.text(introLine,ml,y); y+=8;
 
     // Table header
     doc.setFillColor(248,250,252); doc.rect(ml,y,cw,7,'F');
@@ -176,12 +199,18 @@ Deno.serve(async (req) => {
     y+=10;
 
     // Rows
-    const items = invoice.items?.length ? invoice.items : [{description:`Vermittlungsprovision: ${mhName}`,quantity:1,unit_price:net,total_price:net}];
+    const fallbackDesc = isPenalty
+      ? `Vertragsstrafe: ${penaltyReasonLabel}`
+      : `Vermittlungsprovision: ${mhName}`;
+    const items = invoice.items?.length ? invoice.items : [{description:fallbackDesc,quantity:1,unit_price:net,total_price:net}];
     for(let i=0;i<items.length;i++){
       const it=items[i];
+      const rowDesc = isPenalty
+        ? (it.description || fallbackDesc)
+        : `Vermittlungsprovision: ${mhName}`;
       doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
       doc.text(String(i+1),ml+4,y+4);
-      doc.text(`Vermittlungsprovision: ${mhName}`,ml+20,y+4);
+      doc.text(rowDesc,ml+20,y+4);
       doc.text(String(it.quantity||1),ml+100,y+5.5,{align:'center'});
       doc.text(fmtCur(it.unit_price||net),ml+130,y+5.5,{align:'right'});
       doc.text(fmtCur(it.total_price||net),ml+cw-4,y+5.5,{align:'right'});
@@ -203,9 +232,11 @@ Deno.serve(async (req) => {
     y+=6;
     doc.setDrawColor(ACCENT.r,ACCENT.g,ACCENT.b); doc.setLineWidth(0.5); doc.line(tx,y,tv+4,y);
     y+=2;
-    doc.setFillColor(GREEN_BG.r,GREEN_BG.g,GREEN_BG.b);
+    const totalBg = isPenalty ? RED_BG : GREEN_BG;
+    const totalText = isPenalty ? RED_TEXT : GREEN_TEXT;
+    doc.setFillColor(totalBg.r,totalBg.g,totalBg.b);
     doc.rect(tx-4,y,cw-tx+ml+8,9,'F');
-    doc.setTextColor(GREEN_TEXT.r,GREEN_TEXT.g,GREEN_TEXT.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setTextColor(totalText.r,totalText.g,totalText.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
     doc.text('Gesamtbetrag',tx,y+6.5);
     doc.text(fmtCur(gross),tv,y+6.5,{align:'right'});
     y+=15;
@@ -244,7 +275,10 @@ Deno.serve(async (req) => {
 
     // Closing
     doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
-    doc.text('Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!',ml,y); y+=4.5;
+    const closingLine = isPenalty
+      ? 'Bitte begleichen Sie den Betrag fristgerecht.'
+      : 'Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!';
+    doc.text(closingLine,ml,y); y+=4.5;
     doc.text('Mit freundlichen Grüßen',ml,y); y+=5;
     doc.setTextColor(ACCENT.r,ACCENT.g,ACCENT.b); doc.setFont('helvetica','bold');
     doc.text(`Ihr ${siteName} Team`,ml,y);

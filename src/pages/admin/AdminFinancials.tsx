@@ -41,6 +41,7 @@ import {
   History,
   RefreshCw,
   Eye,
+  Mail,
   Percent,
   ArrowUpRight,
   Calendar,
@@ -50,7 +51,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { getInvoiceStatistics } from '@/lib/invoiceGenerator';
+import { getInvoiceStatistics, sendInvoiceEmail } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -318,6 +319,26 @@ export default function AdminFinancials() {
       toast({
         title: 'Erfolg',
         description: 'Zahlungserinnerung versendet',
+      });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      await sendInvoiceEmail(invoiceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      toast({
+        title: 'Erfolg',
+        description: 'Rechnung per E-Mail versendet',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Fehler',
+        description: error?.message || 'E-Mail konnte nicht gesendet werden',
+        variant: 'destructive',
       });
     },
   });
@@ -786,6 +807,15 @@ export default function AdminFinancials() {
                             title="Rechnung ansehen"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendEmailMutation.mutate(invoice.id)}
+                            disabled={sendEmailMutation.isPending || !!invoice.sent_at}
+                            title={invoice.sent_at ? `Versendet am ${new Date(invoice.sent_at).toLocaleDateString('de-DE')}` : 'Rechnung per E-Mail senden'}
+                          >
+                            <Mail className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="secondary"

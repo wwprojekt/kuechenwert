@@ -20,6 +20,12 @@ interface InvoiceEmailRequest {
   pdfBase64?: string; // Optional: PDF as base64 from generate-invoice-pdf
 }
 
+const PENALTY_REASON_LABELS: Record<string,string> = {
+  anderweitiger_verkauf: 'Anderweitiger Verkauf während Auktion',
+  vorzeitige_ruecknahme: 'Vorzeitige Rücknahme des Fahrzeugs',
+  falsche_angaben: 'Falsche/irreführende Angaben',
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -84,6 +90,11 @@ Deno.serve(async (req) => {
     };
 
     // ─── Prepare display values ────────────────────────────────────
+    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const penaltyReasonLabel = isPenalty
+      ? (PENALTY_REASON_LABELS[invoice.penalty_reason] || invoice.penalty_reason || 'Vertragsstrafe')
+      : '';
+
     const dealerName = invoice.dealer.company_name || 
       `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
     
@@ -91,7 +102,6 @@ Deno.serve(async (req) => {
       ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` 
       : 'Vermittlungsprovision';
 
-    // Use invoice_date (new column), fallback to created_at
     const invoiceDate = invoice.invoice_date || invoice.created_at;
     const invoiceDateFormatted = new Date(invoiceDate).toLocaleDateString('de-DE', {
       day: '2-digit', month: '2-digit', year: 'numeric'
@@ -102,19 +112,27 @@ Deno.serve(async (req) => {
     const grossFormatted = Number(invoice.gross_amount).toLocaleString('de-DE', { 
       minimumFractionDigits: 2, maximumFractionDigits: 2 
     });
+    const payDays = invoice.payment_terms_days || 14;
 
     // ─── Build email content ───────────────────────────────────────
+    const introText = isPenalty
+      ? 'hiermit erhalten Sie Ihre Rechnung &uuml;ber eine Vertragsstrafe gem&auml;&szlig; &sect; 8 Abs. 4 unserer AGB.'
+      : 'Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.';
+
+    const detailLabel = isPenalty ? 'Grund' : 'Fahrzeug';
+    const detailValue = isPenalty ? penaltyReasonLabel : motorhomeName;
+
     const content = `
       ${paragraph(`Sehr geehrte/r ${dealerName},`)}
       ${customerBadge(invoice.dealer.customer_number || invoice.customer_number)}
-      ${paragraph('Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.')}
+      ${paragraph(introText)}
       
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}
-        ${detailRow('Fahrzeug', motorhomeName)}
+        ${detailRow(detailLabel, detailValue)}
         ${detailRow('Rechnungsdatum', invoiceDateFormatted)}
         ${detailRow('F&auml;lligkeitsdatum', dueDateFormatted)}
-        ${detailRow('Zahlungsziel', '14 Tage')}
+        ${detailRow('Zahlungsziel', `${payDays} Tage`)}
       `, 'info')}
 
       ${amountDisplay('Rechnungsbetrag', `&euro;${grossFormatted}`)}
@@ -130,8 +148,11 @@ Deno.serve(async (req) => {
       ${paragraph('Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verf&uuml;gung.')}
     `;
 
-    const emailSubject = `Rechnung ${invoice.invoice_number} - ${siteName}`;
-    const emailHtml = buildEmailLayout(settingsData, 'Neue Rechnung', content);
+    const emailTitle = isPenalty ? 'Vertragsstrafe' : 'Neue Rechnung';
+    const emailSubject = isPenalty
+      ? `Vertragsstrafe – Rechnung ${invoice.invoice_number} - ${siteName}`
+      : `Rechnung ${invoice.invoice_number} - ${siteName}`;
+    const emailHtml = buildEmailLayout(settingsData, emailTitle, content);
 
     // ─── Download PDF for attachment (if available) ────────────────
     let attachments: any[] | undefined = undefined;

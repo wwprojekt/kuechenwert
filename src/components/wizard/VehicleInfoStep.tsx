@@ -88,6 +88,7 @@ const SearchableSelect = ({
   const [isFocused, setIsFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const skipBlurCommitRef = useRef(false);
   const isMobile = useIsMobile();
 
   const results = useMemo(() => {
@@ -155,13 +156,14 @@ const SearchableSelect = ({
 
   const handleSelect = useCallback((val: string) => {
     const trimmed = val.trim();
+    skipBlurCommitRef.current = true;
     setQuery(trimmed);
     setOpen(false);
     setIsFocused(false);
     onChange(trimmed);
     onCommit?.(trimmed);
-    if (isMobile) inputRef.current?.blur();
-  }, [onChange, onCommit, isMobile]);
+    inputRef.current?.blur();
+  }, [onChange, onCommit]);
 
   const dropdownMaxH = isMobile ? "max-h-[200px]" : "max-h-[300px]";
 
@@ -205,6 +207,7 @@ const SearchableSelect = ({
             if (open && results.rest.length === 1) {
               handleSelect(results.rest[0]);
             } else {
+              skipBlurCommitRef.current = true;
               setOpen(false);
               setIsFocused(false);
               commitValue(query);
@@ -212,6 +215,7 @@ const SearchableSelect = ({
             }
           }
           if (e.key === 'Escape') {
+            skipBlurCommitRef.current = true;
             setOpen(false);
             setIsFocused(false);
             setQuery(value || "");
@@ -220,6 +224,10 @@ const SearchableSelect = ({
         }}
         onBlur={() => {
           setIsFocused(false);
+          if (skipBlurCommitRef.current) {
+            skipBlurCommitRef.current = false;
+            return;
+          }
           const trimmed = query.trim();
           if (trimmed && trimmed !== value) {
             commitValue(trimmed);

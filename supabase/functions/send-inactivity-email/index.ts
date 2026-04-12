@@ -92,15 +92,23 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         if (!dealer.user_id) continue;
 
-        // Get profile + opt-out check
+        // Get profile
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, email, broadcast_emails_enabled')
+          .select('first_name, last_name, email')
           .eq('id', dealer.user_id)
           .single();
 
         if (!profile?.email) continue;
-        if (profile.broadcast_emails_enabled === false) {
+
+        // Check opt-out via user_notification_preferences
+        const { data: prefs } = await supabase
+          .from('user_notification_preferences')
+          .select('broadcast_emails_enabled')
+          .eq('user_id', dealer.user_id)
+          .maybeSingle();
+
+        if (prefs?.broadcast_emails_enabled === false) {
           skipped++;
           continue;
         }

@@ -287,7 +287,7 @@ const AuctionDetail = () => {
         value: data.current_bid || data.starting_bid || 0,
         currency: 'EUR',
       });
-      trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type, bidsCount: data.bids_count } });
+      trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type } });
     }
   }, [id, toast, navigate]);
 

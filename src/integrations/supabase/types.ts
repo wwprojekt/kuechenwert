@@ -148,6 +148,36 @@ export type Database = {
           },
         ]
       }
+      agb_acceptances: {
+        Row: {
+          accepted_at: string
+          agb_version: string
+          context: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          agb_version: string
+          context?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          agb_version?: string
+          context?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           consent_id: string
@@ -4337,6 +4367,7 @@ export type Database = {
       generate_listing_number: { Args: never; Returns: string }
       generate_release_pin: { Args: never; Returns: string }
       generate_sepa_reference: { Args: never; Returns: string }
+      get_current_agb_version: { Args: never; Returns: string }
       get_dealer_tax_info: {
         Args: { p_dealer_id: string }
         Returns: {
@@ -4462,6 +4493,15 @@ export type Database = {
       }
       reapply_dealer_application: {
         Args: { application_id_param: string }
+        Returns: undefined
+      }
+      record_agb_acceptance: {
+        Args: {
+          p_context?: string
+          p_ip_address?: string
+          p_user_agent?: string
+          p_user_id: string
+        }
         Returns: undefined
       }
       restrict_dealer_account: {

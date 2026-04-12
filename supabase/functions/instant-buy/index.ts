@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
     }
 
     // 6. Execute the purchase atomically
-    //    Update motorhome status to 'sold' – only if still 'active'
+    //    Update motorhome status to 'sold' – only if still 'available'
     const { data: updatedMotorhome, error: motorhomeUpdateError } = await supabaseAdmin
       .from('motorhomes')
       .update({
@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         sale_type: 'instant',
       })
       .eq('id', motorhome.id)
-      .eq('status', 'active')  // Optimistic lock: only update if still active
+      .eq('status', 'available')  // Optimistic lock: only update if still available (CHECK constraint)
       .select()
       .single();
 

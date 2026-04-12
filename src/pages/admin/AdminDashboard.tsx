@@ -357,7 +357,7 @@ function useActivityTimeline() {
       const [bidsRes, leadsRes, emailsRes, dealerRes] = await Promise.all([
         supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(motorhome:motorhomes(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("wizard_sessions").select("id, customer_name, vehicle_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
-        supabase.from("admin_emails").select("id, subject, direction, created_at, from_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
+        supabase.from("admin_emails").select("id, subject, direction, created_at, sender_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
         supabase.from("dealer_applications").select("id, company_name, created_at, status").order("created_at", { ascending: false }).limit(3),
       ]);
 
@@ -387,7 +387,7 @@ function useActivityTimeline() {
         items.push({
           id: `email-${e.id}`, type: "email",
           title: "E-Mail eingegangen",
-          subtitle: `${e.from_email || "Unbekannt"}: ${e.subject || "Kein Betreff"}`,
+          subtitle: `${e.sender_email || "Unbekannt"}: ${e.subject || "Kein Betreff"}`,
           time: e.created_at, icon: "mail", color: "text-orange-600",
         });
       }

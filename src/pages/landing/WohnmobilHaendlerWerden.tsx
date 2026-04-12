@@ -37,7 +37,7 @@ const WohnmobilHaendlerWerden = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("auctions")
-        .select("id, current_bid, starting_bid, end_time, bid_count, motorhome_id")
+        .select("id, current_bid, starting_bid, end_time, motorhome_id, bids(count)")
         .eq("status", "active")
         .order("end_time", { ascending: true })
         .limit(3);
@@ -61,7 +61,7 @@ const WohnmobilHaendlerWerden = () => {
           title: `${mh?.manufacturer || ""} ${mh?.model || ""}`.trim() || "Wohnmobil",
           year: mh?.year, bodyType: mh?.body_type, mileage: mh?.mileage,
           currentBid: auction.current_bid || auction.starting_bid,
-          bidCount: auction.bid_count || 0,
+          bidCount: (auction as any).bids?.[0]?.count || 0,
           timeLeft: daysLeft > 0 ? `${daysLeft}T ${hoursLeft % 24}h` : `${hoursLeft}h`,
           photoUrl,
         };

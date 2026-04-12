@@ -44,6 +44,7 @@ import {
   CheckCircle,
   XCircle,
   Handshake,
+  TrendingDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -68,6 +69,7 @@ export default function ListingDetail() {
   const [kaufchanceLoading, setKaufchanceLoading] = useState(false);
   const [counterOfferAmounts, setCounterOfferAmounts] = useState<Record<string, string>>({});
   const [counterOfferMessages, setCounterOfferMessages] = useState<Record<string, string>>({});
+  const [lowerCounterAmounts, setLowerCounterAmounts] = useState<Record<string, string>>({});
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
 
   const { data: motorhome, isLoading } = useQuery({
@@ -381,6 +383,62 @@ export default function ListingDetail() {
       loadKaufchanceOffers();
     } catch (err: any) {
       console.error('Error sending counter offer:', err);
+      toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
+  const handleSellerLowerCounter = async (offerId: string) => {
+    const newAmountStr = lowerCounterAmounts[offerId];
+    const newAmount = parseFloat(newAmountStr);
+    const currentOffer = kaufchanceOffers.find(o => o.id === offerId);
+    if (!currentOffer || !currentOffer.counter_offer_amount) return;
+
+    if (isNaN(newAmount) || newAmount >= currentOffer.counter_offer_amount) {
+      toast({ title: 'Ungültiger Betrag', description: `Neuer Betrag muss niedriger als ${Number(currentOffer.counter_offer_amount).toLocaleString('de-DE')} € sein.`, variant: 'destructive' });
+      return;
+    }
+    if (newAmount <= Number(currentOffer.offer_amount)) {
+      toast({ title: 'Ungültiger Betrag', description: `Betrag muss über dem Angebot des Händlers (${Number(currentOffer.offer_amount).toLocaleString('de-DE')} €) liegen.`, variant: 'destructive' });
+      return;
+    }
+
+    const sessionValid = await ensureValidRLSSession();
+    if (!sessionValid) return;
+
+    setRespondingOfferId(offerId);
+    try {
+      const { error } = await supabase
+        .from('post_auction_offers')
+        .update({
+          counter_offer_amount: newAmount,
+          seller_response: `Gegenangebot gesenkt auf ${newAmount.toLocaleString('de-DE')} €`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', offerId)
+        .eq('status', 'countered');
+      if (error) throw error;
+
+      try {
+        await invokeWithAuth('notify-offer-action', {
+          body: {
+            action: 'counter_offer',
+            auctionId: currentOffer.auction_id,
+            buyerId: currentOffer.buyer_id,
+            offerAmount: Number(currentOffer.offer_amount),
+            counterAmount: newAmount,
+            sellerResponse: `Gegenangebot gesenkt auf ${newAmount.toLocaleString('de-DE')} €`,
+          },
+        });
+      } catch (e) {
+        console.error('notify-offer-action:', e);
+      }
+
+      toast({ title: 'Gegenangebot gesenkt', description: `Neues Gegenangebot: ${newAmount.toLocaleString('de-DE')} €` });
+      setLowerCounterAmounts(prev => ({ ...prev, [offerId]: '' }));
+      loadKaufchanceOffers();
+    } catch (err: any) {
       toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
     } finally {
       setRespondingOfferId(null);
@@ -1165,6 +1223,34 @@ export default function ListingDetail() {
                               >
                                 <Handshake className="w-4 h-4 mr-1" />
                                 Gegenangebot senden
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Gegenangebot senken (bei countered, solange Händler nicht reagiert hat) */}
+                        {offer.status === 'countered' && offer.counter_offer_amount && (
+                          <div className="flex flex-col gap-2 min-w-[280px]">
+                            <p className="text-xs text-muted-foreground">
+                              Wartet auf Antwort des Händlers. Sie können Ihr Gegenangebot senken:
+                            </p>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                placeholder={`< ${Number(offer.counter_offer_amount).toLocaleString('de-DE')} €`}
+                                value={lowerCounterAmounts[offer.id] || ''}
+                                onChange={(e) => setLowerCounterAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                className="flex-1"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                                disabled={respondingOfferId === offer.id || !lowerCounterAmounts[offer.id]}
+                                onClick={() => handleSellerLowerCounter(offer.id)}
+                              >
+                                <TrendingDown className="w-4 h-4 mr-1" />
+                                Senken
                               </Button>
                             </div>
                           </div>

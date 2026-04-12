@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
-import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -72,6 +73,7 @@ export default function MyKaufchancen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("browse");
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
+  const [raiseAmounts, setRaiseAmounts] = useState<Record<string, string>>({});
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const isMountedRef = useRef(true);
   const isLoadingRef = useRef(false);
@@ -368,6 +370,43 @@ export default function MyKaufchancen() {
     }
   };
 
+  const handleRaiseOffer = async (e: React.MouseEvent, offer: MyOffer) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newAmount = parseFloat(raiseAmounts[offer.id]);
+    if (isNaN(newAmount) || newAmount <= offer.offer_amount) {
+      toast({ title: 'Ungültiger Betrag', description: `Neuer Betrag muss höher als ${offer.offer_amount.toLocaleString('de-DE')} € sein.`, variant: 'destructive' });
+      return;
+    }
+    setRespondingOfferId(offer.id);
+    try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { showSessionExpired('/dashboard/kaufchancen'); return; }
+
+      const { data: updated, error } = await supabase
+        .from('post_auction_offers')
+        .update({ offer_amount: newAmount, message: `Angebot erhöht auf ${newAmount.toLocaleString('de-DE')} €`, updated_at: new Date().toISOString() })
+        .eq('id', offer.id)
+        .eq('buyer_id', user!.id)
+        .eq('status', 'pending')
+        .select('id');
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
+        loadData();
+        return;
+      }
+      toast({ title: 'Angebot erhöht', description: `Ihr Angebot wurde auf ${newAmount.toLocaleString('de-DE')} € erhöht.` });
+      setRaiseAmounts(prev => ({ ...prev, [offer.id]: '' }));
+      loadData();
+    } catch (err) {
+      console.error('Error raising offer:', err);
+      toast({ title: 'Fehler', description: 'Angebot konnte nicht erhöht werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
@@ -609,6 +648,29 @@ export default function MyKaufchancen() {
                               </div>
                             )}
                           </div>
+
+                          {/* Raise pending offer */}
+                          {offer.status === 'pending' && (
+                            <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                              <Input
+                                type="number"
+                                placeholder={`> ${offer.offer_amount.toLocaleString('de-DE')} €`}
+                                value={raiseAmounts[offer.id] || ''}
+                                onChange={(e) => setRaiseAmounts(prev => ({ ...prev, [offer.id]: e.target.value }))}
+                                className="flex-1 h-7 text-xs"
+                                min={offer.offer_amount + 1}
+                              />
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs bg-amber-500 hover:bg-amber-600"
+                                disabled={respondingOfferId === offer.id || !raiseAmounts[offer.id]}
+                                onClick={(e) => handleRaiseOffer(e, offer)}
+                              >
+                                <TrendingUp className="w-3 h-3 mr-1" />
+                                Erhöhen
+                              </Button>
+                            </div>
+                          )}
 
                           {/* Counter-offer actions */}
                           {offer.status === 'countered' && offer.counter_offer_amount && (

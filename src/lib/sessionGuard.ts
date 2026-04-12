@@ -20,6 +20,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { logger } from './logger';
 
 /**
@@ -476,24 +477,46 @@ export class SessionExpiredError extends Error {
  * @param options body und andere Optionen
  * @returns { data, error } vom Edge Function Aufruf
  */
+/**
+ * Extract a human-readable error message from a FunctionsHttpError.
+ * In @supabase/supabase-js v2.100+, error.context is the already-parsed
+ * response body (object or string), NOT a Response object.
+ */
+function extractFunctionsErrorMessage(error: Error): string {
+  if (!(error instanceof FunctionsHttpError)) return error.message;
+  const ctx = (error as FunctionsHttpError).context;
+  if (!ctx) return error.message;
+  if (typeof ctx === 'string') {
+    try { const j = JSON.parse(ctx); return j?.error || ctx; } catch { return ctx; }
+  }
+  if (typeof ctx === 'object' && ctx.error) return ctx.error;
+  return error.message;
+}
+
+function isFunctions401(error: Error): boolean {
+  if (!(error instanceof FunctionsHttpError)) return false;
+  const ctx = (error as FunctionsHttpError).context;
+  if (!ctx || typeof ctx !== 'object') return false;
+  const msg = (typeof ctx.error === 'string' ? ctx.error : '').toLowerCase();
+  return msg.includes('unauthorized') || msg.includes('nicht autorisiert')
+    || msg.includes('ungültiger token') || msg.includes('kein authorization');
+}
+
 export async function invokeWithAuth(
   functionName: string,
   options?: { body?: Record<string, unknown> | FormData }
 ): Promise<{ data: unknown; error: null } | { data: null; error: Error }> {
-  // Step 1: Get a validated fresh token
   let accessToken = await getFreshAccessToken();
   if (!accessToken) {
     throw new SessionExpiredError();
   }
 
-  // Step 2: Call with fresh token
   const { data, error } = await supabase.functions.invoke(functionName, {
     body: options?.body,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  // Step 3: If 401, retry once with a new token
-  if (error && 'context' in error && (error as any).context?.status === 401) {
+  if (error && isFunctions401(error)) {
     logger.warn(`${functionName}: 401, retrying with fresh token...`);
     accessToken = await getFreshAccessToken();
     if (!accessToken) {
@@ -505,11 +528,23 @@ export async function invokeWithAuth(
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    if (retry.error && 'context' in retry.error && (retry.error as any).context?.status === 401) {
+    if (retry.error && isFunctions401(retry.error)) {
       throw new SessionExpiredError();
     }
 
+    if (retry.error) {
+      const msg = extractFunctionsErrorMessage(retry.error);
+      return { data: null, error: msg !== retry.error.message ? Object.assign(retry.error, { message: msg }) : retry.error };
+    }
     return retry;
+  }
+
+  if (error) {
+    const msg = extractFunctionsErrorMessage(error);
+    if (msg !== error.message) {
+      Object.assign(error, { message: msg });
+    }
+    return { data: null, error };
   }
 
   return { data, error };

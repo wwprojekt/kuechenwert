@@ -46,19 +46,16 @@ import DOMPurify from "dompurify";
 
 /**
  * Extract the actual error message from a Supabase FunctionsHttpError.
- * error.context is the raw Response – body can only be read ONCE,
- * so we read as text first, then try JSON.parse.
+ * In @supabase/supabase-js v2.100+, error.context is the already-parsed
+ * response body (object or string), NOT a raw Response.
  */
-async function extractEdgeFunctionError(error: any): Promise<string> {
+function extractEdgeFunctionError(error: any): string {
   if (error instanceof FunctionsHttpError && error.context) {
-    try {
-      const text = await error.context.text();
-      try {
-        const json = JSON.parse(text);
-        if (json?.error) return json.error;
-      } catch { /* not JSON */ }
-      if (text) return text;
-    } catch { /* body unreadable */ }
+    const ctx = error.context;
+    if (typeof ctx === 'string') {
+      try { const j = JSON.parse(ctx); return j?.error || ctx; } catch { return ctx; }
+    }
+    if (typeof ctx === 'object' && ctx.error) return ctx.error;
   }
   return error?.message || 'Unbekannter Fehler';
 }

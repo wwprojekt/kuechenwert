@@ -29,7 +29,7 @@ export function SiteLogo({
 }: SiteLogoProps) {
   const { settings, loading } = useSettings();
 
-  const logoUrl = settings?.logo_url || "/logo.webp";
+  const logoUrl = settings?.logo_url || "/logo.png";
   const siteName = settings?.site_name || "CaravanWert";
   const siteTagline = settings?.site_tagline || "Deutschlands führende Wohnmobil-Handelsplattform";
 

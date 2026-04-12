@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,8 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./components/ErrorBoundary";
-const WhatsAppButton = lazy(() => import("./components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
-const CookieBanner = lazy(() => import("./components/CookieBanner"));
+import { WhatsAppButton } from "./components/WhatsAppButton";
+import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { SessionExpiredProvider } from "./components/SessionExpiredDialog";
 import { usePageTracking } from "./hooks/useAnalytics";
@@ -21,7 +21,7 @@ import { initMetaPixelConsentListener, trackMetaPageView } from "./lib/metaPixel
 // Lazy-loaded pages – each page becomes its own chunk, loaded on demand.
 // Uses lazyRetry() to auto-reload on stale chunk errors after deployments.
 // ---------------------------------------------------------------------------
-const Index = lazyRetry(() => import("./pages/Index"));
+import Index from "./pages/Index";
 
 // Auth pages
 const Login = lazyRetry(() => import("./pages/Login"));
@@ -281,8 +281,8 @@ const App = () => (
             </Routes>
             </Suspense>
           </PageTransition>
-          <Suspense fallback={null}><WhatsAppButton /></Suspense>
-          <Suspense fallback={null}><CookieBanner /></Suspense>
+          <WhatsAppButton />
+          <CookieBanner />
           </SessionExpiredProvider>
         </BrowserRouter>
       </TooltipProvider>

@@ -259,7 +259,7 @@ const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
   const progressPercent = Math.round(progress);
   return (
-    <div className="mb-8 space-y-3">
+    <div className="mb-4 sm:mb-8 space-y-2 sm:space-y-3">
       <div className="relative h-2 bg-muted rounded-full overflow-hidden">
         <div
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-teal-400 rounded-full transition-all duration-500 ease-out"
@@ -308,7 +308,7 @@ const StepIndicator = ({ currentStep, totalSteps, vehicleType }: { currentStep: 
 };
 
 const TrustBadges = () => (
-  <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-4 text-xs sm:text-sm text-muted-foreground">
+  <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 py-2 sm:py-4 text-xs sm:text-sm text-muted-foreground">
     <div className="flex items-center gap-1.5">
       <Shield className="w-4 h-4 text-green-600" />
       <span>100% Kostenlos</span>
@@ -374,16 +374,16 @@ const CalculationAnimation = ({ onComplete }: { onComplete: () => void }) => {
   }, [onComplete]);
 
   return (
-    <div className="py-12 text-center space-y-6 animate-fade-in">
-      <div className="relative w-20 h-20 mx-auto">
+    <div className="py-6 sm:py-12 text-center space-y-4 sm:space-y-6 animate-fade-in">
+      <div className="relative w-14 h-14 sm:w-20 sm:h-20 mx-auto">
         <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
         <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Calculator className="w-8 h-8 text-primary" />
+          <Calculator className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-lg font-semibold text-foreground transition-all duration-300">
+        <p className="text-base sm:text-lg font-semibold text-foreground transition-all duration-300">
           {LOADING_MESSAGES[messageIndex]?.text}
         </p>
         <div className="max-w-xs mx-auto h-2 bg-muted rounded-full overflow-hidden">
@@ -840,7 +840,7 @@ const Wertrechner = () => {
     if (chips.length === 0) return null;
 
     return (
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-3 sm:mb-6">
         {chips.map((chip, i) => (
           <span key={i} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
             <Check className="w-3 h-3" />
@@ -865,34 +865,34 @@ const Wertrechner = () => {
     >
       <PageHero size="sm">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">Wohnmobil & Wohnwagen Wertrechner</h1>
-          <p className="text-lg text-muted-foreground mb-4">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3">Wohnmobil & Wohnwagen Wertrechner</h1>
+          <p className="text-sm sm:text-lg text-muted-foreground mb-2 sm:mb-4">
             Erhalten Sie in nur 2 Minuten eine kostenlose Wertschätzung für Ihr Wohnmobil oder Ihren Wohnwagen.
           </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm font-medium text-primary">
+          <div className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm font-medium text-primary">
             <TrendingUp className="w-4 h-4" />
             <span>Professionelle Fahrzeugbewertung</span>
           </div>
         </div>
       </PageHero>
 
-      <div className="container py-8 sm:py-12">
+      <div className="container py-4 sm:py-8 md:py-12">
         <div className="max-w-2xl mx-auto">
           {step <= 6 && !showCalculation && <StepIndicator currentStep={step} totalSteps={totalSteps} vehicleType={formData.vehicleType} />}
 
-          <Card className="p-6 sm:p-8 shadow-xl border-0 ring-1 ring-border/40 rounded-2xl">
+          <Card className="p-4 sm:p-6 md:p-8 shadow-xl border-0 ring-1 ring-border/40 rounded-2xl">
             {step > 1 && step <= 6 && !showCalculation && <SummaryChips />}
 
             {showCalculation && <CalculationAnimation onComplete={handleCalculationComplete} />}
 
             {/* Step 1: Fahrzeugkategorie */}
             {!showCalculation && step === 1 && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">Was möchten Sie bewerten?</h2>
-                  <p className="text-muted-foreground">Wählen Sie Ihre Fahrzeugkategorie</p>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1">Was möchten Sie bewerten?</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground">Wählen Sie Ihre Fahrzeugkategorie</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {[
                     { value: "Wohnmobil", label: "Wohnmobil", icon: Car, description: "Reisemobil mit eigenem Motor" },
                     { value: "Wohnwagen", label: "Wohnwagen", icon: Caravan, description: "Anhänger ohne eigenen Motor" },
@@ -904,25 +904,25 @@ const Wertrechner = () => {
                         key={type.value}
                         onClick={() => handleSelectionWithAutoNext("vehicleType", type.value)}
                         className={cn(
-                          "relative p-8 rounded-2xl border-2 text-center transition-all duration-200 group animate-fade-in overflow-hidden",
+                          "relative p-4 sm:p-8 rounded-2xl border-2 text-center transition-all duration-200 group animate-fade-in overflow-hidden",
                           isSelected
                             ? "border-primary bg-gradient-to-br from-primary/5 via-primary/10 to-teal-50 shadow-lg ring-1 ring-primary/30"
                             : "border-border/60 hover:border-primary/40 hover:shadow-md hover:bg-gradient-to-br hover:from-slate-50 hover:to-white"
                         )}
                         style={{ animationDelay: `${index * 100}ms` }}
                       >
-                        <div className="flex flex-col items-center gap-3">
+                        <div className="flex flex-col items-center gap-2 sm:gap-3">
                           <div className={cn(
-                            "w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-200",
+                            "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-200",
                             isSelected
                               ? "bg-primary text-white shadow-md"
                               : "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary"
                           )}>
-                            <Icon className="w-8 h-8" />
+                            <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
                           </div>
                           <div>
-                            <span className="font-bold block text-lg">{type.label}</span>
-                            <span className="text-sm text-muted-foreground">{type.description}</span>
+                            <span className="font-bold block text-base sm:text-lg">{type.label}</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">{type.description}</span>
                           </div>
                         </div>
                         {isSelected && (
@@ -939,12 +939,12 @@ const Wertrechner = () => {
 
             {/* Step 2: Body Type */}
             {!showCalculation && step === 2 && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">Welcher Fahrzeugtyp?</h2>
-                  <p className="text-muted-foreground">Wählen Sie den Typ Ihres {vehicleLabelNominativ}s aus</p>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1">Welcher Fahrzeugtyp?</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground">Wählen Sie den Typ Ihres {vehicleLabelNominativ}s aus</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   {currentBodyTypes.map((type, index) => {
                     const Icon = type.icon;
                     const isSelected = formData.bodyType === type.value;
@@ -953,25 +953,25 @@ const Wertrechner = () => {
                         key={type.value}
                         onClick={() => handleSelectionWithAutoNext("bodyType", type.value)}
                         className={cn(
-                          "relative p-5 rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in overflow-hidden",
+                          "relative p-3 sm:p-5 rounded-xl sm:rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in overflow-hidden",
                           isSelected
                             ? "border-primary bg-gradient-to-br from-primary/5 via-primary/10 to-teal-50 shadow-lg ring-1 ring-primary/30"
                             : "border-border/60 hover:border-primary/40 hover:shadow-md hover:bg-gradient-to-br hover:from-slate-50 hover:to-white"
                         )}
                         style={{ animationDelay: `${index * 80}ms` }}
                       >
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-center sm:items-start gap-3 sm:gap-4">
                           <div className={cn(
-                            "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                            "w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-200",
                             isSelected
                               ? "bg-primary text-white shadow-md"
                               : "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary"
                           )}>
-                            <Icon className="w-7 h-7" />
+                            <Icon className="w-5 h-5 sm:w-7 sm:h-7" />
                           </div>
-                          <div className="flex-1 min-w-0 pt-0.5">
-                            <span className="font-bold block text-[15px]">{type.label}</span>
-                            <span className="text-sm text-muted-foreground leading-snug">{type.description}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold block text-sm sm:text-[15px]">{type.label}</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground leading-snug hidden sm:block">{type.description}</span>
                           </div>
                         </div>
                         {isSelected && (
@@ -988,14 +988,14 @@ const Wertrechner = () => {
 
             {/* Step 3: Manufacturer/Model */}
             {!showCalculation && step === 3 && (
-              <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
+              <div className="space-y-4 sm:space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">Hersteller & Modell</h2>
-                  <p className="text-muted-foreground">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1">Hersteller & Modell</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground">
                     Optional – verbessert die Genauigkeit Ihrer Bewertung
                   </p>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-3 sm:space-y-5">
                   {/* Manufacturer combobox */}
                   <div ref={manufacturerRef}>
                     <Label htmlFor="manufacturer" className="text-sm font-semibold mb-2 block">Hersteller</Label>
@@ -1120,18 +1120,18 @@ const Wertrechner = () => {
 
             {/* Step 4: Year/Mileage */}
             {!showCalculation && step === 4 && (
-              <div className="space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
+              <div className="space-y-4 sm:space-y-6 animate-fade-in" onKeyDown={handleKeyDown}>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1">
                     {isWohnwagen ? "Baujahr" : "Baujahr & Kilometerstand"}
                   </h2>
-                  <p className="text-muted-foreground">
+                  <p className="text-sm sm:text-base text-muted-foreground">
                     {isWohnwagen
                       ? "Das Baujahr ist entscheidend für die Wertermittlung"
                       : "Diese Angaben sind entscheidend für die Wertermittlung"}
                   </p>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-3 sm:space-y-5">
                   <div className="space-y-2 animate-fade-in" style={{ animationDelay: "50ms" }}>
                     <Label htmlFor="year" className="text-sm font-semibold">Baujahr *</Label>
                     <select
@@ -1177,12 +1177,12 @@ const Wertrechner = () => {
 
             {/* Step 5: Condition */}
             {!showCalculation && step === 5 && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">Fahrzeugzustand</h2>
-                  <p className="text-muted-foreground">Wie würden Sie den Gesamtzustand einschätzen?</p>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1">Fahrzeugzustand</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground">Wie würden Sie den Gesamtzustand einschätzen?</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   {CONDITIONS.map((cond, index) => {
                     const isSelected = formData.condition === cond.value;
                     const colorMap: Record<string, { bg: string; border: string; iconBg: string }> = {
@@ -1198,7 +1198,7 @@ const Wertrechner = () => {
                         key={cond.value}
                         onClick={() => handleSelectionWithAutoNext("condition", cond.value)}
                         className={cn(
-                          "relative p-5 rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in",
+                          "relative p-3 sm:p-5 rounded-xl sm:rounded-2xl border-2 text-left transition-all duration-200 group animate-fade-in",
                           isSelected
                             ? `${colors.border} bg-gradient-to-br ${colors.bg} shadow-lg ring-1 ring-primary/20`
                             : "border-border/60 hover:border-primary/40 hover:shadow-md hover:bg-gradient-to-br hover:from-slate-50 hover:to-white",
@@ -1206,16 +1206,16 @@ const Wertrechner = () => {
                         )}
                         style={{ animationDelay: `${index * 80}ms` }}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
                           <div className={cn(
-                            "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl transition-all duration-200",
+                            "w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 text-lg sm:text-2xl transition-all duration-200",
                             isSelected ? colors.iconBg : "bg-slate-100"
                           )}>
                             {cond.emoji}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="font-bold block text-[15px]">{cond.label}</span>
-                            <span className="text-sm text-muted-foreground leading-snug">{cond.description}</span>
+                            <span className="font-bold block text-sm sm:text-[15px]">{cond.label}</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground leading-snug">{cond.description}</span>
                           </div>
                         </div>
                         {isSelected && (
@@ -1232,12 +1232,12 @@ const Wertrechner = () => {
 
             {/* Step 6: Contact Details with dynamic blurred preview */}
             {!showCalculation && step === 6 && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-green-100 mb-2 sm:mb-4">
+                    <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">Ihr Ergebnis ist fertig!</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Ihr Ergebnis ist fertig!</h2>
                   <p className="text-muted-foreground">
                     Geben Sie Ihre Kontaktdaten ein, um Ihre kostenlose Wertschätzung zu erhalten.
                   </p>
@@ -1245,8 +1245,8 @@ const Wertrechner = () => {
 
                 {/* Dynamic blurred preview – shows real calculated numbers */}
                 <div className="relative rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8 text-center blur-md select-none" aria-hidden="true">
-                    <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 sm:p-8 text-center blur-md select-none" aria-hidden="true">
+                    <div className="text-2xl sm:text-4xl md:text-5xl font-bold text-primary mb-2">
                       {previewValue
                         ? `${formatCurrency(previewValue.min)} – ${formatCurrency(previewValue.max)}`
                         : "XX.XXX – XX.XXX"
@@ -1264,7 +1264,7 @@ const Wertrechner = () => {
                   </div>
                 </div>
 
-                <form onSubmit={handleLeadSubmit} className="space-y-5">
+                <form onSubmit={handleLeadSubmit} className="space-y-3 sm:space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold">
                       <User className="w-4 h-4 text-primary/60" />
@@ -1314,7 +1314,7 @@ const Wertrechner = () => {
                   <div ref={turnstileCallbackRef} />
                   <Button
                     type="submit"
-                    className="w-full gradient-hero h-14 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-xl"
+                    className="w-full gradient-hero h-12 sm:h-14 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-xl"
                     disabled={submitMutation.isPending}
                   >
                     {submitMutation.isPending ? "Wird geladen..." : "Wert jetzt anzeigen"}
@@ -1337,17 +1337,17 @@ const Wertrechner = () => {
 
             {/* Step 7: Results */}
             {!showCalculation && step === 7 && estimatedValue && (
-              <div className="space-y-8 animate-fade-in">
+              <div className="space-y-4 sm:space-y-8 animate-fade-in">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-green-100 mb-2 sm:mb-4">
+                    <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">Geschätzter Wert Ihres {vehicleLabelNominativ}s</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Geschätzter Wert Ihres {vehicleLabelNominativ}s</h2>
                   <p className="text-muted-foreground">Basierend auf Ihren Angaben und aktuellen Marktdaten</p>
                 </div>
 
                 {aiLoading ? (
-                  <div className="rounded-xl p-10 text-center bg-gradient-to-br from-primary/5 to-primary/10">
+                  <div className="rounded-xl p-6 sm:p-10 text-center bg-gradient-to-br from-primary/5 to-primary/10">
                     <div className="flex flex-col items-center gap-4">
                       <div className="relative w-16 h-16">
                         <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
@@ -1365,7 +1365,7 @@ const Wertrechner = () => {
                 ) : (
                   <>
                     <div className={cn(
-                      "relative overflow-hidden rounded-2xl p-8 text-center border shadow-md",
+                      "relative overflow-hidden rounded-2xl p-4 sm:p-8 text-center border shadow-md",
                       aiEstimate
                         ? "bg-gradient-to-br from-teal-50 via-white to-teal-50 border-teal-200"
                         : "bg-gradient-to-br from-slate-50 via-white to-slate-50 border-slate-200"
@@ -1395,7 +1395,7 @@ const Wertrechner = () => {
                           : 0.20;
                         return (
                           <>
-                            <div className="text-4xl md:text-5xl font-bold text-teal-800 mb-3">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-teal-800 mb-2 sm:mb-3">
                               <AnimatedValue value={Math.round(aiEstimate.value * (1 - spread))} /> &ndash; <AnimatedValue value={Math.round(aiEstimate.value * (1 + spread))} />
                             </div>
                             <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
@@ -1411,7 +1411,7 @@ const Wertrechner = () => {
                         );
                       })() : (
                         <>
-                          <div className={cn("text-4xl md:text-5xl font-bold mb-3", aiFailed ? "text-slate-700" : "text-teal-800")}>
+                          <div className={cn("text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3", aiFailed ? "text-slate-700" : "text-teal-800")}>
                             <AnimatedValue value={estimatedValue.min} /> &ndash; <AnimatedValue value={estimatedValue.max} />
                           </div>
                           <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
@@ -1435,7 +1435,7 @@ const Wertrechner = () => {
                       </p>
                     </div>
 
-                    <div className="border-t pt-8 text-center space-y-4">
+                    <div className="border-t pt-4 sm:pt-8 text-center space-y-3 sm:space-y-4">
                       <p className="text-muted-foreground">
                         Vielen Dank, {formData.name.split(" ")[0]}! Wir melden uns in Kürze bei Ihnen.
                       </p>
@@ -1486,7 +1486,7 @@ const Wertrechner = () => {
                       </p>
                     </div>
 
-                    <div className="border-t pt-6">
+                    <div className="border-t pt-4 sm:pt-6">
                       <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                         <span className="text-muted-foreground">Kategorie:</span>
@@ -1524,7 +1524,7 @@ const Wertrechner = () => {
 
             {/* Navigation */}
             {!showCalculation && step < 6 && (
-              <div className="flex justify-between mt-8 pt-6 border-t border-border/40">
+              <div className="flex justify-between mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-border/40">
                 {step > 1 ? (
                   <Button variant="outline" onClick={prevStep} className="text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
                     <ChevronLeft className="w-4 h-4 mr-1" />
@@ -1541,7 +1541,7 @@ const Wertrechner = () => {
             )}
 
             {!showCalculation && step === 6 && (
-              <div className="mt-6 pt-4 border-t border-border/40">
+              <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-border/40">
                 <Button variant="outline" onClick={prevStep} className="w-full text-muted-foreground hover:text-foreground border-slate-200 hover:border-slate-300 rounded-xl h-11">
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Zurück zu den Fahrzeugdaten
@@ -1550,7 +1550,7 @@ const Wertrechner = () => {
             )}
 
             {!showCalculation && step === 7 && (
-              <div className="mt-8 pt-6 border-t">
+              <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t">
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -1578,7 +1578,7 @@ const Wertrechner = () => {
           {step <= 6 && !showCalculation && <TrustBadges />}
 
           {step < 6 && !showCalculation && (
-            <div className="mt-6 text-center">
+            <div className="mt-4 sm:mt-6 text-center">
               <p className="text-sm text-muted-foreground mb-3">
                 Lieber eine professionelle Bewertung durch unsere Experten?
               </p>

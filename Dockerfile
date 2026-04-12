@@ -25,10 +25,10 @@ COPY package.json pnpm-lock.yaml ./
 # Install all dependencies (including dev dependencies for build)
 RUN pnpm install --frozen-lockfile
 
-# Install sharp separately for post-build image optimization
-# (not in lockfile to avoid pnpm-lock.yaml drift)
-# --legacy-peer-deps avoids ERESOLVE conflicts with pnpm-managed deps
-RUN npm install --no-save --legacy-peer-deps sharp@0.33.5
+# Install sharp in isolated directory for post-build image optimization
+# (separate from pnpm workspace to avoid lockfile/protocol conflicts)
+RUN mkdir -p /opt/sharp && cd /opt/sharp && npm init -y && npm install sharp@0.33.5
+ENV NODE_PATH=/opt/sharp/node_modules
 
 # Copy source code
 COPY . .

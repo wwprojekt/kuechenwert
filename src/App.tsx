@@ -7,8 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./components/ErrorBoundary";
-import { WhatsAppButton } from "./components/WhatsAppButton";
-import CookieBanner from "./components/CookieBanner";
+const WhatsAppButton = lazy(() => import("./components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
+const CookieBanner = lazy(() => import("./components/CookieBanner"));
 import ScrollRestoration from "./components/ScrollRestoration";
 import { SessionExpiredProvider } from "./components/SessionExpiredDialog";
 import { usePageTracking } from "./hooks/useAnalytics";
@@ -281,8 +281,8 @@ const App = () => (
             </Routes>
             </Suspense>
           </PageTransition>
-          <WhatsAppButton />
-          <CookieBanner />
+          <Suspense fallback={null}><WhatsAppButton /></Suspense>
+          <Suspense fallback={null}><CookieBanner /></Suspense>
           </SessionExpiredProvider>
         </BrowserRouter>
       </TooltipProvider>

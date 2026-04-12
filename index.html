@@ -4,20 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <!-- Favicon — webp for smaller size, png fallback for Apple -->
+    <link rel="icon" type="image/webp" href="/favicon.webp" />
     <link rel="apple-touch-icon" href="/favicon.png" />
 
-    <!-- Preconnect for critical resources -->
-    <link rel="preconnect" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" />
+    <!-- Preconnect for critical resources (max 4, crossorigin for CORS origins) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" crossorigin />
 
     <!-- Preload hero image for fast LCP -->
     <link rel="preload" as="image" href="/images/hero-motorhome.webp" fetchpriority="high" />
 
-    <!-- Google Fonts — display=swap ensures text is visible immediately -->
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Google Fonts — loaded NON-BLOCKING via media trick.
+         Browser loads CSS with media="print" (non-render-blocking),
+         then switches to media="all" once loaded. display=swap shows
+         system font immediately, swaps to Fira Sans when ready. -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" as="style" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" /></noscript>
 
     <!-- Google Consent Mode v2 — minimal inline, MUST load before gtag -->
     <script>

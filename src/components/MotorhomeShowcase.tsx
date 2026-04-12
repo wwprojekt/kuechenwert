@@ -98,8 +98,9 @@ const MotorhomeShowcase = () => {
                   <img 
                     src={item.image} 
                     alt={item.title}
-                    width={640}
-                    height={480}
+                    width={800}
+                    height={600}
+                    sizes="(max-width: 1023px) 50vw, 25vw"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     decoding="async"

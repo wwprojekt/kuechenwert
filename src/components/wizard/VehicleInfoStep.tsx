@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Calendar, Gauge, Info, Check } from "lucide-react";
+import { Calendar, Gauge, Info, Check, Search, X } from "lucide-react";
 import { popularManufacturers, wohnwagenManufacturers, manufacturerModels, wohnwagenManufacturerModels, resolveManufacturer } from "@/lib/vehicle-data";
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -13,21 +13,28 @@ interface VehicleInfoStepProps {
   fieldErrors?: Record<string, string>;
 }
 
-// Popular manufacturers shown at top of dropdown when no search query
-const POPULAR_WOHNMOBIL = ["Hymer", "Dethleffs", "Bürstner", "Knaus", "Carthago", "Hobby", "Pössl", "Adria", "Carado", "Chausson", "Fendt", "Frankia"];
-const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Knaus", "Dethleffs", "Bürstner", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba"];
+// Popular manufacturers – sorted by ACTUAL usage frequency from wizard_sessions data
+const POPULAR_WOHNMOBIL = ["Hymer", "Hobby", "Bürstner", "Dethleffs", "Fendt", "Pössl", "Weinsberg", "Adria", "Knaus", "Volkswagen", "LMC", "Ford", "Carado", "Sunlight", "Chausson", "Carthago"];
+const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Dethleffs", "Bürstner", "Knaus", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba", "Niewiadow", "TEC"];
 
-/**
- * Fuzzy match: handles common typos like "Exzellent"→"Excellent", "smara"→"Amara".
- * Uses bigram overlap (2-char pairs) for typo tolerance + subsequence for reordering.
- */
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+};
+
 const fuzzyScore = (query: string, target: string): number => {
   const q = query.toLowerCase();
   const t = target.toLowerCase();
   if (t.includes(q)) return 1;
   if (q.length < 2 || t.length < 2) return 0;
 
-  // Bigram overlap: count shared 2-char pairs
   const qBigrams = new Set<string>();
   for (let i = 0; i < q.length - 1; i++) qBigrams.add(q.slice(i, i + 2));
   let shared = 0;
@@ -36,11 +43,10 @@ const fuzzyScore = (query: string, target: string): number => {
   }
   const bigramScore = (2 * shared) / (q.length - 1 + t.length - 1);
 
-  // Also try: does removing any single char from query create a substring match?
   if (q.length >= 3) {
     for (let i = 0; i < q.length; i++) {
       const reduced = q.slice(0, i) + q.slice(i + 1);
-      if (t.includes(reduced)) return 0.7; // single-char-off = strong match
+      if (t.includes(reduced)) return 0.7;
     }
   }
 
@@ -48,9 +54,8 @@ const fuzzyScore = (query: string, target: string): number => {
 };
 
 /**
- * Searchable Combobox – input that filters a list as you type.
- * - No query: shows popular items first (if provided), then rest alphabetically
- * - With query: exact starts-with first, then contains, then fuzzy matches
+ * Searchable Combobox – used for the "Anderer Hersteller" search input
+ * and for model selection. Dropdown is capped to fit mobile viewports.
  */
 const SearchableSelect = ({
   options,
@@ -81,6 +86,7 @@ const SearchableSelect = ({
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const results = useMemo(() => {
     const escapeMatch = escapeLabel ? options.find(o => o === escapeLabel) : undefined;
@@ -114,8 +120,6 @@ const SearchableSelect = ({
     return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)], andere: andereOption };
   }, [options, popular, query, escapeLabel]);
 
-  const hasResults = results.popular.length > 0 || results.rest.length > 0 || !!results.andere;
-
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -130,19 +134,24 @@ const SearchableSelect = ({
     if (!value) setQuery("");
   }, [value]);
 
+  // Only autoFocus on desktop – mobile keyboard auto-open kills UX
   useEffect(() => {
-    if (autoFocus && inputRef.current && !disabled && !value) {
+    if (autoFocus && !isMobile && inputRef.current && !disabled && !value) {
       const timeout = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timeout);
     }
-  }, [autoFocus, disabled, value]);
+  }, [autoFocus, disabled, value, isMobile]);
 
   const handleSelect = (val: string) => {
-    onChange(val);
-    onCommit?.(val);
+    const trimmed = val.trim();
+    onChange(trimmed);
+    onCommit?.(trimmed);
     setQuery("");
     setOpen(false);
+    if (isMobile) inputRef.current?.blur();
   };
+
+  const dropdownMaxH = isMobile ? "max-h-[200px]" : "max-h-[300px]";
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -167,6 +176,11 @@ const SearchableSelect = ({
         onFocus={() => {
           if (options.length > 0) setOpen(true);
           if (value) inputRef.current?.select();
+          if (isMobile && wrapperRef.current) {
+            setTimeout(() => {
+              wrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 300);
+          }
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -189,8 +203,7 @@ const SearchableSelect = ({
         }}
       />
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
-          {/* Popular section */}
+        <div className={cn("absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg overflow-y-auto", dropdownMaxH)}>
           {results.popular.length > 0 && (
             <>
               <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Beliebt</div>
@@ -198,6 +211,7 @@ const SearchableSelect = ({
                 <button
                   key={o}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(o)}
                   className={cn(
                     "w-full text-left px-4 py-2.5 text-sm transition-colors",
@@ -213,7 +227,6 @@ const SearchableSelect = ({
               )}
             </>
           )}
-          {/* All results — no artificial limit */}
           {results.rest.length > 0 && (
             <>
               {!!query && results.popular.length === 0 && (
@@ -226,6 +239,7 @@ const SearchableSelect = ({
                 <button
                   key={o}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(o)}
                   className={cn(
                     "w-full text-left px-4 py-2.5 text-sm transition-colors",
@@ -238,12 +252,12 @@ const SearchableSelect = ({
               ))}
             </>
           )}
-          {/* "Andere" always visible at bottom as escape hatch */}
           {results.andere && (
             <>
               <div className="border-t my-1" />
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(results.andere!)}
                 className={cn(
                   "w-full text-left px-4 py-2.5 text-sm transition-colors text-muted-foreground",
@@ -255,7 +269,6 @@ const SearchableSelect = ({
               </button>
             </>
           )}
-          {/* Hint when no exact matches found but user is typing */}
           {results.rest.length === 0 && results.popular.length === 0 && query.trim().length > 0 && (
             <div className="px-4 py-3 text-sm text-muted-foreground">
               <p>Kein Treffer für „{query}" — <strong className="text-foreground">einfach eintippen</strong> und mit Eingabetaste bestätigen.</p>
@@ -270,15 +283,22 @@ const SearchableSelect = ({
 export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: VehicleInfoStepProps) => {
   const vehicleType = formData.vehicleType || "Wohnmobil";
   const isWohnwagen = vehicleType === "Wohnwagen";
+  const isMobile = useIsMobile();
+  const [showManufacturerSearch, setShowManufacturerSearch] = useState(false);
+
   const manufacturers = useMemo(() => {
     return isWohnwagen ? wohnwagenManufacturers : popularManufacturers;
   }, [isWohnwagen]);
 
+  const popularList = isWohnwagen ? POPULAR_WOHNWAGEN : POPULAR_WOHNMOBIL;
+
   const models = useMemo(() => {
     if (!formData.manufacturer) return [];
+    const resolved = resolveManufacturer(formData.manufacturer);
+    const mfr = resolved !== formData.manufacturer ? resolved : formData.manufacturer;
     const m = isWohnwagen
-      ? wohnwagenManufacturerModels[formData.manufacturer]
-      : manufacturerModels[formData.manufacturer];
+      ? wohnwagenManufacturerModels[mfr]
+      : manufacturerModels[mfr];
     if (!m || m.length === 0) return ["Sonstiges Modell"];
     if (m.includes("Sonstiges Modell")) return m;
     return [...m, "Sonstiges Modell"];
@@ -294,19 +314,30 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
   }, []);
 
   const handleManufacturerChange = useCallback((value: string) => {
-    if (value !== formData.manufacturer) {
-      updateFormData({ manufacturer: value, model: "" });
+    const trimmed = value.trim();
+    if (trimmed !== formData.manufacturer) {
+      updateFormData({ manufacturer: trimmed, model: "" });
     } else {
-      updateFormData({ manufacturer: value });
+      updateFormData({ manufacturer: trimmed });
     }
   }, [formData.manufacturer, updateFormData]);
 
+  const handleManufacturerChipSelect = useCallback((value: string) => {
+    updateFormData({ manufacturer: value, model: "" });
+    setShowManufacturerSearch(false);
+  }, [updateFormData]);
+
   const resolveManufacturerOnCommit = useCallback((value: string) => {
-    const resolved = resolveManufacturer(value);
-    if (resolved !== value) {
+    const trimmed = value.trim();
+    const resolved = resolveManufacturer(trimmed);
+    if (resolved !== trimmed) {
       updateFormData({ manufacturer: resolved, model: "" });
+    } else if (trimmed !== value) {
+      updateFormData({ manufacturer: trimmed });
     }
   }, [updateFormData]);
+
+  const isManufacturerFromPopular = popularList.includes(formData.manufacturer);
 
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
@@ -338,136 +369,209 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         </div>
       )}
 
-      {/* ===== ALL FIELDS VISIBLE AT ONCE ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Hersteller – searchable combobox */}
-        <div className="space-y-1.5">
-          <Label htmlFor="manufacturer" className={cn(fieldErrors.manufacturer && "text-red-600")}>
-            Hersteller <span className="text-red-500">*</span>
-          </Label>
-          <SearchableSelect
-            id="manufacturer"
-            options={manufacturers}
-            popular={isWohnwagen ? POPULAR_WOHNWAGEN : POPULAR_WOHNMOBIL}
-            value={formData.manufacturer}
-            onChange={handleManufacturerChange}
-            onCommit={resolveManufacturerOnCommit}
-            placeholder="z.B. Hymer, Dethleffs, Bürstner..."
-            hasError={!!fieldErrors.manufacturer}
-            escapeLabel="Andere"
-            autoFocus
-          />
-          {fieldErrors.manufacturer && (
-            <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>
-          )}
-        </div>
+      {/* === HERSTELLER === */}
+      <div className="space-y-2">
+        <Label className={cn(fieldErrors.manufacturer && "text-red-600")}>
+          Hersteller <span className="text-red-500">*</span>
+        </Label>
 
-        {/* Modell – searchable combobox, populated by manufacturer */}
-        <div className="space-y-1.5">
-          <Label htmlFor="model" className={cn(fieldErrors.model && "text-red-600")}>
-            Modell / Baureihe <span className="text-red-500">*</span>
-          </Label>
-          <SearchableSelect
-            id="model"
-            options={models}
-            value={formData.model}
-            onChange={(val) => updateFormData({ model: val })}
-            placeholder={formData.manufacturer ? `Modell von ${formData.manufacturer}...` : "Erst Hersteller wählen"}
-            disabled={!formData.manufacturer}
-            hasError={!!fieldErrors.model}
-            escapeLabel="Sonstiges Modell"
-          />
-          {fieldErrors.model && (
-            <p className="text-sm text-red-600">{fieldErrors.model}</p>
-          )}
-        </div>
+        {/* Selected manufacturer badge (when already chosen) */}
+        {formData.manufacturer && !showManufacturerSearch ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-12 flex items-center px-3 rounded-lg border-2 border-primary bg-primary/5">
+              <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+              <span className="font-medium text-primary">{formData.manufacturer}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                updateFormData({ manufacturer: "", model: "" });
+                setShowManufacturerSearch(false);
+              }}
+              className="h-12 px-3 rounded-lg border border-border hover:bg-muted transition-colors"
+              aria-label="Hersteller ändern"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Popular manufacturer chips – directly tappable, no keyboard needed */}
+            {!showManufacturerSearch && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {popularList.filter(p => manufacturers.includes(p)).map((mfr) => (
+                    <button
+                      key={mfr}
+                      type="button"
+                      onClick={() => handleManufacturerChipSelect(mfr)}
+                      className={cn(
+                        "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
+                        "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
+                        formData.manufacturer === mfr
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground"
+                      )}
+                    >
+                      {mfr}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowManufacturerSearch(true)}
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium py-1"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Anderer Hersteller? Suche öffnen
+                </button>
+              </div>
+            )}
 
-        {/* Baujahr */}
-        <div className="space-y-1.5">
-          <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
-            <Calendar className="w-4 h-4" />
-            Baujahr <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={formData.year?.toString() || ""}
-            onValueChange={(value) => updateFormData({ year: parseInt(value) })}
-          >
-            <SelectTrigger id="year" className={cn("h-12 text-base", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
-              <SelectValue placeholder="Baujahr wählen" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {yearOptions.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldErrors.year && (
-            <p className="text-sm text-red-600">{fieldErrors.year}</p>
-          )}
-        </div>
+            {/* Search input for non-popular manufacturers */}
+            {showManufacturerSearch && (
+              <div className="space-y-1.5">
+                <SearchableSelect
+                  id="manufacturer"
+                  options={manufacturers}
+                  popular={popularList}
+                  value={formData.manufacturer}
+                  onChange={handleManufacturerChange}
+                  onCommit={resolveManufacturerOnCommit}
+                  placeholder="Hersteller suchen oder eintippen..."
+                  hasError={!!fieldErrors.manufacturer}
+                  escapeLabel="Andere"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowManufacturerSearch(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  ← Zurück zur Auswahl
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        {fieldErrors.manufacturer && (
+          <p className="text-sm text-red-600">{fieldErrors.manufacturer}</p>
+        )}
+      </div>
 
-        {/* Kilometerstand – nur Wohnmobil */}
-        {!isWohnwagen && (
-          <div className="space-y-1.5">
-            <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
-              <Gauge className="w-4 h-4" />
-              Kilometerstand <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="mileage"
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="z.B. 45000"
-              value={formData.mileage || ""}
-              onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
-              min={0}
-              className={cn("h-12 text-base", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
-            />
-            {fieldErrors.mileage && (
-              <p className="text-sm text-red-600">{fieldErrors.mileage}</p>
+      {/* === REMAINING FIELDS (only visible once manufacturer is selected) === */}
+      {formData.manufacturer && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Modell */}
+            <div className="space-y-1.5">
+              <Label htmlFor="model" className={cn(fieldErrors.model && "text-red-600")}>
+                Modell / Baureihe <span className="text-red-500">*</span>
+              </Label>
+              <SearchableSelect
+                id="model"
+                options={models}
+                value={formData.model}
+                onChange={(val) => updateFormData({ model: val.trim() })}
+                onCommit={(val) => updateFormData({ model: val.trim() })}
+                placeholder={`Modell von ${formData.manufacturer}...`}
+                hasError={!!fieldErrors.model}
+                escapeLabel="Sonstiges Modell"
+                autoFocus={!isMobile}
+              />
+              {fieldErrors.model && (
+                <p className="text-sm text-red-600">{fieldErrors.model}</p>
+              )}
+            </div>
+
+            {/* Baujahr */}
+            <div className="space-y-1.5">
+              <Label htmlFor="year" className={cn("flex items-center gap-2", fieldErrors.year && "text-red-600")}>
+                <Calendar className="w-4 h-4" />
+                Baujahr <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.year?.toString() || ""}
+                onValueChange={(value) => updateFormData({ year: parseInt(value) })}
+              >
+                <SelectTrigger id="year" className={cn("h-12 text-base", fieldErrors.year && "border-red-500 ring-red-500/20 ring-2")}>
+                  <SelectValue placeholder="Baujahr wählen" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.year && (
+                <p className="text-sm text-red-600">{fieldErrors.year}</p>
+              )}
+            </div>
+
+            {/* Kilometerstand – nur Wohnmobil */}
+            {!isWohnwagen && (
+              <div className="space-y-1.5">
+                <Label htmlFor="mileage" className={cn("flex items-center gap-2", fieldErrors.mileage && "text-red-600")}>
+                  <Gauge className="w-4 h-4" />
+                  Kilometerstand <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="mileage"
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="z.B. 45000"
+                  value={formData.mileage || ""}
+                  onChange={(e) => updateFormData({ mileage: parseInt(e.target.value) || null })}
+                  min={0}
+                  className={cn("h-12 text-base", fieldErrors.mileage && "border-red-500 ring-red-500/20 ring-2")}
+                />
+                {fieldErrors.mileage && (
+                  <p className="text-sm text-red-600">{fieldErrors.mileage}</p>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Zustand – full width, visual tiles */}
-      <div className="space-y-1.5">
-        <Label className={cn(fieldErrors.condition && "text-red-600")}>
-          Zustand <span className="text-red-500">*</span>
-        </Label>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {[
-            { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
-            { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },
-            { value: "Gepflegt", emoji: "👌", short: "Gepflegt" },
-            { value: "Gebrauchsspuren", emoji: "🔧", short: "Gebraucht" },
-            { value: "Reparaturbedürftig", emoji: "⚠️", short: "Reparatur" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => updateFormData({ condition: opt.value })}
-              className={cn(
-                "min-h-[52px] px-1.5 py-2 rounded-lg border-2 text-center font-medium transition-all flex flex-col items-center justify-center gap-0.5",
-                "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
-                formData.condition === opt.value
-                  ? "border-primary bg-primary/10 text-primary shadow-sm"
-                  : "border-border bg-background text-foreground"
-              )}
-            >
-              <span className="text-lg leading-none">{opt.emoji}</span>
-              <span className="text-[11px] sm:text-xs leading-tight sm:hidden">{opt.short}</span>
-              <span className="text-xs leading-tight hidden sm:block">{opt.value}</span>
-            </button>
-          ))}
+          {/* Zustand – visual tiles */}
+          <div className="space-y-1.5">
+            <Label className={cn(fieldErrors.condition && "text-red-600")}>
+              Zustand <span className="text-red-500">*</span>
+            </Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {[
+                { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
+                { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },
+                { value: "Gepflegt", emoji: "👌", short: "Gepflegt" },
+                { value: "Gebrauchsspuren", emoji: "🔧", short: "Gebraucht" },
+                { value: "Reparaturbedürftig", emoji: "⚠️", short: "Reparatur" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => updateFormData({ condition: opt.value })}
+                  className={cn(
+                    "min-h-[52px] px-1.5 py-2 rounded-lg border-2 text-center font-medium transition-all flex flex-col items-center justify-center gap-0.5",
+                    "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
+                    formData.condition === opt.value
+                      ? "border-primary bg-primary/10 text-primary shadow-sm"
+                      : "border-border bg-background text-foreground"
+                  )}
+                >
+                  <span className="text-lg leading-none">{opt.emoji}</span>
+                  <span className="text-[11px] sm:text-xs leading-tight sm:hidden">{opt.short}</span>
+                  <span className="text-xs leading-tight hidden sm:block">{opt.value}</span>
+                </button>
+              ))}
+            </div>
+            {fieldErrors.condition && (
+              <p className="text-sm text-red-600">{fieldErrors.condition}</p>
+            )}
+          </div>
         </div>
-        {fieldErrors.condition && (
-          <p className="text-sm text-red-600">{fieldErrors.condition}</p>
-        )}
-      </div>
+      )}
 
       {/* Positive reinforcement when all fields filled */}
       {filledCount === totalRequired && (

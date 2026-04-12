@@ -86,8 +86,8 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'CaravanWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'kontakt@caravanwert.de',
-      support_phone: '0800 123 456 78',
+      contact_email: 'info@caravanwert.de',
+      support_phone: '0511 / 51532476',
     };
 
     let subject = "";
@@ -199,7 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>1.</strong> Terminvereinbarung für die Fahrzeugübergabe<br><strong>2.</strong> Bereitstellung aller Fahrzeugdokumente<br><strong>3.</strong> Zahlungsabwicklung')}
           ${paragraph('Den Kaufvertrag erhalten Sie in einer separaten E-Mail.')}
           ${button('Zum Dashboard', auctionUrl, settingsData)}
-          ${paragraph(`Bei Fragen erreichen Sie uns jederzeit unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns jederzeit unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Vielen Dank für Ihr Vertrauen!<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
@@ -221,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Wie geht es weiter?</strong> Unser Team wird sich in Kürze bei Ihnen melden, um die weiteren Optionen zu besprechen. Mögliche nächste Schritte sind:')}
           ${paragraph('<strong>1.</strong> Erneute Auktion mit angepasstem Mindestgebot<br><strong>2.</strong> Direktverkauf an einen unserer Partnerhändler<br><strong>3.</strong> Individuelle Beratung durch unser Expertenteam')}
           ${button('Zum Dashboard', auctionUrl, settingsData)}
-          ${paragraph(`Kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph(`Kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
@@ -272,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Ihre Möglichkeiten:</strong>')}
           ${paragraph('<strong>1.</strong> Angebote im Dashboard einsehen<br><strong>2.</strong> Angebote annehmen, ablehnen oder Gegenangebote machen<br><strong>3.</strong> Unser Team unterstützt Sie bei der Verhandlung')}
           ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
-          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
@@ -291,7 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Was bedeutet das f&uuml;r Sie?</strong>')}
           ${paragraph('<strong>1.</strong> Ihr Fahrzeug wird erneut 7 Tage lang versteigert<br><strong>2.</strong> Sie werden &uuml;ber eingehende Gebote informiert<br><strong>3.</strong> Unser Team begleitet Sie w&auml;hrend des gesamten Prozesses')}
           ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
-          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Mit freundlichen Gr&uuml;&szlig;en,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
@@ -313,7 +313,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>1.</strong> Angebot annehmen \u2013 Kaufvertrag wird automatisch erstellt<br><strong>2.</strong> Gegenangebot machen \u2013 Verhandeln Sie den Preis<br><strong>3.</strong> Angebot ablehnen \u2013 Warten Sie auf weitere Angebote')}
           ${button('Angebot im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`<em>Reagieren Sie zeitnah, damit der H\u00e4ndler nicht abspringt.</em>`)}
-          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0800 123 456 78'}.`)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
         `;
         break;
 

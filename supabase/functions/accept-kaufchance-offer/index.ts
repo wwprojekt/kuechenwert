@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'kontakt@caravanwert.de' };
+        const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
 
         // Contract email to seller
         if (sellerProfile?.email && contractPdfBase64) {
@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
               ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
             `);
 
-            await fetch('https://api.resend.com/emails', {
+            const sellerEmailRes = await fetch('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -395,6 +395,10 @@ Deno.serve(async (req) => {
                 }],
               }),
             });
+            if (!sellerEmailRes.ok) {
+              const errText = await sellerEmailRes.text();
+              throw new Error(`Resend API error: ${errText}`);
+            }
           } catch (e: any) {
             errors.push(`Kaufvertrag-E-Mail an Verkäufer fehlgeschlagen: ${e.message}`);
           }
@@ -416,7 +420,7 @@ Deno.serve(async (req) => {
               ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
             `);
 
-            await fetch('https://api.resend.com/emails', {
+            const buyerEmailRes = await fetch('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -433,6 +437,10 @@ Deno.serve(async (req) => {
                 }],
               }),
             });
+            if (!buyerEmailRes.ok) {
+              const errText = await buyerEmailRes.text();
+              throw new Error(`Resend API error: ${errText}`);
+            }
           } catch (e: any) {
             errors.push(`Kaufvertrag-E-Mail an Käufer fehlgeschlagen: ${e.message}`);
           }
@@ -535,7 +543,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'kontakt@caravanwert.de' };
+      const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
 
       // Get admin emails
       const recipients: string[] = [];
@@ -559,7 +567,7 @@ Deno.serve(async (req) => {
       }
 
       if (recipients.length === 0) {
-        recipients.push('kontakt@caravanwert.de');
+        recipients.push('info@caravanwert.de');
       }
 
       let adminContent = `

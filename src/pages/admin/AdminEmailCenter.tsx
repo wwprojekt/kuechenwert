@@ -455,7 +455,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'contact',
           from_name: c.name,
           from_email: c.email,
-          to_email: 'kontakt@caravanwert.de',
+          to_email: 'info@caravanwert.de',
           subject: c.subject,
           preview: (c.message || '').substring(0, 120),
           status: c.status || 'open',

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const settings = settingsData || {
       site_name: "CaravanWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "kontakt@caravanwert.de",
+      contact_email: "info@caravanwert.de",
       support_phone: "+49 511 51532476",
     };
 

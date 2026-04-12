@@ -50,7 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'CaravanWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'kontakt@caravanwert.de',
+      contact_email: 'info@caravanwert.de',
       support_phone: '+49 511 51532476',
     };
 

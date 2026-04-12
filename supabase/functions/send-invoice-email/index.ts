@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     const settingsData = {
       site_name: siteName,
       site_description: settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: settings?.contact_email || 'kontakt@caravanwert.de',
+      contact_email: settings?.contact_email || 'info@caravanwert.de',
       support_phone: settings?.support_phone || '',
     };
 

@@ -276,19 +276,33 @@ export default function AdminContracts() {
 
   const resendContract = useMutation({
     mutationFn: async (contract: PurchaseContract) => {
-      // Invoke the send-email Edge Function to resend the contract
-      const { error } = await supabase.functions.invoke("send-email", {
+      if (!contract.buyer_id) throw new Error("Kein Käufer zugeordnet");
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("email, first_name, last_name, company_name")
+        .eq("id", contract.buyer_id)
+        .single();
+      if (profileError || !profile?.email) throw new Error("E-Mail-Adresse des Käufers nicht gefunden");
+
+      const buyerLabel = profile.company_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || contract.buyer_name || "Käufer";
+      const contractUrl = contract.buyer_contract_url || contract.contract_url;
+      const downloadLink = contractUrl ? `<p><a href="${contractUrl}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">Kaufvertrag herunterladen</a></p>` : "";
+
+      const bodyHtml = `
+        <p>Guten Tag ${buyerLabel},</p>
+        <p>anbei erhalten Sie erneut Ihren Kaufvertrag <strong>${contract.contract_number}</strong> für das Fahrzeug <strong>${contract.vehicle_description || "–"}</strong>.</p>
+        ${downloadLink}
+        <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+        <p>Mit freundlichen Grüßen,<br>Ihr CaravanWert Team</p>
+      `;
+
+      const { error } = await supabase.functions.invoke("send-admin-email", {
         body: {
-          to: contract.buyer_name, // Will be resolved by Edge Function
-          subject: `Kaufvertrag ${contract.contract_number} - ${contract.vehicle_description}`,
-          template: "contract_resend",
-          data: {
-            contractNumber: contract.contract_number,
-            contractUrl: contract.buyer_contract_url || contract.contract_url,
-            vehicleDescription: contract.vehicle_description,
-            buyerName: contract.buyer_name,
-            sellerName: contract.seller_name,
-          },
+          to: profile.email,
+          subject: `Kaufvertrag ${contract.contract_number} – ${contract.vehicle_description || ""}`,
+          body_html: bodyHtml,
+          recipient_name: buyerLabel,
         },
       });
       if (error) throw error;

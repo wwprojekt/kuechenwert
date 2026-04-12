@@ -41,7 +41,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  */
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'kontakt@caravanwert.de';
+const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'info@caravanwert.de';
 
 // Helper: Send admin notification email directly via Resend
 async function sendAdminEmail(
@@ -58,7 +58,7 @@ async function sendAdminEmail(
 
     const settingsData = settings || {
       site_name: 'CaravanWert',
-      contact_email: 'kontakt@caravanwert.de',
+      contact_email: 'info@caravanwert.de',
     };
 
     // Get admin emails: find users with admin role, then get their emails
@@ -618,7 +618,7 @@ Deno.serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'kontakt@caravanwert.de' };
+          const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
 
           // Send contract email to seller
           if (sellerProfile?.email && contractPdfBase64) {
@@ -636,7 +636,7 @@ Deno.serve(async (req) => {
                 ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
               `);
 
-              await fetch('https://api.resend.com/emails', {
+              const sellerEmailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -653,6 +653,10 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
+              if (!sellerEmailRes.ok) {
+                const errText = await sellerEmailRes.text();
+                throw new Error(`Resend API: ${errText}`);
+              }
               console.log('Contract email sent to seller:', sellerProfile.email);
             } catch (e: any) {
               console.error('Error sending contract to seller:', e);
@@ -676,7 +680,7 @@ Deno.serve(async (req) => {
                 ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
               `);
 
-              await fetch('https://api.resend.com/emails', {
+              const buyerEmailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -693,6 +697,10 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
+              if (!buyerEmailRes.ok) {
+                const errText = await buyerEmailRes.text();
+                throw new Error(`Resend API: ${errText}`);
+              }
               console.log('Contract email sent to buyer:', buyerProfile.email);
             } catch (e: any) {
               console.error('Error sending contract to buyer:', e);

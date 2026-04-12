@@ -58,7 +58,7 @@ const BRAND = {
 export const buildEmailLayout = (settings: Settings, title: string, content: string) => {
   const siteName = settings.site_name || 'CaravanWert';
   const siteDesc = settings.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
-  const contactEmail = settings.contact_email || 'kontakt@caravanwert.de';
+  const contactEmail = settings.contact_email || 'info@caravanwert.de';
   const supportPhone = settings.support_phone || '+49 511 51532476';
   const year = new Date().getFullYear();
 

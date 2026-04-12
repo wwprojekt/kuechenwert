@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const settingsData = settings || {
       site_name: 'CaravanWert',
       site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'kontakt@caravanwert.de',
+      contact_email: 'info@caravanwert.de',
       support_phone: '',
     };
 
@@ -96,7 +96,21 @@ Deno.serve(async (req) => {
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (resendApiKey && winnerProfile.email) {
+    if (!resendApiKey) {
+      console.error('RESEND_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'E-Mail-Dienst nicht konfiguriert (RESEND_API_KEY fehlt)' }),
+        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!winnerProfile.email) {
+      console.error('Winner has no email address:', winnerId);
+      return new Response(
+        JSON.stringify({ error: 'Gewinner hat keine E-Mail-Adresse hinterlegt' }),
+        { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+    {
       const resendResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {

@@ -193,7 +193,7 @@ export default function AdminClaims() {
 
   // ---- Data Fetching ----
 
-  const { data: claims = [], isLoading } = useQuery({
+  const { data: claims = [], isLoading, isError, error: claimsError } = useQuery({
     queryKey: ["adminClaims"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -538,6 +538,12 @@ export default function AdminClaims() {
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                   Lade Reklamationen...
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-destructive">
+                  Fehler beim Laden der Reklamationen: {(claimsError as Error)?.message || "Unbekannter Fehler"}
                 </TableCell>
               </TableRow>
             ) : filteredClaims.length === 0 ? (

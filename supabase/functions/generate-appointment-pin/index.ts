@@ -92,7 +92,7 @@ serve(async (req) => {
     const settingsData = settings || {
       site_name: 'CaravanWert',
       site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'kontakt@caravanwert.de',
+      contact_email: 'info@caravanwert.de',
       support_phone: '',
     };
 

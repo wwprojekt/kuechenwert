@@ -148,8 +148,15 @@ const AuctionDetail = () => {
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
+  const bidAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevHighestBidderRef = useRef<boolean | null>(null);
   const [neighborAuctions, setNeighborAuctions] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
+
+  useEffect(() => {
+    return () => {
+      if (bidAnimationTimerRef.current) clearTimeout(bidAnimationTimerRef.current);
+    };
+  }, []);
 
   // Auto-update bid input when realtime bid makes current input too low
   const prevCurrentBidRef = useRef<number | null>(null);
@@ -366,12 +373,14 @@ const AuctionDetail = () => {
             
             if (isNewBidFromMe) {
               setBidStatusAnimation('pulse-green');
-              setTimeout(() => setBidStatusAnimation('none'), 2000);
+              if (bidAnimationTimerRef.current) clearTimeout(bidAnimationTimerRef.current);
+              bidAnimationTimerRef.current = setTimeout(() => setBidStatusAnimation('none'), 2000);
             } else {
               const wasHighestBidder = prevHighestBidderRef.current;
               if (wasHighestBidder) {
                 setBidStatusAnimation('pulse-red');
-                setTimeout(() => setBidStatusAnimation('none'), 3000);
+                if (bidAnimationTimerRef.current) clearTimeout(bidAnimationTimerRef.current);
+                bidAnimationTimerRef.current = setTimeout(() => setBidStatusAnimation('none'), 3000);
                 notifyOutbid(newBid.amount);
               }
               
@@ -765,7 +774,8 @@ const AuctionDetail = () => {
 
       // Visual feedback: green pulse for own bid
       setBidStatusAnimation('pulse-green');
-      setTimeout(() => setBidStatusAnimation('none'), 2000);
+      if (bidAnimationTimerRef.current) clearTimeout(bidAnimationTimerRef.current);
+      bidAnimationTimerRef.current = setTimeout(() => setBidStatusAnimation('none'), 2000);
 
       if (data.auctionExtended) {
         toast({

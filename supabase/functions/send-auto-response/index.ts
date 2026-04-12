@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, infoBox, list } from '../_shared/email-builder.ts';
+import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -19,6 +20,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const authResult = await checkServiceRoleOrAdmin(req);
+    if (!authResult.authorized) return authResult.response;
     const { sender_email, sender_name } = await req.json();
 
     if (!sender_email) {
@@ -58,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'CaravanWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'kontakt@caravanwert.de',
+      contact_email: 'info@caravanwert.de',
       support_phone: '+49 511 51532476',
     };
 

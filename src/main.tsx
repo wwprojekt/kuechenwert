@@ -7,6 +7,7 @@ import { installGlobalErrorHandlers, initBreadcrumbTracking } from "./lib/errorL
 import "./lib/serviceWorker"; // Side-effect: auto-registers SW in production
 import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
 
@@ -20,12 +21,14 @@ initBreadcrumbTracking();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <HelmetProvider>
-      <SettingsProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </SettingsProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </SettingsProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

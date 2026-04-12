@@ -321,6 +321,13 @@ export default function AdminFinancials() {
         description: 'Zahlungserinnerung versendet',
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Fehler',
+        description: error.message || 'Zahlungserinnerung konnte nicht versendet werden',
+        variant: 'destructive',
+      });
+    },
   });
 
   const sendEmailMutation = useMutation({

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, ChevronDown, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap, Calculator } from "lucide-react";
+import { Menu, X, Phone, Mail, LogOut, User, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap, Calculator } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -90,46 +90,16 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-8">
-            {/* Verkaufen Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  className={`text-sm font-semibold transition-smooth flex items-center gap-1 px-3.5 py-1.5 rounded-full ${
-                    isActive('/verkaufen') || isActive('/verkaufen/wizard') || isActive('/wertermittlung')
-                      ? 'bg-primary text-white shadow-md' 
-                      : 'bg-primary/20 text-primary hover:bg-primary/30'
-                  }`}
-                >
-                  Verkaufen
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link to="/verkaufen/wizard" className="cursor-pointer font-semibold text-primary bg-primary/5 focus:bg-primary/10">
-                    Jetzt verkaufen
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/verkaufen" className="cursor-pointer">
-                    So funktioniert's
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">Wertermittlung</DropdownMenuLabel>
-                <DropdownMenuItem asChild>
-                  <Link to="/wertermittlung" className="cursor-pointer">
-                    Kostenlose Expertenbewertung
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/wertrechner" className="cursor-pointer">
-                    Sofort-Wertrechner
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link 
+              to="/verkaufen/wizard" 
+              className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
+                isActive('/verkaufen') || isActive('/verkaufen/wizard') || isActive('/wertermittlung')
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'bg-primary/20 text-primary hover:bg-primary/30'
+              }`}
+            >
+              Verkaufen
+            </Link>
             <Link 
               to="/kaufen" 
               className={`text-sm font-semibold transition-smooth px-3 py-1.5 rounded-full ${

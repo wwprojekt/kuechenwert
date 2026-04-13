@@ -219,12 +219,22 @@ export default function MyBids() {
             const firstPhoto = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
             const bidCount = group.bids.length;
             const isActive = group.auction.status === "active";
-            const timeLeft = new Date(group.auction.end_time).getTime() - Date.now();
+            const endMs = new Date(group.auction.end_time).getTime();
+            const auctionEndedByTime = endMs <= Date.now();
+            /** Noch „active“ in DB, aber Endzeit vorbei – Schließung/Kaufchance steht aus */
+            const pendingClosure = isActive && auctionEndedByTime;
+            const timeLeft = endMs - Date.now();
             const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
 
             // Status badge config
             let statusBadge: { icon: React.ReactNode; label: string; className: string } | null = null;
-            if (isActive && group.isWinning) {
+            if (pendingClosure) {
+              statusBadge = {
+                icon: <Clock className="w-3 h-3" />,
+                label: "Auswertung",
+                className: "bg-amber-600 text-white",
+              };
+            } else if (isActive && group.isWinning) {
               statusBadge = { icon: <Trophy className="w-3 h-3" />, label: "Führend", className: "bg-green-500 text-white" };
             } else if (isActive && !group.isWinning) {
               statusBadge = { icon: <AlertCircle className="w-3 h-3" />, label: "Überboten", className: "bg-orange-500 text-white" };
@@ -311,8 +321,9 @@ export default function MyBids() {
                         {group.auction.end_time && (
                           <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                             <Clock className="w-3 h-3" />
-                            {isActive
-                              ? (hoursLeft > 24
+                            {pendingClosure
+                              ? "Beendet"
+                              : isActive ? (hoursLeft > 24
                                   ? `${Math.floor(hoursLeft / 24)}d ${hoursLeft % 24}h`
                                   : hoursLeft > 0
                                   ? `${hoursLeft}h`

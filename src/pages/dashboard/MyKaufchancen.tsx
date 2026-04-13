@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +43,21 @@ interface KaufchanceAuction {
   invitation?: KaufchanceInvitation;
 }
 
+/** Auktion: Bieterphase vorbei, DB-Status noch „active“ – close-auction / Cron steht aus */
+interface PendingClosureAuction {
+  id: string;
+  current_bid: number | null;
+  end_time: string;
+  motorhome: {
+    id: string;
+    manufacturer: string;
+    model: string;
+    year: number;
+    listing_number: string | null;
+    photos: Array<{ url: string; display_order: number }>;
+  };
+}
+
 interface MyOffer {
   id: string;
   offer_amount: number;
@@ -70,6 +85,7 @@ export default function MyKaufchancen() {
   const { toast } = useToast();
   const { showSessionExpired } = useSessionExpired();
   const [kaufchancen, setKaufchancen] = useState<KaufchanceAuction[]>([]);
+  const [pendingClosure, setPendingClosure] = useState<PendingClosureAuction[]>([]);
   const [myOffers, setMyOffers] = useState<MyOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("browse");
@@ -102,6 +118,42 @@ export default function MyKaufchancen() {
 
       if (invError) throw invError;
       if (!isMountedRef.current) return;
+
+      // Step 1b: Auktionen mit eigenem Gebot, die „abgelaufen“ sind aber noch status active (Schließung ausstehend)
+      const { data: bidRows, error: bidRowsErr } = await supabase
+        .from("bids")
+        .select("auction_id")
+        .eq("bidder_id", user.id);
+      if (bidRowsErr) throw bidRowsErr;
+
+      const bidAuctionIds = [...new Set((bidRows || []).map((r) => r.auction_id).filter(Boolean))] as string[];
+      if (bidAuctionIds.length > 0) {
+        const nowIso = new Date().toISOString();
+        const { data: stuckRows, error: stuckErr } = await supabase
+          .from("auctions")
+          .select(`
+            id,
+            current_bid,
+            end_time,
+            motorhome:motorhomes (
+              id,
+              manufacturer,
+              model,
+              year,
+              listing_number,
+              photos:motorhome_photos (url, display_order)
+            )
+          `)
+          .in("id", bidAuctionIds)
+          .eq("status", "active")
+          .lt("end_time", nowIso)
+          .order("end_time", { ascending: false });
+        if (stuckErr) throw stuckErr;
+        if (!isMountedRef.current) return;
+        setPendingClosure((stuckRows || []) as PendingClosureAuction[]);
+      } else {
+        setPendingClosure([]);
+      }
 
       // Step 2: Load the auctions for which this user is invited
       if (invitations && invitations.length > 0) {
@@ -460,7 +512,7 @@ export default function MyKaufchancen() {
             Kaufchancen
           </h1>
           <p className="text-sm text-muted-foreground">
-            Exklusive Kaufchancen – Sie wurden als Top-Bieter eingeladen
+            Nachverhandlung nach Auktionen sowie ausstehende Auswertungen Ihrer Gebote
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -491,17 +543,72 @@ export default function MyKaufchancen() {
         </TabsList>
 
         <TabsContent value="browse" className="space-y-3 mt-3">
+          {!loading && pendingClosure.length > 0 && (
+            <Card className="border-amber-500/60 bg-amber-50/80 dark:bg-amber-950/25 p-4">
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4" />
+                Auswertung ausstehend ({pendingClosure.length})
+              </h3>
+              <p className="text-xs text-amber-900/90 dark:text-amber-100/90 mb-3">
+                Diese Auktionen sind bereits beendet, wurden auf dem Server aber noch nicht endgültig abgeschlossen. Sobald die
+                Auswertung läuft, erscheint hier ggf. eine Kaufchance (wenn das Limit nicht erreicht wurde) oder der Status in{" "}
+                <Link to="/dashboard/gebote" className="underline font-medium">
+                  Meine Gebote
+                </Link>
+                . Die Auktionsseite bleibt aufrufbar.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {pendingClosure.map((a) => {
+                  const mh = a.motorhome;
+                  const safePh = Array.isArray(mh?.photos) ? mh.photos : mh?.photos ? [mh.photos] : [];
+                  const first = [...safePh].sort((x, y) => x.display_order - y.display_order)[0];
+                  return (
+                    <Link
+                      key={a.id}
+                      to={`/auktion/${a.id}`}
+                      className="flex gap-3 rounded-md border border-amber-200 dark:border-amber-800 bg-background/80 p-2 text-left hover:border-primary/40 transition-colors"
+                    >
+                      <div className="w-16 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {first ? (
+                          <img src={first.url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Car className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium line-clamp-1">
+                          {mh?.manufacturer} {mh?.model}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Ende {format(new Date(a.end_time), "dd.MM.yyyy HH:mm", { locale: de })} · Höchstgebot{" "}
+                          {Number(a.current_bid || 0).toLocaleString("de-DE")} €
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
-          ) : kaufchancen.length === 0 ? (
+          ) : kaufchancen.length === 0 && pendingClosure.length === 0 ? (
             <Card className="p-8">
               <div className="text-center">
                 <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <h3 className="text-lg font-semibold mb-1">Keine Kaufchancen verfügbar</h3>
+                <h3 className="text-lg font-semibold mb-1">Keine laufende Kaufchance</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Aktuell sind keine Kaufchancen für Sie verfügbar. Sie werden per E-Mail benachrichtigt, wenn Sie als Top-Bieter eingeladen werden.
+                  Hier erscheinen Auktionen in der Kaufchance-Phase, nachdem die Plattform sie abgeschlossen hat und Sie als
+                  Top-Bieter eingeladen wurden. Prüfen Sie oben „Auswertung ausstehend“ oder{" "}
+                  <Link to="/dashboard/gebote" className="text-primary underline">
+                    Meine Gebote
+                  </Link>
+                  .
                 </p>
                 <Button size="sm" asChild>
                   <Link to="/kaufen">Aktive Auktionen ansehen</Link>

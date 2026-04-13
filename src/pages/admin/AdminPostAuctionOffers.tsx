@@ -936,6 +936,7 @@ export default function AdminPostAuctionOffers() {
   };
 
   // ---- Admin: Im Namen des Verkäufers Gegenangebot an alle offenen Bieter senden ----
+  // Fallback: Wenn keine offenen Angebote, proaktive Preisvorstellung an eingeladene Bieter
   const handleAdminSellerCounterAll = async (auctionId: string) => {
     const amount = parseFloat(sellerActionCounterAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -952,51 +953,107 @@ export default function AdminPostAuctionOffers() {
         .eq('auction_id', auctionId)
         .in('status', ['pending', 'countered']);
       if (fetchErr) throw fetchErr;
+
       if (!actionableOffers || actionableOffers.length === 0) {
-        toast({ title: 'Hinweis', description: 'Keine offenen Angebote vorhanden.' });
-        setSellerActionLoading(false);
-        return;
-      }
+        // Keine offenen Angebote → Proaktive Preisvorstellung an eingeladene Bieter
+        const { data: invitations, error: invErr } = await supabase
+          .from('kaufchance_invitations')
+          .select('bidder_id')
+          .eq('auction_id', auctionId);
+        if (invErr) throw invErr;
 
-      let updateErrors = 0;
-      for (const offer of actionableOffers) {
-        const { error } = await supabase
-          .from('post_auction_offers')
-          .update({
-            status: 'countered',
-            counter_offer_amount: amount,
-            seller_response: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', offer.id);
-        if (error) {
-          console.error('Failed to counter offer:', error);
-          updateErrors++;
-          continue;
+        if (!invitations || invitations.length === 0) {
+          toast({ title: 'Hinweis', description: 'Keine eingeladenen Bieter vorhanden.' });
+          setSellerActionLoading(false);
+          return;
         }
 
-        try {
-          const { error: notifyErr } = await supabase.functions.invoke('notify-offer-action', {
-            body: {
-              action: 'counter_offer',
-              auctionId: offer.auction_id,
-              buyerId: offer.buyer_id,
-              offerAmount: Number(offer.offer_amount),
-              counterAmount: amount,
-              sellerResponse: sellerActionMessage || undefined,
-            },
-          });
-          if (notifyErr) console.error('Failed to notify buyer:', notifyErr);
-        } catch (e) {
-          console.error('Failed to notify buyer:', e);
-        }
-      }
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 48);
+        let createErrors = 0;
 
-      if (updateErrors > 0) {
-        toast({ title: 'Teilweise fehlgeschlagen', description: `${actionableOffers.length - updateErrors} von ${actionableOffers.length} Gegenangeboten gesendet.`, variant: 'destructive' });
+        for (const inv of invitations) {
+          const { error } = await supabase
+            .from('post_auction_offers')
+            .insert({
+              auction_id: auctionId,
+              buyer_id: inv.bidder_id,
+              offer_amount: 0,
+              counter_offer_amount: amount,
+              status: 'countered',
+              seller_response: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
+              expires_at: expiresAt.toISOString(),
+            });
+          if (error) {
+            console.error('Failed to create proactive counter offer:', error);
+            createErrors++;
+            continue;
+          }
+
+          try {
+            await supabase.functions.invoke('notify-offer-action', {
+              body: {
+                action: 'counter_offer',
+                auctionId,
+                buyerId: inv.bidder_id,
+                offerAmount: 0,
+                counterAmount: amount,
+                sellerResponse: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
+              },
+            });
+          } catch (e) {
+            console.error('Failed to notify buyer:', e);
+          }
+        }
+
+        if (createErrors > 0) {
+          toast({ title: 'Teilweise fehlgeschlagen', description: `${invitations.length - createErrors} von ${invitations.length} Preisvorschläge gesendet.`, variant: 'destructive' });
+        } else {
+          toast({ title: 'Preisvorschläge gesendet', description: `${amount.toLocaleString('de-DE')} € an ${invitations.length} eingeladene Bieter gesendet.` });
+        }
       } else {
-        toast({ title: 'Gegenangebote gesendet', description: `${amount.toLocaleString('de-DE')} € an ${actionableOffers.length} Bieter im Namen des Verkäufers gesendet.` });
+        // Offene Angebote vorhanden → direkt kontern
+        let updateErrors = 0;
+        for (const offer of actionableOffers) {
+          const { error } = await supabase
+            .from('post_auction_offers')
+            .update({
+              status: 'countered',
+              counter_offer_amount: amount,
+              seller_response: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', offer.id);
+          if (error) {
+            console.error('Failed to counter offer:', error);
+            updateErrors++;
+            continue;
+          }
+
+          try {
+            const { error: notifyErr } = await supabase.functions.invoke('notify-offer-action', {
+              body: {
+                action: 'counter_offer',
+                auctionId: offer.auction_id,
+                buyerId: offer.buyer_id,
+                offerAmount: Number(offer.offer_amount),
+                counterAmount: amount,
+                sellerResponse: sellerActionMessage || undefined,
+              },
+            });
+            if (notifyErr) console.error('Failed to notify buyer:', notifyErr);
+          } catch (e) {
+            console.error('Failed to notify buyer:', e);
+          }
+        }
+
+        if (updateErrors > 0) {
+          toast({ title: 'Teilweise fehlgeschlagen', description: `${actionableOffers.length - updateErrors} von ${actionableOffers.length} Gegenangeboten gesendet.`, variant: 'destructive' });
+        } else {
+          toast({ title: 'Gegenangebote gesendet', description: `${amount.toLocaleString('de-DE')} € an ${actionableOffers.length} Bieter im Namen des Verkäufers gesendet.` });
+        }
       }
+
       setSellerActionCounterAmount("");
       setSellerActionMessage("");
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
@@ -1924,7 +1981,7 @@ export default function AdminPostAuctionOffers() {
                           <User className="w-4 h-4" /> Im Namen des Verkäufers handeln
                         </h3>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Antworten Sie auf alle offenen Angebote im Namen des Verkäufers (z.B. nach telefonischer Absprache mit dem Verkäufer).
+                          Senden Sie eine Preisvorstellung an alle eingeladenen Bieter oder kontern Sie offene Angebote im Namen des Verkäufers.
                         </p>
                         <div className="space-y-3">
                           <div className="space-y-2">

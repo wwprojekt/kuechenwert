@@ -664,11 +664,20 @@ export default function MyKaufchancen() {
 
                           {/* Offer details */}
                           <div className="mt-2 space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Ihr Angebot:</span>
-                              <span className="font-semibold tabular-nums">{offer.offer_amount.toLocaleString('de-DE')} €</span>
-                            </div>
-                            {offer.counter_offer_amount && (
+                            {offer.offer_amount > 0 ? (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Ihr Angebot:</span>
+                                <span className="font-semibold tabular-nums">{offer.offer_amount.toLocaleString('de-DE')} €</span>
+                              </div>
+                            ) : offer.counter_offer_amount ? (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Preisvorstellung:</span>
+                                <span className="font-semibold text-blue-600 tabular-nums">
+                                  {offer.counter_offer_amount.toLocaleString('de-DE')} €
+                                </span>
+                              </div>
+                            ) : null}
+                            {offer.offer_amount > 0 && offer.counter_offer_amount && (
                               <div className="flex items-center justify-between text-xs">
                                 <span className="text-muted-foreground">Gegenangebot:</span>
                                 <span className="font-semibold text-blue-600 tabular-nums">

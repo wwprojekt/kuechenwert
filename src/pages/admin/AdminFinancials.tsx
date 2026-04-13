@@ -6,9 +6,10 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from '@/lib/sessionGuard';
+import { invokeWithAuth, ensureValidRLSSession } from '@/lib/sessionGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +35,6 @@ import {
   CheckCircle, 
   Send,
   CreditCard,
-  Trash2,
   Search,
   Users,
   BarChart3,
@@ -47,7 +47,10 @@ import {
   Calendar,
   Clock,
   Gavel,
-  Scale
+  Scale,
+  Truck,
+  ExternalLink,
+  XCircle
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -59,6 +62,7 @@ import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 
 export default function AdminFinancials() {
+  const navigate = useNavigate();
   const { settings } = useSettings();
 
   // Configurable dunning levels from admin settings
@@ -139,7 +143,8 @@ export default function AdminFinancials() {
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
           auction:auctions(
-            motorhome:motorhomes(manufacturer, model)
+            id,
+            motorhome:motorhomes(id, manufacturer, model)
           ),
           reminders:payment_reminders(reminder_level, reminder_date)
         `)
@@ -161,7 +166,11 @@ export default function AdminFinancials() {
         .from('dealer_payment_history')
         .select(`
           *,
-          invoice:invoices(invoice_number, customer_number),
+          invoice:invoices(
+            invoice_number,
+            customer_number,
+            auction:auctions(id, motorhome:motorhomes(id, manufacturer, model))
+          ),
           dealer:profiles(first_name, last_name, company_name, customer_number)
         `)
         .order('created_at', { ascending: false })
@@ -183,7 +192,8 @@ export default function AdminFinancials() {
         .from('invoices')
         .select(`
           *,
-          dealer:profiles(first_name, last_name, company_name, email, customer_number)
+          dealer:profiles(first_name, last_name, company_name, email, customer_number),
+          auction:auctions(id, motorhome:motorhomes(id, manufacturer, model))
         `)
         .in('payment_status', ['pending', 'partial'])
         .lt('due_date', new Date().toISOString())
@@ -209,6 +219,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number, phone),
+          auction:auctions(id, motorhome:motorhomes(id, manufacturer, model)),
           reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
         `)
         .in('payment_status', ['pending', 'partial'])
@@ -228,18 +239,25 @@ export default function AdminFinancials() {
       { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
       { key: "dealer", label: "Kd.-Nr.", format: (value: any) => value?.customer_number || '' },
       { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
-      { key: "gross_amount", label: "Betrag", format: (value: any) => `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "amount_paid", label: "Bezahlt", format: (value: any) => `€${Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "gross_amount", label: "Restbetrag", format: (value: any, row: any) => `€${(Number(row.gross_amount) - Number(row.amount_paid || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2 })}` },
-      { key: "payment_status", label: "Status" },
+      { key: "invoice_type", label: "Typ", format: (value: any) => value === 'seller_penalty' ? 'Vertragsstrafe' : 'Provision' },
+      { key: "net_amount", label: "Netto", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
+      { key: "tax_amount", label: "MwSt", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
+      { key: "tax_rate", label: "MwSt-%", format: (value: any) => `${Number(value || 0)}%` },
+      { key: "gross_amount", label: "Brutto", format: (value: any) => Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
+      { key: "amount_paid", label: "Bezahlt", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
+      { key: "gross_amount", label: "Restbetrag", format: (_value: any, row: any) => (Number(row.gross_amount) - Number(row.amount_paid || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
+      { key: "payment_status", label: "Status", format: (value: any) => value === 'paid' ? 'Bezahlt' : value === 'partial' ? 'Teilbezahlt' : value === 'cancelled' ? 'Storniert' : 'Offen' },
+      { key: "reverse_charge", label: "Reverse Charge", format: (value: any) => value ? 'Ja' : 'Nein' },
+      { key: "payment_method", label: "Zahlungsart", format: (value: any) => value === 'bank_transfer' ? 'Überweisung' : value === 'cash' ? 'Bar' : value || '' },
       { key: "invoice_date", label: "Rechnungsdatum", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
       { key: "due_date", label: "Fällig am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
+      { key: "paid_at", label: "Bezahlt am", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
     ],
   });
 
   // Delete invoice mutation
   // Dependencies FIRST, then the main invoice record LAST to avoid FK violations.
-  const deleteInvoiceMutation = useMutation({
+  const _deleteInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session abgelaufen");
@@ -350,6 +368,42 @@ export default function AdminFinancials() {
     },
   });
 
+  const cancelInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session abgelaufen");
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          payment_status: 'cancelled',
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
+      toast({
+        title: 'Rechnung storniert',
+        description: 'Die Rechnung wurde erfolgreich storniert.',
+      });
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Fehler beim Stornieren',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const getStatusBadge = (invoice: any) => {
     if (invoice.payment_status === 'paid') {
       return <Badge className="bg-green-100 text-green-800">Bezahlt</Badge>;
@@ -408,20 +462,38 @@ export default function AdminFinancials() {
     }
   };
 
+  const getVehicleLabel = (invoice: any) => {
+    const m = invoice.auction?.motorhome;
+    if (!m) return null;
+    return `${m.manufacturer || ''} ${m.model || ''}`.trim() || null;
+  };
+
+  const navigateToVehicle = (invoice: any) => {
+    const motorhomeId = invoice.auction?.motorhome?.id || invoice.motorhome_id;
+    if (motorhomeId) {
+      navigate(`/admin/motorhomes/${motorhomeId}`);
+    } else if (invoice.auction_id) {
+      navigate(`/admin/auctions/${invoice.auction_id}`);
+    }
+  };
+
   const filteredInvoices = invoices?.filter(invoice => {
     const searchLower = searchTerm.toLowerCase();
+    const vehicleStr = getVehicleLabel(invoice)?.toLowerCase() || '';
     const matchesSearch = searchTerm === '' || 
       invoice.invoice_number?.toLowerCase().includes(searchLower) ||
       invoice.customer_number?.toLowerCase().includes(searchLower) ||
       invoice.dealer?.email?.toLowerCase().includes(searchLower) ||
       invoice.dealer?.customer_number?.toLowerCase().includes(searchLower) ||
       (invoice.dealer?.company_name && invoice.dealer.company_name.toLowerCase().includes(searchLower)) ||
-      (`${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.toLowerCase().includes(searchLower));
+      (`${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.toLowerCase().includes(searchLower)) ||
+      vehicleStr.includes(searchLower);
     
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'paid' && invoice.payment_status === 'paid') ||
       (statusFilter === 'pending' && invoice.payment_status === 'pending') ||
       (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
+      (statusFilter === 'cancelled' && invoice.payment_status === 'cancelled') ||
       (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && new Date(invoice.due_date) < new Date());
     
     const matchesType = typeFilter === 'all' ||
@@ -434,6 +506,8 @@ export default function AdminFinancials() {
   });
 
   // Extended statistics
+  const totalNet = invoices?.reduce((sum, inv) => sum + Number(inv.net_amount || 0), 0) || 0;
+  const totalTax = invoices?.reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0) || 0;
   const totalGross = invoices?.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0) || 0;
   const totalPaid = invoices?.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0) || 0;
   const totalOutstanding = totalGross - totalPaid;
@@ -498,12 +572,16 @@ export default function AdminFinancials() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamtumsatz</CardTitle>
+            <CardTitle className="text-sm font-medium">Gesamtumsatz (brutto)</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {totalGross.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+            </div>
+            <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+              <span>Netto: {totalNet.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+              <span>MwSt: {totalTax.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               {invoices?.length || 0} Rechnungen gesamt
@@ -648,7 +726,7 @@ export default function AdminFinancials() {
             <CardHeader>
               <CardTitle>Rechnungsübersicht</CardTitle>
               <CardDescription>
-                Suchen Sie nach Rechnungsnummer, Kundennummer, Firma oder E-Mail
+                Suchen Sie nach Rechnungsnummer, Kundennummer, Firma, E-Mail oder Fahrzeug
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -657,7 +735,7 @@ export default function AdminFinancials() {
                 <div className="relative flex-1 min-w-[250px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Rechnungsnr., Kundennr., Firma oder E-Mail..."
+                    placeholder="Rechnungsnr., Kundennr., Firma, E-Mail oder Fahrzeug..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9"
@@ -673,6 +751,7 @@ export default function AdminFinancials() {
                     <SelectItem value="partial">Teilbezahlt</SelectItem>
                     <SelectItem value="paid">Bezahlt</SelectItem>
                     <SelectItem value="overdue">Überfällig</SelectItem>
+                    <SelectItem value="cancelled">Storniert</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -782,11 +861,24 @@ export default function AdminFinancials() {
                                 </>
                               ) : (
                                 <>
-                                  <div className="font-medium text-sm">
-                                    {invoice.auction?.motorhome?.manufacturer} {invoice.auction?.motorhome?.model}
+                                  {getVehicleLabel(invoice) ? (
+                                    <button
+                                      onClick={() => navigateToVehicle(invoice)}
+                                      className="flex items-center gap-1.5 font-medium text-sm text-primary hover:underline text-left"
+                                    >
+                                      <Truck className="h-3.5 w-3.5 shrink-0" />
+                                      {getVehicleLabel(invoice)}
+                                      <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                                    </button>
+                                  ) : (
+                                    <div className="text-sm text-muted-foreground">Kein Fahrzeug</div>
+                                  )}
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
-                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
+                                    Netto: {Number(invoice.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                                    {invoice.reverse_charge && <span className="ml-1 text-amber-600">(RC)</span>}
                                   </div>
                                 </>
                               )}
@@ -848,11 +940,14 @@ export default function AdminFinancials() {
                           <Button 
                             variant="ghost"
                             size="sm"
-                            className="text-muted-foreground cursor-not-allowed opacity-50"
-                            onClick={() => toast({ title: 'Aufbewahrungspflicht', description: 'Rechnungen dürfen aus gesetzlichen Gründen nicht gelöscht werden. Rechnungen können nur storniert werden.' })}
-                            title="Rechnungen dürfen nicht gelöscht werden (Aufbewahrungspflicht)"
+                            onClick={() => {
+                              setInvoiceToDelete(invoice);
+                              setDeleteDialogOpen(true);
+                            }}
+                            disabled={invoice.payment_status === 'cancelled' || invoice.payment_status === 'paid'}
+                            title={invoice.payment_status === 'cancelled' ? 'Bereits storniert' : invoice.payment_status === 'paid' ? 'Bezahlte Rechnungen können nicht storniert werden' : 'Rechnung stornieren'}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -902,6 +997,17 @@ export default function AdminFinancials() {
                               <div className="text-xs text-blue-600 font-medium">{custNum}</div>
                             )}
                           </div>
+                          {getVehicleLabel(invoice) && (
+                            <div className="hidden md:block min-w-[130px]">
+                              <button
+                                onClick={() => navigateToVehicle(invoice)}
+                                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                              >
+                                <Truck className="h-3.5 w-3.5 shrink-0" />
+                                {getVehicleLabel(invoice)}
+                              </button>
+                            </div>
+                          )}
                           <div>
                             <Badge variant="destructive">{daysOverdue} Tage überfällig</Badge>
                           </div>
@@ -1020,6 +1126,15 @@ export default function AdminFinancials() {
                               {invoice.dealer?.email && (
                                 <div className="text-xs text-muted-foreground">{invoice.dealer.email}</div>
                               )}
+                              {getVehicleLabel(invoice) && (
+                                <button
+                                  onClick={() => navigateToVehicle(invoice)}
+                                  className="flex items-center gap-1.5 text-xs text-primary hover:underline mt-1"
+                                >
+                                  <Truck className="h-3 w-3 shrink-0" />
+                                  {getVehicleLabel(invoice)}
+                                </button>
+                              )}
                             </div>
                             
                             {/* Dunning Status */}
@@ -1080,12 +1195,14 @@ export default function AdminFinancials() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-muted-foreground border-muted cursor-not-allowed opacity-50"
-                                onClick={() => toast({ title: 'Aufbewahrungspflicht', description: 'Rechnungen dürfen aus gesetzlichen Gründen nicht gelöscht werden. Rechnungen können nur storniert werden.' })}
-                                title="Rechnungen dürfen nicht gelöscht werden (Aufbewahrungspflicht)"
+                                onClick={() => {
+                                  setInvoiceToDelete(invoice);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                title="Rechnung stornieren"
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Löschen
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Stornieren
                               </Button>
                             </div>
                           </div>
@@ -1139,6 +1256,17 @@ export default function AdminFinancials() {
                             <div className="text-xs text-blue-600 font-medium">{payment.dealer.customer_number}</div>
                           )}
                         </div>
+                        {payment.invoice?.auction?.motorhome && (
+                          <div className="hidden md:block">
+                            <button
+                              onClick={() => navigate(`/admin/motorhomes/${payment.invoice.auction.motorhome.id}`)}
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                            >
+                              <Truck className="h-3 w-3 shrink-0" />
+                              {payment.invoice.auction.motorhome.manufacturer} {payment.invoice.auction.motorhome.model}
+                            </button>
+                          </div>
+                        )}
                         <div>
                           <Badge variant="outline">
                             {payment.payment_method === 'bank_transfer' ? 'Überweisung' :
@@ -1176,17 +1304,17 @@ export default function AdminFinancials() {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Storno Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Rechnung unwiderruflich löschen?
+              <XCircle className="h-5 w-5" />
+              Rechnung stornieren?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Sie sind dabei, die Rechnung <strong>{invoiceToDelete?.invoice_number}</strong> zu löschen.
+                Sie sind dabei, die Rechnung <strong>{invoiceToDelete?.invoice_number}</strong> zu stornieren.
               </p>
               {invoiceToDelete?.dealer && (
                 <p>
@@ -1199,22 +1327,21 @@ export default function AdminFinancials() {
                   )}
                 </p>
               )}
+              {getVehicleLabel(invoiceToDelete) && (
+                <p>
+                  Fahrzeug: <strong>{getVehicleLabel(invoiceToDelete)}</strong>
+                </p>
+              )}
               <p>
                 Betrag: <strong>
                   {Number(invoiceToDelete?.gross_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                 </strong>
+                {' '}(Netto: {Number(invoiceToDelete?.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                {' '}+ MwSt: {Number(invoiceToDelete?.tax_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })})
               </p>
-              <p className="text-destructive font-medium mt-3">
-                Folgende Daten werden ebenfalls gelöscht:
-              </p>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Alle Rechnungspositionen</li>
-                <li>Alle Zahlungseingänge zu dieser Rechnung</li>
-                <li>Alle Mahnungen zu dieser Rechnung</li>
-                <li>Das gespeicherte PDF</li>
-              </ul>
-              <p className="font-bold text-destructive mt-2">
-                Diese Aktion kann nicht rückgängig gemacht werden!
+              <p className="text-amber-700 font-medium mt-3">
+                Die Rechnung wird als storniert markiert und bleibt aus Aufbewahrungsgründen im System erhalten.
+                Offene Forderungen werden auf 0 gesetzt.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1222,10 +1349,10 @@ export default function AdminFinancials() {
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => invoiceToDelete && deleteInvoiceMutation.mutate(invoiceToDelete.id)}
-              disabled={deleteInvoiceMutation.isPending}
+              onClick={() => invoiceToDelete && cancelInvoiceMutation.mutate(invoiceToDelete.id)}
+              disabled={cancelInvoiceMutation.isPending}
             >
-              {deleteInvoiceMutation.isPending ? 'Wird gelöscht...' : 'Endgültig löschen'}
+              {cancelInvoiceMutation.isPending ? 'Wird storniert...' : 'Rechnung stornieren'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

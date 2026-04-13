@@ -8,12 +8,14 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  * Edge Function: generate-purchase-contract
  * 
  * Generates a professional, German-language purchase contract (Kaufvertrag)
- * between the seller (private) and the buyer (dealer) after a successful auction.
- * 
+ * between seller and buyer (typically dealer) after a successful auction.
+ *
  * Features:
  * - CaravanWert logo embedded in header
  * - Sequential contract numbers (KV-YYYY-NNNNN) from DB sequence
  * - Dealer customer number (Kundennummer) displayed on contract
+ * - VAT wording from listing (mwst_ausweisbar) for commercial sellers
+ * - Annex A: cover image + structured listing export
  * - Contract stored in purchase_contracts table
  * - PDF uploaded to Supabase Storage
  * 
@@ -125,6 +127,203 @@ function numberToWords(n: number): string {
   return result;
 }
 
+/** JPEG SOF0 / SOF2 dimensions (sufficient for most listing photos). */
+function readJpegDimensions(u8: Uint8Array): { w: number; h: number } | null {
+  let i = 2;
+  while (i + 9 < u8.length) {
+    if (u8[i] !== 0xff) return null;
+    const marker = u8[i + 1];
+    const len = (u8[i + 2] << 8) | u8[i + 3];
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      const h = (u8[i + 5] << 8) | u8[i + 6];
+      const w = (u8[i + 7] << 8) | u8[i + 8];
+      return { w, h };
+    }
+    if (len < 2) return null;
+    i += 2 + len;
+  }
+  return null;
+}
+
+function readPngDimensions(u8: Uint8Array): { w: number; h: number } | null {
+  if (u8.length < 24 || u8[0] !== 0x89) return null;
+  const sig = String.fromCharCode(u8[1], u8[2], u8[3]);
+  if (sig !== 'PNG') return null;
+  const w = (u8[16] << 24) | (u8[17] << 16) | (u8[18] << 8) | u8[19];
+  const h = (u8[20] << 24) | (u8[21] << 16) | (u8[22] << 8) | u8[23];
+  return { w, h };
+}
+
+async function fetchCoverImageForPdf(
+  imageUrl: string,
+): Promise<{ dataUrl: string; fmt: 'JPEG' | 'PNG'; w: number; h: number } | null> {
+  try {
+    const r = await fetch(imageUrl, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) {
+      console.warn('Cover image HTTP', r.status, imageUrl);
+      return null;
+    }
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length < 24) return null;
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    const fmt: 'JPEG' | 'PNG' = isPng ? 'PNG' : 'JPEG';
+    let dims = isPng ? readPngDimensions(buf) : readJpegDimensions(buf);
+    if (!dims) dims = { w: 4, h: 3 };
+
+    let binaryString = '';
+    const chunkSize = 4096;
+    for (let i = 0; i < buf.length; i += chunkSize) {
+      binaryString += String.fromCharCode(...buf.subarray(i, i + chunkSize));
+    }
+    const b64 = btoa(binaryString);
+    const mime = isPng ? 'image/png' : 'image/jpeg';
+    return { dataUrl: `data:${mime};base64,${b64}`, fmt, w: dims.w, h: dims.h };
+  } catch (e) {
+    console.warn('fetchCoverImageForPdf failed:', e);
+    return null;
+  }
+}
+
+function fitImageToBox(
+  natW: number,
+  natH: number,
+  maxW: number,
+  maxH: number,
+): { w: number; h: number } {
+  const ratio = natW / natH;
+  let w = maxW;
+  let h = w / ratio;
+  if (h > maxH) {
+    h = maxH;
+    w = h * ratio;
+  }
+  return { w, h };
+}
+
+/** Plain-text export of listing fields for contract annex (German labels). */
+function buildMotorhomeListingAppendix(m: Record<string, unknown>): string {
+  const out: string[] = [];
+  const add = (label: string, val: unknown) => {
+    if (val === null || val === undefined || val === '') return;
+    if (typeof val === 'boolean') {
+      if (val) out.push(`${label}: Ja`);
+      return;
+    }
+    if (typeof val === 'number') {
+      out.push(`${label}: ${val.toLocaleString('de-DE')}`);
+      return;
+    }
+    out.push(`${label}: ${String(val).trim()}`);
+  };
+
+  add('Inseratsnummer', m.listing_number);
+  add('Hersteller', m.manufacturer);
+  add('Modell', m.model);
+  add('Aufbauart', m.body_type);
+  add('Verkaufstyp', m.sale_type);
+  add('Konto-Typ (Plattform)', m.account_type);
+  add('Standort (Freitext)', m.location);
+  add('Verfügbar ab', m.available_from);
+  add('Inseratspreis / Angebotspreis (€)', m.price);
+  add('Baujahr', m.year);
+  add('Kilometerstand', m.mileage != null ? `${Number(m.mileage).toLocaleString('de-DE')} km` : null);
+  add('Zustand', m.condition);
+  add('Kraftstoff', m.fuel_type);
+  add('Tankinhalt (l)', m.fuel_tank_capacity_liters);
+  add('Emissionsklasse', m.emission_class);
+  add('Getriebe', m.transmission);
+  add('Leistung (kW)', m.power_kw);
+  add('Leistung (PS)', m.engine_power_hp);
+  add('Hubraum (ccm)', m.engine_displacement_ccm);
+  add('Basisfahrzeug', m.base_vehicle);
+  add('Erstzulassung', m.first_registration);
+  add('Letzte HU', m.last_tuev_date);
+  add('HU gültig bis', m.tuev_valid_until);
+  add('Vorbesitzer', m.previous_owners);
+  add('Unfallfrei', m.accident_free === true ? 'Ja' : m.accident_free === false ? 'Nein' : null);
+  add('Nichtraucher', m.non_smoker === true ? 'Ja' : m.non_smoker === false ? 'Nein' : null);
+  add('Checkheft / Service', m.service_history_available === true ? 'Ja' : null);
+  add('Schäden bekannt', m.has_damage === true ? 'Ja' : m.has_damage === false ? 'Nein' : null);
+  add('Schaden-/Mängeltext', m.damage_summary);
+  add('Markisenlänge (m)', m.awning_length_m);
+  add('Länge (m)', m.length_m);
+  add('Breite (m)', m.width_m);
+  add('Höhe (m)', m.height_m);
+  add('Gewicht (kg)', m.weight_kg);
+  add('Nutzlast (kg)', m.payload_kg);
+  add('Achsen', m.number_of_axles);
+  add('Sitze', m.seats);
+  add('Schlafplätze', m.sleeping_places);
+  add('Betten / Bettenbeschreibung', m.beds_description);
+  add('Frischwasser (l)', m.water_tank_liters);
+  add('Grauwasser (l)', m.grey_water_capacity_liters);
+  add('Hauptreifen', m.main_tires);
+  add('Zweitreifen', m.second_tires);
+  add('Batterie (Ah)', m.battery_capacity_ah);
+  add('Solar (W)', m.solar_power_watts);
+  add('Heizung', m.heating_type);
+  add('Küche vorhanden', m.has_kitchen);
+  add('Kühlschranktyp', m.refrigerator_type);
+  add('Klima', m.air_conditioning_type);
+  add('Gas', m.gas_system);
+  add('Standort PLZ', m.postal_code);
+  add('Ort', m.city);
+  add('Land', m.country);
+  add('FIN', m.vehicle_identification_number);
+  add('Kennzeichen', m.license_plate);
+  add('Sofortkaufpreis (€)', m.instant_price);
+  add('Mindestpreis / Limit (€)', m.reserve_price);
+  add('Zusätzliche Ausstattung / Hinweise', m.additional_equipment);
+
+  const equip: [string, unknown, string][] = [
+    ['has_bathroom', m.has_bathroom, 'Bad'],
+    ['has_toilet', m.has_toilet, 'WC'],
+    ['has_shower', m.has_shower, 'Dusche'],
+    ['has_solar', m.has_solar, 'Solar'],
+    ['has_awning', m.has_awning, 'Markise'],
+    ['has_awning_tent', m.has_awning_tent, 'Vorzelt'],
+    ['has_roof_ac', m.has_roof_ac, 'Dachklima'],
+    ['has_stand_ac', m.has_stand_ac, 'Standklima'],
+    ['has_bike_rack', m.has_bike_rack, 'Fahrradträger'],
+    ['has_garage', m.has_garage, 'Garage/Stauraum'],
+    ['has_tv', m.has_tv, 'TV'],
+    ['has_backup_camera', m.has_backup_camera, 'Rückfahrkamera'],
+    ['has_parking_sensors', m.has_parking_sensors, 'Einparkhilfe'],
+    ['has_cruise_control', m.has_cruise_control, 'Tempomat'],
+    ['has_central_locking', m.has_central_locking, 'Zentralverriegelung'],
+    ['has_inverter', m.has_inverter, 'Wechselrichter'],
+    ['has_navigation', m.has_navigation, 'Navigation'],
+    ['has_satellite', m.has_satellite, 'Sat-Anlage'],
+    ['has_airbag', m.has_airbag, 'Airbag'],
+    ['has_alarm', m.has_alarm, 'Alarm'],
+    ['has_esp', m.has_esp, 'ESP'],
+    ['has_swivel_seats', m.has_swivel_seats, 'Drehsitze'],
+    ['has_markise', m.has_markise, 'Markise (Alt)'],
+    ['has_heating', m.has_heating, 'Heizung vorhanden'],
+    ['has_air_conditioning', m.has_air_conditioning, 'Klimaanlage'],
+    ['has_tuev', m.has_tuev, 'TÜV relevant'],
+  ];
+  for (const [, v, label] of equip) {
+    if (v === true) out.push(`Ausstattung: ${label}`);
+  }
+
+  if (m.description && String(m.description).trim()) {
+    out.push('');
+    out.push('--- Beschreibungstext aus dem Inserat ---');
+    out.push(String(m.description).trim());
+  }
+
+  if (m.mwst_ausweisbar === true) {
+    out.push('');
+    out.push('Hinweis Inserat: Umsatzsteuer wird auf der Kaufrechnung gesondert ausgewiesen.');
+  } else if (m.mwst_ausweisbar === false) {
+    out.push('');
+    out.push('Hinweis Inserat: Verkauf ohne gesonderte Umsatzsteuerausweisung (z. B. Differenzbesteuerung / Kleinunternehmer).');
+  }
+
+  return out.join('\n');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest(req);
@@ -159,6 +358,28 @@ Deno.serve(async (req) => {
       .single();
 
     if (mhError || !motorhome) throw new Error(`Motorhome not found: ${mhError?.message}`);
+
+    const { data: sellerRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', sellerId);
+    const sellerIsDealer = (sellerRoles ?? []).some((r) => r.role === 'dealer');
+
+    const { data: photoRows } = await supabase
+      .from('motorhome_photos')
+      .select('url, is_primary, display_order')
+      .eq('motorhome_id', motorhomeId)
+      .order('is_primary', { ascending: false })
+      .order('display_order', { ascending: true });
+
+    const coverUrl = photoRows?.find((p) => p.url)?.url ?? null;
+    let coverForPdf: Awaited<ReturnType<typeof fetchCoverImageForPdf>> = null;
+    if (coverUrl) {
+      coverForPdf = await fetchCoverImageForPdf(coverUrl);
+    }
+    const listingAppendixText = buildMotorhomeListingAppendix(
+      motorhome as unknown as Record<string, unknown>,
+    );
 
     const { data: seller, error: sellerError } = await supabase
       .from('profiles')
@@ -406,13 +627,36 @@ Deno.serve(async (req) => {
     detailRow('Kraftstoff', fuelType);
     detailRow('Zul. Gesamtgewicht', weight);
     y += 2;
+    paragraphText(
+      'Als Anlage A werden das Titelbild aus dem Inserat sowie ein vollständiger Abdruck der auf der Plattform veröffentlichten Fahrzeugangaben Bestandteil dieses Vertrages.',
+    );
+    y += 1;
 
     // ── §3 Kaufpreis und Zahlung ──────────────────────────────────
     sectionTitle('§ 3 Kaufpreis und Zahlung');
 
     paragraphText(`Der Kaufpreis beträgt ${formatCurrency(salePrice)} (in Worten: ${numberToWords(salePrice)}).`);
     paragraphText('Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.');
-    paragraphText('Da der Verkäufer als Privatperson handelt, wird keine Mehrwertsteuer ausgewiesen. Der Kaufpreis versteht sich als Bruttobetrag. Dem Käufer steht es frei, die Differenzbesteuerung gemäß §25a UStG anzuwenden.');
+    if (sellerIsDealer) {
+      const ma = motorhome.mwst_ausweisbar;
+      if (ma === true) {
+        paragraphText(
+          'Der Verkäufer handelt gewerblich. Im Inserat ist angegeben, dass die Umsatzsteuer auf der Kaufrechnung gesondert ausgewiesen wird. Der zwischen den Parteien vereinbarte Kaufpreis bezieht sich auf diese Angabe; die konkrete steuerliche Abrechnung ergibt sich aus der Rechnung des Verkäufers.',
+        );
+      } else if (ma === false) {
+        paragraphText(
+          'Der Verkäufer handelt gewerblich. Im Inserat ist angegeben, dass keine Umsatzsteuer gesondert ausgewiesen wird (z. B. Differenzbesteuerung nach dem Umsatzsteuergesetz oder Kleinunternehmerregelung). Der vereinbarte Kaufpreis entspricht den Angaben im Inserat.',
+        );
+      } else {
+        paragraphText(
+          'Der Verkäufer handelt gewerblich. Zur Ausweisung der Umsatzsteuer verweisen die Parteien auf die Angaben im Inserat und auf die Kaufrechnung des Verkäufers.',
+        );
+      }
+    } else {
+      paragraphText(
+        'Der Verkäufer handelt als Privatperson; es wird keine Umsatzsteuer ausgewiesen. Der Kaufpreis versteht sich als Bruttobetrag. Dem Käufer bleibt es vorbehalten, die gesetzlichen Regelungen zur Differenzbesteuerung anzuwenden.',
+      );
+    }
     paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach Zuschlag auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
     y += 1;
 
@@ -457,6 +701,71 @@ Deno.serve(async (req) => {
     paragraphText('Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist, soweit gesetzlich zulässig, der Sitz des Vermittlers.');
     paragraphText(`Dieser Vertrag wurde in zwei gleichlautenden Ausfertigungen erstellt – je eine für den Verkäufer und den Käufer. Eine digitale Kopie wird über ${siteName} bereitgestellt.`);
     y += 3;
+
+    // ── Anlage A (Inserat) ────────────────────────────────────────
+    doc.addPage();
+    addHeader();
+    y = 32;
+    sectionTitle('Anlage A – Inseratsunterlagen');
+
+    paragraphText(
+      'Nachfolgend das zum Zeitpunkt des Zuschlags auf ' +
+        siteName +
+        ' veröffentlichte Titelbild (sofern vorhanden) sowie ein strukturierter Abdruck der Inseratsdaten.',
+    );
+
+    if (coverForPdf) {
+      const maxImgW = cw - 6;
+      const maxImgH = 88;
+      const { w: imgW, h: imgH } = fitImageToBox(coverForPdf.w, coverForPdf.h, maxImgW, maxImgH);
+      if (y + imgH + 14 > 268) {
+        doc.addPage();
+        addHeader();
+        y = 32;
+      }
+      doc.setTextColor(TEXT_LIGHT.r, TEXT_LIGHT.g, TEXT_LIGHT.b);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Titelbild', ml + 3, y);
+      y += 4;
+      try {
+        doc.addImage(coverForPdf.dataUrl, coverForPdf.fmt, ml + 3, y, imgW, imgH);
+        y += imgH + 6;
+      } catch (_imgErr) {
+        paragraphText('(Das Titelbild konnte technisch nicht eingebettet werden.)');
+      }
+    } else {
+      paragraphText(
+        'Zum Zeitpunkt der Vertragsgenerierung lag kein Titelbild im Inserat vor oder es konnte nicht geladen werden.',
+      );
+    }
+
+    if (y > 248) {
+      doc.addPage();
+      addHeader();
+      y = 32;
+    }
+    doc.setTextColor(BRAND.r, BRAND.g, BRAND.b);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Daten-Auszug aus dem Inserat', ml + 3, y);
+    y += 6;
+
+    for (const rawLine of listingAppendixText.split('\n')) {
+      const line = rawLine.trimEnd();
+      if (line === '') {
+        y += 2;
+        if (y > 275) {
+          doc.addPage();
+          addHeader();
+          y = 32;
+        }
+        continue;
+      }
+      paragraphText(line, 3);
+    }
+
+    y += 2;
 
     // ── Unterschriften ─────────────────────────────────────────────
     if (y > 220) {

@@ -13,11 +13,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" />
 
-    <!-- Preload hero image for fast LCP — responsive: mobile gets small version -->
-    <link rel="preload" as="image" href="/images/hero-motorhome.webp"
-          imagesrcset="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
-          imagesizes="100vw" fetchpriority="high" />
-
     <!-- Google Fonts — loaded NON-BLOCKING via media trick.
          Browser loads CSS with media="print" (non-render-blocking),
          then switches to media="all" once loaded. display=swap shows
@@ -125,12 +120,6 @@
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
         fbq('consent','revoke');
         fbq('init','1846623132710484');
-
-        // Clixtell Click-Fraud Protection
-        var c = document.createElement('script');
-        c.async = true;
-        c.src = document.location.protocol + '//scripts.clixtell.com/track.js';
-        document.head.appendChild(c);
 
         // Cloudflare Turnstile
         var t = document.createElement('script');

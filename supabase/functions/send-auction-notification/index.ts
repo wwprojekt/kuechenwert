@@ -11,7 +11,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -297,6 +297,7 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "seller_new_offer":
+        // WICHTIG: Kein buyerName hier! Verkäufer darf Händler-Identität erst nach Kaufvertrag erfahren.
         subject = `Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
@@ -306,7 +307,6 @@ const handler = async (req: Request): Promise<Response> => {
           ${infoBox('Angebotsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
             ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
-            ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
             ${currentBid ? detailRow('Letztes Auktionsgebot', currentBid) : ''}
           `, 'success', settingsData)}
           ${paragraph('<strong>Ihre M\u00f6glichkeiten:</strong>')}
@@ -314,6 +314,21 @@ const handler = async (req: Request): Promise<Response> => {
           ${button('Angebot im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`<em>Reagieren Sie zeitnah, damit der H\u00e4ndler nicht abspringt.</em>`)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+
+      case "admin_new_offer":
+        subject = `[Admin] Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph('<strong>Ein neues Kaufangebot ist eingegangen.</strong>')}
+          ${infoBox('Angebotsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
+            ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
+            ${currentBid ? detailRow('Letztes Auktionsgebot', currentBid) : ''}
+          `, 'success', settingsData)}
+          ${button('Im Admin-Dashboard ansehen', auctionUrl, settingsData)}
         `;
         break;
 

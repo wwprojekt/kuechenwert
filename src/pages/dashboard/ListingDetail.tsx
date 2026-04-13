@@ -230,10 +230,10 @@ export default function ListingDetail() {
     if (!sessionValid) return;
     setKaufchanceLoading(true);
     try {
-      // Kein buyer-Join: Verkäufer sieht anonymisierte Bieter ("Bieter 1", "Bieter 2" etc.)
+      // Anonymisierung: Nur Angebotsdaten laden, KEIN buyer_id (Identität erst nach Kaufvertrag)
       const { data, error } = await supabase
         .from('post_auction_offers')
-        .select('*')
+        .select('id, auction_id, offer_amount, counter_offer_amount, status, message, seller_response, created_at, updated_at, expires_at')
         .eq('auction_id', resolvedAuction.id)
         .order('created_at', { ascending: false });
       if (error) throw error;

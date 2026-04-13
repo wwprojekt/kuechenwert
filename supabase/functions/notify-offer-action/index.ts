@@ -205,7 +205,7 @@ const handler = async (req: Request): Promise<Response> => {
           console.log(`[notify-offer-action] → seller_new_offer to ${sellerProfile.email} (buyer anonymized)`);
         }
 
-        // Admin-CC: Admins sehen den echten Händlernamen (für Verwaltung)
+        // Admin-CC: Nur Admins sehen den echten Händlernamen (admin_new_offer statt seller_new_offer)
         try {
           const { data: adminRoles } = await supabase
             .from('user_roles')
@@ -227,7 +227,7 @@ const handler = async (req: Request): Promise<Response> => {
                       body: {
                         email: admin.email,
                         name: admin.first_name || 'Admin',
-                        type: 'seller_new_offer',
+                        type: 'admin_new_offer',
                         motorhomeModel: motorhomeName,
                         auctionUrl: 'https://caravanwert.de/admin/post-auction-offers',
                         offerAmount: formattedOffer,

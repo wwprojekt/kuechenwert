@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserRole } from "@/hooks/useUserRole";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +35,6 @@ type VehicleType = "Wohnmobil" | "Wohnwagen";
 
 export default function DealerListingCreate() {
   const { user } = useAuth();
-  const { primaryRole } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -67,25 +65,31 @@ export default function DealerListingCreate() {
       if (!user) throw new Error("Nicht authentifiziert");
       if (!isValid) throw new Error("Bitte füllen Sie alle Pflichtfelder aus");
 
-      const isDealer = primaryRole === "dealer";
       const finalModel = model === "__custom" ? customModel : model;
 
-      const insertData = {
-        seller_id: user.id,
-        account_type: isDealer ? "dealer" : "private",
-        manufacturer,
-        model: finalModel,
-        body_type: bodyType as any,
-        year: Number(year),
-        mileage: isWohnwagen ? 0 : Number(mileage),
-        condition: condition as any,
-        sale_channel: "auction" as const,
-        reserve_price: reservePrice ? Number(reservePrice) : null,
-        status: "available",
-        country: "DE",
-      };
-
       const result = await withSessionRetry(async () => {
+        const { data: roleRow, error: roleErr } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (roleErr) throw roleErr;
+
+        const insertData = {
+          seller_id: user.id,
+          account_type: roleRow?.role === "dealer" ? "dealer" : "private",
+          manufacturer,
+          model: finalModel,
+          body_type: bodyType as any,
+          year: Number(year),
+          mileage: isWohnwagen ? 0 : Number(mileage),
+          condition: condition as any,
+          sale_channel: "auction" as const,
+          reserve_price: reservePrice ? Number(reservePrice) : null,
+          status: "available",
+          country: "DE",
+        };
+
         const { data, error } = await supabase
           .from("motorhomes")
           .insert(insertData)

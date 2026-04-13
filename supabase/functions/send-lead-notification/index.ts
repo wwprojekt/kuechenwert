@@ -148,6 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Eine zusätzliche Email-Benachrichtigung ist nicht nötig.
 
     // Send confirmation to user
+    let userEmailFailed = false;
     if (!data.skipUserEmail) {
       const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",
@@ -210,15 +211,14 @@ const handler = async (req: Request): Promise<Response> => {
       }),
     });
 
-    let userEmailFailed = false;
     if (!userEmailResponse.ok) {
       const error = await userEmailResponse.text();
       console.error("User email failed:", error);
       userEmailFailed = true;
     } else {
       console.log("User confirmation sent successfully");
-      const userResult = await userEmailResponse.json();
-      // Log user confirmation in admin_emails
+      let userResult: any = null;
+      try { userResult = await userEmailResponse.json(); } catch { /* non-JSON body */ }
       try {
         await supabase.from('admin_emails').insert({
           sender_email: 'info@caravanwert.de',

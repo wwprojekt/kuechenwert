@@ -848,12 +848,9 @@ export default function AdminFinancials() {
                           <Button 
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              setInvoiceToDelete(invoice);
-                              setDeleteDialogOpen(true);
-                            }}
-                            title="Rechnung löschen"
+                            className="text-muted-foreground cursor-not-allowed opacity-50"
+                            onClick={() => toast({ title: 'Aufbewahrungspflicht', description: 'Rechnungen dürfen aus gesetzlichen Gründen nicht gelöscht werden. Rechnungen können nur storniert werden.' })}
+                            title="Rechnungen dürfen nicht gelöscht werden (Aufbewahrungspflicht)"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1083,11 +1080,9 @@ export default function AdminFinancials() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                                onClick={() => {
-                                  setInvoiceToDelete(invoice);
-                                  setDeleteDialogOpen(true);
-                                }}
+                                className="text-muted-foreground border-muted cursor-not-allowed opacity-50"
+                                onClick={() => toast({ title: 'Aufbewahrungspflicht', description: 'Rechnungen dürfen aus gesetzlichen Gründen nicht gelöscht werden. Rechnungen können nur storniert werden.' })}
+                                title="Rechnungen dürfen nicht gelöscht werden (Aufbewahrungspflicht)"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Löschen

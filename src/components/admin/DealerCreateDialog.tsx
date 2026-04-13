@@ -200,7 +200,7 @@ export function DealerCreateDialog({
       // Step 3: Optionally send invite email
       if (formData.sendInviteEmail && !isExisting) {
         try {
-          await supabase.functions.invoke("send-registration-invite", {
+          await invokeWithAuth("send-registration-invite", {
             body: {
               email: formData.email.trim(),
               customerName: formData.contact_person_name.trim() || formData.firstName.trim() || undefined,

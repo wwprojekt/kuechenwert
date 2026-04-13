@@ -53,7 +53,7 @@ const AdminStationHandover = () => {
 
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('verify-appointment-pin', {
+      const { data, error } = await invokeWithAuth('verify-appointment-pin', {
         body: { appointment_id: appointmentId, pin }
       });
 

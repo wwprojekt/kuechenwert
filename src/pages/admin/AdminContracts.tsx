@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -297,7 +298,7 @@ export default function AdminContracts() {
         <p>Mit freundlichen Grüßen,<br>Ihr CaravanWert Team</p>
       `;
 
-      const { error } = await supabase.functions.invoke("send-admin-email", {
+      const { error } = await invokeWithAuth("send-admin-email", {
         body: {
           to: profile.email,
           subject: `Kaufvertrag ${contract.contract_number} – ${contract.vehicle_description || ""}`,

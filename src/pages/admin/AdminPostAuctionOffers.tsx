@@ -532,7 +532,7 @@ export default function AdminPostAuctionOffers() {
       let notifyFailed = false;
       if (offerData) {
         try {
-          const { error: notifyErr } = await supabase.functions.invoke('notify-offer-action', {
+          const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
             body: {
               action: 'offer_rejected',
               auctionId: offerData.auction_id,
@@ -594,7 +594,7 @@ export default function AdminPostAuctionOffers() {
       let counterNotifyFailed = false;
       if (offerData) {
         try {
-          const { error: notifyErr } = await supabase.functions.invoke('notify-offer-action', {
+          const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
             body: {
               action: 'counter_offer',
               auctionId: offerData.auction_id,
@@ -854,7 +854,7 @@ export default function AdminPostAuctionOffers() {
 
       // Verkäufer benachrichtigen via Edge Function
       try {
-        await supabase.functions.invoke('notify-offer-action', {
+        await invokeWithAuth('notify-offer-action', {
           body: {
             action: 'admin_offer',
             auctionId,
@@ -910,7 +910,7 @@ export default function AdminPostAuctionOffers() {
 
       for (const offer of actionableOffers) {
         try {
-          await supabase.functions.invoke('notify-offer-action', {
+          await invokeWithAuth('notify-offer-action', {
             body: {
               action: 'offer_rejected',
               auctionId: offer.auction_id,
@@ -991,7 +991,7 @@ export default function AdminPostAuctionOffers() {
           }
 
           try {
-            await supabase.functions.invoke('notify-offer-action', {
+            await invokeWithAuth('notify-offer-action', {
               body: {
                 action: 'counter_offer',
                 auctionId,
@@ -1031,7 +1031,7 @@ export default function AdminPostAuctionOffers() {
           }
 
           try {
-            const { error: notifyErr } = await supabase.functions.invoke('notify-offer-action', {
+            const { error: notifyErr } = await invokeWithAuth('notify-offer-action', {
               body: {
                 action: 'counter_offer',
                 auctionId: offer.auction_id,

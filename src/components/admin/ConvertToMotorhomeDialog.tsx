@@ -547,7 +547,7 @@ export function ConvertToMotorhomeDialog({
   // ---- Invite Mutation: Send registration link ----
   const inviteMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeWithAuth(
         "send-registration-invite",
         {
           body: {

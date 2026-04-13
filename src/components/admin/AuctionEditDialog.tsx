@@ -80,7 +80,7 @@ async function sendRegistrationInviteOnActivation(motorhomeId: string) {
     }
 
     const customerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ");
-    const { data, error } = await supabase.functions.invoke("send-registration-invite", {
+    const { data, error } = await invokeWithAuth("send-registration-invite", {
       body: {
         email: seller.email,
         customerName: customerName || undefined,

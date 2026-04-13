@@ -6,7 +6,7 @@ import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminDateFilter } from "@/components/admin/AdminDateFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1224,7 +1224,7 @@ export default function AdminLeads() {
     }
     setSendingWrongNumberEmail(item.id);
     try {
-      const { data, error } = await supabase.functions.invoke("send-wrong-number-email", {
+      const { data, error } = await invokeWithAuth("send-wrong-number-email", {
         body: { lead_id: item.id, lead_type: item.type, estimated_value: value },
       });
       if (error) throw error;
@@ -1269,7 +1269,7 @@ export default function AdminLeads() {
     const itemKey = `${dispositionType}-${item.id}`;
     setSendingDispositionEmail(itemKey);
     try {
-      const { data, error } = await supabase.functions.invoke("send-disposition-email", {
+      const { data, error } = await invokeWithAuth("send-disposition-email", {
         body: { lead_id: item.id, lead_type: item.type, disposition_type: dispositionType },
       });
       if (error) throw error;
@@ -1304,7 +1304,7 @@ export default function AdminLeads() {
       sessionId: string;
       message?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeWithAuth(
         "send-wizard-resume-email",
         {
           body: { sessionId, customMessage: message },
@@ -1625,7 +1625,7 @@ export default function AdminLeads() {
     setAiLoading(true);
     setAiResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-valuation", {
+      const { data, error } = await invokeWithAuth("ai-valuation", {
         body: {
           manufacturer: lead.manufacturer || undefined,
           model: lead.model || undefined,
@@ -1764,7 +1764,7 @@ export default function AdminLeads() {
   const sendExpertValuationEmail = async (leadId: string, recipientEmail?: string) => {
     setSendingValuationEmail(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-expert-valuation", {
+      const { data, error } = await invokeWithAuth("send-expert-valuation", {
         body: { lead_id: leadId, recipient_email: recipientEmail || undefined },
       });
       if (error) throw error;
@@ -1859,7 +1859,7 @@ export default function AdminLeads() {
 
   const sendRegistrationInvite = async (email: string, name?: string, sourceId?: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeWithAuth(
         "send-registration-invite",
         {
           body: {

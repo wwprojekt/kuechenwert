@@ -1582,6 +1582,19 @@ const AuctionDetail = () => {
                       </Badge>
                     )}
                   </div>
+                  {motorhome.account_type === "dealer" && (
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      {motorhome.mwst_ausweisbar === true && (
+                        <>Umsatzsteuer wird auf der Kaufrechnung gesondert ausgewiesen.</>
+                      )}
+                      {motorhome.mwst_ausweisbar === false && (
+                        <>Verkauf ohne gesonderte Umsatzsteuerausweisung auf der Fahrzeugrechnung (z. B. Differenzbesteuerung oder Kleinunternehmer).</>
+                      )}
+                      {motorhome.mwst_ausweisbar == null && (
+                        <>Angabe zur Umsatzsteuer durch den Verkäufer noch nicht hinterlegt – bei Bedarf beim Verkäufer erfragen.</>
+                      )}
+                    </p>
+                  )}
                   {/* Anonymized Location & Distance */}
                   {motorhome.postal_code && (() => {
                     const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);

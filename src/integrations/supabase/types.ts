@@ -2182,6 +2182,7 @@ export type Database = {
           manufacturer: string
           mileage: number
           model: string
+          mwst_ausweisbar: boolean | null
           non_smoker: boolean | null
           number_of_axles: number | null
           payload_kg: number | null
@@ -2283,6 +2284,7 @@ export type Database = {
           manufacturer: string
           mileage: number
           model: string
+          mwst_ausweisbar?: boolean | null
           non_smoker?: boolean | null
           number_of_axles?: number | null
           payload_kg?: number | null
@@ -2384,6 +2386,7 @@ export type Database = {
           manufacturer?: string
           mileage?: number
           model?: string
+          mwst_ausweisbar?: boolean | null
           non_smoker?: boolean | null
           number_of_axles?: number | null
           payload_kg?: number | null

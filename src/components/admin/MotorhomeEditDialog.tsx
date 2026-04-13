@@ -48,6 +48,7 @@ interface MotorhomeData {
   // Preise & Verkauf
   instant_price: number | null;
   reserve_price: number | null;
+  mwst_ausweisbar: boolean | null;
   sale_channel: string;
   sale_type: string | null;
   available_from: string | null;
@@ -250,6 +251,7 @@ export function MotorhomeEditDialog({
           // Preise & Verkauf
           instant_price: data.instant_price,
           reserve_price: data.reserve_price,
+          mwst_ausweisbar: data.mwst_ausweisbar,
           sale_channel: data.sale_channel,
           sale_type: data.sale_type,
           available_from: data.available_from,
@@ -545,6 +547,17 @@ export function MotorhomeEditDialog({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("instant_price", "Sofortpreis (€)")}
                 {renderNumberInput("reserve_price", "Mindestpreis (€)")}
+              </div>
+
+              <div className="rounded-md border border-border/80 bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Händler / Umsatzsteuer (Kaufrechnung)</p>
+                {renderSwitch(
+                  "mwst_ausweisbar",
+                  "MwSt. auf Kaufrechnung gesondert ausweisen"
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Aus bei Differenzbesteuerung oder Kleinunternehmer; an bei normaler Umsatzbesteuerung.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

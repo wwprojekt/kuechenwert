@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
@@ -47,6 +48,8 @@ export default function DealerListingCreate() {
   const [mileage, setMileage] = useState("");
   const [condition, setCondition] = useState("");
   const [reservePrice, setReservePrice] = useState("");
+  /** Verkäufer kennzeichnet, ob Umsatzsteuer auf der Kaufrechnung ausgewiesen wird */
+  const [mwstAusweisbar, setMwstAusweisbar] = useState(true);
 
   const manufacturers = vehicleType === "Wohnmobil" ? popularManufacturers : wohnwagenManufacturers;
   const modelsMap = vehicleType === "Wohnmobil" ? manufacturerModels : wohnwagenManufacturerModels;
@@ -78,6 +81,7 @@ export default function DealerListingCreate() {
         const insertData = {
           seller_id: user.id,
           account_type: roleRow?.role === "dealer" ? "dealer" : "private",
+          mwst_ausweisbar: roleRow?.role === "dealer" ? mwstAusweisbar : null,
           manufacturer,
           model: finalModel,
           body_type: bodyType as any,
@@ -308,6 +312,23 @@ export default function DealerListingCreate() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/30 p-4">
+              <Checkbox
+                id="mwst-ausweisbar"
+                checked={mwstAusweisbar}
+                onCheckedChange={(c) => setMwstAusweisbar(c === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="mwst-ausweisbar" className="text-sm font-medium leading-none cursor-pointer">
+                  Umsatzsteuer auf der Kaufrechnung gesondert ausweisen
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Aktivieren, wenn Sie die MwSt. auf der Fahrzeugrechnung an den Käufer ausweisen (normale Umsatzbesteuerung).
+                  Deaktivieren z. B. bei Differenzbesteuerung oder Kleinunternehmerregelung.
+                </p>
+              </div>
             </div>
 
             {/* Reserve Price (optional) */}

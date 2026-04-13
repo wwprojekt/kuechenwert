@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Lock, FileText } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
+import { useUserRole } from "@/hooks/useUserRole";
 import { SellerPhotoManager } from "@/components/dashboard/SellerPhotoManager";
 import { useState, useEffect } from "react";
 
@@ -22,6 +23,7 @@ const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment",
 export default function ListingEdit() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { isDealer } = useUserRole();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -152,6 +154,7 @@ export default function ListingEdit() {
     additional_equipment: "",
     vehicle_identification_number: "",
     license_plate: "",
+    mwst_ausweisbar: true,
   });
 
   useEffect(() => {
@@ -220,6 +223,10 @@ export default function ListingEdit() {
         additional_equipment: motorhome.additional_equipment || "",
         vehicle_identification_number: motorhome.vehicle_identification_number || "",
         license_plate: motorhome.license_plate || "",
+        mwst_ausweisbar:
+          motorhome.account_type === "dealer"
+            ? (motorhome.mwst_ausweisbar ?? true)
+            : false,
       });
     }
   }, [motorhome]);
@@ -296,6 +303,11 @@ export default function ListingEdit() {
         vehicle_identification_number: data.vehicle_identification_number || null,
         license_plate: data.license_plate || null,
       };
+
+      const canEditMwst = isDealer || motorhome.account_type === "dealer";
+      if (canEditMwst) {
+        updateData.mwst_ausweisbar = data.mwst_ausweisbar;
+      }
 
       // Only include prices if they have values
       // CRITICAL: Wenn eine Auktion existiert, darf der Verkäufer den Mindestpreis NICHT ändern
@@ -489,6 +501,27 @@ export default function ListingEdit() {
                     )}
                   </div>
                 </div>
+
+                {(isDealer || motorhome.account_type === "dealer") && (
+                  <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/30 p-4">
+                    <Checkbox
+                      id="mwst_ausweisbar"
+                      checked={formData.mwst_ausweisbar}
+                      onCheckedChange={(c) =>
+                        setFormData({ ...formData, mwst_ausweisbar: c === true })
+                      }
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="mwst_ausweisbar" className="text-sm font-medium leading-none cursor-pointer">
+                        Umsatzsteuer auf der Kaufrechnung gesondert ausweisen
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Für gewerbliche Verkäufer: aktivieren, wenn die MwSt. auf der Fahrzeugrechnung ausgewiesen wird;
+                        deaktivieren z. B. bei Differenzbesteuerung oder Kleinunternehmerregelung.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Technical Tab */}

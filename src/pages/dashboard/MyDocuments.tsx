@@ -9,6 +9,7 @@ import { FileText, Download, Car, Euro, Calendar, Loader2, FolderOpen } from "lu
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { openPrivateDocument } from "@/lib/storageUtils";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useToast } from "@/hooks/use-toast";
 
 interface PurchaseContract {
@@ -34,6 +35,9 @@ export default function MyDocuments() {
     if (!user) return;
 
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { data, error } = await supabase
         .from("purchase_contracts")
         .select("id, contract_number, sale_price, status, contract_url, storage_path, buyer_name, vehicle_description, created_at, motorhome_id")
@@ -196,7 +200,7 @@ export default function MyDocuments() {
       <Card className="bg-muted/30 border-dashed">
         <CardContent className="p-4">
           <p className="text-sm text-muted-foreground">
-            <strong>Hinweis:</strong> Kaufverträge werden automatisch nach Auktionsende erstellt und Ihnen per E-Mail zugesandt. 
+            <strong>Hinweis:</strong> Kaufverträge werden nach einem erfolgreichen Verkauf automatisch erstellt (Auktion, Kaufchance oder Sofortkauf) und Ihnen per E-Mail zugesandt.
             Hier können Sie Ihre Verträge jederzeit erneut herunterladen.
           </p>
         </CardContent>

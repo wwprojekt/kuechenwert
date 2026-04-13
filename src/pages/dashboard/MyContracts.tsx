@@ -36,10 +36,10 @@ export default function MyContracts() {
   const loadContracts = useCallback(async () => {
     if (!user) return;
 
-    const sessionValid = await ensureValidRLSSession();
-    if (!sessionValid) return;
-
     try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+
       const { data, error } = await supabase
         .from("purchase_contracts")
         .select("id, contract_number, sale_price, status, contract_url, buyer_contract_url, storage_path, buyer_storage_path, seller_name, vehicle_description, created_at, motorhome_id")

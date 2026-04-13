@@ -1094,9 +1094,12 @@ export default function AdminAuctions() {
             <div className="flex gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-950 dark:text-amber-50">
-                <strong>{overdueActiveCount}</strong> Auktion(en) sind abgelaufen, stehen aber noch auf „Laufend“. Bis zum
-                Schließen entsteht keine Kaufchance und Händler sehen sie fälschlich nicht mehr unter aktiven Geboten.
-                Bitte „Abgelaufene prüfen“ ausführen (schließt per Hintergrundfunktion und setzt ggf. Kaufchance).
+                <strong>{overdueActiveCount}</strong> Auktion(en) sind abgelaufen, stehen aber noch auf „Laufend“. In der
+                Datenbank gibt es noch keinen Kaufchance-Status und keine Einladungen – das passiert erst nach dem Schließen.
+                Händler finden diese Fälle unter <strong>Dashboard → Kaufchancen</strong> („Auswertung ausstehend“) und{" "}
+                <strong>Meine Gebote</strong>, nicht mehr in der Liste „Aktive Auktionen“.                 Normalerweise schließt der Server diese Auktionen automatisch (pg_cron ruft jede Minute
+                „check-expired-auctions“ auf). Wenn der Hinweis länger bleibt, bitte einmal „Abgelaufene prüfen“
+                ausführen oder die Logs der Edge Functions prüfen.
               </p>
             </div>
             <Button

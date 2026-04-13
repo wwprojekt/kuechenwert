@@ -427,6 +427,7 @@ export function getPageTitle(path: string): string {
     '/dashboard/favorites': 'Favoriten',
     '/dashboard/messages': 'Nachrichten',
     '/dashboard/profile': 'Profil',
+    '/dashboard/contracts': 'Kaufverträge',
     '/dashboard/invoices': 'Rechnungen',
     '/dashboard/appointments': 'Termine',
     '/dashboard/kaufchancen': 'Kaufchancen',

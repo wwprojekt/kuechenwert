@@ -9,6 +9,7 @@ import {
   Calendar,
   MessageSquare,
   FileText,
+  FileCheck,
   User,
   Settings,
   Lock,
@@ -141,6 +142,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, badgeKey: "appointments" },
       { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, badgeKey: "messages" },
+      { title: "Kaufverträge", url: "/dashboard/contracts", icon: FileCheck },
       { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },
       { title: "Reklamationen", url: "/dashboard/claims", icon: AlertTriangle, badgeKey: "claims" },
       { title: "Profil", url: "/dashboard/profile", icon: User, allowWhenLocked: true },

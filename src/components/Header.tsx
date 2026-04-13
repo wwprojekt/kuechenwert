@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, Zap, Calculator } from "lucide-react";
+import { Menu, X, Phone, Mail, LogOut, User, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, FileCheck, Zap, Calculator } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -223,6 +223,14 @@ const Header = () => {
                       </DropdownMenuItem>
                       {isDealer && (
                         <DropdownMenuItem asChild>
+                          <Link to="/dashboard/contracts" className="cursor-pointer">
+                            <FileCheck className="h-4 w-4 mr-2" />
+                            Kaufverträge
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isDealer && (
+                        <DropdownMenuItem asChild>
                           <Link to="/dashboard/invoices" className="cursor-pointer">
                             <FileText className="h-4 w-4 mr-2" />
                             Rechnungen
@@ -438,6 +446,14 @@ const Header = () => {
                           Nachrichten
                         </Button>
                       </Link>
+                      {isDealer && (
+                        <Link to="/dashboard/contracts" onClick={() => setMobileMenuOpen(false)}>
+                          <Button variant="ghost" size="sm" className="w-full justify-start">
+                            <FileCheck className="h-4 w-4 mr-2" />
+                            Kaufverträge
+                          </Button>
+                        </Link>
+                      )}
                       {isDealer && (
                         <Link to="/dashboard/invoices" onClick={() => setMobileMenuOpen(false)}>
                           <Button variant="ghost" size="sm" className="w-full justify-start">

@@ -481,6 +481,10 @@ Deno.serve(async (req) => {
             console.error('Error sending contract to seller:', e);
             errors.push(`Kaufvertrag-E-Mail an Verkäufer fehlgeschlagen: ${e.message}`);
           }
+        } else {
+          const reason = !sellerProfile?.email ? 'Verkäufer-E-Mail fehlt' : 'PDF-Base64 leer';
+          console.error(`Contract email to seller SKIPPED: ${reason}`);
+          errors.push(`Kaufvertrag-E-Mail an Verkäufer übersprungen: ${reason}`);
         }
 
         // Send contract email to buyer (dealer)
@@ -526,6 +530,10 @@ Deno.serve(async (req) => {
             console.error('Error sending contract to buyer:', e);
             errors.push(`Kaufvertrag-E-Mail an Käufer fehlgeschlagen: ${e.message}`);
           }
+        } else {
+          const reason = !buyerProfile?.email ? 'Käufer-E-Mail fehlt' : 'PDF-Base64 leer';
+          console.error(`Contract email to buyer SKIPPED: ${reason}`);
+          errors.push(`Kaufvertrag-E-Mail an Käufer übersprungen: ${reason}`);
         }
       } else {
         errors.push(`Kaufvertrag-Generierung: Unerwartete Antwort`);

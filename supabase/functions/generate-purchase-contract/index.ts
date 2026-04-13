@@ -619,7 +619,16 @@ Deno.serve(async (req) => {
     }
 
     // Return PDF as base64 for email attachment
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    // CRITICAL: Don't use btoa(String.fromCharCode(...pdfBytes)) — the spread operator
+    // hits "Maximum call stack size exceeded" for PDFs larger than ~100KB.
+    // Use chunked conversion instead.
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+    const pdfBase64 = btoa(binaryString);
 
     console.log(`Purchase contract generated: ${contractNumber}`);
 

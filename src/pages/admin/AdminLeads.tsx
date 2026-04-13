@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
@@ -84,6 +84,7 @@ import {
   Save,
   Ban,
   UserX,
+  X,
 } from "lucide-react";
 
 // ============================================================================
@@ -665,6 +666,7 @@ function valuationLeadToSessionData(lead: ValuationLead): {
 
 export default function AdminLeads() {
   const [activeTab, setActiveTab] = useState("wizard_sessions");
+  const previousTabRef = useRef("wizard_sessions");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // Paginierung
@@ -893,6 +895,17 @@ export default function AdminLeads() {
   // Seite zurücksetzen bei Wechsel
   useEffect(() => { setLeadsPage(1); }, [activeTab, searchQuery, statusFilter]);
 
+  useEffect(() => {
+    if (searchQuery) {
+      if (activeTab !== "search_results") {
+        previousTabRef.current = activeTab;
+      }
+      setActiveTab("search_results");
+    } else if (activeTab === "search_results") {
+      setActiveTab(previousTabRef.current);
+    }
+  }, [searchQuery]);
+
   // ---- Statistics ----
 
   // Aktive Sessions (ohne versteckende Disposition) für Funnel und Statistiken
@@ -1104,6 +1117,85 @@ export default function AdminLeads() {
   const noAnswerLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "no_answer"), [dispositionLeads]);
   const consideringLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "considering"), [dispositionLeads]);
   const doneLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "done"), [dispositionLeads]);
+
+  const allSearchResults = useMemo(() => {
+    if (!searchQuery) return [];
+    const q = searchQuery.toLowerCase();
+    const results: Array<{
+      id: string;
+      type: "wizard" | "quick" | "valuation";
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      vehicle: string;
+      status: string | null;
+      disposition: string | null;
+      created_at: string | null;
+      source_label: string;
+      source_color: string;
+      is_viewed: boolean;
+    }> = [];
+
+    wizardSessions.forEach(s => {
+      const match =
+        (s.customer_name || "").toLowerCase().includes(q) ||
+        (s.customer_email || "").toLowerCase().includes(q) ||
+        (s.customer_phone || "").toLowerCase().includes(q) ||
+        (s.vehicle_summary || "").toLowerCase().includes(q);
+      if (match) {
+        results.push({
+          id: s.id, type: "wizard",
+          name: s.customer_name, email: s.customer_email, phone: s.customer_phone,
+          vehicle: s.vehicle_summary || "-", status: s.status, disposition: s.disposition,
+          created_at: s.created_at, is_viewed: s.is_viewed,
+          source_label: "Wizard-Session",
+          source_color: "bg-blue-100 text-blue-700 border-blue-200",
+        });
+      }
+    });
+
+    quickLeads.forEach(l => {
+      const name = l.name || (l.form_data_snapshot?.customerName as string) || (l.form_data_snapshot?.name as string) || "";
+      const email = l.email || (l.form_data_snapshot?.customerEmail as string) || "";
+      const phone = l.phone || (l.form_data_snapshot?.customerPhone as string) || "";
+      const mfr = l.manufacturer || (l.form_data_snapshot?.manufacturer as string) || "";
+      const model = l.model || (l.form_data_snapshot?.model as string) || "";
+      const match = name.toLowerCase().includes(q) || email.toLowerCase().includes(q) ||
+        phone.toLowerCase().includes(q) || mfr.toLowerCase().includes(q) || model.toLowerCase().includes(q);
+      if (match) {
+        results.push({
+          id: l.id, type: "quick",
+          name: name || null, email: email || null, phone: phone || null,
+          vehicle: [mfr, model].filter(Boolean).join(" ") || "-", status: l.status,
+          disposition: l.disposition, created_at: l.created_at, is_viewed: l.is_viewed,
+          source_label: "Quick-Lead",
+          source_color: "bg-green-100 text-green-700 border-green-200",
+        });
+      }
+    });
+
+    valuationLeads.forEach(l => {
+      const match = (l.name || "").toLowerCase().includes(q) || (l.email || "").toLowerCase().includes(q) ||
+        (l.phone || "").toLowerCase().includes(q) || (l.manufacturer || "").toLowerCase().includes(q) ||
+        (l.model || "").toLowerCase().includes(q);
+      if (match) {
+        results.push({
+          id: l.id, type: "valuation",
+          name: l.name, email: l.email, phone: l.phone,
+          vehicle: [l.manufacturer, l.model].filter(Boolean).join(" ") || "-", status: l.status,
+          disposition: l.disposition, created_at: l.created_at ? l.created_at : null, is_viewed: l.is_viewed,
+          source_label: "Wertrechner",
+          source_color: "bg-purple-100 text-purple-700 border-purple-200",
+        });
+      }
+    });
+
+    return results.sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [searchQuery, wizardSessions, quickLeads, valuationLeads]);
 
   const handleDispositionChange = (item: DispositionItem, newDisposition: string | null) => {
     if (item.type === "wizard") {
@@ -1888,7 +1980,15 @@ export default function AdminLeads() {
       </Card>
 
       {/* Tabs: Wizard Sessions / Quick Leads / Valuation Leads */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(val) => {
+        if (val !== "search_results" && searchQuery) {
+          setSearchQuery("");
+        }
+        if (val !== "search_results") {
+          previousTabRef.current = val;
+        }
+        setActiveTab(val);
+      }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <TabsList>
             <TabsTrigger value="wizard_sessions" className="gap-2">
@@ -1946,11 +2046,19 @@ export default function AdminLeads() {
             <div className="relative flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Suchen..."
+                placeholder="Alle Tabs durchsuchen..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 pr-8"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-sm hover:bg-muted"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              )}
             </div>
             {activeTab === "wizard_sessions" && (
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -1967,6 +2075,111 @@ export default function AdminLeads() {
             )}
           </div>
         </div>
+
+        {/* ================================================================ */}
+        {/* Unified Search Results */}
+        {/* ================================================================ */}
+        <TabsContent value="search_results">
+          <Card>
+            <div className="px-4 py-3 border-b border-border/40">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{allSearchResults.length}</span> Ergebnis{allSearchResults.length !== 1 ? "se" : ""} für &quot;{searchQuery}&quot; in allen Tabs
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[800px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Quelle</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Kontakt</TableHead>
+                    <TableHead>Fahrzeug</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Datum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allSearchResults.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        Keine Ergebnisse für &quot;{searchQuery}&quot;
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    allSearchResults.slice((leadsPage - 1) * LEADS_PAGE_SIZE, leadsPage * LEADS_PAGE_SIZE).map((item) => (
+                      <TableRow
+                        key={`${item.type}-${item.id}`}
+                        className={`cursor-pointer hover:bg-muted/50 ${!item.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
+                        onClick={() => {
+                          if (item.type === "wizard") {
+                            const session = wizardSessions.find(s => s.id === item.id);
+                            if (session) openDetail(session);
+                          } else if (item.type === "quick") {
+                            const lead = quickLeads.find(l => l.id === item.id);
+                            if (lead) openQuickLeadDetail(lead);
+                          } else if (item.type === "valuation") {
+                            const lead = valuationLeads.find(l => l.id === item.id);
+                            if (lead) openValuationDetail(lead);
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className={`${item.source_color} text-xs w-fit`}>
+                              {item.source_label}
+                            </Badge>
+                            {item.disposition && (
+                              <DispositionBadge disposition={item.disposition} />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className={!item.is_viewed ? "font-bold" : "font-medium"}>
+                          {item.name || "Unbekannt"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            {item.email && (
+                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                                <Mail className="w-3 h-3" /> {item.email}
+                              </span>
+                            )}
+                            {item.phone && (
+                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                                <Phone className="w-3 h-3" /> {item.phone}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{item.vehicle}</TableCell>
+                        <TableCell>
+                          {item.status && <StatusBadge status={item.status} />}
+                        </TableCell>
+                        <TableCell>
+                          {item.created_at && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(item.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {allSearchResults.length > LEADS_PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={leadsPage}
+                  pageSize={LEADS_PAGE_SIZE}
+                  totalItems={allSearchResults.length}
+                  onPageChange={setLeadsPage}
+                />
+              </div>
+            )}
+          </Card>
+        </TabsContent>
 
         {/* ================================================================ */}
         {/* Wizard Sessions Tab */}

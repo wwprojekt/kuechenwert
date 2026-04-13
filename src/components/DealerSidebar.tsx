@@ -68,8 +68,9 @@ function useDealerBadges() {
         supabase.from('dealer_notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
         // Offene Support-Nachrichten mit Admin-Antwort (neue Antworten)
         supabase.from('support_messages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
-        // Anstehende Termine
-        supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('buyer_id', user.id).eq('status', 'scheduled').gte('appointment_date', new Date().toISOString().split('T')[0]),
+        // Anstehende Termine: appointments-Tabelle hat kein buyer_id;
+        // Dealer-Termine werden separat geladen wenn die MyAppointments-Seite aufgerufen wird
+        Promise.resolve({ count: 0, error: null } as { count: number | null; error: null }),
         // Offene Reklamationen mit Status-Update
         supabase.from('claims').select('*', { count: 'exact', head: true }).eq('dealer_id', user.id).or('status.eq.submitted,status.eq.in_review'),
       ]);

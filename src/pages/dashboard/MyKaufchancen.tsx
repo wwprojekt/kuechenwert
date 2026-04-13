@@ -712,7 +712,7 @@ export default function MyKaufchancen() {
 
                           {/* Counter-offer actions */}
                           {offer.status === 'countered' && offer.counter_offer_amount && (
-                            <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40">
+                            <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                               <Button
                                 size="sm"
                                 className="flex-1 h-7 text-xs bg-green-500 hover:bg-green-600"

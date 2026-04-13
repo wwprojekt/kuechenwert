@@ -27,10 +27,9 @@ Deno.serve(async (req) => {
     }
 
     // ─── Main logic ────────────────────────────────────────────────
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const now = new Date().toISOString();
     console.log(`Checking for expired auctions at ${now}...`);
@@ -56,8 +55,12 @@ Deno.serve(async (req) => {
         try {
           console.log(`Closing auction ${auction.id}...`);
           
+          // Explicit Authorization: nested invoke must present service_role JWT for close-auction auth
           const { data, error } = await supabase.functions.invoke('close-auction', {
             body: { auctionId: auction.id },
+            headers: {
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
           });
 
           if (error) {

@@ -92,6 +92,7 @@ const DealerAuctions = () => {
           bids(bidder_id, amount)
         `)
         .eq('status', 'active')
+        .gt('end_time', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -110,7 +111,7 @@ const DealerAuctions = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useLiveData(fetchAuctions, { pollingInterval: 30_000 });
 

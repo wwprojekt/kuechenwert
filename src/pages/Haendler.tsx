@@ -30,6 +30,7 @@ const Haendler = () => {
           )
         `)
         .eq("status", "active")
+        .gt("end_time", new Date().toISOString())
         .order("end_time", { ascending: true })
         .limit(4);
       if (error) throw error;

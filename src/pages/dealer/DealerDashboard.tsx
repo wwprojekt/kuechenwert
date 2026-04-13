@@ -196,6 +196,7 @@ const DealerDashboard = () => {
           )
         `)
         .eq("status", "active")
+        .gt("end_time", new Date().toISOString())
         .order("end_time", { ascending: true })
         .limit(20);
 

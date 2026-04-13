@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
@@ -293,10 +293,37 @@ export default function AdminAuctions() {
     },
   });
 
+  const overdueActiveCount = useMemo(() => {
+    if (!auctions) return 0;
+    return auctions.filter(
+      (a) =>
+        a.status === "active" &&
+        a.end_time &&
+        isPast(new Date(a.end_time)),
+    ).length;
+  }, [auctions]);
+
   // ---- Filter auctions by tab ----
   function getAuctionsForTab(tab: TabDef) {
     if (!auctions) return [];
-    return auctions.filter((a) => tab.statuses.includes(a.status));
+    let list = auctions.filter((a) => tab.statuses.includes(a.status));
+    if (tab.key === "active") {
+      list = [...list].sort((a, b) => {
+        const aOd =
+          a.status === "active" && a.end_time && isPast(new Date(a.end_time))
+            ? 0
+            : 1;
+        const bOd =
+          b.status === "active" && b.end_time && isPast(new Date(b.end_time))
+            ? 0
+            : 1;
+        if (aOd !== bOd) return aOd - bOd;
+        const ae = a.end_time ? new Date(a.end_time).getTime() : 0;
+        const be = b.end_time ? new Date(b.end_time).getTime() : 0;
+        return ae - be;
+      });
+    }
+    return list;
   }
 
   // ---- Count per tab ----
@@ -669,6 +696,8 @@ export default function AdminAuctions() {
         return <Badge variant="destructive">Abgebrochen</Badge>;
       case "draft":
         return <Badge variant="secondary">Entwurf</Badge>;
+      case "kaufchance":
+        return <Badge className="bg-amber-600 hover:bg-amber-700">Kaufchance</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -1055,6 +1084,31 @@ export default function AdminAuctions() {
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
             <span className="text-sm text-blue-800 dark:text-blue-200">Auktionsentwurf wird erstellt...</span>
+          </div>
+        </Card>
+      )}
+
+      {overdueActiveCount > 0 && (
+        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/25 dark:border-amber-700 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-950 dark:text-amber-50">
+                <strong>{overdueActiveCount}</strong> Auktion(en) sind abgelaufen, stehen aber noch auf „Laufend“. Bis zum
+                Schließen entsteht keine Kaufchance und Händler sehen sie fälschlich nicht mehr unter aktiven Geboten.
+                Bitte „Abgelaufene prüfen“ ausführen (schließt per Hintergrundfunktion und setzt ggf. Kaufchance).
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-700 text-amber-950 shrink-0 dark:text-amber-50"
+              onClick={() => checkExpiredAuctionsMutation.mutate()}
+              disabled={checkExpiredAuctionsMutation.isPending}
+            >
+              <RotateCw className={`w-4 h-4 mr-2 ${checkExpiredAuctionsMutation.isPending ? "animate-spin" : ""}`} />
+              Jetzt prüfen
+            </Button>
           </div>
         </Card>
       )}

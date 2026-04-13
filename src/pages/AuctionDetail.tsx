@@ -204,11 +204,13 @@ const AuctionDetail = () => {
       if (!id || !auction?.end_time) return;
       try {
         const endTime = auction.end_time;
+        const nowIso = new Date().toISOString();
         const [prevRes, nextRes] = await Promise.all([
           supabase
             .from('auctions')
             .select('id')
             .eq('status', 'active')
+            .gt('end_time', nowIso)
             .lt('end_time', endTime)
             .order('end_time', { ascending: false })
             .limit(1),

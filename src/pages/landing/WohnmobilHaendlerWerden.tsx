@@ -39,6 +39,7 @@ const WohnmobilHaendlerWerden = () => {
         .from("auctions")
         .select("id, current_bid, starting_bid, end_time, motorhome_id, bids(count)")
         .eq("status", "active")
+        .gt("end_time", new Date().toISOString())
         .order("end_time", { ascending: true })
         .limit(3);
       if (!data?.length) return [];

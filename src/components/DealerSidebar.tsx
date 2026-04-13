@@ -64,7 +64,11 @@ function useDealerBadges() {
         claimsRes,
       ] = await Promise.all([
         // Aktive Auktionen (Gesamtzahl)
-        supabase.from('auctions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase
+          .from('auctions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .gt('end_time', new Date().toISOString()),
         // Ungelesene Benachrichtigungen
         supabase.from('dealer_notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
         // Offene Support-Nachrichten mit Admin-Antwort (neue Antworten)

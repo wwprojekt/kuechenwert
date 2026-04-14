@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -171,6 +171,26 @@ const AuctionDetail = () => {
     retry: 1,
   });
   const isInvitedToKaufchance = isInvitedToKaufchanceData ?? false;
+
+  const queryClient = useQueryClient();
+  const { data: existingOfferForKaufchance } = useQuery({
+    queryKey: ['kaufchanceExistingOffer', id, user?.id],
+    queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+      const { data } = await supabase
+        .from('post_auction_offers')
+        .select('id, offer_amount, counter_offer_amount, status')
+        .eq('auction_id', id!)
+        .eq('buyer_id', user!.id)
+        .in('status', ['pending', 'countered'])
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && !!id && isInvitedToKaufchance,
+    staleTime: 30 * 1000,
+    retry: 1,
+  });
 
   // Live Bidding Status
   const [bidStatusAnimation, setBidStatusAnimation] = useState<'none' | 'pulse-green' | 'pulse-red'>('none');
@@ -498,6 +518,8 @@ const AuctionDetail = () => {
           const newRecord = payload.new as any;
           if (newRecord.auction_id !== id) return;
 
+          queryClient.invalidateQueries({ queryKey: ['kaufchanceExistingOffer', id, user?.id] });
+
           if (newRecord.status === "countered") {
             const amount = newRecord.counter_offer_amount;
             toast({
@@ -525,7 +547,7 @@ const AuctionDetail = () => {
     return () => {
       supabase.removeChannel(kaufchanceChannel);
     };
-  }, [id, user, auction?.status, toast]);
+  }, [id, user, auction?.status, toast, queryClient]);
 
   // Countdown timer
   useEffect(() => {
@@ -2011,16 +2033,25 @@ const AuctionDetail = () => {
                       {isInvitedToKaufchance ? (
                         <>
                           <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
-                            Sie wurden als Top-Bieter eingeladen! Geben Sie jetzt ein Direktangebot ab.
+                            {existingOfferForKaufchance
+                              ? existingOfferForKaufchance.status === 'countered'
+                                ? 'Der Verkäufer hat ein Gegenangebot gemacht. Reagieren Sie jetzt!'
+                                : `Ihr Angebot: ${Number(existingOfferForKaufchance.offer_amount).toLocaleString('de-DE')} € — Sie können den Betrag erhöhen.`
+                              : 'Sie wurden als Top-Bieter eingeladen! Geben Sie jetzt ein Direktangebot ab.'}
                           </p>
                           <PostAuctionOfferDialog
                             auctionId={auction.id}
                             currentBid={currentBid}
                             vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+                            onOfferSent={() => queryClient.invalidateQueries({ queryKey: ['kaufchanceExistingOffer', id, user?.id] })}
                           >
                             <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
                               <Zap className="w-4 h-4 mr-2" />
-                              Jetzt Angebot abgeben
+                              {existingOfferForKaufchance
+                                ? existingOfferForKaufchance.status === 'countered'
+                                  ? 'Gegenangebot beantworten'
+                                  : 'Angebot verwalten'
+                                : 'Jetzt Angebot abgeben'}
                             </Button>
                           </PostAuctionOfferDialog>
                         </>

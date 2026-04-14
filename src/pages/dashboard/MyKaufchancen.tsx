@@ -521,23 +521,23 @@ export default function MyKaufchancen() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-9 w-9"
             onClick={() => loadData(false)}
             disabled={loading}
             title="Aktualisieren"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="h-8">
-          <TabsTrigger value="browse" className="text-xs px-3 py-1">
-            Meine Kaufchancen ({kaufchancen.length})
+        <TabsList className="h-auto p-1">
+          <TabsTrigger value="browse" className="text-xs sm:text-sm px-3 py-1.5">
+            Kaufchancen ({kaufchancen.length})
           </TabsTrigger>
-          <TabsTrigger value="my-offers" className="text-xs px-3 py-1">
-            Meine Angebote ({myOffers.length})
+          <TabsTrigger value="my-offers" className="text-xs sm:text-sm px-3 py-1.5">
+            Angebote ({myOffers.length})
           </TabsTrigger>
         </TabsList>
 
@@ -802,11 +802,11 @@ export default function MyKaufchancen() {
                                 placeholder={`> ${offer.offer_amount.toLocaleString('de-DE')} €`}
                                 value={raiseAmounts[offer.id] || ''}
                                 onChange={(e) => setRaiseAmounts(prev => ({ ...prev, [offer.id]: formatBidDisplay(e.target.value) }))}
-                                className="flex-1 h-7 text-xs"
+                                className="flex-1 h-9 text-sm"
                               />
                               <Button
                                 size="sm"
-                                className="h-7 text-xs bg-amber-500 hover:bg-amber-600"
+                                className="bg-amber-500 hover:bg-amber-600"
                                 disabled={respondingOfferId === offer.id || !raiseAmounts[offer.id]}
                                 onClick={(e) => handleRaiseOffer(e, offer)}
                               >
@@ -821,21 +821,21 @@ export default function MyKaufchancen() {
                             <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                               <Button
                                 size="sm"
-                                className="flex-1 h-7 text-xs bg-green-500 hover:bg-green-600"
+                                className="flex-1 bg-green-500 hover:bg-green-600"
                                 disabled={respondingOfferId === offer.id}
                                 onClick={(e) => handleAcceptCounterOffer(e, offer)}
                               >
-                                <CheckCircle className="w-3 h-3 mr-1" />
+                                <CheckCircle className="w-3.5 h-3.5 mr-1" />
                                 Annehmen
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                className="flex-1 h-7 text-xs"
+                                className="flex-1"
                                 disabled={respondingOfferId === offer.id}
                                 onClick={(e) => handleRejectCounterOffer(e, offer)}
                               >
-                                <XCircle className="w-3 h-3 mr-1" />
+                                <XCircle className="w-3.5 h-3.5 mr-1" />
                                 Ablehnen
                               </Button>
                             </div>

@@ -195,7 +195,7 @@ export default function MyMessages() {
                   className="min-h-[150px]"
                 />
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Abbrechen
                 </Button>
@@ -256,13 +256,13 @@ export default function MyMessages() {
               <CardContent className="space-y-4">
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm font-medium text-muted-foreground mb-1">Ihre Nachricht:</p>
-                  <p className="whitespace-pre-wrap">{msg.message}</p>
+                  <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                 </div>
 
                 {msg.admin_response && (
                   <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
                     <p className="text-sm font-medium text-primary mb-1">Antwort vom Support:</p>
-                    <p className="whitespace-pre-wrap">{msg.admin_response}</p>
+                    <p className="whitespace-pre-wrap break-words">{msg.admin_response}</p>
                     {msg.responded_at && (
                       <p className="text-xs text-muted-foreground mt-2">
                         Beantwortet am {format(new Date(msg.responded_at), "dd.MM.yyyy HH:mm", { locale: de })}

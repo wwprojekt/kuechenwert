@@ -19,6 +19,7 @@ import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useToast } from "@/hooks/use-toast";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -57,6 +58,7 @@ export default function MyInvoices() {
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
   const [customerNumber, setCustomerNumber] = useState<string | null>(null);
 
+  const isMobile = useIsMobile();
   const { sortField, sortDirection, handleSort, sortData } = useTableSort<Invoice>('invoice_date', 'desc');
 
   const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
@@ -216,54 +218,54 @@ export default function MyInvoices() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Gesamt Rechnungen</p>
-                <p className="text-2xl font-bold">{invoices.length}</p>
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Gesamt Rechnungen</p>
+                <p className="text-lg sm:text-2xl font-bold">{invoices.length}</p>
               </div>
-              <FileText className="w-8 h-8 text-primary" />
+              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Offener Betrag</p>
-                <p className="text-2xl font-bold text-orange-600">
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Offener Betrag</p>
+                <p className="text-lg sm:text-2xl font-bold text-orange-600 truncate">
                   {totalOutstanding.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                 </p>
               </div>
-              <Clock className="w-8 h-8 text-orange-600" />
+              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Bezahlt</p>
-                <p className="text-2xl font-bold text-green-600">
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Bezahlt</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">
                   {totalPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                 </p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         {partialCount > 0 && (
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Teilbezahlt</p>
-                  <p className="text-2xl font-bold text-blue-600">{partialCount}</p>
+            <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Teilbezahlt</p>
+                  <p className="text-lg sm:text-2xl font-bold text-blue-600">{partialCount}</p>
                   <p className="text-xs text-muted-foreground">Rechnungen</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-blue-600" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -301,6 +303,64 @@ export default function MyInvoices() {
               <p className="text-muted-foreground">
                 Sie haben noch keine Rechnungen erhalten.
               </p>
+            </div>
+          ) : isMobile ? (
+            <div className="space-y-3">
+              {sortedInvoices.map((invoice) => {
+                const amountPaid = invoice.amount_paid || 0;
+                const remaining = invoice.gross_amount - amountPaid;
+                const paymentProgress = (amountPaid / invoice.gross_amount) * 100;
+                const isPaid = (invoice.payment_status || invoice.status) === "paid";
+                
+                return (
+                  <div key={invoice.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs text-muted-foreground">{invoice.invoice_number}</p>
+                        <p className="font-medium text-sm truncate">
+                          {invoice.auction?.motorhome
+                            ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}`
+                            : '—'}
+                        </p>
+                      </div>
+                      {getStatusBadge(invoice)}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{format(new Date(invoice.invoice_date), "dd.MM.yyyy", { locale: de })}</span>
+                      <span>Fällig: {format(new Date(invoice.due_date), "dd.MM.yyyy", { locale: de })}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-base font-bold">
+                        €{invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                      </span>
+                      {!isPaid && remaining > 0.01 ? (
+                        <div className="text-right">
+                          <div className="text-xs text-orange-600 font-medium">
+                            Offen: €{remaining.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                          </div>
+                          <Progress value={paymentProgress} className="h-1 w-20 mt-0.5" />
+                        </div>
+                      ) : isPaid ? (
+                        <span className="text-xs text-green-600 font-medium">Bezahlt</span>
+                      ) : null}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={pdfLoading === invoice.id}
+                      onClick={() => openInvoicePdf(invoice)}
+                    >
+                      {pdfLoading === invoice.id ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-1" />
+                      )}
+                      PDF herunterladen
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">

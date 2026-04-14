@@ -443,7 +443,7 @@ export const NotificationPreferences = () => {
                 type="time"
                 value={preferences.quiet_hours_start}
                 onChange={(e) => setPreferences({ ...preferences, quiet_hours_start: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full h-[44px] px-3 py-2 border rounded-md text-base"
               />
             </div>
             
@@ -453,7 +453,7 @@ export const NotificationPreferences = () => {
                 type="time"
                 value={preferences.quiet_hours_end}
                 onChange={(e) => setPreferences({ ...preferences, quiet_hours_end: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full h-[44px] px-3 py-2 border rounded-md text-base"
               />
             </div>
           </div>

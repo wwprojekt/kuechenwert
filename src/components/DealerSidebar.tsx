@@ -223,7 +223,7 @@ export function DealerSidebar() {
                     return (
                       <SidebarMenuItem key={item.title}>
                         <div
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed select-none"
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg opacity-40 cursor-not-allowed select-none min-h-[44px]"
                           title="Wird nach Freigabe verfügbar"
                         >
                           <item.icon className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
@@ -246,7 +246,7 @@ export function DealerSidebar() {
                         to={item.url}
                         end={item.url === "/dashboard"}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                          `flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 font-medium min-h-[44px] ${
                             isActive
                               ? "bg-primary text-white shadow-sm"
                               : item.highlight
@@ -291,7 +291,7 @@ export function DealerSidebar() {
       <SidebarFooter className="border-t border-border p-2 sticky bottom-0 bg-sidebar z-10">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3"
+          className="w-full justify-start gap-3 min-h-[44px]"
           onClick={() => navigate("/")}
         >
           <Home className="w-5 h-5" />
@@ -299,7 +299,7 @@ export function DealerSidebar() {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start gap-3 min-h-[44px] text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
           onClick={handleSignOut}
         >
           <LogOut className="w-5 h-5" />

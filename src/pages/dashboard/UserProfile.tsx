@@ -159,16 +159,16 @@ export default function UserProfile() {
       </div>
 
       {/* Email & Verification Status */}
-      <Card className="p-6 border-2">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+      <Card className="p-4 sm:p-6 border-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1 min-w-0">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <Mail className="w-4 h-4" />
               E-Mail-Adresse
             </Label>
-            <p className="text-base">{profile?.email || user?.email || ""}</p>
+            <p className="text-sm sm:text-base truncate">{profile?.email || user?.email || ""}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {emailVerified === true ? (
               <Badge className="bg-green-500 text-white flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
@@ -178,11 +178,12 @@ export default function UserProfile() {
               <div className="flex items-center gap-2">
                 <Badge variant="destructive" className="flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Nicht bestätigt
+                  Unbestätigt
                 </Badge>
                 <Button size="sm" variant="outline" onClick={handleResendVerification} disabled={resendingEmail}>
                   <RefreshCw className={`w-3 h-3 mr-1 ${resendingEmail ? 'animate-spin' : ''}`} />
-                  Erneut senden
+                  <span className="hidden sm:inline">Erneut senden</span>
+                  <span className="sm:hidden">Senden</span>
                 </Button>
               </div>
             ) : null}
@@ -190,7 +191,7 @@ export default function UserProfile() {
         </div>
       </Card>
 
-      <Card className="p-8 border-2 hover:border-primary/20 transition-smooth hover-lift">
+      <Card className="p-4 sm:p-8 border-2 hover:border-primary/20 transition-smooth hover-lift">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section: Persönliche Daten */}
           <div>

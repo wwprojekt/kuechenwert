@@ -21,15 +21,13 @@ import {
   CheckCircle2,
   FileText,
   MessageSquare,
-  Camera,
   Search,
-  Truck,
   CircleDot,
-  Lock,
   MessageSquarePlus,
   Pencil,
   ImagePlus,
   AlertTriangle,
+  Handshake,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -84,9 +82,19 @@ export default function DashboardOverview() {
           table: "motorhome_photos",
         },
         () => {
-          // Also refresh when photos are added/removed
           queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
           queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "post_auction_offers",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
         }
       )
       .subscribe();
@@ -191,7 +199,23 @@ export default function DashboardOverview() {
             addendaCount = count || 0;
           }
 
-          return { ...mh, bidStats, addendaCount };
+          let kaufchanceInfo = null;
+          if (auction && auction.status === 'kaufchance') {
+            const { data: offers } = await supabase
+              .from('post_auction_offers')
+              .select('id, offer_amount, status')
+              .eq('auction_id', auction.id);
+
+            if (offers && offers.length > 0) {
+              kaufchanceInfo = {
+                totalOffers: offers.length,
+                pendingOffers: offers.filter((o: any) => o.status === 'pending').length,
+                highestOffer: Math.max(...offers.map((o: any) => Number(o.offer_amount))),
+              };
+            }
+          }
+
+          return { ...mh, bidStats, addendaCount, kaufchanceInfo };
         })
       );
 
@@ -429,7 +453,7 @@ export default function DashboardOverview() {
           <div className="relative bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6 sm:p-8 border border-primary/20">
             <div className="flex flex-col gap-4">
               <div>
-                <h1 className="text-2xl sm:text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-1 flex items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1 flex items-center gap-3">
                   <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg flex-shrink-0">
                     <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                   </div>
@@ -529,6 +553,7 @@ export default function DashboardOverview() {
           const isLive =
             auction?.status === "active" ||
             auction?.status === "kaufchance";
+          const isKaufchance = auction?.status === "kaufchance";
           const detailUrl = `/dashboard/listings/${mh.id}`;
 
           return (
@@ -554,9 +579,9 @@ export default function DashboardOverview() {
                     )}
                     {isLive && (
                       <div className="absolute top-2 left-2">
-                        <Badge className="bg-green-500 text-white text-xs animate-pulse">
+                        <Badge className={`text-white text-xs animate-pulse ${isKaufchance ? "bg-purple-500" : "bg-green-500"}`}>
                           <CircleDot className="w-3 h-3 mr-1" />
-                          LIVE
+                          {isKaufchance ? "KAUFCHANCE" : "LIVE"}
                         </Badge>
                       </div>
                     )}
@@ -636,8 +661,10 @@ export default function DashboardOverview() {
                         {timeline.label}
                       </div>
                       {timeline.sublabel && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {timeline.sublabel}
+                        <p className={`text-xs mt-1 ${isKaufchance && mh.kaufchanceInfo ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}`}>
+                          {isKaufchance && mh.kaufchanceInfo?.totalOffers
+                            ? `${mh.kaufchanceInfo.totalOffers} Angebot${mh.kaufchanceInfo.totalOffers !== 1 ? "e" : ""} eingegangen – jetzt reagieren!`
+                            : timeline.sublabel}
                         </p>
                       )}
                     </div>
@@ -760,8 +787,60 @@ export default function DashboardOverview() {
                   </div>
                 )}
 
-                {/* Live auction stats */}
-                {isLive && mh.bidStats && (
+                {/* Kaufchance: Angebote-Vorschau & CTA */}
+                {isKaufchance && (
+                  <div className="border-t-2 border-purple-300 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-950/30 dark:to-amber-950/20 px-4 sm:px-6 py-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Handshake className="w-5 h-5 text-purple-600" />
+                        <h3 className="font-semibold text-sm text-purple-800 dark:text-purple-200">
+                          Kaufchance – Händlerangebote
+                        </h3>
+                      </div>
+                      {auction?.kaufchance_expires_at && (
+                        <Badge variant="outline" className="border-purple-300 text-purple-700 dark:text-purple-300 text-xs">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Frist: {format(new Date(auction.kaufchance_expires_at), "dd.MM. HH:mm 'Uhr'", { locale: de })}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {mh.kaufchanceInfo ? (
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-3">
+                        <div className="p-1.5 sm:p-2.5 rounded-lg bg-white/60 dark:bg-background/40 text-center">
+                          <p className="text-[10px] text-muted-foreground">Angebote</p>
+                          <p className="text-sm sm:text-lg font-bold text-purple-600">{mh.kaufchanceInfo.totalOffers}</p>
+                        </div>
+                        <div className="p-1.5 sm:p-2.5 rounded-lg bg-white/60 dark:bg-background/40 text-center">
+                          <p className="text-[10px] text-muted-foreground">Offen</p>
+                          <p className="text-sm sm:text-lg font-bold text-amber-600">{mh.kaufchanceInfo.pendingOffers}</p>
+                        </div>
+                        <div className="p-1.5 sm:p-2.5 rounded-lg bg-white/60 dark:bg-background/40 text-center">
+                          <p className="text-[10px] text-muted-foreground">Höchstes</p>
+                          <p className="text-sm sm:text-lg font-bold text-green-600">
+                            {mh.kaufchanceInfo.highestOffer.toLocaleString("de-DE")} €
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-purple-700 dark:text-purple-300 mb-3">
+                        Die eingeladenen Händler wurden benachrichtigt. Angebote erscheinen hier automatisch.
+                      </p>
+                    )}
+
+                    <Link to={detailUrl}>
+                      <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white shadow-lg gap-2">
+                        <Handshake className="w-4 h-4" />
+                        {mh.kaufchanceInfo?.pendingOffers
+                          ? `${mh.kaufchanceInfo.pendingOffers} offene Angebote ansehen`
+                          : "Angebote ansehen & verwalten"}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Live auction stats (only for active auctions, not kaufchance) */}
+                {auction?.status === "active" && mh.bidStats && (
                   <div className="border-t border-border/50 bg-muted/20 px-4 sm:px-6 py-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                       <div className="text-center sm:text-left">
@@ -795,8 +874,8 @@ export default function DashboardOverview() {
                   </div>
                 )}
 
-                {/* Action buttons for live auctions */}
-                {isLive && (
+                {/* Action buttons for active auctions (kaufchance has its own CTA above) */}
+                {auction?.status === "active" && (
                   <div className="border-t border-border/50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row gap-2">
                     {auction?.id && (
                       <Link
@@ -912,7 +991,7 @@ export default function DashboardOverview() {
         <div className="relative bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6 sm:p-8 border border-primary/20">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div>
-              <h1 className="text-2xl sm:text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
                 <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg flex-shrink-0">
                   <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                 </div>

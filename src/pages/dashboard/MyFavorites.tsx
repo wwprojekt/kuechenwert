@@ -237,7 +237,7 @@ export default function MyFavorites() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                          className="text-muted-foreground hover:text-destructive"
                           onClick={(e) => handleRemove(e, favorite.motorhome_id)}
                         >
                           <Trash2 className="w-4 h-4" />

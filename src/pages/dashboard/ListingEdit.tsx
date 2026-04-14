@@ -439,14 +439,14 @@ export default function ListingEdit() {
           <CardContent className="space-y-6">
           <fieldset disabled={isAuctionLive}>
             <Tabs defaultValue={initialTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="basic">Basis</TabsTrigger>
-                <TabsTrigger value="technical">Technik</TabsTrigger>
-                <TabsTrigger value="dimensions">Maße</TabsTrigger>
-                <TabsTrigger value="interior">Innenraum</TabsTrigger>
-                <TabsTrigger value="equipment">Ausstattung</TabsTrigger>
-                <TabsTrigger value="photos">Fotos</TabsTrigger>
-                <TabsTrigger value="additional">Zusätzlich</TabsTrigger>
+              <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-7 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Basis</TabsTrigger>
+                <TabsTrigger value="technical" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Technik</TabsTrigger>
+                <TabsTrigger value="dimensions" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Maße</TabsTrigger>
+                <TabsTrigger value="interior" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Innenraum</TabsTrigger>
+                <TabsTrigger value="equipment" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Ausstattung</TabsTrigger>
+                <TabsTrigger value="photos" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Fotos</TabsTrigger>
+                <TabsTrigger value="additional" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Zusätzlich</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
@@ -837,7 +837,7 @@ export default function ListingEdit() {
 
             {/* Submit Button - hidden when auction is live */}
             {!isAuctionLive && (
-              <div className="flex justify-end gap-3 pt-6">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6">
                 <Button type="button" variant="outline" onClick={() => navigate(`/dashboard/listings/${id}`)}>
                   Abbrechen
                 </Button>

@@ -332,7 +332,7 @@ export default function DealerClaims() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Abbrechen
                 </Button>
@@ -357,27 +357,27 @@ export default function DealerClaims() {
         ) : claims && claims.length > 0 ? (
           claims.map((claim) => (
             <Card key={claim.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold">{claim.title}</h3>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2">{claim.title}</h3>
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
                       {getStatusBadge(claim.status)}
                       {getPriorityBadge(claim.priority)}
                     </div>
                     
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 truncate">
                       {claim.motorhome && typeof claim.motorhome === 'object' && !Array.isArray(claim.motorhome)
                         ? `${claim.motorhome.manufacturer} ${claim.motorhome.model} (${claim.motorhome.listing_number})`
                         : 'Fahrzeug unbekannt'}
                     </p>
                     
-                    <p className="text-sm mb-3">{claim.description}</p>
+                    <p className="text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-3">{claim.description}</p>
                     
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Eingereicht: {format(new Date(claim.submitted_at), 'dd.MM.yyyy HH:mm', { locale: de })}</span>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
+                      <span>{format(new Date(claim.submitted_at), 'dd.MM.yyyy', { locale: de })}</span>
                       {claim.claim_amount && (
-                        <span>Schadenshöhe: €{claim.claim_amount.toLocaleString('de-DE')}</span>
+                        <span>€{claim.claim_amount.toLocaleString('de-DE')}</span>
                       )}
                       {(Array.isArray(claim.photos) ? claim.photos : claim.photos ? [claim.photos] : []).length > 0 && (
                         <span className="flex items-center gap-1">

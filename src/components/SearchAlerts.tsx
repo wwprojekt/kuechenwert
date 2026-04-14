@@ -477,7 +477,7 @@ export const SearchAlerts = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Abbrechen
                 </Button>
@@ -502,48 +502,49 @@ export const SearchAlerts = () => {
         ) : alerts && alerts.length > 0 ? (
           alerts.map((alert) => (
             <Card key={alert.id} className={alert.is_active ? '' : 'opacity-50'}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold">{alert.alert_name}</h3>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h3 className="font-semibold text-sm sm:text-base">{alert.alert_name}</h3>
                       {getFrequencyBadge(alert.alert_frequency)}
                       {alert.match_count > 0 && (
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {alert.match_count} Treffer
                         </Badge>
                       )}
                     </div>
                     
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">
                       {formatCriteria(alert.search_criteria)}
                     </p>
                     
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
-                        {alert.email_enabled ? 'E-Mail aktiv' : 'E-Mail deaktiviert'}
+                        {alert.email_enabled ? 'E-Mail aktiv' : 'E-Mail aus'}
                       </div>
                       {alert.last_triggered_at && (
                         <div className="flex items-center gap-1">
                           <Bell className="h-3 w-3" />
-                          Letzter Treffer: {new Date(alert.last_triggered_at).toLocaleDateString('de-DE')}
+                          {new Date(alert.last_triggered_at).toLocaleDateString('de-DE')}
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="icon"
+                      className="h-9 w-9 sm:h-10 sm:w-10"
                       onClick={() => handleEditAlert(alert)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>

@@ -249,6 +249,14 @@ export default function ListingDetail() {
     loadKaufchanceOffers();
   }, [resolvedAuction?.id, resolvedAuction?.status]);
 
+  useEffect(() => {
+    if (resolvedAuction?.status !== 'kaufchance') return;
+    const interval = setInterval(() => {
+      loadKaufchanceOffers();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [resolvedAuction?.id, resolvedAuction?.status]);
+
   const handleSellerAcceptOffer = async (offerId: string) => {
     setRespondingOfferId(offerId);
     try {
@@ -1174,7 +1182,7 @@ export default function ListingDetail() {
 
                         {/* Aktions-Buttons */}
                         {offer.status === 'pending' && (
-                          <div className="flex flex-col gap-3 min-w-[280px]">
+                          <div className="flex flex-col gap-3 w-full md:min-w-[280px] md:w-auto">
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
@@ -1232,7 +1240,7 @@ export default function ListingDetail() {
 
                         {/* Gegenangebot senken (bei countered, solange Händler nicht reagiert hat) */}
                         {offer.status === 'countered' && offer.counter_offer_amount && (
-                          <div className="flex flex-col gap-2 min-w-[280px]">
+                          <div className="flex flex-col gap-2 w-full md:min-w-[280px] md:w-auto">
                             <p className="text-xs text-muted-foreground">
                               Wartet auf Antwort des Händlers. Sie können Ihr Gegenangebot senken:
                             </p>

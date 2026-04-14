@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,6 @@ import {
   Target,
   Clock,
   CheckCircle,
-  Plus,
   Search,
   Filter,
   Award,
@@ -28,9 +28,6 @@ import {
   Zap,
   Crown,
   Lock,
-  Truck,
-  MapPin,
-  Calendar as CalendarIcon,
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
@@ -57,6 +54,7 @@ const DealerDashboard = () => {
   const { isPendingDealer, isRejectedDealer, hasDealerApplication, application, dealerCountry, refetch: refetchApp } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
   const audioNotifications = useAudioNotification({ enabled: true, volume: 0.8 });
+  const isMobile = useIsMobile();
   const audioRef = useRef(audioNotifications);
   useEffect(() => { audioRef.current = audioNotifications; }, [audioNotifications]);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -459,41 +457,63 @@ const DealerDashboard = () => {
         </div>
       </div>
 
-      {/* Dealer Level Status Card – auf Handy kompakter */}
+      {/* Dealer Level Status Card */}
       {dealerLevel && (
-        <Card className={`border-2 overflow-hidden hidden md:block ${
+        <Card className={`border-2 overflow-hidden ${
           dealerLevel.level === 'platin' ? 'border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50' :
           dealerLevel.level === 'gold' ? 'border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50' :
           dealerLevel.level === 'silber' ? 'border-slate-300 bg-gradient-to-r from-slate-50 to-gray-50' :
           'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50'
         }`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 md:h-14 md:w-14 rounded-full flex items-center justify-center shadow-lg ${
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className={`h-10 w-10 sm:h-14 sm:w-14 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${
                   dealerLevel.level === 'platin' ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
                   dealerLevel.level === 'gold' ? 'bg-gradient-to-br from-amber-400 to-yellow-500' :
                   dealerLevel.level === 'silber' ? 'bg-gradient-to-br from-slate-400 to-gray-500' :
                   'bg-gradient-to-br from-orange-400 to-amber-500'
                 }`}>
-                  {dealerLevel.level === 'platin' ? <Crown className="h-7 w-7 text-white" /> :
-                   dealerLevel.level === 'gold' ? <Star className="h-7 w-7 text-white" /> :
-                   dealerLevel.level === 'silber' ? <Award className="h-7 w-7 text-white" /> :
-                   <Zap className="h-7 w-7 text-white" />}
+                  {dealerLevel.level === 'platin' ? <Crown className="h-5 w-5 sm:h-7 sm:w-7 text-white" /> :
+                   dealerLevel.level === 'gold' ? <Star className="h-5 w-5 sm:h-7 sm:w-7 text-white" /> :
+                   dealerLevel.level === 'silber' ? <Award className="h-5 w-5 sm:h-7 sm:w-7 text-white" /> :
+                   <Zap className="h-5 w-5 sm:h-7 sm:w-7 text-white" />}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg capitalize">{dealerLevel.level}-Händler</h3>
-                    <Badge variant="outline" className="text-xs">{dealerLevel.points} Punkte</Badge>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-sm sm:text-lg capitalize">{dealerLevel.level}-Händler</h3>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{dealerLevel.points} Pkt.</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {dealerLevel.total_bids} Gebote &middot; {dealerLevel.won_auctions} gewonnen &middot; €{Number(dealerLevel.total_volume).toLocaleString('de-DE')} Volumen
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    {dealerLevel.total_bids} Gebote &middot; {dealerLevel.won_auctions} gewonnen
+                    <span className="hidden sm:inline"> &middot; €{Number(dealerLevel.total_volume).toLocaleString('de-DE')} Volumen</span>
                   </p>
+                  {/* Mobile progress bar inline */}
+                  {dealerLevel.level !== 'platin' && (
+                    <div className="sm:hidden mt-1.5">
+                      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            dealerLevel.level === 'gold' ? 'bg-gradient-to-r from-amber-400 to-yellow-500' :
+                            dealerLevel.level === 'silber' ? 'bg-gradient-to-r from-slate-400 to-gray-500' :
+                            'bg-gradient-to-r from-orange-400 to-amber-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (
+                              dealerLevel.level === 'bronze' ? (dealerLevel.points / 30) * 100 :
+                              dealerLevel.level === 'silber' ? ((dealerLevel.points - 30) / 70) * 100 :
+                              ((dealerLevel.points - 100) / 100) * 100
+                            ))}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              {/* Progress to next level */}
+              {/* Desktop progress to next level */}
               {dealerLevel.level !== 'platin' && (
-                <div className="text-right hidden md:block">
+                <div className="text-right hidden sm:block flex-shrink-0">
                   <p className="text-xs text-muted-foreground mb-1">
                     Nächstes Level: {dealerLevel.level === 'bronze' ? 'Silber (30 Pkt.)' : dealerLevel.level === 'silber' ? 'Gold (100 Pkt.)' : 'Platin (200 Pkt.)'}
                   </p>
@@ -546,7 +566,7 @@ const DealerDashboard = () => {
               </Button>
             </div>
             <div className="space-y-2">
-              {outbidAuctions.slice(0, window.innerWidth < 768 ? 1 : 3).map((auction: any) => {
+              {outbidAuctions.slice(0, isMobile ? 2 : 3).map((auction: any) => {
                 const userBid = auction.bids?.[0];
                 const diff = (auction.current_bid || 0) - (userBid?.amount || 0);
                 const timeLeft = new Date(auction.end_time).getTime() - Date.now();
@@ -592,9 +612,9 @@ const DealerDashboard = () => {
                   </div>
                 );
               })}
-              {outbidAuctions.length > 3 && (
+              {outbidAuctions.length > (isMobile ? 2 : 3) && (
                 <p className="text-center text-sm text-orange-600 dark:text-orange-400 pt-1">
-                  + {outbidAuctions.length - 3} weitere überbotene {outbidAuctions.length - 3 === 1 ? 'Auktion' : 'Auktionen'}
+                  + {outbidAuctions.length - (isMobile ? 2 : 3)} weitere überbotene {outbidAuctions.length - (isMobile ? 2 : 3) === 1 ? 'Auktion' : 'Auktionen'}
                 </p>
               )}
             </div>
@@ -795,29 +815,29 @@ const DealerDashboard = () => {
 
 
       {/* Enhanced Stats Grid */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+      <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>
         {statCards.map((stat, index) => (
           <Link to={isLocked ? '#' : stat.link} key={stat.title} style={{ animationDelay: `${index * 100}ms` }} onClick={isLocked ? (e: React.MouseEvent) => e.preventDefault() : undefined}>
             <Card 
               className="relative overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card animate-scale-in cursor-pointer h-full"
             >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`h-12 w-12 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                    <stat.icon className="h-6 w-6 text-white" />
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex items-center justify-between mb-2 sm:mb-4">
+                  <div className={`h-9 w-9 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <stat.icon className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{stat.title}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     {stat.format === "currency" 
                       ? `€${stat.value.toLocaleString('de-DE')}` 
                       : stat.value.toLocaleString('de-DE')}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs hidden sm:inline-flex">
                       {stat.description}
                     </Badge>
                     {stat.trend === "up" && (
@@ -847,8 +867,8 @@ const DealerDashboard = () => {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer'} transition-smooth group`}
-            onClick={isLocked ? undefined : () => window.location.href = '/kaufen'}
+          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer active:bg-primary/10'} transition-smooth group`}
+            onClick={isLocked ? undefined : () => navigate('/kaufen')}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -866,8 +886,8 @@ const DealerDashboard = () => {
 
 
 
-          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer'} transition-smooth group`}
-            onClick={isLocked ? undefined : () => window.location.href = '/dashboard/inventory'}
+          <div className={`block p-4 border rounded-lg ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5 cursor-pointer active:bg-primary/10'} transition-smooth group`}
+            onClick={isLocked ? undefined : () => navigate('/dashboard/inventory')}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -929,38 +949,38 @@ const DealerDashboard = () => {
         </CardHeader>
         
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {/* Success Rate */}
-            <div className="text-center p-6 border rounded-lg bg-green-50/50">
-              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                <Trophy className="h-8 w-8 text-white" />
+            <div className="text-center p-3 sm:p-6 border rounded-lg bg-green-50/50">
+              <div className="h-10 w-10 sm:h-16 sm:w-16 mx-auto mb-2 sm:mb-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <Trophy className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
               </div>
-              <div className="text-2xl font-bold text-green-600 mb-1">
+              <div className="text-lg sm:text-2xl font-bold text-green-600 mb-0.5 sm:mb-1">
                 {stats?.totalBids > 0 ? Math.round((stats.wonAuctions / stats.totalBids) * 100) : 0}%
               </div>
-              <div className="text-sm text-muted-foreground">Erfolgsquote</div>
+              <div className="text-[11px] sm:text-sm text-muted-foreground">Erfolgsquote</div>
             </div>
 
             {/* Average Spending */}
-            <div className="text-center p-6 border rounded-lg bg-blue-50/50">
-              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                <Euro className="h-8 w-8 text-white" />
+            <div className="text-center p-3 sm:p-6 border rounded-lg bg-blue-50/50">
+              <div className="h-10 w-10 sm:h-16 sm:w-16 mx-auto mb-2 sm:mb-4 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                <Euro className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
               </div>
-              <div className="text-2xl font-bold text-blue-600 mb-1">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600 mb-0.5 sm:mb-1">
                 €{stats?.wonAuctions > 0 ? Math.round(stats.totalSpent / stats.wonAuctions).toLocaleString('de-DE') : '0'}
               </div>
-              <div className="text-sm text-muted-foreground">Ø pro Fahrzeug</div>
+              <div className="text-[11px] sm:text-sm text-muted-foreground">Ø Fahrzeug</div>
             </div>
 
             {/* Total Commissions */}
-            <div className="text-center p-6 border rounded-lg bg-purple-50/50">
-              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                <Target className="h-8 w-8 text-white" />
+            <div className="text-center p-3 sm:p-6 border rounded-lg bg-purple-50/50">
+              <div className="h-10 w-10 sm:h-16 sm:w-16 mx-auto mb-2 sm:mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <Target className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
               </div>
-              <div className="text-2xl font-bold text-purple-600 mb-1">
+              <div className="text-lg sm:text-2xl font-bold text-purple-600 mb-0.5 sm:mb-1">
                 €{stats?.totalCommissions.toLocaleString('de-DE') || '0'}
               </div>
-              <div className="text-sm text-muted-foreground">Provisionen gesamt</div>
+              <div className="text-[11px] sm:text-sm text-muted-foreground">Provisionen</div>
             </div>
           </div>
         </CardContent>
@@ -1022,7 +1042,7 @@ const DealerDashboard = () => {
       {!isLocked && stats?.recentBids && stats.recentBids.length > 0 && (
         <Card className="border-2 hover:border-primary/20 transition-smooth">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Gavel className="h-5 w-5 text-primary" />
@@ -1033,11 +1053,11 @@ const DealerDashboard = () => {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Badge variant="outline" className="flex items-center gap-1">
+                <Badge variant="outline" className="flex items-center gap-1 text-xs">
                   <Trophy className="h-3 w-3 text-green-500" />
                   {stats.leadingBids || 0} führend
                 </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
+                <Badge variant="outline" className="flex items-center gap-1 text-xs">
                   <TrendingUp className="h-3 w-3 text-blue-500" />
                   {stats.activeBids || 0} aktiv
                 </Badge>
@@ -1059,61 +1079,66 @@ const DealerDashboard = () => {
                     to={`/auktion/${bid.auction_id}`}
                     className="block"
                   >
-                    <div className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                    <div className={`p-3 sm:p-4 rounded-lg border-2 transition-all hover:shadow-md ${
                       isLeading ? "bg-green-50 border-green-200 hover:border-green-300" :
                       isOutbid ? "bg-amber-50 border-amber-200 hover:border-amber-300" :
                       isWon ? "bg-blue-50 border-blue-200 hover:border-blue-300" :
                       "bg-muted/30 border-transparent hover:border-primary/20"
                     }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                      <div className="flex items-start gap-3">
+                        <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           isLeading ? "bg-green-100" :
                           isOutbid ? "bg-amber-100" :
                           isWon ? "bg-blue-100" :
                           "bg-muted"
                         }`}>
-                          {isLeading ? <Trophy className="h-5 w-5 text-green-600" /> :
-                           isOutbid ? <TrendingUp className="h-5 w-5 text-amber-600" /> :
-                           isWon ? <CheckCircle className="h-5 w-5 text-blue-600" /> :
-                           <Gavel className="h-5 w-5 text-muted-foreground" />}
+                          {isLeading ? <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" /> :
+                           isOutbid ? <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" /> :
+                           isWon ? <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /> :
+                           <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />}
                         </div>
-                        <div>
-                          <div className="font-medium">
-                            {bid.auctions?.motorhome?.manufacturer} {bid.auctions?.motorhome?.model}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm sm:text-base truncate">
+                                {bid.auctions?.motorhome?.manufacturer} {bid.auctions?.motorhome?.model}
+                              </div>
+                              <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span>Ihr Gebot: €{bid.amount.toLocaleString('de-DE')}</span>
+                                {isActive && bid.auctions?.current_bid > bid.amount && (
+                                  <span className="text-amber-600">
+                                    (Aktuell: €{bid.auctions.current_bid.toLocaleString('de-DE')})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <Badge 
+                                variant={isLeading ? "default" : isOutbid ? "secondary" : isWon ? "default" : "outline"}
+                                className={`text-[10px] sm:text-xs ${
+                                  isLeading ? "bg-green-500 hover:bg-green-600" :
+                                  isWon ? "bg-blue-500 hover:bg-blue-600" :
+                                  ""
+                                }`}
+                              >
+                                {isLeading ? "Höchstbietend" :
+                                 isOutbid ? "Überboten" :
+                                 isWon ? "Gewonnen" :
+                                 !isActive ? "Nicht gewonnen" : "Beendet"}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span>Ihr Gebot: €{bid.amount.toLocaleString('de-DE')}</span>
-                            {isActive && bid.auctions?.current_bid > bid.amount && (
-                              <span className="text-amber-600">
-                                (Aktuell: €{bid.auctions.current_bid.toLocaleString('de-DE')})
-                              </span>
+                          <div className="flex items-center justify-between mt-1.5">
+                            <div className="text-[10px] sm:text-xs text-muted-foreground">
+                              {format(new Date(bid.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </div>
+                            {isActive && bid.auctions?.end_time && (
+                              <div className="text-[10px] sm:text-xs text-muted-foreground">
+                                Endet: {format(new Date(bid.auctions.end_time), "dd.MM. HH:mm", { locale: de })}
+                              </div>
                             )}
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <Badge 
-                          variant={isLeading ? "default" : isOutbid ? "secondary" : isWon ? "default" : "outline"}
-                          className={`mb-1 ${
-                            isLeading ? "bg-green-500 hover:bg-green-600" :
-                            isWon ? "bg-blue-500 hover:bg-blue-600" :
-                            ""
-                          }`}
-                        >
-                          {isLeading ? "Höchstbietend" :
-                           isOutbid ? "Überboten" :
-                           isWon ? "Gewonnen" :
-                           !isActive ? "Nicht gewonnen" : "Beendet"}
-                        </Badge>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(bid.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-                        </div>
-                        {isActive && bid.auctions?.end_time && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Endet: {format(new Date(bid.auctions.end_time), "dd.MM. HH:mm", { locale: de })}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </Link>

@@ -148,44 +148,44 @@ export default function MyContracts() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Kaufverträge</p>
-                <p className="text-2xl font-bold">{contracts.length}</p>
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Kaufverträge</p>
+                <p className="text-lg sm:text-2xl font-bold">{contracts.length}</p>
               </div>
-              <FileCheck className="w-8 h-8 text-primary" />
+              <FileCheck className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Aktiv</p>
-                <p className="text-2xl font-bold text-green-600">
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Aktiv</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">
                   {contracts.filter(c => c.status === "active").length}
                 </p>
               </div>
-              <FileCheck className="w-8 h-8 text-green-600" />
+              <FileCheck className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Gesamtvolumen</p>
-                <p className="text-2xl font-bold text-primary">
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Gesamtvolumen</p>
+                <p className="text-lg sm:text-2xl font-bold text-primary truncate">
                   {contracts
                     .filter(c => c.status === "active")
                     .reduce((sum, c) => sum + Number(c.sale_price || 0), 0)
                     .toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
                 </p>
               </div>
-              <Euro className="w-8 h-8 text-primary" />
+              <Euro className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             </div>
           </CardContent>
         </Card>

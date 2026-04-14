@@ -32,7 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2 } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2, Mail, Phone, ExternalLink, Truck, Hash } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
+interface UserMotorhome {
+  id: string;
+  manufacturer: string;
+  model: string;
+  year: number;
+  listing_number: string | null;
+  status: string;
+}
+
 interface SupportMessage {
   id: string;
   user_id: string | null;
@@ -58,9 +68,12 @@ interface SupportMessage {
   created_at: string | null;
   user?: {
     email?: string;
+    phone?: string | null;
     first_name?: string;
     last_name?: string;
+    customer_number?: string | null;
   };
+  motorhomes?: UserMotorhome[];
 }
 
 export default function AdminMessages() {
@@ -91,30 +104,46 @@ export default function AdminMessages() {
 
       if (messagesError) throw messagesError;
 
-      // Get unique user IDs
       const userIds = [...new Set(messagesData?.map(m => m.user_id).filter(Boolean) as string[])];
 
-      // Fetch profiles for these users
-      let profilesMap: Record<string, { first_name: string | null; last_name: string | null }> = {};
+      type ProfileInfo = { first_name: string | null; last_name: string | null; email: string; phone: string | null; customer_number: string | null };
+      let profilesMap: Record<string, ProfileInfo> = {};
+      let motorhomesMap: Record<string, UserMotorhome[]> = {};
       
       if (userIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name")
-          .in("id", userIds);
+        const [profilesRes, motorhomesRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, first_name, last_name, email, phone, customer_number")
+            .in("id", userIds),
+          supabase
+            .from("motorhomes")
+            .select("id, seller_id, manufacturer, model, year, listing_number, status")
+            .in("seller_id", userIds)
+            .order("created_at", { ascending: false }),
+        ]);
 
-        if (profilesData) {
-          profilesMap = profilesData.reduce((acc, profile) => {
-            acc[profile.id] = { first_name: profile.first_name, last_name: profile.last_name };
+        if (profilesRes.data) {
+          profilesMap = profilesRes.data.reduce((acc, p) => {
+            acc[p.id] = { first_name: p.first_name, last_name: p.last_name, email: p.email, phone: p.phone, customer_number: p.customer_number };
             return acc;
-          }, {} as Record<string, { first_name: string | null; last_name: string | null }>);
+          }, {} as Record<string, ProfileInfo>);
+        }
+
+        if (motorhomesRes.data) {
+          motorhomesMap = motorhomesRes.data.reduce((acc, m) => {
+            const key = m.seller_id;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push({ id: m.id, manufacturer: m.manufacturer, model: m.model, year: m.year, listing_number: m.listing_number, status: m.status });
+            return acc;
+          }, {} as Record<string, UserMotorhome[]>);
         }
       }
 
-      // Combine messages with user data
       const messagesWithUsers = messagesData?.map(msg => ({
         ...msg,
         user: msg.user_id ? profilesMap[msg.user_id] : undefined,
+        motorhomes: msg.user_id ? motorhomesMap[msg.user_id] ?? [] : [],
       })) || [];
 
       setMessages(messagesWithUsers as SupportMessage[]);
@@ -334,6 +363,7 @@ export default function AdminMessages() {
                   </TableHead>
                   <TableHead>Benutzer</TableHead>
                   <TableHead>Betreff</TableHead>
+                  <TableHead>Fahrzeuge</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Datum</TableHead>
                   <TableHead className="text-right">Aktion</TableHead>
@@ -351,16 +381,45 @@ export default function AdminMessages() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span>
-                          {msg.user?.first_name && msg.user?.last_name 
-                            ? `${msg.user.first_name} ${msg.user.last_name}`
-                            : "Unbekannt"}
-                        </span>
+                        <User className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">
+                            {msg.user?.first_name && msg.user?.last_name 
+                              ? `${msg.user.first_name} ${msg.user.last_name}`
+                              : "Unbekannt"}
+                          </div>
+                          {msg.user?.email && (
+                            <div className="text-xs text-muted-foreground truncate">{msg.user.email}</div>
+                          )}
+                          {msg.user?.customer_number && (
+                            <div className="text-xs text-muted-foreground">#{msg.user.customer_number}</div>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium max-w-[300px]">
                       <p className="truncate">{msg.subject}</p>
+                    </TableCell>
+                    <TableCell>
+                      {msg.motorhomes && msg.motorhomes.length > 0 ? (
+                        <div className="space-y-1">
+                          {msg.motorhomes.slice(0, 2).map((mh) => (
+                            <Link
+                              key={mh.id}
+                              to={`/admin/motorhomes/${mh.id}`}
+                              className="flex items-center gap-1 text-xs text-primary hover:underline"
+                            >
+                              <Truck className="w-3 h-3" />
+                              <span className="truncate max-w-[140px]">{mh.manufacturer} {mh.model} ({mh.year})</span>
+                            </Link>
+                          ))}
+                          {msg.motorhomes.length > 2 && (
+                            <span className="text-xs text-muted-foreground">+{msg.motorhomes.length - 2} weitere</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>{getStatusBadge(msg.status)}</TableCell>
                     <TableCell>
@@ -470,20 +529,98 @@ export default function AdminMessages() {
 
       {/* Response Dialog */}
       <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
               {selectedMessage?.subject}
             </DialogTitle>
             <DialogDescription>
-              Anfrage von {selectedMessage?.user?.first_name || "Unbekannt"} am{" "}
+              Anfrage vom{" "}
               {selectedMessage?.created_at &&
                 format(new Date(selectedMessage.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* User info card */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-2">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Absender
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-medium">
+                    {selectedMessage?.user?.first_name && selectedMessage?.user?.last_name
+                      ? `${selectedMessage.user.first_name} ${selectedMessage.user.last_name}`
+                      : "Unbekannt"}
+                  </span>
+                </div>
+                {selectedMessage?.user?.email && (
+                  <a href={`mailto:${selectedMessage.user.email}`} className="flex items-center gap-2 text-primary hover:underline">
+                    <Mail className="w-3.5 h-3.5" />
+                    {selectedMessage.user.email}
+                  </a>
+                )}
+                {selectedMessage?.user?.phone && (
+                  <a href={`tel:${selectedMessage.user.phone}`} className="flex items-center gap-2 text-primary hover:underline">
+                    <Phone className="w-3.5 h-3.5" />
+                    {selectedMessage.user.phone}
+                  </a>
+                )}
+                {selectedMessage?.user?.customer_number && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Hash className="w-3.5 h-3.5" />
+                    Kd.-Nr.: {selectedMessage.user.customer_number}
+                  </div>
+                )}
+              </div>
+              {selectedMessage?.user_id && (
+                <Link
+                  to={`/admin/users/${selectedMessage.user_id}`}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Benutzerprofil öffnen
+                </Link>
+              )}
+            </div>
+
+            {/* User's motorhomes */}
+            {selectedMessage?.motorhomes && selectedMessage.motorhomes.length > 0 && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-2">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Inserate des Benutzers ({selectedMessage.motorhomes.length})
+                </p>
+                <div className="space-y-1.5">
+                  {selectedMessage.motorhomes.map((mh) => (
+                    <Link
+                      key={mh.id}
+                      to={`/admin/motorhomes/${mh.id}`}
+                      className="flex items-center justify-between gap-2 p-2 rounded bg-white dark:bg-background border text-sm hover:bg-accent transition-colors"
+                    >
+                      <span className="font-medium">
+                        {mh.manufacturer} {mh.model} ({mh.year})
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {mh.listing_number && (
+                          <span className="text-xs text-muted-foreground">#{mh.listing_number}</span>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {mh.status}
+                        </Badge>
+                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Message content */}
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm font-medium text-muted-foreground mb-2">Nachricht:</p>
               <p className="whitespace-pre-wrap">{selectedMessage?.message}</p>

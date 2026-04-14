@@ -324,8 +324,8 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
               {/* User Section */}
               <div className="flex items-center gap-2 sm:gap-3">
-                <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
-                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" />
+                <Link to="/" className="sm:hidden flex items-center justify-center min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity">
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" asLink={false} />
                 </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
@@ -347,7 +347,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Email Verification Banner – also for dealers */}
               {emailVerified === false && user?.email && (
@@ -413,8 +413,8 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
               {/* User Section */}
               <div className="flex items-center gap-2 sm:gap-3">
-                <Link to="/" className="sm:hidden flex items-center hover:opacity-80 transition-opacity">
-                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" />
+                <Link to="/" className="sm:hidden flex items-center justify-center min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity">
+                  <SiteLogo variant="icon-only" linkTo="/" iconSize="h-7 w-7" asLink={false} />
                 </Link>
                 <Link to="/dashboard/profile" className="hidden sm:flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
@@ -436,7 +436,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-2 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-8 xl:p-10 overflow-x-hidden overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Email Verification Banner */}
               {emailVerified === false && user?.email && (

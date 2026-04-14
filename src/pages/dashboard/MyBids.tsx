@@ -146,7 +146,7 @@ export default function MyBids() {
             </TabsList>
           </Tabs>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
               <div className="flex items-center gap-1.5">
                 <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
                 <SelectValue placeholder="Sortieren" />

@@ -140,11 +140,11 @@ const DealerInventory = () => {
                 placeholder="Suchen Sie nach Hersteller oder Modell..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9"
+                className="pl-10"
               />
             </div>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <div className="flex items-center gap-2">
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue placeholder="Sortieren" />

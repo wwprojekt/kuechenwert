@@ -112,7 +112,7 @@ export default function MyListings() {
         <>
         <div className="flex justify-end">
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                 <SelectValue placeholder="Sortieren" />
@@ -172,7 +172,7 @@ export default function MyListings() {
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                   <div>
                     <h3 className="font-bold text-lg line-clamp-1">
                       {motorhome.manufacturer} {motorhome.model}
@@ -235,7 +235,8 @@ export default function MyListings() {
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
                     <Button
-                      className={`flex-1 gap-2 ${(!motorhome.photos || motorhome.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                      size="sm"
+                      className={`flex-1 gap-1.5 ${(!motorhome.photos || motorhome.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
                       variant={(!motorhome.photos || motorhome.photos.length === 0) ? 'default' : 'outline'}
                       onClick={(e) => {
                         e.preventDefault();
@@ -248,6 +249,7 @@ export default function MyListings() {
                     </Button>
                     <Button
                       variant="outline"
+                      size="sm"
                       className="flex-1"
                       onClick={(e) => {
                         e.preventDefault();
@@ -255,10 +257,11 @@ export default function MyListings() {
                         navigate(`/dashboard/listings/${motorhome.id}/edit`);
                       }}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Bearbeiten
+                      <Edit className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">Bearbeiten</span>
+                      <span className="sm:hidden">Edit</span>
                     </Button>
-                    <Button variant="ghost" className="px-3">
+                    <Button variant="ghost" size="sm" className="px-3" title="Vorschau">
                       <Eye className="w-4 h-4" />
                     </Button>
                   </div>

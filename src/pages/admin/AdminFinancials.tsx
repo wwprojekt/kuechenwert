@@ -463,12 +463,14 @@ export default function AdminFinancials() {
   };
 
   const getVehicleLabel = (invoice: any) => {
+    if (!invoice) return null;
     const m = invoice.auction?.motorhome;
     if (!m) return null;
     return `${m.manufacturer || ''} ${m.model || ''}`.trim() || null;
   };
 
   const navigateToVehicle = (invoice: any) => {
+    if (!invoice) return;
     const motorhomeId = invoice.auction?.motorhome?.id || invoice.motorhome_id;
     if (motorhomeId) {
       navigate(`/admin/motorhomes/${motorhomeId}`);

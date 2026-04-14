@@ -139,6 +139,12 @@ Deno.serve(async (req) => {
                 }
               }
 
+              // Collect bidder IDs from kaufchance_invitations BEFORE deleting them
+              const { data: invitedBidders } = await supabase
+                .from('kaufchance_invitations')
+                .select('bidder_id')
+                .eq('auction_id', kaufchance.id);
+
               // Expire all pending/countered offers
               await supabase
                 .from('post_auction_offers')
@@ -208,18 +214,36 @@ Deno.serve(async (req) => {
                 } catch (e) { console.error('Seller notification error:', e); }
               }
 
-              // Notify previous bidders about new round
+              // Notify previous bidders about new round (use pre-collected invitedBidders + offer buyers)
               try {
-                const { data: invitations } = await supabase
-                  .from('kaufchance_invitations').select('bidder_id').eq('auction_id', kaufchance.id);
-                // Note: invitations were just deleted, so use a fallback – query bids before delete
-                // Since bids are already deleted, we rely on the post_auction_offers buyers
+                const notifiedIds = new Set<string>();
+
+                // Invited bidders (collected before deletion)
+                for (const inv of (invitedBidders || [])) {
+                  if (notifiedIds.has(inv.bidder_id)) continue;
+                  notifiedIds.add(inv.bidder_id);
+                  const { data: profile } = await supabase
+                    .from('profiles').select('email, first_name, company_name').eq('id', inv.bidder_id).single();
+                  if (profile?.email) {
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: profile.email,
+                        name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                        type: 'auction_relisted',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
+                        endTime: endTimeFormatted,
+                        currentBid: `Runde ${newRound}`,
+                      },
+                    }).catch((e: any) => console.error(`Failed to notify bidder:`, e));
+                  }
+                }
+
+                // Also notify offer buyers who weren't in the invitation list
                 const { data: offerBuyers } = await supabase
                   .from('post_auction_offers')
                   .select('buyer_id')
                   .eq('auction_id', kaufchance.id);
-
-                const notifiedIds = new Set<string>();
                 for (const buyer of (offerBuyers || [])) {
                   if (notifiedIds.has(buyer.buyer_id)) continue;
                   notifiedIds.add(buyer.buyer_id);

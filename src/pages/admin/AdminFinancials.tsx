@@ -1260,11 +1260,11 @@ export default function AdminFinancials() {
                         {payment.invoice?.auction?.motorhome && (
                           <div className="hidden md:block">
                             <button
-                              onClick={() => navigate(`/admin/motorhomes/${payment.invoice.auction.motorhome.id}`)}
+                              onClick={() => navigate(`/admin/motorhomes/${payment.invoice?.auction?.motorhome?.id}`)}
                               className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                             >
                               <Truck className="h-3 w-3 shrink-0" />
-                              {payment.invoice.auction.motorhome.manufacturer} {payment.invoice.auction.motorhome.model}
+                              {payment.invoice?.auction?.motorhome?.manufacturer} {payment.invoice?.auction?.motorhome?.model}
                             </button>
                           </div>
                         )}

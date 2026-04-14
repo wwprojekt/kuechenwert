@@ -218,14 +218,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if auction has ended
-    const now = new Date().getTime();
-    const endTime = new Date(auction.end_time).getTime();
-
-    if (now < endTime) {
-      throw new Error('Auction has not ended yet');
-    }
-
     // Get highest bid
     const { data: highestBid, error: bidError } = await supabase
       .from('bids')
@@ -660,7 +652,23 @@ Deno.serve(async (req) => {
                 const errText = await sellerEmailRes.text();
                 throw new Error(`Resend API: ${errText}`);
               }
+              const sellerResendResult = await sellerEmailRes.json();
               console.log('Contract email sent to seller:', sellerProfile.email);
+
+              await supabase.from('admin_emails').insert({
+                sender_email: 'info@caravanwert.de',
+                sender_name: settingsData.site_name,
+                recipient_email: sellerProfile.email,
+                recipient_name: sellerName,
+                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                body_html: contractEmailHtml,
+                body_text: '',
+                email_type: 'purchase_contract',
+                direction: 'outbound',
+                status: 'sent',
+                resend_id: sellerResendResult?.id || null,
+                is_read: false,
+              }).catch((logErr: any) => console.error('Failed to log seller contract email:', logErr));
             } catch (e: any) {
               console.error('Error sending contract to seller:', e);
               errors.push(`Kaufvertrag-E-Mail an Verkäufer fehlgeschlagen: ${e.message}`);
@@ -708,7 +716,23 @@ Deno.serve(async (req) => {
                 const errText = await buyerEmailRes.text();
                 throw new Error(`Resend API: ${errText}`);
               }
+              const buyerResendResult = await buyerEmailRes.json();
               console.log('Contract email sent to buyer:', buyerProfile.email);
+
+              await supabase.from('admin_emails').insert({
+                sender_email: 'info@caravanwert.de',
+                sender_name: settingsData.site_name,
+                recipient_email: buyerProfile.email,
+                recipient_name: buyerName,
+                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                body_html: contractEmailHtml,
+                body_text: '',
+                email_type: 'purchase_contract',
+                direction: 'outbound',
+                status: 'sent',
+                resend_id: buyerResendResult?.id || null,
+                is_read: false,
+              }).catch((logErr: any) => console.error('Failed to log buyer contract email:', logErr));
             } catch (e: any) {
               console.error('Error sending contract to buyer:', e);
               errors.push(`Kaufvertrag-E-Mail an Käufer fehlgeschlagen: ${e.message}`);

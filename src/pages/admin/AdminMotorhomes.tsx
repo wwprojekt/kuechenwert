@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/sessionGuard";
+import { toast } from "sonner";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +35,18 @@ import {
   MoreHorizontal, Eye, Edit, Trash2, Gavel, Car, Phone,
   Search, Package, Radio, XCircle, CheckCircle2, ArrowUpDown,
   ArrowUp, ArrowDown, ImageOff, Camera, Download, AlertTriangle,
+  Play, X, Ban, RotateCw,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MotorhomeDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { DeleteMotorhomeDialog } from "@/components/admin/DeleteMotorhomeDialog";
@@ -229,12 +242,15 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
 
 export default function AdminMotorhomes() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const sellerFilter = searchParams.get("seller")?.trim() || "";
   const [selectedMotorhome, setSelectedMotorhome] = useState<MotorhomeWithRelations | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; motorhomeName: string } | null>(null);
+  const [auctionActionType, setAuctionActionType] = useState<"activate" | "close" | "cancel" | null>(null);
 
   // Filters & Search
   const [activeTab, setActiveTab] = useState<TabKey>("alle");
@@ -277,6 +293,67 @@ export default function AdminMotorhomes() {
       return data as MotorhomeWithRelations[];
     },
   });
+
+  // ---- Auction Mutations ----
+  const activateAuctionMutation = useMutation({
+    mutationFn: async (auctionId: string) => {
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+      const { error } = await supabase
+        .from("auctions")
+        .update({
+          status: "active",
+          start_time: new Date().toISOString(),
+          end_time: endTime.toISOString(),
+        })
+        .eq("id", auctionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+    },
+    onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
+  });
+
+  const closeAuctionMutation = useMutation({
+    mutationFn: async (auctionId: string) => {
+      const { error } = await invokeWithAuth("close-auction", {
+        body: { auctionId },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich geschlossen");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+    },
+    onError: () => toast.error("Fehler beim Schließen der Auktion"),
+  });
+
+  const cancelAuctionMutation = useMutation({
+    mutationFn: async (auctionId: string) => {
+      const { error } = await supabase
+        .from("auctions")
+        .update({ status: "cancelled" })
+        .eq("id", auctionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich abgebrochen");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+    },
+    onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
+  });
+
+  const handleAuctionAction = () => {
+    if (!auctionActionTarget || !auctionActionType) return;
+    const aId = auctionActionTarget.auction.id;
+    if (auctionActionType === "activate") activateAuctionMutation.mutate(aId);
+    else if (auctionActionType === "close") closeAuctionMutation.mutate(aId);
+    else if (auctionActionType === "cancel") cancelAuctionMutation.mutate(aId);
+    setAuctionActionTarget(null);
+    setAuctionActionType(null);
+  };
 
   // ---- Export ----
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -635,10 +712,47 @@ export default function AdminMotorhomes() {
                           Bearbeiten
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleCreateAuction(motorhome)}>
-                          <Gavel className="w-4 h-4 mr-2" />
-                          Auktion erstellen
-                        </DropdownMenuItem>
+                        {(() => {
+                          const mAuction = getActiveAuction(motorhome.auctions);
+                          if (!mAuction || mAuction.status === "ended" || mAuction.status === "cancelled") {
+                            return (
+                              <DropdownMenuItem onClick={() => handleCreateAuction(motorhome)}>
+                                <Gavel className="w-4 h-4 mr-2" />
+                                {mAuction ? "Erneut in Auktion" : "Auktion erstellen"}
+                              </DropdownMenuItem>
+                            );
+                          }
+                          const mName = `${motorhome.manufacturer} ${motorhome.model}`;
+                          return (
+                            <>
+                              <DropdownMenuItem onClick={() => navigate(`/admin/auctions/${mAuction.id}`)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Auktion anzeigen
+                              </DropdownMenuItem>
+                              {mAuction.status === "draft" && (
+                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("activate"); }}>
+                                  <Play className="w-4 h-4 mr-2" />
+                                  Auktion aktivieren
+                                </DropdownMenuItem>
+                              )}
+                              {mAuction.status === "active" && (
+                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("close"); }}>
+                                  <X className="w-4 h-4 mr-2" />
+                                  Auktion schließen
+                                </DropdownMenuItem>
+                              )}
+                              {(mAuction.status === "active" || mAuction.status === "draft") && (
+                                <DropdownMenuItem
+                                  onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("cancel"); }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Ban className="w-4 h-4 mr-2" />
+                                  Auktion abbrechen
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          );
+                        })()}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleDelete(motorhome)}
@@ -866,6 +980,44 @@ export default function AdminMotorhomes() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
       />
+
+      {/* Auction Action Confirmation Dialog */}
+      <AlertDialog
+        open={!!auctionActionTarget && !!auctionActionType}
+        onOpenChange={(open) => { if (!open) { setAuctionActionTarget(null); setAuctionActionType(null); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {auctionActionType === "activate" && "Auktion aktivieren?"}
+              {auctionActionType === "close" && "Auktion schließen?"}
+              {auctionActionType === "cancel" && "Auktion abbrechen?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {auctionActionType === "activate" && (
+                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.</>
+              )}
+              {auctionActionType === "close" && (
+                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird sofort geschlossen. Falls Gebote vorhanden sind, wird der Höchstbietende benachrichtigt.</>
+              )}
+              {auctionActionType === "cancel" && (
+                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zurück</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAuctionAction}
+              className={auctionActionType === "cancel" ? "bg-destructive hover:bg-destructive/90" : auctionActionType === "activate" ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              {auctionActionType === "activate" && "Aktivieren"}
+              {auctionActionType === "close" && "Schließen"}
+              {auctionActionType === "cancel" && "Abbrechen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

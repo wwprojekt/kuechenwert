@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -44,6 +45,11 @@ import {
   Euro,
   ExternalLink,
   Send,
+  Play,
+  X,
+  Ban,
+  Timer,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -200,19 +206,71 @@ export default function AdminMotorhomeDetail() {
       )
     : [];
 
-  // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
-  // Supabase may return: object (single match), array (multiple), string (error), or null
   const auctionData = motorhome?.auctions;
-  const activeAuction = (() => {
+  const relevantAuction = (() => {
     if (!auctionData || typeof auctionData === 'string') return null;
     if (Array.isArray(auctionData)) {
-      return auctionData.find((a: any) => a?.status === 'active') || null;
+      return auctionData.find((a: any) => a?.status === 'active')
+        || auctionData.find((a: any) => a?.status === 'kaufchance')
+        || auctionData.find((a: any) => a?.status === 'draft')
+        || auctionData.find((a: any) => a?.status === 'sold')
+        || auctionData.find((a: any) => a?.status === 'ended')
+        || auctionData.find((a: any) => a?.status === 'cancelled')
+        || auctionData[0]
+        || null;
     }
-    if (typeof auctionData === 'object' && auctionData.status === 'active') {
-      return auctionData;
-    }
+    if (typeof auctionData === 'object') return auctionData;
     return null;
   })();
+  const activeAuction = relevantAuction?.status === 'active' ? relevantAuction : null;
+
+  // Auction mutations
+  const activateAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!relevantAuction) throw new Error("No auction");
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 7);
+      const { error } = await supabase
+        .from("auctions")
+        .update({ status: "active", start_time: new Date().toISOString(), end_time: endTime.toISOString() })
+        .eq("id", relevantAuction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+    },
+    onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
+  });
+
+  const closeAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!relevantAuction) throw new Error("No auction");
+      const { error } = await invokeWithAuth("close-auction", { body: { auctionId: relevantAuction.id } });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich geschlossen");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+    },
+    onError: () => toast.error("Fehler beim Schließen der Auktion"),
+  });
+
+  const cancelAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!relevantAuction) throw new Error("No auction");
+      const { error } = await supabase
+        .from("auctions")
+        .update({ status: "cancelled" })
+        .eq("id", relevantAuction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich abgebrochen");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+    },
+    onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
+  });
 
   return (
     <AdminDetailLayout
@@ -236,13 +294,88 @@ export default function AdminMotorhomeDetail() {
               <Edit className="w-4 h-4 mr-2" />
               Bearbeiten
             </Button>
-            {!activeAuction && (motorhome.sale_channel === "auction" || motorhome.sale_channel === "instant_price") && (
+            {relevantAuction?.status === "draft" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Play className="w-4 h-4 mr-2" />
+                    Aktivieren
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => activateAuctionMutation.mutate()}>
+                      Aktivieren
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {relevantAuction?.status === "active" && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <X className="w-4 h-4 mr-2" />
+                    Auktion schließen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion schließen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird sofort geschlossen. Falls Gebote vorhanden sind, wird der Höchstbietende benachrichtigt.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Zurück</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => closeAuctionMutation.mutate()}>
+                      Schließen
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {(relevantAuction?.status === "active" || relevantAuction?.status === "draft") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive">
+                    <Ban className="w-4 h-4 mr-2" />
+                    Auktion abbrechen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird abgebrochen. Keine Benachrichtigungen werden versendet.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Zurück</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => cancelAuctionMutation.mutate()}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Abbrechen
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {(!relevantAuction || relevantAuction.status === "ended" || relevantAuction.status === "cancelled") && (
               <Button
                 size="sm"
                 onClick={() => navigate(`/admin/auctions?create=${motorhome.id}`)}
               >
                 <Gavel className="w-4 h-4 mr-2" />
-                Auktion erstellen
+                {relevantAuction ? "Erneut in Auktion" : "Auktion erstellen"}
               </Button>
             )}
             <AlertDialog>
@@ -567,23 +700,69 @@ export default function AdminMotorhomeDetail() {
                 )}
               </DetailSection>
 
-              {/* Active Auction */}
-              {activeAuction && (
-                <DetailSection title="Aktive Auktion" icon={<Gavel className="w-5 h-5" />}>
+              {/* Auction Info */}
+              {relevantAuction && (
+                <DetailSection
+                  title={
+                    relevantAuction.status === "active" ? "Aktive Auktion" :
+                    relevantAuction.status === "draft" ? "Auktionsentwurf" :
+                    relevantAuction.status === "kaufchance" ? "Kaufchance" :
+                    relevantAuction.status === "sold" ? "Verkauft (Auktion)" :
+                    relevantAuction.status === "ended" ? "Auktion beendet" :
+                    relevantAuction.status === "cancelled" ? "Auktion abgebrochen" :
+                    "Auktion"
+                  }
+                  icon={<Gavel className="w-5 h-5" />}
+                >
                   <div className="space-y-4">
-                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                      <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatPrice(activeAuction.current_bid || activeAuction.starting_bid)}
-                      </p>
-                    </div>
+                    {relevantAuction.status === "active" && (
+                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                        <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatPrice(relevantAuction.current_bid || relevantAuction.starting_bid)}
+                        </p>
+                      </div>
+                    )}
+                    {relevantAuction.status === "draft" && (
+                      <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20">
+                        <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                          Entwurf — noch nicht aktiviert
+                        </p>
+                      </div>
+                    )}
+                    {(relevantAuction.status === "ended" || relevantAuction.status === "cancelled") && (
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <Badge variant={relevantAuction.status === "cancelled" ? "destructive" : "secondary"}>
+                          {relevantAuction.status === "cancelled" ? "Abgebrochen" : "Beendet"}
+                        </Badge>
+                      </div>
+                    )}
+                    {relevantAuction.status === "kaufchance" && (
+                      <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                        <p className="text-sm text-orange-700 dark:text-orange-400 font-medium">
+                          Kaufchance-Phase aktiv
+                        </p>
+                      </div>
+                    )}
+                    {relevantAuction.status === "sold" && (
+                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                        <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                          Erfolgreich verkauft
+                        </p>
+                        {relevantAuction.current_bid && (
+                          <p className="text-2xl font-bold text-green-600 mt-1">
+                            {formatPrice(relevantAuction.current_bid)}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <InfoGrid columns={2}>
-                      <InfoItem label="Startgebot" value={formatPrice(activeAuction.starting_bid)} />
-                      <InfoItem label="Endet" value={formatDate(activeAuction.end_time)} />
+                      <InfoItem label="Startgebot" value={formatPrice(relevantAuction.starting_bid)} />
+                      <InfoItem label="Endet" value={formatDate(relevantAuction.end_time)} />
                     </InfoGrid>
                     <Button
                       className="w-full"
-                      onClick={() => navigate(`/admin/auctions/${activeAuction.id}`)}
+                      onClick={() => navigate(`/admin/auctions/${relevantAuction.id}`)}
                     >
                       <Gavel className="w-4 h-4 mr-2" />
                       Auktion anzeigen

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ import {
   Calendar,
   Play,
   X,
+  Ban,
   Edit,
   ExternalLink,
   AlertTriangle,
@@ -166,6 +167,26 @@ export default function AdminAuctionDetail() {
     },
   });
 
+  // Cancel auction mutation
+  const cancelAuctionMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("auctions")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich abgebrochen");
+      logEvent({ action: "auction_cancelled", entityType: "auction", entityId: id });
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+    },
+    onError: (error) => {
+      logger.error("Cancel auction error:", error);
+      toast.error("Fehler beim Abbrechen der Auktion");
+    },
+  });
+
   const deleteBidMutation = useMutation({
     mutationFn: async (bidId: string) => {
       const { data, error } = await supabase.rpc("admin_delete_bid", { p_bid_id: bidId });
@@ -301,26 +322,50 @@ export default function AdminAuctionDetail() {
             {auction.status === "active" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="destructive">
+                  <Button size="sm" variant="outline">
                     <X className="w-4 h-4 mr-2" />
-                    Beenden
+                    Schließen
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion beenden?</AlertDialogTitle>
+                    <AlertDialogTitle>Auktion schließen?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Die Auktion wird sofort beendet. Falls Gebote vorhanden sind, wird der
+                      Die Auktion wird sofort geschlossen. Falls Gebote vorhanden sind, wird der
                       Höchstbietende benachrichtigt.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogCancel>Zurück</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => closeAuctionMutation.mutate()}>
+                      Schließen
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {(auction.status === "active" || auction.status === "draft") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive">
+                    <Ban className="w-4 h-4 mr-2" />
+                    Abbrechen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Auktion wird abgebrochen. Es werden keine Benachrichtigungen an Bieter oder Verkäufer versendet.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Zurück</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={() => closeAuctionMutation.mutate()}
+                      onClick={() => cancelAuctionMutation.mutate()}
                       className="bg-destructive hover:bg-destructive/90"
                     >
-                      Beenden
+                      Abbrechen
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

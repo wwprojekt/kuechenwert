@@ -522,7 +522,7 @@ Deno.serve(async (req) => {
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'seller_sold',
               motorhomeModel: motorhomeName,
-              auctionUrl: `https://caravanwert.de/dashboard`,
+              auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome?.id}`,
               currentBid: `€${salePrice.toLocaleString()}`,
             },
           });

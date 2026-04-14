@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
         adminContent += warningBox(`<strong>⚠️ ${errors.length} Fehler aufgetreten:</strong><br>${errors.map(e => `• ${e}`).join('<br>')}`);
       }
 
-      adminContent += button('Kaufchancen verwalten', `https://caravanwert.de/admin/post-auction-offers`);
+      adminContent += button('Kaufchancen verwalten', `https://caravanwert.de/admin/offers`);
 
       await sendAdminEmail(supabase, `Kaufchance gestartet: ${motorhomeName}`, adminContent);
 
@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
             name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
             type: sellerType,
             motorhomeModel: motorhomeName,
-            auctionUrl: `https://caravanwert.de/dashboard`,
+            auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`,
             currentBid: highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : undefined,
           },
         }).catch((e: any) => console.error('Error sending seller end notification:', e));

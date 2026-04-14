@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
                           name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                           type: 'kaufchance_expired',
                           motorhomeModel: motorhomeName,
-                          auctionUrl: 'https://caravanwert.de/kaufen',
+                          auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
                         },
                       }).catch((e: any) => console.error(`Failed to notify bidder ${inv.bidder_id}:`, e));
                     }
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
                         name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                         type: 'kaufchance_expired',
                         motorhomeModel: motorhomeName,
-                        auctionUrl: 'https://caravanwert.de/dashboard',
+                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh?.id}`,
                       },
                     }).catch((e: any) => console.error(`Failed to notify seller ${mh.seller_id}:`, e));
                   }

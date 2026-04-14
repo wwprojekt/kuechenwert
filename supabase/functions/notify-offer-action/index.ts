@@ -5,10 +5,11 @@
  * Läuft serverseitig mit service_role, sodass alle Profile gelesen werden können (kein RLS-Problem).
  *
  * Unterstützte Aktionen:
- *   - new_offer:      Händler gibt ein Angebot ab → Verkäufer + Admin werden benachrichtigt
- *   - offer_rejected:  Verkäufer/Admin lehnt ab → Käufer wird benachrichtigt
- *   - counter_offer:   Verkäufer/Admin macht Gegenangebot → Käufer wird benachrichtigt
- *   - admin_offer:     Admin erstellt Angebot im Namen eines Händlers → Verkäufer wird benachrichtigt
+ *   - new_offer:            Händler gibt ein Angebot ab → Verkäufer + Admin werden benachrichtigt
+ *   - offer_rejected:       Verkäufer/Admin lehnt ab → Käufer wird benachrichtigt
+ *   - counter_offer:        Verkäufer/Admin macht Gegenangebot → Käufer wird benachrichtigt
+ *   - admin_offer:          Admin erstellt Angebot im Namen eines Händlers → Verkäufer wird benachrichtigt
+ *   - buyer_reject_counter: Käufer lehnt Gegenangebot ab → Verkäufer + Admin werden benachrichtigt
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
@@ -22,7 +23,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 interface NotifyRequest {
-  action: 'new_offer' | 'offer_rejected' | 'counter_offer' | 'admin_offer';
+  action: 'new_offer' | 'offer_rejected' | 'counter_offer' | 'admin_offer' | 'buyer_reject_counter';
   offerId?: string;
   auctionId: string;
   buyerId: string;
@@ -88,6 +89,18 @@ async function authorizeNotifyOfferRequest(
       .eq('auction_id', body.auctionId)
       .eq('buyer_id', body.buyerId)
       .in('status', ['pending', 'countered'])
+      .maybeSingle();
+    if (!offer) return base;
+    return { authorized: true };
+  }
+
+  if (body.action === 'buyer_reject_counter') {
+    if (user.id !== body.buyerId) return base;
+    const { data: offer } = await supabase
+      .from('post_auction_offers')
+      .select('id')
+      .eq('auction_id', body.auctionId)
+      .eq('buyer_id', body.buyerId)
       .maybeSingle();
     if (!offer) return base;
     return { authorized: true };
@@ -286,6 +299,67 @@ const handler = async (req: Request): Promise<Response> => {
             })
           );
           console.log(`[notify-offer-action] → buyer_counter_offer to ${buyerProfile.email}`);
+        }
+        break;
+      }
+
+      case 'buyer_reject_counter': {
+        // Verkäufer benachrichtigen: Käufer hat Gegenangebot abgelehnt
+        if (sellerProfile?.email) {
+          notifications.push(
+            supabase.functions.invoke('send-auction-notification', {
+              body: {
+                email: sellerProfile.email,
+                name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                type: 'seller_buyer_rejected',
+                motorhomeModel: motorhomeName,
+                auctionUrl: 'https://caravanwert.de/dashboard',
+                offerAmount: formattedOffer,
+                counterAmount: formattedCounter,
+              },
+            })
+          );
+          console.log(`[notify-offer-action] → seller_buyer_rejected to ${sellerProfile.email}`);
+        }
+
+        // Admin-CC
+        try {
+          const { data: adminRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'admin');
+
+          if (adminRoles && adminRoles.length > 0) {
+            const adminIds = adminRoles.map((r: { user_id: string }) => r.user_id);
+            const { data: adminProfiles } = await supabase
+              .from('profiles')
+              .select('email, first_name')
+              .in('id', adminIds);
+
+            if (adminProfiles) {
+              for (const admin of adminProfiles) {
+                if (admin.email && admin.email !== sellerProfile?.email) {
+                  notifications.push(
+                    supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: admin.email,
+                        name: admin.first_name || 'Admin',
+                        type: 'seller_buyer_rejected',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: 'https://caravanwert.de/admin/post-auction-offers',
+                        offerAmount: formattedOffer,
+                        counterAmount: formattedCounter,
+                        buyerName: buyerDisplayName,
+                      },
+                    })
+                  );
+                  console.log(`[notify-offer-action] → admin CC buyer_reject_counter to ${admin.email}`);
+                }
+              }
+            }
+          }
+        } catch (adminErr) {
+          console.error('[notify-offer-action] Failed to send admin CC:', adminErr);
         }
         break;
       }

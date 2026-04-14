@@ -11,7 +11,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired" | "seller_buyer_rejected";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -369,6 +369,26 @@ const handler = async (req: Request): Promise<Response> => {
           ${button('Gegenangebot ansehen', auctionUrl, settingsData)}
           ${paragraph(`<em>Reagieren Sie zeitnah, um die Kaufchance nicht zu verpassen!</em>`)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
+        `;
+        break;
+
+      case "seller_buyer_rejected":
+        subject = `Gegenangebot abgelehnt: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Ein H\u00e4ndler hat Ihr Gegenangebot abgelehnt.</strong>')}
+          ${paragraph('Der H\u00e4ndler hat sich entschieden, Ihr Gegenangebot f\u00fcr das folgende Fahrzeug nicht anzunehmen.')}
+          ${infoBox('Verhandlungsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${offerAmount ? detailRow('Angebot des H\u00e4ndlers', offerAmount) : ''}
+            ${counterAmount ? detailRow('Ihr Gegenangebot', counterAmount) : ''}
+            ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Wie geht es weiter?</strong>')}
+          ${paragraph('Sie k\u00f6nnen dem H\u00e4ndler ein neues, niedrigeres Gegenangebot machen oder auf weitere Angebote von anderen eingeladenen Bietern warten.')}
+          ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
         `;
         break;
 

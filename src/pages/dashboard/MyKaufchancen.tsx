@@ -410,15 +410,14 @@ export default function MyKaufchancen() {
         loadData();
         return;
       }
-      // Notify seller that buyer rejected the counter-offer
       try {
         await invokeWithAuth('notify-offer-action', {
           body: {
-            action: 'offer_rejected',
+            action: 'buyer_reject_counter',
             auctionId: offer.auction_id,
             buyerId: user!.id,
             offerAmount: Number(offer.offer_amount),
-            sellerResponse: 'Käufer hat das Gegenangebot abgelehnt',
+            counterAmount: Number(offer.counter_offer_amount),
           },
         });
       } catch (notifyErr) {

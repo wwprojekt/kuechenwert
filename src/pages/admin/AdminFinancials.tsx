@@ -54,7 +54,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { getInvoiceStatistics, sendInvoiceEmail } from '@/lib/invoiceGenerator';
+import { sendInvoiceEmail } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -123,13 +123,6 @@ export default function AdminFinancials() {
     });
   };
 
-  // Fetch financial statistics
-  const { data: _stats } = useQuery({
-    queryKey: ['financial-stats'],
-    queryFn: getInvoiceStatistics,
-    refetchInterval: 30000,
-  });
-
   // Fetch all invoices with customer_number
   const { data: invoices, isLoading: invoicesLoading } = useQuery({
     queryKey: ['admin-invoices'],
@@ -196,6 +189,7 @@ export default function AdminFinancials() {
           auction:auctions(id, motorhome:motorhomes(id, manufacturer, model))
         `)
         .in('payment_status', ['pending', 'partial'])
+        .neq('status', 'cancelled')
         .lt('due_date', new Date().toISOString())
         .order('due_date');
       
@@ -223,6 +217,7 @@ export default function AdminFinancials() {
           reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
         `)
         .in('payment_status', ['pending', 'partial'])
+        .neq('status', 'cancelled')
         .lt('due_date', dunningThresholdDate.toISOString())
         .order('due_date');
       
@@ -304,7 +299,6 @@ export default function AdminFinancials() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payment-history'] });
       toast({
@@ -377,6 +371,7 @@ export default function AdminFinancials() {
         .from('invoices')
         .update({
           status: 'cancelled',
+          payment_status: 'cancelled',
           updated_at: new Date().toISOString(),
         })
         .eq('id', invoiceId);
@@ -384,7 +379,6 @@ export default function AdminFinancials() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
       toast({
@@ -506,32 +500,34 @@ export default function AdminFinancials() {
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
-  // Extended statistics
-  const totalNet = invoices?.reduce((sum, inv) => sum + Number(inv.net_amount || 0), 0) || 0;
-  const totalTax = invoices?.reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0) || 0;
-  const totalGross = invoices?.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0) || 0;
-  const totalPaid = invoices?.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0) || 0;
+  // Extended statistics – exclude cancelled invoices from all KPIs
+  const activeInvoices = invoices?.filter(inv => inv.status !== 'cancelled') || [];
+  const totalNet = activeInvoices.reduce((sum, inv) => sum + Number(inv.net_amount || 0), 0);
+  const totalTax = activeInvoices.reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0);
+  const totalGross = activeInvoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
+  const totalPaid = activeInvoices.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
   const totalOutstanding = totalGross - totalPaid;
-  const overdueCount = invoices?.filter(inv => 
+  const overdueCount = activeInvoices.filter(inv => 
     (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
     new Date(inv.due_date) < new Date()
-  ).length || 0;
-  const overdueAmount = invoices?.filter(inv => 
+  ).length;
+  const overdueAmount = activeInvoices.filter(inv => 
     (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
     new Date(inv.due_date) < new Date()
-  ).reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0) || 0;
-  const paidCount = invoices?.filter(inv => inv.payment_status === 'paid').length || 0;
-  const avgInvoiceAmount = invoices?.length ? totalGross / invoices.length : 0;
+  ).reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0);
+  const paidCount = activeInvoices.filter(inv => inv.payment_status === 'paid').length;
+  const cancelledCount = invoices?.filter(inv => inv.status === 'cancelled').length || 0;
+  const avgInvoiceAmount = activeInvoices.length ? totalGross / activeInvoices.length : 0;
   const paymentRate = totalGross > 0 ? (totalPaid / totalGross) * 100 : 0;
   const dunningCount = dunningInvoices?.length || 0;
   const dunningAmount = dunningInvoices?.reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0) || 0;
 
-  // This month stats
-  const thisMonthInvoices = invoices?.filter(inv => {
+  // This month stats – also exclude cancelled
+  const thisMonthInvoices = activeInvoices.filter(inv => {
     const d = new Date(inv.invoice_date || inv.created_at);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }) || [];
+  });
   const thisMonthRevenue = thisMonthInvoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
   const thisMonthCount = thisMonthInvoices.length;
 
@@ -558,7 +554,7 @@ export default function AdminFinancials() {
             size="sm"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-              queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+              
               queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
               queryClient.invalidateQueries({ queryKey: ['payment-history'] });
             }}
@@ -585,7 +581,7 @@ export default function AdminFinancials() {
               <span>MwSt: {totalTax.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              {invoices?.length || 0} Rechnungen gesamt
+              {activeInvoices.length} Rechnungen{cancelledCount > 0 && ` (${cancelledCount} storniert)`}
             </p>
           </CardContent>
         </Card>

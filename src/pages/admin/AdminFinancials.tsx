@@ -246,7 +246,7 @@ export default function AdminFinancials() {
       { key: "gross_amount", label: "Brutto", format: (value: any) => Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
       { key: "amount_paid", label: "Bezahlt", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
       { key: "gross_amount", label: "Restbetrag", format: (_value: any, row: any) => (Number(row.gross_amount) - Number(row.amount_paid || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
-      { key: "payment_status", label: "Status", format: (value: any) => value === 'paid' ? 'Bezahlt' : value === 'partial' ? 'Teilbezahlt' : value === 'cancelled' ? 'Storniert' : 'Offen' },
+      { key: "status", label: "Status", format: (value: any, row: any) => row.status === 'cancelled' ? 'Storniert' : row.payment_status === 'paid' ? 'Bezahlt' : row.payment_status === 'partial' ? 'Teilbezahlt' : 'Offen' },
       { key: "reverse_charge", label: "Reverse Charge", format: (value: any) => value ? 'Ja' : 'Nein' },
       { key: "payment_method", label: "Zahlungsart", format: (value: any) => value === 'bank_transfer' ? 'Überweisung' : value === 'cash' ? 'Bar' : value || '' },
       { key: "invoice_date", label: "Rechnungsdatum", format: (value: any) => value ? new Date(value).toLocaleDateString("de-DE") : "" },
@@ -376,7 +376,6 @@ export default function AdminFinancials() {
       const { error } = await supabase
         .from('invoices')
         .update({
-          payment_status: 'cancelled',
           status: 'cancelled',
           updated_at: new Date().toISOString(),
         })
@@ -413,7 +412,7 @@ export default function AdminFinancials() {
       return <Badge className="bg-blue-100 text-blue-800">Teilbezahlt</Badge>;
     }
     
-    if (invoice.payment_status === 'cancelled') {
+    if (invoice.status === 'cancelled') {
       return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
     }
     
@@ -495,7 +494,7 @@ export default function AdminFinancials() {
       (statusFilter === 'paid' && invoice.payment_status === 'paid') ||
       (statusFilter === 'pending' && invoice.payment_status === 'pending') ||
       (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
-      (statusFilter === 'cancelled' && invoice.payment_status === 'cancelled') ||
+      (statusFilter === 'cancelled' && invoice.status === 'cancelled') ||
       (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && new Date(invoice.due_date) < new Date());
     
     const matchesType = typeFilter === 'all' ||
@@ -946,8 +945,8 @@ export default function AdminFinancials() {
                               setInvoiceToDelete(invoice);
                               setDeleteDialogOpen(true);
                             }}
-                            disabled={invoice.payment_status === 'cancelled' || invoice.payment_status === 'paid'}
-                            title={invoice.payment_status === 'cancelled' ? 'Bereits storniert' : invoice.payment_status === 'paid' ? 'Bezahlte Rechnungen können nicht storniert werden' : 'Rechnung stornieren'}
+                            disabled={invoice.status === 'cancelled' || invoice.payment_status === 'paid'}
+                            title={invoice.status === 'cancelled' ? 'Bereits storniert' : invoice.payment_status === 'paid' ? 'Bezahlte Rechnungen können nicht storniert werden' : 'Rechnung stornieren'}
                           >
                             <XCircle className="h-4 w-4" />
                           </Button>

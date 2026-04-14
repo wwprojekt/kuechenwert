@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth } from "@/lib/sessionGuard";
+
 import { toast } from "sonner";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { Card } from "@/components/ui/card";
@@ -34,8 +34,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MoreHorizontal, Eye, Edit, Trash2, Gavel, Car, Phone,
   Search, Package, Radio, XCircle, CheckCircle2, ArrowUpDown,
-  ArrowUp, ArrowDown, ImageOff, Camera, Download, AlertTriangle,
-  Play, X, Ban, RotateCw,
+  ArrowUp, ArrowDown, ImageOff, Camera, AlertTriangle,
+  Play, Ban,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -250,7 +250,7 @@ export default function AdminMotorhomes() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; motorhomeName: string } | null>(null);
-  const [auctionActionType, setAuctionActionType] = useState<"activate" | "close" | "cancel" | null>(null);
+  const [auctionActionType, setAuctionActionType] = useState<"activate" | "cancel" | null>(null);
 
   // Filters & Search
   const [activeTab, setActiveTab] = useState<TabKey>("alle");
@@ -316,20 +316,6 @@ export default function AdminMotorhomes() {
     onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
   });
 
-  const closeAuctionMutation = useMutation({
-    mutationFn: async (auctionId: string) => {
-      const { error } = await invokeWithAuth("close-auction", {
-        body: { auctionId },
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich geschlossen");
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
-    },
-    onError: () => toast.error("Fehler beim Schließen der Auktion"),
-  });
-
   const cancelAuctionMutation = useMutation({
     mutationFn: async (auctionId: string) => {
       const { error } = await supabase
@@ -349,7 +335,6 @@ export default function AdminMotorhomes() {
     if (!auctionActionTarget || !auctionActionType) return;
     const aId = auctionActionTarget.auction.id;
     if (auctionActionType === "activate") activateAuctionMutation.mutate(aId);
-    else if (auctionActionType === "close") closeAuctionMutation.mutate(aId);
     else if (auctionActionType === "cancel") cancelAuctionMutation.mutate(aId);
     setAuctionActionTarget(null);
     setAuctionActionType(null);
@@ -735,13 +720,7 @@ export default function AdminMotorhomes() {
                                   Auktion aktivieren
                                 </DropdownMenuItem>
                               )}
-                              {mAuction.status === "active" && (
-                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("close"); }}>
-                                  <X className="w-4 h-4 mr-2" />
-                                  Auktion schließen
-                                </DropdownMenuItem>
-                              )}
-                              {(mAuction.status === "active" || mAuction.status === "draft") && (
+                              {(mAuction.status === "active" || mAuction.status === "draft" || mAuction.status === "kaufchance") && (
                                 <DropdownMenuItem
                                   onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("cancel"); }}
                                   className="text-destructive focus:text-destructive"
@@ -990,18 +969,14 @@ export default function AdminMotorhomes() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {auctionActionType === "activate" && "Auktion aktivieren?"}
-              {auctionActionType === "close" && "Auktion schließen?"}
               {auctionActionType === "cancel" && "Auktion abbrechen?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {auctionActionType === "activate" && (
                 <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.</>
               )}
-              {auctionActionType === "close" && (
-                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird sofort geschlossen. Falls Gebote vorhanden sind, wird der Höchstbietende benachrichtigt.</>
-              )}
               {auctionActionType === "cancel" && (
-                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet.</>
+                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet. Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1012,7 +987,6 @@ export default function AdminMotorhomes() {
               className={auctionActionType === "cancel" ? "bg-destructive hover:bg-destructive/90" : auctionActionType === "activate" ? "bg-green-600 hover:bg-green-700" : ""}
             >
               {auctionActionType === "activate" && "Aktivieren"}
-              {auctionActionType === "close" && "Schließen"}
               {auctionActionType === "cancel" && "Abbrechen"}
             </AlertDialogAction>
           </AlertDialogFooter>

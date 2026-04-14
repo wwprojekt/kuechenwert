@@ -286,39 +286,28 @@ export default function AdminContracts() {
 
   const resendContract = useMutation({
     mutationFn: async (contract: PurchaseContract) => {
-      if (!contract.buyer_id) throw new Error("Kein Käufer zugeordnet");
+      if (!contract.buyer_id && !contract.seller_id) {
+        throw new Error("Kein Käufer oder Verkäufer zugeordnet");
+      }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("email, first_name, last_name, company_name")
-        .eq("id", contract.buyer_id)
-        .single();
-      if (profileError || !profile?.email) throw new Error("E-Mail-Adresse des Käufers nicht gefunden");
-
-      const buyerLabel = profile.company_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || contract.buyer_name || "Käufer";
-      const contractUrl = contract.buyer_contract_url || contract.contract_url;
-      const downloadLink = contractUrl ? `<p><a href="${contractUrl}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">Kaufvertrag herunterladen</a></p>` : "";
-
-      const bodyHtml = `
-        <p>Guten Tag ${buyerLabel},</p>
-        <p>anbei erhalten Sie erneut Ihren Kaufvertrag <strong>${contract.contract_number}</strong> für das Fahrzeug <strong>${contract.vehicle_description || "–"}</strong>.</p>
-        ${downloadLink}
-        <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-        <p>Mit freundlichen Grüßen,<br>Ihr CaravanWert Team</p>
-      `;
-
-      const { error } = await invokeWithAuth("send-admin-email", {
+      const { data, error } = await invokeWithAuth("resend-purchase-contract", {
         body: {
-          to: profile.email,
-          subject: `Kaufvertrag ${contract.contract_number} – ${contract.vehicle_description || ""}`,
-          body_html: bodyHtml,
-          recipient_name: buyerLabel,
+          contractId: contract.id,
+          targets: "both",
         },
       });
       if (error) throw error;
+      if (data && !data.success) {
+        const failedTargets = (data.results || [])
+          .filter((r: { success: boolean }) => !r.success)
+          .map((r: { target: string; error?: string }) => `${r.target}: ${r.error}`)
+          .join(", ");
+        throw new Error(failedTargets || "Unbekannter Fehler");
+      }
+      return data;
     },
     onSuccess: () => {
-      toast({ title: "Vertrag erneut gesendet" });
+      toast({ title: "Kaufvertrag erneut an Verkäufer und Käufer gesendet (mit PDF)" });
     },
     onError: (error: Error) => {
       toast({

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Car, Clock, TrendingUp, RotateCw, X, Play, Edit, Trash2,
-  Loader2, Mail, MapPin, AlertTriangle, FileEdit, Radio,
+  Car, Clock, TrendingUp, RotateCw, Ban, Play, Edit, Trash2,
+  Loader2, Mail, AlertTriangle, FileEdit, Radio,
   XCircle, CheckCircle2,
 } from "lucide-react";
 import { useTableSort } from "@/hooks/useTableSort";
@@ -264,7 +264,7 @@ export default function AdminAuctions() {
   };
 
   // ---- Data Query ----
-  const { data: auctions, isLoading } = useQuery({
+  const { data: auctions, isLoading, error: queryError } = useQuery({
     queryKey: ["adminAuctions", bidderFilter],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -563,20 +563,20 @@ export default function AdminAuctions() {
     },
   });
 
-  const closeAuctionMutation = useMutation({
+  const cancelAuctionMutation = useMutation({
     mutationFn: async (auctionId: string) => {
-      const { data, error } = await invokeWithAuth('close-auction', {
-        body: { auctionId },
-      });
+      const { error } = await supabase
+        .from("auctions")
+        .update({ status: "cancelled" })
+        .eq("id", auctionId);
       if (error) throw error;
-      return data;
     },
     onSuccess: () => {
-      toast.success("Auktion erfolgreich geschlossen");
+      toast.success("Auktion erfolgreich abgebrochen");
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
     },
     onError: (error: any) => {
-      toast.error("Fehler beim Schließen der Auktion");
+      toast.error("Fehler beim Abbrechen der Auktion");
       logger.error(error);
     },
   });
@@ -945,29 +945,30 @@ export default function AdminAuctions() {
               </AlertDialog>
             )}
 
-            {/* Schließen - bei Laufend oder Nicht verkauft (ended) */}
-            {(auction.status === "active" || auction.status === "ended") && (
+            {/* Abbrechen - bei Laufend oder Kaufchance */}
+            {(auction.status === "active" || auction.status === "kaufchance") && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Auktion manuell schließen">
-                    <X className="w-4 h-4" />
+                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Auktion abbrechen">
+                    <Ban className="w-4 h-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion manuell schließen?</AlertDialogTitle>
+                    <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Die Auktion wird manuell geschlossen und der Höchstbietende (falls vorhanden) gewinnt.
-                      Dieser Vorgang kann nicht rückgängig gemacht werden.
+                      Die Auktion wird abgebrochen. Es werden keine Benachrichtigungen an Bieter oder Verkäufer versendet.
+                      Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogCancel>Zurück</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={() => closeAuctionMutation.mutate(auction.id)}
-                      disabled={closeAuctionMutation.isPending}
+                      onClick={() => cancelAuctionMutation.mutate(auction.id)}
+                      disabled={cancelAuctionMutation.isPending}
+                      className="bg-destructive hover:bg-destructive/90"
                     >
-                      Schließen
+                      Abbrechen
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1105,6 +1106,32 @@ export default function AdminAuctions() {
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
             <span className="text-sm text-blue-800 dark:text-blue-200">Auktionsentwurf wird erstellt...</span>
+          </div>
+        </Card>
+      )}
+
+      {/* Error state */}
+      {queryError && (
+        <Card className="p-4 border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                Fehler beim Laden der Auktionen
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                {queryError.message}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-400 text-red-700 shrink-0"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["adminAuctions"] })}
+            >
+              <RotateCw className="w-4 h-4 mr-1" />
+              Erneut laden
+            </Button>
           </div>
         </Card>
       )}

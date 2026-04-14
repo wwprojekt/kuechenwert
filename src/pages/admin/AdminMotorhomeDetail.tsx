@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth } from "@/lib/sessionGuard";
+
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -39,17 +39,12 @@ import {
   Phone,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   MapPin,
   FileText,
   Euro,
-  ExternalLink,
   Send,
   Play,
-  X,
   Ban,
-  Timer,
-  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -222,7 +217,7 @@ export default function AdminMotorhomeDetail() {
     if (typeof auctionData === 'object') return auctionData;
     return null;
   })();
-  const activeAuction = relevantAuction?.status === 'active' ? relevantAuction : null;
+
 
   // Auction mutations
   const activateAuctionMutation = useMutation({
@@ -241,19 +236,6 @@ export default function AdminMotorhomeDetail() {
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
     },
     onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
-  });
-
-  const closeAuctionMutation = useMutation({
-    mutationFn: async () => {
-      if (!relevantAuction) throw new Error("No auction");
-      const { error } = await invokeWithAuth("close-auction", { body: { auctionId: relevantAuction.id } });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich geschlossen");
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
-    },
-    onError: () => toast.error("Fehler beim Schließen der Auktion"),
   });
 
   const cancelAuctionMutation = useMutation({
@@ -318,31 +300,7 @@ export default function AdminMotorhomeDetail() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            {relevantAuction?.status === "active" && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <X className="w-4 h-4 mr-2" />
-                    Auktion schließen
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion schließen?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Die Auktion wird sofort geschlossen. Falls Gebote vorhanden sind, wird der Höchstbietende benachrichtigt.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Zurück</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => closeAuctionMutation.mutate()}>
-                      Schließen
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            {(relevantAuction?.status === "active" || relevantAuction?.status === "draft") && (
+            {(relevantAuction?.status === "active" || relevantAuction?.status === "draft" || relevantAuction?.status === "kaufchance") && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" variant="destructive">
@@ -355,6 +313,7 @@ export default function AdminMotorhomeDetail() {
                     <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Die Auktion wird abgebrochen. Keine Benachrichtigungen werden versendet.
+                      Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

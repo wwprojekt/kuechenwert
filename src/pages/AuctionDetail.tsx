@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useDealerPending } from "@/hooks/useDealerPending";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 import { parseGermanNumber, formatBidDisplay } from '@/lib/parseGermanNumber';
@@ -123,6 +124,7 @@ const AuctionDetail = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { primaryRole, isDealer, isLoading: isRoleLoading } = useUserRole();
+  const { isPendingDealer, isRejectedDealer } = useDealerPending();
   const isAdmin = primaryRole === 'admin';
   const canSeePrices = isDealer || isAdmin;
   const siteName = settings?.site_name || 'CaravanWert';
@@ -1985,6 +1987,25 @@ const AuctionDetail = () => {
                       Gebote sind verbindlich. Mindesterhöhung: €50
                     </p>
                   </div>
+                  ) : (isPendingDealer || isRejectedDealer) ? (
+                  <div className="space-y-4">
+                    <div className="p-4 border-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 rounded-lg text-center">
+                      <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
+                      <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                        {isPendingDealer ? 'Ihr Händler-Antrag wird geprüft' : 'Händler-Antrag abgelehnt'}
+                      </h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
+                        {isPendingDealer
+                          ? 'Sie können bieten, sobald wir Ihren Antrag freigeschaltet haben. Die Prüfung dauert in der Regel 1–2 Werktage.'
+                          : 'Ihr Antrag wurde leider abgelehnt. Bitte prüfen Sie die Details in Ihrem Dashboard und reichen Sie ggf. erneut ein.'}
+                      </p>
+                      <Link to="/dashboard">
+                        <Button className="w-full" variant="default">
+                          Zum Dashboard
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                   ) : (
                   <div className="space-y-4">
                     <div className="p-4 border-2 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg text-center">
@@ -2090,7 +2111,9 @@ const AuctionDetail = () => {
                     <Lock className="w-10 h-10 mx-auto text-amber-500/50 mb-3" />
                     <p className="text-muted-foreground font-medium text-sm">Gebotsverlauf nur für Händler sichtbar</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Melden Sie sich als Händler an, um den Gebotsverlauf zu sehen.
+                      {(isPendingDealer || isRejectedDealer)
+                        ? 'Der Gebotsverlauf wird sichtbar, sobald Ihr Händler-Antrag freigeschaltet wurde.'
+                        : 'Melden Sie sich als Händler an, um den Gebotsverlauf zu sehen.'}
                     </p>
                     {!user ? (
                       <div className="flex gap-2 justify-center mt-4">
@@ -2104,6 +2127,12 @@ const AuctionDetail = () => {
                           </Button>
                         </Link>
                       </div>
+                    ) : (isPendingDealer || isRejectedDealer) ? (
+                      <Link to="/dashboard" className="mt-4 inline-block">
+                        <Button size="sm" variant="outline">
+                          Zum Dashboard
+                        </Button>
+                      </Link>
                     ) : (
                       <Link to="/register/haendler" className="mt-4 inline-block">
                         <Button size="sm" variant="outline">

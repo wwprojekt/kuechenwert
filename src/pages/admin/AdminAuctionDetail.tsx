@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth } from "@/lib/sessionGuard";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -20,7 +19,6 @@ import {
   Euro,
   Calendar,
   Play,
-  X,
   Ban,
   Edit,
   ExternalLink,
@@ -145,25 +143,6 @@ export default function AdminAuctionDetail() {
     onError: (error) => {
       logger.error("Activate auction error:", error);
       toast.error("Fehler beim Aktivieren der Auktion");
-    },
-  });
-
-  // Close auction mutation
-  const closeAuctionMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await invokeWithAuth("close-auction", {
-        body: { auctionId: id },
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich geschlossen");
-      logEvent({ action: "auction_closed", entityType: "auction", entityId: id });
-      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
-    },
-    onError: (error) => {
-      logger.error("Close auction error:", error);
-      toast.error("Fehler beim Schließen der Auktion");
     },
   });
 
@@ -319,37 +298,12 @@ export default function AdminAuctionDetail() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            {auction.status === "active" && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <X className="w-4 h-4 mr-2" />
-                    Schließen
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion schließen?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Die Auktion wird sofort geschlossen. Falls Gebote vorhanden sind, wird der
-                      Höchstbietende benachrichtigt.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Zurück</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => closeAuctionMutation.mutate()}>
-                      Schließen
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            {(auction.status === "active" || auction.status === "draft") && (
+            {(auction.status === "active" || auction.status === "draft" || auction.status === "kaufchance") && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" variant="destructive">
                     <Ban className="w-4 h-4 mr-2" />
-                    Abbrechen
+                    Auktion abbrechen
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -357,6 +311,7 @@ export default function AdminAuctionDetail() {
                     <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Die Auktion wird abgebrochen. Es werden keine Benachrichtigungen an Bieter oder Verkäufer versendet.
+                      Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

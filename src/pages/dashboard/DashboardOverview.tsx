@@ -166,58 +166,93 @@ export default function DashboardOverview() {
 
       if (error) throw error;
 
-      // For each motorhome with an active auction, get bid stats
-      const enriched = await Promise.all(
-        (motorhomes || []).map(async (mh) => {
+      // Batch-fetch bids, addenda, and offers for all auctions (avoids N+1 queries)
+      const auctionIds = (motorhomes || [])
+        .map((mh) => {
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
-          let bidStats = null;
+          return auction?.id;
+        })
+        .filter(Boolean) as string[];
 
-          if (auction) {
-            const { data: bids } = await supabase
+      const kaufchanceAuctionIds = (motorhomes || [])
+        .map((mh) => {
+          const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+          return auction?.status === "kaufchance" ? auction.id : null;
+        })
+        .filter(Boolean) as string[];
+
+      const [allBidsRes, allAddendaRes, allOffersRes] = await Promise.all([
+        auctionIds.length > 0
+          ? supabase
               .from("bids")
-              .select("amount, created_at, bidder_id")
-              .eq("auction_id", auction.id)
-              .order("created_at", { ascending: false });
-
-            if (bids && bids.length > 0) {
-              bidStats = {
-                totalBids: bids.length,
-                uniqueBidders: new Set(bids.map((b) => b.bidder_id)).size,
-                highestBid: Math.max(...bids.map((b) => Number(b.amount))),
-                latestBidTime: bids[0].created_at,
-              };
-            }
-          }
-
-          // Get addenda count
-          let addendaCount = 0;
-          if (auction) {
-            const { count } = await supabase
+              .select("auction_id, amount, created_at, bidder_id")
+              .in("auction_id", auctionIds)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        auctionIds.length > 0
+          ? supabase
               .from("auction_addenda")
-              .select("*", { count: "exact", head: true })
-              .eq("auction_id", auction.id);
-            addendaCount = count || 0;
+              .select("auction_id")
+              .in("auction_id", auctionIds)
+          : Promise.resolve({ data: [] }),
+        kaufchanceAuctionIds.length > 0
+          ? supabase
+              .from("post_auction_offers")
+              .select("auction_id, id, offer_amount, status")
+              .in("auction_id", kaufchanceAuctionIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const allBids = allBidsRes.data || [];
+      const allAddenda = allAddendaRes.data || [];
+      const allOffers = allOffersRes.data || [];
+
+      // Group results by auction_id
+      const bidsByAuction = allBids.reduce<Record<string, typeof allBids>>((acc, b) => {
+        (acc[b.auction_id] ||= []).push(b);
+        return acc;
+      }, {});
+      const addendaByAuction = allAddenda.reduce<Record<string, number>>((acc, a) => {
+        acc[a.auction_id] = (acc[a.auction_id] || 0) + 1;
+        return acc;
+      }, {});
+      const offersByAuction = allOffers.reduce<Record<string, typeof allOffers>>((acc, o) => {
+        (acc[o.auction_id] ||= []).push(o);
+        return acc;
+      }, {});
+
+      const enriched = (motorhomes || []).map((mh) => {
+        const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+        let bidStats = null;
+        let addendaCount = 0;
+        let kaufchanceInfo = null;
+
+        if (auction) {
+          const bids = bidsByAuction[auction.id] || [];
+          if (bids.length > 0) {
+            bidStats = {
+              totalBids: bids.length,
+              uniqueBidders: new Set(bids.map((b) => b.bidder_id)).size,
+              highestBid: Math.max(...bids.map((b) => Number(b.amount))),
+              latestBidTime: bids[0].created_at,
+            };
           }
+          addendaCount = addendaByAuction[auction.id] || 0;
 
-          let kaufchanceInfo = null;
-          if (auction && auction.status === 'kaufchance') {
-            const { data: offers } = await supabase
-              .from('post_auction_offers')
-              .select('id, offer_amount, status')
-              .eq('auction_id', auction.id);
-
-            if (offers && offers.length > 0) {
+          if (auction.status === "kaufchance") {
+            const offers = offersByAuction[auction.id] || [];
+            if (offers.length > 0) {
               kaufchanceInfo = {
                 totalOffers: offers.length,
-                pendingOffers: offers.filter((o: any) => o.status === 'pending').length,
+                pendingOffers: offers.filter((o: any) => o.status === "pending").length,
                 highestOffer: Math.max(...offers.map((o: any) => Number(o.offer_amount))),
               };
             }
           }
+        }
 
-          return { ...mh, bidStats, addendaCount, kaufchanceInfo };
-        })
-      );
+        return { ...mh, bidStats, addendaCount, kaufchanceInfo };
+      });
 
       return enriched;
     },
@@ -362,14 +397,14 @@ export default function DashboardOverview() {
       };
     }
 
-    if (auction.status === "scheduled") {
+    if (auction.status === "draft") {
       return {
         step: 3,
-        label: "Auktion geplant",
-        sublabel: `Startet am ${format(new Date(auction.start_time), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}`,
-        color: "text-indigo-600",
-        bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
-        borderColor: "border-indigo-200 dark:border-indigo-800",
+        label: "Wartet auf Freischaltung",
+        sublabel: "Unser Support-Team prüft und aktiviert Ihre Auktion in Kürze",
+        color: "text-amber-600",
+        bgColor: "bg-amber-100 dark:bg-amber-900/30",
+        borderColor: "border-amber-200 dark:border-amber-800",
       };
     }
 
@@ -417,9 +452,20 @@ export default function DashboardOverview() {
       };
     }
 
+    if (auction.status === "cancelled") {
+      return {
+        step: 6,
+        label: "Auktion abgebrochen",
+        sublabel: "Diese Auktion wurde abgebrochen. Bei Fragen kontaktieren Sie unser Support-Team.",
+        color: "text-red-600",
+        bgColor: "bg-red-100 dark:bg-red-900/30",
+        borderColor: "border-red-200 dark:border-red-800",
+      };
+    }
+
     return {
       step: 1,
-      label: auction.status || "Unbekannt",
+      label: "Unbekannt",
       sublabel: "",
       color: "text-gray-600",
       bgColor: "bg-gray-100 dark:bg-gray-900/30",
@@ -431,7 +477,7 @@ export default function DashboardOverview() {
   const timelineSteps = [
     { num: 1, label: "Eingereicht", icon: FileText },
     { num: 2, label: "Prüfung", icon: Search },
-    { num: 3, label: "Geplant", icon: Calendar },
+    { num: 3, label: "Freischaltung", icon: Calendar },
     { num: 4, label: "Live", icon: Gavel },
     { num: 5, label: "Kaufchance", icon: Sparkles },
     { num: 6, label: "Abgeschlossen", icon: CheckCircle2 },
@@ -1217,6 +1263,10 @@ export default function DashboardOverview() {
                             ? "Beendet"
                             : auction.status === "kaufchance"
                             ? "Kaufchance"
+                            : auction.status === "draft"
+                            ? "Entwurf"
+                            : auction.status === "cancelled"
+                            ? "Abgebrochen"
                             : auction.status}
                         </Badge>
                         <p className="text-sm font-semibold text-foreground mt-1 sm:mt-2">

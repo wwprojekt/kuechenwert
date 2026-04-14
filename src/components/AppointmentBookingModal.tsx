@@ -106,7 +106,7 @@ export const AppointmentBookingModal = ({
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('station_id', selectedStation)
-        .in('status', ['scheduled', 'verified'])
+        .in('status', ['scheduled', 'confirmed'])
         .gte('appointment_date', appointmentDateTime.toISOString())
         .lt('appointment_date', new Date(appointmentDateTime.getTime() + 60 * 60 * 1000).toISOString());
 

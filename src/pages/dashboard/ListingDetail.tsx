@@ -533,16 +533,28 @@ export default function ListingDetail() {
 
       {/* Title & Status */}
       <div>
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
             {motorhome.manufacturer} {motorhome.model}
           </h1>
           {auction && (
             <Badge
               variant={auction.status === "active" ? "default" : "secondary"}
-              className={auction.status === "active" ? "bg-green-500" : ""}
+              className={`whitespace-nowrap ${auction.status === "active" ? "bg-green-500" : ""}`}
             >
-              {auction.status === "active" ? "Aktiv" : auction.status}
+              {auction.status === "active"
+                ? "Aktiv"
+                : auction.status === "draft"
+                ? "Wartet auf Freischaltung"
+                : auction.status === "ended"
+                ? "Beendet"
+                : auction.status === "sold"
+                ? "Verkauft"
+                : auction.status === "kaufchance"
+                ? "Kaufchance"
+                : auction.status === "cancelled"
+                ? "Abgebrochen"
+                : auction.status}
             </Badge>
           )}
         </div>
@@ -550,6 +562,37 @@ export default function ListingDetail() {
           Erstellt am {format(new Date(motorhome.created_at), "dd. MMMM yyyy", { locale: de })}
         </p>
       </div>
+
+      {/* Draft status info banner */}
+      {auction?.status === "draft" && (
+        <Card className="border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <div className="flex-shrink-0 p-3 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                  Wartet auf Freischaltung
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Ihr Inserat wurde erfolgreich erstellt. Unser Support-Team prüft die Angaben und aktiviert
+                  Ihre Auktion in Kürze. Sie werden benachrichtigt, sobald die Auktion live geht.
+                </p>
+                {motorhome.reserve_price && (
+                  <div className="mt-3 inline-flex items-center gap-2 bg-white/60 dark:bg-black/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-1.5">
+                    <Euro className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">Ihr Mindestpreis:</span>
+                    <span className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                      {Number(motorhome.reserve_price).toLocaleString("de-DE")} €
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Photos */}
       {sortedPhotos.length > 0 && (

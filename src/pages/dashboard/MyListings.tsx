@@ -185,12 +185,25 @@ export default function MyListings() {
                   {/* Auction Info */}
                   {auction && (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-1">
                         <span className="text-sm text-muted-foreground">Status:</span>
                         <Badge
                           variant={auction.status === "active" ? "default" : "secondary"}
+                          className="whitespace-nowrap"
                         >
-                          {auction.status === "active" ? "Aktiv" : auction.status}
+                          {auction.status === "active"
+                            ? "Aktiv"
+                            : auction.status === "draft"
+                            ? "Wartet auf Freischaltung"
+                            : auction.status === "ended"
+                            ? "Beendet"
+                            : auction.status === "sold"
+                            ? "Verkauft"
+                            : auction.status === "kaufchance"
+                            ? "Kaufchance"
+                            : auction.status === "cancelled"
+                            ? "Abgebrochen"
+                            : auction.status}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
@@ -213,10 +226,18 @@ export default function MyListings() {
                   )}
 
                   {/* Price Info */}
+                  {motorhome.reserve_price && Number(motorhome.reserve_price) > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Mindestpreis:</span>
+                      <span className="font-semibold">
+                        €{Number(motorhome.reserve_price).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                   {motorhome.instant_price && Number(motorhome.instant_price) > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Sofortpreis:</span>
-                      <span className="font-semibold text-lg">
+                      <span className="font-semibold">
                         €{Number(motorhome.instant_price).toLocaleString()}
                       </span>
                     </div>

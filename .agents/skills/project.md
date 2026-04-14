@@ -39,8 +39,16 @@
 - [x] Conversion Optimizations Phase 1-6: Wizard Redesign, Progressive Disclosure, Zero-Friction (08.04.2026)
 - [x] Security: 11x search_path, SECURITY INVOKER, RLS Policies, audit_logs cleanup (08.04.2026)
 - [x] Repo-Bereinigung: Alle veralteten Analyse-MDs, Snapshots, Task-Exports gelöscht (11.04.2026)
+- [x] Bug 1: bids max_autobid_amount – Column-Level REVOKE + bids_public View (14.04.2026)
+- [x] Bug 3: AdminAnalytics Revenue – current_bid statt reserve_price, usersTrend-Fix (14.04.2026)
+- [x] Bug 4: AppointmentBookingModal – 'verified' → 'confirmed' Status-Fix (14.04.2026)
+- [x] Bug 5: AdminAuctions Recycling – Delete-before-activate + Error-Handling (14.04.2026)
+- [x] Bug 6: DashboardOverview N+1 → 3 Batch-Queries (14.04.2026)
 
 ### Offene Aufgaben
+- [ ] Bug 2: motorhomes RLS – sensible Spalten (reserve_price, contract_url, VIN, Kennzeichen) mit Column-Level Grants / View schützen (40+ Dateien betroffen, phased approach)
+- [ ] Bug 4 (DB): EXCLUSION-Constraint auf appointments(station_id, appointment_date) für echte TOCTOU-Absicherung
+- [ ] Bug 7: RESEND_API_KEY in Supabase Edge Function Secrets prüfen/erneuern
 - [ ] Blog-System: Tabelle + Seiten existieren, 0 Artikel (Content fehlt)
 - [ ] Migration Edge Functions deaktivieren (harmlos, niedrige Priorität)
 - [ ] Baujahr-Ranges per Model implementieren

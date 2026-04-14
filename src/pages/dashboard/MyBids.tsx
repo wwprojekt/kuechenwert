@@ -31,7 +31,7 @@ export default function MyBids() {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from("bids")
+        .from("bids_public")
         .select(`
           *,
           auction:auctions (

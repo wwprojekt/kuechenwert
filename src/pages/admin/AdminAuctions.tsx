@@ -394,20 +394,20 @@ export default function AdminAuctions() {
           updateData.reserve_price = motorhome.reserve_price;
         }
 
+        // Clean up old data BEFORE reactivating to avoid stale bids in new auction
+        const { error: bidsDelErr } = await supabase.from("bids").delete().eq("auction_id", existing.id);
+        if (bidsDelErr) throw new Error(`Alte Gebote konnten nicht gelöscht werden: ${bidsDelErr.message}`);
+        const { error: invDelErr } = await supabase.from("kaufchance_invitations").delete().eq("auction_id", existing.id);
+        if (invDelErr) throw new Error(`Alte Einladungen konnten nicht gelöscht werden: ${invDelErr.message}`);
+        const { error: offDelErr } = await supabase.from("post_auction_offers").delete().eq("auction_id", existing.id);
+        if (offDelErr) throw new Error(`Alte Angebote konnten nicht gelöscht werden: ${offDelErr.message}`);
+
         const { error: updateError } = await supabase
           .from("auctions")
           .update(updateData)
           .eq("id", existing.id);
 
         if (updateError) throw updateError;
-
-        // Alte Bids und Kaufchance-Daten aufräumen
-        const { error: bidsDelErr } = await supabase.from("bids").delete().eq("auction_id", existing.id);
-        if (bidsDelErr) console.error("Failed to clean up bids:", bidsDelErr);
-        const { error: invDelErr } = await supabase.from("kaufchance_invitations").delete().eq("auction_id", existing.id);
-        if (invDelErr) console.error("Failed to clean up invitations:", invDelErr);
-        const { error: offDelErr } = await supabase.from("post_auction_offers").delete().eq("auction_id", existing.id);
-        if (offDelErr) console.error("Failed to clean up offers:", offDelErr);
 
         // Motorhome-Status auf active setzen
         const { error: mhErr } = await supabase.from("motorhomes").update({ status: "active" }).eq("id", motorhomeId);
@@ -645,6 +645,13 @@ export default function AdminAuctions() {
       const endTime = new Date();
       endTime.setDate(endTime.getDate() + 7);
 
+      // Delete old bids BEFORE reactivating to avoid stale data in the new auction
+      const { error: bidsDelErr } = await supabase
+        .from('bids')
+        .delete()
+        .eq('auction_id', auction.id);
+      if (bidsDelErr) throw new Error(`Alte Gebote konnten nicht gelöscht werden: ${bidsDelErr.message}`);
+
       // Reset auction to active with new 7-day period
       const { error } = await supabase
         .from('auctions')
@@ -661,16 +668,11 @@ export default function AdminAuctions() {
       if (error) throw error;
 
       // Update motorhome status back to active
-      await supabase
+      const { error: mhErr } = await supabase
         .from('motorhomes')
         .update({ status: 'active', updated_at: new Date().toISOString() })
         .eq('id', auction.motorhome_id);
-
-      // Delete old bids for a fresh start
-      await supabase
-        .from('bids')
-        .delete()
-        .eq('auction_id', auction.id);
+      if (mhErr) throw mhErr;
 
       return { ...auction, endTime };
     },

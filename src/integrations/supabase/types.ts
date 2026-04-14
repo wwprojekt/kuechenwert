@@ -4067,6 +4067,33 @@ export type Database = {
       }
     }
     Views: {
+      bids_public: {
+        Row: {
+          amount: number
+          auction_id: string
+          bidder_id: string
+          created_at: string
+          id: string
+          is_autobid: boolean
+          max_autobid_amount: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_bidder_id_fkey"
+            columns: ["bidder_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_daily_summary: {
         Row: {
           date: string | null

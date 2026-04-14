@@ -33,9 +33,12 @@ export default function AdminAnalytics() {
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
       const totalBids = bidsRes.count || 0;
       
-      // Revenue calculation
-      const soldMotorhomes = motorhomesRes.data?.filter(m => m.status === "sold") || [];
-      const totalRevenue = soldMotorhomes.reduce((sum, m) => sum + Number(m.instant_price || m.reserve_price || 0), 0);
+      // Revenue calculation – use auction current_bid (actual sale price), not reserve_price
+      const soldAuctionsList = auctionsRes.data?.filter(a => a.status === "sold") || [];
+      const totalRevenue = soldAuctionsList.reduce((sum, a) => {
+        const mh = motorhomesRes.data?.find(m => m.id === a.motorhome_id);
+        return sum + Number(a.current_bid || mh?.instant_price || 0);
+      }, 0);
       
       // Average bid amount
       const avgBidAmount = bidsRes.data && bidsRes.data.length > 0
@@ -233,8 +236,8 @@ export default function AdminAnalytics() {
       title: "Gesamtumsatz",
       value: `€${(platformStats?.totalRevenue || 0).toLocaleString()}`,
       icon: DollarSign,
-      change: formatTrend(platformStats?.usersTrend),
-      trend: (platformStats?.usersTrend || 0) >= 0 ? "up" : "down",
+      change: "—",
+      trend: "up" as const,
       gradient: "from-green-500 to-emerald-500",
     },
     {

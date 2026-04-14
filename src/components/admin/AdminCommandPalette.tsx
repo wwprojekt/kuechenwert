@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Car, Gavel, Users, Building2, Mail, Settings,
   TrendingUp, FileText, Calculator, Calendar, Shield, Search,
   MessageCircle, Star, AlertTriangle, CreditCard, FileSignature,
-  Scale, UserPlus,
+  Scale, UserPlus, Receipt,
 } from "lucide-react";
 
 const ADMIN_PAGES = [
@@ -51,12 +51,14 @@ function useQuickSearchData(query: string) {
   return useQuery({
     queryKey: ["adminQuickSearch", query],
     queryFn: async () => {
-      if (!query || query.length < 2) return { motorhomes: [], profiles: [], auctions: [] };
+      if (!query || query.length < 2)
+        return { motorhomes: [], profiles: [], auctions: [], invoices: [], contracts: [] };
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { motorhomes: [], profiles: [], auctions: [] };
+      if (!sessionValid)
+        return { motorhomes: [], profiles: [], auctions: [], invoices: [], contracts: [] };
 
       const q = `%${query}%`;
-      const [mhRes, profileRes, auctionRes] = await Promise.all([
+      const [mhRes, profileRes, auctionRes, invoiceRes, contractRes] = await Promise.all([
         supabase
           .from("motorhomes")
           .select("id, manufacturer, model, year, status")
@@ -72,12 +74,24 @@ function useQuickSearchData(query: string) {
           .select("id, status, motorhome:motorhomes!inner(manufacturer, model)")
           .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'motorhomes' })
           .limit(5),
+        supabase
+          .from("invoices")
+          .select("id, invoice_number, gross_amount, payment_status, dealer_id")
+          .ilike("invoice_number", q)
+          .limit(5),
+        supabase
+          .from("purchase_contracts")
+          .select("id, contract_number, status")
+          .ilike("contract_number", q)
+          .limit(5),
       ]);
 
       return {
         motorhomes: mhRes.data || [],
         profiles: profileRes.data || [],
         auctions: auctionRes.data || [],
+        invoices: invoiceRes.data || [],
+        contracts: contractRes.data || [],
       };
     },
     enabled: query.length >= 2,
@@ -126,7 +140,7 @@ export function AdminCommandPalette() {
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="Seite, Kunde, Wohnmobil oder Auktion suchen…"
+          placeholder="Seite, Kunde, Wohnmobil, Auktion, Rechnung oder Vertrag suchen…"
           value={query}
           onValueChange={setQuery}
         />
@@ -172,7 +186,37 @@ export function AdminCommandPalette() {
             </CommandGroup>
           )}
 
-          {(searchData?.motorhomes?.length || 0) > 0 || (searchData?.profiles?.length || 0) > 0 || (searchData?.auctions?.length || 0) > 0 ? (
+          {searchData?.invoices && searchData.invoices.length > 0 && (
+            <CommandGroup heading="Rechnungen">
+              {searchData.invoices.map((inv: any) => (
+                <CommandItem key={inv.id} onSelect={() => go("/admin/financials")}>
+                  <Receipt className="mr-2 h-4 w-4 text-amber-600" />
+                  <span>{inv.invoice_number}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {inv.payment_status ?? "—"}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {searchData?.contracts && searchData.contracts.length > 0 && (
+            <CommandGroup heading="Kaufverträge">
+              {searchData.contracts.map((c: any) => (
+                <CommandItem key={c.id} onSelect={() => go("/admin/contracts")}>
+                  <FileText className="mr-2 h-4 w-4 text-slate-600" />
+                  <span>{c.contract_number}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{c.status}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {(searchData?.motorhomes?.length || 0) > 0 ||
+          (searchData?.profiles?.length || 0) > 0 ||
+          (searchData?.auctions?.length || 0) > 0 ||
+          (searchData?.invoices?.length || 0) > 0 ||
+          (searchData?.contracts?.length || 0) > 0 ? (
             <CommandSeparator />
           ) : null}
 

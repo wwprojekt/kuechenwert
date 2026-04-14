@@ -978,6 +978,104 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* Financial Overview */}
+      {revenue && (revenue.monthRevenue > 0 || revenue.openInvoices > 0 || revenue.overdueInvoices > 0) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+          <Link to="/admin/financials">
+            <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Euro className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{revenue.monthRevenue.toLocaleString("de-DE")} €</p>
+                  <p className="text-[10px] text-muted-foreground">Umsatz Monat</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/admin/financials">
+            <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Banknote className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{revenue.weekRevenue.toLocaleString("de-DE")} €</p>
+                  <p className="text-[10px] text-muted-foreground">Umsatz Woche</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/admin/financials">
+            <Card className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${revenue.openInvoices > 0 ? "border-amber-200" : ""}`}>
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{revenue.openInvoices}</p>
+                  <p className="text-[10px] text-muted-foreground">Offene Rechnungen</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/admin/financials">
+            <Card className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${revenue.overdueInvoices > 0 ? "border-red-200 bg-red-50/50 dark:bg-red-950/20" : ""}`}>
+              <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg ${revenue.overdueInvoices > 0 ? "bg-red-100 dark:bg-red-900/30" : "bg-gray-100"} flex items-center justify-center`}>
+                  <AlertTriangle className={`w-4 h-4 ${revenue.overdueInvoices > 0 ? "text-red-600" : "text-gray-600"}`} />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{revenue.overdueInvoices}</p>
+                  <p className="text-[10px] text-muted-foreground">Überfällig ({revenue.overdueAmount.toLocaleString("de-DE")} €)</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      )}
+
+      {/* Performance Metrics (30 Tage) */}
+      {metrics && (metrics.totalLeads30d > 0 || metrics.totalSold30d > 0) && (
+        <Card className="border-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-500" />
+              Performance (30 Tage)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="text-center p-2">
+                <p className="text-xl font-bold">{metrics.totalLeads30d}</p>
+                <p className="text-[10px] text-muted-foreground">Leads</p>
+              </div>
+              <div className="text-center p-2">
+                <p className="text-xl font-bold">{metrics.totalAuctions30d}</p>
+                <p className="text-[10px] text-muted-foreground">Auktionen</p>
+              </div>
+              <div className="text-center p-2">
+                <p className="text-xl font-bold text-green-600">{metrics.totalSold30d}</p>
+                <p className="text-[10px] text-muted-foreground">Verkauft</p>
+              </div>
+              <div className="text-center p-2">
+                <p className="text-xl font-bold">{metrics.conversionRate}%</p>
+                <p className="text-[10px] text-muted-foreground">Konversionsrate</p>
+              </div>
+              <div className="text-center p-2">
+                <p className="text-xl font-bold">{metrics.avgSalePrice > 0 ? `${Math.round(metrics.avgSalePrice).toLocaleString("de-DE")} €` : "–"}</p>
+                <p className="text-[10px] text-muted-foreground">Ø Verkaufspreis</p>
+              </div>
+              <div className="text-center p-2">
+                <p className="text-xl font-bold">{metrics.avgResponseHours !== null ? `${metrics.avgResponseHours}h` : "–"}</p>
+                <p className="text-[10px] text-muted-foreground">Ø Reaktionszeit</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content: Action Items + Recent Motorhomes */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         {/* Left: Action Items (3/5) */}
@@ -1011,10 +1109,130 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Live Auktionen */}
+          {activeAuctions && activeAuctions.length > 0 && (
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-purple-600" />
+                    Laufende Auktionen
+                    <CountBadge count={activeAuctions.length} color="bg-purple-500" />
+                  </CardTitle>
+                  <Link to="/admin/auctions">
+                    <Button variant="ghost" size="sm" className="text-xs h-7">
+                      Alle <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-1">
+                  {activeAuctions.map((a: any) => {
+                    const mh = a.motorhome;
+                    const bidCount = a.bids?.[0]?.count ?? 0;
+                    return (
+                      <Link key={a.id} to={`/admin/auctions/${a.id}`} className="block">
+                        <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{mh?.manufacturer} {mh?.model} ({mh?.year})</p>
+                            <p className="text-xs text-muted-foreground">{bidCount} Gebot{bidCount !== 1 ? "e" : ""}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0 space-y-0.5">
+                            <p className="text-sm font-bold">{Number(a.current_bid || a.starting_bid || 0).toLocaleString("de-DE")} €</p>
+                            <AuctionCountdown endTime={a.end_time} />
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Letzte Gebote */}
+          {recentBids && recentBids.length > 0 && (
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Gavel className="w-4 h-4 text-green-600" />
+                  Letzte Gebote
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-1">
+                  {recentBids.map((b: any) => {
+                    const bidder = b.bidder;
+                    const vehicle = b.auction?.motorhome;
+                    const bidderName = bidder?.company_name || `${bidder?.first_name || ""} ${bidder?.last_name || ""}`.trim() || "Unbekannt";
+                    return (
+                      <Link key={b.id} to={`/admin/auctions/${b.auction?.id}`} className="block">
+                        <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">
+                              {vehicle?.manufacturer} {vehicle?.model}
+                              {b.is_autobid && <Badge className="ml-2 text-[9px] px-1 py-0 h-4 bg-violet-500">Auto</Badge>}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{bidderName}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-bold text-green-600">{Number(b.amount).toLocaleString("de-DE")} €</p>
+                            <p className="text-[10px] text-muted-foreground">{timeAgo(b.created_at)}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right: Recently Changed Motorhomes (2/5) */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Dringende Leads */}
+          {urgentLeads && urgentLeads.length > 0 && (
+            <Card className="border-2 border-orange-200 dark:border-orange-900">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <PhoneCall className="w-4 h-4 text-orange-600" />
+                    Dringende Leads
+                  </CardTitle>
+                  <Link to="/admin/leads">
+                    <Button variant="ghost" size="sm" className="text-xs h-7">
+                      Alle <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-1">
+                  {urgentLeads.slice(0, 5).map((lead: any) => {
+                    const vehicle = lead.vehicle_summary || ((lead.form_data as any)?.manufacturer || "Fahrzeug");
+                    return (
+                      <Link key={lead.id} to="/admin/leads" className="block">
+                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg hover:bg-muted/60 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{lead.customer_name || lead.customer_email || "Unbekannt"}</p>
+                            <p className="text-xs text-muted-foreground truncate">{vehicle}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {lead.contacted && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">Kontaktiert</Badge>}
+                            <UrgencyBadge days={lead.ageDays} />
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-2">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -1088,6 +1306,36 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Activity Timeline */}
+          {timeline && timeline.length > 0 && (
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-slate-500" />
+                  Aktivitäts-Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-1">
+                  {timeline.slice(0, 8).map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        item.type === "bid" ? "bg-green-500" :
+                        item.type === "lead" ? "bg-blue-500" :
+                        item.type === "email" ? "bg-orange-500" : "bg-amber-500"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{item.title}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{item.subtitle}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">{timeAgo(item.time)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Schnellzugriff-Karten */}
           <Card className="border-2">

@@ -37,7 +37,7 @@ import {
 import { MotorhomeDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { DeleteMotorhomeDialog } from "@/components/admin/DeleteMotorhomeDialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useExport } from "@/hooks/useExport";
@@ -117,6 +117,7 @@ interface MotorhomeWithRelations {
   updated_at: string | null;
   sold_at: string | null;
   sold_to: string | null;
+  seller_id?: string;
   seller?: {
     first_name: string | null;
     last_name: string | null;
@@ -228,6 +229,8 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
 
 export default function AdminMotorhomes() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sellerFilter = searchParams.get("seller")?.trim() || "";
   const [selectedMotorhome, setSelectedMotorhome] = useState<MotorhomeWithRelations | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -328,6 +331,9 @@ export default function AdminMotorhomes() {
 
     // Tab filter
     let filtered = withRealStatus;
+    if (sellerFilter) {
+      filtered = filtered.filter((m) => m.seller_id === sellerFilter);
+    }
     if (activeTab !== "alle") {
       if (activeTab === "verkauft") {
         filtered = filtered.filter((m) => m._realStatus === "verkauft" || m._realStatus === "reserviert");
@@ -385,7 +391,7 @@ export default function AdminMotorhomes() {
     });
 
     return { filteredMotorhomes: filtered, tabCounts };
-  }, [motorhomes, activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter, sortKey, sortDir]);
+  }, [motorhomes, activeTab, sellerFilter, searchQuery, conditionFilter, saleChannelFilter, photoFilter, sortKey, sortDir]);
 
   // ---- Quick Stats ----
   const stats = useMemo(() => {
@@ -728,7 +734,7 @@ export default function AdminMotorhomes() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const count = tabCounts[tab.key];

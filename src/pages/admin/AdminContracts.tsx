@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth } from "@/lib/sessionGuard";
@@ -65,6 +65,7 @@ import {
 import { ExportButton } from "@/components/ExportButton";
 import { useExport } from "@/hooks/useExport";
 import { openPrivateDocument } from "@/lib/storageUtils";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 // ============================================================================
 // Types
@@ -160,6 +161,7 @@ function StatCard({
 export default function AdminContracts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedContract, setSelectedContract] =
     useState<PurchaseContract | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -217,6 +219,13 @@ export default function AdminContracts() {
       return true;
     });
   }, [contracts, statusFilter, searchQuery]);
+
+  const PAGE_SIZE = 20;
+
+  // Reset Seite bei Filter-Änderung
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
 
   // ---- Mutations ----
 
@@ -373,6 +382,12 @@ export default function AdminContracts() {
 
   // ---- Render ----
 
+  const totalItems = filteredContracts.length;
+  const pageContracts = filteredContracts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -497,7 +512,7 @@ export default function AdminContracts() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredContracts.map((contract) => (
+                pageContracts.map((contract) => (
                   <TableRow key={contract.id}>
                     <TableCell className="font-mono font-medium">
                       {contract.contract_number}
@@ -575,6 +590,16 @@ export default function AdminContracts() {
             </TableBody>
           </Table>
           </div>
+          {totalItems > PAGE_SIZE && (
+            <div className="px-4 pb-4">
+              <AdminPagination
+                page={currentPage}
+                pageSize={PAGE_SIZE}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

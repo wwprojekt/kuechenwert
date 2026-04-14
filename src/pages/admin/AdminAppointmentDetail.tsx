@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -122,6 +122,26 @@ export default function AdminAppointmentDetail() {
       };
     },
     enabled: !!id,
+  });
+
+  const motorhomeId = appointment?.motorhome_id;
+
+  const { data: motorhomeAuction } = useQuery({
+    queryKey: ["adminAppointmentAuctionByMotorhome", motorhomeId],
+    queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
+
+      const { data, error } = await supabase
+        .from("auctions")
+        .select("id")
+        .eq("motorhome_id", motorhomeId!)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!motorhomeId,
   });
 
   // Update status mutation
@@ -455,14 +475,24 @@ export default function AdminAppointmentDetail() {
                 title="Fahrzeug"
                 icon={<Car className="w-5 h-5" />}
                 actions={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/admin/motorhomes/${appointment.motorhome?.id}`)}
-                  >
-                    Details
-                    <ExternalLink className="w-4 h-4 ml-2" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {motorhomeAuction?.id && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/admin/auctions/${motorhomeAuction.id}`}>
+                          Auktion
+                          <ExternalLink className="w-4 h-4 ml-2" />
+                        </Link>
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/admin/motorhomes/${appointment.motorhome?.id}`)}
+                    >
+                      Details
+                      <ExternalLink className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 }
               >
                 <div className="flex gap-6">

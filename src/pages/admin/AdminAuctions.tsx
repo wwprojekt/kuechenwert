@@ -246,6 +246,7 @@ export default function AdminAuctions() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const bidderFilter = searchParams.get("bidder")?.trim() ?? "";
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("draft");
@@ -264,7 +265,7 @@ export default function AdminAuctions() {
 
   // ---- Data Query ----
   const { data: auctions, isLoading } = useQuery({
-    queryKey: ["adminAuctions"],
+    queryKey: ["adminAuctions", bidderFilter],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auctions")
@@ -289,7 +290,17 @@ export default function AdminAuctions() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      let list = data || [];
+      if (bidderFilter) {
+        const { data: bidRows, error: bidErr } = await supabase
+          .from("bids")
+          .select("auction_id")
+          .eq("bidder_id", bidderFilter);
+        if (bidErr) throw bidErr;
+        const ids = new Set((bidRows || []).map((r) => r.auction_id));
+        list = list.filter((a) => ids.has(a.id));
+      }
+      return list;
     },
   });
 
@@ -1061,8 +1072,16 @@ export default function AdminAuctions() {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <ExportButton
-            onExportCSV={() => exportCSV(auctions || [])}
-            onExportExcel={() => exportExcel(auctions || [])}
+            onExportCSV={() =>
+              exportCSV(
+                getFilteredAuctionsForTab(TABS.find((t) => t.key === activeTab)!),
+              )
+            }
+            onExportExcel={() =>
+              exportExcel(
+                getFilteredAuctionsForTab(TABS.find((t) => t.key === activeTab)!),
+              )
+            }
             isExporting={isExporting}
           />
           <Button

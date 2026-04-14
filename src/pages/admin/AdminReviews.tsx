@@ -1,9 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
+import { AdminPagination, paginateArray } from "@/components/admin/AdminPagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -264,6 +267,63 @@ export default function AdminReviews() {
     });
   }, [reviews, statusFilter, ratingFilter, searchQuery, profileMap]);
 
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, ratingFilter]);
+
+  const paginatedReviews = useMemo(
+    () => paginateArray(filteredReviews, currentPage, PAGE_SIZE),
+    [filteredReviews, currentPage]
+  );
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "haendler-bewertungen",
+    columns: [
+      { key: "haendler", label: "Händler" },
+      { key: "bewerter", label: "Bewerter" },
+      { key: "bewertung", label: "Bewertung" },
+      { key: "text", label: "Text" },
+      { key: "status", label: "Status" },
+      { key: "datum", label: "Datum" },
+    ],
+  });
+
+  const reviewsExportRows = useMemo(() => {
+    const profileDisplayName = (id: string) => {
+      const p = profileMap[id];
+      if (!p) return "Unbekannt";
+      if (p.company_name) return p.company_name;
+      return `${p.first_name || ""} ${p.last_name || ""}`.trim() || p.email || "Unbekannt";
+    };
+    const statusLabel = (status: string | null) => {
+      switch (status) {
+        case "approved":
+          return "Freigegeben";
+        case "rejected":
+          return "Abgelehnt";
+        case "flagged":
+          return "Markiert";
+        default:
+          return "Ausstehend";
+      }
+    };
+    return filteredReviews.map((review) => {
+      const fullText = review.comment || review.review_text || "";
+      const truncated = fullText.length > 200 ? `${fullText.slice(0, 200)}…` : fullText;
+      return {
+        haendler: profileDisplayName(review.dealer_id),
+        bewerter: profileDisplayName(review.reviewer_id),
+        bewertung: review.rating,
+        text: truncated || "",
+        status: statusLabel(review.status),
+        datum: format(new Date(review.created_at), "dd.MM.yyyy HH:mm", { locale: de }),
+      };
+    });
+  }, [filteredReviews, profileMap]);
+
   // ---- Mutations ----
 
   const moderateReview = useMutation({
@@ -404,13 +464,21 @@ export default function AdminReviews() {
             Bewertungen moderieren, freigeben oder ablehnen
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["adminDealerReviews"] })}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExportCSV={() => exportCSV(reviewsExportRows)}
+            onExportExcel={() => exportExcel(reviewsExportRows)}
+            isExporting={isExporting}
+            size="sm"
+          />
+          <Button
+            variant="outline"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["adminDealerReviews"] })}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Aktualisieren
+          </Button>
+        </div>
       </div>
 
       {/* Statistics */}
@@ -559,7 +627,7 @@ export default function AdminReviews() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredReviews.map((review) => (
+              paginatedReviews.map((review) => (
                 <TableRow
                   key={review.id}
                   className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(review.id) ? "bg-primary/5" : ""} ${review.rating <= 2 ? "border-l-2 border-l-red-400" : ""}`}
@@ -646,6 +714,16 @@ export default function AdminReviews() {
             )}
           </TableBody>
         </Table>
+        {filteredReviews.length > PAGE_SIZE && (
+          <div className="px-4 pb-4">
+            <AdminPagination
+              page={currentPage}
+              pageSize={PAGE_SIZE}
+              totalItems={filteredReviews.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </Card>
 
       {/* ================================================================== */}

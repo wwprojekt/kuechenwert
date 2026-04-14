@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -597,7 +597,11 @@ export default function AdminMotorhomeDetail() {
                 <DetailSection title="Termine" icon={<Calendar className="w-5 h-5" />}>
                   <div className="space-y-3">
                     {motorhome.appointments.slice(0, 3).map((appointment: any) => (
-                      <div key={appointment.id} className="p-3 rounded-lg border">
+                      <Link
+                        key={appointment.id}
+                        to={`/admin/appointments/${appointment.id}`}
+                        className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         <div className="flex items-center justify-between mb-2">
                           <Badge variant={appointment.status === "confirmed" ? "default" : "outline"}>
                             {appointment.status}
@@ -612,7 +616,7 @@ export default function AdminMotorhomeDetail() {
                             {appointment.station.name}, {appointment.station.city}
                           </p>
                         )}
-                      </div>
+                      </Link>
                     ))}
                     {motorhome.appointments.length > 3 && (
                       <p className="text-sm text-muted-foreground text-center">

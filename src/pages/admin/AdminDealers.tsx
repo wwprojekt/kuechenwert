@@ -563,18 +563,40 @@ export default function AdminDealers() {
     return applications?.filter((a: DealerApplication) => a.status === "pending") || [];
   }, [applications]);
 
+  const filteredPendingApplications = useMemo(() => {
+    if (!searchTerm) return pendingApplications;
+    const q = searchTerm.toLowerCase();
+    return pendingApplications.filter(
+      (a) =>
+        a.company_name?.toLowerCase().includes(q) ||
+        a.contact_person_name?.toLowerCase().includes(q) ||
+        a.profiles?.email?.toLowerCase().includes(q)
+    );
+  }, [pendingApplications, searchTerm]);
+
   // Filter rejected applications
   const rejectedApplications = useMemo(() => {
     return applications?.filter((a: DealerApplication) => a.status === "rejected") || [];
   }, [applications]);
+
+  const filteredRejectedApplications = useMemo(() => {
+    if (!searchTerm) return rejectedApplications;
+    const q = searchTerm.toLowerCase();
+    return rejectedApplications.filter(
+      (a) =>
+        a.company_name?.toLowerCase().includes(q) ||
+        a.contact_person_name?.toLowerCase().includes(q) ||
+        a.profiles?.email?.toLowerCase().includes(q)
+    );
+  }, [rejectedApplications, searchTerm]);
 
   // Filter approved applications (not yet active dealers)
   const approvedApplications = useMemo(() => {
     return applications?.filter((a: DealerApplication) => a.status === "approved") || [];
   }, [applications]);
 
-  const sortedPending = useMemo(() => sortData(pendingApplications, dealerSortAccessors), [pendingApplications, sortData]);
-  const sortedRejected = useMemo(() => sortData(rejectedApplications, dealerSortAccessors), [rejectedApplications, sortData]);
+  const sortedPending = useMemo(() => sortData(filteredPendingApplications, dealerSortAccessors), [filteredPendingApplications, sortData]);
+  const sortedRejected = useMemo(() => sortData(filteredRejectedApplications, dealerSortAccessors), [filteredRejectedApplications, sortData]);
 
   return (
     <div className="space-y-6">
@@ -659,6 +681,18 @@ export default function AdminDealers() {
           <TabsTrigger value="dealers">Aktive Händler</TabsTrigger>
         </TabsList>
 
+        <div className="relative w-full max-w-sm">
+          <Input
+            placeholder="Suche nach Firma, Ansprechpartner, E-Mail…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </span>
+        </div>
+
         {/* Applications Tab */}
         <TabsContent value="applications" className="space-y-4">
           <Card>
@@ -682,7 +716,7 @@ export default function AdminDealers() {
                       Lade Anträge...
                     </TableCell>
                   </TableRow>
-                ) : pendingApplications.length > 0 ? (
+                ) : filteredPendingApplications.length > 0 ? (
                   sortedPending.map((application: DealerApplication) => (
                     <TableRow key={application.id}>
                       <TableCell className="font-medium flex items-center gap-2">
@@ -773,7 +807,9 @@ export default function AdminDealers() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
-                      Keine ausstehenden Anträge gefunden.
+                      {pendingApplications.length === 0
+                        ? "Keine ausstehenden Anträge gefunden."
+                        : "Keine Treffer für die Suche."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -799,7 +835,7 @@ export default function AdminDealers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rejectedApplications.length > 0 ? (
+                {filteredRejectedApplications.length > 0 ? (
                   sortedRejected.map((application: DealerApplication) => (
                     <TableRow key={application.id} className="bg-red-50/50">
                       <TableCell className="font-medium flex items-center gap-2">
@@ -847,7 +883,9 @@ export default function AdminDealers() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
-                      Keine abgelehnten Anträge vorhanden.
+                      {rejectedApplications.length === 0
+                        ? "Keine abgelehnten Anträge vorhanden."
+                        : "Keine Treffer für die Suche."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -864,17 +902,6 @@ export default function AdminDealers() {
               {filteredDealers.length} aktive Händler
             </p>
             <div className="flex items-center gap-2">
-              <div className="relative w-full max-w-sm items-center">
-                <Input
-                  placeholder="Suche nach Firma, Stadt, Ansprechpartner..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Search className="h-5 w-5 text-muted-foreground" />
-                </span>
-              </div>
               <ExportButton
                 onExportCSV={() => exportCSV(filteredDealers || [])}
                 onExportExcel={() => exportExcel(filteredDealers || [])}

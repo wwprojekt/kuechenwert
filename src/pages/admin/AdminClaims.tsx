@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -63,6 +63,7 @@ import {
   AlertCircle,
   MessageSquare,
 } from "lucide-react";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 // ============================================================================
 // Types
@@ -180,6 +181,7 @@ export default function AdminClaims() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
@@ -265,6 +267,13 @@ export default function AdminClaims() {
       return true;
     });
   }, [claims, statusFilter, priorityFilter, searchQuery, dealerProfiles]);
+
+  const PAGE_SIZE = 20;
+
+  // Reset Seite bei Filter-Änderung
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, priorityFilter]);
 
   // ---- Mutations ----
 
@@ -392,6 +401,12 @@ export default function AdminClaims() {
     if (dealer.company_name) return dealer.company_name;
     return `${dealer.first_name || ""} ${dealer.last_name || ""}`.trim() || "Unbekannt";
   };
+
+  const totalItems = filteredClaims.length;
+  const pageClaims = filteredClaims.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   // ---- Render ----
 
@@ -554,7 +569,7 @@ export default function AdminClaims() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredClaims.map((claim) => (
+              pageClaims.map((claim) => (
                 <TableRow
                   key={claim.id}
                   className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(claim.id) ? "bg-primary/5" : ""}`}
@@ -640,6 +655,16 @@ export default function AdminClaims() {
           </TableBody>
         </Table>
         </div>
+        {totalItems > PAGE_SIZE && (
+          <div className="px-4 pb-4">
+            <AdminPagination
+              page={currentPage}
+              pageSize={PAGE_SIZE}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </Card>
 
       {/* ================================================================== */}

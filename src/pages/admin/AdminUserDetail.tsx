@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -106,6 +106,12 @@ export default function AdminUserDetail() {
         .limit(5);
       if (motorhomesError) throw motorhomesError;
 
+      const { count: motorhomesTotal, error: motorhomesCountError } = await supabase
+        .from("motorhomes")
+        .select("*", { count: "exact", head: true })
+        .eq("seller_id", id);
+      if (motorhomesCountError) throw motorhomesCountError;
+
       // Fetch user's bids
       const { data: bids, error: bidsError } = await supabase
         .from("bids")
@@ -123,6 +129,12 @@ export default function AdminUserDetail() {
         .order("created_at", { ascending: false })
         .limit(10);
       if (bidsError) throw bidsError;
+
+      const { count: bidsTotal, error: bidsCountError } = await supabase
+        .from("bids")
+        .select("*", { count: "exact", head: true })
+        .eq("bidder_id", id);
+      if (bidsCountError) throw bidsCountError;
 
       // Fetch user's favorites count
       const { count: favoritesCount, error: favoritesError } = await supabase
@@ -151,6 +163,8 @@ export default function AdminUserDetail() {
         roles: (Array.isArray(profile.user_roles) ? profile.user_roles : profile.user_roles ? [profile.user_roles] : []).map((r: any) => r.role),
         motorhomes: motorhomes || [],
         bids: bids || [],
+        motorhomesTotal: motorhomesTotal ?? 0,
+        bidsTotal: bidsTotal ?? 0,
         favoritesCount: favoritesCount || 0,
         messagesCount: messagesCount || 0,
         dealerApplication,
@@ -308,12 +322,12 @@ export default function AdminUserDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               label="Inserate"
-              value={user.motorhomes?.length || 0}
+              value={user.motorhomesTotal}
               icon={<Car className="w-5 h-5" />}
             />
             <StatsCard
               label="Gebote"
-              value={user.bids?.length || 0}
+              value={user.bidsTotal}
               icon={<Gavel className="w-5 h-5" />}
             />
             <StatsCard
@@ -427,12 +441,25 @@ export default function AdminUserDetail() {
               {/* Tabs for Activity */}
               <Tabs defaultValue="listings" className="space-y-4">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="listings">Inserate ({user.motorhomes?.length || 0})</TabsTrigger>
-                  <TabsTrigger value="bids">Gebote ({user.bids?.length || 0})</TabsTrigger>
+                  <TabsTrigger value="listings">Inserate ({user.motorhomesTotal})</TabsTrigger>
+                  <TabsTrigger value="bids">Gebote ({user.bidsTotal})</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="listings">
-                  <DetailSection title="Inserate" icon={<Car className="w-5 h-5" />}>
+                  <DetailSection
+                    title="Inserate"
+                    icon={<Car className="w-5 h-5" />}
+                    actions={
+                      id ? (
+                        <Button variant="link" className="h-auto p-0 text-sm" asChild>
+                          <Link to={`/admin/motorhomes?seller=${id}`}>
+                            Alle Inserate anzeigen
+                            <ExternalLink className="w-3.5 h-3.5 ml-1 inline" />
+                          </Link>
+                        </Button>
+                      ) : null
+                    }
+                  >
                     {Array.isArray(user.motorhomes) && user.motorhomes.length > 0 ? (
                       <Table>
                         <TableHeader>
@@ -508,7 +535,20 @@ export default function AdminUserDetail() {
                 </TabsContent>
 
                 <TabsContent value="bids">
-                  <DetailSection title="Gebote" icon={<Gavel className="w-5 h-5" />}>
+                  <DetailSection
+                    title="Gebote"
+                    icon={<Gavel className="w-5 h-5" />}
+                    actions={
+                      id ? (
+                        <Button variant="link" className="h-auto p-0 text-sm" asChild>
+                          <Link to={`/admin/auctions?bidder=${id}`}>
+                            Alle Gebote anzeigen
+                            <ExternalLink className="w-3.5 h-3.5 ml-1 inline" />
+                          </Link>
+                        </Button>
+                      ) : null
+                    }
+                  >
                     {Array.isArray(user.bids) && user.bids.length > 0 ? (
                       <Table>
                         <TableHeader>

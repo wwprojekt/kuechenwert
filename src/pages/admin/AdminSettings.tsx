@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { logger } from "@/lib/logger";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
+
+/** Snapshot for dirty check (UI-only fields excluded). */
+function settingsFormSnapshot(data: Record<string, unknown>): string {
+  const { _showApiKey: _ui, ...rest } = data;
+  return JSON.stringify(rest);
+}
 
 export default function AdminSettings() {
   const { toast } = useToast();
@@ -25,12 +41,47 @@ export default function AdminSettings() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const tuvBadgeInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState("general");
+  const [savedSnapshot, setSavedSnapshot] = useState("");
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  /** Target tab when confirming discard (ref avoids onOpenChange vs. Action click ordering issues). */
+  const pendingTabRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (settings) {
       setFormData(settings);
+      setSavedSnapshot(settingsFormSnapshot(settings as Record<string, unknown>));
     }
   }, [settings]);
+
+  const isDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return settingsFormSnapshot(formData as Record<string, unknown>) !== savedSnapshot;
+  }, [formData, savedSnapshot]);
+
+  const handleTabChange = (next: string) => {
+    if (next === activeTab) return;
+    if (isDirty) {
+      pendingTabRef.current = next;
+      setDiscardDialogOpen(true);
+    } else {
+      setActiveTab(next);
+    }
+  };
+
+  const handleConfirmDiscardTab = () => {
+    const next = pendingTabRef.current;
+    pendingTabRef.current = null;
+    if (next != null) {
+      try {
+        setFormData(JSON.parse(savedSnapshot));
+      } catch {
+        // ignore corrupt snapshot
+      }
+      setActiveTab(next);
+    }
+    setDiscardDialogOpen(false);
+  };
 
   const handleFileUpload = async (file: File, type: 'logo' | 'favicon' | 'tuv_badge') => {
     try {
@@ -170,7 +221,28 @@ export default function AdminSettings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ungespeicherte Änderungen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie die ungespeicherten Änderungen verwerfen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                pendingTabRef.current = null;
+              }}
+            >
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDiscardTab}>Verwerfen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-7 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />

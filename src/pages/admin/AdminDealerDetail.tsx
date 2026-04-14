@@ -971,6 +971,7 @@ export default function AdminDealerDetail() {
                             <TableHead>Betrag</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Zeitpunkt</TableHead>
+                            <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -992,6 +993,17 @@ export default function AdminDealerDetail() {
                               </TableCell>
                               <TableCell className="text-muted-foreground">
                                 {formatDate(bid.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={!bid.auction?.id}
+                                  title="Auktion öffnen"
+                                  onClick={() => bid.auction?.id && navigate(`/admin/auctions/${bid.auction.id}`)}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}

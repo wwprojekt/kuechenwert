@@ -32,8 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2, Mail, Phone, ExternalLink, Truck, Hash } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2, Mail, Phone, ExternalLink, Truck, Hash, Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +91,7 @@ export default function AdminMessages() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchMessages = async () => {
     try {
@@ -261,8 +263,16 @@ export default function AdminMessages() {
   };
 
   const filteredMessages = messages.filter((msg) => {
-    if (filter === "all") return true;
-    return msg.status === filter;
+    if (filter !== "all" && msg.status !== filter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const nameMatch = `${msg.user?.first_name || ""} ${msg.user?.last_name || ""}`.toLowerCase().includes(q);
+      const emailMatch = (msg.user?.email || "").toLowerCase().includes(q);
+      const subjectMatch = (msg.subject || "").toLowerCase().includes(q);
+      const messageMatch = (msg.message || "").toLowerCase().includes(q);
+      if (!nameMatch && !emailMatch && !subjectMatch && !messageMatch) return false;
+    }
+    return true;
   });
 
   const getStatusBadge = (status: string | null) => {
@@ -302,12 +312,21 @@ export default function AdminMessages() {
             Verwalten Sie Benutzeranfragen
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
           {openCount > 0 && (
             <Badge variant="destructive" className="text-sm">
               {openCount} offene Anfragen
             </Badge>
           )}
+          <div className="relative w-full sm:w-[260px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Suche nach Name, E-Mail, Betreff…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <Select value={filter} onValueChange={(val) => setFilter(val as typeof filter)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter" />

@@ -1,15 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, DollarSign, Key, CheckCircle2, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  DollarSign,
+  Key,
+  CheckCircle2,
+  ExternalLink,
+  Search,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { AdminPagination, paginateArray } from "@/components/admin/AdminPagination";
+import { useExport } from "@/hooks/useExport";
+import { ExportButton } from "@/components/ExportButton";
 
 interface Appointment {
   id: string;
@@ -40,16 +54,74 @@ interface Appointment {
   };
 }
 
+const PAGE_SIZE = 20;
+
 const AdminAppointments = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const { exportCSV, exportExcel, isExporting } = useExport({
+    filename: "termine",
+    columns: [
+      { key: "id", label: "Termin-ID" },
+      {
+        key: "appointment_date",
+        label: "Datum & Uhrzeit",
+        format: (v: string) =>
+          v ? format(new Date(v), "dd.MM.yyyy HH:mm", { locale: de }) : "",
+      },
+      { key: "status", label: "Status" },
+      { key: "duration_minutes", label: "Dauer (Min.)" },
+      {
+        key: "motorhomes",
+        label: "Fahrzeug",
+        format: (_: Appointment["motorhomes"], row: Appointment) =>
+          [row.motorhomes?.manufacturer, row.motorhomes?.model, row.motorhomes?.year]
+            .filter(Boolean)
+            .join(" "),
+      },
+      {
+        key: "purchase_stations",
+        label: "Station",
+        format: (_: Appointment["purchase_stations"], row: Appointment) =>
+          [row.purchase_stations?.name, row.purchase_stations?.city].filter(Boolean).join(", "),
+      },
+      {
+        key: "profiles",
+        label: "Verkäufer",
+        format: (_: Appointment["profiles"], row: Appointment) =>
+          `${row.profiles?.first_name || ""} ${row.profiles?.last_name || ""}`.trim(),
+      },
+      {
+        key: "profiles",
+        label: "E-Mail Verkäufer",
+        format: (_: Appointment["profiles"], row: Appointment) => row.profiles?.email || "",
+      },
+      { key: "payment_method", label: "Zahlungsart" },
+      { key: "payment_status", label: "Zahlungsstatus" },
+      {
+        key: "payment_amount",
+        label: "Betrag (EUR)",
+        format: (v: number | null) =>
+          v != null ? Number(v).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "",
+      },
+      { key: "release_pin", label: "Release-PIN" },
+      { key: "notes", label: "Notizen" },
+    ],
+  });
 
   useEffect(() => {
     fetchAppointments();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
 
   const fetchAppointments = async () => {
     try {
@@ -194,14 +266,31 @@ const AdminAppointments = () => {
     return <Badge variant={variants[status] || "secondary"}>{labels[status] || status}</Badge>;
   };
 
-  const filteredAppointments = appointments.filter((apt) => {
-    if (filter === "all") return true;
-    return apt.status === filter;
-  });
+  const filteredAppointments = useMemo(() => {
+    let list = appointments.filter((apt) => {
+      if (filter === "all") return true;
+      return apt.status === filter;
+    });
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter((apt) => {
+      const vehicle = `${apt.motorhomes?.manufacturer ?? ""} ${apt.motorhomes?.model ?? ""} ${apt.motorhomes?.year ?? ""}`.toLowerCase();
+      const seller = `${apt.profiles?.first_name ?? ""} ${apt.profiles?.last_name ?? ""} ${apt.profiles?.email ?? ""}`.toLowerCase();
+      const station = `${apt.purchase_stations?.name ?? ""} ${apt.purchase_stations?.city ?? ""}`.toLowerCase();
+      return vehicle.includes(q) || seller.includes(q) || station.includes(q);
+    });
+  }, [appointments, filter, searchQuery]);
+
+  const paginatedAppointments = useMemo(
+    () => paginateArray(filteredAppointments, currentPage, PAGE_SIZE),
+    [filteredAppointments, currentPage]
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Calendar className="w-8 h-8" />
@@ -211,6 +300,12 @@ const AdminAppointments = () => {
             Verwaltung aller Übergabetermine
           </p>
         </div>
+        <ExportButton
+          onExportCSV={() => exportCSV(filteredAppointments)}
+          onExportExcel={() => exportExcel(filteredAppointments)}
+          isExporting={isExporting}
+          size="sm"
+        />
       </div>
 
       {/* Filter */}
@@ -241,6 +336,17 @@ const AdminAppointments = () => {
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Suche nach Fahrzeug, Verkäufer, Station..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {/* Appointments List */}
       <div className="space-y-4">
         {loading ? (
@@ -252,7 +358,7 @@ const AdminAppointments = () => {
             <p className="text-muted-foreground">Keine Termine gefunden</p>
           </Card>
         ) : (
-          filteredAppointments.map((appointment) => (
+          paginatedAppointments.map((appointment) => (
             <Card key={appointment.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -413,6 +519,15 @@ const AdminAppointments = () => {
           ))
         )}
       </div>
+
+      {!loading && filteredAppointments.length > PAGE_SIZE && (
+        <AdminPagination
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          totalItems={filteredAppointments.length}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 };

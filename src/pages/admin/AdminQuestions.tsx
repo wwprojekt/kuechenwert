@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -78,6 +79,7 @@ export default function AdminQuestions() {
   const [answer, setAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "unanswered" | "answered">("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
@@ -119,6 +121,13 @@ export default function AdminQuestions() {
   useEffect(() => {
     fetchQuestions();
   }, []);
+
+  const PAGE_SIZE = 20;
+
+  // Reset Seite bei Filter-Änderung
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   const getFirstPhoto = (question: VehicleQuestion): string | null => {
     const photos = question.motorhome?.motorhome_photos;
@@ -236,6 +245,12 @@ export default function AdminQuestions() {
     return true;
   });
 
+  const totalItems = filteredQuestions.length;
+  const pageQuestions = filteredQuestions.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   const unansweredCount = questions.filter((q) => !q.answer).length;
 
   return (
@@ -291,6 +306,7 @@ export default function AdminQuestions() {
               <p className="text-muted-foreground">Keine Fragen gefunden</p>
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -316,7 +332,7 @@ export default function AdminQuestions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQuestions.map((question) => {
+                {pageQuestions.map((question) => {
                   const photo = getFirstPhoto(question);
                   const auctionId = getAuctionId(question);
 
@@ -443,6 +459,17 @@ export default function AdminQuestions() {
                 })}
               </TableBody>
             </Table>
+            {totalItems > PAGE_SIZE && (
+              <div className="px-4 pb-4">
+                <AdminPagination
+                  page={currentPage}
+                  pageSize={PAGE_SIZE}
+                  totalItems={totalItems}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>

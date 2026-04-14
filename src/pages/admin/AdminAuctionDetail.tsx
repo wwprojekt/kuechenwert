@@ -32,6 +32,7 @@ import {
   Phone,
   Trash2,
   Scale,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -256,6 +257,14 @@ export default function AdminAuctionDetail() {
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Bearbeiten
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/financials")}
+            >
+              <Receipt className="w-4 h-4 mr-2" />
+              Finanzen
             </Button>
             <Button
               variant="outline"

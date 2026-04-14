@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: allActiveAuctions, error: auctionsError } = await supabase
       .from('auctions')
       .select(`
-        id, current_bid, starting_bid, end_time, created_at, instant_buy_price,
+        id, current_bid, starting_bid, end_time, created_at,
         motorhomes!left (
           id, manufacturer, model, year, body_type, mileage, city, seller_id,
           photos:motorhome_photos(url, display_order)
@@ -124,15 +124,22 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Check opt-out
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, email, broadcast_emails_enabled')
+          .select('first_name, last_name, email')
           .eq('id', dealer.user_id)
           .single();
 
         if (!profile?.email) continue;
-        if (profile.broadcast_emails_enabled === false) {
+
+        // Check opt-out via user_notification_preferences
+        const { data: prefs } = await supabase
+          .from('user_notification_preferences')
+          .select('broadcast_emails_enabled')
+          .eq('user_id', dealer.user_id)
+          .maybeSingle();
+
+        if (prefs?.broadcast_emails_enabled === false) {
           skipped++;
           continue;
         }
@@ -210,14 +217,12 @@ const handler = async (req: Request): Promise<Response> => {
             const price = formatPrice(auction.current_bid || auction.starting_bid);
             const timeLeft = getTimeRemaining(auction.end_time);
             const bids = bidCounts[auction.id] || 0;
-            const hasBuyNow = auction.instant_buy_price && auction.instant_buy_price > 0;
 
             let details = `${detailRow('Aktuelles Gebot', `<strong style="color: #1f8aa2;">${price}</strong>`)}`;
             details += `${detailRow('Gebote', `${bids}`)}`;
             details += `${detailRow('Endet in', timeLeft)}`;
             if (m.mileage) details += `${detailRow('Kilometerstand', `${Number(m.mileage).toLocaleString('de-DE')} km`)}`;
             if (m.city) details += `${detailRow('Standort', m.city)}`;
-            if (hasBuyNow) details += `${detailRow('Sofortkauf', `<strong style="color: #059669;">${formatPrice(auction.instant_buy_price)}</strong>`)}`;
 
             emailContent += infoBox(
               `${m.manufacturer || '?'} ${m.model || ''} (${m.year || ''})`,

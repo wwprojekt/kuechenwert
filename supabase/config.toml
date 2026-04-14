@@ -86,6 +86,9 @@ verify_jwt = false
 [functions.send-inactivity-email]
 verify_jwt = false
 
+[functions.send-dealer-auction-digest]
+verify_jwt = false
+
 [functions.send-lead-notification]
 verify_jwt = false
 

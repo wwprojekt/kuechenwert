@@ -1,0 +1,19 @@
+-- AGB §6: Erweitert "Nachverhandlung, Kaufchancen und Folgerunden" um:
+-- - 72h Kaufchance-Phase Definition
+-- - Automatische Wiedereinstellung nach erfolgloser Kaufchance
+-- - Mindestpreis-Anpassung basierend auf Gegenangeboten
+-- - Widerspruchsrecht des Verkäufers (§307 BGB konform)
+-- Applied directly to production; this migration is for version control only.
+
+-- The UPDATE was applied live:
+-- UPDATE legal_pages SET content = REPLACE(content, old_section6, new_section6),
+--   version = version + 1, updated_at = NOW()
+-- WHERE slug = 'agb';
+--
+-- New §6 content covers:
+-- 1. Kaufchance-Phase (72h after auction end if reserve not met but bids exist)
+-- 2. Ablauf der Kaufchance (bidders invited, offers, counter-offers)
+-- 3. Automatische Wiedereinstellung (auto-relist after failed Kaufchance, 7-day rounds, unlimited)
+-- 4. Anpassung des Mindestpreises (lowest seller counter-offer becomes new reserve)
+-- 5. Widerspruchsrecht des Verkäufers (opt-out via dashboard during 72h window)
+-- 6. Verbot des anderweitigen Verkaufs (cross-ref to §4.4)

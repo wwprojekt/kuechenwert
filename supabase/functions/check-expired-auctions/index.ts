@@ -95,87 +95,189 @@ Deno.serve(async (req) => {
     // ─── 2. Kaufchance auctions whose kaufchance_expires_at has passed ──
     const { data: expiredKaufchancen, error: kaufchanceError } = await supabase
       .from('auctions')
-      .select('id, kaufchance_expires_at, status')
+      .select('id, kaufchance_expires_at, status, auto_relist, auction_round, reserve_price')
       .eq('status', 'kaufchance')
       .lt('kaufchance_expires_at', now);
 
     if (kaufchanceError) {
       console.error('Error fetching expired kaufchancen:', kaufchanceError);
-      // Don't throw - continue with results from step 1
     } else {
       console.log(`Found ${expiredKaufchancen?.length || 0} expired kaufchancen`);
 
       if (expiredKaufchancen && expiredKaufchancen.length > 0) {
         for (const kaufchance of expiredKaufchancen) {
           try {
-            console.log(`Closing expired kaufchance ${kaufchance.id}...`);
-
-            // Update auction status to 'ended'
-            const { error: updateError } = await supabase
+            // Load auction with motorhome data
+            const { data: auctionData } = await supabase
               .from('auctions')
-              .update({ status: 'ended', updated_at: now })
-              .eq('id', kaufchance.id);
+              .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model)')
+              .eq('id', kaufchance.id)
+              .single();
 
-            if (updateError) {
-              console.error(`Error closing kaufchance ${kaufchance.id}:`, updateError);
-              results.push({
-                auctionId: kaufchance.id,
-                type: 'kaufchance_expired',
-                success: false,
-                error: updateError.message,
-              });
-            } else {
-              // Load auction with motorhome data for notifications
-              const { data: auctionData } = await supabase
-                .from('auctions')
-                .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model)')
-                .eq('id', kaufchance.id)
-                .single();
+            const mh = Array.isArray(auctionData?.motorhome) ? auctionData.motorhome[0] : auctionData?.motorhome;
+            const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
 
-              const mh = Array.isArray(auctionData?.motorhome) ? auctionData.motorhome[0] : auctionData?.motorhome;
+            // ── AUTO-RELIST: If auto_relist is true, restart auction ──
+            if (kaufchance.auto_relist) {
+              console.log(`Auto-relisting kaufchance ${kaufchance.id} (round ${kaufchance.auction_round})...`);
 
-              // Update motorhome status back to 'active' (available again)
-              if (auctionData?.motorhome_id) {
-                const { error: mhError } = await supabase
-                  .from('motorhomes')
-                  .update({ status: 'active', updated_at: now })
-                  .eq('id', auctionData.motorhome_id);
-                if (mhError) console.error(`Failed to update motorhome status for ${auctionData.motorhome_id}:`, mhError);
+              // Determine new reserve price from seller's lowest counter-offer
+              let newReservePrice = kaufchance.reserve_price;
+              const { data: counterOffers } = await supabase
+                .from('post_auction_offers')
+                .select('counter_offer_amount')
+                .eq('auction_id', kaufchance.id)
+                .not('counter_offer_amount', 'is', null);
+
+              if (counterOffers && counterOffers.length > 0) {
+                const lowestCounter = Math.min(
+                  ...counterOffers.map((o: any) => Number(o.counter_offer_amount))
+                );
+                if (lowestCounter > 0) {
+                  newReservePrice = lowestCounter;
+                  console.log(`New reserve price from counter-offer: ${newReservePrice} (was ${kaufchance.reserve_price})`);
+                }
               }
 
-              // Set all pending/countered offers to 'expired'
-              const { error: expireOffersErr } = await supabase
+              // Expire all pending/countered offers
+              await supabase
                 .from('post_auction_offers')
-                .update({
-                  status: 'expired',
-                  seller_response: 'Kaufchance-Frist abgelaufen',
-                  updated_at: now,
-                })
+                .update({ status: 'expired', seller_response: 'Kaufchance-Frist abgelaufen – automatische Wiedereinstellung', updated_at: now })
                 .eq('auction_id', kaufchance.id)
                 .in('status', ['pending', 'countered']);
 
-              if (expireOffersErr) {
-                console.error(`Failed to expire offers for kaufchance ${kaufchance.id}:`, expireOffersErr);
+              // Delete old bids and kaufchance_invitations
+              await supabase.from('bids').delete().eq('auction_id', kaufchance.id);
+              await supabase.from('kaufchance_invitations').delete().eq('auction_id', kaufchance.id);
+
+              // Reset auction to active with new 7-day window
+              const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+              const newRound = (kaufchance.auction_round || 1) + 1;
+
+              const { error: relistError } = await supabase
+                .from('auctions')
+                .update({
+                  status: 'active',
+                  start_time: now,
+                  end_time: endTime,
+                  current_bid: null,
+                  kaufchance_expires_at: null,
+                  kaufchance_min_price: null,
+                  reserve_price: newReservePrice,
+                  auction_round: newRound,
+                  auto_relist: true,
+                  updated_at: now,
+                })
+                .eq('id', kaufchance.id);
+
+              if (relistError) {
+                console.error(`Failed to auto-relist ${kaufchance.id}:`, relistError);
+                results.push({ auctionId: kaufchance.id, type: 'auto_relist', success: false, error: relistError.message });
+                continue;
               }
 
-              // Send anonymous notifications to involved parties
-              const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
+              // Motorhome stays/becomes active
+              if (auctionData?.motorhome_id) {
+                await supabase.from('motorhomes')
+                  .update({ status: 'active', updated_at: now })
+                  .eq('id', auctionData.motorhome_id);
+              }
 
-              // Notify invited bidders (no seller identity revealed)
+              const endTimeFormatted = new Date(endTime).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const reserveFormatted = newReservePrice ? `${Number(newReservePrice).toLocaleString('de-DE')} €` : 'nicht gesetzt';
+
+              // Notify seller about auto-relist
+              if (mh?.seller_id) {
+                try {
+                  const { data: sellerProfile } = await supabase
+                    .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
+                  if (sellerProfile?.email) {
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: sellerProfile.email,
+                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        type: 'seller_auto_relisted',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
+                        endTime: endTimeFormatted,
+                        reservePrice: reserveFormatted,
+                        currentBid: `Runde ${newRound}`,
+                      },
+                    }).catch((e: any) => console.error(`Failed to notify seller:`, e));
+                  }
+                } catch (e) { console.error('Seller notification error:', e); }
+              }
+
+              // Notify previous bidders about new round
               try {
                 const { data: invitations } = await supabase
-                  .from('kaufchance_invitations')
-                  .select('bidder_id')
+                  .from('kaufchance_invitations').select('bidder_id').eq('auction_id', kaufchance.id);
+                // Note: invitations were just deleted, so use a fallback – query bids before delete
+                // Since bids are already deleted, we rely on the post_auction_offers buyers
+                const { data: offerBuyers } = await supabase
+                  .from('post_auction_offers')
+                  .select('buyer_id')
                   .eq('auction_id', kaufchance.id);
 
+                const notifiedIds = new Set<string>();
+                for (const buyer of (offerBuyers || [])) {
+                  if (notifiedIds.has(buyer.buyer_id)) continue;
+                  notifiedIds.add(buyer.buyer_id);
+                  const { data: profile } = await supabase
+                    .from('profiles').select('email, first_name, company_name').eq('id', buyer.buyer_id).single();
+                  if (profile?.email) {
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: profile.email,
+                        name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                        type: 'auction_relisted',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
+                        endTime: endTimeFormatted,
+                        currentBid: `Runde ${newRound}`,
+                      },
+                    }).catch((e: any) => console.error(`Failed to notify buyer:`, e));
+                  }
+                }
+              } catch (e) { console.error('Buyer notification error:', e); }
+
+              console.log(`Auto-relisted ${kaufchance.id} → round ${newRound}, reserve ${newReservePrice}`);
+              results.push({ auctionId: kaufchance.id, type: 'auto_relist', success: true, data: { round: newRound, reservePrice: newReservePrice } });
+
+            } else {
+              // ── OPT-OUT: Seller disabled auto-relist → end auction as before ──
+              console.log(`Closing expired kaufchance ${kaufchance.id} (auto_relist=false)...`);
+
+              const { error: updateError } = await supabase
+                .from('auctions')
+                .update({ status: 'ended', updated_at: now })
+                .eq('id', kaufchance.id);
+
+              if (updateError) {
+                console.error(`Error closing kaufchance ${kaufchance.id}:`, updateError);
+                results.push({ auctionId: kaufchance.id, type: 'kaufchance_expired', success: false, error: updateError.message });
+                continue;
+              }
+
+              if (auctionData?.motorhome_id) {
+                await supabase.from('motorhomes')
+                  .update({ status: 'active', updated_at: now })
+                  .eq('id', auctionData.motorhome_id);
+              }
+
+              await supabase.from('post_auction_offers')
+                .update({ status: 'expired', seller_response: 'Kaufchance-Frist abgelaufen', updated_at: now })
+                .eq('auction_id', kaufchance.id)
+                .in('status', ['pending', 'countered']);
+
+              // Notify bidders
+              try {
+                const { data: invitations } = await supabase
+                  .from('kaufchance_invitations').select('bidder_id').eq('auction_id', kaufchance.id);
                 if (invitations) {
                   for (const inv of invitations) {
                     const { data: profile } = await supabase
-                      .from('profiles')
-                      .select('email, first_name, company_name')
-                      .eq('id', inv.bidder_id)
-                      .single();
-
+                      .from('profiles').select('email, first_name, company_name').eq('id', inv.bidder_id).single();
                     if (profile?.email) {
                       await supabase.functions.invoke('send-auction-notification', {
                         body: {
@@ -189,19 +291,13 @@ Deno.serve(async (req) => {
                     }
                   }
                 }
-              } catch (notifyErr) {
-                console.error(`Failed to notify bidders for kaufchance ${kaufchance.id}:`, notifyErr);
-              }
+              } catch (e) { console.error('Bidder notification error:', e); }
 
-              // Notify seller (no buyer identity revealed)
+              // Notify seller
               if (mh?.seller_id) {
                 try {
                   const { data: sellerProfile } = await supabase
-                    .from('profiles')
-                    .select('email, first_name')
-                    .eq('id', mh.seller_id)
-                    .single();
-
+                    .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
                     await supabase.functions.invoke('send-auction-notification', {
                       body: {
@@ -209,30 +305,19 @@ Deno.serve(async (req) => {
                         name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                         type: 'kaufchance_expired',
                         motorhomeModel: motorhomeName,
-                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh?.id}`,
+                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
                       },
-                    }).catch((e: any) => console.error(`Failed to notify seller ${mh.seller_id}:`, e));
+                    }).catch((e: any) => console.error(`Failed to notify seller:`, e));
                   }
-                } catch (sellerNotifyErr) {
-                  console.error(`Failed to notify seller for kaufchance ${kaufchance.id}:`, sellerNotifyErr);
-                }
+                } catch (e) { console.error('Seller notification error:', e); }
               }
 
-              console.log(`Successfully closed kaufchance ${kaufchance.id} (offers expired, parties notified)`);
-              results.push({
-                auctionId: kaufchance.id,
-                type: 'kaufchance_expired',
-                success: true,
-              });
+              console.log(`Closed kaufchance ${kaufchance.id} (opted out of auto-relist)`);
+              results.push({ auctionId: kaufchance.id, type: 'kaufchance_expired', success: true });
             }
           } catch (error: any) {
-            console.error(`Exception closing kaufchance ${kaufchance.id}:`, error);
-            results.push({
-              auctionId: kaufchance.id,
-              type: 'kaufchance_expired',
-              success: false,
-              error: error.message,
-            });
+            console.error(`Exception processing kaufchance ${kaufchance.id}:`, error);
+            results.push({ auctionId: kaufchance.id, type: 'kaufchance_expired', success: false, error: error.message });
           }
         }
       }

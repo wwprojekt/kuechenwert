@@ -652,6 +652,13 @@ export default function AdminAuctions() {
         .eq('auction_id', auction.id);
       if (bidsDelErr) throw new Error(`Alte Gebote konnten nicht gelöscht werden: ${bidsDelErr.message}`);
 
+      // Get current round
+      const { data: currentAuction } = await supabase
+        .from('auctions')
+        .select('auction_round')
+        .eq('id', auction.id)
+        .single();
+
       // Reset auction to active with new 7-day period
       const { error } = await supabase
         .from('auctions')
@@ -662,6 +669,8 @@ export default function AdminAuctions() {
           current_bid: null,
           kaufchance_expires_at: null,
           kaufchance_min_price: null,
+          auction_round: (currentAuction?.auction_round || 1) + 1,
+          auto_relist: true,
         })
         .eq('id', auction.id);
 
@@ -763,7 +772,17 @@ export default function AdminAuctions() {
             </p>
           </div>
         </TableCell>
-        <TableCell>{getStatusBadge(auction.status)}</TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1.5">
+            {getStatusBadge(auction.status)}
+            {(auction.auction_round ?? 1) > 1 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">R{auction.auction_round}</Badge>
+            )}
+            {auction.status === 'kaufchance' && auction.auto_relist === false && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-300 text-red-600">kein Relist</Badge>
+            )}
+          </div>
+        </TableCell>
         <TableCell>
           <div className="flex items-center gap-1">
             <TrendingUp className="w-4 h-4 text-primary" />

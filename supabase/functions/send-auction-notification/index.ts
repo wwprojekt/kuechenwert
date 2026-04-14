@@ -11,7 +11,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired" | "seller_buyer_rejected";
+  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired" | "seller_buyer_rejected" | "seller_auto_relisted" | "auction_relisted";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -405,6 +405,44 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('Offene Angebote wurden automatisch als abgelaufen markiert.')}
           ${paragraph('Entdecken Sie weitere verf\u00fcgbare Fahrzeuge auf unserer Plattform:')}
           ${button('Fahrzeuge entdecken', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
+        `;
+        break;
+
+      case "seller_auto_relisted":
+        subject = `Neue Auktionsrunde gestartet: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Die Kaufchance-Phase f\u00fcr Ihr Fahrzeug ist abgelaufen, ohne dass eine Einigung erzielt wurde. <strong>Gem\u00e4\u00df unseren AGB wurde Ihr Fahrzeug automatisch erneut in die Auktion aufgenommen.</strong>')}
+          ${infoBox('Neue Auktion', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Auktionsrunde', currentBid) : ''}
+            ${endTime ? detailRow('Neues Auktionsende', endTime) : ''}
+            ${reservePrice ? detailRow('Neuer Mindestpreis', reservePrice) : ''}
+          `, 'success', settingsData)}
+          ${paragraph('<strong>Was bedeutet das f\u00fcr Sie?</strong>')}
+          ${paragraph('<strong>1.</strong> Ihr Fahrzeug wird erneut 7 Tage lang versteigert<br><strong>2.</strong> Alle gepr\u00fcften H\u00e4ndler k\u00f6nnen neue Gebote abgeben<br><strong>3.</strong> Der Mindestpreis wurde ggf. basierend auf den Verhandlungen angepasst')}
+          ${paragraph('<strong>M\u00f6chten Sie die automatische Wiedereinstellung deaktivieren?</strong> Sie k\u00f6nnen dies jederzeit in Ihrem Dashboard unter Ihrem Inserat einstellen.')}
+          ${button('Im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+
+      case "auction_relisted":
+        subject = `Neue Chance: ${motorhomeModel} \u2013 erneut in der Auktion!`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Gute Neuigkeiten!</strong> Ein Fahrzeug, f\u00fcr das Sie sich interessiert haben, ist erneut in der Auktion verf\u00fcgbar.')}
+          ${infoBox('Auktionsdetails', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Auktionsrunde', currentBid) : ''}
+            ${endTime ? detailRow('Auktionsende', endTime) : ''}
+          `, 'info', settingsData)}
+          ${paragraph('Die vorherige Kaufchance-Verhandlung endete ohne Einigung. Jetzt haben Sie erneut die M\u00f6glichkeit, auf dieses Fahrzeug zu bieten.')}
+          ${paragraph('<strong>Tipp:</strong> Nutzen Sie die Auto-Bid Funktion, um automatisch bis zu Ihrem Maximalgebot mitzubieten.')}
+          ${button('Jetzt mitbieten', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;

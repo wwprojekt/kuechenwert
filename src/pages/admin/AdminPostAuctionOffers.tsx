@@ -107,6 +107,8 @@ interface AuctionInfo {
   reserve_price: number | null;
   starting_bid: number | null;
   end_time: string | null;
+  auction_round: number;
+  auto_relist: boolean;
   motorhome: {
     id: string;
     manufacturer: string;
@@ -276,6 +278,7 @@ export default function AdminPostAuctionOffers() {
         .select(`
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
+          auction_round, auto_relist,
           motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .in("id", auctionIds);
@@ -296,6 +299,7 @@ export default function AdminPostAuctionOffers() {
         .select(`
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
+          auction_round, auto_relist,
           motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
         `)
         .eq("status", "kaufchance")
@@ -739,7 +743,7 @@ export default function AdminPostAuctionOffers() {
       // 1. Lade aktuelle Auktionsdaten
       const { data: currentAuction, error: fetchErr } = await supabase
         .from('auctions')
-        .select('motorhome_id, reserve_price, starting_bid, motorhome:motorhomes(reserve_price, postal_code, city)')
+        .select('motorhome_id, reserve_price, starting_bid, auction_round, motorhome:motorhomes(reserve_price, postal_code, city)')
         .eq('id', auctionId)
         .single();
       if (fetchErr) throw fetchErr;
@@ -793,6 +797,8 @@ export default function AdminPostAuctionOffers() {
           end_time: endTime.toISOString(),
           kaufchance_expires_at: null,
           kaufchance_min_price: null,
+          auction_round: ((currentAuction as any)?.auction_round || 1) + 1,
+          auto_relist: true,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', auctionId);
@@ -1213,6 +1219,12 @@ export default function AdminPostAuctionOffers() {
                             <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
+                          {(auction.auction_round ?? 1) > 1 && (
+                            <span>Runde: <strong>{auction.auction_round}</strong></span>
+                          )}
+                          <span className={auction.auto_relist ? 'text-teal-600' : 'text-red-500'}>
+                            Auto-Relist: <strong>{auction.auto_relist ? 'Aktiv' : 'Deaktiviert'}</strong>
+                          </span>
                           {auction.kaufchance_expires_at && (
                             <span>
                               Frist: <strong>{format(new Date(auction.kaufchance_expires_at), "dd.MM.yyyy HH:mm", { locale: de })}</strong>

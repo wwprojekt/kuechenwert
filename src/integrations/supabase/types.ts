@@ -510,6 +510,8 @@ export type Database = {
       }
       auctions: {
         Row: {
+          auction_round: number
+          auto_relist: boolean
           created_at: string
           current_bid: number | null
           end_time: string | null
@@ -525,6 +527,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auction_round?: number
+          auto_relist?: boolean
           created_at?: string
           current_bid?: number | null
           end_time?: string | null
@@ -540,6 +544,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auction_round?: number
+          auto_relist?: boolean
           created_at?: string
           current_bid?: number | null
           end_time?: string | null

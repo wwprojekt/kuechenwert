@@ -88,18 +88,18 @@ const Footer = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-              <Link to="/verkaufen/wizard">
+              <Link to="/verkaufen/wizard" className="w-full sm:w-auto">
                 <Button
-                  className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium"
+                  className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium w-full sm:w-auto"
                 >
                   Jetzt kostenlos bewerten
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/wertrechner">
+              <Link to="/wertrechner" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className="h-11 px-6 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                  className="h-11 px-6 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
                 >
                   Wert berechnen
                 </Button>

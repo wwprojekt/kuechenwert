@@ -68,7 +68,7 @@ const Benefits = () => {
                 className="group animate-scale-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="bg-card border-2 hover:border-primary/30 rounded-lg p-8 space-y-4 hover-lift h-full transition-smooth">
+                  <div className="bg-card border-2 hover:border-primary/30 rounded-lg p-5 sm:p-8 space-y-4 hover-lift h-full transition-smooth">
                   <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-smooth">
                     <IconComponent className="h-7 w-7 text-primary" />
                   </div>

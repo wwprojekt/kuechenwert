@@ -62,7 +62,7 @@ const HowItWorks = () => {
                 className="relative overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group animate-scale-in bg-card"
                 style={{ animationDelay: `${index * 0.15}s` }}
               >
-                <CardContent className="relative pt-10 pb-10 px-8 space-y-6">
+                <CardContent className="relative pt-8 pb-8 px-5 sm:pt-10 sm:pb-10 sm:px-8 space-y-5 sm:space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="h-16 w-16 rounded-lg gradient-hero flex items-center justify-center shadow-lg group-hover:shadow-glow transition-smooth">
                       <IconComponent className="h-8 w-8 text-white" />
@@ -73,7 +73,7 @@ const HowItWorks = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-2xl font-bold text-foreground">
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">
                       {channel.title}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">

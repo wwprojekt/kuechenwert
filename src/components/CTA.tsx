@@ -23,15 +23,15 @@ const CTA = () => {
                 Erhalten Sie in nur 4 Schritten eine kostenlose Sofort-Schätzung mit unserem Wertrechner.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link to="/wertrechner">
-                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <Link to="/wertrechner" className="w-full sm:w-auto">
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg w-full sm:w-auto">
                   <Calculator className="h-4 w-4 mr-2" />
                   Sofort-Schätzung
                 </Button>
               </Link>
-              <Link to="/wertermittlung">
-                <Button variant="outline" className="border-amber-300 hover:bg-amber-50">
+              <Link to="/wertermittlung" className="w-full sm:w-auto">
+                <Button variant="outline" className="border-amber-300 hover:bg-amber-50 w-full sm:w-auto">
                   Experten-Bewertung
                 </Button>
               </Link>

@@ -51,14 +51,14 @@ interface FAQProps {
 
 const FAQ = ({ hideHeader = false }: FAQProps) => {
   return (
-    <section id="faq" className="py-16 md:py-24 gradient-subtle">
-      <div className="container">
+    <section id="faq" className="py-12 sm:py-16 md:py-24 gradient-subtle">
+      <div className="container px-4 sm:px-6 lg:px-8">
         {!hideHeader && (
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
               Häufig gestellte Fragen
             </h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground">
               Hier finden Sie Antworten auf die wichtigsten Fragen rund um den Verkauf Ihres Wohnmobils.
             </p>
           </div>

@@ -32,6 +32,8 @@ import {
   Trash2,
   Scale,
   Receipt,
+  Clock,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +97,7 @@ export default function AdminAuctionDetail() {
               company_name
             )
           ),
+          auction_addenda(id, content, created_at),
           bids (
             id,
             amount,
@@ -435,6 +438,29 @@ export default function AdminAuctionDetail() {
                   </InfoGrid>
                 </div>
               </DetailSection>
+
+              {/* Nachträge des Verkäufers */}
+              {Array.isArray((auction as any)?.auction_addenda) && (auction as any).auction_addenda.length > 0 && (
+                <DetailSection title="Nachträge des Verkäufers" icon={<FileText className="w-5 h-5 text-blue-600" />}>
+                  <div className="space-y-3">
+                    {[...(auction as any).auction_addenda]
+                      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                      .map((item: any) => (
+                        <div
+                          key={item.id}
+                          className="p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20"
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Hinzugefügt am{" "}
+                            {format(new Date(item.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </DetailSection>
+              )}
 
               {/* Bids Table */}
               <DetailSection title={`Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>

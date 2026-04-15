@@ -45,6 +45,8 @@ import {
   Send,
   Play,
   Ban,
+  Clock,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AdminDetailLayout,
   DetailSection,
@@ -101,12 +111,22 @@ export default function AdminMotorhomeDetail() {
             created_at
           ),
           auctions(
-            id,
-            status,
-            starting_bid,
-            current_bid,
-            start_time,
-            end_time
+            *,
+            auction_addenda(id, content, created_at),
+            bids(
+              id,
+              amount,
+              created_at,
+              is_autobid,
+              max_autobid_amount,
+              bidder:profiles!bids_bidder_id_fkey(
+                id,
+                first_name,
+                last_name,
+                email,
+                company_name
+              )
+            )
           ),
           appointments(
             id,
@@ -218,6 +238,23 @@ export default function AdminMotorhomeDetail() {
     return null;
   })();
 
+  const sortedBids = (() => {
+    const bids = (relevantAuction as any)?.bids;
+    if (!bids || !Array.isArray(bids)) return [];
+    return [...bids].sort((a: any, b: any) => b.amount - a.amount);
+  })();
+
+  const uniqueBidderCount = new Set(
+    sortedBids.map((b: any) => b.bidder?.id).filter(Boolean)
+  ).size;
+
+  const addenda = (() => {
+    const items = (relevantAuction as any)?.auction_addenda;
+    if (!items || !Array.isArray(items)) return [];
+    return [...items].sort(
+      (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  })();
 
   // Auction mutations
   const activateAuctionMutation = useMutation({
@@ -405,11 +442,12 @@ export default function AdminMotorhomeDetail() {
 
               {/* Tabs for Details */}
               <Tabs defaultValue="basic" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="basic">Grunddaten</TabsTrigger>
                   <TabsTrigger value="technical">Technik</TabsTrigger>
                   <TabsTrigger value="interior">Ausstattung</TabsTrigger>
                   <TabsTrigger value="equipment">Extras</TabsTrigger>
+                  <TabsTrigger value="condition">Zustand</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic">
@@ -426,6 +464,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Listennummer" value={motorhome.listing_number} />
                       <InfoItem label="PLZ (Standort)" value={motorhome.postal_code || "—"} />
                       <InfoItem label="Stadt" value={motorhome.city || "—"} />
+                      <InfoItem label="Basisfahrzeug" value={motorhome.base_vehicle || "—"} />
                     </InfoGrid>
                     {motorhome.description && (
                       <div className="mt-6 p-4 rounded-lg bg-muted/50">
@@ -440,12 +479,18 @@ export default function AdminMotorhomeDetail() {
                   <DetailSection title="Technische Daten" icon={<Settings className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
                       <InfoItem label="Kraftstoff" value={motorhome.fuel_type} icon={<Fuel className="w-3 h-3" />} />
-                      <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
+                      <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS${motorhome.power_kw ? ` (${motorhome.power_kw} kW)` : ''}` : "—"} />
                       <InfoItem label="Getriebe" value={motorhome.transmission} />
                       <InfoItem label="Abgasnorm" value={motorhome.emission_class} />
                       <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString()} />
+                      <InfoItem label="Hubraum" value={motorhome.engine_displacement_ccm ? `${motorhome.engine_displacement_ccm} ccm` : "—"} />
+                      <InfoItem label="Tankinhalt" value={motorhome.fuel_tank_capacity_liters ? `${motorhome.fuel_tank_capacity_liters} L` : "—"} />
+                      <InfoItem label="Gassystem" value={motorhome.gas_system || "—"} />
+                      <InfoItem label="Hauptreifen" value={motorhome.main_tires || "—"} />
+                      <InfoItem label="Zweitreifen" value={motorhome.second_tires || "—"} />
+                      <InfoItem label="Letzter TÜV" value={formatDate(motorhome.last_tuev_date)} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">
                       {motorhome.accident_free && (
@@ -464,6 +509,12 @@ export default function AdminMotorhomeDetail() {
                         <Badge variant="outline" className="gap-1">
                           <FileText className="w-3 h-3" />
                           Scheckheft
+                        </Badge>
+                      )}
+                      {motorhome.has_tuev && (
+                        <Badge variant="outline" className="gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-green-600" />
+                          TÜV vorhanden
                         </Badge>
                       )}
                     </div>
@@ -506,6 +557,9 @@ export default function AdminMotorhomeDetail() {
                       {motorhome.has_bathroom && <Badge variant="outline">Bad</Badge>}
                       {motorhome.has_toilet && <Badge variant="outline">Toilette</Badge>}
                       {motorhome.has_shower && <Badge variant="outline">Dusche</Badge>}
+                      {motorhome.has_swivel_seats && <Badge variant="outline">Drehsitze</Badge>}
+                      {motorhome.has_roof_ac && <Badge variant="outline">Dach-Klimaanlage</Badge>}
+                      {motorhome.has_stand_ac && <Badge variant="outline">Stand-Klimaanlage</Badge>}
                     </div>
                   </DetailSection>
                 </TabsContent>
@@ -556,6 +610,12 @@ export default function AdminMotorhomeDetail() {
                           <Warehouse className="w-3 h-3" /> Heckgarage
                         </Badge>
                       )}
+                      {motorhome.has_esp && <Badge variant="outline">ESP</Badge>}
+                      {motorhome.has_airbag && <Badge variant="outline">Airbag</Badge>}
+                      {motorhome.has_alarm && <Badge variant="outline">Alarmanlage</Badge>}
+                      {motorhome.has_navigation && <Badge variant="outline">Navigation</Badge>}
+                      {motorhome.has_satellite && <Badge variant="outline">Satellitenanlage</Badge>}
+                      {motorhome.has_awning_tent && <Badge variant="outline">Vorzelt</Badge>}
                     </div>
                     {motorhome.battery_capacity_ah && (
                       <p className="text-sm text-muted-foreground mt-4">
@@ -570,7 +630,96 @@ export default function AdminMotorhomeDetail() {
                     )}
                   </DetailSection>
                 </TabsContent>
+
+                <TabsContent value="condition">
+                  <DetailSection title="Fahrzeugzustand" icon={<Shield className="w-5 h-5" />}>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className={`p-3 rounded-lg border text-center ${motorhome.accident_free ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : motorhome.accident_free === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
+                        {motorhome.accident_free ? (
+                          <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                        ) : motorhome.accident_free === false ? (
+                          <AlertTriangle className="w-5 h-5 mx-auto mb-1 text-red-600" />
+                        ) : (
+                          <Car className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                        )}
+                        <p className="text-sm font-medium">
+                          {motorhome.accident_free ? "Unfallfrei" : motorhome.accident_free === false ? "Unfall vorhanden" : "Keine Angabe"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-lg border text-center ${motorhome.non_smoker ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : motorhome.non_smoker === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
+                        {motorhome.non_smoker ? (
+                          <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                        ) : motorhome.non_smoker === false ? (
+                          <AlertTriangle className="w-5 h-5 mx-auto mb-1 text-red-600" />
+                        ) : (
+                          <Car className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                        )}
+                        <p className="text-sm font-medium">
+                          {motorhome.non_smoker ? "Nichtraucher" : motorhome.non_smoker === false ? "Raucherfahrzeug" : "Keine Angabe"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-lg border text-center ${motorhome.service_history_available ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
+                        {motorhome.service_history_available ? (
+                          <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                        ) : (
+                          <FileText className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                        )}
+                        <p className="text-sm font-medium">
+                          {motorhome.service_history_available ? "Scheckheft vorhanden" : "Kein Scheckheft"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-lg border text-center ${motorhome.has_tuev ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
+                        {motorhome.has_tuev ? (
+                          <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                        ) : (
+                          <Calendar className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                        )}
+                        <p className="text-sm font-medium">
+                          {motorhome.tuev_valid_until ? `TÜV bis ${formatMonthYear(motorhome.tuev_valid_until)}` : motorhome.has_tuev ? "TÜV vorhanden" : "Kein TÜV"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {motorhome.damage_summary ? (
+                      <div className="mt-4 p-4 rounded-lg border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                        <h4 className="font-semibold flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                          Bekannte Mängel
+                        </h4>
+                        <p className="text-sm whitespace-pre-wrap">{motorhome.damage_summary}</p>
+                      </div>
+                    ) : !motorhome.has_damage ? (
+                      <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <p className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Keine bekannten Mängel angegeben
+                        </p>
+                      </div>
+                    ) : null}
+                  </DetailSection>
+                </TabsContent>
               </Tabs>
+
+              {/* Nachträge des Verkäufers */}
+              {addenda.length > 0 && (
+                <DetailSection title="Nachträge des Verkäufers" icon={<FileText className="w-5 h-5 text-blue-600" />}>
+                  <div className="space-y-3">
+                    {addenda.map((item: any) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20"
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Hinzugefügt am{" "}
+                          {format(new Date(item.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </DetailSection>
+              )}
 
               {/* Damage Photos */}
               {Array.isArray(motorhome.damage_photos) && motorhome.damage_photos.length > 0 && (
@@ -596,6 +745,76 @@ export default function AdminMotorhomeDetail() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </DetailSection>
+              )}
+
+              {/* Gebote */}
+              {sortedBids.length > 0 && (
+                <DetailSection title={`Gebote (${sortedBids.length})`} icon={<Gavel className="w-5 h-5" />}>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Bieter</TableHead>
+                          <TableHead>Betrag</TableHead>
+                          <TableHead>Max Auto</TableHead>
+                          <TableHead>Typ</TableHead>
+                          <TableHead>Zeitpunkt</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedBids.map((bid: any, idx: number) => (
+                          <TableRow key={bid.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">
+                                  {bid.bidder?.first_name} {bid.bidder?.last_name}
+                                  {idx === 0 && (
+                                    <Badge variant="default" className="ml-2 text-xs">Höchstgebot</Badge>
+                                  )}
+                                </p>
+                                {bid.bidder?.company_name && (
+                                  <p className="text-xs text-muted-foreground">{bid.bidder.company_name}</p>
+                                )}
+                                <a
+                                  href={`mailto:${bid.bidder?.email}`}
+                                  className="text-xs text-muted-foreground hover:text-primary"
+                                >
+                                  {bid.bidder?.email}
+                                </a>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {bid.max_autobid_amount ? formatPrice(bid.max_autobid_amount) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={bid.is_autobid ? "secondary" : "outline"}>
+                                {bid.is_autobid ? "Auto" : "Manuell"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {format(new Date(bid.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Gebote</p>
+                      <p className="text-lg font-semibold">{sortedBids.length}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Bieter</p>
+                      <p className="text-lg font-semibold">{uniqueBidderCount}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Höchstgebot</p>
+                      <p className="text-lg font-semibold">{formatPrice(sortedBids[0]?.amount)}</p>
+                    </div>
                   </div>
                 </DetailSection>
               )}
@@ -719,6 +938,28 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Startgebot" value={formatPrice(relevantAuction.starting_bid)} />
                       <InfoItem label="Endet" value={formatDate(relevantAuction.end_time)} />
                     </InfoGrid>
+                    {relevantAuction.reserve_price != null && (
+                      <div className={`p-2 rounded text-sm ${
+                        (relevantAuction.current_bid || 0) >= relevantAuction.reserve_price
+                          ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
+                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400'
+                      }`}>
+                        {(relevantAuction.current_bid || 0) >= relevantAuction.reserve_price
+                          ? `✓ Reservepreis erreicht (${formatPrice(relevantAuction.reserve_price)})`
+                          : `Reservepreis: ${formatPrice(relevantAuction.reserve_price)} — fehlen noch ${formatPrice(relevantAuction.reserve_price - (relevantAuction.current_bid || 0))}`
+                        }
+                      </div>
+                    )}
+                    {sortedBids.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {sortedBids.length} Gebote von {uniqueBidderCount} Bietern
+                      </p>
+                    )}
+                    {relevantAuction.auction_round > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        Auktionsrunde {relevantAuction.auction_round}
+                      </p>
+                    )}
                     <Button
                       className="w-full"
                       onClick={() => navigate(`/admin/auctions/${relevantAuction.id}`)}
@@ -769,14 +1010,62 @@ export default function AdminMotorhomeDetail() {
               <DetailSection title="Preisgestaltung" icon={<Euro className="w-5 h-5" />}>
                 <div className="space-y-3">
                   <InfoItem label="Verkaufsweg" value={getSaleChannelBadge(motorhome.sale_channel).label} />
-                  {motorhome.instant_price && (
+                  {motorhome.instant_price != null && (
                     <InfoItem label="Sofortpreis" value={formatPrice(motorhome.instant_price)} />
                   )}
-                  {motorhome.reserve_price && (
+                  {motorhome.reserve_price != null && (
                     <InfoItem label="Reservepreis" value={formatPrice(motorhome.reserve_price)} />
                   )}
+                  {motorhome.price != null && (
+                    <InfoItem label="Verkaufspreis" value={formatPrice(motorhome.price)} />
+                  )}
+                  <Separator className="my-2" />
+                  <InfoItem
+                    label="Kontoart"
+                    value={motorhome.account_type === "dealer" ? "Händler" : motorhome.account_type === "private" ? "Privat" : motorhome.account_type || "—"}
+                  />
+                  <InfoItem
+                    label="MwSt ausweisbar"
+                    value={motorhome.mwst_ausweisbar === true ? "Ja" : motorhome.mwst_ausweisbar === false ? "Nein" : "Nicht angegeben"}
+                  />
                 </div>
               </DetailSection>
+
+              {/* Vertragsdaten */}
+              {(motorhome.contract_number || motorhome.contract_url || motorhome.sold_to || motorhome.sold_at) && (
+                <DetailSection title="Vertragsdaten" icon={<FileText className="w-5 h-5" />}>
+                  <div className="space-y-3">
+                    {motorhome.contract_number && (
+                      <InfoItem label="Vertragsnr." value={motorhome.contract_number} />
+                    )}
+                    {motorhome.contract_url && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Vertrag</span>
+                        <a
+                          href={motorhome.contract_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Vertrag öffnen →
+                        </a>
+                      </div>
+                    )}
+                    {motorhome.sold_to && (
+                      <InfoItem label="Verkauft an" value={motorhome.sold_to} />
+                    )}
+                    {motorhome.sold_at && (
+                      <InfoItem label="Verkauft am" value={formatDate(motorhome.sold_at)} />
+                    )}
+                    {motorhome.sale_type && (
+                      <InfoItem label="Verkaufstyp" value={motorhome.sale_type} />
+                    )}
+                    {motorhome.available_from && (
+                      <InfoItem label="Verfügbar ab" value={formatDate(motorhome.available_from)} />
+                    )}
+                  </div>
+                </DetailSection>
+              )}
 
               {/* Meta Info */}
               <Card>

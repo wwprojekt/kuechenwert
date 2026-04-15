@@ -110,53 +110,46 @@ Deno.serve(async (req) => {
             // Load auction with motorhome data
             const { data: auctionData } = await supabase
               .from('auctions')
-              .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model)')
+              .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model, reserve_price)')
               .eq('id', kaufchance.id)
               .single();
 
             const mh = Array.isArray(auctionData?.motorhome) ? auctionData.motorhome[0] : auctionData?.motorhome;
             const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
 
-            // ── AUTO-RELIST: If auto_relist is true, restart auction ──
-            if (kaufchance.auto_relist) {
+            // ── AUTO-RELIST: default on (matches DB NOT NULL + frontend `!== false`) ──
+            if (kaufchance.auto_relist !== false) {
               console.log(`Auto-relisting kaufchance ${kaufchance.id} (round ${kaufchance.auction_round})...`);
 
-              // Determine new reserve price from seller's lowest counter-offer
-              let newReservePrice = kaufchance.reserve_price;
+              // Baseline reserve (auction row, else motorhome — same idea as close-auction)
+              let newReservePrice =
+                kaufchance.reserve_price ?? (mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null;
+
+              // Lowest seller counter-offer among still-active negotiations only
               const { data: counterOffers } = await supabase
                 .from('post_auction_offers')
                 .select('counter_offer_amount')
                 .eq('auction_id', kaufchance.id)
+                .in('status', ['pending', 'countered'])
                 .not('counter_offer_amount', 'is', null);
 
               if (counterOffers && counterOffers.length > 0) {
                 const lowestCounter = Math.min(
-                  ...counterOffers.map((o: any) => Number(o.counter_offer_amount))
+                  ...counterOffers.map((o: { counter_offer_amount: unknown }) => Number(o.counter_offer_amount))
                 );
                 if (lowestCounter > 0) {
                   newReservePrice = lowestCounter;
-                  console.log(`New reserve price from counter-offer: ${newReservePrice} (was ${kaufchance.reserve_price})`);
+                  console.log(`New reserve price from counter-offer: ${newReservePrice}`);
                 }
               }
 
-              // Collect bidder IDs from kaufchance_invitations BEFORE deleting them
+              // Collect bidder IDs from kaufchance_invitations BEFORE any destructive writes
               const { data: invitedBidders } = await supabase
                 .from('kaufchance_invitations')
                 .select('bidder_id')
                 .eq('auction_id', kaufchance.id);
 
-              // Expire all pending/countered offers
-              await supabase
-                .from('post_auction_offers')
-                .update({ status: 'expired', seller_response: 'Kaufchance-Frist abgelaufen – automatische Wiedereinstellung', updated_at: now })
-                .eq('auction_id', kaufchance.id)
-                .in('status', ['pending', 'countered']);
-
-              // Delete old bids and kaufchance_invitations
-              await supabase.from('bids').delete().eq('auction_id', kaufchance.id);
-              await supabase.from('kaufchance_invitations').delete().eq('auction_id', kaufchance.id);
-
-              // Reset auction to active with new 7-day window
+              // Transition auction first — avoids orphaned state if update fails after deletes
               const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
               const newRound = (kaufchance.auction_round || 1) + 1;
 
@@ -182,11 +175,24 @@ Deno.serve(async (req) => {
                 continue;
               }
 
-              // Motorhome stays/becomes active
+              const { error: expireErr } = await supabase
+                .from('post_auction_offers')
+                .update({ status: 'expired', seller_response: 'Kaufchance-Frist abgelaufen – automatische Wiedereinstellung', updated_at: now })
+                .eq('auction_id', kaufchance.id)
+                .in('status', ['pending', 'countered']);
+              if (expireErr) console.error(`Expire offers after relist ${kaufchance.id}:`, expireErr);
+
+              const { error: bidsDelErr } = await supabase.from('bids').delete().eq('auction_id', kaufchance.id);
+              if (bidsDelErr) console.error(`Delete bids after relist ${kaufchance.id}:`, bidsDelErr);
+
+              const { error: invDelErr } = await supabase.from('kaufchance_invitations').delete().eq('auction_id', kaufchance.id);
+              if (invDelErr) console.error(`Delete kaufchance_invitations after relist ${kaufchance.id}:`, invDelErr);
+
               if (auctionData?.motorhome_id) {
-                await supabase.from('motorhomes')
-                  .update({ status: 'active', updated_at: now })
+                const { error: mhErr } = await supabase.from('motorhomes')
+                  .update({ status: 'active', reserve_price: newReservePrice, updated_at: now })
                   .eq('id', auctionData.motorhome_id);
+                if (mhErr) console.error(`Motorhome sync after relist ${kaufchance.id}:`, mhErr);
               }
 
               const endTimeFormatted = new Date(endTime).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -220,7 +226,7 @@ Deno.serve(async (req) => {
 
                 // Invited bidders (collected before deletion)
                 for (const inv of (invitedBidders || [])) {
-                  if (notifiedIds.has(inv.bidder_id)) continue;
+                  if (!inv.bidder_id || notifiedIds.has(inv.bidder_id)) continue;
                   notifiedIds.add(inv.bidder_id);
                   const { data: profile } = await supabase
                     .from('profiles').select('email, first_name, company_name').eq('id', inv.bidder_id).single();
@@ -245,7 +251,7 @@ Deno.serve(async (req) => {
                   .select('buyer_id')
                   .eq('auction_id', kaufchance.id);
                 for (const buyer of (offerBuyers || [])) {
-                  if (notifiedIds.has(buyer.buyer_id)) continue;
+                  if (!buyer.buyer_id || notifiedIds.has(buyer.buyer_id)) continue;
                   notifiedIds.add(buyer.buyer_id);
                   const { data: profile } = await supabase
                     .from('profiles').select('email, first_name, company_name').eq('id', buyer.buyer_id).single();

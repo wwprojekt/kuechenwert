@@ -289,6 +289,9 @@ export function PostAuctionOfferDialog({
         {existingOffer!.seller_response && (
           <p className="text-sm text-muted-foreground italic">&quot;{existingOffer!.seller_response}&quot;</p>
         )}
+        <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
+          Hinweis: Wenn Sie das Gegenangebot ablehnen, können Sie danach ein neues, eigenes Angebot abgeben.
+        </p>
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
           <Button className="flex-1 bg-green-500 hover:bg-green-600" disabled={isSubmitting} onClick={handleAcceptCounterOffer}>
             <CheckCircle className="w-4 h-4 mr-2" />

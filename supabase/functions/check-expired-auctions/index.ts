@@ -125,21 +125,20 @@ Deno.serve(async (req) => {
               let newReservePrice =
                 kaufchance.reserve_price ?? (mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null;
 
-              // Lowest seller counter-offer among still-active negotiations only
-              const { data: counterOffers } = await supabase
+              // Lowest buyer offer_amount becomes new reserve price for next round
+              const { data: allOffers } = await supabase
                 .from('post_auction_offers')
-                .select('counter_offer_amount')
+                .select('offer_amount, counter_offer_amount')
                 .eq('auction_id', kaufchance.id)
-                .in('status', ['pending', 'countered'])
-                .not('counter_offer_amount', 'is', null);
+                .in('status', ['pending', 'countered', 'rejected']);
 
-              if (counterOffers && counterOffers.length > 0) {
-                const lowestCounter = Math.min(
-                  ...counterOffers.map((o: { counter_offer_amount: unknown }) => Number(o.counter_offer_amount))
+              if (allOffers && allOffers.length > 0) {
+                const lowestOffer = Math.min(
+                  ...allOffers.map((o: { offer_amount: unknown }) => Number(o.offer_amount))
                 );
-                if (lowestCounter > 0) {
-                  newReservePrice = lowestCounter;
-                  console.log(`New reserve price from counter-offer: ${newReservePrice}`);
+                if (lowestOffer > 0) {
+                  newReservePrice = lowestOffer;
+                  console.log(`New reserve price from lowest offer: ${newReservePrice}`);
                 }
               }
 

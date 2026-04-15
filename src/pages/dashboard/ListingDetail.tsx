@@ -329,15 +329,22 @@ export default function ListingDetail() {
         .eq('id', offerId)
         .single();
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('post_auction_offers')
         .update({
           status: 'rejected',
           seller_response: 'Angebot abgelehnt',
           updated_at: new Date().toISOString(),
         })
-        .eq('id', offerId);
+        .eq('id', offerId)
+        .eq('status', 'pending')
+        .select('id');
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
+        loadKaufchanceOffers();
+        return;
+      }
 
       if (offerData) {
         try {
@@ -387,7 +394,7 @@ export default function ListingDetail() {
         .eq('id', offerId)
         .single();
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('post_auction_offers')
         .update({
           status: 'countered',
@@ -395,8 +402,15 @@ export default function ListingDetail() {
           seller_response: message || `Gegenangebot: ${amount.toLocaleString('de-DE')} €`,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', offerId);
+        .eq('id', offerId)
+        .eq('status', 'pending')
+        .select('id');
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
+        loadKaufchanceOffers();
+        return;
+      }
 
       if (offerData) {
         try {
@@ -451,7 +465,13 @@ export default function ListingDetail() {
 
     setRespondingOfferId(offerId);
     try {
-      const { error } = await supabase
+      const { data: offerData } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount, auction_id')
+        .eq('id', offerId)
+        .single();
+
+      const { data: updated, error } = await supabase
         .from('post_auction_offers')
         .update({
           counter_offer_amount: newAmount,
@@ -459,22 +479,30 @@ export default function ListingDetail() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', offerId)
-        .eq('status', 'countered');
+        .eq('status', 'countered')
+        .select('id');
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte laden Sie die Seite neu.' });
+        loadKaufchanceOffers();
+        return;
+      }
 
-      try {
-        await invokeWithAuth('notify-offer-action', {
-          body: {
-            action: 'counter_offer',
-            auctionId: currentOffer.auction_id,
-            buyerId: currentOffer.buyer_id,
-            offerAmount: Number(currentOffer.offer_amount),
-            counterAmount: newAmount,
-            sellerResponse: `Gegenangebot gesenkt auf ${newAmount.toLocaleString('de-DE')} €`,
-          },
-        });
-      } catch (e) {
-        console.error('notify-offer-action:', e);
+      if (offerData) {
+        try {
+          await invokeWithAuth('notify-offer-action', {
+            body: {
+              action: 'counter_offer',
+              auctionId: offerData.auction_id,
+              buyerId: offerData.buyer_id,
+              offerAmount: Number(offerData.offer_amount),
+              counterAmount: newAmount,
+              sellerResponse: `Gegenangebot gesenkt auf ${newAmount.toLocaleString('de-DE')} €`,
+            },
+          });
+        } catch (e) {
+          console.error('notify-offer-action:', e);
+        }
       }
 
       toast({ title: 'Gegenangebot gesenkt', description: `Neues Gegenangebot: ${newAmount.toLocaleString('de-DE')} €` });

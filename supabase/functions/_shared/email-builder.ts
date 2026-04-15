@@ -218,6 +218,57 @@ export const detailRow = (label: string, value: string) => {
   `;
 };
 
+/** First photo URL for emails (sorted by display_order). Handles public storage paths. */
+export const pickPrimaryPhotoUrl = (photos: unknown): string | null => {
+  if (!photos) return null;
+  const raw = Array.isArray(photos) ? photos : [photos];
+  const list = raw.filter((p): p is { url?: string; display_order?: number | null } =>
+    p !== null && typeof p === 'object' && 'url' in p
+  );
+  list.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+  const u = list[0]?.url;
+  if (!u || typeof u !== 'string') return null;
+  const t = u.trim();
+  if (t.startsWith('http://') || t.startsWith('https://')) return t;
+  // logo lives at .../storage/v1/object/public/branding/... → prefix for bucket-relative paths
+  const publicRoot = BRAND.logoUrl.replace(/\/branding\/.*$/, '');
+  const path = t.replace(/^\//, '');
+  return `${publicRoot}/${path}`;
+};
+
+/**
+ * Vehicle row for digest / bid emails: thumbnail + linked title + pre-built detail rows (HTML).
+ */
+export const auctionEmailCard = (
+  auctionUrl: string,
+  vehicleTitle: string,
+  detailsInnerHtml: string,
+  imageUrl: string | null,
+) => {
+  const escAttr = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const escHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeUrl = escAttr(auctionUrl);
+  const safeTitleAttr = escAttr(vehicleTitle);
+  const thumb = imageUrl
+    ? `<a href="${safeUrl}" style="text-decoration:none;"><img src="${escAttr(imageUrl)}" alt="${safeTitleAttr}" width="140" style="display:block;width:140px;max-width:140px;height:auto;max-height:104px;object-fit:cover;border-radius:8px;border:1px solid ${BRAND.border};" /></a>`
+    : `<a href="${safeUrl}" style="display:inline-block;width:140px;min-height:88px;line-height:88px;background:${BRAND.bgGray};border:1px dashed ${BRAND.border};border-radius:8px;text-align:center;font-size:12px;color:${BRAND.textMuted};text-decoration:none;">Foto folgt</a>`;
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 14px 0; border: 1px solid ${BRAND.border}; border-radius: 10px;">
+      <tr>
+        <td style="padding: 14px;" valign="middle" width="158">${thumb}</td>
+        <td style="padding: 14px 14px 14px 0;" valign="top">
+          <a href="${safeUrl}" style="color: ${BRAND.primaryDark}; font-size: 17px; font-weight: 700; text-decoration: none; line-height: 1.35;">${escHtml(vehicleTitle)}</a>
+          <div style="margin-top: 6px;">${detailsInnerHtml}</div>
+          <p style="margin: 10px 0 0; font-size: 13px;"><a href="${safeUrl}" style="color: ${BRAND.primary}; font-weight: 600; text-decoration: underline;">Zur Auktion →</a></p>
+        </td>
+      </tr>
+    </table>
+  `;
+};
+
 export const button = (text: string, url: string, _settings?: Settings) => {
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 30px 0;">

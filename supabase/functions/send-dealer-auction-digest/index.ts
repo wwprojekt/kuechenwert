@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
-import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, divider, list } from '../_shared/email-builder.ts';
+import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, auctionEmailCard, pickPrimaryPhotoUrl } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -191,15 +191,23 @@ const handler = async (req: Request): Promise<Response> => {
         if (biddedEndingSoon.length > 0) {
           emailContent += infoBox(
             `⏰ ${biddedEndingSoon.length} Ihrer Auktionen ${biddedEndingSoon.length === 1 ? 'endet' : 'enden'} bald!`,
-            biddedEndingSoon.slice(0, 3).map((a: any) => {
-              const m = a.motorhomes;
-              const price = formatPrice(a.current_bid || a.starting_bid);
-              const timeLeft = getTimeRemaining(a.end_time);
-              return detailRow(
-                `${m?.manufacturer || '?'} ${m?.model || ''} (${m?.year || ''})`,
-                `${price} · ${bidCounts[a.id] || 0} Gebote · <strong style="color: #dc2626;">endet in ${timeLeft}</strong>`
-              );
-            }).join(''),
+            (() => {
+              const endingCards = biddedEndingSoon.slice(0, 3).map((a: any) => {
+                const m = a.motorhomes;
+                if (!m) return '';
+                const auctionUrl = `https://caravanwert.de/auktion/${a.id}`;
+                const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
+                const price = formatPrice(a.current_bid || a.starting_bid);
+                const timeLeft = getTimeRemaining(a.end_time);
+                const bids = bidCounts[a.id] || 0;
+                const details =
+                  `${detailRow('Aktuelles Gebot', `<strong style="color: #1f8aa2;">${price}</strong>`)}` +
+                  `${detailRow('Gebote', `${bids}`)}` +
+                  `${detailRow('Restzeit', `<strong style="color: #dc2626;">${timeLeft}</strong>`)}`;
+                return auctionEmailCard(auctionUrl, title, details, pickPrimaryPhotoUrl(m.photos));
+              }).join('');
+              return endingCards;
+            })(),
             'warning',
             settingsData
           );
@@ -214,6 +222,8 @@ const handler = async (req: Request): Promise<Response> => {
           for (const auction of displayAuctions) {
             const m = auction.motorhomes as any;
             if (!m) continue;
+            const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
+            const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
             const price = formatPrice(auction.current_bid || auction.starting_bid);
             const timeLeft = getTimeRemaining(auction.end_time);
             const bids = bidCounts[auction.id] || 0;
@@ -224,12 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
             if (m.mileage) details += `${detailRow('Kilometerstand', `${Number(m.mileage).toLocaleString('de-DE')} km`)}`;
             if (m.city) details += `${detailRow('Standort', m.city)}`;
 
-            emailContent += infoBox(
-              `${m.manufacturer || '?'} ${m.model || ''} (${m.year || ''})`,
-              details,
-              bids === 0 ? 'success' : 'info',
-              settingsData
-            );
+            emailContent += auctionEmailCard(auctionUrl, title, details, pickPrimaryPhotoUrl(m.photos));
           }
 
           if (unbidNewAuctions.length > 5) {
@@ -244,16 +249,16 @@ const handler = async (req: Request): Promise<Response> => {
           for (const auction of unbidEndingSoon.slice(0, 3)) {
             const m = auction.motorhomes as any;
             if (!m) continue;
+            const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
+            const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
             const price = formatPrice(auction.current_bid || auction.starting_bid);
             const timeLeft = getTimeRemaining(auction.end_time);
             const bids = bidCounts[auction.id] || 0;
-
-            emailContent += infoBox(
-              `${m.manufacturer || '?'} ${m.model || ''} (${m.year || ''})`,
-              `${detailRow('Aktuelles Gebot', `<strong>${price}</strong>`)}${detailRow('Gebote', `${bids}`)}${detailRow('Endet in', `<strong style="color: #dc2626;">${timeLeft}</strong>`)}`,
-              'warning',
-              settingsData
-            );
+            const details =
+              `${detailRow('Aktuelles Gebot', `<strong>${price}</strong>`)}` +
+              `${detailRow('Gebote', `${bids}`)}` +
+              `${detailRow('Endet in', `<strong style="color: #dc2626;">${timeLeft}</strong>`)}`;
+            emailContent += auctionEmailCard(auctionUrl, title, details, pickPrimaryPhotoUrl(m.photos));
           }
           emailContent += button('Jetzt bieten', 'https://caravanwert.de/kaufen', settingsData);
         }

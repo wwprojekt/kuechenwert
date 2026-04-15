@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
-import { buildEmailLayout, infoBox, detailRow, paragraph, customerBadge } from '../_shared/email-builder.ts';
+import { buildEmailLayout, detailRow, paragraph, customerBadge, auctionEmailCard, pickPrimaryPhotoUrl, button } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
@@ -45,13 +45,22 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         *,
-        motorhome:motorhomes(manufacturer, model)
+        motorhome:motorhomes(
+          manufacturer, model, year, mileage, city,
+          photos:motorhome_photos(url, display_order)
+        )
       `)
       .eq('id', auctionId)
       .single();
 
     if (!auction) {
       throw new Error('Auction not found');
+    }
+
+    const mhRaw = auction.motorhome as Record<string, unknown> | null | undefined;
+    const mh = Array.isArray(mhRaw) ? mhRaw[0] : mhRaw;
+    if (!mh || typeof mh !== 'object') {
+      throw new Error('Motorhome not found');
     }
 
     // Fetch site settings
@@ -68,46 +77,58 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: '0511 / 51532476',
     };
 
-    const motorhomeName = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`;
+    const m = mh as {
+      manufacturer?: string | null;
+      model?: string | null;
+      year?: number | null;
+      mileage?: number | null;
+      city?: string | null;
+      photos?: unknown;
+    };
+    const motorhomeName = `${m.manufacturer || ''} ${m.model || ''}`.trim() || 'Fahrzeug';
+    const vehicleTitle = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
     const userName = profile.first_name || profile.email.split('@')[0];
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
+    const photoUrl = pickPrimaryPhotoUrl(m.photos);
+    const highBid = auction.current_bid != null
+      ? `€${Number(auction.current_bid).toLocaleString('de-DE')}`
+      : '—';
+    const endsAt = new Date(auction.end_time).toLocaleString('de-DE');
+    const outbidDetails =
+      `${detailRow('Ihr Gebot', `€${bidAmount.toLocaleString('de-DE')}`)}` +
+      `${detailRow('Aktuelles Höchstgebot', highBid)}` +
+      `${detailRow('Auktionsende', endsAt)}` +
+      (m.mileage != null ? `${detailRow('Kilometerstand', `${Number(m.mileage).toLocaleString('de-DE')} km`)}` : '') +
+      (m.city ? `${detailRow('Standort', String(m.city))}` : '');
+    const confirmDetails =
+      `${detailRow('Ihr Gebot', `€${bidAmount.toLocaleString('de-DE')}`)}` +
+      `${detailRow('Status', 'Sie sind derzeit Höchstbietender')}` +
+      `${detailRow('Auktionsende', endsAt)}` +
+      (m.mileage != null ? `${detailRow('Kilometerstand', `${Number(m.mileage).toLocaleString('de-DE')} km`)}` : '') +
+      (m.city ? `${detailRow('Standort', String(m.city))}` : '');
 
     // Build email content
-    const content = isOutbid 
+    const content = isOutbid
       ? `
         ${paragraph(`Hallo ${userName},`)}
         ${customerBadge(profile.customer_number)}
         ${paragraph(`Sie wurden bei der Auktion für <strong>${motorhomeName}</strong> überboten.`)}
-        
-        ${infoBox('Gebotsstatus', `
-          ${detailRow('Ihr Gebot', `€${bidAmount.toLocaleString()}`)}
-          ${detailRow('Aktuelles Höchstgebot', `€${auction.current_bid.toLocaleString()}`)}
-        `, 'warning', settingsData)}
-        
-        ${detailRow('Auktion endet', new Date(auction.end_time).toLocaleString('de-DE'))}
-        
+        ${auctionEmailCard(auctionUrl, vehicleTitle, outbidDetails, photoUrl)}
         ${paragraph('Geben Sie ein höheres Gebot ab, um weiterhin im Rennen zu bleiben.')}
-        ${paragraph(`<a href="${auctionUrl}" style="color: #195d3e; text-decoration: underline; font-weight: bold;">Höheres Gebot abgeben →</a>`)}
+        ${button('Jetzt höher bieten', auctionUrl, settingsData)}
       `
       : `
         ${paragraph(`Hallo ${userName},`)}
         ${customerBadge(profile.customer_number)}
         ${paragraph(`Ihr Gebot für <strong>${motorhomeName}</strong> wurde erfolgreich platziert!`)}
-        
-        ${infoBox('Gebotsstatus', `
-          ${detailRow('Ihr Gebot', `€${bidAmount.toLocaleString()}`)}
-          ${detailRow('Status', 'Sie sind derzeit Höchstbietender ✓')}
-        `, 'success', settingsData)}
-        
-        ${detailRow('Auktion endet', new Date(auction.end_time).toLocaleString('de-DE'))}
-        
+        ${auctionEmailCard(auctionUrl, vehicleTitle, confirmDetails, photoUrl)}
         ${paragraph('Behalten Sie die Auktion im Auge, um sicherzustellen, dass Sie Höchstbietender bleiben.')}
-        ${paragraph(`<a href="${auctionUrl}" style="color: #195d3e; text-decoration: underline; font-weight: bold;">Auktion ansehen →</a>`)}
+        ${button('Auktion ansehen', auctionUrl, settingsData)}
       `;
 
     const html = buildEmailLayout(
-      settingsData, 
-      isOutbid ? 'Sie wurden überboten!' : 'Ihr Gebot wurde akzeptiert', 
+      settingsData,
+      isOutbid ? 'Sie wurden überboten!' : 'Ihr Gebot wurde akzeptiert',
       content
     );
 

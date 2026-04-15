@@ -165,11 +165,11 @@ export const CONVERSION_LABELS = {
 // ============================================================
 export const CONVERSION_VALUES = {
   // Primäre Conversions
-  WIZARD_ABGESCHLOSSEN: 15.0,     // Höchster Wert: 41% konvertieren zu Auktionen
-  TERMINBUCHUNG: 15.0,            // Gleichwertig: Termin = hohes Kaufinteresse
-  KONTAKTFORMULAR_GESENDET: 10.0, // Direkter Kontakt, gute Qualität
-  WERTERMITTLUNG_LEAD: 5.0,       // Mittlere Qualität
-  WERTRECHNER_LEAD: 2.5,          // Niedrigster Wert: nur 2% konvertieren
+  WIZARD_ABGESCHLOSSEN: 9.0,      // Höchster Wert: 41% konvertieren zu Auktionen
+  TERMINBUCHUNG: 9.0,             // Gleichwertig: Termin = hohes Kaufinteresse
+  KONTAKTFORMULAR_GESENDET: 1.0,  // Sekundär: allgemeines Kontaktformular
+  WERTERMITTLUNG_LEAD: 2.5,       // Wertermittlung Lead
+  WERTRECHNER_LEAD: 2.5,          // Wertrechner Lead
 
   // Sekundäre Conversions (Micro-Conversions, nur Beobachtung)
   LANDING_PAGE_LEAD: 1.0,

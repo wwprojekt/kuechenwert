@@ -160,15 +160,15 @@ function detectCountryFromPhone(phone: string): string {
  */
 const CONVERSION_VALUE_MAP: Record<string, number> = {
   // Primäre Conversions
-  wizard: 15.0,
-  wizard_abgeschlossen: 15.0,
-  wizard_completed: 15.0,
-  terminbuchung: 15.0,
-  kontakt: 10.0,
-  kontaktformular_gesendet: 10.0,
-  contact_form: 10.0,
-  wertermittlung: 5.0,
-  wertermittlung_lead: 5.0,
+  wizard: 9.0,
+  wizard_abgeschlossen: 9.0,
+  wizard_completed: 9.0,
+  terminbuchung: 9.0,
+  kontakt: 1.0,
+  kontaktformular_gesendet: 1.0,
+  contact_form: 1.0,
+  wertermittlung: 2.5,
+  wertermittlung_lead: 2.5,
   wertrechner: 2.5,
   wertrechner_lead: 2.5,
   // Sekundäre Conversions
@@ -368,42 +368,15 @@ const handler = async (req: Request): Promise<Response> => {
         // Differenzierter Conversion Value nach Lead-Qualität
         const conversionValue = getConversionValue(lead_type);
 
-        // Conversion Action ID basierend auf Lead-Typ auswählen
-        // WICHTIG: Die Keys müssen exakt den `type`-Werten entsprechen, die vom Frontend
-        // über send-lead-notification als `lead_type` weitergegeben werden.
-        // Frontend sendet: "kontakt", "wertermittlung", "wertrechner", "wizard"
-        // Zusätzlich werden die langen Varianten als Aliase beibehalten.
-        const conversionActionMap: Record<string, string> = {
-          // === Primäre Keys (exakt wie vom Frontend gesendet) ===
-          'kontakt': '7545833202',           // Kontaktformular gesendet
-          'wertermittlung': '7545833205',     // Wertermittlung Lead
-          'wertrechner': '7545833208',        // Wertrechner Lead
-          'wizard': '7545833211',             // Wizard Abgeschlossen
-          // === Aliase (für Abwärtskompatibilität und direkte API-Aufrufe) ===
-          // 'bewertung_abgeschlossen' entfernt – Legacy-Conversion, erzeugte Duplikat mit wizard
-          'landing_page_lead': '7545833199',
-          'kontaktformular_gesendet': '7545833202',
-          'contact_form': '7545833202',
-          'wertermittlung_lead': '7545833205',
-          'wertrechner_lead': '7545833208',
-          'wizard_abgeschlossen': '7545833211',
-          'wizard_completed': '7545833211',
-          'terminbuchung': '7545833214',
-          'wizard_gestartet': '7545833217',
-          'wizard_started': '7545833217',
-          'wizard_fahrzeugdaten': '7545833220',
-          'wizard_vehicle_data': '7545833220',
-          'dealer_register': '7545833199',
-        };
+        // Single UPLOAD_CLICKS conversion action for all offline lead conversions.
+        // Lead differentiation happens via conversionValue (quality-based) and
+        // custom_variables would be used for detailed reporting in Google Ads.
+        // The WEBPAGE-type actions (7545833199–7545833220) remain active for
+        // client-side gtag tracking; this UPLOAD_CLICKS action is exclusively
+        // for server-side API uploads with Enhanced Conversions for Leads.
+        const OFFLINE_LEAD_CONVERSION_ACTION_ID = '7576040066';
 
-        const conversionActionId = conversionActionMap[lead_type];
-        if (!conversionActionId) {
-          console.warn(`[track-conversion] WARNUNG: Unbekannter lead_type "${lead_type}" - kein Mapping gefunden. Conversion wird NICHT an Google Ads gesendet.`);
-          results.gads = {
-            skipped: true,
-            reason: `Unbekannter lead_type: "${lead_type}". Kein Mapping in conversionActionMap gefunden.`,
-          };
-        } else {
+        {
           const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
 
           // 3. Conversion-Payload aufbauen
@@ -422,7 +395,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           const conversion: ConversionPayload["conversions"][0] = {
-            conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
+            conversionAction: `customers/${customerId}/conversionActions/${OFFLINE_LEAD_CONVERSION_ACTION_ID}`,
             conversionDateTime,
             conversionValue,
             currencyCode: "EUR",
@@ -488,12 +461,12 @@ const handler = async (req: Request): Promise<Response> => {
             status: gadsResponse.status,
             ok: gadsResponse.ok,
             hasGclid: !!gclid,
-            conversionActionId,
+            conversionActionId: OFFLINE_LEAD_CONVERSION_ACTION_ID,
             leadType: lead_type,
             result: gadsResult,
           };
 
-          console.log(`[track-conversion] Google Ads API: ${gadsResponse.status} (lead_type: ${lead_type}, actionId: ${conversionActionId}, GCLID: ${!!gclid})`);
+          console.log(`[track-conversion] Google Ads API: ${gadsResponse.status} (lead_type: ${lead_type}, actionId: ${OFFLINE_LEAD_CONVERSION_ACTION_ID}, GCLID: ${!!gclid})`);
           if (!gadsResponse.ok) {
             console.error("[track-conversion] Google Ads API Fehler:", JSON.stringify(gadsResult));
           }

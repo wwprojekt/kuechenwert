@@ -785,13 +785,14 @@ Deno.serve(async (req) => {
             const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
             const saleAmount = Number(highestBid!.amount);
 
-            // Calculate commission via RPC
+            // Calculate commission via RPC (returns TABLE → array of rows)
             let commissionAmount = saleAmount * 0.05; // fallback: 5%
             try {
-              const { data: commResult } = await supabase.rpc('calculate_commission', {
+              const { data: commRows } = await supabase.rpc('calculate_commission', {
                 sale_amount: saleAmount,
                 dealer_id_param: soldTo,
               });
+              const commResult = Array.isArray(commRows) ? commRows[0] : commRows;
               if (commResult?.commission_amount) {
                 commissionAmount = Number(commResult.commission_amount);
               }

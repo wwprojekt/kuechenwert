@@ -151,7 +151,7 @@ const AuctionDetail = () => {
   const [addenda, setAddenda] = useState<{id: string; content: string; created_at: string}[]>([]);
 
   // Check if current user is invited to kaufchance (React Query for dedup + caching)
-  const { data: isInvitedToKaufchanceData } = useQuery({
+  const { data: isInvitedToKaufchanceData, isLoading: isKaufchanceInviteLoading } = useQuery({
     queryKey: ['kaufchanceInvitation', id, user?.id],
     queryFn: async () => {
       // Session-Check VOR RLS-Query (getSession gibt auch abgelaufene Tokens zurück!)
@@ -2076,6 +2076,23 @@ const AuctionDetail = () => {
                             </Button>
                           </PostAuctionOfferDialog>
                         </>
+                      ) : !user ? (
+                        <>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                            Melden Sie sich an, um zu prüfen, ob Sie als Top-Bieter ein Kaufangebot abgeben können.
+                          </p>
+                          <Button asChild className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                            <Link to={`/login?redirect=/auktion/${id}`}>
+                              <Lock className="w-4 h-4 mr-2" />
+                              Anmelden & Angebot abgeben
+                            </Link>
+                          </Button>
+                        </>
+                      ) : isKaufchanceInviteLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-amber-600" />
+                          <p className="text-sm text-amber-800 dark:text-amber-200">Einladung wird geprüft…</p>
+                        </div>
                       ) : (
                         <p className="text-sm text-amber-800 dark:text-amber-200">
                           Diese Auktion befindet sich in der Kaufchance-Phase. Nur eingeladene Top-Bieter können ein Angebot abgeben.

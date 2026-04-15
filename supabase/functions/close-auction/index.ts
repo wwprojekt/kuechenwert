@@ -750,10 +750,11 @@ Deno.serve(async (req) => {
         errors.push(`Kaufvertrag komplett fehlgeschlagen: ${contractError.message}`);
       }
 
-      // ─── GOOGLE ADS SALE CONVERSION (when GCLID available) ────────
-      // Upload the actual commission as an offline conversion so Google Ads
-      // can optimise bids based on real revenue, not just lead values.
-      if (auction.motorhome?.gclid || auction.motorhome?.gbraid || auction.motorhome?.wbraid) {
+      // ─── GOOGLE ADS SALE CONVERSION (only after invoice confirmed) ──
+      // The sale is only truly complete when the invoice has been created.
+      // Only then do we report revenue to Google Ads so Smart Bidding
+      // learns from real, confirmed sales — not from tentative status changes.
+      if (invoiceSuccess && (auction.motorhome?.gclid || auction.motorhome?.gbraid || auction.motorhome?.wbraid)) {
         try {
           const GADS_CUSTOMER_ID = Deno.env.get("GADS_CUSTOMER_ID");
           const GADS_DEVELOPER_TOKEN = Deno.env.get("GADS_DEVELOPER_TOKEN");
@@ -861,6 +862,8 @@ Deno.serve(async (req) => {
           console.error('[close-auction] Google Ads sale conversion error:', gadsErr);
           errors.push(`Google Ads Sale-Conversion: ${gadsErr.message}`);
         }
+      } else if (!invoiceSuccess) {
+        console.log('[close-auction] Invoice not created successfully, skipping sale conversion (no confirmed sale)');
       } else {
         console.log('[close-auction] No GCLID/GBRAID/WBRAID on motorhome, skipping sale conversion');
       }

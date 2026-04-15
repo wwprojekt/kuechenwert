@@ -29,6 +29,15 @@
       try{var c=JSON.parse(localStorage.getItem('cookie-consent')||'null');if(c&&c.marketing){gtag('set','ads_data_redaction',false);gtag('consent','update',{'analytics_storage':c.analytics?'granted':'denied','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','functionality_storage':'granted','personalization_storage':'granted'})}else if(c&&c.analytics){gtag('consent','update',{'analytics_storage':'granted','functionality_storage':'granted','personalization_storage':'granted'})}}catch(e){}
     </script>
     
+    <!-- Clixtell Click Fraud Protection — must load early to capture all visits -->
+    <script type='text/javascript'>
+    var script=document.createElement('script');var prefix=document.location.protocol;
+    script.async=true;script.type='text/javascript';
+    var target=prefix+'//scripts.clixtell.com/track.js';
+    script.src=target;var elem=document.head;elem.appendChild(script);
+    </script>
+    <noscript><img src='//tracker.clixtell.com/track/t.gif'></noscript>
+
     <!-- Primary Meta Tags -->
     <title>CaravanWert - Deutschlands führende Wohnmobil-Handelsplattform</title>
     <meta name="description" content="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!" />
@@ -119,13 +128,6 @@
         // Meta Pixel – DSGVO-konform, revoked bis Consent
         try{!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
         if(typeof fbq==='function'){fbq('consent','revoke');fbq('init','1846623132710484');}}catch(e){}
-
-        // Clixtell Click Fraud Protection
-        var cx = document.createElement('script');
-        cx.async = true;
-        cx.type = 'text/javascript';
-        cx.src = document.location.protocol + '//scripts.clixtell.com/track.js';
-        document.head.appendChild(cx);
 
         // Cloudflare Turnstile
         var t = document.createElement('script');

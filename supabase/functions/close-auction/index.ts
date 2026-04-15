@@ -750,6 +750,121 @@ Deno.serve(async (req) => {
         errors.push(`Kaufvertrag komplett fehlgeschlagen: ${contractError.message}`);
       }
 
+      // ─── GOOGLE ADS SALE CONVERSION (when GCLID available) ────────
+      // Upload the actual commission as an offline conversion so Google Ads
+      // can optimise bids based on real revenue, not just lead values.
+      if (auction.motorhome?.gclid || auction.motorhome?.gbraid || auction.motorhome?.wbraid) {
+        try {
+          const GADS_CUSTOMER_ID = Deno.env.get("GADS_CUSTOMER_ID");
+          const GADS_DEVELOPER_TOKEN = Deno.env.get("GADS_DEVELOPER_TOKEN");
+          const GADS_OAUTH_REFRESH_TOKEN = Deno.env.get("GADS_OAUTH_REFRESH_TOKEN");
+          const GADS_OAUTH_CLIENT_ID = Deno.env.get("GADS_OAUTH_CLIENT_ID");
+          const GADS_OAUTH_CLIENT_SECRET = Deno.env.get("GADS_OAUTH_CLIENT_SECRET");
+          const SALE_CONVERSION_ACTION_ID = Deno.env.get("GADS_SALE_CONVERSION_ACTION_ID");
+
+          if (GADS_CUSTOMER_ID && GADS_DEVELOPER_TOKEN && GADS_OAUTH_REFRESH_TOKEN && GADS_OAUTH_CLIENT_ID && GADS_OAUTH_CLIENT_SECRET && SALE_CONVERSION_ACTION_ID) {
+            console.log('[close-auction] GCLID found on motorhome, uploading sale conversion to Google Ads...');
+
+            const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                grant_type: "refresh_token",
+                client_id: GADS_OAUTH_CLIENT_ID,
+                client_secret: GADS_OAUTH_CLIENT_SECRET,
+                refresh_token: GADS_OAUTH_REFRESH_TOKEN,
+              }),
+            });
+
+            if (!tokenResponse.ok) {
+              throw new Error(`OAuth token error: ${tokenResponse.status}`);
+            }
+
+            const { access_token: accessToken } = await tokenResponse.json();
+            const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
+            const saleAmount = Number(highestBid!.amount);
+
+            // Calculate commission via RPC
+            let commissionAmount = saleAmount * 0.05; // fallback: 5%
+            try {
+              const { data: commResult } = await supabase.rpc('calculate_commission', {
+                sale_amount: saleAmount,
+                dealer_id_param: soldTo,
+              });
+              if (commResult?.commission_amount) {
+                commissionAmount = Number(commResult.commission_amount);
+              }
+            } catch (commErr) {
+              console.error('[close-auction] Commission calc failed, using fallback:', commErr);
+            }
+
+            const conversionDateTime = new Date().toISOString().replace("T", " ").replace("Z", "+00:00");
+
+            const conversion: Record<string, unknown> = {
+              conversionAction: `customers/${customerId}/conversionActions/${SALE_CONVERSION_ACTION_ID}`,
+              conversionDateTime,
+              conversionValue: commissionAmount,
+              currencyCode: "EUR",
+              orderId: `sale_${auctionId}_${Date.now()}`,
+              userIdentifiers: [],
+            };
+
+            if (auction.motorhome.gclid) conversion.gclid = auction.motorhome.gclid;
+            if (auction.motorhome.gbraid) conversion.gbraid = auction.motorhome.gbraid;
+            if (auction.motorhome.wbraid) conversion.wbraid = auction.motorhome.wbraid;
+
+            // Add seller email as user identifier for Enhanced Conversions
+            if (auction.motorhome.seller_id) {
+              const { data: sellerForHash } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', auction.motorhome.seller_id)
+                .single();
+
+              if (sellerForHash?.email) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(sellerForHash.email.trim().toLowerCase());
+                const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashedEmail = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+                (conversion.userIdentifiers as Array<Record<string, unknown>>).push({ hashedEmail });
+              }
+            }
+
+            const gadsResponse = await fetch(
+              `https://googleads.googleapis.com/v23/customers/${customerId}:uploadClickConversions`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${accessToken}`,
+                  "developer-token": GADS_DEVELOPER_TOKEN,
+                  "login-customer-id": "9746508145",
+                },
+                body: JSON.stringify({
+                  conversions: [conversion],
+                  partialFailure: true,
+                }),
+              }
+            );
+
+            const gadsResult = await gadsResponse.json();
+            console.log(`[close-auction] Google Ads sale conversion: ${gadsResponse.status} (commission: €${commissionAmount.toFixed(2)}, sale: €${saleAmount})`);
+            if (!gadsResponse.ok) {
+              console.error('[close-auction] Google Ads API error:', JSON.stringify(gadsResult));
+              errors.push(`Google Ads Sale-Conversion fehlgeschlagen: ${gadsResponse.status}`);
+            }
+          } else {
+            console.log('[close-auction] Google Ads API credentials incomplete, skipping sale conversion');
+          }
+        } catch (gadsErr: any) {
+          console.error('[close-auction] Google Ads sale conversion error:', gadsErr);
+          errors.push(`Google Ads Sale-Conversion: ${gadsErr.message}`);
+        }
+      } else {
+        console.log('[close-auction] No GCLID/GBRAID/WBRAID on motorhome, skipping sale conversion');
+      }
+
       // ─── ADMIN NOTIFICATION (SOLD) ────────────────────────────────
       const { data: winnerProfile } = await supabase
         .from('profiles')

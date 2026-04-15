@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
 import { translateError } from "@/lib/germanErrors";
 import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
-import { getTrackingData } from "@/lib/clickIdService";
+import { getTrackingData, getStoredClickIds } from "@/lib/clickIdService";
 import { trackEvent } from "@/lib/analyticsService";
 import { ensureValidSession, ensureValidRLSSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import type { Database } from "@/integrations/supabase/types";
@@ -492,10 +492,11 @@ export const useWizardForm = () => {
         const generatedSessionId = crypto.randomUUID();
         let savedSessionId: string | null = null;
         try {
+          const savedClickIds = getStoredClickIds();
           const { error: sessionError } = await withNetworkRetry(
             () => supabase.from('wizard_sessions').insert({
               id: generatedSessionId,
-              user_id: capturedUserId, // Use the signUp user ID if available
+              user_id: capturedUserId,
               anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
               customer_name: formData.customerName || null,
               customer_email: formData.customerEmail || null,
@@ -508,6 +509,9 @@ export const useWizardForm = () => {
               status: 'completed',
               vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
               completed_at: new Date().toISOString(),
+              gclid: savedClickIds.gclid || null,
+              gbraid: savedClickIds.gbraid || null,
+              wbraid: savedClickIds.wbraid || null,
             }),
             2,
             'wizard-session-insert'

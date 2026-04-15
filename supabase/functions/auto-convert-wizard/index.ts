@@ -387,7 +387,9 @@ const handler = async (req: Request): Promise<Response> => {
       body_type: bodyType,
       condition,
       status: "available",
-      // reserve_price is already set in mapWizardToMotorhome
+      gclid: session.gclid || null,
+      gbraid: session.gbraid || null,
+      wbraid: session.wbraid || null,
     };
 
     const { data: motorhome, error: insertError } = await adminClient

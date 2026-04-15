@@ -2146,6 +2146,8 @@ export type Database = {
           fuel_tank_capacity_liters: number | null
           fuel_type: Database["public"]["Enums"]["fuel_type"] | null
           gas_system: string | null
+          gbraid: string | null
+          gclid: string | null
           grey_water_capacity_liters: number | null
           has_air_conditioning: boolean | null
           has_airbag: boolean | null
@@ -2216,6 +2218,7 @@ export type Database = {
           updated_at: string | null
           vehicle_identification_number: string | null
           water_tank_liters: number | null
+          wbraid: string | null
           weight_kg: number | null
           width_m: number | null
           year: number
@@ -2248,6 +2251,8 @@ export type Database = {
           fuel_tank_capacity_liters?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
           gas_system?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           grey_water_capacity_liters?: number | null
           has_air_conditioning?: boolean | null
           has_airbag?: boolean | null
@@ -2318,6 +2323,7 @@ export type Database = {
           updated_at?: string | null
           vehicle_identification_number?: string | null
           water_tank_liters?: number | null
+          wbraid?: string | null
           weight_kg?: number | null
           width_m?: number | null
           year: number
@@ -2350,6 +2356,8 @@ export type Database = {
           fuel_tank_capacity_liters?: number | null
           fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
           gas_system?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           grey_water_capacity_liters?: number | null
           has_air_conditioning?: boolean | null
           has_airbag?: boolean | null
@@ -2420,6 +2428,7 @@ export type Database = {
           updated_at?: string | null
           vehicle_identification_number?: string | null
           water_tank_liters?: number | null
+          wbraid?: string | null
           weight_kg?: number | null
           width_m?: number | null
           year?: number
@@ -3989,6 +3998,8 @@ export type Database = {
           done_email_last_sent: string | null
           followup_email_sent_at: string | null
           form_data: Json
+          gbraid: string | null
+          gclid: string | null
           id: string
           is_viewed: boolean
           last_activity_at: string | null
@@ -4002,6 +4013,7 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           vehicle_summary: string | null
+          wbraid: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
         }
@@ -4021,6 +4033,8 @@ export type Database = {
           done_email_last_sent?: string | null
           followup_email_sent_at?: string | null
           form_data?: Json
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           is_viewed?: boolean
           last_activity_at?: string | null
@@ -4034,6 +4048,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vehicle_summary?: string | null
+          wbraid?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
         }
@@ -4053,6 +4068,8 @@ export type Database = {
           done_email_last_sent?: string | null
           followup_email_sent_at?: string | null
           form_data?: Json
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           is_viewed?: boolean
           last_activity_at?: string | null
@@ -4066,6 +4083,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vehicle_summary?: string | null
+          wbraid?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
         }
@@ -4073,15 +4091,45 @@ export type Database = {
       }
     }
     Views: {
+      analytics_daily_summary: {
+        Row: {
+          date: string | null
+          desktop_sessions: number | null
+          mobile_sessions: number | null
+          page_views: number | null
+          sessions: number | null
+          tablet_sessions: number | null
+          unique_visitors: number | null
+        }
+        Relationships: []
+      }
       bids_public: {
         Row: {
-          amount: number
-          auction_id: string
-          bidder_id: string
-          created_at: string
-          id: string
-          is_autobid: boolean
+          amount: number | null
+          auction_id: string | null
+          bidder_id: string | null
+          created_at: string | null
+          id: string | null
+          is_autobid: boolean | null
           max_autobid_amount: number | null
+        }
+        Insert: {
+          amount?: number | null
+          auction_id?: string | null
+          bidder_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_autobid?: boolean | null
+          max_autobid_amount?: never
+        }
+        Update: {
+          amount?: number | null
+          auction_id?: string | null
+          bidder_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_autobid?: boolean | null
+          max_autobid_amount?: never
         }
         Relationships: [
           {
@@ -4099,18 +4147,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      analytics_daily_summary: {
-        Row: {
-          date: string | null
-          desktop_sessions: number | null
-          mobile_sessions: number | null
-          page_views: number | null
-          sessions: number | null
-          tablet_sessions: number | null
-          unique_visitors: number | null
-        }
-        Relationships: []
       }
       error_logs_grouped: {
         Row: {
@@ -4374,6 +4410,8 @@ export type Database = {
           done_email_last_sent: string | null
           followup_email_sent_at: string | null
           form_data: Json
+          gbraid: string | null
+          gclid: string | null
           id: string
           is_viewed: boolean
           last_activity_at: string | null
@@ -4387,6 +4425,7 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           vehicle_summary: string | null
+          wbraid: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
         }[]

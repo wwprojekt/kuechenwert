@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { getStoredClickIds } from "@/lib/clickIdService";
 import type { WizardFormData } from "./useWizardForm";
 
 const ANONYMOUS_ID_KEY = "caravanwert_anonymous_id";
@@ -263,6 +264,12 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             customer_email: formData.customerEmail || null,
             customer_phone: formData.customerPhone || null,
           };
+
+          // Persist Google Ads Click-IDs for sale-back conversion tracking
+          const clickIds = getStoredClickIds();
+          if (clickIds.gclid) updatePayload.gclid = clickIds.gclid;
+          if (clickIds.gbraid) updatePayload.gbraid = clickIds.gbraid;
+          if (clickIds.wbraid) updatePayload.wbraid = clickIds.wbraid;
 
           // Link user if now logged in
           if (user) {

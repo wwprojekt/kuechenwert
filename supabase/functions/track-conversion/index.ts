@@ -153,7 +153,7 @@ function detectCountryFromPhone(phone: string): string {
 /**
  * Differenzierte Conversion-Werte nach Lead-Qualität.
  * Basiert auf echten Datenbank-Auswertungen:
- *   - Wizard: 41% konvertieren zu Auktionen → 15€
+ *   - Wizard: 41% konvertieren zu Auktionen → 9€
  *   - Wertrechner: 2% konvertieren → 2.50€
  *
  * MUSS synchron mit CONVERSION_VALUES in gadsConversionService.ts bleiben!

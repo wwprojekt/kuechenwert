@@ -126,7 +126,7 @@ export const CONVERSION_LABELS = {
   BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpdD',
   
   // Kontaktformular: /kontakt Formular abgesendet
-  KONTAKTFORMULAR_GESENDET: '5RLHCN2SkY4cEL7FhpdD',
+  KONTAKTFORMULAR_GESENDET: 'pXp5CPKNkY4cEL7FhpdD',
   
   // Wertermittlung: /wertermittlung Formular mit Kontaktdaten abgesendet
   WERTERMITTLUNG_LEAD: 'AHaxCPWNkY4cEL7FhpdD',
@@ -144,7 +144,7 @@ export const CONVERSION_LABELS = {
   
   // Landing Page Funnel-Einstieg: Nutzer wählt Fahrzeugdaten auf Landing Page
   // KEIN Lead! Nur Micro-Conversion als Funnel-Einstieg
-  LANDING_PAGE_LEAD: 'ZiKsCMmOkY4cEL7FhpdD',
+  LANDING_PAGE_LEAD: 'IfQvCO-NkY4cEL7FhpdD',
   
   // Wizard Gestartet: Schritt 1 im VerkaufenWizard geladen
   WIZARD_GESTARTET: '-m3-CIGOkY4cEL7FhpdD',

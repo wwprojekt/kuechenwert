@@ -14,8 +14,12 @@ interface VehicleInfoStepProps {
 }
 
 // Popular manufacturers – sorted by ACTUAL usage frequency from wizard_sessions data
-const POPULAR_WOHNMOBIL = ["Hymer", "Hobby", "Bürstner", "Dethleffs", "Fendt", "Pössl", "Weinsberg", "Adria", "Knaus", "Volkswagen", "LMC", "Ford", "Carado", "Sunlight", "Chausson", "Carthago"];
-const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Dethleffs", "Bürstner", "Knaus", "Tabbert", "Adria", "Weinsberg", "LMC", "Eriba", "Niewiadow", "TEC"];
+// (last 60 days, Wohnmobil only, "Andere" excluded). Hobby + Fendt moved out of
+// Wohnmobil list because they are primarily Wohnwagen brands (not in Top-20 for
+// Wohnmobil). Fiat (16), Pilote (12), Mercedes-Benz (8), Eura Mobil (8) added
+// because they appear in the Top-16 selections but were missing from the list.
+const POPULAR_WOHNMOBIL = ["Hymer", "Bürstner", "Pössl", "Weinsberg", "Knaus", "Dethleffs", "Fiat", "Ford", "Adria", "Pilote", "Volkswagen", "Chausson", "LMC", "Mercedes-Benz", "Eura Mobil", "Carthago"];
+const POPULAR_WOHNWAGEN = ["Hobby", "Fendt", "Dethleffs", "Tabbert", "Adria", "Bürstner", "Knaus", "LMC", "Weinsberg", "Eriba", "Niewiadow", "TEC"];
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -325,8 +329,12 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
   const models = useMemo(() => {
     if (!formData.manufacturer) return [];
-    const resolved = resolveManufacturer(formData.manufacturer);
-    const mfr = resolved !== formData.manufacturer ? resolved : formData.manufacturer;
+    // Defensive: trim vor dem Lookup, damit ein "Bürstner " (Whitespace aus
+    // Legacy-Daten oder URL-Params, die dem Commit-Pfad entgangen sind)
+    // trotzdem die korrekte Modell-Liste liefert statt einer leeren.
+    const cleanMfr = formData.manufacturer.trim();
+    const resolved = resolveManufacturer(cleanMfr);
+    const mfr = resolved !== cleanMfr ? resolved : cleanMfr;
     const m = isWohnwagen
       ? wohnwagenManufacturerModels[mfr]
       : manufacturerModels[mfr];
@@ -433,8 +441,8 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 id="model"
                 options={models}
                 value={formData.model}
-                onChange={(val) => updateFormData({ model: val })}
-                onCommit={(val) => updateFormData({ model: val })}
+                onChange={(val) => updateFormData({ model: val.trim() })}
+                onCommit={(val) => updateFormData({ model: val.trim() })}
                 placeholder={`Modell von ${formData.manufacturer}...`}
                 hasError={!!fieldErrors.model}
                 escapeLabel="Sonstiges Modell"

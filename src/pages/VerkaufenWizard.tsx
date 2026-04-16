@@ -24,6 +24,7 @@ import { useWizardSession } from "@/hooks/useWizardSession";
 import { trackWizardStarted, trackWizardStep, trackWizardAbandoned } from "@/lib/gadsConversionService";
 import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
+import { resolveManufacturer } from "@/lib/vehicle-data";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -186,16 +187,47 @@ const VerkaufenWizard = () => {
         updates.vehicleType = 'Wohnmobil';
       }
     }
-    if (manufacturer) updates.manufacturer = manufacturer;
-    if (model) updates.model = model;
-    if (bodyType) updates.bodyType = bodyType;
-    if (saleChannel) updates.saleChannel = saleChannel;
-    if (customerName) updates.customerName = customerName;
-    if (customerEmail) updates.customerEmail = customerEmail;
-    if (customerPhone) updates.customerPhone = customerPhone;
+    // Trim + Alias-Resolution, damit URL-Params (z.B. vom Wertrechner oder
+    // iOS-Smart-Space via Share-Link) keine kaputten Werte wie "Bürstner "
+    // oder "Sunligth " in form_data schreiben. Ohne Trim matcht später
+    // manufacturerModels["Bürstner "] nicht und die Modell-Liste ist leer.
+    if (manufacturer) {
+      const trimmed = manufacturer.trim();
+      if (trimmed) {
+        const resolved = resolveManufacturer(trimmed);
+        updates.manufacturer = resolved !== trimmed ? resolved : trimmed;
+      }
+    }
+    if (model) {
+      const trimmed = model.trim();
+      if (trimmed) updates.model = trimmed;
+    }
+    if (bodyType) {
+      const trimmed = bodyType.trim();
+      if (trimmed) updates.bodyType = trimmed;
+    }
+    if (saleChannel) {
+      const trimmed = saleChannel.trim();
+      if (trimmed) updates.saleChannel = trimmed;
+    }
+    if (customerName) {
+      const trimmed = customerName.trim();
+      if (trimmed) updates.customerName = trimmed;
+    }
+    if (customerEmail) {
+      const trimmed = customerEmail.trim();
+      if (trimmed) updates.customerEmail = trimmed;
+    }
+    if (customerPhone) {
+      const trimmed = customerPhone.trim();
+      if (trimmed) updates.customerPhone = trimmed;
+    }
     if (year) updates.year = parseInt(year);
     if (mileage) updates.mileage = parseInt(mileage);
-    if (condition) updates.condition = condition;
+    if (condition) {
+      const trimmed = condition.trim();
+      if (trimmed) updates.condition = trimmed;
+    }
     
     if (Object.keys(updates).length > 0) {
       updateFormData(updates);

@@ -267,12 +267,24 @@ const step3Schema = z.object({
 // Step 6: Photos (optional - no validation needed, user can skip)
 const step6Schema = z.object({});
 
+// A reasonable-but-permissive phone check: min 6 usable digits, allows +, spaces, -, /, ().
+// We deliberately stay permissive (international formats) but reject e.g. "12" or "abc".
+const phoneRegex = /^[+()\d\s\-/.]{6,}$/;
+const phoneSchema = z
+  .string()
+  .min(5, "Bitte geben Sie eine gültige Telefonnummer ein")
+  .regex(phoneRegex, "Bitte geben Sie eine gültige Telefonnummer ein")
+  .refine(
+    (v) => (v.match(/\d/g) || []).length >= 6,
+    "Telefonnummer benötigt mindestens 6 Ziffern"
+  );
+
 // Step 7: Sale Channel & Contact (saleChannel + phone required, name+email already captured)
 const step7Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-  customerPhone: z.string().min(5, "Bitte geben Sie eine gültige Telefonnummer ein"),
+  customerPhone: phoneSchema,
   instantPrice: z.number().nullable().optional(),
 }).refine(
   (data) => data.saleChannel !== 'instant_price' || (data.instantPrice != null && data.instantPrice > 0),
@@ -291,12 +303,28 @@ const step8Schema = z.object({
   }),
   customerName: z.string().min(1, "Name fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerEmail: z.string().email("E-Mail-Adresse fehlt oder ung\u00fcltig \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
-  customerPhone: z.string().min(5, "Telefonnummer fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 7"),
+  customerPhone: phoneSchema,
   street: z.string().min(1, "Stra\u00dfe ist erforderlich"),
   houseNumber: z.string().min(1, "Hausnummer ist erforderlich"),
   zipCode: z.string().min(3, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(10, "PLZ ist zu lang"),
   city: z.string().min(1, "Ort ist erforderlich"),
   country: z.string().min(2, "Bitte w\u00e4hlen Sie ein Land"),
+});
+
+// Passwort-Validierung f\u00fcr Gast-Submit (Step 8 ohne bestehendes Login).
+// Verlangt 8+ Zeichen, 1 Gro\u00df-, 1 Kleinbuchstabe und 1 Ziffer.
+// Sonderzeichen sind empfohlen, aber nicht hart verlangt (Score-UI zeigt an).
+const passwordSchema = z.object({
+  registerPassword: z
+    .string()
+    .min(8, "Passwort muss mindestens 8 Zeichen lang sein")
+    .regex(/[A-Z]/, "Passwort muss mindestens einen Gro\u00dfbuchstaben enthalten")
+    .regex(/[a-z]/, "Passwort muss mindestens einen Kleinbuchstaben enthalten")
+    .regex(/[0-9]/, "Passwort muss mindestens eine Ziffer enthalten"),
+  confirmPassword: z.string().min(1, "Bitte Passwort best\u00e4tigen"),
+}).refine((d) => d.registerPassword === d.confirmPassword, {
+  message: "Passw\u00f6rter stimmen nicht \u00fcberein",
+  path: ['confirmPassword'],
 });
 
 export const useWizardForm = () => {
@@ -443,7 +471,11 @@ export const useWizardForm = () => {
     }
   };
 
-  const submitForm = async (registerPassword?: string, botProtection?: { turnstileToken?: string | null; honeypot?: string }): Promise<boolean> => {
+  const submitForm = async (
+    registerPassword?: string,
+    botProtection?: { turnstileToken?: string | null; honeypot?: string },
+    context?: { existingSessionId?: string | null; anonymousId?: string | null }
+  ): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
@@ -487,47 +519,94 @@ export const useWizardForm = () => {
         const formDataForStorage = { ...formData };
         delete (formDataForStorage as Partial<WizardFormData>).photos;
 
-        // User wird jetzt in auto-convert-wizard per admin.createUser() erstellt.
-        // Daher gibt es hier keine user_id - sie wird von der Edge Function nachträglich gesetzt.
-        const capturedUserId = null;
+        const savedClickIds = getStoredClickIds();
 
-        // Save to wizard_sessions so admin can convert and data is not lost
-        // Generate UUID client-side to avoid needing .select('id') after INSERT.
-        // The SELECT RLS policy requires auth.uid() which is null for unconfirmed users,
-        // so .select('id').single() would fail silently and return null.
-        const generatedSessionId = crypto.randomUUID();
+        // Prefer UPDATEing the existing wizard_session created by useWizardSession
+        // on mount — otherwise we end up with two "completed" rows for a single
+        // lead. Fall back to a fresh INSERT only when no session is available
+        // (e.g. initial RPC create failed earlier).
         let savedSessionId: string | null = null;
-        try {
-          const savedClickIds = getStoredClickIds();
-          const { error: sessionError } = await withNetworkRetry(
-            () => supabase.from('wizard_sessions').insert({
-              id: generatedSessionId,
-              user_id: capturedUserId,
-              anonymous_id: `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-              customer_name: formData.customerName || null,
-              customer_email: formData.customerEmail || null,
-              customer_phone: formData.customerPhone || null,
-              current_step: 8,
-              max_step_reached: 8,
-              total_steps: 8,
-              step_name: 'completed',
-              form_data: formDataForStorage,
-              status: 'completed',
-              vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
-              completed_at: new Date().toISOString(),
-              gclid: savedClickIds.gclid || null,
-              gbraid: savedClickIds.gbraid || null,
-              wbraid: savedClickIds.wbraid || null,
-            }),
-            2,
-            'wizard-session-insert'
-          );
-          
-          if (sessionError) throw sessionError;
-          savedSessionId = generatedSessionId;
-          logger.info('Wizard session saved for signup-without-session user, id:', generatedSessionId);
-        } catch (wizardSessionError) {
-          logger.error('Failed to save wizard session:', wizardSessionError);
+        const existingSessionId = context?.existingSessionId || null;
+        const existingAnonId = context?.anonymousId || null;
+
+        if (existingSessionId && existingAnonId) {
+          try {
+            const { error: updateError } = await withNetworkRetry(
+              () => supabase.rpc('update_wizard_session_by_anonymous_id', {
+                p_anonymous_id: existingAnonId,
+                p_session_id: existingSessionId,
+                p_updates: {
+                  customer_name: formData.customerName || null,
+                  customer_email: formData.customerEmail || null,
+                  customer_phone: formData.customerPhone || null,
+                  current_step: 8,
+                  max_step_reached: 8,
+                  total_steps: 8,
+                  step_name: 'completed',
+                  form_data: formDataForStorage,
+                  status: 'completed',
+                  vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
+                  completed_at: new Date().toISOString(),
+                  gclid: savedClickIds.gclid || null,
+                  gbraid: savedClickIds.gbraid || null,
+                  wbraid: savedClickIds.wbraid || null,
+                },
+              }),
+              2,
+              'wizard-session-update'
+            );
+            if (updateError) throw updateError;
+            savedSessionId = existingSessionId;
+            logger.info('Wizard session updated for guest submit, id:', savedSessionId);
+          } catch (wizardUpdateErr) {
+            logger.warn('Guest submit: session UPDATE failed, falling back to INSERT', wizardUpdateErr);
+          }
+        }
+
+        if (!savedSessionId) {
+          const generatedSessionId = crypto.randomUUID();
+          try {
+            const { error: sessionError } = await withNetworkRetry(
+              () => supabase.from('wizard_sessions').insert({
+                id: generatedSessionId,
+                user_id: null,
+                anonymous_id: existingAnonId || `wizard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                customer_name: formData.customerName || null,
+                customer_email: formData.customerEmail || null,
+                customer_phone: formData.customerPhone || null,
+                current_step: 8,
+                max_step_reached: 8,
+                total_steps: 8,
+                step_name: 'completed',
+                form_data: formDataForStorage,
+                status: 'completed',
+                vehicle_summary: `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`.trim(),
+                completed_at: new Date().toISOString(),
+                gclid: savedClickIds.gclid || null,
+                gbraid: savedClickIds.gbraid || null,
+                wbraid: savedClickIds.wbraid || null,
+              }),
+              2,
+              'wizard-session-insert'
+            );
+
+            if (sessionError) throw sessionError;
+            savedSessionId = generatedSessionId;
+            logger.info('Wizard session saved for signup-without-session user, id:', generatedSessionId);
+          } catch (wizardSessionError) {
+            // C3: FAIL LOUD — previously this error was swallowed and the user
+            // was told everything succeeded while their data was lost. Now we
+            // surface the error and abort the submit so they can retry.
+            logger.error('Failed to save wizard session:', wizardSessionError);
+            toast({
+              title: "Fehler beim Speichern",
+              description:
+                "Ihre Anfrage konnte nicht gespeichert werden. Bitte pr\u00fcfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return false;
+          }
         }
 
         // ===== SOFORTIGE WEITERLEITUNG =====
@@ -561,6 +640,7 @@ export const useWizardForm = () => {
           const trackingData = getTrackingData();
           (window as any).__pendingWizardConvert = {
             sessionId: savedSessionId,
+            anonymousId: context?.anonymousId || null,
             password: registerPassword,
             leadNotification: {
               name: formData.customerName || "Unbekannt",
@@ -584,6 +664,7 @@ export const useWizardForm = () => {
           (window as any).__pendingWizardPhotos = {
             photos: formData.photos,
             sessionId: savedSessionId,
+            anonymousId: context?.anonymousId || null,
           };
         }
         navigate("/verkaufen/danke");
@@ -805,7 +886,19 @@ export const useWizardForm = () => {
         throw motorhomeError;
       }
 
-      // Insert photos
+      // Insert photos + create auction. If either fails we roll back the
+      // motorhome row so we don't leave half-created listings behind.
+      const rollbackMotorhome = async (reason: string) => {
+        logger.error(`Wizard submit: rolling back motorhome ${motorhome.id} (${reason})`);
+        try {
+          await supabase.from('motorhome_photos').delete().eq('motorhome_id', motorhome.id);
+          await supabase.from('auctions').delete().eq('motorhome_id', motorhome.id);
+          await supabase.from('motorhomes').delete().eq('id', motorhome.id);
+        } catch (rollbackErr) {
+          logger.error('Rollback after failed wizard submit failed:', rollbackErr);
+        }
+      };
+
       if (photoUrls.length > 0) {
         const photoRecords = photoUrls.map((url, index) => ({
           motorhome_id: motorhome.id,
@@ -817,7 +910,10 @@ export const useWizardForm = () => {
           .from('motorhome_photos')
           .insert(photoRecords);
 
-        if (photosError) throw photosError;
+        if (photosError) {
+          await rollbackMotorhome('photos insert failed');
+          throw photosError;
+        }
       }
 
       // Create auction listing (for both 'auction' and 'instant_price' channels)
@@ -832,7 +928,10 @@ export const useWizardForm = () => {
             status: 'draft',
           });
 
-        if (auctionError) throw auctionError;
+        if (auctionError) {
+          await rollbackMotorhome('auction insert failed');
+          throw auctionError;
+        }
       }
 
       // Send notification to admin about new listing (fire-and-forget)
@@ -949,10 +1048,50 @@ export const useWizardForm = () => {
     setFieldErrors({});
   }, []);
 
+  /**
+   * Validates the password fields for the guest registration flow (Step 8).
+   * Returns true if the password is strong enough and both fields match.
+   * Also writes the resulting errors into `fieldErrors` so the form can
+   * highlight the offending inputs.
+   */
+  const validatePassword = useCallback(
+    (registerPassword: string, confirmPassword: string): boolean => {
+      try {
+        passwordSchema.parse({ registerPassword, confirmPassword });
+        setFieldErrors((prev) => {
+          const next = { ...prev };
+          delete next.registerPassword;
+          delete next.confirmPassword;
+          return next;
+        });
+        return true;
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errors: Record<string, string> = {};
+          error.errors.forEach((e) => {
+            const fieldPath = e.path?.join('.') || 'registerPassword';
+            if (!errors[fieldPath]) {
+              errors[fieldPath] = e.message;
+            }
+          });
+          setFieldErrors((prev) => ({ ...prev, ...errors }));
+          toast({
+            title: "Bitte überprüfen Sie Ihr Passwort",
+            description: Object.values(errors)[0] || "Das Passwort erfüllt die Anforderungen nicht",
+            variant: "destructive",
+          });
+        }
+        return false;
+      }
+    },
+    [toast]
+  );
+
   return {
     formData,
     updateFormData,
     validateStep,
+    validatePassword,
     submitForm,
     isSubmitting,
     clearDraft,

@@ -14,10 +14,12 @@ type PhotoUploadState = "idle" | "uploading" | "success" | "error";
 interface PendingWizardPhotos {
   photos: File[];
   sessionId: string;
+  anonymousId?: string | null;
 }
 
 interface PendingWizardConvert {
   sessionId: string;
+  anonymousId?: string | null;
   password?: string;
   leadNotification: Record<string, unknown>;
 }
@@ -42,7 +44,7 @@ const VerkaufenDanke = () => {
     if (!pending?.sessionId) return;
 
     convertStarted.current = true;
-    const { sessionId, password, leadNotification } = pending;
+    const { sessionId, password, leadNotification, anonymousId } = pending;
     delete (window as any).__pendingWizardConvert;
 
     supabase.functions.invoke("auto-convert-wizard", {
@@ -51,6 +53,7 @@ const VerkaufenDanke = () => {
         userId: null,
         password,
         hasPassword: true,
+        anonymousId: anonymousId || null,
       },
     }).then((res) => {
       if (res.error) {
@@ -83,7 +86,7 @@ const VerkaufenDanke = () => {
     }
 
     uploadStarted.current = true;
-    const { photos, sessionId } = pending;
+    const { photos, sessionId, anonymousId } = pending;
     setTotalPhotos(photos.length);
     setUploadState("uploading");
 
@@ -94,6 +97,9 @@ const VerkaufenDanke = () => {
       try {
         const photoFormData = new FormData();
         photoFormData.append("sessionId", sessionId);
+        if (anonymousId) {
+          photoFormData.append("anonymousId", anonymousId);
+        }
         for (const photo of photos) {
           photoFormData.append("photos", photo);
         }

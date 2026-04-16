@@ -67,47 +67,94 @@ function getContactFromUrl(): {
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
+  sessionParam: string | null;
 } {
   if (typeof window === "undefined") {
-    return { customerName: null, customerEmail: null, customerPhone: null };
+    return { customerName: null, customerEmail: null, customerPhone: null, sessionParam: null };
   }
   const params = new URLSearchParams(window.location.search);
   return {
     customerName: params.get("customerName") || null,
     customerEmail: params.get("customerEmail") || null,
     customerPhone: params.get("customerPhone") || null,
+    sessionParam: params.get("session") || null,
   };
 }
 
 interface UseWizardSessionReturn {
   sessionId: string | null;
+  anonymousId: string;
+  /** The step the session was on when loaded (null if new session). Let the caller restore to this step. */
+  initialStep: number | null;
   isReady: boolean;
-  saveProgress: (currentStep: number, formData: WizardFormData, totalSteps: number) => Promise<void>;
+  saveProgress: (
+    currentStep: number,
+    formData: WizardFormData,
+    totalSteps: number,
+    options?: { immediate?: boolean }
+  ) => Promise<void>;
   markCompleted: () => Promise<void>;
   updateContactFromAuth: (authData: { email?: string; firstName?: string; lastName?: string; phone?: string }) => Promise<void>;
 }
 
 export const useWizardSession = (): UseWizardSessionReturn => {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [initialStep, setInitialStep] = useState<number | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [anonymousId, setAnonymousId] = useState<string>(() => getAnonymousId());
 
   const maxStepRef = useRef(1);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<(() => Promise<void>) | null>(null);
   const lastSavedDataRef = useRef<string>("");
 
-  // Initialize session on mount - immediately capture contact data from URL
   useEffect(() => {
     const initSession = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        const anonymousId = getAnonymousId();
+        const anon = getAnonymousId();
+        setAnonymousId(anon);
         const urlContact = getContactFromUrl();
 
         // Check for existing in-progress session
-        let existingSession = null;
+        let existingSession: {
+          id: string;
+          current_step?: number | null;
+          max_step_reached?: number | null;
+          customer_name?: string | null;
+          customer_email?: string | null;
+          customer_phone?: string | null;
+        } | null = null;
 
-        if (user) {
-          // Authenticated users can query directly via RLS (user_id = auth.uid())
+        // 1. Highest priority: session ID from URL (cross-device resume link)
+        //    We fetch via the SECURITY DEFINER find RPC so it works for anon users too.
+        if (urlContact.sessionParam) {
+          try {
+            const { data } = await supabase
+              .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anon });
+            const fromAnon = Array.isArray(data) && data.length > 0 ? data[0] : (data && !Array.isArray(data) ? data : null);
+            // Only accept the URL session if it matches our anon or our auth user;
+            // else fall through to normal flow. This prevents a stolen link from
+            // leaking another user's data onto this device.
+            if (user) {
+              const { data: byId } = await supabase
+                .from("wizard_sessions")
+                .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone, user_id")
+                .eq("id", urlContact.sessionParam)
+                .maybeSingle();
+              if (byId && byId.user_id === user.id) {
+                existingSession = byId;
+              }
+            } else if (fromAnon && fromAnon.id === urlContact.sessionParam) {
+              existingSession = fromAnon;
+            }
+          } catch (_e) {
+            // non-critical; fall through
+          }
+        }
+
+        // 2. Authenticated user: own sessions via RLS
+        if (!existingSession && user) {
           const sessionValid = await ensureValidRLSSession();
           if (sessionValid) {
             const { data } = await supabase
@@ -122,12 +169,11 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           }
         }
 
+        // 3. Anonymous: secure RPC by anonymous_id
         if (!existingSession) {
-          // Anonymous users: Use secure RPC function instead of direct table access
-          // This bypasses RLS safely and only returns the session matching this anonymous_id
           const { data } = await supabase
-            .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anonymousId });
-          
+            .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anon });
+
           if (data && Array.isArray(data) && data.length > 0) {
             existingSession = data[0];
           } else if (data && !Array.isArray(data)) {
@@ -138,15 +184,19 @@ export const useWizardSession = (): UseWizardSessionReturn => {
         if (existingSession) {
           setSessionId(existingSession.id);
           maxStepRef.current = existingSession.max_step_reached || 1;
+          // Restore position if the user had progressed beyond step 1.
+          const restoreTo = existingSession.current_step && existingSession.current_step > 1
+            ? existingSession.current_step
+            : null;
+          setInitialStep(restoreTo);
 
           // Update session with contact data from URL if not already set
           const updatePayload: Record<string, unknown> = {};
-          
+
           if (user) {
             updatePayload.user_id = user.id;
           }
-          
-          // Fill in contact data from URL params if session doesn't have them yet
+
           if (!existingSession.customer_name && urlContact.customerName) {
             updatePayload.customer_name = urlContact.customerName;
           }
@@ -159,7 +209,6 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
           if (Object.keys(updatePayload).length > 0) {
             if (user) {
-              // Authenticated users update directly
               const updateSessionValid = await ensureValidRLSSession();
               if (updateSessionValid) {
                 await supabase
@@ -168,20 +217,18 @@ export const useWizardSession = (): UseWizardSessionReturn => {
                   .eq("id", existingSession.id);
               }
             } else {
-              // Anonymous users update via secure RPC
               await supabase.rpc("update_wizard_session_by_anonymous_id", {
-                p_anonymous_id: anonymousId,
+                p_anonymous_id: anon,
                 p_session_id: existingSession.id,
                 p_updates: updatePayload,
               });
             }
           }
         } else {
-          // Create new session via SECURITY DEFINER RPC function
-          // This bypasses RLS so anonymous users can create sessions and get the ID back
+          // Create new session via SECURITY DEFINER RPC.
           const { data: newSessionId, error } = await supabase
             .rpc("create_wizard_session", {
-              p_anonymous_id: anonymousId,
+              p_anonymous_id: anon,
               p_user_id: user?.id || null,
               p_customer_name: urlContact.customerName || null,
               p_customer_email: urlContact.customerEmail || null,
@@ -216,41 +263,45 @@ export const useWizardSession = (): UseWizardSessionReturn => {
   }, []);
 
   /**
-   * Save wizard progress to DB (debounced).
-   * Skips save if data hasn't changed to avoid unnecessary writes.
+   * Save wizard progress to DB (debounced by default).
+   * When options.immediate is true the pending save is flushed synchronously,
+   * bypassing the 1s debounce (used by beforeunload).
    */
   const saveProgress = useCallback(
-    async (currentStep: number, formData: WizardFormData, totalSteps: number) => {
+    async (
+      currentStep: number,
+      formData: WizardFormData,
+      totalSteps: number,
+      options?: { immediate?: boolean }
+    ) => {
       if (!sessionId) return;
 
-      // Track max step reached
       if (currentStep > maxStepRef.current) {
         maxStepRef.current = currentStep;
       }
 
-      // Debounce saves
+      // Cancel any pending debounced save; we'll either reschedule or run now.
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
       }
 
-      saveTimeoutRef.current = setTimeout(async () => {
+      const runSave = async () => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           const serializedData = serializeFormData(formData);
 
-          // Build a fingerprint to skip duplicate saves
+          // Fingerprint covers the entire serialized form_data + step.
+          // Previously we only tracked a tiny subset which let dimension,
+          // equipment and price changes slip through unsaved.
           const fingerprint = JSON.stringify({
             step: currentStep,
-            name: formData.customerName,
-            email: formData.customerEmail,
-            phone: formData.customerPhone,
-            manufacturer: formData.manufacturer,
-            model: formData.model,
-            photos_count: (formData.photos || []).length,
+            max: maxStepRef.current,
+            data: serializedData,
           });
 
           if (fingerprint === lastSavedDataRef.current) {
-            return; // No meaningful change, skip save
+            return;
           }
 
           const updatePayload: Record<string, unknown> = {
@@ -265,23 +316,19 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             customer_phone: formData.customerPhone || null,
           };
 
-          // Persist Google Ads Click-IDs for sale-back conversion tracking
           const clickIds = getStoredClickIds();
           if (clickIds.gclid) updatePayload.gclid = clickIds.gclid;
           if (clickIds.gbraid) updatePayload.gbraid = clickIds.gbraid;
           if (clickIds.wbraid) updatePayload.wbraid = clickIds.wbraid;
 
-          // Link user if now logged in
           if (user) {
             updatePayload.user_id = user.id;
-            // Try to get email from auth if not in form
             if (!formData.customerEmail && user.email) {
               updatePayload.customer_email = user.email;
             }
           }
 
           if (user) {
-            // Authenticated users update directly via RLS
             const saveSessionValid = await ensureValidRLSSession();
             if (!saveSessionValid) return;
             const { error } = await supabase
@@ -295,10 +342,9 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               lastSavedDataRef.current = fingerprint;
             }
           } else {
-            // Anonymous users update via secure RPC
-            const anonymousId = getAnonymousId();
+            const anon = getAnonymousId();
             const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
-              p_anonymous_id: anonymousId,
+              p_anonymous_id: anon,
               p_session_id: sessionId,
               p_updates: updatePayload,
             });
@@ -311,17 +357,27 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           }
         } catch (error) {
           logger.error("Failed to save wizard progress:", error);
+        } finally {
+          pendingSaveRef.current = null;
         }
-      }, 1000); // 1 second debounce
+      };
+
+      pendingSaveRef.current = runSave;
+
+      if (options?.immediate) {
+        await runSave();
+        return;
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        if (pendingSaveRef.current) {
+          pendingSaveRef.current();
+        }
+      }, 1000);
     },
     [sessionId]
   );
 
-  /**
-   * Update wizard session with contact data from authenticated user.
-   * Called after login/register in AuthenticationStep to ensure
-   * contact data is persisted even when URL params were missing.
-   */
   const updateContactFromAuth = useCallback(
     async (authData: { email?: string; firstName?: string; lastName?: string; phone?: string }) => {
       if (!sessionId) return;
@@ -329,7 +385,6 @@ export const useWizardSession = (): UseWizardSessionReturn => {
       try {
         const updatePayload: Record<string, unknown> = {};
 
-        // Build full name from first + last
         const fullName = [authData.firstName, authData.lastName].filter(Boolean).join(' ');
         if (fullName) {
           updatePayload.customer_name = fullName;
@@ -341,11 +396,9 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           updatePayload.customer_phone = authData.phone;
         }
 
-        // Also link user_id if now logged in
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           updatePayload.user_id = user.id;
-          // Fallback: use auth email if not provided
           if (!updatePayload.customer_email && user.email) {
             updatePayload.customer_email = user.email;
           }
@@ -353,7 +406,6 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
         if (Object.keys(updatePayload).length > 0) {
           if (user) {
-            // Authenticated user: direct update via RLS
             const contactSessionValid = await ensureValidRLSSession();
             if (!contactSessionValid) return;
             const { error } = await supabase
@@ -365,10 +417,9 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               logger.error("Failed to update wizard session contact from auth:", error);
             }
           } else {
-            // Anonymous user: update via secure RPC
-            const anonymousId = getAnonymousId();
+            const anon = getAnonymousId();
             const { error } = await supabase.rpc("update_wizard_session_by_anonymous_id", {
-              p_anonymous_id: anonymousId,
+              p_anonymous_id: anon,
               p_session_id: sessionId,
               p_updates: updatePayload,
             });
@@ -385,9 +436,6 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     [sessionId]
   );
 
-  /**
-   * Mark session as completed (called after successful submission)
-   */
   const markCompleted = useCallback(async () => {
     if (!sessionId) return;
 
@@ -406,9 +454,9 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             .eq("id", sessionId);
         }
       } else {
-        const anonymousId = getAnonymousId();
+        const anon = getAnonymousId();
         await supabase.rpc("update_wizard_session_by_anonymous_id", {
-          p_anonymous_id: anonymousId,
+          p_anonymous_id: anon,
           p_session_id: sessionId,
           p_updates: {
             status: "completed",
@@ -425,10 +473,11 @@ export const useWizardSession = (): UseWizardSessionReturn => {
 
   return {
     sessionId,
+    anonymousId,
+    initialStep,
     isReady,
     saveProgress,
     markCompleted,
     updateContactFromAuth,
-
   };
 };

@@ -27,6 +27,7 @@ import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { toast } from "sonner";
 
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
@@ -42,14 +43,26 @@ const steps = [
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, validateStep, submitForm, isSubmitting, clearDraft, fieldErrors, clearFieldErrors } = useWizardForm();
-  const { saveProgress, markCompleted, updateContactFromAuth, isReady } = useWizardSession();
+  const { formData, updateFormData, validateStep, validatePassword, submitForm, isSubmitting, clearDraft, fieldErrors, clearFieldErrors } = useWizardForm();
+  const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep } = useWizardSession();
   const hasRestoredRef = useRef(false);
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
+
+  // H1: Restore the step the user was on when they left. Only runs when the
+  // session finishes loading and the user did not already land on a specific
+  // step via URL (?step=X, ?source=wertrechner, …).
+  useEffect(() => {
+    if (!isReady) return;
+    if (hasRestoredRef.current) return;
+    if (initialStep && initialStep >= 1 && initialStep <= 8) {
+      setCurrentStep(initialStep);
+      hasRestoredRef.current = true;
+    }
+  }, [isReady, initialStep]);
 
   // Check if user is already authenticated and prefill profile data
   useEffect(() => {
@@ -194,18 +207,36 @@ const VerkaufenWizard = () => {
 
   // Step-Guard: Verhindert, dass Nutzer per URL-Parameter (z.B. ?step=8) Steps überspringen
   // und dann beim Submit ungültige Daten an die Datenbank senden.
-  // Prüft kritische Pflichtfelder aus vorherigen Steps und setzt zurück zum frühesten fehlenden Step.
+  // Prüft ALLE kritischen Pflichtfelder aus vorherigen Steps und setzt zurück zum
+  // frühesten fehlenden Step. Die Reihenfolge ist wichtig – wir springen zum ersten
+  // fehlenden Pflichtfeld, nicht zum letzten.
   useEffect(() => {
-    if (currentStep >= 2 && !formData.bodyType) {
+    if (!formData.bodyType && currentStep > 1) {
       setCurrentStep(1);
-    } else if (currentStep >= 8 && !formData.saleChannel) {
-      // sale_channel ist Pflicht (Step 7) – ohne gültigen Wert → DB-Enum-Fehler
-      setCurrentStep(7);
-    } else if (currentStep >= 6 && (!formData.customerName || !formData.customerEmail)) {
-      // Kontaktdaten werden in Step 5 erfasst
-      setCurrentStep(5);
+      return;
     }
-  }, [currentStep, formData.bodyType, formData.saleChannel, formData.customerName, formData.customerEmail]);
+    if ((!formData.manufacturer || !formData.model || !formData.year) && currentStep > 2) {
+      // Wohnwagen haben keinen Mileage-Check, aber Manufacturer/Modell/Jahr sind immer Pflicht.
+      setCurrentStep(2);
+      return;
+    }
+    if ((!formData.customerName || !formData.customerEmail) && currentStep > 5) {
+      setCurrentStep(5);
+      return;
+    }
+    if (!formData.saleChannel && currentStep > 7) {
+      setCurrentStep(7);
+    }
+  }, [
+    currentStep,
+    formData.bodyType,
+    formData.manufacturer,
+    formData.model,
+    formData.year,
+    formData.customerName,
+    formData.customerEmail,
+    formData.saleChannel,
+  ]);
 
   // Google Ads: Wizard-Start tracken
   useEffect(() => {
@@ -222,10 +253,12 @@ const VerkaufenWizard = () => {
     }
   }, [currentStep, formData, steps.length, saveProgress, isReady]);
 
-  // Save progress on page unload
+  // Save progress on page unload. We pass { immediate: true } so the save is
+  // flushed synchronously (the regular debounced save would almost always be
+  // cancelled by the unload event).
   useEffect(() => {
     const handleBeforeUnload = () => {
-      saveProgress(currentStep, formData, steps.length);
+      saveProgress(currentStep, formData, steps.length, { immediate: true });
       if (currentStep < steps.length) {
         const currentStepInfo = steps[currentStep - 1];
         trackWizardAbandoned(currentStep, currentStepInfo?.name || `Schritt ${currentStep}`);
@@ -307,6 +340,16 @@ const VerkaufenWizard = () => {
     const isValid = await validateStep(8);
     if (!isValid) return;
 
+    // Additional password validation for guest submissions. If the user is
+    // logged in we skip this – their password is already set.
+    if (!currentUser) {
+      const passwordCheck = validatePassword(registerPassword, confirmPassword);
+      if (!passwordCheck.valid) {
+        toast.error(passwordCheck.error ?? 'Bitte Passwort prüfen.');
+        return;
+      }
+    }
+
     // Update contact data in session before submit
     await updateContactFromAuth({
       email: formData.customerEmail,
@@ -315,10 +358,11 @@ const VerkaufenWizard = () => {
       phone: formData.customerPhone,
     });
 
-    const success = await submitForm(registerPassword || undefined, {
-      turnstileToken,
-      honeypot: honeypotValue,
-    });
+    const success = await submitForm(
+      registerPassword || undefined,
+      { turnstileToken, honeypot: honeypotValue },
+      { existingSessionId: sessionId, anonymousId },
+    );
     if (success) {
       await markCompleted();
       markLeadWizardCompleted();
@@ -384,9 +428,13 @@ const VerkaufenWizard = () => {
 
   return (
     <PageLayout
-      title="Wohnmobil-Verkauf starten – Angebot in 2 Min."
-      description="Verkaufen Sie Ihr Wohnmobil schnell und einfach – kostenloses Angebot in 2 Minuten"
-      keywords="wohnmobil verkaufen, wohnmobil bewertung, caravan verkaufen"
+      title={formData.bodyType === 'Wohnwagen'
+        ? 'Wohnwagen-Verkauf starten – Angebot in 2 Min.'
+        : 'Wohnmobil-Verkauf starten – Angebot in 2 Min.'}
+      description={formData.bodyType === 'Wohnwagen'
+        ? 'Verkaufen Sie Ihren Wohnwagen schnell und einfach – kostenloses Angebot in 2 Minuten'
+        : 'Verkaufen Sie Ihr Wohnmobil schnell und einfach – kostenloses Angebot in 2 Minuten'}
+      keywords="wohnmobil verkaufen, wohnwagen verkaufen, wohnmobil bewertung, caravan verkaufen"
       canonicalPath="/verkaufen/wizard"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/verkaufen/wizard"))}
       hideHeader
@@ -404,11 +452,13 @@ const VerkaufenWizard = () => {
               Zurück zur Übersicht
             </a>
           </div>
-          <div className="text-center hidden sm:block">
-            <h1 className="text-base md:text-xl font-bold text-foreground">
-              Verkaufen Sie Ihr Wohnmobil
+          <div className="text-center">
+            <h1 className="text-sm sm:text-base md:text-xl font-bold text-foreground">
+              {formData.bodyType === 'Wohnwagen'
+                ? 'Verkaufen Sie Ihren Wohnwagen'
+                : 'Verkaufen Sie Ihr Wohnmobil'}
             </h1>
-            <p className="text-muted-foreground text-xs mt-0.5">
+            <p className="text-muted-foreground text-[11px] sm:text-xs mt-0.5">
               Kostenloses Angebot in nur 2 Minuten
             </p>
           </div>
@@ -450,7 +500,15 @@ const VerkaufenWizard = () => {
               {/* Form Card - 2/3 width on desktop */}
               <div className="lg:col-span-2">
                 <Card className="p-2.5 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
-                  <div className="min-h-[180px] md:min-h-[350px]">{renderStep()}</div>
+                  <div
+                    role="region"
+                    aria-live="polite"
+                    aria-atomic="false"
+                    aria-label={`Schritt ${currentStep} von ${steps.length}: ${steps[currentStep - 1]?.name ?? ''}`}
+                    className="min-h-[180px] md:min-h-[350px]"
+                  >
+                    {renderStep()}
+                  </div>
                 </Card>
 
                 {/* Mobile vehicle summary (above trust signals on small screens) */}
@@ -464,8 +522,9 @@ const VerkaufenWizard = () => {
                   </div>
                 )}
 
-                {/* Mobile Trust Signals (hidden on desktop where sidebar is visible) */}
-                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground lg:hidden py-2">
+                {/* Mobile Trust Signals (hidden on desktop where sidebar is visible).
+                    flex-wrap avoids overflow on 320px screens. */}
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground lg:hidden py-2">
                   <span className="flex items-center gap-1">
                     <Check className="h-3.5 w-3.5 text-green-500" />
                     100% kostenlos

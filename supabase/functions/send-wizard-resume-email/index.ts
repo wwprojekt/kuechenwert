@@ -19,12 +19,15 @@ interface ResumeEmailRequest {
   customMessage?: string;
 }
 
+// Must mirror the real wizard flow in VerkaufenWizard.tsx:
+// 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
+// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeugtyp",
   2: "Fahrzeugdaten",
-  3: "Kontakt",
-  4: "Details & Technik",
-  5: "Ausstattung",
+  3: "Details & Technik",
+  4: "Ausstattung",
+  5: "Kontakt",
   6: "Fotos",
   7: "Verkaufsweg",
   8: "Standort & Konto",
@@ -87,9 +90,15 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "0511 / 51532476",
     };
 
-    // Build resume URL
+    // Build resume URL. Including the session id enables cross-device resume:
+    // useWizardSession reads ?session=<id> and reloads form_data from the DB
+    // even when the user opens the link on a different browser where the
+    // anonymous_id cookie doesn't exist.
     const currentStep = session.current_step || 1;
-    const resumeUrl = `https://caravanwert.de/verkaufen/wizard?step=${currentStep}`;
+    const resumeUrl =
+      `https://caravanwert.de/verkaufen/wizard?step=${currentStep}` +
+      `&session=${encodeURIComponent(sessionId)}` +
+      `&source=resume_email`;
 
     // Extract vehicle info from form_data
     const formData = session.form_data || {};

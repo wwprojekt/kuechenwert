@@ -4,6 +4,15 @@ import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+const MAX_PHOTOS = 30;
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
+// HEIC/HEIF photos come straight from iPhones but are not decodable by most
+// desktop browsers for the preview, and our storage pipeline would accept them
+// but the buyer-facing listing can't render them without conversion. We reject
+// them here with a clear message so the user knows they need to export as JPG.
+const REJECTED_EXTENSIONS = [".heic", ".heif"];
 
 
 interface PhotosStepProps {
@@ -27,12 +36,52 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
 
   const addValidFiles = useCallback(
     (files: File[]) => {
-      const validFiles = files.filter(
-        (file) => file.type.startsWith("image/") && file.size <= 100 * 1024 * 1024
-      );
+      if (files.length === 0) return;
+
+      const rejected: { name: string; reason: string }[] = [];
+      const validFiles: File[] = [];
+
+      for (const file of files) {
+        const nameLower = file.name.toLowerCase();
+        const isHeic =
+          REJECTED_EXTENSIONS.some((ext) => nameLower.endsWith(ext)) ||
+          file.type === "image/heic" ||
+          file.type === "image/heif";
+
+        if (isHeic) {
+          rejected.push({ name: file.name, reason: "HEIC wird nicht unterstützt – bitte als JPG exportieren" });
+          continue;
+        }
+        if (!file.type.startsWith("image/")) {
+          rejected.push({ name: file.name, reason: "Kein Bildformat" });
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          rejected.push({ name: file.name, reason: `Zu groß (max. ${Math.round(MAX_FILE_SIZE / 1024 / 1024)} MB)` });
+          continue;
+        }
+        validFiles.push(file);
+      }
+
+      if (rejected.length > 0) {
+        const first = rejected[0];
+        toast.error(
+          rejected.length === 1
+            ? `${first.name}: ${first.reason}`
+            : `${rejected.length} Dateien abgelehnt (${first.reason} u. a.)`,
+        );
+      }
+
       if (validFiles.length === 0) return;
-      const newPhotos = [...formData.photos, ...validFiles].slice(0, 30);
-      updateFormData({ photos: newPhotos });
+
+      const combined = [...formData.photos, ...validFiles];
+      const truncated = combined.slice(0, MAX_PHOTOS);
+      if (combined.length > MAX_PHOTOS) {
+        toast.info(`Maximal ${MAX_PHOTOS} Fotos – zusätzliche Dateien wurden nicht übernommen.`);
+      } else {
+        toast.success(`${validFiles.length} Foto${validFiles.length !== 1 ? "s" : ""} hinzugefügt`);
+      }
+      updateFormData({ photos: truncated });
     },
     [formData.photos, updateFormData]
   );

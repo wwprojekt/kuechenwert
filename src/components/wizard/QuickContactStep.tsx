@@ -36,6 +36,10 @@ export const QuickContactStep = ({
           </Label>
           <Input
             id="customerName"
+            name="name"
+            type="text"
+            autoComplete="name"
+            autoCapitalize="words"
             placeholder="Max Mustermann"
             value={formData.customerName || ""}
             onChange={(e) => updateFormData({ customerName: e.target.value })}
@@ -53,7 +57,12 @@ export const QuickContactStep = ({
           </Label>
           <Input
             id="customerEmail"
+            name="email"
             type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            inputMode="email"
             placeholder="max@beispiel.de"
             value={formData.customerEmail || ""}
             onChange={(e) => updateFormData({ customerEmail: e.target.value })}

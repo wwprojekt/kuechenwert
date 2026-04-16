@@ -71,7 +71,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
               Kraftstoffart
               {formData.fuel_type && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
             </Label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { value: "Diesel", label: "⛽ Diesel" },
                 { value: "Benzin", label: "⛽ Benzin" },
@@ -83,7 +83,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
                   type="button"
                   onClick={() => updateFormData({ fuel_type: opt.value })}
                   className={cn(
-                    "px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center",
+                    "min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center",
                     "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
                     formData.fuel_type === opt.value
                       ? "bg-primary text-white border-primary shadow-sm"
@@ -141,7 +141,7 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
               type="button"
               onClick={() => updateFormData({ sleeping_places: formData.sleeping_places === n ? null : n })}
               className={cn(
-                "w-10 h-10 rounded-lg text-sm font-medium border-2 transition-all",
+                "w-11 h-11 rounded-lg text-sm font-medium border-2 transition-all",
                 "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
                 formData.sleeping_places === n
                   ? "bg-primary text-white border-primary shadow-sm"

@@ -104,57 +104,34 @@ const AuthConfirm = () => {
         setStatus("success");
         setMessage(getSuccessMessage(type));
 
-        // After signup confirmation: ensure motorhome is linked to this user.
-        // This is a fallback in case auto-convert-wizard ran before the user was
-        // fully confirmed, or if there was a race condition with user creation.
+        // After signup confirmation: adopt any orphaned wizard sessions that
+        // belong to this user's email.
+        //
+        // Since the wizard_sessions RLS is now owner-scoped, we can no longer
+        // SELECT by customer_email from the client. Instead we call the
+        // SECURITY DEFINER RPC `link_wizard_sessions_to_confirmed_user()`,
+        // which runs as the server, checks auth.jwt()->>email itself, and
+        // updates every matching orphan session atomically. This avoids the
+        // previous two-step read/update dance that race-conditioned against
+        // auto-convert-wizard.
         if (type === "signup" || type === "email") {
           try {
-            const { data: { user: confirmedUser } } = await supabase.auth.getUser();
-            if (confirmedUser) {
-              // Check if user already has motorhomes
-              const { data: existingMotorhomes } = await supabase
-                .from("motorhomes")
-                .select("id")
-                .eq("seller_id", confirmedUser.id)
-                .limit(1);
-
-              // If no motorhomes found, try to link via wizard_session
-              if (!existingMotorhomes || existingMotorhomes.length === 0) {
-                // No motorhomes found for confirmed user, check wizard sessions
-                
-                const sessionValid = await ensureValidRLSSession();
-                if (!sessionValid) return;
-
-                // Look for wizard sessions with this user's email that have been converted
-                const { data: wizardSession } = await supabase
-                  .from("wizard_sessions")
-                  .select("id, status, user_id")
-                  .eq("customer_email", confirmedUser.email)
-                  .in("status", ["completed", "converted"])
-                  .order("created_at", { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
-
-                if (wizardSession) {
-                  // Update wizard session to link to this user
-                  if (!wizardSession.user_id || wizardSession.user_id !== confirmedUser.id) {
-                    await supabase
-                      .from("wizard_sessions")
-                      .update({ user_id: confirmedUser.id })
-                      .eq("id", wizardSession.id);
-                    // Linked wizard session to confirmed user
-                  }
-
-                  // If session was converted but motorhome has wrong seller_id,
-                  // the auto-convert should have handled this. But as a safety net,
-                  // we trigger a re-check by invalidating queries on the dashboard.
-                  // Wizard session found, dashboard will auto-refresh via realtime
-                }
+            const sessionValid = await ensureValidRLSSession();
+            if (sessionValid) {
+              const { error: linkError } = await supabase.rpc(
+                "link_wizard_sessions_to_confirmed_user"
+              );
+              if (linkError) {
+                console.warn(
+                  "link_wizard_sessions_to_confirmed_user RPC failed (non-critical):",
+                  linkError
+                );
               }
             }
           } catch (linkError) {
-            console.error("Error during post-confirmation motorhome linking:", linkError);
-            // Non-critical: don't block the redirect
+            console.error("Error during post-confirmation session linking:", linkError);
+            // Non-critical: don't block the redirect. The user can always
+            // re-submit or the background cron will retry.
           }
         }
 

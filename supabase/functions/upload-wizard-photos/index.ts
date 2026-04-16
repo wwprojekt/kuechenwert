@@ -59,6 +59,7 @@ Deno.serve(async (req: Request) => {
   try {
     const formData = await req.formData();
     const sessionId = formData.get("sessionId");
+    const anonymousId = formData.get("anonymousId");
 
     if (!sessionId || typeof sessionId !== "string") {
       return new Response(
@@ -77,6 +78,58 @@ Deno.serve(async (req: Request) => {
     }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Resolve the calling user from the Authorization header (if present).
+    // We cannot rely on verify_jwt here because guest uploads must work too,
+    // but when a bearer token IS provided we use it for ownership verification.
+    let callerUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      const token = authHeader.slice(7).trim();
+      if (token && token !== SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const { data: { user } } = await adminClient.auth.getUser(token);
+          if (user?.id) callerUserId = user.id;
+        } catch (_) {
+          // Token bogus -> treat as guest. The ownership RPC below still
+          // blocks access unless anonymous_id matches.
+        }
+      }
+    }
+
+    // --- Ownership check ---
+    // Before the dedicated RPC existed, this function accepted ANY valid
+    // session UUID, so an attacker who guessed a session id could overwrite
+    // PII or upload to any stranger's wizard. We now require either:
+    //   - the anonymous_id recorded on the session, OR
+    //   - the user_id of an authenticated caller.
+    const anonIdForRpc = typeof anonymousId === "string" && anonymousId.length > 0
+      ? anonymousId
+      : null;
+
+    const { data: isOwner, error: verifyError } = await adminClient.rpc(
+      "verify_wizard_session_ownership",
+      {
+        p_session_id: sessionId,
+        p_anonymous_id: anonIdForRpc,
+        p_user_id: callerUserId,
+      }
+    );
+
+    if (verifyError) {
+      console.error("verify_wizard_session_ownership RPC failed:", verifyError.message);
+      return new Response(
+        JSON.stringify({ error: "Ownership verification failed" }),
+        { status: 500, headers }
+      );
+    }
+
+    if (!isOwner) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: wizard session does not belong to caller" }),
+        { status: 403, headers }
+      );
+    }
 
     // Verify the wizard session exists
     const { data: session, error: sessionError } = await adminClient

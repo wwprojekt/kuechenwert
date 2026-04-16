@@ -107,7 +107,7 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                   type="button"
                   onClick={() => updateFormData({ seats_with_seatbelts: formData.seats_with_seatbelts === n ? null : n })}
                   className={cn(
-                    "w-10 h-10 rounded-lg text-sm font-medium border-2 transition-all",
+                    "w-11 h-11 rounded-lg text-sm font-medium border-2 transition-all",
                     "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]",
                     formData.seats_with_seatbelts === n
                       ? "bg-primary text-white border-primary shadow-sm"

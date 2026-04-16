@@ -382,6 +382,7 @@ const handler = async (req: Request): Promise<Response> => {
                         offerAmount: formattedOffer,
                         counterAmount: formattedCounter,
                         buyerName: buyerDisplayName,
+                        isFestpreis,
                       },
                     })
                   );

@@ -139,13 +139,13 @@ export default function AdminAuctionDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Auktion erfolgreich aktiviert");
+      toast.success(isFestpreis ? "Inserat erfolgreich aktiviert" : "Auktion erfolgreich aktiviert");
       logEvent({ action: "auction_activated", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
     onError: (error) => {
       logger.error("Activate auction error:", error);
-      toast.error("Fehler beim Aktivieren der Auktion");
+      toast.error(isFestpreis ? "Fehler beim Aktivieren des Inserats" : "Fehler beim Aktivieren der Auktion");
     },
   });
 
@@ -159,13 +159,13 @@ export default function AdminAuctionDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Auktion erfolgreich abgebrochen");
+      toast.success(isFestpreis ? "Inserat erfolgreich abgebrochen" : "Auktion erfolgreich abgebrochen");
       logEvent({ action: "auction_cancelled", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
     onError: (error) => {
       logger.error("Cancel auction error:", error);
-      toast.error("Fehler beim Abbrechen der Auktion");
+      toast.error(isFestpreis ? "Fehler beim Abbrechen des Inserats" : "Fehler beim Abbrechen der Auktion");
     },
   });
 
@@ -237,6 +237,7 @@ export default function AdminAuctionDetail() {
   const highestBid = sortedBids[0];
   const bidCount = sortedBids.length;
   const uniqueBidders = new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
+  const isFestpreis = auction?.motorhome?.sale_channel === 'instant_price';
 
   // Get main photo – ensure motorhome_photos is always an array
   const rawPhotos = auction?.motorhome?.motorhome_photos;
@@ -247,11 +248,11 @@ export default function AdminAuctionDetail() {
 
   return (
     <AdminDetailLayout
-      title={auction ? `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}` : "Auktion"}
+      title={auction ? `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}` : "Inserat"}
       subtitle={auction?.motorhome ? `${auction.motorhome.year} • ${auction.motorhome.body_type}` : undefined}
       status={auction ? getStatusBadge(auction.status) : undefined}
       backUrl="/admin/auctions"
-      backLabel="Alle Auktionen"
+      backLabel="Alle Inserate"
       isLoading={isLoading}
       icon={<Gavel className="w-6 h-6" />}
       actions={
@@ -287,9 +288,9 @@ export default function AdminAuctionDetail() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion aktivieren?</AlertDialogTitle>
+                    <AlertDialogTitle>{isFestpreis ? 'Inserat aktivieren?' : 'Auktion aktivieren?'}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Die Auktion wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.
+                      {isFestpreis ? 'Das Festpreis-Inserat wird aktiviert und ist dann öffentlich sichtbar.' : 'Die Auktion wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.'}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -306,14 +307,14 @@ export default function AdminAuctionDetail() {
                 <AlertDialogTrigger asChild>
                   <Button size="sm" variant="destructive">
                     <Ban className="w-4 h-4 mr-2" />
-                    Auktion abbrechen
+                    {isFestpreis ? 'Inserat abbrechen' : 'Auktion abbrechen'}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Auktion abbrechen?</AlertDialogTitle>
+                    <AlertDialogTitle>{isFestpreis ? 'Inserat abbrechen?' : 'Auktion abbrechen?'}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Die Auktion wird abgebrochen. Es werden keine Benachrichtigungen an Bieter oder Verkäufer versendet.
+                      {isFestpreis ? 'Das Inserat wird abgebrochen. Es werden keine Benachrichtigungen versendet.' : 'Die Auktion wird abgebrochen. Es werden keine Benachrichtigungen an Bieter oder Verkäufer versendet.'}
                       Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -357,12 +358,12 @@ export default function AdminAuctionDetail() {
               icon={<Euro className="w-5 h-5" />}
             />
             <StatsCard
-              label="Anzahl Gebote"
+              label={isFestpreis ? "Preisvorschläge" : "Anzahl Gebote"}
               value={bidCount}
               icon={<Gavel className="w-5 h-5" />}
             />
             <StatsCard
-              label="Bieter"
+              label={isFestpreis ? "Interessenten" : "Bieter"}
               value={uniqueBidders}
               icon={<Users className="w-5 h-5" />}
             />
@@ -381,7 +382,7 @@ export default function AdminAuctionDetail() {
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-6">
               {/* Auction Details */}
-              <DetailSection title="Auktionsdetails" icon={<Gavel className="w-5 h-5" />}>
+              <DetailSection title={isFestpreis ? "Inseratsdetails" : "Auktionsdetails"} icon={<Gavel className="w-5 h-5" />}>
                 <InfoGrid columns={3}>
                   <InfoItem label="Startgebot" value={formatPrice(auction.starting_bid)} icon={<Euro className="w-3 h-3" />} />
                   <InfoItem label="Reservepreis" value={formatPrice(auction.reserve_price)} icon={<Euro className="w-3 h-3" />} />
@@ -487,7 +488,7 @@ export default function AdminAuctionDetail() {
               )}
 
               {/* Bids Table */}
-              <DetailSection title={`Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
+              <DetailSection title={isFestpreis ? `Preisvorschläge (${bidCount})` : `Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
                 {sortedBids.length > 0 ? (
                   <div className="overflow-x-auto">
                   <Table>
@@ -587,7 +588,7 @@ export default function AdminAuctionDetail() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Noch keine Gebote vorhanden</p>
+                    <p>{isFestpreis ? 'Noch keine Preisvorschläge vorhanden' : 'Noch keine Gebote vorhanden'}</p>
                   </div>
                 )}
               </DetailSection>
@@ -647,7 +648,7 @@ export default function AdminAuctionDetail() {
 
               {/* Highest Bidder */}
               {highestBid && (
-                <DetailSection title="Höchstbietender" icon={<TrendingUp className="w-5 h-5" />}>
+                <DetailSection title={isFestpreis ? "Höchstes Angebot" : "Höchstbietender"} icon={<TrendingUp className="w-5 h-5" />}>
                   <div className="space-y-4">
                     <div>
                       <p className="font-semibold text-lg">
@@ -658,7 +659,7 @@ export default function AdminAuctionDetail() {
                       )}
                     </div>
                     <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                      <p className="text-sm text-muted-foreground">Höchstgebot</p>
+                      <p className="text-sm text-muted-foreground">{isFestpreis ? 'Höchster Vorschlag' : 'Höchstgebot'}</p>
                       <p className="text-2xl font-bold text-green-600">{formatPrice(highestBid.amount)}</p>
                     </div>
                     <Separator />

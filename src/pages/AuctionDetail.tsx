@@ -506,16 +506,16 @@ const AuctionDetail = () => {
     };
   }, [id, user, toast, notifyOutbid]);
 
-  // Realtime: Subscribe to kaufchance offer changes (seller responds to this user's offers)
+  // Realtime: Subscribe to offer changes (seller responds to this user's offers)
   useEffect(() => {
-    if (!user || !id || auction?.status !== 'kaufchance') return;
+    if (!user || !id || (auction?.status !== 'kaufchance' && !(auction?.status === 'active' && motorhome?.sale_channel === 'instant_price'))) return;
 
     const kaufchanceChannel = supabase
       .channel(`kaufchance-detail-${id}-${user.id}`)
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "post_auction_offers",
           filter: `buyer_id=eq.${user.id}`,
@@ -525,6 +525,9 @@ const AuctionDetail = () => {
           if (newRecord.auction_id !== id) return;
 
           queryClient.invalidateQueries({ queryKey: ['kaufchanceExistingOffer', id, user?.id] });
+          fetchAuction();
+
+          if (payload.eventType === "INSERT") return;
 
           if (newRecord.status === "countered") {
             const amount = newRecord.counter_offer_amount;
@@ -553,7 +556,7 @@ const AuctionDetail = () => {
     return () => {
       supabase.removeChannel(kaufchanceChannel);
     };
-  }, [id, user, auction?.status, toast, queryClient]);
+  }, [id, user, auction?.status, motorhome?.sale_channel, toast, queryClient, fetchAuction]);
 
   // Countdown timer
   useEffect(() => {

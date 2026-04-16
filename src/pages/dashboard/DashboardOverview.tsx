@@ -177,7 +177,9 @@ export default function DashboardOverview() {
       const kaufchanceAuctionIds = (motorhomes || [])
         .map((mh) => {
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
-          return auction?.status === "kaufchance" ? auction.id : null;
+          if (auction?.status === "kaufchance") return auction.id;
+          if (auction?.status === "active" && mh.sale_channel === "instant_price") return auction.id;
+          return null;
         })
         .filter(Boolean) as string[];
 
@@ -239,7 +241,7 @@ export default function DashboardOverview() {
           }
           addendaCount = addendaByAuction[auction.id] || 0;
 
-          if (auction.status === "kaufchance") {
+          if (auction.status === "kaufchance" || (auction.status === "active" && mh.sale_channel === "instant_price")) {
             const offers = offersByAuction[auction.id] || [];
             if (offers.length > 0) {
               kaufchanceInfo = {
@@ -401,7 +403,7 @@ export default function DashboardOverview() {
       return {
         step: 3,
         label: "Wartet auf Freischaltung",
-        sublabel: "Unser Support-Team prüft und aktiviert Ihre Auktion in Kürze",
+        sublabel: mh.sale_channel === "instant_price" ? "Unser Support-Team prüft und aktiviert Ihr Inserat in Kürze" : "Unser Support-Team prüft und aktiviert Ihre Auktion in Kürze",
         color: "text-amber-600",
         bgColor: "bg-amber-100 dark:bg-amber-900/30",
         borderColor: "border-amber-200 dark:border-amber-800",
@@ -409,10 +411,11 @@ export default function DashboardOverview() {
     }
 
     if (auction.status === "active") {
+      const isFP = mh.sale_channel === "instant_price";
       return {
         step: 4,
-        label: "Auktion läuft",
-        sublabel: `Endet am ${format(new Date(auction.end_time), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}`,
+        label: isFP ? "Festpreis aktiv" : "Auktion läuft",
+        sublabel: isFP ? `Festpreis-Inserat aktiv bis ${format(new Date(auction.end_time), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}` : `Endet am ${format(new Date(auction.end_time), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}`,
         color: "text-green-600",
         bgColor: "bg-green-100 dark:bg-green-900/30",
         borderColor: "border-green-200 dark:border-green-800",
@@ -444,7 +447,7 @@ export default function DashboardOverview() {
     if (auction.status === "ended") {
       return {
         step: 6,
-        label: "Auktion beendet",
+        label: mh.sale_channel === "instant_price" ? "Inserat beendet" : "Auktion beendet",
         sublabel: mh.sold_to ? "Ihr Fahrzeug wurde erfolgreich verkauft" : "Reservepreis nicht erreicht",
         color: mh.sold_to ? "text-emerald-600" : "text-gray-600",
         bgColor: mh.sold_to ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-gray-100 dark:bg-gray-900/30",
@@ -455,8 +458,8 @@ export default function DashboardOverview() {
     if (auction.status === "cancelled") {
       return {
         step: 6,
-        label: "Auktion abgebrochen",
-        sublabel: "Diese Auktion wurde abgebrochen. Bei Fragen kontaktieren Sie unser Support-Team.",
+        label: mh.sale_channel === "instant_price" ? "Inserat abgebrochen" : "Auktion abgebrochen",
+        sublabel: mh.sale_channel === "instant_price" ? "Dieses Inserat wurde abgebrochen. Bei Fragen kontaktieren Sie unser Support-Team." : "Diese Auktion wurde abgebrochen. Bei Fragen kontaktieren Sie unser Support-Team.",
         color: "text-red-600",
         bgColor: "bg-red-100 dark:bg-red-900/30",
         borderColor: "border-red-200 dark:border-red-800",
@@ -707,9 +710,9 @@ export default function DashboardOverview() {
                         {timeline.label}
                       </div>
                       {timeline.sublabel && (
-                        <p className={`text-xs mt-1 ${isKaufchance && mh.kaufchanceInfo ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}`}>
-                          {isKaufchance && mh.kaufchanceInfo?.totalOffers
-                            ? `${mh.kaufchanceInfo.totalOffers} Angebot${mh.kaufchanceInfo.totalOffers !== 1 ? "e" : ""} eingegangen – jetzt reagieren!`
+                        <p className={`text-xs mt-1 ${(isKaufchance || (auction?.status === "active" && mh.sale_channel === "instant_price")) && mh.kaufchanceInfo ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}`}>
+                          {(isKaufchance || (auction?.status === "active" && mh.sale_channel === "instant_price")) && mh.kaufchanceInfo?.totalOffers
+                            ? `${mh.kaufchanceInfo.totalOffers} Preisvorschlag${mh.kaufchanceInfo.totalOffers !== 1 ? "e" : ""} eingegangen – jetzt reagieren!`
                             : timeline.sublabel}
                         </p>
                       )}
@@ -935,7 +938,7 @@ export default function DashboardOverview() {
                           className="w-full gap-2"
                         >
                           <Eye className="w-4 h-4" />
-                          Auktion ansehen
+                          {mh.sale_channel === "instant_price" ? "Inserat ansehen" : "Auktion ansehen"}
                         </Button>
                       </Link>
                     )}

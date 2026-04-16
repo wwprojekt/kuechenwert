@@ -121,7 +121,9 @@ export const DamageDocumentation = ({
       
       const { error: uploadError } = await supabase.storage
         .from('motorhome-photos')
-        .upload(fileName, uploadFile);
+        .upload(fileName, uploadFile, {
+          contentType: uploadFile.type || `image/${fileExt}`,
+        });
 
       if (uploadError) throw uploadError;
 

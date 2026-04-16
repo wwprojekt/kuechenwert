@@ -78,7 +78,9 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
 
         const { error: uploadError } = await supabase.storage
           .from('motorhome-photos')
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            contentType: file.type || `image/${fileExt}`,
+          });
 
         if (uploadError) throw uploadError;
 

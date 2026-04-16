@@ -131,6 +131,7 @@ export const LegalDocumentUpload = ({
       const { error: uploadError } = await supabase.storage
         .from('dealer-documents')
         .upload(fileName, file, {
+          contentType: file.type || `application/${fileExt}`,
           onUploadProgress: (progress) => {
             setUploadProgress((progress.loaded / progress.total) * 100);
           }

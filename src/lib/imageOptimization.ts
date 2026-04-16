@@ -34,6 +34,15 @@ export interface ImageMetadata {
 }
 
 class ImageOptimizer {
+  // Mobile canvas pixel limit (conservative: 4096*4096 = 16.7M).
+  // Source images beyond this are likely to corrupt drawImage silently.
+  private static readonly MAX_SOURCE_PIXELS = 16_777_216;
+
+  // Minimum blob size (bytes) we accept from canvas.toBlob.
+  // A valid JPEG of even 1×1 pixel is ~600 bytes.
+  // If the blob is smaller, canvas likely produced garbage.
+  private static readonly MIN_BLOB_SIZE = 500;
+
   /**
    * Get image metadata without loading the full image
    */
@@ -73,6 +82,10 @@ class ImageOptimizer {
 
       img.onload = () => {
         URL.revokeObjectURL(url);
+        if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+          reject(new Error('Image loaded but has 0×0 dimensions'));
+          return;
+        }
         resolve(img);
       };
 
@@ -109,6 +122,31 @@ class ImageOptimizer {
   }
 
   /**
+   * Verify canvas actually contains visible pixel data (not all-transparent/all-black).
+   * Samples a few pixels across the canvas to detect silent drawImage failures.
+   */
+  private verifyCanvasHasContent(ctx: CanvasRenderingContext2D, width: number, height: number): boolean {
+    const samplePoints = [
+      [Math.floor(width / 4), Math.floor(height / 4)],
+      [Math.floor(width / 2), Math.floor(height / 2)],
+      [Math.floor(width * 3 / 4), Math.floor(height * 3 / 4)],
+      [Math.floor(width / 2), Math.floor(height / 4)],
+      [Math.floor(width / 4), Math.floor(height / 2)],
+    ];
+
+    let allBlack = true;
+    for (const [x, y] of samplePoints) {
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      // pixel is [R, G, B, A] — if ANY sample has non-black content, we're good
+      if (pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5) {
+        allBlack = false;
+        break;
+      }
+    }
+    return !allBlack;
+  }
+
+  /**
    * Optimize a single image (uses a fresh canvas per call for concurrency safety)
    */
   async optimizeImage(
@@ -128,11 +166,24 @@ class ImageOptimizer {
 
     try {
       const img = await this.loadImage(file);
+
+      const sourcePixels = img.naturalWidth * img.naturalHeight;
+      if (sourcePixels > ImageOptimizer.MAX_SOURCE_PIXELS) {
+        logger.warn(
+          `Image too large for canvas: ${img.naturalWidth}×${img.naturalHeight} = ${sourcePixels}px (limit ${ImageOptimizer.MAX_SOURCE_PIXELS}px). Skipping optimization.`
+        );
+        throw new Error(`Source image exceeds safe canvas limit (${sourcePixels}px)`);
+      }
+
       const { width, height } = this.calculateDimensions(
-        img.width,
-        img.height,
+        img.naturalWidth,
+        img.naturalHeight,
         config
       );
+
+      if (width <= 0 || height <= 0) {
+        throw new Error(`Invalid canvas dimensions: ${width}×${height}`);
+      }
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -154,13 +205,33 @@ class ImageOptimizer {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
+      // Verify canvas has visible content. On mobile browsers with memory
+      // pressure, drawImage can silently fail leaving the canvas empty.
+      if (!this.verifyCanvasHasContent(ctx, width, height)) {
+        logger.warn(
+          `Canvas verification failed: drawImage produced no visible content for ${file.name} (${img.naturalWidth}×${img.naturalHeight}). Skipping optimization.`
+        );
+        throw new Error('Canvas drawImage produced empty/black output');
+      }
+
       const blob = await this.canvasToBlob(canvas, config.format, config.quality);
+
+      if (blob.size < ImageOptimizer.MIN_BLOB_SIZE) {
+        logger.warn(
+          `Suspiciously small blob (${blob.size} bytes) for ${width}×${height} canvas. Skipping optimization.`
+        );
+        throw new Error(`Canvas produced suspiciously small output (${blob.size} bytes)`);
+      }
+
+      // Release canvas memory immediately
+      canvas.width = 0;
+      canvas.height = 0;
 
       const optimizedFile = new File(
         [blob],
         this.generateFileName(file.name, config.format),
         {
-          type: blob.type,
+          type: blob.type || `image/${config.format}`,
           lastModified: Date.now(),
         }
       );
@@ -188,10 +259,10 @@ class ImageOptimizer {
       
       canvas.toBlob(
         (blob) => {
-          if (blob) {
+          if (blob && blob.size > 0) {
             resolve(blob);
           } else {
-            reject(new Error('Failed to convert canvas to blob'));
+            reject(new Error('Failed to convert canvas to blob (null or empty)'));
           }
         },
         mimeType,

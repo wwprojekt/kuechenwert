@@ -93,7 +93,10 @@ export default function AdminSettings() {
 
       const { error: uploadError } = await supabase.storage
         .from('branding')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type || `image/${fileExt}`,
+        });
 
       if (uploadError) throw uploadError;
 

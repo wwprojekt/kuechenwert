@@ -638,7 +638,7 @@ export default function ListingDetail() {
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
                   Ihr Inserat wurde erfolgreich erstellt. Unser Support-Team prüft die Angaben und aktiviert
-                  Ihre Auktion in Kürze. Sie werden benachrichtigt, sobald die Auktion live geht.
+                  Ihr Inserat in Kürze. Sie werden benachrichtigt, sobald es live geht.
                 </p>
                 {motorhome.reserve_price && (
                   <div className="mt-3 inline-flex items-center gap-2 bg-white/60 dark:bg-black/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-1.5">
@@ -680,15 +680,16 @@ export default function ListingDetail() {
           <Card className="border-2 hover:border-primary/20 transition-smooth">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
+                <p className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold">
-                €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
+                €{Number(motorhome.sale_channel === 'instant_price' ? motorhome.instant_price : (auction.current_bid || auction.starting_bid)).toLocaleString()}
               </p>
             </CardContent>
           </Card>
 
+          {motorhome.sale_channel !== 'instant_price' && (
           <Card className="border-2 hover:border-primary/20 transition-smooth">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
@@ -701,6 +702,7 @@ export default function ListingDetail() {
               </p>
             </CardContent>
           </Card>
+          )}
 
           <Card className="border-2 hover:border-primary/20 transition-smooth">
             <CardContent className="p-6">
@@ -779,7 +781,9 @@ export default function ListingDetail() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Verkaufsweg</span>
                     <Badge>
-                      {motorhome.sale_channel === "station"
+                      {motorhome.sale_channel === "instant_price"
+                        ? "Nur Festpreis"
+                        : motorhome.sale_channel === "station"
                         ? "Station"
                         : motorhome.instant_price && Number(motorhome.instant_price) > 0
                         ? "Auktion + Sofortkauf"

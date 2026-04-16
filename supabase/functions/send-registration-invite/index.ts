@@ -108,10 +108,10 @@ const handler = async (req: Request): Promise<Response> => {
 
         const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
         const saleChannelLabel =
+          motorhome.sale_channel === "instant_price" ? "Festpreis (Sofortkauf)" :
           motorhome.sale_channel === "station" ? "Ankaufstation" :
           hasInstantBuy ? "H\u00e4ndler-Auktion + Sofortkauf" :
           motorhome.sale_channel === "auction" ? "H\u00e4ndler-Auktion" :
-          motorhome.sale_channel === "instant_price" ? "H\u00e4ndler-Auktion + Sofortkauf" :
           motorhome.sale_channel || "\u2013";
 
         vehicleInfo = infoBox(

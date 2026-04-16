@@ -102,8 +102,8 @@ const handler = async (req: Request): Promise<Response> => {
           const { data: activeAuctions } = await supabase
             .from('auctions')
             .select(`
-              id, current_bid, starting_bid, end_time, instant_buy_price,
-              motorhomes!left (manufacturer, model, year, body_type, mileage, city)
+              id, current_bid, starting_bid, end_time,
+              motorhomes!left (manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price)
             `)
             .eq('status', 'active')
             .order('end_time', { ascending: true })
@@ -114,7 +114,8 @@ const handler = async (req: Request): Promise<Response> => {
             for (const auction of activeAuctions) {
               const m = auction.motorhomes as any;
               if (!m) continue;
-              const price = (auction.current_bid || auction.starting_bid || 0);
+              const isFestpreis = m.sale_channel === 'instant_price';
+              const price = isFestpreis ? Number(m.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0);
               const priceStr = price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
               const endDate = new Date(auction.end_time);
               const remainingMs = endDate.getTime() - Date.now();
@@ -122,19 +123,25 @@ const handler = async (req: Request): Promise<Response> => {
               const remainingHours = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
               const timeStr = remainingDays > 0 ? `${remainingDays}d ${remainingHours}h` : `${remainingHours}h`;
 
-              // Get bid count
-              const { count: bidCount } = await supabase
-                .from('bids')
-                .select('id', { count: 'exact', head: true })
-                .eq('auction_id', auction.id);
+              if (isFestpreis) {
+                auctionRows += detailRow(
+                  `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
+                  `Festpreis: ${priceStr} · endet in ${timeStr}`
+                );
+              } else {
+                const { count: bidCount } = await supabase
+                  .from('bids')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('auction_id', auction.id);
 
-              auctionRows += detailRow(
-                `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
-                `${priceStr} · ${bidCount || 0} Gebote · endet in ${timeStr}`
-              );
+                auctionRows += detailRow(
+                  `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
+                  `${priceStr} · ${bidCount || 0} Gebote · endet in ${timeStr}`
+                );
+              }
             }
             auctionPreviewHtml = infoBox(
-              `🔥 ${activeAuctions.length} Auktionen warten auf Sie`,
+              `🔥 ${activeAuctions.length} Inserate warten auf Sie`,
               auctionRows,
               'info',
               settingsData

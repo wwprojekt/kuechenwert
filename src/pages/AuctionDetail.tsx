@@ -951,7 +951,7 @@ const AuctionDetail = () => {
     image: photos[0]?.url || 'https://caravanwert.de/favicon.png',
     offers: {
       '@type': 'Offer',
-      price: currentBid,
+      price: motorhome.sale_channel === 'instant_price' ? Number(motorhome.instant_price || 0) : currentBid,
       priceCurrency: 'EUR',
       availability: auction.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
       itemCondition: 'https://schema.org/UsedCondition',
@@ -967,8 +967,10 @@ const AuctionDetail = () => {
     <PageLayout
       breadcrumbs={true}
       title={`${motorhome.manufacturer} ${motorhome.model}`}
-      description={`Auktion für ${motorhome.manufacturer} ${motorhome.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
-      keywords={`auktion, ${motorhome.manufacturer}, ${motorhome.model}, wohnmobil`}
+      description={motorhome.sale_channel === 'instant_price'
+        ? `${motorhome.manufacturer} ${motorhome.model} - Festpreis: €${Number(motorhome.instant_price || 0).toLocaleString()}`
+        : `Auktion für ${motorhome.manufacturer} ${motorhome.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
+      keywords={`${motorhome.sale_channel === 'instant_price' ? 'festpreis' : 'auktion'}, ${motorhome.manufacturer}, ${motorhome.model}, wohnmobil`}
       canonicalPath={`/auktion/${id}`}
       ogImage={photos[0]?.url}
       structuredData={productSchema}
@@ -1709,16 +1711,18 @@ const AuctionDetail = () => {
                     <p className="text-4xl font-extrabold text-destructive tabular-nums">
                       {timeRemaining}
                     </p>
+                    {motorhome.sale_channel !== 'instant_price' && (
                     <p className="text-xs text-destructive/80 mt-1 font-medium">
                       Gebot in letzter Minute verlängert um 1 Min!
                     </p>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Clock className="w-5 h-5 text-primary" />
                       <p className="text-sm font-medium">
-                        {timeRemaining === "Beendet" ? "Auktionsstatus" : "Verbleibende Zeit"}
+                        {timeRemaining === "Beendet" ? "Status" : "Verbleibende Zeit"}
                       </p>
                     </div>
                     <p
@@ -1738,7 +1742,8 @@ const AuctionDetail = () => {
 
                 <Separator />
 
-                {/* Current bid with Live Status */}
+                {/* Current bid with Live Status — hidden for instant-price-only listings */}
+                {motorhome.sale_channel !== 'instant_price' && (
                 <div className={`relative rounded-xl p-4 -mx-2 transition-all duration-500 ${
                   bidStatusAnimation === 'pulse-green'
                     ? 'bg-emerald-50 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-100'
@@ -1805,14 +1810,15 @@ const AuctionDetail = () => {
                     </>
                   )}
                 </div>
+                )}
 
                 {/* Provision - visible for dealers and admins (hook lives inside the component) */}
-                {(primaryRole === 'dealer' || isAdmin) && currentBid > 0 && (
+                {motorhome.sale_channel !== 'instant_price' && (primaryRole === 'dealer' || isAdmin) && currentBid > 0 && (
                   <AuctionCommissionOverview currentBid={currentBid} />
                 )}
 
                 {/* Reserve price indicator - only visible to seller and admin */}
-                {canSeeReservePrice && auction.reserve_price && (
+                {motorhome.sale_channel !== 'instant_price' && canSeeReservePrice && auction.reserve_price && (
                   <div>
                     {reserveMet ? (
                       <Badge className="w-full justify-center bg-green-500 text-white">
@@ -1828,31 +1834,47 @@ const AuctionDetail = () => {
 
                 <Separator />
 
-                {/* Instant Buy Section - only for dealers */}
+                {/* Instant Buy Section */}
                 {motorhome.instant_price && 
                  Number(motorhome.instant_price) > 0 &&
                  motorhome.status !== 'sold' && canSeePrices && (
                   <>
-                    <div className="space-y-3 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
+                    <div className={`space-y-3 p-4 border-2 rounded-lg ${
+                      motorhome.sale_channel === 'instant_price'
+                        ? 'border-yellow-400/50 bg-yellow-50/50 dark:bg-yellow-950/20'
+                        : 'border-primary/20 bg-primary/5'
+                    }`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Sofortkauf</p>
-                          <p className="text-2xl font-bold text-primary">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortkauf'}
+                          </p>
+                          <p className={`text-2xl font-bold ${
+                            motorhome.sale_channel === 'instant_price' ? 'text-yellow-600 dark:text-yellow-400' : 'text-primary'
+                          }`}>
                             €{motorhome.instant_price.toLocaleString()}
                           </p>
                         </div>
-                        <Zap className="w-8 h-8 text-primary" />
+                        <Zap className={`w-8 h-8 ${
+                          motorhome.sale_channel === 'instant_price' ? 'text-yellow-500' : 'text-primary'
+                        }`} />
                       </div>
                       <Button
                         onClick={handleInstantBuy}
                         disabled={isSubmitting || auction.status !== 'active'}
-                        className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
+                        className={`w-full h-12 text-lg ${
+                          motorhome.sale_channel === 'instant_price'
+                            ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                            : 'bg-primary hover:bg-primary/90'
+                        }`}
                       >
                         <Zap className="w-5 h-5 mr-2" />
                         {isSubmitting ? "Wird gekauft..." : "Jetzt kaufen"}
                       </Button>
                       <p className="text-xs text-center text-muted-foreground">
-                        Sofort kaufen und Auktion beenden
+                        {motorhome.sale_channel === 'instant_price'
+                          ? 'Verbindlicher Kauf zum Festpreis'
+                          : 'Sofort kaufen und Auktion beenden'}
                       </p>
                     </div>
                     <Separator />
@@ -1872,7 +1894,27 @@ const AuctionDetail = () => {
                     )}
                   </div>
                 ) : auction.status === "active" && timeRemaining !== "Beendet" ? (
-                  isRoleLoading && user ? (
+                  motorhome.sale_channel === 'instant_price' ? (
+                    /* Instant-price-only: no bidding, only the Sofortkauf button above */
+                    !canSeePrices ? (
+                      <div className="p-4 border-2 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg text-center">
+                        <Lock className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+                        <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                          Nur für Händler verfügbar
+                        </h3>
+                        <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
+                          Melden Sie sich als Händler an, um dieses Fahrzeug zum Festpreis zu kaufen.
+                        </p>
+                        {!user && (
+                          <Link to={`/login?redirect=/auktion/${id}`}>
+                            <Button className="w-full" variant="default">
+                              Jetzt anmelden
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    ) : null
+                  ) : isRoleLoading && user ? (
                     <div className="space-y-4 animate-pulse">
                       <div className="h-12 bg-muted rounded-md" />
                       <div className="grid grid-cols-3 gap-2">
@@ -2109,7 +2151,8 @@ const AuctionDetail = () => {
                 )}
               </Card>
 
-              {/* Gebotsverlauf - direkt unter der Bidding Sidebar */}
+              {/* Gebotsverlauf - hidden for instant-price-only listings */}
+              {motorhome.sale_channel !== 'instant_price' && (
               <Card className="p-6 mt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold flex items-center gap-2">
@@ -2296,6 +2339,7 @@ const AuctionDetail = () => {
                   </>
                 )}
               </Card>
+              )}
             </div>
           </div>
         </div>

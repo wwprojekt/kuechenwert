@@ -61,9 +61,9 @@ export default function MyListings() {
       case "auction":
         return hasInstantBuy
           ? <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>
-          : <Badge className="bg-purple-500">Auktion</Badge>;
+          : <Badge className="bg-blue-500">Auktion</Badge>;
       case "instant_price":
-        return <Badge className="bg-purple-500">Auktion + Sofortkauf</Badge>;
+        return <Badge className="bg-yellow-500">Nur Festpreis</Badge>;
       case "station":
         return <Badge className="bg-orange-500">Station</Badge>;
       default:
@@ -206,12 +206,14 @@ export default function MyListings() {
                             : auction.status}
                         </Badge>
                       </div>
+                      {motorhome.sale_channel !== 'instant_price' && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Aktuelles Gebot:</span>
                         <span className="font-semibold">
                           €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
                         </span>
                       </div>
+                      )}
                       {auction.end_time && (
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Endet:</span>
@@ -236,8 +238,8 @@ export default function MyListings() {
                   )}
                   {motorhome.instant_price && Number(motorhome.instant_price) > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Sofortpreis:</span>
-                      <span className="font-semibold">
+                      <span className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis:' : 'Sofortpreis:'}</span>
+                      <span className={`font-semibold ${motorhome.sale_channel === 'instant_price' ? 'text-yellow-600' : ''}`}>
                         €{Number(motorhome.instant_price).toLocaleString()}
                       </span>
                     </div>

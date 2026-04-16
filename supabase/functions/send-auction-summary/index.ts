@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         id, current_bid, starting_bid, end_time, status,
-        motorhomes (manufacturer, model, year, seller_id)
+        motorhomes (manufacturer, model, year, seller_id, sale_channel, instant_price)
       `)
       .eq('status', 'active');
 
@@ -103,28 +103,39 @@ const handler = async (req: Request): Promise<Response> => {
         for (const auction of sellerAuctionList) {
           const motorhome = auction.motorhomes as any;
           const vehicleStr = `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})`;
-          const currentBid = typeof auction.current_bid === 'number'
-            ? auction.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-            : `${auction.current_bid || 0} €`;
+          const isInstantOnly = motorhome.sale_channel === 'instant_price';
+          const displayPrice = isInstantOnly
+            ? (motorhome.instant_price || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+            : (typeof auction.current_bid === 'number'
+              ? auction.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+              : `${auction.current_bid || 0} €`);
           const endDate = new Date(auction.end_time);
           const remainingMs = endDate.getTime() - Date.now();
           const remainingDays = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60 * 24)));
           const remainingHours = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
           const auctionBidCount = bidCounts[auction.id] || 0;
 
-          auctionRows += infoBox(vehicleStr, `
-            ${detailRow('Aktueller Preis', `<strong style="color: #1f8aa2;">${currentBid}</strong>`)}
-            ${detailRow('Anzahl Gebote', `${auctionBidCount}`)}
-            ${detailRow('Verbleibende Zeit', `${remainingDays} Tage, ${remainingHours} Stunden`)}
-          `, auctionBidCount > 0 ? 'success' : 'default', settingsData);
+          if (isInstantOnly) {
+            auctionRows += infoBox(vehicleStr, `
+              ${detailRow('Festpreis', `<strong style="color: #d97706;">${displayPrice}</strong>`)}
+              ${detailRow('Verkaufsweg', 'Nur Festpreis (kein Bieterverfahren)')}
+              ${detailRow('Verbleibende Zeit', `${remainingDays} Tage, ${remainingHours} Stunden`)}
+            `, 'default', settingsData);
+          } else {
+            auctionRows += infoBox(vehicleStr, `
+              ${detailRow('Aktueller Preis', `<strong style="color: #1f8aa2;">${displayPrice}</strong>`)}
+              ${detailRow('Anzahl Gebote', `${auctionBidCount}`)}
+              ${detailRow('Verbleibende Zeit', `${remainingDays} Tage, ${remainingHours} Stunden`)}
+            `, auctionBidCount > 0 ? 'success' : 'default', settingsData);
+          }
         }
 
-        const subject = `Ihre Auktions-Übersicht – ${sellerAuctionList.length} aktive Auktion${sellerAuctionList.length > 1 ? 'en' : ''}`;
+        const subject = `Ihre Inserat-Übersicht – ${sellerAuctionList.length} aktive${sellerAuctionList.length > 1 ? '' : 's'} Inserat${sellerAuctionList.length > 1 ? 'e' : ''}`;
         const emailContent = `
           ${greeting(name || undefined)}
-          ${paragraph(`Hier ist Ihre t&auml;gliche &Uuml;bersicht &uuml;ber Ihre <strong>${sellerAuctionList.length} aktive${sellerAuctionList.length > 1 ? 'n' : ''} Auktion${sellerAuctionList.length > 1 ? 'en' : ''}</strong>:`)}
+          ${paragraph(`Hier ist Ihre t&auml;gliche &Uuml;bersicht &uuml;ber Ihre <strong>${sellerAuctionList.length} aktive${sellerAuctionList.length > 1 ? 'n' : 's'} Inserat${sellerAuctionList.length > 1 ? 'e' : ''}</strong>:`)}
           ${auctionRows}
-          ${button('Alle Auktionen ansehen', 'https://caravanwert.de/dashboard', settingsData)}
+          ${button('Alle Inserate ansehen', 'https://caravanwert.de/dashboard', settingsData)}
           ${paragraph('<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese &Uuml;bersicht t&auml;glich, solange Sie aktive Auktionen haben. Sie k&ouml;nnen diese Benachrichtigung in Ihren <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Profileinstellungen</a> deaktivieren.</span>')}
         `;
 

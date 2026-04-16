@@ -415,9 +415,13 @@ export function ConvertToMotorhomeDialog({
 
       if (insertError) throw insertError;
 
-      // Automatisch Auktion erstellen wenn sale_channel === 'auction'
-      if ((formData.sale_channel || "auction") === "auction") {
-        const reservePrice = formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null);
+      // Auktion als Listing-Container erstellen (für 'auction' und 'instant_price')
+      const effectiveChannel = formData.sale_channel || "auction";
+      if (effectiveChannel === "auction" || effectiveChannel === "instant_price") {
+        const isInstantOnly = effectiveChannel === "instant_price";
+        const reservePrice = isInstantOnly
+          ? (formData.instant_price || null)
+          : formData.instant_price ? (formData.reserve_price || formData.instant_price) : (formData.reserve_price || null);
 
         // Prüfe ob bereits eine Auktion für dieses Motorhome existiert (UNIQUE Constraint)
         const { data: existingAuction } = await supabase
@@ -431,7 +435,7 @@ export function ConvertToMotorhomeDialog({
           const { error: updateError } = await supabase
             .from("auctions")
             .update({
-              starting_bid: 50,
+              starting_bid: isInstantOnly ? 0 : 50,
               reserve_price: reservePrice,
               status: "draft",
               current_bid: null,
@@ -451,7 +455,7 @@ export function ConvertToMotorhomeDialog({
             .from("auctions")
             .insert({
               motorhome_id: motorhome.id,
-              starting_bid: 50,
+              starting_bid: isInstantOnly ? 0 : 50,
               reserve_price: reservePrice,
               status: "draft",
             } as any);

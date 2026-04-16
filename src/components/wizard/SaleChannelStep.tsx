@@ -64,7 +64,12 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
         <Label className={cn("text-base font-semibold", fieldErrors.saleChannel && "text-red-600")}>Wie möchten Sie verkaufen? <span className="text-red-500">*</span></Label>
         <RadioGroup
           value={formData.saleChannel}
-          onValueChange={(value) => updateFormData({ saleChannel: value })}
+          onValueChange={(value) => {
+            const updates: Partial<WizardFormData> = { saleChannel: value };
+            if (value !== 'instant_price') updates.instantPrice = null;
+            if (value !== 'auction') updates.reservePrice = null;
+            updateFormData(updates);
+          }}
           className="grid grid-cols-1 gap-3"
         >
           {/* Sofortpreis */}
@@ -74,7 +79,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
                 : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md md:hover:scale-[1.005]"
             }`}
-            onClick={() => updateFormData({ saleChannel: "instant_price" })}
+            onClick={() => updateFormData({ saleChannel: "instant_price", reservePrice: null })}
           >
             <div className="flex items-center gap-3 md:gap-4">
               <div className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
@@ -105,7 +110,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
                 : "border-2 border-primary/20 bg-card hover:border-primary/40 hover:shadow-md md:hover:scale-[1.005]"
             }`}
-            onClick={() => updateFormData({ saleChannel: "auction" })}
+            onClick={() => updateFormData({ saleChannel: "auction", instantPrice: null })}
           >
             <div className="absolute -top-3 right-4">
               <span className="inline-flex items-center gap-1 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full shadow-sm">
@@ -142,7 +147,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
                 : "border-2 border-transparent bg-card hover:border-primary/30 hover:shadow-md md:hover:scale-[1.005]"
             }`}
-            onClick={() => updateFormData({ saleChannel: "station" })}
+            onClick={() => updateFormData({ saleChannel: "station", instantPrice: null, reservePrice: null })}
           >
             <div className="flex items-center gap-3 md:gap-4">
               <div className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
@@ -172,6 +177,34 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
       </div>
 
       {/* Preis-Felder je nach Verkaufsweg */}
+      {formData.saleChannel === "instant_price" && (
+        <div className="space-y-2 animate-fade-in">
+          <Label htmlFor="instantPrice" className={cn(fieldErrors.instantPrice && "text-red-600")}>
+            Ihr Wunschpreis <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">€</span>
+            <Input
+              id="instantPrice"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="z.B. 45000"
+              value={formData.instantPrice || ""}
+              onChange={(e) => updateFormData({ instantPrice: e.target.value ? parseInt(e.target.value) : null })}
+              min={1}
+              className={cn("pl-8", fieldErrors.instantPrice && "border-red-500 ring-red-500/20 ring-2")}
+            />
+          </div>
+          {fieldErrors.instantPrice && (
+            <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.instantPrice}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren.
+          </p>
+        </div>
+      )}
+
       {formData.saleChannel === "auction" && (
         <div className="space-y-2 animate-fade-in">
           <Label htmlFor="reservePrice">Mindestpreis (optional)</Label>

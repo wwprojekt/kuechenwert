@@ -235,6 +235,7 @@ export default function AdminPostAuctionOffers() {
   const [backToAuctionAuctionId, setBackToAuctionAuctionId] = useState<string | null>(null);
   const [backToAuctionReservePrice, setBackToAuctionReservePrice] = useState("");
   const [backToAuctionVehicleName, setBackToAuctionVehicleName] = useState("");
+  const [backToAuctionLowestOffer, setBackToAuctionLowestOffer] = useState<number | null>(null);
 
   // Admin: Angebot im Namen des Händlers erstellen
   const [adminOfferDealerId, setAdminOfferDealerId] = useState("");
@@ -721,11 +722,28 @@ export default function AdminPostAuctionOffers() {
   };
 
   // ---- Zurück in Auktion: Dialog öffnen ----
-  const openBackToAuctionDialog = (auctionId: string, vehicleName: string, currentReservePrice: number | null) => {
+  const openBackToAuctionDialog = async (auctionId: string, vehicleName: string, currentReservePrice: number | null) => {
     setBackToAuctionAuctionId(auctionId);
     setBackToAuctionVehicleName(vehicleName);
-    setBackToAuctionReservePrice(currentReservePrice ? String(currentReservePrice) : "");
+    setBackToAuctionLowestOffer(null);
     setBackToAuctionDialogOpen(true);
+
+    // Niedrigstes Verkäufer-Gegenangebot als neuen Reservepreis vorschlagen
+    const { data: offers } = await supabase
+      .from('post_auction_offers')
+      .select('counter_offer_amount')
+      .eq('auction_id', auctionId)
+      .not('counter_offer_amount', 'is', null)
+      .order('counter_offer_amount', { ascending: true })
+      .limit(1);
+
+    const lowestSellerOffer = offers?.[0]?.counter_offer_amount;
+    if (lowestSellerOffer) {
+      setBackToAuctionReservePrice(String(lowestSellerOffer));
+      setBackToAuctionLowestOffer(lowestSellerOffer);
+    } else {
+      setBackToAuctionReservePrice(currentReservePrice ? String(currentReservePrice) : "");
+    }
   };
 
   // ---- Zurück in Auktion: Bestehende Auktion recyceln (UPDATE statt INSERT) ----
@@ -2385,9 +2403,15 @@ export default function AdminPostAuctionOffers() {
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">&euro;</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Geben Sie einen neuen Mindestpreis ein oder lassen Sie das Feld leer, um den bisherigen Preis beizubehalten.
-              </p>
+              {backToAuctionLowestOffer ? (
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Vorausgefüllt mit dem niedrigsten Verkäufer-Gegenangebot: {Number(backToAuctionLowestOffer).toLocaleString('de-DE')} €
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Geben Sie einen neuen Mindestpreis ein oder lassen Sie das Feld leer, um den bisherigen Preis beizubehalten.
+                </p>
+              )}
             </div>
           </div>
 

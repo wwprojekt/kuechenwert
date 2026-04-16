@@ -131,6 +131,17 @@ Deno.serve(async (req) => {
 
     console.log('Place bid request:', { auctionId, amount, userId: user.id, isAutobid });
 
+    // ─── Reject bids on instant-price-only listings ──────────────
+    const { data: auctionMotorhome } = await supabaseAdmin
+      .from('auctions')
+      .select('motorhome_id, motorhomes!inner(sale_channel)')
+      .eq('id', auctionId)
+      .single();
+
+    if ((auctionMotorhome?.motorhomes as any)?.sale_channel === 'instant_price') {
+      throw new Error('Dieses Fahrzeug ist nur per Sofortkauf verfügbar. Gebote sind nicht möglich.');
+    }
+
     // ─── ATOMIC BID PLACEMENT via PostgreSQL RPC ───────────────────
     // This replaces the previous non-atomic read-validate-insert-update
     // sequence with a single database transaction that uses

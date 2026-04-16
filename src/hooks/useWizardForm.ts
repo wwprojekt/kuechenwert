@@ -272,7 +272,11 @@ const step7Schema = z.object({
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   customerPhone: z.string().min(5, "Bitte geben Sie eine gültige Telefonnummer ein"),
-});
+  instantPrice: z.number().nullable().optional(),
+}).refine(
+  (data) => data.saleChannel !== 'instant_price' || (data.instantPrice != null && data.instantPrice > 0),
+  { message: "Bitte geben Sie Ihren Wunschpreis ein", path: ['instantPrice'] },
+);
 
 // Step 8: Location & Account (Standort + Passwort - letzter Schritt)
 // bodyType, manufacturer und saleChannel werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit.
@@ -394,6 +398,7 @@ export const useWizardForm = () => {
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
+            instantPrice: formData.instantPrice,
           });
           break;
         case 8:
@@ -825,14 +830,15 @@ export const useWizardForm = () => {
         if (photosError) throw photosError;
       }
 
-      // If auction, create auction entry
-      if (formData.saleChannel === 'auction') {
+      // Create auction listing (for both 'auction' and 'instant_price' channels)
+      // instant_price vehicles use the auction as a listing container but disable bidding
+      if (formData.saleChannel === 'auction' || formData.saleChannel === 'instant_price') {
         const { error: auctionError } = await supabase
           .from('auctions')
           .insert({
             motorhome_id: motorhome.id,
-            starting_bid: 50,
-            reserve_price: formData.reservePrice,
+            starting_bid: formData.saleChannel === 'instant_price' ? 0 : 50,
+            reserve_price: formData.saleChannel === 'instant_price' ? formData.instantPrice : formData.reservePrice,
             status: 'draft',
           });
 

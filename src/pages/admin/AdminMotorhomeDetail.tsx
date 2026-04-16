@@ -208,7 +208,7 @@ export default function AdminMotorhomeDetail() {
   const getSaleChannelBadge = (channel: string) => {
     const hasInstantBuy = motorhome?.instant_price && Number(motorhome.instant_price) > 0;
     const channelConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      instant_price: { label: "Auktion + Sofortkauf", variant: "default" },
+      instant_price: { label: "Nur Festpreis", variant: "default" },
       auction: hasInstantBuy ? { label: "Auktion + Sofortkauf", variant: "default" } : { label: "Auktion", variant: "secondary" },
       station: { label: "Station", variant: "outline" },
     };
@@ -894,10 +894,10 @@ export default function AdminMotorhomeDetail() {
                 >
                   <div className="space-y-4">
                     {relevantAuction.status === "active" && (
-                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                        <p className="text-sm text-muted-foreground">Aktuelles Gebot</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          {formatPrice(relevantAuction.current_bid || relevantAuction.starting_bid)}
+                      <div className={`p-3 rounded-lg ${motorhome.sale_channel === 'instant_price' ? 'bg-yellow-50 dark:bg-yellow-950/20' : 'bg-green-50 dark:bg-green-950/20'}`}>
+                        <p className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                        <p className={`text-2xl font-bold ${motorhome.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-green-600'}`}>
+                          {formatPrice(motorhome.sale_channel === 'instant_price' ? motorhome.instant_price : (relevantAuction.current_bid || relevantAuction.starting_bid))}
                         </p>
                       </div>
                     )}
@@ -938,7 +938,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Startgebot" value={formatPrice(relevantAuction.starting_bid)} />
                       <InfoItem label="Endet" value={formatDate(relevantAuction.end_time)} />
                     </InfoGrid>
-                    {relevantAuction.reserve_price != null && (
+                    {relevantAuction.reserve_price != null && motorhome.sale_channel !== 'instant_price' && (
                       <div className={`p-2 rounded text-sm ${
                         (relevantAuction.current_bid || 0) >= relevantAuction.reserve_price
                           ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
@@ -1011,7 +1011,7 @@ export default function AdminMotorhomeDetail() {
                 <div className="space-y-3">
                   <InfoItem label="Verkaufsweg" value={getSaleChannelBadge(motorhome.sale_channel).label} />
                   {motorhome.instant_price != null && (
-                    <InfoItem label="Sofortpreis" value={formatPrice(motorhome.instant_price)} />
+                    <InfoItem label={motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(motorhome.instant_price)} />
                   )}
                   {motorhome.reserve_price != null && (
                     <InfoItem label="Reservepreis" value={formatPrice(motorhome.reserve_price)} />

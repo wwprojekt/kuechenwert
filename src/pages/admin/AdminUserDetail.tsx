@@ -506,7 +506,7 @@ export default function AdminUserDetail() {
                                   <Badge variant="outline">{motorhome.status}</Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {motorhome.sale_channel === "auction" ? "Auktion" : motorhome.sale_channel === "station" ? "Ankaufstation" : motorhome.sale_channel}
+                                  {motorhome.sale_channel === "auction" ? "Auktion" : motorhome.sale_channel === "instant_price" ? "Nur Festpreis" : motorhome.sale_channel === "station" ? "Ankaufstation" : motorhome.sale_channel || "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                   {format(new Date(motorhome.created_at), "dd.MM.yyyy")}

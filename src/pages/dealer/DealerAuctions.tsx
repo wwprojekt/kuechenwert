@@ -38,6 +38,8 @@ interface Auction {
     mileage: number;
     postal_code: string | null;
     city: string | null;
+    sale_channel: string | null;
+    instant_price: number | null;
     motorhome_photos: Array<{ url: string; display_order: number }>;
   };
   bids: Array<{
@@ -87,6 +89,8 @@ const DealerAuctions = () => {
             postal_code,
             city,
             seller_id,
+            sale_channel,
+            instant_price,
             motorhome_photos(url, display_order)
           ),
           bids(bidder_id, amount)
@@ -158,10 +162,16 @@ const DealerAuctions = () => {
     switch (sortBy) {
       case 'ending_soon':
         return sorted.sort((a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime());
-      case 'price_asc':
-        return sorted.sort((a, b) => (a.current_bid || a.starting_bid) - (b.current_bid || b.starting_bid));
-      case 'price_desc':
-        return sorted.sort((a, b) => (b.current_bid || b.starting_bid) - (a.current_bid || a.starting_bid));
+      case 'price_asc': {
+        const getP = (x: Auction) => x.motorhome?.sale_channel === 'instant_price'
+          ? Number(x.motorhome?.instant_price || 0) : (x.current_bid || x.starting_bid);
+        return sorted.sort((a, b) => getP(a) - getP(b));
+      }
+      case 'price_desc': {
+        const getP = (x: Auction) => x.motorhome?.sale_channel === 'instant_price'
+          ? Number(x.motorhome?.instant_price || 0) : (x.current_bid || x.starting_bid);
+        return sorted.sort((a, b) => getP(b) - getP(a));
+      }
       case 'newest':
         return sorted.sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime());
       case 'bids':
@@ -216,8 +226,8 @@ const DealerAuctions = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ending_soon">Endet bald</SelectItem>
-                <SelectItem value="price_desc">Höchstes Gebot</SelectItem>
-                <SelectItem value="price_asc">Niedrigstes Gebot</SelectItem>
+                <SelectItem value="price_desc">Höchster Preis</SelectItem>
+                <SelectItem value="price_asc">Niedrigster Preis</SelectItem>
                 <SelectItem value="bids">Meiste Gebote</SelectItem>
                 <SelectItem value="newest">Neueste zuerst</SelectItem>
               </SelectContent>
@@ -251,7 +261,8 @@ const DealerAuctions = () => {
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
             const isExpired = new Date(auction.end_time).getTime() < Date.now();
-            const hasBuyNow = auction.buy_now_price && auction.buy_now_price > 0;
+            const hasBuyNow = (auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0);
+            const isInstantOnly = auction.motorhome?.sale_channel === 'instant_price';
             const bidCount = Array.isArray(auction.bids) ? auction.bids.length : 0;
 
             return (
@@ -289,7 +300,13 @@ const DealerAuctions = () => {
                       ) : (
                         <Badge variant="secondary" className="shadow-lg text-xs">Aktiv</Badge>
                       )}
-                      {hasBuyNow && !isExpired && (
+                      {isInstantOnly && !isExpired && (
+                        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Festpreis
+                        </Badge>
+                      )}
+                      {hasBuyNow && !isInstantOnly && !isExpired && (
                         <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
                           <Zap className="h-3 w-3 mr-1" />
                           Sofortkauf
@@ -310,12 +327,14 @@ const DealerAuctions = () => {
                       </Badge>
                     </div>
 
-                    {/* Bid Count */}
-                    <div className="absolute bottom-2 right-2">
-                      <Badge variant="secondary" className="bg-black/70 text-white border-0 text-xs">
-                        {bidCount} {bidCount === 1 ? 'Gebot' : 'Gebote'}
-                      </Badge>
-                    </div>
+                    {/* Bid Count — hide for Festpreis */}
+                    {!isInstantOnly && (
+                      <div className="absolute bottom-2 right-2">
+                        <Badge variant="secondary" className="bg-black/70 text-white border-0 text-xs">
+                          {bidCount} {bidCount === 1 ? 'Gebot' : 'Gebote'}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}
@@ -356,16 +375,16 @@ const DealerAuctions = () => {
                     {/* Pricing */}
                     <div className="flex items-end justify-between mb-3">
                       <div>
-                        <p className="text-xs text-muted-foreground">Aktuelles Gebot</p>
-                        <p className="text-lg font-bold text-primary">
-                          €{(auction.current_bid || auction.starting_bid).toLocaleString('de-DE')}
+                        <p className="text-xs text-muted-foreground">{isInstantOnly ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                        <p className={`text-lg font-bold ${isInstantOnly ? 'text-yellow-600' : 'text-primary'}`}>
+                          €{(isInstantOnly ? (auction.motorhome?.instant_price || 0) : (auction.current_bid || auction.starting_bid)).toLocaleString('de-DE')}
                         </p>
                       </div>
-                      {hasBuyNow && (
+                      {hasBuyNow && !isInstantOnly && (
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Sofort</p>
                           <p className="text-sm font-semibold text-emerald-600">
-                            €{auction.buy_now_price!.toLocaleString('de-DE')}
+                            €{(auction.motorhome?.instant_price || auction.buy_now_price || 0).toLocaleString('de-DE')}
                           </p>
                         </div>
                       )}
@@ -396,8 +415,8 @@ const DealerAuctions = () => {
                         </>
                       ) : (
                         <>
-                          <Gavel className="h-4 w-4 mr-2" />
-                          Jetzt bieten
+                          {isInstantOnly ? <Zap className="h-4 w-4 mr-2" /> : <Gavel className="h-4 w-4 mr-2" />}
+                          {isInstantOnly ? 'Jetzt kaufen' : 'Jetzt bieten'}
                         </>
                       )}
                     </Button>

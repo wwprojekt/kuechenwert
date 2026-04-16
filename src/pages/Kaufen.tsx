@@ -175,8 +175,10 @@ const Kaufen = () => {
       const motorhome = auction.motorhome;
       if (!motorhome) return false;
 
-      // Price filter
-      const currentPrice = auction.current_bid || auction.starting_bid || 0;
+      // Price filter — use instant_price for Festpreis listings
+      const currentPrice = motorhome.sale_channel === 'instant_price'
+        ? Number(motorhome.instant_price || 0)
+        : (auction.current_bid || auction.starting_bid || 0);
       if (currentPrice < filters.priceRange[0] || currentPrice > filters.priceRange[1]) {
         return false;
       }
@@ -266,12 +268,20 @@ const Kaufen = () => {
       case 'newest':
         sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
-      case 'price_asc':
-        sorted.sort((a, b) => (a.current_bid || a.starting_bid || 0) - (b.current_bid || b.starting_bid || 0));
+      case 'price_asc': {
+        const getPrice = (a: any) => a.motorhome?.sale_channel === 'instant_price'
+          ? Number(a.motorhome?.instant_price || 0)
+          : (a.current_bid || a.starting_bid || 0);
+        sorted.sort((a, b) => getPrice(a) - getPrice(b));
         break;
-      case 'price_desc':
-        sorted.sort((a, b) => (b.current_bid || b.starting_bid || 0) - (a.current_bid || a.starting_bid || 0));
+      }
+      case 'price_desc': {
+        const getPriceDesc = (a: any) => a.motorhome?.sale_channel === 'instant_price'
+          ? Number(a.motorhome?.instant_price || 0)
+          : (a.current_bid || a.starting_bid || 0);
+        sorted.sort((a, b) => getPriceDesc(b) - getPriceDesc(a));
         break;
+      }
       case 'year_desc':
         sorted.sort((a, b) => (b.motorhome?.year || 0) - (a.motorhome?.year || 0));
         break;

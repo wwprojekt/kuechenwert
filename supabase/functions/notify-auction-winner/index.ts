@@ -64,11 +64,15 @@ Deno.serve(async (req) => {
 
     const motorhome = auction.motorhome;
     const winnerName = `${winnerProfile.first_name} ${winnerProfile.last_name}`;
+    const isInstantBuy = motorhome.sale_channel === 'instant_price' || motorhome.sale_type === 'instant';
 
     // Build email content with email-builder
     const content = `
       ${paragraph(`Sehr geehrte/r ${winnerName},`)}
-      ${paragraph('<strong>Herzlichen Gl&uuml;ckwunsch!</strong> Sie haben die Auktion erfolgreich gewonnen.')}
+      ${paragraph(isInstantBuy
+        ? '<strong>Herzlichen Gl&uuml;ckwunsch!</strong> Ihr Kauf wurde erfolgreich abgeschlossen.'
+        : '<strong>Herzlichen Gl&uuml;ckwunsch!</strong> Sie haben die Auktion erfolgreich gewonnen.'
+      )}
 
       ${infoBox(`${motorhome.manufacturer} ${motorhome.model}`, `
         ${detailRow('Baujahr', String(motorhome.year))}
@@ -76,7 +80,7 @@ Deno.serve(async (req) => {
         ${detailRow('Aufbauart', motorhome.body_type || '–')}
       `, 'success')}
 
-      ${amountDisplay('Ihr Gebot', `&euro;${Number(amount).toLocaleString()}`)}
+      ${amountDisplay(isInstantBuy ? 'Kaufpreis' : 'Ihr Gebot', `&euro;${Number(amount).toLocaleString()}`)}
 
       ${paragraph('Wir werden uns in K&uuml;rze mit Ihnen in Verbindung setzen, um die n&auml;chsten Schritte zu besprechen:')}
       ${list([
@@ -91,8 +95,10 @@ Deno.serve(async (req) => {
       ${paragraph('Vielen Dank f&uuml;r Ihr Vertrauen!<br>Ihr CaravanWert Team')}
     `;
 
-    const emailSubject = 'Herzlichen Gl\u00fcckwunsch! Sie haben die Auktion gewonnen';
-    const emailHtml = buildEmailLayout(settingsData, 'Auktion gewonnen!', content);
+    const emailSubject = isInstantBuy
+      ? 'Herzlichen Gl\u00fcckwunsch! Ihr Kauf wurde best\u00e4tigt'
+      : 'Herzlichen Gl\u00fcckwunsch! Sie haben die Auktion gewonnen';
+    const emailHtml = buildEmailLayout(settingsData, isInstantBuy ? 'Kauf best\u00e4tigt!' : 'Auktion gewonnen!', content);
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');

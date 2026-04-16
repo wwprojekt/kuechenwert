@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // ─── 1. Active auctions whose end_time has passed ──────────────
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
-      .select('id, end_time, status')
+      .select('id, end_time, status, motorhomes!inner(sale_channel)')
       .eq('status', 'active')
       .lt('end_time', now);
 
@@ -49,10 +49,30 @@ Deno.serve(async (req) => {
     console.log(`Found ${expiredAuctions?.length || 0} expired active auctions`);
 
     // Close each expired auction via close-auction Edge Function
+    // For instant_price listings: end directly (no Kaufchance/bidder flows)
     const results = [];
     if (expiredAuctions && expiredAuctions.length > 0) {
       for (const auction of expiredAuctions) {
         try {
+          const saleChannel = (auction.motorhomes as any)?.sale_channel;
+
+          // Instant-price-only listings: simply mark as ended (no bidder/Kaufchance logic)
+          if (saleChannel === 'instant_price') {
+            console.log(`Ending instant-price listing ${auction.id} (no Kaufchance)...`);
+            const { error: endError } = await supabase
+              .from('auctions')
+              .update({ status: 'ended' })
+              .eq('id', auction.id);
+
+            results.push({
+              auctionId: auction.id,
+              type: 'instant_price_expired',
+              success: !endError,
+              error: endError?.message,
+            });
+            continue;
+          }
+
           console.log(`Closing auction ${auction.id}...`);
           
           // Explicit Authorization: nested invoke must present service_role JWT for close-auction auth
@@ -125,20 +145,20 @@ Deno.serve(async (req) => {
               let newReservePrice =
                 kaufchance.reserve_price ?? (mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null;
 
-              // Lowest buyer offer_amount becomes new reserve price for next round
+              // Lowest seller counter_offer_amount becomes new reserve price for next round
               const { data: allOffers } = await supabase
                 .from('post_auction_offers')
-                .select('offer_amount, counter_offer_amount')
+                .select('counter_offer_amount')
                 .eq('auction_id', kaufchance.id)
-                .in('status', ['pending', 'countered', 'rejected']);
+                .not('counter_offer_amount', 'is', null);
 
               if (allOffers && allOffers.length > 0) {
-                const lowestOffer = Math.min(
-                  ...allOffers.map((o: { offer_amount: unknown }) => Number(o.offer_amount))
+                const lowestCounterOffer = Math.min(
+                  ...allOffers.map((o: { counter_offer_amount: unknown }) => Number(o.counter_offer_amount))
                 );
-                if (lowestOffer > 0) {
-                  newReservePrice = lowestOffer;
-                  console.log(`New reserve price from lowest offer: ${newReservePrice}`);
+                if (lowestCounterOffer > 0) {
+                  newReservePrice = lowestCounterOffer;
+                  console.log(`New reserve price from lowest seller counter-offer: ${newReservePrice}`);
                 }
               }
 

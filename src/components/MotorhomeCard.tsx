@@ -234,7 +234,13 @@ const MotorhomeCard = ({
                 Verkauft
               </Badge>
             )}
-            {hasInstantSale && !isSold && (
+            {hasInstantSale && !isSold && saleChannel === 'instant_price' && (
+              <Badge className="bg-yellow-500 text-white flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                Festpreis
+              </Badge>
+            )}
+            {hasInstantSale && !isSold && saleChannel !== 'instant_price' && (
               <Badge className="bg-primary text-primary-foreground flex items-center gap-1">
                 <Zap className="w-3 h-3" />
                 Sofortkauf
@@ -381,7 +387,7 @@ const MotorhomeCard = ({
               <>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 py-2">
                   <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>Gebote nur für Händler sichtbar</span>
+                  <span>{saleChannel === 'instant_price' ? 'Preis nur für Händler sichtbar' : 'Gebote nur für Händler sichtbar'}</span>
                 </div>
                 <Button 
                   className="w-full bg-primary hover:bg-primary/90 group" 
@@ -398,20 +404,33 @@ const MotorhomeCard = ({
               <>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <div className="text-xs text-muted-foreground">
-                      {isSold ? 'Verkaufspreis' : isAuction ? 'Aktuelles Gebot' : 'Ankaufspreis'}
-                    </div>
-                    <div className="text-xl font-bold text-primary">
-                      {displayPrice.toLocaleString("de-DE")} €
-                    </div>
-                    {hasInstantSale && !isSold && (
-                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                        <Zap className="w-3 h-3" />
-                        Sofort: {instantPrice?.toLocaleString("de-DE")} €
-                      </div>
+                    {saleChannel === 'instant_price' ? (
+                      <>
+                        <div className="text-xs text-muted-foreground">
+                          {isSold ? 'Verkaufspreis' : 'Festpreis'}
+                        </div>
+                        <div className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                          {instantPrice?.toLocaleString("de-DE")} €
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-xs text-muted-foreground">
+                          {isSold ? 'Verkaufspreis' : isAuction ? 'Aktuelles Gebot' : 'Ankaufspreis'}
+                        </div>
+                        <div className="text-xl font-bold text-primary">
+                          {displayPrice.toLocaleString("de-DE")} €
+                        </div>
+                        {hasInstantSale && !isSold && (
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Zap className="w-3 h-3" />
+                            Sofort: {instantPrice?.toLocaleString("de-DE")} €
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                  {isAuction && (
+                  {isAuction && saleChannel !== 'instant_price' && (
                     <div className="text-right text-xs text-muted-foreground">
                       <div>{bidCount} Gebote</div>
                       {startingBid && (
@@ -422,7 +441,7 @@ const MotorhomeCard = ({
                 </div>
                 
                 {/* Commission Display for Auctions - only for dealers */}
-                {isAuction && !isSold && canSeePrices && (
+                {isAuction && !isSold && canSeePrices && saleChannel !== 'instant_price' && (
                   <div className="mb-3">
                     <CommissionDisplay 
                       bidAmount={displayPrice} 
@@ -432,12 +451,12 @@ const MotorhomeCard = ({
                 )}
                 
                 <Button 
-                  className="w-full bg-primary hover:bg-primary/90 group" 
+                  className={`w-full group ${saleChannel === 'instant_price' && !isSold && !isEnded ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-primary hover:bg-primary/90'}`}
                   size="sm"
                   variant={isEnded && !isSold ? 'outline' : 'default'}
                   disabled={isSold}
                 >
-                  {isSold ? 'Verkauft' : isEnded ? 'Ergebnis ansehen' : isAuction ? 'Ansehen & Bieten' : 'Details ansehen'}
+                  {isSold ? 'Verkauft' : isEnded ? 'Ergebnis ansehen' : saleChannel === 'instant_price' ? 'Jetzt kaufen' : isAuction ? 'Ansehen & Bieten' : 'Details ansehen'}
                   {!isSold && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-smooth" />}
                 </Button>
               </>

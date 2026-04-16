@@ -636,7 +636,11 @@ Deno.serve(async (req) => {
     sectionTitle('§ 3 Kaufpreis und Zahlung');
 
     paragraphText(`Der Kaufpreis beträgt ${formatCurrency(salePrice)} (in Worten: ${numberToWords(salePrice)}).`);
-    paragraphText('Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.');
+    const isFestpreis = motorhome.sale_channel === 'instant_price' || motorhome.sale_type === 'instant';
+    paragraphText(isFestpreis
+      ? 'Der Kaufpreis entspricht dem auf der Plattform ' + siteName + ' veröffentlichten Festpreis und ist von beiden Parteien als verbindlich anerkannt.'
+      : 'Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.'
+    );
     if (sellerIsDealer) {
       const ma = motorhome.mwst_ausweisbar;
       if (ma === true) {
@@ -657,7 +661,7 @@ Deno.serve(async (req) => {
         'Der Verkäufer handelt als Privatperson; es wird keine Umsatzsteuer ausgewiesen. Der Kaufpreis versteht sich als Bruttobetrag. Dem Käufer bleibt es vorbehalten, die gesetzlichen Regelungen zur Differenzbesteuerung anzuwenden.',
       );
     }
-    paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach Zuschlag auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
+    paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach ' + (isFestpreis ? 'Vertragsabschluss' : 'Zuschlag') + ' auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
     y += 1;
 
     // ── §4 Übergabe ───────────────────────────────────────────────
@@ -709,7 +713,7 @@ Deno.serve(async (req) => {
     sectionTitle('Anlage A – Inseratsunterlagen');
 
     paragraphText(
-      'Nachfolgend das zum Zeitpunkt des Zuschlags auf ' +
+      'Nachfolgend das zum Zeitpunkt des ' + (isFestpreis ? 'Kaufabschlusses' : 'Zuschlags') + ' auf ' +
         siteName +
         ' veröffentlichte Titelbild (sofern vorhanden) sowie ein strukturierter Abdruck der Inseratsdaten.',
     );
@@ -776,7 +780,7 @@ Deno.serve(async (req) => {
 
     sectionTitle('Unterschriften');
 
-    paragraphText(`Dieser Vertrag wurde elektronisch über die Plattform ${siteName} erstellt und gilt mit Zuschlag der Auktion als von beiden Parteien angenommen.`);
+    paragraphText(`Dieser Vertrag wurde elektronisch über die Plattform ${siteName} erstellt und gilt ${isFestpreis ? 'mit Abschluss des Kaufvorgangs' : 'mit Zuschlag der Auktion'} als von beiden Parteien angenommen.`);
     y += 5;
 
     // Signature boxes

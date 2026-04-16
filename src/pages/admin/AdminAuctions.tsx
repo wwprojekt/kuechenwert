@@ -257,7 +257,9 @@ export default function AdminAuctions() {
   const sortAccessors: Record<string, (a: any) => unknown> = {
     vehicle: (a) => `${a.motorhome?.manufacturer || ''} ${a.motorhome?.model || ''}`.trim().toLowerCase(),
     seller: (a) => `${a.motorhome?.seller?.first_name || ''} ${a.motorhome?.seller?.last_name || ''}`.trim().toLowerCase(),
-    current_bid: (a) => Number(a.current_bid || a.starting_bid || 0),
+    current_bid: (a) => a.motorhome?.sale_channel === 'instant_price'
+      ? Number(a.motorhome?.instant_price || 0)
+      : Number(a.current_bid || a.starting_bid || 0),
     bids_count: (a) => Number(a.bids?.[0]?.count || 0),
     end_time: (a) => a.end_time || '',
     created_at: (a) => a.created_at || '',
@@ -278,6 +280,8 @@ export default function AdminAuctions() {
             year,
             postal_code,
             city,
+            sale_channel,
+            instant_price,
             motorhome_photos(url, display_order),
             seller:profiles!left (
               first_name,
@@ -356,10 +360,10 @@ export default function AdminAuctions() {
         .eq("motorhome_id", motorhomeId)
         .maybeSingle();
 
-      // Fetch motorhome Daten (reserve_price + PLZ-Check)
+      // Fetch motorhome Daten (reserve_price + PLZ-Check + sale_channel)
       const { data: motorhome } = await supabase
         .from("motorhomes")
-        .select("reserve_price, postal_code, city")
+        .select("reserve_price, postal_code, city, sale_channel, instant_price")
         .eq("id", motorhomeId)
         .single();
 
@@ -380,9 +384,10 @@ export default function AdminAuctions() {
         }
 
         // Bestehende Auktion recyceln und sofort aktivieren
+        const isInstantOnly = motorhome?.sale_channel === 'instant_price';
         const updateData: Record<string, unknown> = {
           status: "active",
-          starting_bid: 50,
+          starting_bid: isInstantOnly ? 0 : 50,
           current_bid: null,
           start_time: now.toISOString(),
           end_time: endTime.toISOString(),
@@ -390,7 +395,9 @@ export default function AdminAuctions() {
           kaufchance_min_price: null,
         };
 
-        if (motorhome?.reserve_price) {
+        if (isInstantOnly && motorhome?.instant_price) {
+          updateData.reserve_price = Number(motorhome.instant_price);
+        } else if (motorhome?.reserve_price) {
           updateData.reserve_price = motorhome.reserve_price;
         }
 
@@ -417,15 +424,18 @@ export default function AdminAuctions() {
       }
 
       // Keine Auktion vorhanden: Neue erstellen und sofort aktivieren
+      const isInstantNew = motorhome?.sale_channel === 'instant_price';
       const insertData: Record<string, unknown> = {
         motorhome_id: motorhomeId,
-        starting_bid: 50,
+        starting_bid: isInstantNew ? 0 : 50,
         status: "active",
         start_time: now.toISOString(),
         end_time: endTime.toISOString(),
       };
 
-      if (motorhome?.reserve_price) {
+      if (isInstantNew && motorhome?.instant_price) {
+        insertData.reserve_price = Number(motorhome.instant_price);
+      } else if (motorhome?.reserve_price) {
         insertData.reserve_price = motorhome.reserve_price;
       }
 
@@ -756,9 +766,15 @@ export default function AdminAuctions() {
             <p className="font-medium">
               {auction.motorhome?.manufacturer} {auction.motorhome?.model}
             </p>
-            <p className="text-sm text-muted-foreground">
-              {auction.motorhome?.year}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-sm text-muted-foreground">{auction.motorhome?.year}</span>
+              {auction.motorhome?.sale_channel === 'instant_price' && (
+                <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0">Festpreis</Badge>
+              )}
+              {auction.motorhome?.sale_channel === 'auction' && auction.motorhome?.instant_price > 0 && (
+                <Badge className="bg-purple-500 text-white text-[10px] px-1.5 py-0">+Sofortkauf</Badge>
+              )}
+            </div>
           </div>
         </TableCell>
         <TableCell>
@@ -785,14 +801,20 @@ export default function AdminAuctions() {
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-1">
-            <TrendingUp className="w-4 h-4 text-primary" />
+            <TrendingUp className={`w-4 h-4 ${(auction as any).motorhome?.sale_channel === 'instant_price' ? 'text-yellow-500' : 'text-primary'}`} />
             <span className="font-medium">
-              €{Number(auction.current_bid || auction.starting_bid).toLocaleString()}
+              €{Number((auction as any).motorhome?.sale_channel === 'instant_price'
+                ? ((auction as any).motorhome?.instant_price || 0)
+                : (auction.current_bid || auction.starting_bid)
+              ).toLocaleString()}
             </span>
           </div>
         </TableCell>
         <TableCell>
-          <Badge variant="outline">{auction.bids?.[0]?.count || 0}</Badge>
+          {(auction as any).motorhome?.sale_channel === 'instant_price'
+            ? <Badge variant="outline" className="text-yellow-600 border-yellow-300">—</Badge>
+            : <Badge variant="outline">{auction.bids?.[0]?.count || 0}</Badge>
+          }
         </TableCell>
         <TableCell>
           {auction.end_time ? (

@@ -190,6 +190,8 @@ const DealerDashboard = () => {
             year,
             body_type,
             listing_number,
+            sale_channel,
+            instant_price,
             photos:motorhome_photos(url, display_order)
           )
         `)
@@ -714,7 +716,13 @@ const DealerDashboard = () => {
                               Empfohlen
                             </Badge>
                           )}
-                          {auction.buy_now_price && auction.buy_now_price > 0 && !isExpired && (
+                          {auction.motorhome?.sale_channel === 'instant_price' && !isExpired && (
+                            <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg text-xs">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Festpreis
+                            </Badge>
+                          )}
+                          {auction.motorhome?.sale_channel !== 'instant_price' && ((auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0)) && !isExpired && (
                             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
                               <Zap className="h-3 w-3 mr-1" />
                               Sofortkauf
@@ -751,9 +759,9 @@ const DealerDashboard = () => {
                         
                         <div className="flex items-end justify-between">
                           <div>
-                            <p className="text-xs text-muted-foreground">Aktuelles Gebot</p>
-                            <p className="text-lg font-bold text-primary">
-                              €{(auction.current_bid || auction.starting_bid || 0).toLocaleString('de-DE')}
+                            <p className="text-xs text-muted-foreground">{auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                            <p className={`text-lg font-bold ${auction.motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-primary'}`}>
+                              €{(auction.motorhome?.sale_channel === 'instant_price' ? (auction.motorhome?.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0)).toLocaleString('de-DE')}
                             </p>
                           </div>
                           {hasBid && (
@@ -780,10 +788,17 @@ const DealerDashboard = () => {
                               Details
                             </>
                           ) : (
-                            <>
-                              <Gavel className="h-4 w-4 mr-2" />
-                              Jetzt bieten
-                            </>
+                            auction.motorhome?.sale_channel === 'instant_price' ? (
+                              <>
+                                <Zap className="h-4 w-4 mr-2" />
+                                Jetzt kaufen
+                              </>
+                            ) : (
+                              <>
+                                <Gavel className="h-4 w-4 mr-2" />
+                                Jetzt bieten
+                              </>
+                            )
                           )}
                         </Button>
                       </CardContent>

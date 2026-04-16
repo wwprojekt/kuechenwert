@@ -451,12 +451,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // 4. Create Auction if needed
-    if (motorhomePayload.sale_channel === "auction") {
+    // 4. Create Auction listing (for both 'auction' and 'instant_price' channels)
+    // instant_price vehicles use the auction as a listing container but disable bidding
+    if (motorhomePayload.sale_channel === "auction" || motorhomePayload.sale_channel === "instant_price") {
+      const isInstantOnly = motorhomePayload.sale_channel === "instant_price";
       const { error: auctionInsertErr } = await adminClient.from("auctions").insert({
         motorhome_id: motorhome.id,
-        starting_bid: 50,
-        reserve_price: motorhomePayload.reserve_price,
+        starting_bid: isInstantOnly ? 0 : 50,
+        reserve_price: isInstantOnly ? motorhomePayload.instant_price : motorhomePayload.reserve_price,
         status: "draft",
       });
       if (auctionInsertErr) {

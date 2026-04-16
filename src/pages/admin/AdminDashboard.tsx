@@ -472,7 +472,7 @@ function useActiveAuctions() {
         .from("auctions")
         .select(`
           id, end_time, current_bid, starting_bid, status,
-          motorhome:motorhomes(id, manufacturer, model, year, motorhome_photos(url, display_order)),
+          motorhome:motorhomes(id, manufacturer, model, year, sale_channel, instant_price, motorhome_photos(url, display_order)),
           bids(count)
         `)
         .eq("status", "active")
@@ -1131,16 +1131,18 @@ export default function AdminDashboard() {
                 <div className="space-y-1">
                   {activeAuctions.map((a: any) => {
                     const mh = a.motorhome;
+                    const isFP = mh?.sale_channel === 'instant_price';
                     const bidCount = a.bids?.[0]?.count ?? 0;
+                    const displayPrice = isFP ? Number(mh?.instant_price || 0) : Number(a.current_bid || a.starting_bid || 0);
                     return (
                       <Link key={a.id} to={`/admin/auctions/${a.id}`} className="block">
                         <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{mh?.manufacturer} {mh?.model} ({mh?.year})</p>
-                            <p className="text-xs text-muted-foreground">{bidCount} Gebot{bidCount !== 1 ? "e" : ""}</p>
+                            <p className="text-xs text-muted-foreground">{isFP ? 'Festpreis' : `${bidCount} Gebot${bidCount !== 1 ? "e" : ""}`}</p>
                           </div>
                           <div className="text-right flex-shrink-0 space-y-0.5">
-                            <p className="text-sm font-bold">{Number(a.current_bid || a.starting_bid || 0).toLocaleString("de-DE")} €</p>
+                            <p className={`text-sm font-bold ${isFP ? 'text-yellow-600' : ''}`}>{displayPrice.toLocaleString("de-DE")} €</p>
                             <AuctionCountdown endTime={a.end_time} />
                           </div>
                         </div>

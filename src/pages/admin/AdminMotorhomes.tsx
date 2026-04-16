@@ -510,9 +510,9 @@ export default function AdminMotorhomes() {
       case "auction":
         return hasInstantBuy
           ? <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-xs">Auktion + Sofortkauf</Badge>
-          : <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-xs">Auktion</Badge>;
+          : <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-xs">Auktion</Badge>;
       case "instant_price":
-        return <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-xs">Auktion + Sofortkauf</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">Nur Festpreis</Badge>;
       case "station":
         return <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Station</Badge>;
       default:

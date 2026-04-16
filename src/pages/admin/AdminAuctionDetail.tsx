@@ -335,11 +335,25 @@ export default function AdminAuctionDetail() {
     >
       {auction && (
         <div className="space-y-6">
+          {/* Instant-price-only notice */}
+          {auction.motorhome?.sale_channel === 'instant_price' && (
+            <div className="p-3 rounded-lg border-2 border-yellow-400/50 bg-yellow-50 dark:bg-yellow-950/20 flex items-center gap-3">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <p className="font-semibold text-yellow-800 dark:text-yellow-200">Nur Festpreis – kein Bieterverfahren</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Der Verkäufer möchte nur per Sofortkauf verkaufen.
+                  {auction.motorhome?.instant_price ? ` Festpreis: ${formatPrice(auction.motorhome.instant_price)}` : ' Kein Preis hinterlegt!'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
-              label="Aktuelles Gebot"
-              value={formatPrice(auction.current_bid || auction.starting_bid)}
+              label={auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}
+              value={auction.motorhome?.sale_channel === 'instant_price' ? formatPrice(auction.motorhome?.instant_price) : formatPrice(auction.current_bid || auction.starting_bid)}
               icon={<Euro className="w-5 h-5" />}
             />
             <StatsCard
@@ -435,6 +449,16 @@ export default function AdminAuctionDetail() {
                     <InfoItem label="Aufbauart" value={auction.motorhome?.body_type} />
                     <InfoItem label="PLZ (Standort)" value={auction.motorhome?.postal_code || "—"} />
                     <InfoItem label="Stadt" value={auction.motorhome?.city || "—"} />
+                    <InfoItem label="Verkaufsweg" value={
+                      auction.motorhome?.sale_channel === 'instant_price' ? '⚡ Nur Festpreis'
+                      : auction.motorhome?.sale_channel === 'auction' && auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0
+                        ? '🔨 Auktion + Sofortkauf'
+                      : auction.motorhome?.sale_channel === 'station' ? '📍 Ankaufstation'
+                      : '🔨 Auktion'
+                    } />
+                    {auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0 && (
+                      <InfoItem label={auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(auction.motorhome.instant_price)} icon={<Euro className="w-3 h-3" />} />
+                    )}
                   </InfoGrid>
                 </div>
               </DetailSection>

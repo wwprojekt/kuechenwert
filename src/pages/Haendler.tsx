@@ -25,7 +25,7 @@ const Haendler = () => {
         .select(`
           id, current_bid, starting_bid, end_time,
           motorhome:motorhomes!left(
-            manufacturer, model, year, body_type, mileage, city,
+            manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price,
             photos:motorhome_photos(url, display_order)
           )
         `)
@@ -286,7 +286,8 @@ const Haendler = () => {
                 if (!m) return null;
                 const photos = m.photos?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
                 const photoUrl = photos?.[0]?.url;
-                const price = auction.current_bid || auction.starting_bid || 0;
+                const isFestpreis = m.sale_channel === 'instant_price';
+                const price = isFestpreis ? Number(m.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0);
                 const timeLeft = getTimeRemaining(auction.end_time);
                 const isUrgent = new Date(auction.end_time).getTime() - Date.now() < 24 * 60 * 60 * 1000;
 
@@ -306,13 +307,19 @@ const Haendler = () => {
                           {timeLeft}
                         </Badge>
                       </div>
-                      {!auction.current_bid && (
+                      {isFestpreis ? (
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-yellow-500 text-white text-xs font-semibold shadow-md">
+                            Festpreis
+                          </Badge>
+                        </div>
+                      ) : !auction.current_bid ? (
                         <div className="absolute top-3 left-3">
                           <Badge className="bg-emerald-500 text-white text-xs font-semibold shadow-md">
                             Noch ohne Gebot!
                           </Badge>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-bold text-sm line-clamp-1 mb-1">
@@ -325,8 +332,8 @@ const Haendler = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-xs text-muted-foreground">Aktuelles Gebot</div>
-                          <div className="text-lg font-bold text-primary">
+                          <div className="text-xs text-muted-foreground">{isFestpreis ? 'Festpreis' : 'Aktuelles Gebot'}</div>
+                          <div className={`text-lg font-bold ${isFestpreis ? 'text-yellow-600' : 'text-primary'}`}>
                             {Number(price).toLocaleString("de-DE")} €
                           </div>
                         </div>

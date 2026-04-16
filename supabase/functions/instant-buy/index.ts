@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         sale_type: 'instant',
       })
       .eq('id', motorhome.id)
-      .eq('status', 'available')  // Optimistic lock: only update if still available (CHECK constraint)
+      .in('status', ['available', 'active'])  // Optimistic lock: only update if still purchasable
       .select()
       .single();
 
@@ -281,12 +281,12 @@ Deno.serve(async (req) => {
       throw new Error('Kauf konnte nicht abgeschlossen werden – das Wohnmobil wurde möglicherweise bereits verkauft');
     }
 
-    // 7. Close the auction
+    // 7. Close the auction and record the sale price
     const { error: auctionUpdateError } = await supabaseAdmin
       .from('auctions')
-      .update({ status: 'sold' })
+      .update({ status: 'sold', current_bid: instantPrice })
       .eq('id', auctionId)
-      .eq('status', 'active');  // Only close if still active
+      .eq('status', 'active');
 
     if (auctionUpdateError) {
       console.error('Error closing auction after instant buy:', auctionUpdateError);

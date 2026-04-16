@@ -135,6 +135,14 @@ const AuctionDetail = () => {
 
   const [auction, setAuction] = useState<AuctionWithMotorhome | null>(null);
   const [auctionLoadState, setAuctionLoadState] = useState<'loading' | 'loaded' | 'not_found' | 'error'>('loading');
+  // IMPORTANT: Declare `motorhome` alias early (before any hooks reference it).
+  // Terser CSE aliases `auction.motorhome` across the file into a single local
+  // `const motorhome = auction.motorhome`. If that declaration sits after the
+  // early-return guards further below, hook dependency arrays referencing
+  // `auction?.motorhome?.sale_channel` (evaluated every render) hit the TDZ
+  // on first render and throw "Cannot access 's' before initialization",
+  // which AuctionErrorBoundary catches and shows the generic load error.
+  const motorhome = auction?.motorhome ?? null;
   const [bids, setBids] = useState<BidWithBidder[]>([]);
   const [bidAmount, setBidAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -918,7 +926,7 @@ const AuctionDetail = () => {
     );
   }
 
-  if (!auction || !auction.motorhome) {
+  if (!auction || !motorhome) {
     return (
       <PageLayout breadcrumbs={true} title="Lädt..." description="Auktion wird geladen">
         <AuctionDetailSkeleton />
@@ -926,7 +934,6 @@ const AuctionDetail = () => {
     );
   }
 
-  const motorhome = auction.motorhome;
   const rawPhotos = motorhome.photos;
   const photos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
   const currentBid = auction.current_bid || auction.starting_bid;

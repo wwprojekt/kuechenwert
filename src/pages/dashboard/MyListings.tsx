@@ -122,8 +122,8 @@ export default function MyListings() {
               <SelectItem value="newest">Neueste zuerst</SelectItem>
               <SelectItem value="oldest">Älteste zuerst</SelectItem>
               <SelectItem value="name">Name A-Z</SelectItem>
-              <SelectItem value="bid_desc">Höchstes Gebot</SelectItem>
-              <SelectItem value="bid_asc">Niedrigstes Gebot</SelectItem>
+              <SelectItem value="bid_desc">Höchster Preis</SelectItem>
+              <SelectItem value="bid_asc">Niedrigster Preis</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -136,12 +136,16 @@ export default function MyListings() {
               case 'bid_desc': {
                 const aAuction = Array.isArray(a.auction) ? a.auction[0] : a.auction;
                 const bAuction = Array.isArray(b.auction) ? b.auction[0] : b.auction;
-                return Number(bAuction?.current_bid || 0) - Number(aAuction?.current_bid || 0);
+                const aPrice = a.sale_channel === 'instant_price' ? Number(a.instant_price || 0) : Number(aAuction?.current_bid || 0);
+                const bPrice = b.sale_channel === 'instant_price' ? Number(b.instant_price || 0) : Number(bAuction?.current_bid || 0);
+                return bPrice - aPrice;
               }
               case 'bid_asc': {
                 const aAuction = Array.isArray(a.auction) ? a.auction[0] : a.auction;
                 const bAuction = Array.isArray(b.auction) ? b.auction[0] : b.auction;
-                return Number(aAuction?.current_bid || 0) - Number(bAuction?.current_bid || 0);
+                const aPrice = a.sale_channel === 'instant_price' ? Number(a.instant_price || 0) : Number(aAuction?.current_bid || 0);
+                const bPrice = b.sale_channel === 'instant_price' ? Number(b.instant_price || 0) : Number(bAuction?.current_bid || 0);
+                return aPrice - bPrice;
               }
               default: return 0;
             }

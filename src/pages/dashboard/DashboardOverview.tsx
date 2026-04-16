@@ -347,7 +347,7 @@ export default function DashboardOverview() {
           `
           *,
           motorhome:motorhomes!inner (
-            id, manufacturer, model, year,
+            id, manufacturer, model, year, sale_channel, instant_price,
             photos:motorhome_photos (url, display_order)
           )
         `
@@ -1269,10 +1269,12 @@ export default function DashboardOverview() {
                             ? "Abgebrochen"
                             : auction.status}
                         </Badge>
-                        <p className="text-sm font-semibold text-foreground mt-1 sm:mt-2">
-                          €
+                        <p className={`text-sm font-semibold mt-1 sm:mt-2 ${(auction.motorhome as any)?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-foreground'}`}>
+                          {(auction.motorhome as any)?.sale_channel === 'instant_price' ? 'Festpreis ' : ''}€
                           {Number(
-                            auction.current_bid || auction.starting_bid
+                            (auction.motorhome as any)?.sale_channel === 'instant_price'
+                              ? (auction.motorhome as any)?.instant_price || 0
+                              : auction.current_bid || auction.starting_bid
                           ).toLocaleString("de-DE")}
                         </p>
                       </div>

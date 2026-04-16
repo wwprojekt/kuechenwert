@@ -328,16 +328,19 @@ const AuctionDetail = () => {
 
     if (data.motorhome) {
       const mh = data.motorhome;
+      const trackingValue = mh.sale_channel === 'instant_price'
+        ? Number(mh.instant_price || 0)
+        : (data.current_bid || data.starting_bid || 0);
       trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
       trackMetaViewContent({
         content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
         content_category: mh.body_type || 'Wohnmobil',
         content_ids: [mh.id],
         content_type: 'vehicle',
-        value: data.current_bid || data.starting_bid || 0,
+        value: trackingValue,
         currency: 'EUR',
       });
-      trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: data.current_bid || data.starting_bid || 0, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type } });
+      trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: trackingValue, properties: { auctionId: data.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type } });
     }
   }, [id, toast, navigate]);
 

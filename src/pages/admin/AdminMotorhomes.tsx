@@ -651,11 +651,15 @@ export default function AdminMotorhomes() {
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       {getStatusBadge(motorhome._realStatus)}
-                      {auction && auction.status === "active" && auction.current_bid != null && (
+                      {auction && auction.status === "active" && motorhome.sale_channel === 'instant_price' && motorhome.instant_price ? (
+                        <span className="text-xs text-yellow-600 font-medium">
+                          Festpreis {Number(motorhome.instant_price).toLocaleString("de-DE")} €
+                        </span>
+                      ) : auction && auction.status === "active" && auction.current_bid != null ? (
                         <span className="text-xs text-muted-foreground">
                           {Number(auction.current_bid).toLocaleString("de-DE")} €
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">{motorhome.year}</TableCell>

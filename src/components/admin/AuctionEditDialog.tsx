@@ -40,6 +40,8 @@ interface Auction {
     model?: string;
     postal_code?: string | null;
     city?: string | null;
+    sale_channel?: string | null;
+    instant_price?: number | null;
     seller?: {
       email?: string;
       first_name?: string;
@@ -456,7 +458,9 @@ export function AuctionEditDialog({
               placeholder="Optional"
             />
             <p className="text-xs text-muted-foreground">
-              Aktuelles Gebot: €{(auction.current_bid || auction.starting_bid).toLocaleString()}
+              {auction.motorhome?.sale_channel === 'instant_price'
+                ? `Festpreis: €${Number(auction.motorhome.instant_price || 0).toLocaleString()}`
+                : `Aktuelles Gebot: €${(auction.current_bid || auction.starting_bid).toLocaleString()}`}
             </p>
           </div>
 

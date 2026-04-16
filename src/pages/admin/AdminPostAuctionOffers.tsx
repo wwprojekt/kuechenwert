@@ -761,7 +761,7 @@ export default function AdminPostAuctionOffers() {
       // 1. Lade aktuelle Auktionsdaten
       const { data: currentAuction, error: fetchErr } = await supabase
         .from('auctions')
-        .select('motorhome_id, reserve_price, starting_bid, auction_round, motorhome:motorhomes(reserve_price, postal_code, city)')
+        .select('motorhome_id, reserve_price, starting_bid, auction_round, motorhome:motorhomes(reserve_price, postal_code, city, sale_channel, instant_price)')
         .eq('id', auctionId)
         .single();
       if (fetchErr) throw fetchErr;
@@ -810,12 +810,12 @@ export default function AdminPostAuctionOffers() {
           status: 'active' as any,
           current_bid: null,
           reserve_price: newReservePrice && !isNaN(newReservePrice) ? newReservePrice : null,
-          starting_bid: currentAuction?.starting_bid || 50,
+          starting_bid: currentAuction?.starting_bid ?? 50,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           kaufchance_expires_at: null,
           kaufchance_min_price: null,
-          auction_round: ((currentAuction as any)?.auction_round || 1) + 1,
+          auction_round: ((currentAuction as any)?.auction_round ?? 1) + 1,
           auto_relist: true,
           updated_at: new Date().toISOString(),
         } as any)

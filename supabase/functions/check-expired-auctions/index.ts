@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // ─── 1. Active auctions whose end_time has passed ──────────────
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
-      .select('id, end_time, status, motorhomes!inner(sale_channel)')
+      .select('id, end_time, status, motorhome_id, motorhomes!inner(sale_channel)')
       .eq('status', 'active')
       .lt('end_time', now);
 
@@ -61,8 +61,16 @@ Deno.serve(async (req) => {
             console.log(`Ending instant-price listing ${auction.id} (no Kaufchance)...`);
             const { error: endError } = await supabase
               .from('auctions')
-              .update({ status: 'ended' })
+              .update({ status: 'ended', updated_at: now })
               .eq('id', auction.id);
+
+            if (!endError && auction.motorhome_id) {
+              const { error: mhErr } = await supabase
+                .from('motorhomes')
+                .update({ status: 'ended', updated_at: now })
+                .eq('id', auction.motorhome_id);
+              if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
+            }
 
             results.push({
               auctionId: auction.id,

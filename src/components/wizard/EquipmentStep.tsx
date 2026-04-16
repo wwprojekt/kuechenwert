@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { useState } from "react";
-import { Settings, Home, Sun, Tent, Droplets, Tv, Camera, ParkingCircle, Battery, Wind, Lock, Shield, Snowflake, Users, Truck, Calendar, ClipboardCheck, ChevronDown, Star } from "lucide-react";
+import { Settings, Home, Sun, Tent, Tv, Camera, ParkingCircle, Battery, Lock, Shield, Snowflake, Users, Truck, ClipboardCheck, ChevronDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { baseVehicles, getPowerOptionsForBaseVehicle, formatPower, psToKw } from "@/lib/vehicle-data";
 

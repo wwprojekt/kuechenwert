@@ -12,7 +12,7 @@ interface DetailsStepProps {
   fieldErrors?: Record<string, string>;
 }
 
-export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: DetailsStepProps) => {
+export const DetailsStep = ({ formData, updateFormData }: DetailsStepProps) => {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
   const handleDefectsToggle = (value: string) => {
@@ -24,13 +24,16 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
   };
 
   // Smart defaults on mount: Diesel + Schaltung + Keine Mängel
-  // → Step can be passed with 0 clicks (all pre-selected)
+  // → Step can be passed with 0 clicks (all pre-selected).
+  // We intentionally run once on mount: re-running on formData changes would
+  // fight the user (e.g. setting fuel_type back to Diesel after they chose Benzin).
   useEffect(() => {
     const updates: Partial<WizardFormData> = {};
     if (!isWohnwagen && !formData.fuel_type) updates.fuel_type = "Diesel";
     if (!isWohnwagen && !formData.transmission) updates.transmission = "Schaltgetriebe";
     if (!formData.no_known_defects && formData.known_defects === undefined) updates.no_known_defects = true;
     if (Object.keys(updates).length > 0) updateFormData(updates);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Count how many optional fields are filled (for encouragement, not gating)

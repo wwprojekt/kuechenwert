@@ -6,12 +6,11 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAndLogError } from "@/lib/errorLogService";
 import { translateError } from "@/lib/germanErrors";
-import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
+import { trackWizardCompleted, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
 import { getTrackingData, getStoredClickIds } from "@/lib/clickIdService";
 import { trackEvent } from "@/lib/analyticsService";
 import { ensureValidSession, ensureValidRLSSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import { optimizeImage, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
-import type { Database } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
 
@@ -1012,12 +1011,15 @@ export const useWizardForm = () => {
     } catch (error: unknown) {
       logger.error("Submission error:", error);
 
-      // Bei Netzwerkfehlern: spezifischere Meldung und Hinweis auf erneuten Versuch
+      // Bei Netzwerkfehlern: spezifischere Meldung und Hinweis auf erneuten Versuch.
+      // handleAndLogError() is called for its side-effect (Sentry/analytics log);
+      // the translated return value is discarded here because the toast below
+      // uses a fixed, friendlier wording for network hiccups.
       if (isNetworkError(error)) {
-        const germanMessage = handleAndLogError(error, {
+        handleAndLogError(error, {
           componentName: 'VerkaufenWizard',
           category: 'api',
-          severity: 'medium', // Netzwerkfehler sind weniger kritisch als echte API-Fehler
+          severity: 'medium',
           metadata: { retryHint: true, networkError: true },
         });
         toast({

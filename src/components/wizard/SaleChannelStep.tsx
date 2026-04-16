@@ -5,14 +5,14 @@
  * Name und E-Mail werden bereits in Step 5 (QuickContactStep) erfasst und hier vorausgefüllt.
  */
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Star, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Users, TrendingUp, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SaleChannelStepProps {
@@ -22,11 +22,16 @@ interface SaleChannelStepProps {
 }
 
 export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: SaleChannelStepProps) => {
-  // Pre-select recommended option to reduce friction (user can change)
+  // Pre-select recommended option to reduce friction (user can change).
+  // Runs once on mount: re-running on saleChannel change would undo the
+  // user's choice if they switch away and back, and updateFormData is
+  // a stable useCallback so it would otherwise trigger the same effect
+  // twice on re-renders.
   useEffect(() => {
     if (!formData.saleChannel) {
       updateFormData({ saleChannel: "auction" });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

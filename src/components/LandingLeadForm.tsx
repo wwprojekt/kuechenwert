@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowRight, CheckCircle, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { vehicleTypes, popularManufacturers, wohnwagenManufacturers, bodyTypes, wohnwagenBodyTypes } from "@/lib/vehicle-data";
-import { captureOrUpdateLead } from "@/lib/leadTrackingService";
 import { trackLandingPageLead } from "@/lib/gadsConversionService";
 import { cn } from "@/lib/utils";
 
@@ -52,14 +51,6 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
       });
       return;
     }
-
-    // Partiellen Lead erfassen (nur Fahrzeugdaten)
-    await captureOrUpdateLead({
-      manufacturer,
-      bodyType,
-      source: "landing_page_partial",
-      pageUrl: window.location.pathname,
-    });
 
     // bodyType-Label auf Wertrechner-internen Wert mappen
     const mappedBodyType = BODY_TYPE_MAP[bodyType] || bodyType.toLowerCase();

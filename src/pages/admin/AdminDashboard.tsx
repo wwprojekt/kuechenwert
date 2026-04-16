@@ -44,25 +44,23 @@ function useDashboardStats() {
     queryKey: ["adminDashboardStats"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { totalMotorhomes: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, totalLeads: 0, completedWizards: 0, totalValuations: 0 };
+      if (!sessionValid) return { totalMotorhomes: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, completedWizards: 0, totalValuations: 0 };
 
       const [
         motorhomesRes,
         auctionsRes,
         usersRes,
-        leadsRes,
         wizardRes,
         valuationRes,
       ] = await Promise.all([
         supabase.from("motorhomes").select("*", { count: "exact", head: true }),
         supabase.from("auctions").select("status"),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }),
       ]);
 
-      const errors = [motorhomesRes.error, auctionsRes.error, usersRes.error, leadsRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
+      const errors = [motorhomesRes.error, auctionsRes.error, usersRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
       if (errors.length > 0) {
         console.error("Dashboard stats errors:", errors);
         throw new Error(`${errors.length} Dashboard-Abfragen fehlgeschlagen`);
@@ -75,12 +73,13 @@ function useDashboardStats() {
         activeAuctions,
         totalAuctions: auctionsRes.data?.length || 0,
         totalUsers: usersRes.count || 0,
-        totalLeads: leadsRes.count || 0,
         completedWizards: wizardRes.count || 0,
         totalValuations: valuationRes.count || 0,
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -129,35 +128,7 @@ function useActionItems() {
         }
       }
 
-      // 2. Neue Quick Leads (nicht angesehen, ohne Disposition)
-      const { data: newLeads } = await supabase
-        .from("quick_leads")
-        .select("id, name, email, phone, manufacturer, model, created_at, is_viewed")
-        .or("is_viewed.is.null,is_viewed.eq.false")
-        .is("disposition", null)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (newLeads) {
-        for (const l of newLeads) {
-          const vehicle = `${l.manufacturer || ""} ${l.model || ""}`.trim() || "Kein Fahrzeug";
-          items.push({
-            id: `lead-${l.id}`,
-            type: "lead",
-            title: `Neuer Lead: ${vehicle}`,
-            subtitle: l.name || l.email || l.phone || "Unbekannt",
-            time: l.created_at || "",
-            link: "/admin/leads",
-            priority: "medium",
-            icon: UserPlus,
-            iconColor: "text-cyan-600 bg-cyan-100",
-            badge: "Lead",
-            badgeColor: "bg-cyan-500",
-          });
-        }
-      }
-
-      // 3. Neue Bewertungsanfragen (nicht angesehen, ohne Disposition)
+      // 2. Neue Bewertungsanfragen (nicht angesehen, ohne Disposition)
       const { data: newValuations } = await supabase
         .from("value_assessment_leads")
         .select("id, name, email, manufacturer, model, year, created_at, is_viewed")
@@ -185,7 +156,7 @@ function useActionItems() {
         }
       }
 
-      // 4. Offene Support-Nachrichten
+      // 3. Offene Support-Nachrichten
       const { data: openMessages } = await supabase
         .from("support_messages")
         .select("id, subject, message, created_at, status")
@@ -211,7 +182,7 @@ function useActionItems() {
         }
       }
 
-      // 5. Neue Kontaktnachrichten
+      // 4. Neue Kontaktnachrichten
       const { data: newContacts } = await supabase
         .from("contact_messages")
         .select("id, name, email, subject, created_at, status")
@@ -237,7 +208,7 @@ function useActionItems() {
         }
       }
 
-      // 6. Offene Händler-Bewerbungen
+      // 5. Offene Händler-Bewerbungen
       const { data: pendingDealers } = await supabase
         .from("dealer_applications")
         .select("id, company_name, contact_person_name, created_at, status")
@@ -263,7 +234,7 @@ function useActionItems() {
         }
       }
 
-      // 7. Unbeantwortete Fahrzeugfragen
+      // 6. Unbeantwortete Fahrzeugfragen
       const { data: openQuestions } = await supabase
         .from("vehicle_questions")
         .select("id, question, questioner_name, questioner_email, created_at, answer")
@@ -342,7 +313,9 @@ function useActionItems() {
 
       return items;
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -382,7 +355,10 @@ function useRevenueStats() {
         overdueAmount: overdue.reduce((s, i) => s + Number(i.gross_amount || 0), 0),
       };
     },
-    refetchInterval: 60000,
+    // Invoices barely change minute-to-minute – 5 min is plenty.
+    refetchInterval: 300000,
+    staleTime: 120000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -445,7 +421,11 @@ function useActivityTimeline() {
 
       return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
     },
-    refetchInterval: 15000,
+    // Timeline gets live updates via Realtime (bids, wizards, dealers);
+    // the poll is just a safety net for inbound emails that have no trigger.
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -499,7 +479,10 @@ function usePerformanceMetrics() {
         avgSalePrice,
       };
     },
-    refetchInterval: 120000,
+    // 30-day aggregate – refreshing every 5 min is more than enough.
+    refetchInterval: 300000,
+    staleTime: 180000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -524,7 +507,11 @@ function useActiveAuctions() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 15000,
+    // Countdown is computed client-side; Realtime handles new bids.
+    // A 60 s refetch only matters when auctions are added/removed.
+    refetchInterval: 60000,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -552,7 +539,9 @@ function useUrgentLeads() {
         contacted: !!(s.resume_email_sent_at || s.admin_called_at),
       }));
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -578,7 +567,11 @@ function useRecentBids() {
         .limit(8);
       return data || [];
     },
-    refetchInterval: 15000,
+    // Realtime `bids` subscription invalidates this query on every new bid,
+    // so the poll is only a fallback when the websocket drops.
+    refetchInterval: 60000,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -605,7 +598,7 @@ function useRecentlyChangedMotorhomes() {
       if (!data) return [];
 
       const sellerIds = [...new Set(data.map(m => m.seller_id).filter(Boolean))];
-      let profileMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
+      const profileMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
 
       if (sellerIds.length > 0) {
         const { data: profiles } = await supabase
@@ -628,7 +621,9 @@ function useRecentlyChangedMotorhomes() {
           : false,
       }));
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -641,13 +636,12 @@ function useUnreadCounts() {
     queryKey: ["adminUnreadCounts"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { openSupport: 0, newContacts: 0, newWizards: 0, newLeads: 0, newValuations: 0, pendingDealers: 0, openQuestions: 0, totalMessages: 0, totalAnfragen: 0 };
+      if (!sessionValid) return { openSupport: 0, newContacts: 0, newWizards: 0, newValuations: 0, pendingDealers: 0, openQuestions: 0, totalMessages: 0, totalAnfragen: 0 };
 
       const [
         supportRes,
         contactRes,
         wizardRes,
-        leadsRes,
         valuationRes,
         dealerRes,
         questionsRes,
@@ -655,7 +649,6 @@ function useUnreadCounts() {
         supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
@@ -665,15 +658,16 @@ function useUnreadCounts() {
         openSupport: supportRes.count || 0,
         newContacts: contactRes.count || 0,
         newWizards: wizardRes.count || 0,
-        newLeads: leadsRes.count || 0,
         newValuations: valuationRes.count || 0,
         pendingDealers: dealerRes.count || 0,
         openQuestions: questionsRes.count || 0,
         totalMessages: (supportRes.count || 0) + (contactRes.count || 0),
-        totalAnfragen: (wizardRes.count || 0) + (leadsRes.count || 0) + (valuationRes.count || 0),
+        totalAnfragen: (wizardRes.count || 0) + (valuationRes.count || 0),
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 

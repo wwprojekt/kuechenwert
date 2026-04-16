@@ -59,11 +59,11 @@ interface WizardSessionData {
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
-  form_data: Record<string, unknown>;
+  form_data?: Record<string, unknown>;
   status: string;
 }
 
-type LeadSourceType = "wizard" | "quick" | "valuation";
+type LeadSourceType = "wizard" | "valuation";
 
 interface ConvertToMotorhomeDialogProps {
   session: WizardSessionData | null;
@@ -196,7 +196,7 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     has_stand_ac: Boolean(formData.has_stand_ac),
 
     // Defects
-    has_damage: formData.no_known_defects != null ? !Boolean(formData.no_known_defects) : null,
+    has_damage: formData.no_known_defects != null ? !formData.no_known_defects : null,
     damage_summary: formData.known_defects ? String(formData.known_defects) : null,
 
     // Location
@@ -496,14 +496,6 @@ export function ConvertToMotorhomeDialog({
             admin_notes: `${(session as any).admin_notes ? (session as any).admin_notes + "\n" : ""}${convertNote}`,
           } as any)
           .eq("id", session.id);
-      } else if (sourceType === "quick") {
-        await supabase
-          .from("quick_leads")
-          .update({
-            notes: `${(session as any).notes ? (session as any).notes + "\n" : ""}${convertNote}`,
-            lead_quality: "converted",
-          } as any)
-          .eq("id", session.id);
       } else if (sourceType === "valuation") {
         await supabase
           .from("value_assessment_leads")
@@ -518,7 +510,6 @@ export function ConvertToMotorhomeDialog({
     onSuccess: (result) => {
       // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       // Also invalidate seller-side queries so the customer dashboard updates
@@ -608,7 +599,7 @@ export function ConvertToMotorhomeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Car className="w-5 h-5 text-primary" />
-            {sourceType === "wizard" ? "Wizard-Anfrage" : sourceType === "quick" ? "Quick-Lead" : "Wertrechner-Lead"} als Wohnmobil anlegen
+            {sourceType === "wizard" ? "Wizard-Anfrage" : "Wertrechner-Lead"} als Wohnmobil anlegen
           </DialogTitle>
           <DialogDescription>
             Prüfen und bearbeiten Sie die Daten{sourceType === "wizard" ? " aus der Wizard-Session" : ""}. Nach dem Anlegen

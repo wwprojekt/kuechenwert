@@ -75,8 +75,6 @@ import {
   Loader2,
   Calculator,
   Euro,
-  FileText,
-  Globe,
   PhoneOff,
   PhoneMissed,
   Undo2,
@@ -102,7 +100,7 @@ interface WizardSession {
   max_step_reached: number;
   total_steps: number;
   step_name: string | null;
-  form_data: Record<string, unknown>;
+  form_data?: Record<string, unknown>;
   status: string;
   vehicle_summary: string | null;
   admin_notes: string | null;
@@ -119,37 +117,32 @@ interface WizardSession {
   is_viewed: boolean;
 }
 
-interface QuickLead {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  manufacturer: string | null;
-  model: string | null;
-  body_type: string | null;
-  sale_channel: string | null;
-  source: string | null;
-  wizard_completed: boolean | null;
-  created_at: string;
-  updated_at: string | null;
-  // Extended fields
-  admin_notes: string | null;
-  notes: string | null;
-  status: string | null;
-  contacted_at: string | null;
-  lead_quality: string | null;
-  form_data_snapshot: Record<string, unknown> | null;
-  last_wizard_step: number | null;
-  max_wizard_step: number | null;
-  page_url: string | null;
-  referrer: string | null;
-  user_agent: string | null;
-  disposition: string | null;
-  wrong_number_email_count: number | null;
-  wrong_number_email_last_sent: string | null;
-  admin_estimated_value: number | null;
-  is_viewed: boolean;
-}
+const WIZARD_SESSION_LIST_COLUMNS = [
+  "id",
+  "user_id",
+  "anonymous_id",
+  "customer_name",
+  "customer_email",
+  "customer_phone",
+  "current_step",
+  "max_step_reached",
+  "total_steps",
+  "step_name",
+  "status",
+  "vehicle_summary",
+  "admin_notes",
+  "resume_email_sent_at",
+  "admin_called_at",
+  "created_at",
+  "updated_at",
+  "last_activity_at",
+  "completed_at",
+  "disposition",
+  "wrong_number_email_count",
+  "wrong_number_email_last_sent",
+  "admin_estimated_value",
+  "is_viewed",
+].join(",");
 
 interface ValuationLead {
   id: string;
@@ -190,7 +183,7 @@ interface ValuationLead {
 
 type DispositionItem = {
   id: string;
-  type: "wizard" | "quick" | "valuation";
+  type: "wizard" | "valuation";
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -563,73 +556,6 @@ function DispositionButtons({ currentDisposition, onSetDisposition, isPending }:
   );
 }
 
-function QuickLeadStatusBadge({ status, leadQuality, contactedAt }: { status: string | null; leadQuality: string | null; contactedAt: string | null }) {
-  if (status === "converted" || leadQuality === "converted") {
-    return (
-      <Badge className="bg-purple-500 hover:bg-purple-600">
-        <Car className="w-3 h-3 mr-1" /> Konvertiert
-      </Badge>
-    );
-  }
-  if (contactedAt) {
-    return (
-      <Badge className="bg-green-500 hover:bg-green-600">
-        <CheckCircle2 className="w-3 h-3 mr-1" /> Kontaktiert
-      </Badge>
-    );
-  }
-  if (leadQuality === "hot") {
-    return (
-      <Badge className="bg-orange-500 hover:bg-orange-600">
-        <TrendingUp className="w-3 h-3 mr-1" /> Hot
-      </Badge>
-    );
-  }
-  if (leadQuality === "warm") {
-    return (
-      <Badge className="bg-yellow-500 hover:bg-yellow-600">
-        <Target className="w-3 h-3 mr-1" /> Warm
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="text-orange-500">
-      Offen
-    </Badge>
-  );
-}
-
-/**
- * Helper to map a QuickLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
- */
-function quickLeadToSessionData(lead: QuickLead): {
-  id: string;
-  user_id: string | null;
-  customer_name: string | null;
-  customer_email: string | null;
-  customer_phone: string | null;
-  form_data: Record<string, unknown>;
-  status: string;
-} {
-  // Merge direct fields + form_data_snapshot
-  const formData: Record<string, unknown> = {
-    ...(lead.form_data_snapshot || {}),
-    manufacturer: lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string) || "",
-    model: lead.model || (lead.form_data_snapshot?.model as string) || "",
-    bodyType: lead.body_type || (lead.form_data_snapshot?.bodyType as string) || "",
-    saleChannel: lead.sale_channel || (lead.form_data_snapshot?.saleChannel as string) || "auction",
-  };
-  return {
-    id: lead.id,
-    user_id: null,
-    customer_name: lead.name,
-    customer_email: lead.email,
-    customer_phone: lead.phone,
-    form_data: formData,
-    status: lead.status || "new",
-  };
-}
-
 /**
  * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
  */
@@ -678,18 +604,13 @@ export default function AdminLeads() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
-  // Quick lead detail dialog
-  const [selectedQuickLead, setSelectedQuickLead] = useState<QuickLead | null>(null);
-  const [quickLeadDetailOpen, setQuickLeadDetailOpen] = useState(false);
-  const [quickLeadAdminNotes, setQuickLeadAdminNotes] = useState("");
   // Delete states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
   const [dateFrom, setDateFrom] = useState<Date | null>(null);
   const [dateTo, setDateTo] = useState<Date | null>(null);
-  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [selectedValuationIds, setSelectedValuationIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "quick" | "valuation"; ids: string[] } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "wizard" | "valuation"; ids: string[] } | null>(null);
   // Valuation detail dialog
   const [valuationDetailOpen, setValuationDetailOpen] = useState(false);
   const [selectedValuation, setSelectedValuation] = useState<ValuationLead | null>(null);
@@ -722,8 +643,8 @@ export default function AdminLeads() {
   const [dispositionEmailCounts, setDispositionEmailCounts] = useState<Record<string, { count: number; lastSent: string | null }>>({});
   // Convert to motorhome dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data: Record<string, unknown>; status: string } | null>(null);
-  const [convertSourceType, setConvertSourceType] = useState<"wizard" | "quick" | "valuation">("wizard");
+  const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data?: Record<string, unknown>; status: string } | null>(null);
+  const [convertSourceType, setConvertSourceType] = useState<"wizard" | "valuation">("wizard");
   const { toast } = useToast();
 
   const { exportCSV, exportExcel, isExporting } = useExport({
@@ -780,26 +701,13 @@ export default function AdminLeads() {
 
       const { data, error } = await supabase
         .from("wizard_sessions")
-        .select("*")
+        .select(WIZARD_SESSION_LIST_COLUMNS)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as WizardSession[];
     },
-    refetchInterval: 30000,
-  });
-
-  const { data: quickLeads = [], isLoading: loadingLeads } = useQuery({
-    queryKey: ["adminQuickLeads"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("quick_leads")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as QuickLead[];
-    },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 30000,
   });
 
   const { data: valuationLeads = [], isLoading: loadingValuationLeads } = useQuery({
@@ -812,7 +720,8 @@ export default function AdminLeads() {
       if (error) throw error;
       return (data || []) as ValuationLead[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 30000,
   });
 
   // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Motorhomes ----
@@ -952,44 +861,13 @@ export default function AdminLeads() {
       avgAbandonStep,
       actionableLeads,
       notContacted,
-      quickLeadsTotal: quickLeads.filter(l => !l.disposition || l.disposition === "already_customer").length,
       valuationLeadsTotal: valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer").length,
     };
-  }, [activeSessions, quickLeads, valuationLeads]);
+  }, [activeSessions, valuationLeads]);
 
   // ---- Filtering ----
 
-  const enrichedSessions = useMemo(() => {
-    return wizardSessions.map((session) => {
-      if (session.customer_name && session.customer_email && session.customer_phone) {
-        return session;
-      }
-      const matchingLead = quickLeads.find((lead) => {
-        if (session.customer_email && lead.email) {
-          return lead.email === session.customer_email;
-        }
-        if (lead.manufacturer && session.vehicle_summary) {
-          const leadTime = new Date(lead.created_at).getTime();
-          const sessionTime = new Date(session.created_at).getTime();
-          const timeDiff = Math.abs(leadTime - sessionTime);
-          return (
-            session.vehicle_summary.includes(lead.manufacturer) &&
-            timeDiff < 5 * 60 * 1000
-          );
-        }
-        return false;
-      });
-      if (matchingLead) {
-        return {
-          ...session,
-          customer_name: session.customer_name || matchingLead.name,
-          customer_email: session.customer_email || matchingLead.email,
-          customer_phone: session.customer_phone || matchingLead.phone,
-        };
-      }
-      return session;
-    });
-  }, [wizardSessions, quickLeads]);
+  const enrichedSessions = wizardSessions;
 
   // Date filter helper
   const matchesDateRange = (dateStr: string | null) => {
@@ -1018,22 +896,6 @@ export default function AdminLeads() {
       return true;
     });
   }, [enrichedSessions, statusFilter, searchQuery, dateFrom, dateTo]);
-
-  const filteredQuickLeads = useMemo(() => {
-    const withoutDisposition = quickLeads.filter(l => !l.disposition || l.disposition === "already_customer");
-    return withoutDisposition.filter((lead) => {
-      if (!matchesDateRange(lead.created_at)) return false;
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        (lead.name || (lead.form_data_snapshot?.customerName as string) || (lead.form_data_snapshot?.name as string) || "").toLowerCase().includes(q) ||
-        (lead.email || (lead.form_data_snapshot?.customerEmail as string) || "").toLowerCase().includes(q) ||
-        (lead.phone || (lead.form_data_snapshot?.customerPhone as string) || "").toLowerCase().includes(q) ||
-        (lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string) || "").toLowerCase().includes(q) ||
-        (lead.model || (lead.form_data_snapshot?.model as string) || "").toLowerCase().includes(q)
-      );
-    });
-  }, [quickLeads, searchQuery, dateFrom, dateTo]);
 
   const filteredValuationLeads = useMemo(() => {
     const withoutDisposition = valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer");
@@ -1072,23 +934,6 @@ export default function AdminLeads() {
         admin_estimated_value: s.admin_estimated_value || null,
       });
     });
-    // Quick leads with disposition
-    quickLeads.filter(l => l.disposition).forEach(l => {
-      items.push({
-        id: l.id,
-        type: "quick",
-        name: l.name,
-        email: l.email,
-        phone: l.phone,
-        vehicle: [l.manufacturer, l.model].filter(Boolean).join(" ") || "-",
-        disposition: l.disposition,
-        created_at: l.created_at,
-        source_label: "Quick-Lead",
-        wrong_number_email_count: l.wrong_number_email_count || 0,
-        wrong_number_email_last_sent: l.wrong_number_email_last_sent || null,
-        admin_estimated_value: l.admin_estimated_value || null,
-      });
-    });
     // Valuation leads with disposition
     valuationLeads.filter(l => l.disposition).forEach(l => {
       items.push({
@@ -1111,7 +956,7 @@ export default function AdminLeads() {
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [wizardSessions, quickLeads, valuationLeads]);
+  }, [wizardSessions, valuationLeads]);
 
   const wrongNumberLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "wrong_number"), [dispositionLeads]);
   const noAnswerLeads = useMemo(() => dispositionLeads.filter(l => l.disposition === "no_answer"), [dispositionLeads]);
@@ -1123,7 +968,7 @@ export default function AdminLeads() {
     const q = searchQuery.toLowerCase();
     const results: Array<{
       id: string;
-      type: "wizard" | "quick" | "valuation";
+      type: "wizard" | "valuation";
       name: string | null;
       email: string | null;
       phone: string | null;
@@ -1154,26 +999,6 @@ export default function AdminLeads() {
       }
     });
 
-    quickLeads.forEach(l => {
-      const name = l.name || (l.form_data_snapshot?.customerName as string) || (l.form_data_snapshot?.name as string) || "";
-      const email = l.email || (l.form_data_snapshot?.customerEmail as string) || "";
-      const phone = l.phone || (l.form_data_snapshot?.customerPhone as string) || "";
-      const mfr = l.manufacturer || (l.form_data_snapshot?.manufacturer as string) || "";
-      const model = l.model || (l.form_data_snapshot?.model as string) || "";
-      const match = name.toLowerCase().includes(q) || email.toLowerCase().includes(q) ||
-        phone.toLowerCase().includes(q) || mfr.toLowerCase().includes(q) || model.toLowerCase().includes(q);
-      if (match) {
-        results.push({
-          id: l.id, type: "quick",
-          name: name || null, email: email || null, phone: phone || null,
-          vehicle: [mfr, model].filter(Boolean).join(" ") || "-", status: l.status,
-          disposition: l.disposition, created_at: l.created_at, is_viewed: l.is_viewed,
-          source_label: "Quick-Lead",
-          source_color: "bg-green-100 text-green-700 border-green-200",
-        });
-      }
-    });
-
     valuationLeads.forEach(l => {
       const match = (l.name || "").toLowerCase().includes(q) || (l.email || "").toLowerCase().includes(q) ||
         (l.phone || "").toLowerCase().includes(q) || (l.manufacturer || "").toLowerCase().includes(q) ||
@@ -1195,13 +1020,11 @@ export default function AdminLeads() {
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [searchQuery, wizardSessions, quickLeads, valuationLeads]);
+  }, [searchQuery, wizardSessions, valuationLeads]);
 
   const handleDispositionChange = (item: DispositionItem, newDisposition: string | null) => {
     if (item.type === "wizard") {
       updateWizardDisposition.mutate({ id: item.id, disposition: newDisposition });
-    } else if (item.type === "quick") {
-      updateQuickLeadDisposition.mutate({ id: item.id, disposition: newDisposition });
     } else {
       updateValuationDisposition.mutate({ id: item.id, disposition: newDisposition });
     }
@@ -1234,7 +1057,6 @@ export default function AdminLeads() {
         description: `Falsche-Nummer-E-Mail wurde an ${data?.recipient || item.email} gesendet. (${data?.email_count || 1}x)`,
       });
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
       queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
     } catch (err: any) {
       toast({
@@ -1379,36 +1201,6 @@ export default function AdminLeads() {
     },
   });
 
-  // ---- Quick Lead Mutations ----
-
-  const markQuickLeadContacted = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("quick_leads")
-        .update({ contacted_at: new Date().toISOString(), status: "contacted" } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Als kontaktiert markiert" });
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-    },
-  });
-
-  const updateQuickLeadAdminNotes = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      const { error } = await supabase
-        .from("quick_leads")
-        .update({ admin_notes: notes } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Notiz gespeichert" });
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-    },
-  });
-
   // ---- Valuation Lead Mutations ----
 
   const updateValuationAdminNotes = useMutation({
@@ -1447,28 +1239,6 @@ export default function AdminLeads() {
     },
     onError: (error: Error) => {
       toast({ title: "Fehler beim Löschen", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const deleteQuickLeads = useMutation({
-    mutationFn: async (ids: string[]) => {
-      // Soft-Delete: Setzt deleted_at statt Zeilen zu löschen (Datenschutz-Nachweispflicht)
-      const { error } = await supabase
-        .from("quick_leads")
-        .update({ deleted_at: new Date().toISOString() })
-        .in("id", ids);
-      if (error) throw error;
-    },
-    onSuccess: (_, ids) => {
-      toast({
-        title: `${ids.length} Lead${ids.length > 1 ? "s" : ""} archiviert`,
-        description: "Die ausgewählten Quick-Leads wurden archiviert.",
-      });
-      setSelectedLeadIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Fehler beim Archivieren", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1587,23 +1357,6 @@ export default function AdminLeads() {
     },
   });
 
-  const updateQuickLeadDisposition = useMutation({
-    mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
-      const { error } = await supabase
-        .from("quick_leads")
-        .update({ disposition } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Disposition aktualisiert" });
-      queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Fehler", description: error.message, variant: "destructive" });
-    },
-  });
-
   const updateValuationDisposition = useMutation({
     mutationFn: async ({ id, disposition }: { id: string; disposition: string | null }) => {
       const { error } = await supabase
@@ -1678,35 +1431,30 @@ export default function AdminLeads() {
   // ---- Handlers ----
 
   const openDetail = (session: WizardSession) => {
-    let enrichedSession = { ...session };
-    if (!session.customer_name || !session.customer_email || !session.customer_phone) {
-      const matchingLead = quickLeads.find((lead) => {
-        if (session.customer_email && lead.email) {
-          return lead.email === session.customer_email;
-        }
-        if (lead.manufacturer && session.vehicle_summary) {
-          const leadTime = new Date(lead.created_at).getTime();
-          const sessionTime = new Date(session.created_at).getTime();
-          const timeDiff = Math.abs(leadTime - sessionTime);
-          return (
-            session.vehicle_summary.includes(lead.manufacturer) &&
-            timeDiff < 5 * 60 * 1000
-          );
-        }
-        return false;
-      });
-      if (matchingLead) {
-        enrichedSession = {
-          ...session,
-          customer_name: session.customer_name || matchingLead.name,
-          customer_email: session.customer_email || matchingLead.email,
-          customer_phone: session.customer_phone || matchingLead.phone,
-        };
-      }
-    }
-    setSelectedSession(enrichedSession);
+    setSelectedSession(session);
     setAdminNotes(session.admin_notes || "");
     setDetailDialogOpen(true);
+
+    // Lazy-load form_data (excluded from list query for payload size)
+    if (!session.form_data) {
+      ensureValidRLSSession().then(valid => {
+        if (!valid) return;
+        supabase
+          .from("wizard_sessions")
+          .select("form_data")
+          .eq("id", session.id)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error || !data) return;
+            setSelectedSession((prev) =>
+              prev && prev.id === session.id
+                ? { ...prev, form_data: (data.form_data as Record<string, unknown>) || {} }
+                : prev
+            );
+          });
+      });
+    }
+
     // Mark as viewed
     if (!session.is_viewed) {
       ensureValidRLSSession().then(valid => {
@@ -1723,19 +1471,6 @@ export default function AdminLeads() {
     setSelectedSession(session);
     setCustomMessage("");
     setEmailDialogOpen(true);
-  };
-
-  const openQuickLeadDetail = (lead: QuickLead) => {
-    setSelectedQuickLead(lead);
-    setQuickLeadAdminNotes(lead.admin_notes || lead.notes || "");
-    setQuickLeadDetailOpen(true);
-    // Mark as viewed
-    if (!lead.is_viewed) {
-      supabase.from("quick_leads").update({ is_viewed: true }).eq("id", lead.id).then(({ error }) => {
-        if (error) { console.error("Failed to mark quick lead as viewed:", error); return; }
-        queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-      });
-    }
   };
 
   const openValuationDetail = (lead: ValuationLead) => {
@@ -1790,8 +1525,6 @@ export default function AdminLeads() {
     if (!deleteTarget) return;
     if (deleteTarget.type === "wizard") {
       deleteWizardSessions.mutate(deleteTarget.ids);
-    } else if (deleteTarget.type === "quick") {
-      deleteQuickLeads.mutate(deleteTarget.ids);
     } else {
       deleteValuationLeads.mutate(deleteTarget.ids);
     }
@@ -1799,7 +1532,7 @@ export default function AdminLeads() {
     setDeleteTarget(null);
   };
 
-  const openDeleteDialog = (type: "wizard" | "quick" | "valuation", ids: string[]) => {
+  const openDeleteDialog = (type: "wizard" | "valuation", ids: string[]) => {
     setDeleteTarget({ type, ids });
     setDeleteDialogOpen(true);
   };
@@ -1821,23 +1554,6 @@ export default function AdminLeads() {
     }
   };
 
-  const toggleLeadSelection = (id: string) => {
-    setSelectedLeadIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAllLeads = () => {
-    if (selectedLeadIds.size === filteredQuickLeads.length) {
-      setSelectedLeadIds(new Set());
-    } else {
-      setSelectedLeadIds(new Set(filteredQuickLeads.map((l) => l.id)));
-    }
-  };
-
   const toggleValuationSelection = (id: string) => {
     setSelectedValuationIds((prev) => {
       const next = new Set(prev);
@@ -1855,7 +1571,7 @@ export default function AdminLeads() {
     }
   };
 
-  const isDeleting = deleteWizardSessions.isPending || deleteQuickLeads.isPending || deleteValuationLeads.isPending;
+  const isDeleting = deleteWizardSessions.isPending || deleteValuationLeads.isPending;
 
   const sendRegistrationInvite = async (email: string, name?: string, sourceId?: string) => {
     try {
@@ -1905,7 +1621,6 @@ export default function AdminLeads() {
           variant="outline"
           onClick={() => {
             queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
-            queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
             queryClient.invalidateQueries({ queryKey: ["adminValuationLeads"] });
           }}
         >
@@ -1920,7 +1635,7 @@ export default function AdminLeads() {
           title="Gesamt Sessions"
           value={stats.total}
           icon={Users}
-          description={`${stats.quickLeadsTotal} Quick-Leads, ${stats.valuationLeadsTotal} Wertrechner`}
+          description={`${stats.valuationLeadsTotal} Wertrechner-Leads`}
           color="bg-blue-500"
         />
         <StatCard
@@ -1997,15 +1712,6 @@ export default function AdminLeads() {
               {wizardSessions.filter(s => !s.is_viewed && (!s.disposition || s.disposition === "already_customer")).length > 0 && (
                 <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
                   {wizardSessions.filter(s => !s.is_viewed && (!s.disposition || s.disposition === "already_customer")).length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="quick_leads" className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              Quick-Leads ({quickLeads.filter(l => !l.disposition || l.disposition === "already_customer").length})
-              {quickLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length > 0 && (
-                <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] rounded-full">
-                  {quickLeads.filter(l => !l.is_viewed && (!l.disposition || l.disposition === "already_customer")).length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -2115,9 +1821,6 @@ export default function AdminLeads() {
                           if (item.type === "wizard") {
                             const session = wizardSessions.find(s => s.id === item.id);
                             if (session) openDetail(session);
-                          } else if (item.type === "quick") {
-                            const lead = quickLeads.find(l => l.id === item.id);
-                            if (lead) openQuickLeadDetail(lead);
                           } else if (item.type === "valuation") {
                             const lead = valuationLeads.find(l => l.id === item.id);
                             if (lead) openValuationDetail(lead);
@@ -2364,8 +2067,22 @@ export default function AdminLeads() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                setConvertSession(session);
+                              onClick={async () => {
+                                let sessionWithFormData = session;
+                                if (!session.form_data) {
+                                  const valid = await ensureValidRLSSession();
+                                  if (valid) {
+                                    const { data } = await supabase
+                                      .from("wizard_sessions")
+                                      .select("form_data")
+                                      .eq("id", session.id)
+                                      .maybeSingle();
+                                    if (data) {
+                                      sessionWithFormData = { ...session, form_data: (data.form_data as Record<string, unknown>) || {} };
+                                    }
+                                  }
+                                }
+                                setConvertSession(sessionWithFormData);
                                 setConvertSourceType("wizard");
                                 setConvertDialogOpen(true);
                               }}
@@ -2407,221 +2124,6 @@ export default function AdminLeads() {
                   page={leadsPage}
                   pageSize={LEADS_PAGE_SIZE}
                   totalItems={filteredSessions.length}
-                  onPageChange={setLeadsPage}
-                />
-              </div>
-            )}
-          </Card>
-        </TabsContent>
-
-        {/* ================================================================ */}
-        {/* Quick Leads Tab - EXTENDED */}
-        {/* ================================================================ */}
-        <TabsContent value="quick_leads">
-          {selectedLeadIds.size > 0 && (
-            <div className="flex flex-wrap items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 mb-3 animate-fade-in gap-2">
-              <span className="text-sm font-medium">
-                {selectedLeadIds.size} Lead{selectedLeadIds.size > 1 ? "s" : ""} ausgewählt
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={async () => {
-                  const ids = Array.from(selectedLeadIds);
-                  for (const id of ids) {
-                    await supabase.from("quick_leads").update({ contacted_at: new Date().toISOString(), status: "contacted" } as any).eq("id", id);
-                  }
-                  toast({ title: `${ids.length} Leads als kontaktiert markiert` });
-                  queryClient.invalidateQueries({ queryKey: ["adminQuickLeads"] });
-                  setSelectedLeadIds(new Set());
-                }}>
-                  <Phone className="w-3.5 h-3.5 mr-1.5" /> Als kontaktiert
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds(new Set())}>
-                  Aufheben
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => openDeleteDialog("quick", Array.from(selectedLeadIds))}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  {selectedLeadIds.size} löschen
-                </Button>
-              </div>
-            </div>
-          )}
-          <Card>
-            <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={filteredQuickLeads.length > 0 && selectedLeadIds.size === filteredQuickLeads.length}
-                      onCheckedChange={toggleAllLeads}
-                      aria-label="Alle auswählen"
-                    />
-                  </TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Kontakt</TableHead>
-                  <TableHead>Fahrzeug</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Quelle</TableHead>
-                  <TableHead>Wizard</TableHead>
-                  <TableHead>Erstellt</TableHead>
-                  <TableHead className="text-right">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingLeads ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Lade Leads...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredQuickLeads.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Keine Leads gefunden
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredQuickLeads.slice((leadsPage - 1) * LEADS_PAGE_SIZE, leadsPage * LEADS_PAGE_SIZE).map((lead) => (
-                    <TableRow
-                      key={lead.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${selectedLeadIds.has(lead.id) ? "bg-primary/5" : ""} ${!lead.is_viewed ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
-                      onClick={() => openQuickLeadDetail(lead)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedLeadIds.has(lead.id)}
-                          onCheckedChange={() => toggleLeadSelection(lead.id)}
-                          aria-label="Lead auswählen"
-                        />
-                      </TableCell>
-                      <TableCell className={!lead.is_viewed ? "font-bold" : "font-medium"}>
-                        {lead.name
-                          || (lead.form_data_snapshot?.customerName as string)
-                          || (lead.form_data_snapshot?.name as string)
-                          || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          {(lead.email || (lead.form_data_snapshot?.customerEmail as string)) && (
-                            <p className="text-xs flex items-center gap-1">
-                              <Mail className="w-3 h-3" /> {lead.email || (lead.form_data_snapshot?.customerEmail as string)}
-                            </p>
-                          )}
-                          {(lead.phone || (lead.form_data_snapshot?.customerPhone as string)) && (
-                            <p className="text-xs flex items-center gap-1">
-                              <Phone className="w-3 h-3" /> {lead.phone || (lead.form_data_snapshot?.customerPhone as string)}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {[lead.manufacturer || (lead.form_data_snapshot?.manufacturer as string), lead.model || (lead.form_data_snapshot?.model as string)].filter(Boolean).join(" ") || "-"}
-                        </span>
-                        {(lead.body_type || (lead.form_data_snapshot?.bodyType as string)) && (
-                          <p className="text-xs text-muted-foreground">{lead.body_type || (lead.form_data_snapshot?.bodyType as string)}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <QuickLeadStatusBadge status={lead.status} leadQuality={lead.lead_quality} contactedAt={lead.contacted_at} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {lead.source === "hero_form_partial"
-                            ? "Teilweise"
-                            : lead.source === "hero_form"
-                            ? "Hero-Formular"
-                            : lead.source || "-"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {lead.wizard_completed ? (
-                          <Badge className="bg-green-500 text-xs">Ja</Badge>
-                        ) : lead.max_wizard_step ? (
-                          <Badge variant="outline" className="text-xs text-blue-500">
-                            Schritt {lead.max_wizard_step}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs text-orange-500">
-                            Nein
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(lead.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" onClick={() => openQuickLeadDetail(lead)} title="Details anzeigen">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {lead.phone && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                window.open(`tel:${lead.phone}`);
-                                markQuickLeadContacted.mutate(lead.id);
-                              }}
-                              title="Anrufen & als kontaktiert markieren"
-                            >
-                              <PhoneCall className="w-4 h-4 text-green-600" />
-                            </Button>
-                          )}
-                          {lead.status !== "converted" && lead.lead_quality !== "converted" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setConvertSession(quickLeadToSessionData(lead));
-                                setConvertSourceType("quick");
-                                setConvertDialogOpen(true);
-                              }}
-                              title="Als Wohnmobil anlegen"
-                            >
-                              <Car className="w-4 h-4 text-primary" />
-                            </Button>
-                          )}
-                          {(lead.status === "converted" || lead.lead_quality === "converted") && lead.email && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => sendRegistrationInvite(lead.email!, lead.name || undefined, lead.id)}
-                              title="Registrierungslink senden"
-                            >
-                              <Mail className="w-4 h-4 text-purple-600" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog("quick", [lead.id])}
-                            title="Lead löschen"
-                            className="hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-            </div>
-            {filteredQuickLeads.length > LEADS_PAGE_SIZE && (
-              <div className="px-4 pb-4">
-                <AdminPagination
-                  page={leadsPage}
-                  pageSize={LEADS_PAGE_SIZE}
-                  totalItems={filteredQuickLeads.length}
                   onPageChange={setLeadsPage}
                 />
               </div>
@@ -2899,9 +2401,6 @@ export default function AdminLeads() {
                             if (item.type === "wizard") {
                               const session = wizardSessions.find(s => s.id === item.id);
                               if (session) openDetail(session);
-                            } else if (item.type === "quick") {
-                              const lead = quickLeads.find(l => l.id === item.id);
-                              if (lead) openQuickLeadDetail(lead);
                             } else if (item.type === "valuation") {
                               const lead = valuationLeads.find(l => l.id === item.id);
                               if (lead) openValuationDetail(lead);
@@ -3022,9 +2521,6 @@ export default function AdminLeads() {
                                   if (item.type === "wizard") {
                                     const session = wizardSessions.find(s => s.id === item.id);
                                     if (session) openDetail(session);
-                                  } else if (item.type === "quick") {
-                                    const lead = quickLeads.find(l => l.id === item.id);
-                                    if (lead) openQuickLeadDetail(lead);
                                   } else {
                                     const lead = valuationLeads.find(l => l.id === item.id);
                                     if (lead) openValuationDetail(lead);
@@ -3356,310 +2852,6 @@ export default function AdminLeads() {
                           size="sm"
                           className="text-blue-600 border-blue-300 hover:bg-blue-50"
                           onClick={() => sendRegistrationInvite(selectedSession.customer_email!, selectedSession.customer_name || undefined, selectedSession.id)}
-                        >
-                          <Mail className="w-4 h-4 mr-2" />
-                          Registrierungslink senden
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ================================================================== */}
-      {/* Quick Lead Detail Dialog - NEW */}
-      {/* ================================================================== */}
-      <Dialog open={quickLeadDetailOpen} onOpenChange={setQuickLeadDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedQuickLead && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <UserPlus className="w-5 h-5" />
-                  Quick-Lead Details
-                </DialogTitle>
-                <DialogDescription>
-                  {[selectedQuickLead.manufacturer, selectedQuickLead.model].filter(Boolean).join(" ") || "Keine Fahrzeugdaten"}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6">
-                {/* Status */}
-                <div className="flex items-center justify-between">
-                  <QuickLeadStatusBadge
-                    status={selectedQuickLead.status}
-                    leadQuality={selectedQuickLead.lead_quality}
-                    contactedAt={selectedQuickLead.contacted_at}
-                  />
-                  {selectedQuickLead.lead_quality && (
-                    <Badge variant="outline" className="text-xs">
-                      Qualität: {selectedQuickLead.lead_quality}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Contact Info */}
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4" /> Kontaktdaten
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="font-medium">{selectedQuickLead.name || "Nicht angegeben"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">E-Mail</p>
-                      {selectedQuickLead.email ? (
-                        <a href={`mailto:${selectedQuickLead.email}`} className="font-medium text-primary hover:underline text-sm">
-                          {selectedQuickLead.email}
-                        </a>
-                      ) : (
-                        <p className="text-muted-foreground">Nicht angegeben</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Telefon</p>
-                      {selectedQuickLead.phone ? (
-                        <a href={`tel:${selectedQuickLead.phone}`} className="font-medium text-primary hover:underline">
-                          {selectedQuickLead.phone}
-                        </a>
-                      ) : (
-                        <p className="text-muted-foreground">Nicht angegeben</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Vehicle Data */}
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Car className="w-4 h-4" /> Fahrzeugdaten
-                  </h3>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Hersteller</span>
-                      <span className="font-medium">{selectedQuickLead.manufacturer || "-"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Modell</span>
-                      <span className="font-medium">{selectedQuickLead.model || "-"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Aufbauart</span>
-                      <span className="font-medium">{selectedQuickLead.body_type || "-"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Verkaufsweg</span>
-                      <span className="font-medium">{selectedQuickLead.sale_channel ? (SALE_CHANNEL_LABELS[selectedQuickLead.sale_channel] || selectedQuickLead.sale_channel) : "-"}</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Form Data Snapshot (if available) */}
-                {selectedQuickLead.form_data_snapshot && Object.keys(selectedQuickLead.form_data_snapshot).length > 0 && (
-                  <Card className="p-4">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4" /> Wizard-Daten Snapshot
-                    </h3>
-                    <div className="space-y-4">
-                      {FIELD_GROUPS.map((group) => {
-                        const groupEntries = group.fields.filter((field) => {
-                          const val = (selectedQuickLead.form_data_snapshot as Record<string, unknown>)?.[field];
-                          return val !== null && val !== undefined && val !== "" && field !== "photos";
-                        });
-                        if (groupEntries.length === 0) return null;
-                        return (
-                          <div key={group.title}>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
-                              {group.title}
-                            </p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                              {groupEntries.map((field) => {
-                                const val = (selectedQuickLead.form_data_snapshot as Record<string, unknown>)[field];
-                                return (
-                                  <div key={field} className="flex justify-between py-0.5">
-                                    <span className="text-muted-foreground">{FIELD_LABELS[field] || field}</span>
-                                    <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(field, val)}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {/* Ungrouped fields */}
-                      {(() => {
-                        const allGroupedFields = FIELD_GROUPS.flatMap((g) => g.fields);
-                        const ungrouped = Object.entries(selectedQuickLead.form_data_snapshot || {}).filter(
-                          ([key, val]) =>
-                            !allGroupedFields.includes(key) &&
-                            val !== null && val !== undefined && val !== "" &&
-                            key !== "photos" && key !== "photos_count" &&
-                            key !== "customerName" && key !== "customerEmail" && key !== "customerPhone"
-                        );
-                        if (ungrouped.length === 0) return null;
-                        return (
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-1">
-                              Sonstige
-                            </p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                              {ungrouped.map(([key, val]) => (
-                                <div key={key} className="flex justify-between py-0.5">
-                                  <span className="text-muted-foreground">{FIELD_LABELS[key] || key}</span>
-                                  <span className="font-medium text-right max-w-[180px] truncate">{formatFieldValue(key, val)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </Card>
-                )}
-
-                {/* Meta Info */}
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> Herkunft & Tracking
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Quelle</span>
-                      <span>{selectedQuickLead.source || "-"}</span>
-                    </div>
-                    {selectedQuickLead.page_url && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Seite</span>
-                        <span className="text-right max-w-[250px] truncate">{selectedQuickLead.page_url}</span>
-                      </div>
-                    )}
-                    {selectedQuickLead.referrer && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Referrer</span>
-                        <span className="text-right max-w-[250px] truncate">{selectedQuickLead.referrer}</span>
-                      </div>
-                    )}
-                    {selectedQuickLead.max_wizard_step != null && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Max. Wizard-Schritt</span>
-                        <span>{selectedQuickLead.max_wizard_step} ({STEP_NAMES[selectedQuickLead.max_wizard_step] || "-"})</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Wizard abgeschlossen</span>
-                      <span>{selectedQuickLead.wizard_completed ? "Ja" : "Nein"}</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Timeline */}
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="w-4 h-4" /> Zeitverlauf
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Erstellt</span>
-                      <span>{format(new Date(selectedQuickLead.created_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
-                    </div>
-                    {selectedQuickLead.updated_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Zuletzt aktualisiert</span>
-                        <span>{formatDistanceToNow(new Date(selectedQuickLead.updated_at), { addSuffix: true, locale: de })}</span>
-                      </div>
-                    )}
-                    {selectedQuickLead.contacted_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Kontaktiert</span>
-                        <span>{format(new Date(selectedQuickLead.contacted_at), "dd.MM.yyyy HH:mm", { locale: de })}</span>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Admin Notes */}
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" /> Admin-Notizen
-                  </h3>
-                  <Textarea
-                    value={quickLeadAdminNotes}
-                    onChange={(e) => setQuickLeadAdminNotes(e.target.value)}
-                    placeholder="Notizen zum Lead hinzufügen (z.B. Gesprächsnotizen, Vereinbarungen...)"
-                    rows={3}
-                  />
-                  <Button
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => updateQuickLeadAdminNotes.mutate({ id: selectedQuickLead.id, notes: quickLeadAdminNotes })}
-                    disabled={updateQuickLeadAdminNotes.isPending}
-                  >
-                    {updateQuickLeadAdminNotes.isPending ? "Speichern..." : "Notiz speichern"}
-                  </Button>
-                </Card>
-
-                {/* Disposition Buttons */}
-                <DispositionButtons
-                  currentDisposition={selectedQuickLead.disposition}
-                  onSetDisposition={(d) => updateQuickLeadDisposition.mutate({ id: selectedQuickLead.id, disposition: d })}
-                  isPending={updateQuickLeadDisposition.isPending}
-                />
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  {selectedQuickLead.phone && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        window.open(`tel:${selectedQuickLead.phone}`);
-                        markQuickLeadContacted.mutate(selectedQuickLead.id);
-                      }}
-                    >
-                      <PhoneCall className="w-4 h-4 mr-2 text-green-600" />
-                      Anrufen & vermerken
-                    </Button>
-                  )}
-                  {!selectedQuickLead.contacted_at && (
-                    <Button
-                      variant="outline"
-                      onClick={() => markQuickLeadContacted.mutate(selectedQuickLead.id)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2 text-blue-600" />
-                      Als kontaktiert markieren
-                    </Button>
-                  )}
-                  {selectedQuickLead.status !== "converted" && selectedQuickLead.lead_quality !== "converted" && (
-                    <Button
-                      className="gradient-hero hover:gradient-hero-hover"
-                      onClick={() => {
-                        setConvertSession(quickLeadToSessionData(selectedQuickLead));
-                        setConvertSourceType("quick");
-                        setConvertDialogOpen(true);
-                        setQuickLeadDetailOpen(false);
-                      }}
-                    >
-                      <Car className="w-4 h-4 mr-2" />
-                      Als Wohnmobil anlegen
-                    </Button>
-                  )}
-                  {(selectedQuickLead.status === "converted" || selectedQuickLead.lead_quality === "converted") && (
-                    <>
-                      <Badge variant="outline" className="text-purple-600 border-purple-300 py-1.5 px-3">
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Bereits als Wohnmobil angelegt
-                      </Badge>
-                      {selectedQuickLead.email && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                          onClick={() => sendRegistrationInvite(selectedQuickLead.email!, selectedQuickLead.name || undefined, selectedQuickLead.id)}
                         >
                           <Mail className="w-4 h-4 mr-2" />
                           Registrierungslink senden

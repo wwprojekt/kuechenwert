@@ -21,7 +21,6 @@ import { AccountLocationStep } from "@/components/wizard/AccountLocationStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useWizardSession } from "@/hooks/useWizardSession";
-import { captureOrUpdateLead, updateLeadWizardProgress, markLeadWizardCompleted } from "@/lib/leadTrackingService";
 import { trackWizardStarted, trackWizardStep, trackWizardAbandoned } from "@/lib/gadsConversionService";
 import { trackMetaInitiateCheckout, trackMetaWizardStep, trackMetaLead } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
@@ -309,30 +308,6 @@ const VerkaufenWizard = () => {
     };
   }, [currentStep, formData, saveProgress]);
 
-  // Capture lead when user reaches Step 5 (Quick Contact) and provides email.
-  // We also include the vehicle-identity fields so a user who tweaks the
-  // manufacturer/model AFTER giving their email updates the lead record.
-  useEffect(() => {
-    if (currentStep >= 5 && formData.customerEmail && formData.customerName) {
-      captureOrUpdateLead({
-        name: formData.customerName,
-        email: formData.customerEmail,
-        manufacturer: formData.manufacturer,
-        model: formData.model,
-        bodyType: formData.bodyType,
-        source: 'wizard_quick_contact',
-        pageUrl: window.location.pathname,
-      });
-    }
-  }, [
-    currentStep,
-    formData.customerEmail,
-    formData.customerName,
-    formData.manufacturer,
-    formData.model,
-    formData.bodyType,
-  ]);
-
   // Higher starting percentage reduces abandonment psychology
   const progressMap: Record<number, number> = { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
@@ -342,20 +317,10 @@ const VerkaufenWizard = () => {
     if (isValid && currentStep < steps.length) {
       const nextStep = currentStep + 1;
 
-      // Bei Step 5 → 6: Lead SOFORT erfassen (Name + E-Mail sind jetzt vorhanden)
+      // Bei Step 5 → 6: Wizard-Session sofort (ohne Debounce) mit Kontaktdaten
+      // aktualisieren, damit der Lead auch dann erhalten bleibt, wenn der User
+      // danach abbricht.
       if (currentStep === 5 && formData.customerEmail && formData.customerName) {
-        // Lead sofort in quick_leads erfassen
-        await captureOrUpdateLead({
-          name: formData.customerName,
-          email: formData.customerEmail,
-          manufacturer: formData.manufacturer,
-          model: formData.model,
-          bodyType: formData.bodyType,
-          source: 'wizard_quick_contact',
-          pageUrl: window.location.pathname,
-        });
-
-        // Wizard-Session sofort (ohne Debounce) mit Kontaktdaten aktualisieren
         await updateContactFromAuth({
           email: formData.customerEmail,
           firstName: formData.customerName?.split(' ')[0],
@@ -363,10 +328,6 @@ const VerkaufenWizard = () => {
         });
       }
 
-      updateLeadWizardProgress({
-        step: nextStep,
-        formData: formData as unknown as Record<string, unknown>,
-      });
       const nextStepInfo = steps[nextStep - 1];
       trackWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
       trackMetaWizardStep(nextStep, nextStepInfo?.name || `Schritt ${nextStep}`);
@@ -412,7 +373,6 @@ const VerkaufenWizard = () => {
     );
     if (success) {
       await markCompleted();
-      markLeadWizardCompleted();
       // Google Ads trackWizardCompleted() wird bereits in useWizardForm.ts aufgerufen
       // (mit korrekter Transaction ID für Deduplizierung).
       // Ein zweiter Aufruf hier würde eine Doppel-Conversion mit neuer Transaction ID erzeugen.

@@ -29,12 +29,11 @@ export function useAdminNotificationCounts() {
       if (!sessionValid) return null;
 
       const [
-        wizardRes, leadsRes, valuationRes, supportRes, contactRes,
+        wizardRes, valuationRes, supportRes, contactRes,
         dealerRes, questionsRes, unreadEmailsRes, reviewsRes,
         claimsRes, appointmentsRes, offersRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("quick_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("support_messages").select("*", { count: "exact", head: true }).is("admin_response", null),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).or("status.eq.new,status.is.null"),
@@ -48,7 +47,7 @@ export function useAdminNotificationCounts() {
       ]);
 
       return {
-        leads: (wizardRes.count || 0) + (leadsRes.count || 0) + (valuationRes.count || 0),
+        leads: (wizardRes.count || 0) + (valuationRes.count || 0),
         support: supportRes.count || 0,
         contacts: contactRes.count || 0,
         dealers: dealerRes.count || 0,
@@ -60,8 +59,12 @@ export function useAdminNotificationCounts() {
         offers: offersRes.count || 0,
       };
     },
-    refetchInterval: 30000,
-    staleTime: 10000,
+    // Badge counts are not time-critical; 90 s is plenty and cuts the total
+    // count-query load in the admin layout by ~66 %. staleTime 60 s prevents
+    // refetch-on-window-focus from hammering the DB when an admin alt-tabs.
+    refetchInterval: 90000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 

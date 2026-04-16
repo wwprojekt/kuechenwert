@@ -10,6 +10,7 @@ import { trackWizardCompleted, trackUserRegistered, setEnhancedConversionFromFor
 import { getTrackingData, getStoredClickIds } from "@/lib/clickIdService";
 import { trackEvent } from "@/lib/analyticsService";
 import { ensureValidSession, ensureValidRLSSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
+import { optimizeImage, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
 import type { Database } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
@@ -631,12 +632,23 @@ export const useWizardForm = () => {
       const photoUrls: string[] = [];
       if (formData.photos.length > 0) {
         const uploadPromises = formData.photos.map(async (file, i) => {
-          const fileExt = file.name.split('.').pop();
+          let uploadFile: File;
+          let fileExt: string;
+          try {
+            const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
+            uploadFile = optimized.file;
+            fileExt = optimized.format;
+          } catch {
+            uploadFile = file;
+            fileExt = file.name.split('.').pop() || 'jpg';
+          }
           const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
             .from('motorhome-photos')
-            .upload(fileName, file);
+            .upload(fileName, uploadFile, {
+              contentType: uploadFile.type || `image/${fileExt}`,
+            });
 
           if (uploadError) throw uploadError;
 

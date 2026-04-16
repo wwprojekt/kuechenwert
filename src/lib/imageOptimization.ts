@@ -141,6 +141,15 @@ class ImageOptimizer {
       canvas.width = width;
       canvas.height = height;
 
+      // Fill with white background BEFORE drawing the image.
+      // Canvas defaults to transparent black (rgba(0,0,0,0)).
+      // JPEG doesn't support transparency, so without this fill,
+      // any transparent pixels become BLACK in the output.
+      if (config.format === 'jpeg') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+      }
+
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);

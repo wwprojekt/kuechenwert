@@ -23,7 +23,7 @@ import { de } from "date-fns/locale";
 
 interface ActionItem {
   id: string;
-  type: "wizard" | "lead" | "message" | "dealer" | "question" | "motorhome";
+  type: "wizard" | "lead" | "message" | "dealer" | "question" | "motorhome" | "offer";
   title: string;
   subtitle: string;
   time: string;
@@ -285,6 +285,49 @@ function useActionItems() {
             iconColor: "text-indigo-600 bg-indigo-100",
             badge: "Frage",
             badgeColor: "bg-indigo-500",
+          });
+        }
+      }
+
+      // Offene Preisvorschläge (pending + countered): hoch-priorisiert
+      const { data: pendingOffers } = await supabase
+        .from("post_auction_offers")
+        .select("id, offer_amount, status, created_at, auction_id, buyer_id")
+        .in("status", ["pending", "countered"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (pendingOffers && pendingOffers.length > 0) {
+        const auctionIds = [...new Set(pendingOffers.map((o: any) => o.auction_id))];
+        const buyerIds = [...new Set(pendingOffers.map((o: any) => o.buyer_id))];
+
+        const [{ data: auctionsData }, { data: buyersData }] = await Promise.all([
+          supabase.from("auctions").select("id, motorhome:motorhomes(manufacturer, model, sale_channel)").in("id", auctionIds),
+          supabase.from("profiles").select("id, company_name, first_name, last_name").in("id", buyerIds),
+        ]);
+
+        const auctionMap = new Map((auctionsData || []).map((a: any) => [a.id, a]));
+        const buyerMap = new Map((buyersData || []).map((b: any) => [b.id, b]));
+
+        for (const o of pendingOffers) {
+          const a = auctionMap.get(o.auction_id) as any;
+          const mh = Array.isArray(a?.motorhome) ? a.motorhome[0] : a?.motorhome;
+          const buyer = buyerMap.get(o.buyer_id) as any;
+          const buyerName = buyer?.company_name || `${buyer?.first_name || ""} ${buyer?.last_name || ""}`.trim() || "Unbekannt";
+          const vehicleName = `${mh?.manufacturer || ""} ${mh?.model || ""}`.trim() || "Fahrzeug";
+          const isFestpreis = mh?.sale_channel === "instant_price";
+          items.push({
+            id: `offer-${o.id}`,
+            type: "offer",
+            title: `${o.status === "countered" ? "Gegenangebot offen" : (isFestpreis ? "Neuer Preisvorschlag" : "Neues Kaufangebot")}: ${Number(o.offer_amount).toLocaleString("de-DE")} €`,
+            subtitle: `${buyerName} → ${vehicleName}`,
+            time: o.created_at || "",
+            link: "/admin/offers",
+            priority: "high",
+            icon: Gavel,
+            iconColor: "text-green-600 bg-green-100",
+            badge: o.status === "countered" ? "Gegenangebot" : (isFestpreis ? "Vorschlag" : "Kaufchance"),
+            badgeColor: o.status === "countered" ? "bg-amber-500" : "bg-green-500",
           });
         }
       }

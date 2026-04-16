@@ -836,20 +836,26 @@ export default function DashboardOverview() {
                   </div>
                 )}
 
-                {/* Kaufchance: Angebote-Vorschau & CTA */}
-                {isKaufchance && (
+                {/* Kaufchance / Festpreis: Angebote-Vorschau & CTA */}
+                {(isKaufchance || (auction?.status === "active" && mh.sale_channel === "instant_price")) && (
                   <div className="border-t-2 border-purple-300 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-950/30 dark:to-amber-950/20 px-4 sm:px-6 py-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2">
                         <Handshake className="w-5 h-5 text-purple-600" />
                         <h3 className="font-semibold text-sm text-purple-800 dark:text-purple-200">
-                          Kaufchance – Händlerangebote
+                          {isKaufchance ? "Kaufchance – Händlerangebote" : "Preisvorschläge von Händlern"}
                         </h3>
                       </div>
-                      {auction?.kaufchance_expires_at && (
+                      {isKaufchance && auction?.kaufchance_expires_at && (
                         <Badge variant="outline" className="border-purple-300 text-purple-700 dark:text-purple-300 text-xs">
                           <Clock className="w-3 h-3 mr-1" />
                           Frist: {format(new Date(auction.kaufchance_expires_at), "dd.MM. HH:mm 'Uhr'", { locale: de })}
+                        </Badge>
+                      )}
+                      {!isKaufchance && auction?.end_time && (
+                        <Badge variant="outline" className="border-purple-300 text-purple-700 dark:text-purple-300 text-xs">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Inserat bis: {format(new Date(auction.end_time), "dd.MM. HH:mm 'Uhr'", { locale: de })}
                         </Badge>
                       )}
                     </div>
@@ -857,7 +863,7 @@ export default function DashboardOverview() {
                     {mh.kaufchanceInfo ? (
                       <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-3">
                         <div className="p-1.5 sm:p-2.5 rounded-lg bg-white/60 dark:bg-background/40 text-center">
-                          <p className="text-[10px] text-muted-foreground">Angebote</p>
+                          <p className="text-[10px] text-muted-foreground">{isKaufchance ? "Angebote" : "Vorschläge"}</p>
                           <p className="text-sm sm:text-lg font-bold text-purple-600">{mh.kaufchanceInfo.totalOffers}</p>
                         </div>
                         <div className="p-1.5 sm:p-2.5 rounded-lg bg-white/60 dark:bg-background/40 text-center">
@@ -873,7 +879,9 @@ export default function DashboardOverview() {
                       </div>
                     ) : (
                       <p className="text-sm text-purple-700 dark:text-purple-300 mb-3">
-                        Die eingeladenen Händler wurden benachrichtigt. Angebote erscheinen hier automatisch.
+                        {isKaufchance
+                          ? "Die eingeladenen Händler wurden benachrichtigt. Angebote erscheinen hier automatisch."
+                          : "Noch keine Preisvorschläge. Sobald Händler Vorschläge abgeben, erscheinen diese hier automatisch."}
                       </p>
                     )}
 
@@ -881,8 +889,8 @@ export default function DashboardOverview() {
                       <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white shadow-lg gap-2">
                         <Handshake className="w-4 h-4" />
                         {mh.kaufchanceInfo?.pendingOffers
-                          ? `${mh.kaufchanceInfo.pendingOffers} offene Angebote ansehen`
-                          : "Angebote ansehen & verwalten"}
+                          ? `${mh.kaufchanceInfo.pendingOffers} offene ${isKaufchance ? "Angebote" : "Vorschläge"} ansehen`
+                          : `${isKaufchance ? "Angebote" : "Vorschläge"} ansehen & verwalten`}
                       </Button>
                     </Link>
                   </div>

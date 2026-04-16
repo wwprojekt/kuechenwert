@@ -30,6 +30,8 @@ interface AuctionEmailRequest {
   counterAmount?: string;
   // Festpreis flag
   isFestpreis?: boolean;
+  // Flag: listing only ended/expired (not sold) – used for lost-subject
+  listingEnded?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -42,7 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (!auth.authorized) return auth.response;
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis }: AuctionEmailRequest = await req.json();
+    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis, listingEnded }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
@@ -172,18 +174,22 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "lost":
-        subject = isFestpreis ? "Fahrzeug verkauft – Ihr Angebot wurde nicht berücksichtigt" : "Auktion beendet";
+        subject = listingEnded
+          ? "Inserat beendet – Ihr Angebot ist abgelaufen"
+          : (isFestpreis ? "Fahrzeug verkauft – Ihr Angebot wurde nicht berücksichtigt" : "Auktion beendet");
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
-          ${paragraph(isFestpreis
-            ? 'Das folgende Fahrzeug wurde an einen anderen Händler verkauft:'
-            : 'Die Auktion für folgendes Fahrzeug wurde beendet:'
+          ${paragraph(listingEnded
+            ? 'Das Inserat für folgendes Fahrzeug wurde beendet, ohne dass ein Verkauf zustande kam. Ihr Angebot ist damit abgelaufen:'
+            : (isFestpreis
+              ? 'Das folgende Fahrzeug wurde an einen anderen Händler verkauft:'
+              : 'Die Auktion für folgendes Fahrzeug wurde beendet:')
           )}
           ${infoBox(isFestpreis ? 'Angebotsdetails' : 'Auktionsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
             ${yourBid ? detailRow(isFestpreis ? 'Ihr Angebot' : 'Ihr Gebot', yourBid) : ''}
-            ${currentBid ? detailRow(isFestpreis ? 'Verkaufspreis' : 'Höchstgebot', currentBid) : ''}
+            ${currentBid && !listingEnded ? detailRow(isFestpreis ? 'Verkaufspreis' : 'Höchstgebot', currentBid) : ''}
           `, 'default', settingsData)}
           ${paragraph('Entdecken Sie weitere verfügbare Wohnmobile auf unserer Plattform.')}
           ${button('Weitere Fahrzeuge', 'https://caravanwert.de/kaufen', settingsData)}
@@ -303,7 +309,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       case "seller_new_offer":
         // WICHTIG: Kein buyerName hier! Verkäufer darf Händler-Identität erst nach Kaufvertrag erfahren.
-        subject = `Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
+        subject = isFestpreis ? `Neuer Preisvorschlag f\u00fcr ${motorhomeModel}` : `Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}

@@ -122,10 +122,10 @@ async function processAppointments(
         hour: '2-digit', minute: '2-digit',
       });
 
-      const subject = `Erinnerung: Ihr Termin morgen bei ${settingsData.site_name}`;
+      const subject = `Erinnerung: Ihr Termin in den n\u00e4chsten 24 Stunden bei ${settingsData.site_name}`;
       const emailContent = `
         ${greeting(name || undefined)}
-        ${paragraph(`Wir m&ouml;chten Sie an Ihren <strong>Termin morgen</strong> erinnern:`)}
+        ${paragraph(`Wir m&ouml;chten Sie an Ihren <strong>bevorstehenden Termin</strong> erinnern:`)}
         ${infoBox('Termindetails', `
           ${detailRow('Datum', formattedDate)}
           ${detailRow('Uhrzeit', formattedTime + ' Uhr')}

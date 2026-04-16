@@ -308,6 +308,44 @@ const handler = async (req: Request): Promise<Response> => {
           );
           console.log(`[notify-offer-action] → buyer_offer_rejected to ${buyerProfile.email}`);
         }
+
+        // Admin-CC
+        try {
+          const { data: adminRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'admin');
+          if (adminRoles && adminRoles.length > 0) {
+            const adminIds = adminRoles.map((r: { user_id: string }) => r.user_id);
+            const { data: adminProfiles } = await supabase
+              .from('profiles')
+              .select('email, first_name')
+              .in('id', adminIds);
+            if (adminProfiles) {
+              for (const admin of adminProfiles) {
+                if (admin.email && admin.email !== sellerProfile?.email) {
+                  notifications.push(
+                    supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: admin.email,
+                        name: admin.first_name || 'Admin',
+                        type: 'buyer_offer_rejected',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: 'https://caravanwert.de/admin/offers',
+                        offerAmount: formattedOffer,
+                        sellerResponse: sellerResponse || undefined,
+                        isFestpreis,
+                      },
+                    })
+                  );
+                  console.log(`[notify-offer-action] → admin CC offer_rejected to ${admin.email}`);
+                }
+              }
+            }
+          }
+        } catch (adminErr) {
+          console.error('[notify-offer-action] Failed to send admin CC (offer_rejected):', adminErr);
+        }
         break;
       }
 
@@ -330,6 +368,45 @@ const handler = async (req: Request): Promise<Response> => {
             })
           );
           console.log(`[notify-offer-action] → buyer_counter_offer to ${buyerProfile.email}`);
+        }
+
+        // Admin-CC
+        try {
+          const { data: adminRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'admin');
+          if (adminRoles && adminRoles.length > 0) {
+            const adminIds = adminRoles.map((r: { user_id: string }) => r.user_id);
+            const { data: adminProfiles } = await supabase
+              .from('profiles')
+              .select('email, first_name')
+              .in('id', adminIds);
+            if (adminProfiles) {
+              for (const admin of adminProfiles) {
+                if (admin.email && admin.email !== sellerProfile?.email) {
+                  notifications.push(
+                    supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: admin.email,
+                        name: admin.first_name || 'Admin',
+                        type: 'buyer_counter_offer',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: 'https://caravanwert.de/admin/offers',
+                        offerAmount: formattedOffer,
+                        counterAmount: formattedCounter,
+                        sellerResponse: sellerResponse || undefined,
+                        isFestpreis,
+                      },
+                    })
+                  );
+                  console.log(`[notify-offer-action] → admin CC counter_offer to ${admin.email}`);
+                }
+              }
+            }
+          }
+        } catch (adminErr) {
+          console.error('[notify-offer-action] Failed to send admin CC (counter_offer):', adminErr);
         }
         break;
       }

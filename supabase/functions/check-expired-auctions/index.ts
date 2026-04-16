@@ -104,8 +104,9 @@ Deno.serve(async (req) => {
                         type: 'lost',
                         motorhomeModel: motorhomeName,
                         auctionUrl: 'https://caravanwert.de/kaufen',
-                        yourBid: `€${Number(eo.offer_amount).toLocaleString()}`,
+                        yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                         isFestpreis: true,
+                        listingEnded: true,
                       },
                     });
                   }

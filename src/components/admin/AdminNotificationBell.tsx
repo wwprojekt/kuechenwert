@@ -44,7 +44,7 @@ export function useAdminNotificationCounts() {
         supabase.from("dealer_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
         supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split("T")[0]),
-        supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).in("status", ["pending", "countered"]),
       ]);
 
       return {

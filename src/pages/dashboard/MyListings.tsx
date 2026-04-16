@@ -6,7 +6,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown, Handshake } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -49,7 +49,37 @@ export default function MyListings() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      // Load pending offer counts for active kaufchance or instant_price listings
+      const relevantAuctionIds = (data || [])
+        .map((mh: any) => {
+          const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+          if (!a) return null;
+          if (a.status === "kaufchance") return a.id;
+          if (a.status === "active" && mh.sale_channel === "instant_price") return a.id;
+          return null;
+        })
+        .filter(Boolean) as string[];
+
+      let offerCountByAuction: Record<string, { total: number; pending: number }> = {};
+      if (relevantAuctionIds.length > 0) {
+        const { data: offers } = await supabase
+          .from("post_auction_offers")
+          .select("auction_id, status")
+          .in("auction_id", relevantAuctionIds);
+        offerCountByAuction = (offers || []).reduce<Record<string, { total: number; pending: number }>>((acc, o: any) => {
+          if (!acc[o.auction_id]) acc[o.auction_id] = { total: 0, pending: 0 };
+          acc[o.auction_id].total += 1;
+          if (o.status === "pending") acc[o.auction_id].pending += 1;
+          return acc;
+        }, {});
+      }
+
+      return (data || []).map((mh: any) => {
+        const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+        const offerCounts = a ? offerCountByAuction[a.id] : undefined;
+        return { ...mh, offerCounts };
+      });
     },
     enabled: !!user,
   });
@@ -227,6 +257,21 @@ export default function MyListings() {
                             })}
                           </span>
                         </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Pending offers badge (Kaufchance or active Festpreis) */}
+                  {motorhome.offerCounts && motorhome.offerCounts.total > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-2">
+                        <Handshake className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                          {motorhome.offerCounts.total} {motorhome.sale_channel === 'instant_price' ? 'Preisvorschlag' : 'Angebot'}{motorhome.offerCounts.total !== 1 ? (motorhome.sale_channel === 'instant_price' ? 'e' : 'e') : ''}
+                        </span>
+                      </div>
+                      {motorhome.offerCounts.pending > 0 && (
+                        <Badge className="bg-amber-500 text-white">{motorhome.offerCounts.pending} offen</Badge>
                       )}
                     </div>
                   )}

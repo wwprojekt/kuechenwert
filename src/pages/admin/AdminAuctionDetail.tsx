@@ -121,6 +121,31 @@ export default function AdminAuctionDetail() {
     enabled: !!id,
   });
 
+  // Fetch post_auction_offers (Preisvorschläge / Kaufchance-Angebote) for this auction
+  const { data: postAuctionOffers } = useQuery({
+    queryKey: ["adminAuctionOffers", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("post_auction_offers")
+        .select(`
+          id, auction_id, buyer_id, offer_amount, counter_offer_amount,
+          status, message, seller_response, expires_at, created_at, updated_at,
+          buyer:profiles!post_auction_offers_buyer_id_fkey (
+            id, first_name, last_name, email, company_name
+          )
+        `)
+        .eq("auction_id", id)
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.error("Error fetching post_auction_offers:", error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!id,
+    refetchInterval: 30000,
+  });
+
   // Activate auction mutation
   const activateAuctionMutation = useMutation({
     mutationFn: async () => {
@@ -235,9 +260,17 @@ export default function AdminAuctionDetail() {
   );
 
   const highestBid = sortedBids[0];
-  const bidCount = sortedBids.length;
-  const uniqueBidders = new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
   const isFestpreis = auction?.motorhome?.sale_channel === 'instant_price';
+
+  // For Festpreis-listings use post_auction_offers for counts and display
+  const offersArray = Array.isArray(postAuctionOffers) ? postAuctionOffers : [];
+  const sortedOffers = [...offersArray].sort(
+    (a: any, b: any) => Number(b.offer_amount) - Number(a.offer_amount)
+  );
+  const bidCount = isFestpreis ? offersArray.length : sortedBids.length;
+  const uniqueBidders = isFestpreis
+    ? new Set(offersArray.map((o: any) => o.buyer_id)).size
+    : new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
 
   // Get main photo – ensure motorhome_photos is always an array
   const rawPhotos = auction?.motorhome?.motorhome_photos;
@@ -487,8 +520,72 @@ export default function AdminAuctionDetail() {
                 </DetailSection>
               )}
 
-              {/* Bids Table */}
-              <DetailSection title={isFestpreis ? `Preisvorschläge (${bidCount})` : `Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
+              {/* Preisvorschläge-Tabelle für Festpreis-Inserate */}
+              {isFestpreis && (
+                <DetailSection title={`Preisvorschläge (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
+                  {sortedOffers.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Händler</TableHead>
+                            <TableHead>Vorschlag</TableHead>
+                            <TableHead>Gegenangebot</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Eingegangen</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedOffers.map((offer: any, index: number) => {
+                            const buyer = Array.isArray(offer.buyer) ? offer.buyer[0] : offer.buyer;
+                            const statusConfig: Record<string, { label: string; className: string }> = {
+                              pending: { label: "Offen", className: "bg-amber-500" },
+                              countered: { label: "Gegenangebot", className: "bg-blue-500" },
+                              accepted: { label: "Angenommen", className: "bg-green-500" },
+                              rejected: { label: "Abgelehnt", className: "bg-red-500" },
+                              expired: { label: "Abgelaufen", className: "bg-gray-500" },
+                              withdrawn: { label: "Zurückgezogen", className: "bg-gray-400" },
+                            };
+                            const cfg = statusConfig[offer.status] || { label: offer.status, className: "bg-gray-500" };
+                            return (
+                              <TableRow key={offer.id} className={index === 0 && offer.status === 'pending' ? "bg-green-50 dark:bg-green-950/20" : ""}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">
+                                      {buyer?.company_name || `${buyer?.first_name || ''} ${buyer?.last_name || ''}`.trim() || 'Unbekannt'}
+                                      {index === 0 && offer.status === 'pending' && (
+                                        <Badge className="ml-2" variant="default">Höchster</Badge>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{buyer?.email}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-semibold">{formatPrice(offer.offer_amount)}</TableCell>
+                                <TableCell>{offer.counter_offer_amount ? formatPrice(offer.counter_offer_amount) : "—"}</TableCell>
+                                <TableCell>
+                                  <Badge className={`${cfg.className} text-white`}>{cfg.label}</Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {formatDate(offer.created_at)}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>Noch keine Preisvorschläge vorhanden</p>
+                    </div>
+                  )}
+                </DetailSection>
+              )}
+
+              {/* Bids Table – nur für Nicht-Festpreis-Inserate */}
+              {!isFestpreis && (
+              <DetailSection title={`Gebote (${bidCount})`} icon={<TrendingUp className="w-5 h-5" />}>
                 {sortedBids.length > 0 ? (
                   <div className="overflow-x-auto">
                   <Table>
@@ -588,10 +685,11 @@ export default function AdminAuctionDetail() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>{isFestpreis ? 'Noch keine Preisvorschläge vorhanden' : 'Noch keine Gebote vorhanden'}</p>
+                    <p>Noch keine Gebote vorhanden</p>
                   </div>
                 )}
               </DetailSection>
+              )}
             </div>
 
             {/* Right Column - Sidebar */}
@@ -646,42 +744,85 @@ export default function AdminAuctionDetail() {
                 </div>
               </DetailSection>
 
-              {/* Highest Bidder */}
-              {highestBid && (
-                <DetailSection title={isFestpreis ? "Höchstes Angebot" : "Höchstbietender"} icon={<TrendingUp className="w-5 h-5" />}>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="font-semibold text-lg">
-                        {highestBid.bidder?.first_name} {highestBid.bidder?.last_name}
-                      </p>
-                      {highestBid.bidder?.company_name && (
-                        <p className="text-sm text-muted-foreground">{highestBid.bidder.company_name}</p>
-                      )}
-                    </div>
-                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                      <p className="text-sm text-muted-foreground">{isFestpreis ? 'Höchster Vorschlag' : 'Höchstgebot'}</p>
-                      <p className="text-2xl font-bold text-green-600">{formatPrice(highestBid.amount)}</p>
-                    </div>
-                    <Separator />
-                    <div className="space-y-3">
-                      <a
-                        href={`mailto:${highestBid.bidder?.email}`}
-                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+              {/* Highest Bidder / Höchster Vorschlag */}
+              {(() => {
+                if (isFestpreis) {
+                  const topOffer = sortedOffers.find((o: any) => o.status === 'pending' || o.status === 'countered') || sortedOffers[0];
+                  if (!topOffer) return null;
+                  const buyer = Array.isArray(topOffer.buyer) ? topOffer.buyer[0] : topOffer.buyer;
+                  return (
+                    <DetailSection title="Höchster Vorschlag" icon={<TrendingUp className="w-5 h-5" />}>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="font-semibold text-lg">
+                            {buyer?.first_name} {buyer?.last_name}
+                          </p>
+                          {buyer?.company_name && (
+                            <p className="text-sm text-muted-foreground">{buyer.company_name}</p>
+                          )}
+                        </div>
+                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                          <p className="text-sm text-muted-foreground">Preisvorschlag</p>
+                          <p className="text-2xl font-bold text-green-600">{formatPrice(topOffer.offer_amount)}</p>
+                        </div>
+                        <Separator />
+                        <div className="space-y-3">
+                          <a
+                            href={`mailto:${buyer?.email}`}
+                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                          >
+                            <Mail className="w-4 h-4" />
+                            {buyer?.email}
+                          </a>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => navigate(`/admin/users/${buyer?.id}`)}
+                        >
+                          Profil anzeigen
+                        </Button>
+                      </div>
+                    </DetailSection>
+                  );
+                }
+                if (!highestBid) return null;
+                return (
+                  <DetailSection title="Höchstbietender" icon={<TrendingUp className="w-5 h-5" />}>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-semibold text-lg">
+                          {highestBid.bidder?.first_name} {highestBid.bidder?.last_name}
+                        </p>
+                        {highestBid.bidder?.company_name && (
+                          <p className="text-sm text-muted-foreground">{highestBid.bidder.company_name}</p>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                        <p className="text-sm text-muted-foreground">Höchstgebot</p>
+                        <p className="text-2xl font-bold text-green-600">{formatPrice(highestBid.amount)}</p>
+                      </div>
+                      <Separator />
+                      <div className="space-y-3">
+                        <a
+                          href={`mailto:${highestBid.bidder?.email}`}
+                          className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                        >
+                          <Mail className="w-4 h-4" />
+                          {highestBid.bidder?.email}
+                        </a>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => navigate(`/admin/users/${highestBid.bidder?.id}`)}
                       >
-                        <Mail className="w-4 h-4" />
-                        {highestBid.bidder?.email}
-                      </a>
+                        Profil anzeigen
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/admin/users/${highestBid.bidder?.id}`)}
-                    >
-                      Profil anzeigen
-                    </Button>
-                  </div>
-                </DetailSection>
-              )}
+                  </DetailSection>
+                );
+              })()}
 
               {/* Photos Preview */}
               {photosArray.length > 0 && (

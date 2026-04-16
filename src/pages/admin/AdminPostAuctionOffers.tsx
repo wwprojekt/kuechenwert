@@ -1568,13 +1568,15 @@ export default function AdminPostAuctionOffers() {
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-xl">
-                    <Gavel className="w-5 h-5 text-amber-600" />
-                    Kaufchance: {vehicleName}
+                    <Gavel className={`w-5 h-5 ${motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-amber-600'}`} />
+                    {motorhome?.sale_channel === 'instant_price' ? 'Festpreis: ' : 'Kaufchance: '}{vehicleName}
                     {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
                   </DialogTitle>
                   <DialogDescription className="flex items-center gap-3 flex-wrap">
                     {isExpired ? (
                       <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
+                    ) : motorhome?.sale_channel === 'instant_price' ? (
+                      <Badge className="bg-yellow-500 text-white">Festpreis aktiv</Badge>
                     ) : (
                       <Badge className="bg-amber-500 text-white">Aktiv</Badge>
                     )}

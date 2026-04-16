@@ -292,7 +292,13 @@ Deno.serve(async (req) => {
       console.error('Error closing auction after instant buy:', auctionUpdateError);
     }
 
-    // 7b. Expire any pending price proposals for this listing
+    // 7b. Fetch + expire pending price proposals for this listing (notify proposers below)
+    const { data: expiredOffers } = await supabaseAdmin
+      .from('post_auction_offers')
+      .select('buyer_id, offer_amount')
+      .eq('auction_id', auctionId)
+      .in('status', ['pending', 'countered']);
+
     const { error: expireOffersErr } = await supabaseAdmin
       .from('post_auction_offers')
       .update({ status: 'expired', seller_response: 'Fahrzeug wurde per Sofortkauf verkauft', updated_at: new Date().toISOString() })
@@ -649,6 +655,37 @@ Deno.serve(async (req) => {
           }
         } catch (e: any) {
           console.error('Error processing loser notification for:', loserId, e);
+        }
+      }
+    }
+
+    // ─── 12b. NOTIFY OPEN PROPOSERS (Festpreis price proposals) ─
+    if (expiredOffers && expiredOffers.length > 0) {
+      for (const eo of expiredOffers) {
+        if (eo.buyer_id === user.id) continue;
+        try {
+          const { data: proposerProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('email, first_name, company_name')
+            .eq('id', eo.buyer_id)
+            .single();
+
+          if (proposerProfile?.email) {
+            supabaseAdmin.functions.invoke('send-auction-notification', {
+              body: {
+                email: proposerProfile.email,
+                name: proposerProfile.company_name || proposerProfile.first_name || proposerProfile.email.split('@')[0],
+                type: 'lost',
+                motorhomeModel: motorhomeName,
+                auctionUrl: 'https://caravanwert.de/kaufen',
+                yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
+                currentBid: `€${Number(instantPrice).toLocaleString('de-DE')}`,
+                isFestpreis: true,
+              },
+            }).catch((e: any) => console.error('Error sending proposer lost notification:', e));
+          }
+        } catch (e: any) {
+          console.error('Error processing proposer notification for:', eo.buyer_id, e);
         }
       }
     }

@@ -415,7 +415,7 @@ Deno.serve(async (req) => {
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
                 ${detailRow('Fahrzeug', motorhomeName)}
-                ${detailRow('Kaufpreis', `€${salePrice.toLocaleString()}`)}
+                ${detailRow('Kaufpreis', `€${salePrice.toLocaleString('de-DE')}`)}
               `, 'success')}
               ${paragraph('Bitte prüfen Sie den Vertrag sorgfältig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
               ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
                 ${detailRow('Fahrzeug', motorhomeName)}
-                ${detailRow('Kaufpreis', `€${salePrice.toLocaleString()}`)}
+                ${detailRow('Kaufpreis', `€${salePrice.toLocaleString('de-DE')}`)}
               `, 'success')}
               ${paragraph('Bitte prüfen Sie den Vertrag sorgfältig. Die Rechnung über die Vermittlungsprovision erhalten Sie in einer separaten E-Mail.')}
               ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
@@ -571,7 +571,7 @@ Deno.serve(async (req) => {
               type: 'seller_sold',
               motorhomeModel: motorhomeName,
               auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome?.id}`,
-              currentBid: `€${salePrice.toLocaleString()}`,
+              currentBid: `€${salePrice.toLocaleString('de-DE')}`,
             },
           });
           if (sellerErr) throw sellerErr;
@@ -611,8 +611,8 @@ Deno.serve(async (req) => {
                   type: 'lost',
                   motorhomeModel: motorhomeName,
                   auctionUrl: 'https://caravanwert.de/kaufen',
-                  yourBid: `€${Number(inv.highest_bid).toLocaleString()}`,
-                  currentBid: `€${salePrice.toLocaleString()}`,
+                  yourBid: `€${Number(inv.highest_bid).toLocaleString('de-DE')}`,
+                  currentBid: `€${salePrice.toLocaleString('de-DE')}`,
                   isFestpreis: isFestpreisProposal,
                 },
               });
@@ -646,8 +646,8 @@ Deno.serve(async (req) => {
                   type: 'lost',
                   motorhomeModel: motorhomeName,
                   auctionUrl: 'https://caravanwert.de/kaufen',
-                  yourBid: `€${Number(ro.offer_amount).toLocaleString()}`,
-                  currentBid: `€${salePrice.toLocaleString()}`,
+                  yourBid: `€${Number(ro.offer_amount).toLocaleString('de-DE')}`,
+                  currentBid: `€${salePrice.toLocaleString('de-DE')}`,
                   isFestpreis: isFestpreisProposal,
                 },
               });
@@ -708,11 +708,11 @@ Deno.serve(async (req) => {
         ${infoBox('Verkaufsdetails', `
           ${detailRow('Status', `✅ VERKAUFT (${saleLabel})`)}
           ${detailRow('Fahrzeug', motorhomeName)}
-          ${detailRow('Verkaufspreis', `€${salePrice.toLocaleString()}`)}
+          ${detailRow('Verkaufspreis', `€${salePrice.toLocaleString('de-DE')}`)}
           ${isFestpreisProposal
-            ? detailRow('Urspr. Festpreis', `€${Number(auction.motorhome?.instant_price || 0).toLocaleString()}`)
-            : detailRow('Urspr. Mindestgebot', `€${Number(auction.reserve_price || 0).toLocaleString()}`)}
-          ${!isFestpreisProposal ? detailRow('Höchstes Auktionsgebot', `€${Number(auction.current_bid || 0).toLocaleString()}`) : ''}
+            ? detailRow('Urspr. Festpreis', `€${Number(auction.motorhome?.instant_price || 0).toLocaleString('de-DE')}`)
+            : detailRow('Urspr. Mindestgebot', `€${Number(auction.reserve_price || 0).toLocaleString('de-DE')}`)}
+          ${!isFestpreisProposal ? detailRow('Höchstes Auktionsgebot', `€${Number(auction.current_bid || 0).toLocaleString('de-DE')}`) : ''}
         `, 'success')}
         ${infoBox('Käufer', `
           ${detailRow('Händler', buyerName)}
@@ -730,8 +730,8 @@ Deno.serve(async (req) => {
 
       adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
 
-      const adminSubject = `[Admin] ${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`;
-      const html = buildEmailLayout(settingsData, `${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`, adminContent);
+      const adminSubject = `[Admin] ${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString('de-DE')}`;
+      const html = buildEmailLayout(settingsData, `${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString('de-DE')}`, adminContent);
 
       if (RESEND_API_KEY) {
         await fetch('https://api.resend.com/emails', {

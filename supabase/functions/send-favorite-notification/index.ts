@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { motorhome_id, auction_id, event_type, new_price, auction_title } = await req.json();
+    const { motorhome_id, auction_id, event_type, new_price, auction_title, is_festpreis } = await req.json();
 
     if (!motorhome_id || !event_type) {
       return new Response(JSON.stringify({ error: "motorhome_id and event_type required" }), {
@@ -117,37 +117,47 @@ Deno.serve(async (req) => {
         subject = `Preisänderung bei Ihrem Favoriten – ${vehicleName}`;
         emailContent = [
           greeting(firstName),
-          paragraph(`Bei einem Wohnmobil auf Ihrer Favoritenliste gibt es ein neues Gebot:`),
-          infoBox("Neues Gebot", [
+          paragraph(is_festpreis
+            ? `Bei einem Wohnmobil auf Ihrer Favoritenliste hat sich der Festpreis geändert:`
+            : `Bei einem Wohnmobil auf Ihrer Favoritenliste gibt es ein neues Gebot:`),
+          infoBox(is_festpreis ? "Neuer Festpreis" : "Neues Gebot", [
             detailRow("Fahrzeug", vehicleName),
-            detailRow("Neuer Preis", formattedPrice),
+            detailRow(is_festpreis ? "Neuer Festpreis" : "Neuer Preis", formattedPrice),
           ].join("")),
-          paragraph(`Wenn Sie dieses Fahrzeug nicht verpassen möchten, geben Sie jetzt Ihr Gebot ab.`),
-          button("Jetzt Gebot abgeben", `https://caravanwert.de/auktion/${auction_id}`),
+          paragraph(is_festpreis
+            ? `Wenn Sie dieses Fahrzeug nicht verpassen möchten, sichern Sie es sich jetzt zum Festpreis.`
+            : `Wenn Sie dieses Fahrzeug nicht verpassen möchten, geben Sie jetzt Ihr Gebot ab.`),
+          button(is_festpreis ? "Jetzt ansehen" : "Jetzt Gebot abgeben", `https://caravanwert.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ending") {
-        subject = `Ihr Favorit endet bald – ${vehicleName}`;
+        subject = is_festpreis ? `Ihr Favorit endet bald – ${vehicleName}` : `Ihr Favorit endet bald – ${vehicleName}`;
         emailContent = [
           greeting(firstName),
-          paragraph(`Eine Auktion auf Ihrer Favoritenliste endet in Kürze:`),
-          infoBox("Auktion endet bald", [
+          paragraph(is_festpreis
+            ? `Ein Festpreis-Inserat auf Ihrer Favoritenliste endet in Kürze:`
+            : `Eine Auktion auf Ihrer Favoritenliste endet in Kürze:`),
+          infoBox(is_festpreis ? "Inserat endet bald" : "Auktion endet bald", [
             detailRow("Fahrzeug", vehicleName),
-            detailRow("Aktueller Preis", formattedPrice),
+            detailRow(is_festpreis ? "Festpreis" : "Aktueller Preis", formattedPrice),
           ].join(""), "warning"),
-          paragraph(`Verpassen Sie nicht Ihre Chance – geben Sie jetzt Ihr Gebot ab, bevor die Auktion endet.`),
-          button("Zur Auktion", `https://caravanwert.de/auktion/${auction_id}`),
+          paragraph(is_festpreis
+            ? `Verpassen Sie nicht Ihre Chance – sichern Sie sich dieses Fahrzeug zum Festpreis, bevor das Inserat endet.`
+            : `Verpassen Sie nicht Ihre Chance – geben Sie jetzt Ihr Gebot ab, bevor die Auktion endet.`),
+          button(is_festpreis ? "Jetzt ansehen" : "Zur Auktion", `https://caravanwert.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ended") {
-        subject = `Auktion beendet – ${vehicleName}`;
+        subject = is_festpreis ? `Inserat beendet – ${vehicleName}` : `Auktion beendet – ${vehicleName}`;
         emailContent = [
           greeting(firstName),
-          paragraph(`Eine Auktion auf Ihrer Favoritenliste wurde beendet:`),
-          infoBox("Auktion beendet", [
+          paragraph(is_festpreis
+            ? `Ein Festpreis-Inserat auf Ihrer Favoritenliste wurde beendet:`
+            : `Eine Auktion auf Ihrer Favoritenliste wurde beendet:`),
+          infoBox(is_festpreis ? "Inserat beendet" : "Auktion beendet", [
             detailRow("Fahrzeug", vehicleName),
-            detailRow("Endpreis", formattedPrice),
+            detailRow(is_festpreis ? "Festpreis" : "Endpreis", formattedPrice),
           ].join(""), "info"),
-          paragraph(`Entdecken Sie weitere spannende Auktionen auf unserer Plattform.`),
-          button("Weitere Auktionen entdecken", `https://caravanwert.de/kaufen`),
+          paragraph(`Entdecken Sie weitere spannende Angebote auf unserer Plattform.`),
+          button("Weitere Angebote entdecken", `https://caravanwert.de/kaufen`),
         ].join("");
       } else {
         continue;

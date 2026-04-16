@@ -218,6 +218,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Festpreis-only listings: no bidding/Kaufchance logic — just end cleanly
+    if (auction.motorhome?.sale_channel === 'instant_price') {
+      console.log(`Closing instant-price listing ${auctionId} — no Kaufchance/bid logic`);
+      const now = new Date().toISOString();
+
+      await supabase.from('auctions')
+        .update({ status: 'ended', updated_at: now })
+        .eq('id', auctionId);
+
+      if (auction.motorhome?.id) {
+        await supabase.from('motorhomes')
+          .update({ status: 'ended', updated_at: now })
+          .eq('id', auction.motorhome.id);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Instant-price listing ended', outcome: 'ended' }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get highest bid
     const { data: highestBid, error: bidError } = await supabase
       .from('bids')

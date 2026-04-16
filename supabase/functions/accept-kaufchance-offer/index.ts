@@ -114,16 +114,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Race condition check: auction must still be in kaufchance
-    if (auction.status !== 'kaufchance') {
+    // Determine if this is a Festpreis price proposal (active auction + instant_price)
+    const isFestpreisProposal = auction.status === 'active' && auction.motorhome?.sale_channel === 'instant_price';
+
+    // Race condition check: auction must be in kaufchance OR active Festpreis
+    if (auction.status !== 'kaufchance' && !isFestpreisProposal) {
       return new Response(
-        JSON.stringify({ error: `Auction is no longer in kaufchance phase (status: ${auction.status})` }),
+        JSON.stringify({ error: `Auktion ist nicht in der Kaufchance-Phase oder aktiv (Status: ${auction.status})` }),
         { status: 409, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if Kaufchance has expired
-    if (auction.kaufchance_expires_at) {
+    // Check if Kaufchance has expired (only relevant for kaufchance, not Festpreis proposals)
+    if (!isFestpreisProposal && auction.kaufchance_expires_at) {
       const expiresAt = new Date(auction.kaufchance_expires_at).getTime();
       if (Date.now() > expiresAt) {
         return new Response(
@@ -235,6 +238,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── 5. Update auction status to 'sold' (with row count verification) ───
+    const expectedStatus = isFestpreisProposal ? 'active' : 'kaufchance';
     const { data: auctionUpdateData, error: updateAuctionError } = await supabase
       .from('auctions')
       .update({
@@ -242,7 +246,7 @@ Deno.serve(async (req) => {
         current_bid: salePrice,
       })
       .eq('id', auction.id)
-      .eq('status', 'kaufchance')
+      .eq('status', expectedStatus)
       .select('id');
 
     if (updateAuctionError || !auctionUpdateData || auctionUpdateData.length === 0) {
@@ -263,8 +267,8 @@ Deno.serve(async (req) => {
       }
 
       const errorMsg = updateAuctionError
-        ? 'Auktions-Status-Update fehlgeschlagen. Bitte erneut versuchen.'
-        : 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.';
+        ? 'Status-Update fehlgeschlagen. Bitte erneut versuchen.'
+        : isFestpreisProposal ? 'Das Inserat ist nicht mehr aktiv.' : 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.';
       const statusCode = updateAuctionError ? 500 : 409;
 
       return new Response(
@@ -280,7 +284,7 @@ Deno.serve(async (req) => {
         status: 'sold',
         sold_to: buyerId,
         sold_at: new Date().toISOString(),
-        sale_type: 'kaufchance',
+        sale_type: isFestpreisProposal ? 'price_proposal' : 'kaufchance',
       })
       .eq('id', auction.motorhome.id);
 
@@ -647,14 +651,17 @@ Deno.serve(async (req) => {
         recipients.push('info@caravanwert.de');
       }
 
+      const saleLabel = isFestpreisProposal ? 'Preisvorschlag' : 'Kaufchance';
       let adminContent = `
-        ${paragraph('<strong>Ein Kaufchance-Angebot wurde angenommen!</strong>')}
+        ${paragraph(`<strong>Ein ${saleLabel}-Angebot wurde angenommen!</strong>`)}
         ${infoBox('Verkaufsdetails', `
-          ${detailRow('Status', '✅ VERKAUFT (Kaufchance)')}
+          ${detailRow('Status', `✅ VERKAUFT (${saleLabel})`)}
           ${detailRow('Fahrzeug', motorhomeName)}
           ${detailRow('Verkaufspreis', `€${salePrice.toLocaleString()}`)}
-          ${detailRow('Urspr. Mindestgebot', `€${Number(auction.reserve_price || 0).toLocaleString()}`)}
-          ${detailRow('Höchstes Auktionsgebot', `€${Number(auction.current_bid || 0).toLocaleString()}`)}
+          ${isFestpreisProposal
+            ? detailRow('Urspr. Festpreis', `€${Number(auction.motorhome?.instant_price || 0).toLocaleString()}`)
+            : detailRow('Urspr. Mindestgebot', `€${Number(auction.reserve_price || 0).toLocaleString()}`)}
+          ${!isFestpreisProposal ? detailRow('Höchstes Auktionsgebot', `€${Number(auction.current_bid || 0).toLocaleString()}`) : ''}
         `, 'success')}
         ${infoBox('Käufer', `
           ${detailRow('Händler', buyerName)}
@@ -672,7 +679,8 @@ Deno.serve(async (req) => {
 
       adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
 
-      const html = buildEmailLayout(settingsData, `Kaufchance angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`, adminContent);
+      const adminSubject = `[Admin] ${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`;
+      const html = buildEmailLayout(settingsData, `${saleLabel} angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`, adminContent);
 
       if (RESEND_API_KEY) {
         await fetch('https://api.resend.com/emails', {
@@ -684,7 +692,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: `${settingsData.site_name} System <info@caravanwert.de>`,
             to: recipients,
-            subject: `[Admin] Kaufchance angenommen: ${motorhomeName} für €${salePrice.toLocaleString()}`,
+            subject: adminSubject,
             html,
           }),
         });
@@ -697,7 +705,7 @@ Deno.serve(async (req) => {
           sender_name: `${settingsData.site_name} System`,
           recipient_email: recipients[0],
           recipient_name: 'Admin',
-          subject: `[Admin] Kaufchance angenommen: ${motorhomeName}`,
+          subject: adminSubject,
           body_html: html,
           body_text: '',
           email_type: 'auto',

@@ -485,9 +485,9 @@ const Kaufen = () => {
 
                   <div>
                     <h2 className="text-2xl font-bold">
-                      {isLoading ? "Lädt..." : `${filteredAuctions.length} Auktionen gefunden`}
+                      {isLoading ? "Lädt..." : `${filteredAuctions.length} Inserate gefunden`}
                     </h2>
-                    <p className="text-sm text-muted-foreground mt-1">Aktive Auktionen</p>
+                    <p className="text-sm text-muted-foreground mt-1">Aktive Angebote</p>
                   </div>
                 </div>
 
@@ -723,7 +723,7 @@ const Kaufen = () => {
                 <Card className="p-12">
                   <div className="text-center">
                     <p className="text-xl font-semibold text-muted-foreground mb-2">
-                      Keine aktiven Auktionen
+                      Keine aktiven Inserate
                     </p>
                     <p className="text-muted-foreground">
                       Aktuell sind keine Auktionen verfügbar. Schauen Sie später wieder vorbei!

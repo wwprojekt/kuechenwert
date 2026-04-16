@@ -76,6 +76,30 @@ async function authorizeNotifyOfferRequest(
 
   if (body.action === 'new_offer') {
     if (user.id !== body.buyerId) return base;
+
+    // For Festpreis listings, any authenticated dealer can make a proposal (no invitation needed)
+    const { data: auctionCheck } = await supabase
+      .from('auctions')
+      .select('status, motorhome:motorhomes(sale_channel)')
+      .eq('id', body.auctionId)
+      .maybeSingle();
+    const saleChannel = Array.isArray(auctionCheck?.motorhome)
+      ? auctionCheck.motorhome[0]?.sale_channel
+      : (auctionCheck?.motorhome as any)?.sale_channel;
+
+    if (saleChannel === 'instant_price' && auctionCheck?.status === 'active') {
+      // Festpreis: verify user is a dealer
+      const { data: dealerRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['dealer', 'admin'])
+        .maybeSingle();
+      if (dealerRole) return { authorized: true };
+      return base;
+    }
+
+    // Regular Kaufchance: require invitation
     const { data: inv } = await supabase
       .from('kaufchance_invitations')
       .select('id')

@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         *,
-        motorhome:motorhomes(manufacturer, model)
+        motorhome:motorhomes(manufacturer, model, sale_channel)
       `)
       .eq('status', 'active')
       .gt('end_time', now)
@@ -73,6 +73,9 @@ const handler = async (req: Request): Promise<Response> => {
     const notifications = [];
 
     for (const auction of endingAuctions) {
+      // Festpreis listings have no bidders — skip ending notification
+      if ((auction.motorhome as any)?.sale_channel === 'instant_price') continue;
+
       // Get all unique bidders for this auction
       const { data: bids } = await supabase
         .from('bids')

@@ -362,7 +362,7 @@ const DealerDashboard = () => {
       trend: stats?.leadingBids && stats.leadingBids > 0 ? "up" : "neutral"
     },
     {
-      title: "Gewonnene Auktionen",
+      title: "Erworbene Fahrzeuge",
       value: stats?.wonAuctions || 0,
       icon: CheckCircle,
       gradient: "from-green-500 to-emerald-500",

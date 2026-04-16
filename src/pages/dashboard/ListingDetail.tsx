@@ -256,9 +256,13 @@ export default function ListingDetail() {
     },
   });
 
-  // ── Kaufchance: Angebote für den Seller laden ──
+  const isFestpreisListing = motorhome?.sale_channel === 'instant_price';
+
+  // ── Kaufchance / Preisvorschlag: Angebote für den Seller laden ──
   const loadKaufchanceOffers = async () => {
-    if (!resolvedAuction?.id || resolvedAuction?.status !== 'kaufchance') return;
+    const isKaufchance = resolvedAuction?.status === 'kaufchance';
+    const isFestpreisActive = isFestpreisListing && resolvedAuction?.status === 'active';
+    if (!resolvedAuction?.id || (!isKaufchance && !isFestpreisActive)) return;
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
     setKaufchanceLoading(true);
@@ -283,7 +287,9 @@ export default function ListingDetail() {
   }, [resolvedAuction?.id, resolvedAuction?.status]);
 
   useEffect(() => {
-    if (resolvedAuction?.status !== 'kaufchance') return;
+    const shouldPoll = resolvedAuction?.status === 'kaufchance' ||
+      (isFestpreisListing && resolvedAuction?.status === 'active');
+    if (!shouldPoll) return;
     const interval = setInterval(() => {
       loadKaufchanceOffers();
     }, 15000);
@@ -1188,32 +1194,41 @@ export default function ListingDetail() {
         </Card>
       )}
 
-      {/* Kaufchancen-Angebote Sektion (nur bei kaufchance-Status) */}
-      {auction?.status === 'kaufchance' && (
-        <Card className="border-2 border-amber-200 dark:border-amber-800">
+      {/* Kaufchancen-/Preisvorschlag-Sektion */}
+      {(auction?.status === 'kaufchance' || (isFestpreisListing && auction?.status === 'active' && kaufchanceOffers.length > 0)) && (
+        <Card className={`border-2 ${isFestpreisListing ? 'border-blue-200 dark:border-blue-800' : 'border-amber-200 dark:border-amber-800'}`}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Handshake className="w-5 h-5 text-amber-600" />
-              Kaufchancen – Eingehende Angebote
+              <Handshake className={`w-5 h-5 ${isFestpreisListing ? 'text-blue-600' : 'text-amber-600'}`} />
+              {isFestpreisListing ? 'Preisvorschläge von Händlern' : 'Kaufchancen – Eingehende Angebote'}
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Die Auktion endete ohne Verkauf. Die Top-Bieter wurden eingeladen, Ihnen ein Angebot zu unterbreiten.
+              {isFestpreisListing
+                ? 'Händler haben Ihnen Preisvorschläge für Ihr Fahrzeug unterbreitet. Sie können annehmen, ablehnen oder ein Gegenangebot machen.'
+                : 'Die Auktion endete ohne Verkauf. Die Top-Bieter wurden eingeladen, Ihnen ein Angebot zu unterbreiten.'}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Kaufchance-Info: Preise und Frist */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-lg bg-muted/50 text-center">
-                <p className="text-xs text-muted-foreground">Letztes Auktionsgebot</p>
-                <p className="text-lg font-bold">{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</p>
-              </div>
-              {motorhome.reserve_price && (
+            {/* Info-Karten: Preise und Frist */}
+            <div className={`grid grid-cols-1 ${isFestpreisListing ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
+              {isFestpreisListing ? (
+                <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 text-center">
+                  <p className="text-xs text-muted-foreground">Ihr Festpreis</p>
+                  <p className="text-lg font-bold text-yellow-600">{Number(motorhome.instant_price || 0).toLocaleString('de-DE')} €</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Letztes Auktionsgebot</p>
+                  <p className="text-lg font-bold">{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</p>
+                </div>
+              )}
+              {!isFestpreisListing && motorhome.reserve_price && (
                 <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 text-center">
                   <p className="text-xs text-muted-foreground">Ihr Mindestpreis</p>
                   <p className="text-lg font-bold text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</p>
                 </div>
               )}
-              {auction.kaufchance_expires_at && (
+              {!isFestpreisListing && auction.kaufchance_expires_at && (
                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-center">
                   <p className="text-xs text-muted-foreground">Kaufchance-Frist</p>
                   <p className="text-sm font-semibold">
@@ -1221,10 +1236,16 @@ export default function ListingDetail() {
                   </p>
                 </div>
               )}
+              {isFestpreisListing && (
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-center">
+                  <p className="text-xs text-muted-foreground">Anzahl Vorschläge</p>
+                  <p className="text-lg font-bold text-blue-600">{kaufchanceOffers.length}</p>
+                </div>
+              )}
             </div>
 
-            {/* Auto-Relist Info & Opt-out */}
-            {isSeller && (
+            {/* Auto-Relist Info & Opt-out — only for Kaufchance, not Festpreis */}
+            {!isFestpreisListing && isSeller && (
               <div className={`p-4 rounded-lg border ${auction.auto_relist !== false ? 'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-800' : 'bg-muted/50 border-border'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -1291,7 +1312,11 @@ export default function ListingDetail() {
             ) : kaufchanceOffers.length === 0 ? (
               <div className="text-center py-8">
                 <Clock className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Noch keine Angebote eingegangen. Die eingeladenen Bieter wurden benachrichtigt.</p>
+                <p className="text-muted-foreground">
+                  {isFestpreisListing
+                    ? 'Noch keine Preisvorschläge eingegangen.'
+                    : 'Noch keine Angebote eingegangen. Die eingeladenen Bieter wurden benachrichtigt.'}
+                </p>
               </div>
             ) : (
               <div className="space-y-4">

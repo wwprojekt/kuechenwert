@@ -190,7 +190,7 @@ function buildFollowupEmail(
     "Wussten Sie schon?",
     `<p style="margin: 0; font-size: 14px; line-height: 22px; color: #555;">
       Fahrzeuge, die über ${settingsData.site_name} angeboten werden, erhalten im Durchschnitt 
-      <strong>Gebote von mehreren Händlern</strong> – und das völlig kostenlos für Sie als Verkäufer. 
+      <strong>Anfragen von mehreren geprüften Händlern</strong> – und das völlig kostenlos für Sie als Verkäufer. 
       Je früher Sie Ihr Inserat abschließen, desto schneller finden Sie den besten Käufer.
     </p>`,
     "info",

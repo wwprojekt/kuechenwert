@@ -128,14 +128,15 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Update motorhome status
+    // Update motorhome status — preserve existing sale_type if already sold via auction/instant/kaufchance
+    const existingSaleType = appointment.motorhomes?.sale_type;
     const { error: motorhomeError } = await supabaseClient
       .from('motorhomes')
       .update({ 
         status: 'sold',
         sold_to: appointment.buyer_id || null,
         sold_at: new Date().toISOString(),
-        sale_type: 'handover',
+        sale_type: existingSaleType || 'handover',
       })
       .eq('id', appointment.motorhome_id);
 

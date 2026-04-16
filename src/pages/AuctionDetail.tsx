@@ -100,6 +100,7 @@ import {
   FileText,
   Lock,
   Building2,
+  Send,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -1816,8 +1817,10 @@ const AuctionDetail = () => {
                 )}
 
                 {/* Provision - visible for dealers and admins (hook lives inside the component) */}
-                {motorhome.sale_channel !== 'instant_price' && (primaryRole === 'dealer' || isAdmin) && currentBid > 0 && (
-                  <AuctionCommissionOverview currentBid={currentBid} />
+                {(primaryRole === 'dealer' || isAdmin) && (
+                  motorhome.sale_channel === 'instant_price'
+                    ? Number(motorhome.instant_price || 0) > 0 && <AuctionCommissionOverview currentBid={Number(motorhome.instant_price)} />
+                    : currentBid > 0 && <AuctionCommissionOverview currentBid={currentBid} />
                 )}
 
                 {/* Reserve price indicator - only visible to seller and admin */}
@@ -1898,7 +1901,6 @@ const AuctionDetail = () => {
                   </div>
                 ) : auction.status === "active" && timeRemaining !== "Beendet" ? (
                   motorhome.sale_channel === 'instant_price' ? (
-                    /* Instant-price-only: no bidding, only the Sofortkauf button above */
                     !canSeePrices ? (
                       <div className="p-4 border-2 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg text-center">
                         <Lock className="w-8 h-8 text-amber-500 mx-auto mb-3" />
@@ -1906,7 +1908,7 @@ const AuctionDetail = () => {
                           Nur für Händler verfügbar
                         </h3>
                         <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-                          Melden Sie sich als Händler an, um dieses Fahrzeug zum Festpreis zu kaufen.
+                          Melden Sie sich als Händler an, um dieses Fahrzeug zum Festpreis zu kaufen oder einen Preisvorschlag zu machen.
                         </p>
                         {!user && (
                           <Link to={`/login?redirect=/auktion/${id}`}>
@@ -1915,6 +1917,29 @@ const AuctionDetail = () => {
                             </Button>
                           </Link>
                         )}
+                      </div>
+                    ) : (primaryRole === 'dealer' || isAdmin) ? (
+                      <div className="space-y-3 p-4 border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Send className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-semibold text-blue-800 dark:text-blue-300">Preisvorschlag</h3>
+                        </div>
+                        <p className="text-sm text-blue-700 dark:text-blue-400">
+                          Sie möchten einen anderen Preis vorschlagen? Geben Sie einen Preisvorschlag ab — der Verkäufer kann annehmen, ablehnen oder ein Gegenangebot machen.
+                        </p>
+                        <PostAuctionOfferDialog
+                          auctionId={auction.id}
+                          currentBid={currentBid}
+                          vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+                          onOfferSent={() => queryClient.invalidateQueries({ queryKey: ['festpreisExistingOffer', id, user?.id] })}
+                          isFestpreis={true}
+                          festpreis={Number(motorhome.instant_price || 0)}
+                        >
+                          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                            <Send className="w-4 h-4 mr-2" />
+                            Preisvorschlag abgeben
+                          </Button>
+                        </PostAuctionOfferDialog>
                       </div>
                     ) : null
                   ) : isRoleLoading && user ? (

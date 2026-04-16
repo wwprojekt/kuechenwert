@@ -33,6 +33,8 @@ interface PostAuctionOfferDialogProps {
   vehicleTitle: string;
   onOfferSent?: () => void;
   children?: React.ReactNode;
+  isFestpreis?: boolean;
+  festpreis?: number;
 }
 
 export function PostAuctionOfferDialog({
@@ -41,6 +43,8 @@ export function PostAuctionOfferDialog({
   vehicleTitle,
   onOfferSent,
   children,
+  isFestpreis = false,
+  festpreis,
 }: PostAuctionOfferDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -113,23 +117,31 @@ export function PostAuctionOfferDialog({
       const { data: auction, error: auctionError } = await supabase
         .from('auctions').select('status, kaufchance_expires_at').eq('id', auctionId).single();
       if (auctionError || !auction) {
-        toast({ title: 'Auktion nicht gefunden', description: 'Die Auktion existiert nicht mehr.', variant: 'destructive' });
-        return;
-      }
-      if (auction.status !== 'kaufchance') {
-        toast({ title: 'Kaufchance nicht mehr verfügbar', description: 'Diese Auktion akzeptiert keine Kaufangebote mehr.', variant: 'destructive' });
-        return;
-      }
-      if (auction.kaufchance_expires_at && new Date(auction.kaufchance_expires_at) < new Date()) {
-        toast({ title: 'Kaufchance abgelaufen', description: 'Das Zeitfenster für Kaufangebote ist abgelaufen.', variant: 'destructive' });
+        toast({ title: 'Inserat nicht gefunden', description: 'Das Inserat existiert nicht mehr.', variant: 'destructive' });
         return;
       }
 
-      const { data: invitation, error: invError } = await supabase
-        .from('kaufchance_invitations').select('id').eq('auction_id', auctionId).eq('bidder_id', user.id).maybeSingle();
-      if (invError || !invitation) {
-        toast({ title: 'Nicht eingeladen', description: 'Sie wurden nicht als Top-Bieter zu dieser Kaufchance eingeladen.', variant: 'destructive' });
-        return;
+      if (isFestpreis) {
+        if (auction.status !== 'active') {
+          toast({ title: 'Inserat nicht mehr aktiv', description: 'Dieses Inserat akzeptiert keine Preisvorschläge mehr.', variant: 'destructive' });
+          return;
+        }
+      } else {
+        if (auction.status !== 'kaufchance') {
+          toast({ title: 'Kaufchance nicht mehr verfügbar', description: 'Diese Auktion akzeptiert keine Kaufangebote mehr.', variant: 'destructive' });
+          return;
+        }
+        if (auction.kaufchance_expires_at && new Date(auction.kaufchance_expires_at) < new Date()) {
+          toast({ title: 'Kaufchance abgelaufen', description: 'Das Zeitfenster für Kaufangebote ist abgelaufen.', variant: 'destructive' });
+          return;
+        }
+
+        const { data: invitation, error: invError } = await supabase
+          .from('kaufchance_invitations').select('id').eq('auction_id', auctionId).eq('bidder_id', user.id).maybeSingle();
+        if (invError || !invitation) {
+          toast({ title: 'Nicht eingeladen', description: 'Sie wurden nicht als Top-Bieter zu dieser Kaufchance eingeladen.', variant: 'destructive' });
+          return;
+        }
       }
 
       const { data: checkExisting } = await supabase
@@ -309,19 +321,19 @@ export function PostAuctionOfferDialog({
   const renderRaiseView = () => (
     <>
       <DialogHeader>
-        <DialogTitle>Angebot erhöhen</DialogTitle>
+        <DialogTitle>{isFestpreis ? 'Preisvorschlag erhöhen' : 'Angebot erhöhen'}</DialogTitle>
         <DialogDescription>
-          Sie haben bereits ein offenes Angebot für &quot;{vehicleTitle}&quot;. Sie können den Betrag erhöhen.
+          Sie haben bereits {isFestpreis ? 'einen offenen Preisvorschlag' : 'ein offenes Angebot'} für &quot;{vehicleTitle}&quot;. Sie können den Betrag erhöhen.
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="p-3 bg-muted rounded-lg space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Letztes Gebot (Auktion):</span>
-            <span className="font-semibold">{currentBid.toLocaleString('de-DE')} €</span>
+            <span className="text-muted-foreground">{isFestpreis ? 'Festpreis:' : 'Letztes Gebot (Auktion):'}</span>
+            <span className="font-semibold">{(isFestpreis && festpreis ? festpreis : currentBid).toLocaleString('de-DE')} €</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Ihr aktuelles Angebot:</span>
+            <span className="text-muted-foreground">{isFestpreis ? 'Ihr aktueller Vorschlag:' : 'Ihr aktuelles Angebot:'}</span>
             <span className="font-bold text-primary">{existingOffer!.offer_amount.toLocaleString('de-DE')} €</span>
           </div>
         </div>
@@ -349,15 +361,17 @@ export function PostAuctionOfferDialog({
   const renderNewOfferView = () => (
     <>
       <DialogHeader>
-        <DialogTitle>Kaufangebot abgeben</DialogTitle>
+        <DialogTitle>{isFestpreis ? 'Preisvorschlag abgeben' : 'Kaufangebot abgeben'}</DialogTitle>
         <DialogDescription>
-          Geben Sie ein Angebot für &quot;{vehicleTitle}&quot; ab. Der Verkäufer kann Ihr Angebot annehmen, ablehnen oder ein Gegenangebot machen.
+          {isFestpreis
+            ? `Geben Sie einen Preisvorschlag für "${vehicleTitle}" ab. Der Verkäufer kann Ihren Vorschlag annehmen, ablehnen oder ein Gegenangebot machen.`
+            : `Geben Sie ein Angebot für "${vehicleTitle}" ab. Der Verkäufer kann Ihr Angebot annehmen, ablehnen oder ein Gegenangebot machen.`}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmitNewOffer} className="space-y-4">
         <div className="p-3 bg-muted rounded-lg">
-          <p className="text-sm text-muted-foreground">Letztes Gebot in der Auktion:</p>
-          <p className="text-xl font-bold">{currentBid.toLocaleString('de-DE')} €</p>
+          <p className="text-sm text-muted-foreground">{isFestpreis ? 'Festpreis:' : 'Letztes Gebot in der Auktion:'}</p>
+          <p className="text-xl font-bold">{(isFestpreis && festpreis ? festpreis : currentBid).toLocaleString('de-DE')} €</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="offer-amount">Ihr Angebot *</Label>

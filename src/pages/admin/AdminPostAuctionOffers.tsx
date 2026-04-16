@@ -116,6 +116,8 @@ interface AuctionInfo {
     seller_id: string;
     reserve_price: number | null;
     year: number | null;
+    sale_channel?: string | null;
+    instant_price?: number | null;
   } | null;
 }
 
@@ -291,22 +293,52 @@ export default function AdminPostAuctionOffers() {
     enabled: offers.length > 0,
   });
 
-  // Also load kaufchance auctions that may not have offers yet
+  // Load kaufchance auctions AND active Festpreis listings with offers
   const { data: kaufchanceAuctions = [] } = useQuery({
     queryKey: ["adminKaufchanceAuctions"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Kaufchance auctions
+      const { data: kcData, error: kcErr } = await supabase
         .from("auctions")
         .select(`
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round, auto_relist,
-          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
         `)
         .eq("status", "kaufchance")
         .order("kaufchance_expires_at", { ascending: true });
-      if (error) throw error;
-      return (data || []) as AuctionInfo[];
+      if (kcErr) throw kcErr;
+
+      // Active Festpreis listings that have pending/countered offers
+      const { data: fpOffers } = await supabase
+        .from("post_auction_offers")
+        .select("auction_id")
+        .in("status", ["pending", "countered"]);
+
+      const fpAuctionIds = [...new Set((fpOffers || []).map(o => o.auction_id))];
+      let fpAuctions: AuctionInfo[] = [];
+      if (fpAuctionIds.length > 0) {
+        const { data: fpData } = await supabase
+          .from("auctions")
+          .select(`
+            id, motorhome_id, status, current_bid, starting_bid, end_time,
+            kaufchance_expires_at, kaufchance_min_price, reserve_price,
+            auction_round, auto_relist,
+            motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
+          `)
+          .eq("status", "active")
+          .in("id", fpAuctionIds);
+        fpAuctions = ((fpData || []) as any[]).filter(a => {
+          const mh = Array.isArray(a.motorhome) ? a.motorhome[0] : a.motorhome;
+          return mh?.sale_channel === 'instant_price';
+        }) as AuctionInfo[];
+      }
+
+      // Merge, deduplicate by id
+      const merged = [...(kcData || []), ...fpAuctions];
+      const seen = new Set<string>();
+      return merged.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; }) as AuctionInfo[];
     },
     refetchInterval: 30000,
   });

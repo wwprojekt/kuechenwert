@@ -1931,7 +1931,7 @@ const AuctionDetail = () => {
                           auctionId={auction.id}
                           currentBid={currentBid}
                           vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
-                          onOfferSent={() => queryClient.invalidateQueries({ queryKey: ['festpreisExistingOffer', id, user?.id] })}
+                          onOfferSent={() => queryClient.invalidateQueries({ queryKey: ['auctionDetail', id] })}
                           isFestpreis={true}
                           festpreis={Number(motorhome.instant_price || 0)}
                         >

@@ -282,7 +282,7 @@ export default function AdminPostAuctionOffers() {
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round, auto_relist,
-          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year)
+          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
         `)
         .in("id", auctionIds);
       if (error) throw error;

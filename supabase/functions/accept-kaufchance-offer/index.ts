@@ -117,6 +117,14 @@ Deno.serve(async (req) => {
     // Determine if this is a Festpreis price proposal (active auction + instant_price)
     const isFestpreisProposal = auction.status === 'active' && auction.motorhome?.sale_channel === 'instant_price';
 
+    // Guard: motorhome must not already be sold (prevents race with instant-buy)
+    if (auction.motorhome?.status === 'sold') {
+      return new Response(
+        JSON.stringify({ error: 'Dieses Fahrzeug wurde bereits verkauft.' }),
+        { status: 409, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Race condition check: auction must be in kaufchance OR active Festpreis
     if (auction.status !== 'kaufchance' && !isFestpreisProposal) {
       return new Response(
@@ -401,7 +409,7 @@ Deno.serve(async (req) => {
         if (sellerProfile?.email && contractPdfBase64) {
           try {
             const sellerName = `${sellerProfile.first_name || ''} ${sellerProfile.last_name || ''}`.trim() || 'Kunde';
-            const html = buildEmailLayout(settingsData, 'Ihr Kaufvertrag – Kaufchance angenommen', `
+            const html = buildEmailLayout(settingsData, isFestpreisProposal ? 'Ihr Kaufvertrag – Preisvorschlag angenommen' : 'Ihr Kaufvertrag – Kaufchance angenommen', `
               ${paragraph(`Hallo ${sellerName},`)}
               ${paragraph('Ein Kaufangebot für Ihr Fahrzeug wurde angenommen. Anbei erhalten Sie den Kaufvertrag.')}
               ${infoBox('Vertragsdetails', `
@@ -605,6 +613,7 @@ Deno.serve(async (req) => {
                   auctionUrl: 'https://caravanwert.de/kaufen',
                   yourBid: `€${Number(inv.highest_bid).toLocaleString()}`,
                   currentBid: `€${salePrice.toLocaleString()}`,
+                  isFestpreis: isFestpreisProposal,
                 },
               });
             }
@@ -639,6 +648,7 @@ Deno.serve(async (req) => {
                   auctionUrl: 'https://caravanwert.de/kaufen',
                   yourBid: `€${Number(ro.offer_amount).toLocaleString()}`,
                   currentBid: `€${salePrice.toLocaleString()}`,
+                  isFestpreis: isFestpreisProposal,
                 },
               });
             }

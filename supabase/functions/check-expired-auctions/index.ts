@@ -72,13 +72,48 @@ Deno.serve(async (req) => {
               if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
             }
 
-            // Expire any pending price proposals for this listing
+            // Expire any pending price proposals and notify proposers
+            const { data: expiredOffers } = await supabase
+              .from('post_auction_offers')
+              .select('buyer_id, offer_amount')
+              .eq('auction_id', auction.id)
+              .in('status', ['pending', 'countered']);
+
             const { error: expireOffersErr } = await supabase
               .from('post_auction_offers')
               .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
               .eq('auction_id', auction.id)
               .in('status', ['pending', 'countered']);
             if (expireOffersErr) console.error(`Failed to expire offers for ${auction.id}:`, expireOffersErr);
+
+            // Notify proposers that their offers expired
+            if (expiredOffers && expiredOffers.length > 0) {
+              const motorhomeName = `${(auction.motorhomes as any)?.manufacturer || ''} ${(auction.motorhomes as any)?.model || ''}`.trim();
+              for (const eo of expiredOffers) {
+                try {
+                  const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('email, first_name, company_name')
+                    .eq('id', eo.buyer_id)
+                    .single();
+                  if (profile?.email) {
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: profile.email,
+                        name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                        type: 'lost',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: 'https://caravanwert.de/kaufen',
+                        yourBid: `€${Number(eo.offer_amount).toLocaleString()}`,
+                        isFestpreis: true,
+                      },
+                    });
+                  }
+                } catch (notifyErr: any) {
+                  console.error(`Failed to notify proposer ${eo.buyer_id}:`, notifyErr.message);
+                }
+              }
+            }
 
             results.push({
               auctionId: auction.id,

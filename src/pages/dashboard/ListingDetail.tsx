@@ -1195,7 +1195,7 @@ export default function ListingDetail() {
       )}
 
       {/* Kaufchancen-/Preisvorschlag-Sektion */}
-      {(auction?.status === 'kaufchance' || (isFestpreisListing && auction?.status === 'active' && kaufchanceOffers.length > 0)) && (
+      {(auction?.status === 'kaufchance' || (isFestpreisListing && auction?.status === 'active')) && (
         <Card className={`border-2 ${isFestpreisListing ? 'border-blue-200 dark:border-blue-800' : 'border-amber-200 dark:border-amber-800'}`}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">

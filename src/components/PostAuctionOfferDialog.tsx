@@ -126,6 +126,13 @@ export function PostAuctionOfferDialog({
           toast({ title: 'Inserat nicht mehr aktiv', description: 'Dieses Inserat akzeptiert keine Preisvorschläge mehr.', variant: 'destructive' });
           return;
         }
+        // Prevent seller from proposing on own listing
+        const { data: mhData } = await supabase.from('auctions').select('motorhome:motorhomes(seller_id)').eq('id', auctionId).single();
+        const sellerId = Array.isArray(mhData?.motorhome) ? mhData.motorhome[0]?.seller_id : (mhData?.motorhome as any)?.seller_id;
+        if (sellerId && sellerId === user.id) {
+          toast({ title: 'Eigenes Inserat', description: 'Sie können kein Angebot für Ihr eigenes Fahrzeug abgeben.', variant: 'destructive' });
+          return;
+        }
       } else {
         if (auction.status !== 'kaufchance') {
           toast({ title: 'Kaufchance nicht mehr verfügbar', description: 'Diese Auktion akzeptiert keine Kaufangebote mehr.', variant: 'destructive' });

@@ -374,7 +374,7 @@ export default function AdminMotorhomes() {
 
   // ---- Filtering & Sorting ----
   const { filteredMotorhomes, tabCounts } = useMemo(() => {
-    if (!motorhomes) return { filteredMotorhomes: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, nicht_verkauft: 0, verkauft: 0 } };
+    if (!motorhomes) return { filteredMotorhomes: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, kaufchance: 0, nicht_verkauft: 0, verkauft: 0 } };
 
     // Calculate real status for each motorhome
     const withRealStatus = motorhomes.map((m) => ({
@@ -387,6 +387,7 @@ export default function AdminMotorhomes() {
       alle: withRealStatus.length,
       vorbereitung: withRealStatus.filter((m) => m._realStatus === "vorbereitung").length,
       in_auktion: withRealStatus.filter((m) => m._realStatus === "in_auktion").length,
+      kaufchance: withRealStatus.filter((m) => m._realStatus === "kaufchance").length,
       nicht_verkauft: withRealStatus.filter((m) => m._realStatus === "nicht_verkauft").length,
       verkauft: withRealStatus.filter((m) => m._realStatus === "verkauft" || m._realStatus === "reserviert").length,
     };

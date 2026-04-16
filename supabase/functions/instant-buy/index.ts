@@ -290,8 +290,15 @@ Deno.serve(async (req) => {
 
     if (auctionUpdateError) {
       console.error('Error closing auction after instant buy:', auctionUpdateError);
-      // Non-fatal: motorhome is already marked as sold
     }
+
+    // 7b. Expire any pending price proposals for this listing
+    const { error: expireOffersErr } = await supabaseAdmin
+      .from('post_auction_offers')
+      .update({ status: 'expired', seller_response: 'Fahrzeug wurde per Sofortkauf verkauft', updated_at: new Date().toISOString() })
+      .eq('auction_id', auctionId)
+      .in('status', ['pending', 'countered']);
+    if (expireOffersErr) console.error('Failed to expire offers after instant buy:', expireOffersErr);
 
     console.log(
       `Instant buy completed: auction=${auctionId}, motorhome=${motorhome.id}, ` +

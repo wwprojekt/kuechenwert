@@ -88,6 +88,8 @@ async function authorizeNotifyOfferRequest(
       : (auctionCheck?.motorhome as any)?.sale_channel;
 
     if (saleChannel === 'instant_price' && auctionCheck?.status === 'active') {
+      // Prevent seller from proposing on own listing
+      if (sellerId && user.id === sellerId) return base;
       // Festpreis: verify user is a dealer
       const { data: dealerRole } = await supabase
         .from('user_roles')
@@ -172,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
     // 1. Lade Auktions- und Fahrzeugdaten
     const { data: auctionData, error: auctionError } = await supabase
       .from('auctions')
-      .select('id, current_bid, motorhome:motorhomes(id, seller_id, manufacturer, model)')
+      .select('id, current_bid, status, motorhome:motorhomes(id, seller_id, manufacturer, model, sale_channel)')
       .eq('id', auctionId)
       .single();
 
@@ -189,6 +191,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const sellerId = mh.seller_id;
     const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
+    const isFestpreis = (mh as any).sale_channel === 'instant_price';
 
     // 2. Lade Käufer-Profil (service_role → kein RLS)
     const { data: buyerProfile } = await supabase
@@ -236,6 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
                 auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
                 offerAmount: formattedOffer,
                 currentBid: currentBidFormatted,
+                isFestpreis,
               },
             })
           );
@@ -270,6 +274,7 @@ const handler = async (req: Request): Promise<Response> => {
                         offerAmount: formattedOffer,
                         buyerName: buyerDisplayName,
                         currentBid: currentBidFormatted,
+                        isFestpreis,
                       },
                     })
                   );
@@ -297,6 +302,7 @@ const handler = async (req: Request): Promise<Response> => {
                 auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
                 offerAmount: formattedOffer,
                 sellerResponse: sellerResponse || undefined,
+                isFestpreis,
               },
             })
           );
@@ -319,6 +325,7 @@ const handler = async (req: Request): Promise<Response> => {
                 offerAmount: formattedOffer,
                 counterAmount: formattedCounter,
                 sellerResponse: sellerResponse || undefined,
+                isFestpreis,
               },
             })
           );
@@ -340,6 +347,7 @@ const handler = async (req: Request): Promise<Response> => {
                 auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
                 offerAmount: formattedOffer,
                 counterAmount: formattedCounter,
+                isFestpreis,
               },
             })
           );

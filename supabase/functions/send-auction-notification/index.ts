@@ -28,6 +28,8 @@ interface AuctionEmailRequest {
   buyerName?: string;
   sellerResponse?: string;
   counterAmount?: string;
+  // Festpreis flag
+  isFestpreis?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -40,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (!auth.authorized) return auth.response;
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount }: AuctionEmailRequest = await req.json();
+    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
@@ -170,18 +172,21 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "lost":
-        subject = "Auktion beendet";
+        subject = isFestpreis ? "Fahrzeug verkauft – Ihr Angebot wurde nicht berücksichtigt" : "Auktion beendet";
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
-          ${paragraph('Die Auktion für folgendes Fahrzeug wurde beendet:')}
-          ${infoBox('Auktionsdetails', `
+          ${paragraph(isFestpreis
+            ? 'Das folgende Fahrzeug wurde an einen anderen Händler verkauft:'
+            : 'Die Auktion für folgendes Fahrzeug wurde beendet:'
+          )}
+          ${infoBox(isFestpreis ? 'Angebotsdetails' : 'Auktionsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
-            ${yourBid ? detailRow('Ihr Gebot', yourBid) : ''}
-            ${currentBid ? detailRow('Höchstgebot', currentBid) : ''}
+            ${yourBid ? detailRow(isFestpreis ? 'Ihr Angebot' : 'Ihr Gebot', yourBid) : ''}
+            ${currentBid ? detailRow(isFestpreis ? 'Verkaufspreis' : 'Höchstgebot', currentBid) : ''}
           `, 'default', settingsData)}
-          ${paragraph('Entdecken Sie weitere verfügbare Wohnmobile in unserer Plattform.')}
-          ${button('Weitere Auktionen', 'https://caravanwert.de/kaufen', settingsData)}
+          ${paragraph('Entdecken Sie weitere verfügbare Wohnmobile auf unserer Plattform.')}
+          ${button('Weitere Fahrzeuge', 'https://caravanwert.de/kaufen', settingsData)}
         `;
         break;
 
@@ -303,11 +308,14 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Sie haben ein neues Kaufangebot erhalten!</strong>')}
-          ${paragraph(`Ein H\u00e4ndler hat w\u00e4hrend der Kaufchance-Phase ein Angebot f\u00fcr Ihr Fahrzeug abgegeben.`)}
+          ${paragraph(isFestpreis
+            ? 'Ein Händler hat einen Preisvorschlag für Ihr Fahrzeug abgegeben.'
+            : 'Ein Händler hat während der Kaufchance-Phase ein Angebot für Ihr Fahrzeug abgegeben.'
+          )}
           ${infoBox('Angebotsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
             ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
-            ${currentBid ? detailRow('Letztes Auktionsgebot', currentBid) : ''}
+            ${currentBid ? detailRow(isFestpreis ? 'Ihr Festpreis' : 'Letztes Auktionsgebot', currentBid) : ''}
           `, 'success', settingsData)}
           ${paragraph('<strong>Ihre M\u00f6glichkeiten:</strong>')}
           ${paragraph('<strong>1.</strong> Angebot annehmen \u2013 Kaufvertrag wird automatisch erstellt<br><strong>2.</strong> Gegenangebot machen \u2013 Verhandeln Sie den Preis<br><strong>3.</strong> Angebot ablehnen \u2013 Warten Sie auf weitere Angebote')}
@@ -318,15 +326,15 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "admin_new_offer":
-        subject = `[Admin] Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
+        subject = `[Admin] ${isFestpreis ? 'Neuer Preisvorschlag' : 'Neues Kaufangebot'} f\u00fcr ${motorhomeModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
-          ${paragraph('<strong>Ein neues Kaufangebot ist eingegangen.</strong>')}
+          ${paragraph(isFestpreis ? '<strong>Ein neuer Preisvorschlag ist eingegangen.</strong>' : '<strong>Ein neues Kaufangebot ist eingegangen.</strong>')}
           ${infoBox('Angebotsdetails', `
             ${detailRow('Fahrzeug', motorhomeModel)}
             ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
             ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
-            ${currentBid ? detailRow('Letztes Auktionsgebot', currentBid) : ''}
+            ${currentBid ? detailRow(isFestpreis ? 'Festpreis' : 'Letztes Auktionsgebot', currentBid) : ''}
           `, 'success', settingsData)}
           ${button('Im Admin-Dashboard ansehen', auctionUrl, settingsData)}
         `;
@@ -344,7 +352,10 @@ const handler = async (req: Request): Promise<Response> => {
             ${sellerResponse ? detailRow('Begr\u00fcndung', sellerResponse) : ''}
           `, 'warning', settingsData)}
           ${paragraph('<strong>Wie geht es weiter?</strong>')}
-          ${paragraph('Sie k\u00f6nnen jederzeit ein neues, h\u00f6heres Angebot abgeben, solange die Kaufchance-Phase noch l\u00e4uft. Nutzen Sie die Gelegenheit!')}
+          ${paragraph(isFestpreis
+            ? 'Sie können jederzeit ein neues Angebot abgeben, solange das Inserat noch aktiv ist.'
+            : 'Sie können jederzeit ein neues, höheres Angebot abgeben, solange die Kaufchance-Phase noch läuft. Nutzen Sie die Gelegenheit!'
+          )}
           ${button('Neues Angebot abgeben', auctionUrl, settingsData)}
           ${paragraph(`Entdecken Sie auch weitere verf\u00fcgbare Fahrzeuge auf unserer Plattform.`)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
@@ -367,7 +378,10 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Ihre M\u00f6glichkeiten:</strong>')}
           ${paragraph('<strong>1.</strong> Gegenangebot annehmen \u2013 Kaufvertrag wird erstellt<br><strong>2.</strong> Eigenes Gegenangebot machen \u2013 Weiter verhandeln<br><strong>3.</strong> Ablehnen \u2013 Verhandlung beenden')}
           ${button('Gegenangebot ansehen', auctionUrl, settingsData)}
-          ${paragraph(`<em>Reagieren Sie zeitnah, um die Kaufchance nicht zu verpassen!</em>`)}
+          ${paragraph(isFestpreis
+            ? '<em>Reagieren Sie zeitnah, damit das Angebot nicht verfällt!</em>'
+            : '<em>Reagieren Sie zeitnah, um die Kaufchance nicht zu verpassen!</em>'
+          )}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;
@@ -386,7 +400,10 @@ const handler = async (req: Request): Promise<Response> => {
             ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
           `, 'warning', settingsData)}
           ${paragraph('<strong>Wie geht es weiter?</strong>')}
-          ${paragraph('Sie k\u00f6nnen dem H\u00e4ndler ein neues, niedrigeres Gegenangebot machen oder auf weitere Angebote von anderen eingeladenen Bietern warten.')}
+          ${paragraph(isFestpreis
+            ? 'Sie können dem Händler ein neues Gegenangebot machen oder auf weitere Angebote von anderen Händlern warten.'
+            : 'Sie können dem Händler ein neues, niedrigeres Gegenangebot machen oder auf weitere Angebote von anderen eingeladenen Bietern warten.'
+          )}
           ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
         `;

@@ -340,10 +340,24 @@ export default function ListingEdit() {
       });
       navigate(`/dashboard/listings/${id}`);
     },
-    onError: (_error) => {
+    onError: (error: unknown) => {
+      console.error('ListingEdit update failed:', error);
+      const err = error as { message?: string; code?: string } | null;
+      const rawMsg = err?.message?.trim();
+      // Preserve our own explicit thrown messages (e.g. "Bearbeitung gesperrt: …")
+      // so the seller knows WHY the save failed; fall back to a generic text for
+      // low-level Postgres / network errors that would only confuse the user.
+      const isUserFacingMessage =
+        !!rawMsg &&
+        !rawMsg.startsWith('duplicate key') &&
+        !rawMsg.startsWith('new row violates') &&
+        !rawMsg.toLowerCase().includes('fetch') &&
+        !rawMsg.toLowerCase().includes('network');
       toast({
         title: "Fehler",
-        description: "Inserat konnte nicht aktualisiert werden",
+        description: isUserFacingMessage
+          ? rawMsg
+          : "Inserat konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
         variant: "destructive",
       });
     },

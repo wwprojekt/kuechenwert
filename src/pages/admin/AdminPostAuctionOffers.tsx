@@ -893,6 +893,29 @@ export default function AdminPostAuctionOffers() {
     if (!sessionValid) return;
     setAdminOfferLoading(true);
     try {
+      // Pre-check: the unique index idx_post_auction_offers_one_active_per_buyer
+      // forbids more than one pending/countered offer per (auction_id, buyer_id).
+      // Without this guard the INSERT below would fail with a raw Postgres
+      // "duplicate key value violates unique constraint" error in the toast.
+      const { data: existingOffer, error: existingErr } = await supabase
+        .from('post_auction_offers')
+        .select('id, status')
+        .eq('auction_id', auctionId)
+        .eq('buyer_id', adminOfferDealerId)
+        .in('status', ['pending', 'countered'])
+        .maybeSingle();
+      if (existingErr) throw existingErr;
+      if (existingOffer) {
+        toast({
+          title: 'Aktives Angebot vorhanden',
+          description:
+            'Dieser Händler hat bereits ein offenes Angebot auf diese Auktion. Bitte nutzen Sie "Kontern" oder "Ablehnen" statt ein neues Angebot anzulegen.',
+          variant: 'destructive',
+        });
+        setAdminOfferLoading(false);
+        return;
+      }
+
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 48); // 48h Frist
 
@@ -906,7 +929,22 @@ export default function AdminPostAuctionOffers() {
           status: 'pending',
           expires_at: expiresAt.toISOString(),
         });
-      if (error) throw error;
+      if (error) {
+        // Race-condition fallback: between our pre-check and insert another
+        // offer may have been created. Surface a friendly message instead of
+        // the raw Postgres unique-violation text.
+        if ((error as { code?: string }).code === '23505') {
+          toast({
+            title: 'Aktives Angebot vorhanden',
+            description:
+              'Zwischen Prüfung und Speichern wurde bereits ein Angebot angelegt. Bitte die Liste neu laden.',
+            variant: 'destructive',
+          });
+          setAdminOfferLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       // Verkäufer benachrichtigen via Edge Function
       try {

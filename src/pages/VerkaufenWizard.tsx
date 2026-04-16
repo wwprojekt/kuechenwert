@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
@@ -27,7 +28,6 @@ import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
-import { toast } from "sonner";
 
 const steps = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
@@ -43,14 +43,14 @@ const steps = [
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, validateStep, validatePassword, submitForm, isSubmitting, clearDraft, fieldErrors, clearFieldErrors } = useWizardForm();
+  const { formData, updateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep } = useWizardSession();
   const hasRestoredRef = useRef(false);
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
-  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { turnstileToken, turnstileCallbackRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue] = useHoneypot();
 
   // H1: Restore the step the user was on when they left. Only runs when the
   // session finishes loading and the user did not already land on a specific
@@ -64,19 +64,21 @@ const VerkaufenWizard = () => {
     }
   }, [isReady, initialStep]);
 
-  // Check if user is already authenticated and prefill profile data
+  // Check if user is already authenticated and prefill profile data.
+  // Listens to auth state changes so a user who logs in DURING the wizard
+  // (e.g. via magic link in another tab) still gets their profile prefilled.
   useEffect(() => {
-    const loadUserAndProfile = async () => {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user || null;
+    let cancelled = false;
+
+    const loadUserAndProfile = async (user: User | null) => {
+      if (cancelled) return;
       setCurrentUser(user);
 
       if (!user) return;
 
-      // Load profile data for prefill (only if form fields are still empty)
       try {
         const sessionValid = await ensureValidRLSSession();
-        if (!sessionValid) return;
+        if (!sessionValid || cancelled) return;
 
         const { data: profile } = await supabase
           .from('profiles')
@@ -84,36 +86,32 @@ const VerkaufenWizard = () => {
           .eq('id', user.id)
           .single();
 
-        if (!profile) return;
+        if (!profile || cancelled) return;
 
         const updates: Partial<typeof formData> = {};
 
-        // Name: nur vorausfüllen wenn noch leer
         const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
         if (fullName && !formData.customerName) {
           updates.customerName = fullName;
         }
 
-        // E-Mail: aus Auth-User (immer vorhanden)
         if (user.email && !formData.customerEmail) {
           updates.customerEmail = user.email;
         }
 
-        // Telefon: aus Profil
         if (profile.phone && !formData.customerPhone) {
           updates.customerPhone = profile.phone;
         }
 
-        // Adresse: address_street enthält "Straße Hausnummer" kombiniert
+        // address_street stores "Straße Hausnummer" combined – split on the
+        // last whitespace-delimited token that starts with a digit.
         if (profile.address_street && !formData.street) {
           const streetParts = profile.address_street.trim();
-          // Hausnummer ist typischerweise das letzte Element (z.B. "Musterstraße 12a")
           const match = streetParts.match(/^(.+?)\s+(\d+\S*)$/);
           if (match) {
             updates.street = match[1];
             updates.houseNumber = match[2];
           } else {
-            // Kein klares Muster: gesamten String als Straße verwenden
             updates.street = streetParts;
           }
         }
@@ -128,7 +126,7 @@ const VerkaufenWizard = () => {
           updates.country = profile.address_country;
         }
 
-        if (Object.keys(updates).length > 0) {
+        if (Object.keys(updates).length > 0 && !cancelled) {
           updateFormData(updates);
           logger.info('Wizard: Profildaten vorausgefüllt', { fields: Object.keys(updates) });
         }
@@ -137,7 +135,21 @@ const VerkaufenWizard = () => {
       }
     };
 
-    loadUserAndProfile();
+    supabase.auth.getUser().then(({ data }) => loadUserAndProfile(data.user || null));
+
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadUserAndProfile(session?.user || null);
+    });
+
+    return () => {
+      cancelled = true;
+      authSubscription.subscription.unsubscribe();
+    };
+    // We intentionally exclude formData/updateFormData here: they change
+    // frequently and re-running the prefill on every keystroke would wipe
+    // user edits. The only trigger we care about is the auth state itself,
+    // which is handled via onAuthStateChange above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Prefill form data from URL parameters
@@ -238,26 +250,42 @@ const VerkaufenWizard = () => {
     formData.saleChannel,
   ]);
 
-  // Google Ads: Wizard-Start tracken
+  // Google Ads: Wizard-Start tracken.
+  // We intentionally run this only once on mount – searchParams.get('source')
+  // is read via ref semantics (the URL at mount time is the one that
+  // actually triggered the wizard).
   useEffect(() => {
     const source = searchParams.get('source') || 'direct';
     trackWizardStarted(source);
     trackMetaInitiateCheckout({ content_name: 'Verkaufs-Wizard', content_category: 'Wohnmobil' });
     trackEvent('wizard_started', { category: 'wizard', properties: { source } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save progress
+  // Auto-save progress. steps.length is a module-level constant so it's not
+  // a valid effect dependency.
   useEffect(() => {
     if (isReady) {
       saveProgress(currentStep, formData, steps.length);
     }
-  }, [currentStep, formData, steps.length, saveProgress, isReady]);
+  }, [currentStep, formData, saveProgress, isReady]);
 
-  // Save progress on page unload. We pass { immediate: true } so the save is
-  // flushed synchronously (the regular debounced save would almost always be
+  // Save progress on page unload / tab hide. We pass { immediate: true } so
+  // the save is flushed synchronously (the regular debounced save would be
   // cancelled by the unload event).
+  //
+  // Why three listeners:
+  //  - beforeunload      → desktop tab close / reload
+  //  - pagehide          → iOS Safari (beforeunload is unreliable there)
+  //  - visibilitychange  → mobile app-switch (WhatsApp, push notifications …)
+  //
+  // We guard against duplicate fires with a ref so the abandoned-tracking
+  // event only runs once per unload.
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    let fired = false;
+    const flushAndTrack = () => {
+      if (fired) return;
+      fired = true;
       saveProgress(currentStep, formData, steps.length, { immediate: true });
       if (currentStep < steps.length) {
         const currentStepInfo = steps[currentStep - 1];
@@ -266,11 +294,24 @@ const VerkaufenWizard = () => {
       }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [currentStep, formData, steps.length, saveProgress]);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flushAndTrack();
+    };
 
-  // Capture lead when user reaches Step 5 (Quick Contact) and provides email
+    window.addEventListener('beforeunload', flushAndTrack);
+    window.addEventListener('pagehide', flushAndTrack);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', flushAndTrack);
+      window.removeEventListener('pagehide', flushAndTrack);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [currentStep, formData, saveProgress]);
+
+  // Capture lead when user reaches Step 5 (Quick Contact) and provides email.
+  // We also include the vehicle-identity fields so a user who tweaks the
+  // manufacturer/model AFTER giving their email updates the lead record.
   useEffect(() => {
     if (currentStep >= 5 && formData.customerEmail && formData.customerName) {
       captureOrUpdateLead({
@@ -283,7 +324,14 @@ const VerkaufenWizard = () => {
         pageUrl: window.location.pathname,
       });
     }
-  }, [currentStep, formData.customerEmail, formData.customerName]);
+  }, [
+    currentStep,
+    formData.customerEmail,
+    formData.customerName,
+    formData.manufacturer,
+    formData.model,
+    formData.bodyType,
+  ]);
 
   // Higher starting percentage reduces abandonment psychology
   const progressMap: Record<number, number> = { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
@@ -342,12 +390,11 @@ const VerkaufenWizard = () => {
 
     // Additional password validation for guest submissions. If the user is
     // logged in we skip this – their password is already set.
+    // validatePassword already shows its own toast with the exact error, so
+    // we just bail out on failure.
     if (!currentUser) {
-      const passwordCheck = validatePassword(registerPassword, confirmPassword);
-      if (!passwordCheck.valid) {
-        toast.error(passwordCheck.error ?? 'Bitte Passwort prüfen.');
-        return;
-      }
+      const passwordValid = validatePassword(registerPassword, confirmPassword);
+      if (!passwordValid) return;
     }
 
     // Update contact data in session before submit
@@ -475,7 +522,7 @@ const VerkaufenWizard = () => {
                   {Math.round(progress)}%
                 </span>
               </div>
-              <Progress value={progress} className="h-1.5 sm:h-2 sm:h-2.5 rounded-full" />
+              <Progress value={progress} className="h-1.5 sm:h-2.5 rounded-full" />
               {/* Step dots – clickable visual orientation */}
               <div className="flex items-center justify-center gap-1.5 mt-1.5 sm:mt-2">
                 {steps.map((step, i) => (

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect, useState } from "react";
+import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight } from "lucide-react";
@@ -24,15 +24,41 @@ interface PhotosStepProps {
 export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosStepProps) => {
   const [isDragging, setIsDragging] = useState(false);
 
+  // Per-File object-URL cache. Previously the memo regenerated ALL urls on
+  // every photos-array change, which caused every <img> to reload and
+  // flicker whenever the user added/removed a single photo. Now we reuse
+  // the existing URL for each File identity and only create/revoke URLs
+  // for files that actually changed.
+  const urlCacheRef = useRef<Map<File, string>>(new Map());
+
   const photoUrls = useMemo(() => {
-    return formData.photos.map((photo) => URL.createObjectURL(photo));
+    const cache = urlCacheRef.current;
+    const currentSet = new Set(formData.photos);
+    for (const [file, url] of Array.from(cache)) {
+      if (!currentSet.has(file)) {
+        URL.revokeObjectURL(url);
+        cache.delete(file);
+      }
+    }
+    return formData.photos.map((file) => {
+      let url = cache.get(file);
+      if (!url) {
+        url = URL.createObjectURL(file);
+        cache.set(file, url);
+      }
+      return url;
+    });
   }, [formData.photos]);
 
   useEffect(() => {
+    // Revoke all remaining URLs when the step unmounts, to avoid leaking
+    // object-URL memory on navigation away from the wizard.
+    const cache = urlCacheRef.current;
     return () => {
-      photoUrls.forEach((url) => URL.revokeObjectURL(url));
+      for (const url of cache.values()) URL.revokeObjectURL(url);
+      cache.clear();
     };
-  }, [photoUrls]);
+  }, []);
 
   const addValidFiles = useCallback(
     (files: File[]) => {
@@ -178,7 +204,7 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
         >
           <Upload className="w-8 h-8 text-muted-foreground mb-2" />
           <span className="text-base font-medium text-foreground mb-1">
-            {hasPhotos ? "Weitere Fotos hinzufügen" : "Fotos hochladen"}
+            {hasPhotos ? "Weitere Fotos hinzufügen" : "Fotos aus Galerie wählen"}
           </span>
           <span className="text-xs text-muted-foreground text-center">
             Klicken oder Dateien hierher ziehen
@@ -193,6 +219,27 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
           />
         </label>
       </Card>
+
+      {/* Mobile-only camera shortcut. capture="environment" opens the rear
+          camera directly on iOS/Android, skipping the gallery picker. On
+          desktop browsers this attribute is silently ignored. We render the
+          button on every device but hide it via `sm:hidden` because it only
+          adds value on a phone. */}
+      <label
+        htmlFor="photo-capture"
+        className="sm:hidden flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer text-sm font-medium text-primary"
+      >
+        <Camera className="w-4 h-4" />
+        Foto mit Kamera aufnehmen
+        <input
+          id="photo-capture"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </label>
 
       {/* Photo preview */}
       {hasPhotos && (

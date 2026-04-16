@@ -2,7 +2,12 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- interactive-widget=resizes-content tells Chrome to resize the layout
+         viewport when the on-screen keyboard opens, so sticky bottom-nav
+         buttons (e.g. in the Verkaufs-Wizard) stay above the keyboard.
+         iOS Safari ignores this, but also respects position:sticky within
+         scrollable containers. viewport-fit=cover enables env(safe-area-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     
     <!-- Favicon — webp for smaller size, png fallback for Apple -->
     <link rel="icon" type="image/webp" href="/favicon.webp" />

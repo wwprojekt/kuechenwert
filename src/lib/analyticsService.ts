@@ -40,6 +40,10 @@ interface SessionData {
 class AnalyticsService {
   private sessionId: string | null = null;
   private sessionCreated: boolean = false;
+  // Mutex gegen parallele createSession()-Aufrufe (z.B. consent-update
+  // + flushQueues-Interval gleichzeitig), die sonst zwei parallele INSERTs
+  // mit identischer session_id auslösen und 23505 (duplicate_key) triggern.
+  private createSessionPromise: Promise<void> | null = null;
   private pageViewQueue: Array<{
     pagePath: string;
     pageTitle: string;
@@ -160,51 +164,70 @@ class AnalyticsService {
 
   private async createSession(): Promise<void> {
     if (this.sessionCreated || !hasAnalyticsConsent()) return;
-    
-    const consentId = getConsentId();
-    if (!consentId || !this.sessionId) return;
+
+    // Wenn bereits ein createSession-Aufruf läuft, warte nur darauf – kein
+    // zweiter Insert mit gleicher session_id.
+    if (this.createSessionPromise) {
+      return this.createSessionPromise;
+    }
+
+    this.createSessionPromise = (async () => {
+      const consentId = getConsentId();
+      if (!consentId || !this.sessionId) return;
+
+      try {
+        const deviceInfo = this.getDeviceInfo();
+        const utm = this.getUTMParams();
+
+        const { error } = await supabase.from('analytics_sessions').insert({
+          session_id: this.sessionId,
+          consent_id: consentId,
+          device_type: deviceInfo.type,
+          browser: deviceInfo.browser,
+          browser_version: deviceInfo.browserVersion,
+          os: deviceInfo.os,
+          os_version: deviceInfo.osVersion,
+          referrer_url: document.referrer || null,
+          referrer_domain: (() => {
+            let referrerDomain: string | null = null;
+            try {
+              referrerDomain = document.referrer ? new URL(document.referrer).hostname : null;
+            } catch { referrerDomain = null; }
+            return referrerDomain;
+          })(),
+          utm_source: utm.source,
+          utm_medium: utm.medium,
+          utm_campaign: utm.campaign,
+          utm_term: utm.term,
+          utm_content: utm.content,
+          landing_page: window.location.pathname,
+        });
+
+        if (error) {
+          // Table doesn't exist – non-fatal
+          if (error.code === '42P01' || error.code === 'PGRST205') {
+            logger.warn('Analytics tables not yet created');
+          } else if (error.code === '23505') {
+            // Duplicate key – session bereits von parallelem Tab/Aufruf angelegt.
+            // Als "erstellt" markieren und weiter flushen.
+            this.sessionCreated = true;
+            logger.log('Analytics session already existed (deduped)');
+          } else {
+            throw error;
+          }
+        } else {
+          this.sessionCreated = true;
+          logger.log('Analytics session created');
+        }
+      } catch (error) {
+        logger.error('Failed to create analytics session:', error);
+      }
+    })();
 
     try {
-      const deviceInfo = this.getDeviceInfo();
-      const utm = this.getUTMParams();
-      
-      const { error } = await supabase.from('analytics_sessions').insert({
-        session_id: this.sessionId,
-        consent_id: consentId,
-        device_type: deviceInfo.type,
-        browser: deviceInfo.browser,
-        browser_version: deviceInfo.browserVersion,
-        os: deviceInfo.os,
-        os_version: deviceInfo.osVersion,
-        referrer_url: document.referrer || null,
-        referrer_domain: (() => {
-          let referrerDomain: string | null = null;
-          try {
-            referrerDomain = document.referrer ? new URL(document.referrer).hostname : null;
-          } catch { referrerDomain = null; }
-          return referrerDomain;
-        })(),
-        utm_source: utm.source,
-        utm_medium: utm.medium,
-        utm_campaign: utm.campaign,
-        utm_term: utm.term,
-        utm_content: utm.content,
-        landing_page: window.location.pathname,
-      });
-
-      if (error) {
-        // If table doesn't exist, log warning but don't crash
-        if (error.code === '42P01' || error.code === 'PGRST205') {
-          logger.warn('Analytics tables not yet created');
-        } else {
-          throw error;
-        }
-      } else {
-        this.sessionCreated = true;
-        logger.log('Analytics session created');
-      }
-    } catch (error) {
-      logger.error('Failed to create analytics session:', error);
+      await this.createSessionPromise;
+    } finally {
+      this.createSessionPromise = null;
     }
   }
 

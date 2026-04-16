@@ -247,8 +247,21 @@ export const AccountLocationStep = ({
       </div>
 
       {/* ===== KONTO ERSTELLEN (PFLICHT) ===== */}
+      {/*
+        Passwort-Felder stehen in einem <form>, damit Browser/Password-Manager
+        (1Password, LastPass, iCloud Keychain, Chrome Autofill) die Felder als
+        zusammengehöriges Registrierungs-Formular erkennen und die DOM-Warnung
+        "Password field is not contained in a form" vermieden wird. Der
+        eigentliche Wizard-Submit erfolgt außerhalb dieses <form>-Elements;
+        onSubmit wird daher neutralisiert, damit ein versehentliches Enter
+        im Passwort-Feld kein Navigations-Reload auslöst.
+      */}
       {!isAuthenticated && (
-        <div className="space-y-4 border-t pt-4 sm:pt-6">
+        <form
+          className="space-y-4 border-t pt-4 sm:pt-6"
+          onSubmit={(e) => e.preventDefault()}
+          autoComplete="on"
+        >
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
             <h3 className="text-base font-semibold">Konto erstellen</h3>
@@ -346,7 +359,7 @@ export const AccountLocationStep = ({
               )}
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* Bereits eingeloggt - Info */}

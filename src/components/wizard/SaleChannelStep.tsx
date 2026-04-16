@@ -297,7 +297,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
               name="phone"
               type="tel"
               inputMode="tel"
-              pattern="^\+?[0-9\s\-()]{7,}$"
+              pattern="^\+?[-0-9\s()]{7,}$"
               placeholder="+49 123 456789"
               value={formData.customerPhone || ""}
               onChange={(e) => updateFormData({ customerPhone: e.target.value })}

@@ -90,8 +90,11 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
     // Dispatch event for analytics service
     window.dispatchEvent(new CustomEvent('consent-updated', { detail: finalConsent }));
 
-    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern
-    supabase.from('cookie_consent').upsert({
+    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern.
+    // Plain INSERT (kein UPSERT), da der ON CONFLICT DO UPDATE-Pfad die
+    // UPDATE-RLS-Policy für anon prüft und mit 42501 scheitert. Siehe
+    // CookieBanner.tsx für Details. Duplicate-Key (23505) wird still ignoriert.
+    supabase.from('cookie_consent').insert({
       consent_id: finalConsent.consentId,
       user_id: null,
       essential: finalConsent.essential,
@@ -100,8 +103,10 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       marketing: finalConsent.marketing,
       user_agent: navigator.userAgent.substring(0, 500),
       consent_version: CONSENT_VERSION,
-    }, { onConflict: 'consent_id' }).then(({ error }) => {
-      if (error) logger.error('Failed to save consent to DB:', error);
+    }).then(({ error }) => {
+      if (error && error.code !== '23505') {
+        logger.error('Failed to save consent to DB:', error);
+      }
     });
 
     logger.log('Cookie consent updated:', finalConsent);

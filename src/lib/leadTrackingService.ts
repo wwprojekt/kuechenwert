@@ -116,11 +116,19 @@ export async function captureOrUpdateLead(data: LeadData): Promise<string | null
       return existingLeadId;
     }
 
-    // Neuen Lead erstellen - mit Mutex um Duplikate zu verhindern
+    // Neuen Lead erstellen - mit Mutex um Duplikate zu verhindern.
+    // WICHTIG: Client-seitige UUID + plain insert (ohne .select()) vermeidet,
+    // dass PostgREST ein RETURNING ausführt, welches die (sehr restriktive)
+    // SELECT-RLS-Policy auf quick_leads prüfen würde. Für anonyme Wizard-Nutzer
+    // ist die SELECT-Policy auf "nur Admins" gesetzt – ein .select() nach dem
+    // Insert würde daher mit 42501 fehlschlagen, obwohl der Insert selbst
+    // erlaubt ist.
     const insertPromise = (async (): Promise<string | null> => {
-      const { data: newLead, error } = await supabase
+      const newLeadId = crypto.randomUUID();
+      const { error } = await supabase
         .from("quick_leads")
         .insert({
+          id: newLeadId,
           name: data.name || null,
           email: data.email ? data.email.toLowerCase().trim() : null,
           phone: data.phone || null,
@@ -133,21 +141,15 @@ export async function captureOrUpdateLead(data: LeadData): Promise<string | null
           lead_quality: leadQuality,
           user_agent: navigator.userAgent,
           referrer: document.referrer || null,
-        })
-        .select("id")
-        .single();
+        });
 
       if (error) {
         logger.error("Lead capture error:", error);
         return null;
       }
 
-      if (newLead?.id) {
-        setLeadId(newLead.id);
-        return newLead.id;
-      }
-
-      return null;
+      setLeadId(newLeadId);
+      return newLeadId;
     })();
 
     pendingInsert = insertPromise;

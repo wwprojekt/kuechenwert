@@ -186,9 +186,16 @@ const CookieBanner = () => {
     // Dispatch event for analytics service to react
     window.dispatchEvent(new CustomEvent('consent-updated', { detail: finalConsent }));
 
-    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern
-    // Fire-and-forget – darf die UX nicht blockieren
-    supabase.from('cookie_consent').upsert({
+    // DSGVO: Einwilligung serverseitig in cookie_consent Tabelle speichern.
+    // Fire-and-forget – darf die UX nicht blockieren.
+    //
+    // WICHTIG: Plain INSERT statt UPSERT. Der UPSERT-Pfad (ON CONFLICT DO UPDATE)
+    // prüft auch im Insert-Fall die UPDATE-RLS-Policy, welche für anonyme Nutzer
+    // nicht erfüllt ist (→ 42501). Da der consent_id pro Browser stabil ist, ist
+    // ein Duplicate-Key-Error (23505) der erwartete Fall für Folge-Änderungen
+    // und wird hier still verworfen. Für echte Consent-Änderungen wäre ein
+    // neuer consent_id nötig (Audit-Trail), siehe TODO unten.
+    supabase.from('cookie_consent').insert({
       consent_id: finalConsent.consentId,
       user_id: null, // Wird ggf. später mit auth.uid() verknüpft
       essential: finalConsent.essential,
@@ -197,8 +204,11 @@ const CookieBanner = () => {
       marketing: finalConsent.marketing,
       user_agent: navigator.userAgent.substring(0, 500),
       consent_version: CONSENT_VERSION,
-    }, { onConflict: 'consent_id' }).then(({ error }) => {
-      if (error) logger.error('Failed to save consent to DB:', error);
+    }).then(({ error }) => {
+      // 23505 = unique_violation: consent_id existiert bereits → erwartet
+      if (error && error.code !== '23505') {
+        logger.error('Failed to save consent to DB:', error);
+      }
     });
 
     logger.log('Cookie consent saved:', finalConsent);

@@ -455,7 +455,7 @@ export const useWizardForm = () => {
 
       // Check if user is already authenticated (with session validation)
       const sessionResult = await ensureValidSession();
-      let user = sessionResult.user;
+      const user = sessionResult.user;
 
       if (sessionResult.wasRefreshed) {
         logger.info('Wizard submit: Session was proactively refreshed');
@@ -553,43 +553,16 @@ export const useWizardForm = () => {
           title: "Fahrzeug erfolgreich eingereicht!",
           description: "Sie erhalten in Kürze eine E-Mail zur Kontoaktivierung. Prüfen Sie Ihr Postfach.",
         });
-        // Fotos und sessionId über window-Objekt an die Danke-Seite übergeben.
-        // WARUM? File-Objekte sind nicht über history.state serialisierbar.
-        // WARUM NICHT fire-and-forget? navigate() bricht laufende fetch()-Requests ab.
-        // Die Danke-Seite liest diese Daten und startet den Upload dort.
-        if (formData.photos.length > 0 && savedSessionId) {
-          (window as any).__pendingWizardPhotos = {
-            photos: formData.photos,
-            sessionId: savedSessionId,
-          };
-        }
-        navigate("/verkaufen/danke");
-
-        // --- Background tasks (fire-and-forget, nicht blockierend) ---
+        // Alle Daten über window-Objekt an die Danke-Seite übergeben.
+        // WARUM? navigate() bricht laufende fetch()-Requests ab (OPTIONS geht durch,
+        // aber der eigentliche POST wird abgebrochen). Deshalb müssen ALLE
+        // Edge-Function-Aufrufe auf der Danke-Seite starten, nicht hier.
         if (savedSessionId) {
-          // 1. auto-convert-wizard: Erstellt Profil, Motorhome, sendet Aktivierungs-E-Mail
-          supabase.functions.invoke("auto-convert-wizard", {
-            body: {
-              sessionId: savedSessionId,
-              userId: null,
-              password: registerPassword,
-              hasPassword: true,
-            },
-          }).then((res) => {
-            if (res.error) {
-              logger.error("Auto-convert returned error (background):", res.error);
-            } else {
-              logger.info("Auto-convert successful (background)");
-            }
-          }).catch((convertErr) => {
-            logger.error("Auto-convert failed (background):", convertErr);
-          });
-
-          // 2. send-lead-notification: Admin-Benachrichtigung + Conversion-Tracking
           const trackingData = getTrackingData();
-          supabase.functions.invoke("send-lead-notification", {
-            body: {
-              type: "wizard",
+          (window as any).__pendingWizardConvert = {
+            sessionId: savedSessionId,
+            password: registerPassword,
+            leadNotification: {
               name: formData.customerName || "Unbekannt",
               email: formData.customerEmail || "",
               phone: formData.customerPhone || undefined,
@@ -605,10 +578,15 @@ export const useWizardForm = () => {
               turnstileToken: botProtection?.turnstileToken || undefined,
               honeypot: botProtection?.honeypot || undefined,
             },
-          }).catch((emailError) => {
-            logger.error("Failed to send wizard lead notification (background):", emailError);
-          });
+          };
         }
+        if (formData.photos.length > 0 && savedSessionId) {
+          (window as any).__pendingWizardPhotos = {
+            photos: formData.photos,
+            sessionId: savedSessionId,
+          };
+        }
+        navigate("/verkaufen/danke");
 
         return true;
       }

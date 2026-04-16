@@ -7,7 +7,7 @@
  *
  * Expects JSON body:
  * - lead_id: UUID of the lead entry
- * - lead_type: "wizard" | "quick" | "valuation"
+ * - lead_type: "wizard" | "valuation"
  * - estimated_value: (optional) override value if not stored in DB
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -58,7 +58,6 @@ function getCorsHeaders(req: Request): Record<string, string> {
 function getTableName(leadType: string): string {
   switch (leadType) {
     case "wizard": return "wizard_sessions";
-    case "quick": return "quick_leads";
     case "valuation": return "value_assessment_leads";
     default: throw new Error(`Unbekannter Lead-Typ: ${leadType}`);
   }
@@ -80,21 +79,6 @@ function extractLeadInfo(lead: any, leadType: string) {
       condition: formData.condition || formData.zustand || null,
       estimatedValue: lead.admin_estimated_value || null,
       vehicleSummary: lead.vehicle_summary || null,
-    };
-  } else if (leadType === "quick") {
-    const formData = lead.form_data_snapshot || {};
-    return {
-      name: lead.name || null,
-      email: lead.email || null,
-      phone: lead.phone || null,
-      manufacturer: lead.manufacturer || null,
-      model: lead.model || null,
-      year: formData.year || formData.baujahr || null,
-      bodyType: lead.body_type || null,
-      mileage: formData.mileage || formData.kilometerstand || null,
-      condition: formData.condition || null,
-      estimatedValue: lead.admin_estimated_value || null,
-      vehicleSummary: null,
     };
   } else {
     // valuation

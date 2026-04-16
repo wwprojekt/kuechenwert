@@ -6,7 +6,7 @@
  *
  * Expects JSON body:
  * - lead_id: UUID of the lead entry
- * - lead_type: "wizard" | "quick" | "valuation"
+ * - lead_type: "wizard" | "valuation"
  * - disposition_type: "no_answer" | "considering" | "done"
  * - estimated_value: (optional) override value if not stored in DB
  */
@@ -23,7 +23,6 @@ import {
   detailRow,
   amountDisplay,
   divider,
-  list,
 } from "../_shared/email-builder.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -37,7 +36,6 @@ type DispositionType = typeof VALID_DISPOSITIONS[number];
 function getTableName(leadType: string): string {
   switch (leadType) {
     case "wizard": return "wizard_sessions";
-    case "quick": return "quick_leads";
     case "valuation": return "value_assessment_leads";
     default: throw new Error(`Unbekannter Lead-Typ: ${leadType}`);
   }
@@ -59,21 +57,6 @@ function extractLeadInfo(lead: any, leadType: string) {
       condition: formData.condition || formData.zustand || null,
       estimatedValue: lead.admin_estimated_value || null,
       vehicleSummary: lead.vehicle_summary || null,
-    };
-  } else if (leadType === "quick") {
-    const formData = lead.form_data_snapshot || {};
-    return {
-      name: lead.name || null,
-      email: lead.email || null,
-      phone: lead.phone || null,
-      manufacturer: lead.manufacturer || null,
-      model: lead.model || null,
-      year: formData.year || formData.baujahr || null,
-      bodyType: lead.body_type || null,
-      mileage: formData.mileage || formData.kilometerstand || null,
-      condition: formData.condition || null,
-      estimatedValue: lead.admin_estimated_value || null,
-      vehicleSummary: null,
     };
   } else {
     // valuation

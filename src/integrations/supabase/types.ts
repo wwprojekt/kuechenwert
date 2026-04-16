@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2972,114 +2972,6 @@ export type Database = {
         }
         Relationships: []
       }
-      quick_leads: {
-        Row: {
-          admin_estimated_value: number | null
-          admin_notes: string | null
-          body_type: string | null
-          contacted_at: string | null
-          created_at: string | null
-          deleted_at: string | null
-          disposition: string | null
-          done_email_count: number | null
-          done_email_last_sent: string | null
-          email: string | null
-          form_data_snapshot: Json | null
-          id: string
-          is_viewed: boolean
-          last_wizard_step: number | null
-          lead_quality: string | null
-          manufacturer: string | null
-          max_wizard_step: number | null
-          model: string | null
-          name: string | null
-          no_answer_email_count: number | null
-          no_answer_email_last_sent: string | null
-          notes: string | null
-          page_url: string | null
-          phone: string | null
-          referrer: string | null
-          sale_channel: string | null
-          source: string | null
-          status: string | null
-          updated_at: string | null
-          user_agent: string | null
-          wizard_completed: boolean | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
-        }
-        Insert: {
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          body_type?: string | null
-          contacted_at?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          email?: string | null
-          form_data_snapshot?: Json | null
-          id?: string
-          is_viewed?: boolean
-          last_wizard_step?: number | null
-          lead_quality?: string | null
-          manufacturer?: string | null
-          max_wizard_step?: number | null
-          model?: string | null
-          name?: string | null
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          notes?: string | null
-          page_url?: string | null
-          phone?: string | null
-          referrer?: string | null
-          sale_channel?: string | null
-          source?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_agent?: string | null
-          wizard_completed?: boolean | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-        }
-        Update: {
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          body_type?: string | null
-          contacted_at?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          email?: string | null
-          form_data_snapshot?: Json | null
-          id?: string
-          is_viewed?: boolean
-          last_wizard_step?: number | null
-          lead_quality?: string | null
-          manufacturer?: string | null
-          max_wizard_step?: number | null
-          model?: string | null
-          name?: string | null
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          notes?: string | null
-          page_url?: string | null
-          phone?: string | null
-          referrer?: string | null
-          sale_channel?: string | null
-          source?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_agent?: string | null
-          wizard_completed?: boolean | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-        }
-        Relationships: []
-      }
       rate_limits: {
         Row: {
           count: number
@@ -4478,6 +4370,7 @@ export type Database = {
         Args: { dealer_id_param: string }
         Returns: boolean
       }
+      link_wizard_sessions_to_confirmed_user: { Args: never; Returns: number }
       log_audit_event: {
         Args: {
           p_action: string
@@ -4588,10 +4481,6 @@ export type Database = {
         Args: { dealer_id_param: string }
         Returns: undefined
       }
-      update_max_wizard_step: {
-        Args: { p_lead_id: string; p_step: number }
-        Returns: undefined
-      }
       update_motorhome_damage_status: {
         Args: { motorhome_id_param: string }
         Returns: undefined
@@ -4599,6 +4488,14 @@ export type Database = {
       update_wizard_session_by_anonymous_id: {
         Args: { p_anonymous_id: string; p_session_id: string; p_updates: Json }
         Returns: undefined
+      }
+      verify_wizard_session_ownership: {
+        Args: {
+          p_anonymous_id?: string
+          p_session_id: string
+          p_user_id?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
@@ -4635,7 +4532,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "ReparaturbedÃ¼rftig"
+        | "Reparaturbedürftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -4805,7 +4702,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "ReparaturbedÃ¼rftig",
+        "Reparaturbedürftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",
@@ -4816,4 +4713,3 @@ export const Constants = {
     },
   },
 } as const
-

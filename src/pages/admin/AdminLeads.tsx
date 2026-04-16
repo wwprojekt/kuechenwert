@@ -867,8 +867,6 @@ export default function AdminLeads() {
 
   // ---- Filtering ----
 
-  const enrichedSessions = wizardSessions;
-
   // Date filter helper
   const matchesDateRange = (dateStr: string | null) => {
     if (!dateFrom && !dateTo) return true;
@@ -880,7 +878,7 @@ export default function AdminLeads() {
   };
 
   const filteredSessions = useMemo(() => {
-    return enrichedSessions.filter((session) => {
+    return wizardSessions.filter((session) => {
       if (session.disposition && session.disposition !== "already_customer") return false;
       if (statusFilter !== "all" && session.status !== statusFilter) return false;
       if (!matchesDateRange(session.created_at)) return false;
@@ -895,7 +893,7 @@ export default function AdminLeads() {
       }
       return true;
     });
-  }, [enrichedSessions, statusFilter, searchQuery, dateFrom, dateTo]);
+  }, [wizardSessions, statusFilter, searchQuery, dateFrom, dateTo]);
 
   const filteredValuationLeads = useMemo(() => {
     const withoutDisposition = valuationLeads.filter(l => !l.disposition || l.disposition === "already_customer");

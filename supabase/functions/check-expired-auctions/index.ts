@@ -424,17 +424,96 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── 3. Orphan sweep: offers on already-dead auctions ───────────────────
+    // Finds post_auction_offers in pending/countered whose auction is already
+    // sold/ended/cancelled. This can happen if admin cancelled/sold directly
+    // in a place we didn't instrument, or if a race left offers stranded.
+    // We expire them defensively so buyers don't see phantom offers forever.
+    let orphanCount = 0;
+    try {
+      const { data: orphanOffers } = await supabase
+        .from('post_auction_offers')
+        .select('id, auction_id, buyer_id, offer_amount, auction:auctions(status, motorhome:motorhomes(manufacturer, model))')
+        .in('status', ['pending', 'countered'])
+        .limit(500);
+
+      const deadStatuses = new Set(['sold', 'ended', 'cancelled']);
+      const toExpire = (orphanOffers || []).filter((o: any) => {
+        const auc = Array.isArray(o.auction) ? o.auction[0] : o.auction;
+        return auc && deadStatuses.has(auc.status);
+      });
+
+      if (toExpire.length > 0) {
+        const ids = toExpire.map((o: any) => o.id);
+        const { error: orphanErr } = await supabase
+          .from('post_auction_offers')
+          .update({
+            status: 'expired',
+            seller_response: 'Inserat bereits beendet – Angebot automatisch storniert',
+            updated_at: now,
+          })
+          .in('id', ids);
+        if (orphanErr) {
+          console.error('Orphan sweep update failed:', orphanErr);
+        } else {
+          orphanCount = toExpire.length;
+          console.log(`Orphan sweep expired ${orphanCount} offers on dead auctions`);
+
+          // Best-effort: notify proposers so they aren't left in the dark.
+          // Only notify for offers whose auction is cancelled (user-driven end
+          // that would otherwise surprise them). sold/ended offers are noisy
+          // because the winning-buyer path already sent "lost" mails.
+          for (const o of toExpire) {
+            const auc = Array.isArray(o.auction) ? o.auction[0] : o.auction;
+            if (auc?.status !== 'cancelled') continue;
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('email, first_name, company_name')
+                .eq('id', o.buyer_id)
+                .single();
+              if (profile?.email) {
+                const mh = auc?.motorhome
+                  ? (Array.isArray(auc.motorhome) ? auc.motorhome[0] : auc.motorhome)
+                  : null;
+                const motorhomeName = mh
+                  ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim()
+                  : 'Inserat';
+                await supabase.functions.invoke('send-auction-notification', {
+                  body: {
+                    email: profile.email,
+                    name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                    type: 'lost',
+                    motorhomeModel: motorhomeName,
+                    auctionUrl: 'https://caravanwert.de/kaufen',
+                    yourBid: `€${Number(o.offer_amount).toLocaleString('de-DE')}`,
+                    isFestpreis: true,
+                    listingEnded: true,
+                  },
+                });
+              }
+            } catch (notifyErr: any) {
+              console.error(`Orphan sweep notify failed for ${o.buyer_id}:`, notifyErr?.message);
+            }
+          }
+        }
+      }
+    } catch (orphanBlockErr: any) {
+      console.error('Orphan sweep block failed:', orphanBlockErr?.message);
+    }
+
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
 
-    console.log(`Processing completed: ${successCount} successful, ${failCount} failed`);
+    console.log(`Processing completed: ${successCount} successful, ${failCount} failed, ${orphanCount} orphan offers swept`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${results.length} expired auctions/kaufchancen`,
+        message: `Processed ${results.length} expired auctions/kaufchancen; swept ${orphanCount} orphan offers`,
         successCount,
         failCount,
+        orphanCount,
         results,
       }),
       { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }

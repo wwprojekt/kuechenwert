@@ -135,14 +135,26 @@ export async function approveDealerApplication(applicationId: string): Promise<v
       .single();
 
     // Use the database function for proper role assignment
+    // RPC is atomic: only the caller that actually transitioned pending->approved wins.
+    // A concurrent second call raises ALREADY_PROCESSED -> we skip the email to
+    // avoid duplicate welcome emails.
     const { error: approvalError } = await supabase
       .rpc('approve_dealer_application', {
         application_id_param: applicationId
       });
 
-    if (approvalError) throw approvalError;
+    if (approvalError) {
+      const msg = approvalError.message || '';
+      if (msg.includes('ALREADY_PROCESSED')) {
+        // Another admin already approved this application in parallel.
+        // No email here — the first caller is responsible for sending it.
+        throw new Error('Bewerbung wurde bereits bearbeitet');
+      }
+      throw approvalError;
+    }
 
-  // Send approval email - don't fail the whole operation if email fails
+  // Send approval email - don't fail the whole operation if email fails.
+  // This only runs if the RPC succeeded (= this caller won the race).
   try {
     if (profile?.email) {
       await invokeWithAuth('send-dealer-notification', {

@@ -1265,17 +1265,22 @@ export default function AdminSettings() {
                     max="10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="commission-rate">Provisionsrate (%)</Label>
-                  <Input
-                    id="commission-rate"
-                    type="number"
-                    value={formData.commission_rate_percent || ''}
-                    onChange={(e) => updateField('commission_rate_percent', parseFloat(e.target.value))}
-                    min="0"
-                    max="20"
-                    step="0.5"
-                  />
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 p-4">
+                <div className="flex items-start gap-3">
+                  <Receipt className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800 dark:text-blue-300">
+                    <p className="font-medium mb-1">Provisionen verwalten</p>
+                    <p className="text-blue-700 dark:text-blue-400">
+                      Die Provisionsstaffeln und Volumen-Rabatte werden unter{" "}
+                      <a href="/admin/commissions" className="font-medium underline hover:no-underline">
+                        Admin → Provisionen
+                      </a>{" "}
+                      verwaltet. Dort können Sie Staffeln (min./max. Verkaufssumme, Prozent- oder Fixbetrag)
+                      und Volumen-Rabatte pro Händler konfigurieren. Die dort gesetzten Werte werden automatisch
+                      sowohl bei Auktions-Zuschlägen als auch bei Sofortkäufen verwendet.
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4 pt-4 border-t">

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -174,19 +175,22 @@ export default function AdminAuctionDetail() {
     },
   });
 
-  // Cancel auction mutation
+  // Cancel auction mutation (also expires open offers + notifies proposers)
   const cancelAuctionMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("auctions")
-        .update({ status: "cancelled" })
-        .eq("id", id);
-      if (error) throw error;
+      if (!id) throw new Error("No auction id");
+      return cancelAuctionAsAdmin(id);
     },
-    onSuccess: () => {
-      toast.success(isFestpreis ? "Inserat erfolgreich abgebrochen" : "Auktion erfolgreich abgebrochen");
+    onSuccess: (result) => {
+      const offerInfo = result.expiredOffersCount > 0
+        ? ` · ${result.expiredOffersCount} offene Angebote storniert`
+        : "";
+      toast.success(
+        (isFestpreis ? "Inserat erfolgreich abgebrochen" : "Auktion erfolgreich abgebrochen") + offerInfo
+      );
       logEvent({ action: "auction_cancelled", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionOffers", id] });
     },
     onError: (error) => {
       logger.error("Cancel auction error:", error);

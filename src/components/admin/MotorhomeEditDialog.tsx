@@ -335,10 +335,50 @@ export function MotorhomeEditDialog({
         .eq("id", motorhome.id);
 
       if (error) throw error;
+
+      // ─── Cascade: if status was flipped to "sold" manually, sync the auction
+      //             and expire any open post_auction_offers. Otherwise dealers
+      //             still see a phantom "pending" offer and accept-kaufchance-offer
+      //             would block with "vehicle already sold".
+      // Best-effort; failures here do NOT rollback the motorhome update.
+      if (data.status === "sold" && motorhome.status !== "sold") {
+        try {
+          const { data: relatedAuctions } = await supabase
+            .from("auctions")
+            .select("id, status")
+            .eq("motorhome_id", motorhome.id);
+          const activeAuction = (relatedAuctions || []).find(
+            (a: any) => a.status === "active" || a.status === "kaufchance"
+          );
+          if (activeAuction) {
+            await supabase
+              .from("auctions")
+              .update({ status: "sold" })
+              .eq("id", activeAuction.id)
+              .in("status", ["active", "kaufchance"]);
+
+            const { count } = await supabase
+              .from("post_auction_offers")
+              .update({
+                status: "expired",
+                seller_response: "Fahrzeug wurde manuell als verkauft markiert",
+                updated_at: new Date().toISOString(),
+              }, { count: "exact" })
+              .eq("auction_id", activeAuction.id)
+              .in("status", ["pending", "countered"]);
+            if (count && count > 0) {
+              logger.info(`Cascaded ${count} open offers to expired on manual sold status`);
+            }
+          }
+        } catch (cascadeErr) {
+          logger.error("Sold-status cascade failed (non-fatal):", cascadeErr);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhome"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       toast({
         title: "Gespeichert",
         description: "Wohnmobil wurde erfolgreich aktualisiert.",

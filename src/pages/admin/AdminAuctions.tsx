@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -574,16 +575,14 @@ export default function AdminAuctions() {
   });
 
   const cancelAuctionMutation = useMutation({
-    mutationFn: async (auctionId: string) => {
-      const { error } = await supabase
-        .from("auctions")
-        .update({ status: "cancelled" })
-        .eq("id", auctionId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich abgebrochen");
+    mutationFn: (auctionId: string) => cancelAuctionAsAdmin(auctionId),
+    onSuccess: (result) => {
+      const offerInfo = result.expiredOffersCount > 0
+        ? ` · ${result.expiredOffersCount} offene Angebote storniert`
+        : "";
+      toast.success(`Auktion erfolgreich abgebrochen${offerInfo}`);
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
     },
     onError: (error: any) => {
       toast.error("Fehler beim Abbrechen der Auktion");

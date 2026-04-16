@@ -36,6 +36,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ─── Dedup for "approved" welcome email (defense-in-depth) ────────────────
+    // Primary safety: approve_dealer_application RPC uses WHERE status='pending'
+    // so only the first admin click wins. This check is a belt-and-suspenders
+    // guard against any other accidental double-invocation (retry, queue, etc).
+    if (type === 'approved') {
+      try {
+        const { data: existing } = await supabase
+          .from('admin_emails')
+          .select('id')
+          .eq('recipient_email', email)
+          .eq('email_type', 'dealer_approved')
+          .eq('status', 'sent')
+          .limit(1)
+          .maybeSingle();
+        if (existing) {
+          console.log(`[send-dealer-notification] Duplicate 'approved' for ${email} suppressed (already sent id=${existing.id})`);
+          return new Response(
+            JSON.stringify({ ok: true, deduped: true, message: 'Welcome email already sent' }),
+            { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) } }
+          );
+        }
+      } catch (dedupErr) {
+        console.error('[send-dealer-notification] Dedup check failed (continuing):', dedupErr);
+      }
+    }
+
     // Fetch customer number if not passed
     let custNum = passedCustNum || '';
     if (!custNum) {

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -278,14 +279,13 @@ export default function AdminMotorhomeDetail() {
   const cancelAuctionMutation = useMutation({
     mutationFn: async () => {
       if (!relevantAuction) throw new Error("No auction");
-      const { error } = await supabase
-        .from("auctions")
-        .update({ status: "cancelled" })
-        .eq("id", relevantAuction.id);
-      if (error) throw error;
+      return cancelAuctionAsAdmin(relevantAuction.id);
     },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich abgebrochen");
+    onSuccess: (result) => {
+      const offerInfo = result.expiredOffersCount > 0
+        ? ` · ${result.expiredOffersCount} offene Angebote storniert`
+        : "";
+      toast.success(`Auktion erfolgreich abgebrochen${offerInfo}`);
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
     },
     onError: () => toast.error("Fehler beim Abbrechen der Auktion"),

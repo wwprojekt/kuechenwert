@@ -508,7 +508,7 @@ const AuctionDetail = () => {
 
   // Realtime: Subscribe to offer changes (seller responds to this user's offers)
   useEffect(() => {
-    if (!user || !id || (auction?.status !== 'kaufchance' && !(auction?.status === 'active' && motorhome?.sale_channel === 'instant_price'))) return;
+    if (!user || !id || (auction?.status !== 'kaufchance' && !(auction?.status === 'active' && auction?.motorhome?.sale_channel === 'instant_price'))) return;
 
     const kaufchanceChannel = supabase
       .channel(`kaufchance-detail-${id}-${user.id}`)
@@ -556,7 +556,7 @@ const AuctionDetail = () => {
     return () => {
       supabase.removeChannel(kaufchanceChannel);
     };
-  }, [id, user, auction?.status, motorhome?.sale_channel, toast, queryClient, fetchAuction]);
+  }, [id, user, auction?.status, auction?.motorhome?.sale_channel, toast, queryClient, fetchAuction]);
 
   // Countdown timer
   useEffect(() => {

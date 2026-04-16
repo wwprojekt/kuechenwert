@@ -29,3 +29,9 @@ dist-ssr
 /screenshots
 /tests
 worker/__pycache__/
+
+# Temp/debug files
+.tmp-*
+temp-*.json
+cookies.txt
+dokploy_cookies.txt

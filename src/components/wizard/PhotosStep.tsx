@@ -75,13 +75,13 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
   const hasPhotos = formData.photos.length > 0;
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="mb-4">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+    <div className="space-y-3 sm:space-y-5 animate-fade-in">
+      <div className="mb-2 sm:mb-4">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2 flex items-center gap-2">
           <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fotos Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'}
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-xs sm:text-base text-muted-foreground">
           Fotos sind <strong>optional</strong> – Sie können sie jetzt hochladen oder jederzeit per E-Mail nachreichen
         </p>
       </div>
@@ -125,7 +125,7 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
       >
         <label
           htmlFor="photo-upload"
-          className="flex flex-col items-center justify-center py-5 md:py-8 px-4 cursor-pointer"
+          className="flex flex-col items-center justify-center py-4 sm:py-5 md:py-8 px-4 cursor-pointer"
         >
           <Upload className="w-8 h-8 text-muted-foreground mb-2" />
           <span className="text-base font-medium text-foreground mb-1">

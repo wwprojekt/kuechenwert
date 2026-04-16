@@ -30,23 +30,23 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
   }, []);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+    <div className="space-y-3 sm:space-y-6 animate-fade-in">
+      <div className="mb-3 sm:mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2 flex items-center gap-2">
           <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Verkaufsweg wählen
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-xs sm:text-base text-muted-foreground">
           Wählen Sie Ihren Verkaufsweg und vervollständigen Sie Ihre Kontaktdaten
         </p>
       </div>
 
       {/* FOMO-Banner */}
-      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-        <div className="flex items-center gap-3">
+      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1 text-green-600">
-            <Users className="w-5 h-5" />
-            <TrendingUp className="w-5 h-5" />
+            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <p className="text-sm font-semibold text-green-800 dark:text-green-200">

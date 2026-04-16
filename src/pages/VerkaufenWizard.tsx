@@ -393,9 +393,9 @@ const VerkaufenWizard = () => {
       hideFooter
     >
       {/* Kompakter Wizard-Header mit Logo (da globaler Header ausgeblendet) */}
-      <div className="bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-muted/65 pt-3 pb-2 md:pt-4 md:pb-3 border-b border-border/30">
+      <div className="bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-muted/65 pt-2 pb-1.5 sm:pt-3 sm:pb-2 md:pt-4 md:pb-3 border-b border-border/30">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-0 sm:mb-2">
             <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <SiteLogo variant="icon-text" />
             </a>
@@ -404,7 +404,7 @@ const VerkaufenWizard = () => {
               Zurück zur Übersicht
             </a>
           </div>
-          <div className="text-center">
+          <div className="text-center hidden sm:block">
             <h1 className="text-base md:text-xl font-bold text-foreground">
               Verkaufen Sie Ihr Wohnmobil
             </h1>
@@ -415,19 +415,19 @@ const VerkaufenWizard = () => {
         </div>
       </div>
 
-      <div className="min-h-screen py-4 md:py-8 bg-muted/65">
+      <div className="min-h-screen py-2 sm:py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Indicator with step dots */}
-            <div className="mb-4 md:mb-6 animate-slide-up">
-              <div className="flex justify-end items-center mb-1.5">
+            <div className="mb-2 sm:mb-4 md:mb-6 animate-slide-up">
+              <div className="flex justify-end items-center mb-1">
                 <span className="text-xs sm:text-sm font-semibold text-primary">
                   {Math.round(progress)}%
                 </span>
               </div>
-              <Progress value={progress} className="h-2 sm:h-2.5 rounded-full" />
+              <Progress value={progress} className="h-1.5 sm:h-2 sm:h-2.5 rounded-full" />
               {/* Step dots – clickable visual orientation */}
-              <div className="flex items-center justify-center gap-1.5 mt-2">
+              <div className="flex items-center justify-center gap-1.5 mt-1.5 sm:mt-2">
                 {steps.map((step, i) => (
                   <div
                     key={step.id}
@@ -449,7 +449,7 @@ const VerkaufenWizard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Form Card - 2/3 width on desktop */}
               <div className="lg:col-span-2">
-                <Card className="p-3 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
+                <Card className="p-2.5 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
                   <div className="min-h-[180px] md:min-h-[350px]">{renderStep()}</div>
                 </Card>
 

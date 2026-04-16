@@ -79,14 +79,14 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
   const [showEquipment, setShowEquipment] = useState(false);
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-3 sm:space-y-5 animate-fade-in">
       {/* Header */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-0.5 sm:mb-1 flex items-center gap-2">
           <Star className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Fahrzeug-Details & Ausstattung
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Je mehr Angaben, desto bessere Angebote von Händlern – alles optional, aber empfohlen
         </p>
       </div>

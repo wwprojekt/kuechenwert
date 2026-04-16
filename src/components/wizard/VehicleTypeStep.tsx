@@ -81,20 +81,20 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-3 sm:space-y-5 animate-fade-in">
       {/* Header */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-0.5 sm:mb-1 flex items-center gap-2">
           <Car className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Was möchten Sie verkaufen?
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Wählen Sie Ihren Fahrzeugtyp und die Aufbauart
         </p>
       </div>
 
       {/* FOMO-Element */}
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2.5">
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5">
         <div className="flex items-center gap-1 text-primary">
           <Users className="w-4 h-4" />
           <TrendingUp className="w-4 h-4" />
@@ -105,9 +105,9 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
       </div>
 
       {/* Fahrzeugtyp-Auswahl */}
-      <div className="space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <label className="text-sm font-semibold text-foreground">Fahrzeugtyp</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {vehicleTypes.map((type) => {
             const isSelected = vehicleType === type.value;
             const Icon = type.value === "Wohnmobil" ? Car : Caravan;
@@ -135,11 +135,11 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
       </div>
 
       {/* Aufbauart-Auswahl - 2-spaltig */}
-      <div className="space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <label className={cn("text-sm font-semibold", fieldErrors.bodyType ? "text-red-600" : "text-foreground")}>
           Aufbauart <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {currentBodyTypes.map((type, index) => {
             const info = currentBodyTypeInfo[type];
             if (!info) return null;
@@ -157,7 +157,7 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
                   }
                 }}
                 className={cn(
-                  "p-3 rounded-xl border-2 text-center transition-all duration-200 group animate-fade-in relative",
+                  "p-2 sm:p-3 rounded-xl border-2 text-center transition-all duration-200 group animate-fade-in relative",
                   "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
                   isSelected
                     ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
@@ -174,10 +174,10 @@ export const VehicleTypeStep = ({ formData, updateFormData, fieldErrors = {}, on
 
                 {/* SVG-Icon der Aufbauart */}
                 <div className={cn(
-                  "w-full flex items-center justify-center mb-2 transition-colors",
+                  "w-full flex items-center justify-center mb-1 sm:mb-2 transition-colors",
                   isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary"
                 )}>
-                  <Icon className="w-16 h-10 md:w-20 md:h-12" />
+                  <Icon className="w-14 h-9 sm:w-16 sm:h-10 md:w-20 md:h-12" />
                 </div>
 
                 {/* Label */}

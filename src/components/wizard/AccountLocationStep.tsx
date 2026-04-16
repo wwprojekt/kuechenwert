@@ -119,21 +119,21 @@ export const AccountLocationStep = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-3 sm:space-y-6 animate-fade-in">
       {/* Motivational banner */}
-      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-2 text-sm">
+      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-2.5 sm:p-3 flex items-center gap-2 text-xs sm:text-sm">
         <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
         <span className="text-green-800 dark:text-green-200 font-medium">
           Fast geschafft! Nur noch Standort angeben{!isAuthenticated ? " und Passwort wählen" : ""} — dann erhalten Sie Ihr Angebot.
         </span>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+      <div className="mb-3 sm:mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2 flex items-center gap-2">
           <MapPin className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Standort & Konto
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-xs sm:text-base text-muted-foreground">
           Letzter Schritt – geben Sie den Standort Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'} an{!isAuthenticated ? " und erstellen Sie Ihr Konto" : ""}
         </p>
       </div>
@@ -248,7 +248,7 @@ export const AccountLocationStep = ({
 
       {/* ===== KONTO ERSTELLEN (PFLICHT) ===== */}
       {!isAuthenticated && (
-        <div className="space-y-4 border-t pt-6">
+        <div className="space-y-4 border-t pt-4 sm:pt-6">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
             <h3 className="text-base font-semibold">Konto erstellen</h3>
@@ -367,7 +367,7 @@ export const AccountLocationStep = ({
       )}
 
       {/* Datenschutz-Hinweis */}
-      <div className="bg-muted/50 rounded-lg p-4 flex items-start gap-3">
+      <div className="bg-muted/50 rounded-lg p-3 sm:p-4 flex items-start gap-3">
         <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
           Mit dem Absenden stimmen Sie unseren{" "}

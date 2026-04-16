@@ -42,20 +42,20 @@ export const DetailsStep = ({ formData, updateFormData, fieldErrors = {} }: Deta
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-3 sm:space-y-5 animate-fade-in">
       {/* Header – positive framing instead of "Technische Details" */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-0.5 sm:mb-1 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Bessere Angebote erhalten
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Mit diesen Angaben bieten Händler bis zu <strong className="text-foreground">15% mehr</strong> – alles vorausgefüllt, einfach prüfen
         </p>
       </div>
 
       {/* Vorauswahl-Info: zeigt dem User dass wir schon für ihn gearbeitet haben */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center gap-2 text-sm">
+      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2.5 sm:p-3 flex items-center gap-2 text-xs sm:text-sm">
         <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
         <span className="text-blue-700 dark:text-blue-300">
           Alles ist <strong>optional und vorausgefüllt</strong> — Sie können direkt auf <strong>„Weiter"</strong> klicken oder Angaben anpassen.

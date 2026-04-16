@@ -315,7 +315,65 @@ const handler = async (req: Request): Promise<Response> => {
 
     let firstEmailSent = 0;
     let followupEmailSent = 0;
+    let autoConverted = 0;
     let errors = 0;
+
+    // ─────────────────────────────────────────────────────
+    // 0) SAFETY NET: Completed sessions that were never converted.
+    //    If the client-side auto-convert call was aborted (browser closed,
+    //    network error, JS crash), the session stays at "completed" with
+    //    user_id=null forever. This picks them up after 10 minutes.
+    // ─────────────────────────────────────────────────────
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: stuckSessions, error: stuckError } = await supabase
+      .from("wizard_sessions")
+      .select("id, customer_email, customer_name")
+      .eq("status", "completed")
+      .is("user_id", null)
+      .not("customer_email", "is", null)
+      .lt("completed_at", tenMinutesAgo)
+      .gt("completed_at", twentyFourHoursAgo)
+      .order("completed_at", { ascending: true })
+      .limit(10);
+
+    if (stuckError) {
+      console.error("Error fetching stuck completed sessions:", stuckError.message);
+    }
+
+    if (stuckSessions && stuckSessions.length > 0) {
+      console.log(`Found ${stuckSessions.length} stuck completed session(s) — triggering auto-convert`);
+
+      for (const session of stuckSessions) {
+        try {
+          const convertRes = await fetch(`${SUPABASE_URL}/functions/v1/auto-convert-wizard`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              sessionId: session.id,
+              userId: null,
+              hasPassword: false,
+            }),
+          });
+
+          if (convertRes.ok) {
+            autoConverted++;
+            console.log(`Auto-converted stuck session ${session.id} (${session.customer_email})`);
+          } else {
+            const errText = await convertRes.text();
+            console.error(`Failed to auto-convert session ${session.id}: ${convertRes.status} ${errText}`);
+            errors++;
+          }
+        } catch (convertErr: any) {
+          console.error(`Error auto-converting session ${session.id}:`, convertErr.message);
+          errors++;
+        }
+      }
+    }
 
     // ─────────────────────────────────────────────────────
     // 1) FIRST EMAIL: Sessions inactive for >2 hours,
@@ -497,7 +555,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const summary = {
       success: true,
-      message: `Wizard recovery processed: first_emails=${firstEmailSent}, followup_emails=${followupEmailSent}, errors=${errors}`,
+      message: `Wizard recovery processed: auto_converted=${autoConverted}, first_emails=${firstEmailSent}, followup_emails=${followupEmailSent}, errors=${errors}`,
+      auto_converted: autoConverted,
       first_emails_sent: firstEmailSent,
       followup_emails_sent: followupEmailSent,
       errors,

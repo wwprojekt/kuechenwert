@@ -665,7 +665,7 @@ Deno.serve(async (req) => {
         'Der Verkäufer handelt als Privatperson; es wird keine Umsatzsteuer ausgewiesen. Der Kaufpreis versteht sich als Bruttobetrag. Dem Käufer bleibt es vorbehalten, die gesetzlichen Regelungen zur Differenzbesteuerung anzuwenden.',
       );
     }
-    paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach ' + (isFestpreis ? 'Vertragsabschluss' : 'Zuschlag') + ' auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
+    paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach ' + (isFestpreisOrProposal ? 'Vertragsabschluss' : 'Zuschlag') + ' auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
     y += 1;
 
     // ── §4 Übergabe ───────────────────────────────────────────────
@@ -717,7 +717,7 @@ Deno.serve(async (req) => {
     sectionTitle('Anlage A – Inseratsunterlagen');
 
     paragraphText(
-      'Nachfolgend das zum Zeitpunkt des ' + (isFestpreis ? 'Kaufabschlusses' : 'Zuschlags') + ' auf ' +
+      'Nachfolgend das zum Zeitpunkt des ' + (isFestpreisOrProposal ? 'Kaufabschlusses' : 'Zuschlags') + ' auf ' +
         siteName +
         ' veröffentlichte Titelbild (sofern vorhanden) sowie ein strukturierter Abdruck der Inseratsdaten.',
     );

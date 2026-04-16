@@ -233,13 +233,47 @@ Deno.serve(async (req) => {
           .eq('id', auction.motorhome.id);
       }
 
-      // Expire any pending price proposals
+      // Expire any pending price proposals and notify proposers
+      const { data: expiredOffers } = await supabase
+        .from('post_auction_offers')
+        .select('buyer_id, offer_amount')
+        .eq('auction_id', auctionId)
+        .in('status', ['pending', 'countered']);
+
       const { error: expireOffersErr } = await supabase
         .from('post_auction_offers')
         .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
         .eq('auction_id', auctionId)
         .in('status', ['pending', 'countered']);
       if (expireOffersErr) console.error(`Failed to expire offers for ${auctionId}:`, expireOffersErr);
+
+      if (expiredOffers && expiredOffers.length > 0) {
+        const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+        for (const eo of expiredOffers) {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('email, first_name, company_name')
+              .eq('id', eo.buyer_id)
+              .single();
+            if (profile?.email) {
+              await supabase.functions.invoke('send-auction-notification', {
+                body: {
+                  email: profile.email,
+                  name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                  type: 'lost',
+                  motorhomeModel: motorhomeName,
+                  auctionUrl: 'https://caravanwert.de/kaufen',
+                  yourBid: `€${Number(eo.offer_amount).toLocaleString()}`,
+                  isFestpreis: true,
+                },
+              });
+            }
+          } catch (notifyErr: any) {
+            console.error(`Failed to notify proposer ${eo.buyer_id}:`, notifyErr.message);
+          }
+        }
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: 'Instant-price listing ended', outcome: 'ended' }),

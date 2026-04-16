@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // ─── 1. Active auctions whose end_time has passed ──────────────
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
-      .select('id, end_time, status, motorhome_id, motorhomes!inner(sale_channel)')
+      .select('id, end_time, status, motorhome_id, motorhomes!inner(sale_channel, manufacturer, model)')
       .eq('status', 'active')
       .lt('end_time', now);
 

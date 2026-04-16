@@ -643,6 +643,7 @@ Deno.serve(async (req) => {
                 auctionUrl,
                 yourBid: `€${loserHighestBid.toLocaleString()}`,
                 currentBid: `€${instantPrice.toLocaleString()}`,
+                isFestpreis: motorhome.sale_channel === 'instant_price',
               },
             }).catch((e: any) => console.error('Error sending loser notification:', e));
           }

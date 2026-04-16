@@ -72,6 +72,14 @@ Deno.serve(async (req) => {
               if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
             }
 
+            // Expire any pending price proposals for this listing
+            const { error: expireOffersErr } = await supabase
+              .from('post_auction_offers')
+              .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
+              .eq('auction_id', auction.id)
+              .in('status', ['pending', 'countered']);
+            if (expireOffersErr) console.error(`Failed to expire offers for ${auction.id}:`, expireOffersErr);
+
             results.push({
               auctionId: auction.id,
               type: 'instant_price_expired',

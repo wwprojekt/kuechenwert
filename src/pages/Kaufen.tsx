@@ -726,7 +726,7 @@ const Kaufen = () => {
                       Keine aktiven Inserate
                     </p>
                     <p className="text-muted-foreground">
-                      Aktuell sind keine Auktionen verfügbar. Schauen Sie später wieder vorbei!
+                      Aktuell sind keine Inserate verfügbar. Schauen Sie später wieder vorbei!
                     </p>
                   </div>
                 </Card>

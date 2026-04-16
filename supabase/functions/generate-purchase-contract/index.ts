@@ -636,10 +636,14 @@ Deno.serve(async (req) => {
     sectionTitle('§ 3 Kaufpreis und Zahlung');
 
     paragraphText(`Der Kaufpreis beträgt ${formatCurrency(salePrice)} (in Worten: ${numberToWords(salePrice)}).`);
-    const isFestpreis = motorhome.sale_channel === 'instant_price' || motorhome.sale_type === 'instant';
-    paragraphText(isFestpreis
-      ? 'Der Kaufpreis entspricht dem auf der Plattform ' + siteName + ' veröffentlichten Festpreis und ist von beiden Parteien als verbindlich anerkannt.'
-      : 'Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.'
+    const isDirectFestpreis = motorhome.sale_type === 'instant';
+    const isPriceProposal = motorhome.sale_type === 'price_proposal';
+    const isFestpreisOrProposal = isDirectFestpreis || isPriceProposal || motorhome.sale_channel === 'instant_price';
+    paragraphText(isPriceProposal
+      ? 'Der Kaufpreis wurde durch Preisverhandlung über die Plattform ' + siteName + ' vereinbart und ist von beiden Parteien als verbindlich anerkannt.'
+      : isDirectFestpreis || motorhome.sale_channel === 'instant_price'
+        ? 'Der Kaufpreis entspricht dem auf der Plattform ' + siteName + ' veröffentlichten Festpreis und ist von beiden Parteien als verbindlich anerkannt.'
+        : 'Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.'
     );
     if (sellerIsDealer) {
       const ma = motorhome.mwst_ausweisbar;
@@ -780,7 +784,7 @@ Deno.serve(async (req) => {
 
     sectionTitle('Unterschriften');
 
-    paragraphText(`Dieser Vertrag wurde elektronisch über die Plattform ${siteName} erstellt und gilt ${isFestpreis ? 'mit Abschluss des Kaufvorgangs' : 'mit Zuschlag der Auktion'} als von beiden Parteien angenommen.`);
+    paragraphText(`Dieser Vertrag wurde elektronisch über die Plattform ${siteName} erstellt und gilt ${isPriceProposal ? 'mit Annahme des Preisvorschlags' : isFestpreisOrProposal ? 'mit Abschluss des Kaufvorgangs' : 'mit Zuschlag der Auktion'} als von beiden Parteien angenommen.`);
     y += 5;
 
     // Signature boxes

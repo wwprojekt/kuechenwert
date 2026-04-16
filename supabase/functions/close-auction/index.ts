@@ -233,6 +233,14 @@ Deno.serve(async (req) => {
           .eq('id', auction.motorhome.id);
       }
 
+      // Expire any pending price proposals
+      const { error: expireOffersErr } = await supabase
+        .from('post_auction_offers')
+        .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
+        .eq('auction_id', auctionId)
+        .in('status', ['pending', 'countered']);
+      if (expireOffersErr) console.error(`Failed to expire offers for ${auctionId}:`, expireOffersErr);
+
       return new Response(
         JSON.stringify({ success: true, message: 'Instant-price listing ended', outcome: 'ended' }),
         { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }

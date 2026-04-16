@@ -378,7 +378,7 @@ export function PostAuctionOfferDialog({
           <div className="relative">
             <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input id="offer-amount" type="text" inputMode="decimal"
-              placeholder={`z.B. ${(currentBid > 0 ? currentBid - 500 : 1000).toLocaleString('de-DE')}`}
+              placeholder={`z.B. ${((isFestpreis && festpreis ? festpreis * 0.9 : currentBid > 0 ? currentBid - 500 : 1000)).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
               value={offerAmount} onChange={(e) => setOfferAmount(formatBidDisplay(e.target.value))} className="pl-9" />
           </div>
           <p className="text-xs text-muted-foreground">Hinweis: Ihr Angebot sollte realistisch sein, um eine Chance auf Annahme zu haben.</p>

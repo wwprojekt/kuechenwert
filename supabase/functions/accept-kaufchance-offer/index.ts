@@ -573,34 +573,75 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Notify other invited bidders that they lost
+    // Notify other bidders/proposers that they lost
     try {
-      const { data: otherInvitations } = await supabase
-        .from('kaufchance_invitations')
-        .select('bidder_id, highest_bid')
-        .eq('auction_id', auction.id)
-        .neq('bidder_id', buyerId);
+      const notifiedIds = new Set<string>();
 
-      if (otherInvitations) {
-        for (const inv of otherInvitations) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('email, first_name, company_name')
-            .eq('id', inv.bidder_id)
-            .single();
+      // For Kaufchance: notify invited bidders
+      if (!isFestpreisProposal) {
+        const { data: otherInvitations } = await supabase
+          .from('kaufchance_invitations')
+          .select('bidder_id, highest_bid')
+          .eq('auction_id', auction.id)
+          .neq('bidder_id', buyerId);
 
-          if (profile?.email) {
-            await supabase.functions.invoke('send-auction-notification', {
-              body: {
-                email: profile.email,
-                name: profile.company_name || profile.first_name || profile.email.split('@')[0],
-                type: 'lost',
-                motorhomeModel: motorhomeName,
-                auctionUrl: 'https://caravanwert.de/kaufen',
-                yourBid: `€${Number(inv.highest_bid).toLocaleString()}`,
-                currentBid: `€${salePrice.toLocaleString()}`,
-              },
-            });
+        if (otherInvitations) {
+          for (const inv of otherInvitations) {
+            if (notifiedIds.has(inv.bidder_id)) continue;
+            notifiedIds.add(inv.bidder_id);
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('email, first_name, company_name')
+              .eq('id', inv.bidder_id)
+              .single();
+
+            if (profile?.email) {
+              await supabase.functions.invoke('send-auction-notification', {
+                body: {
+                  email: profile.email,
+                  name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                  type: 'lost',
+                  motorhomeModel: motorhomeName,
+                  auctionUrl: 'https://caravanwert.de/kaufen',
+                  yourBid: `€${Number(inv.highest_bid).toLocaleString()}`,
+                  currentBid: `€${salePrice.toLocaleString()}`,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // Notify other proposers whose offers were rejected (covers Festpreis + Kaufchance)
+      if (otherOfferIds.length > 0) {
+        const { data: rejectedOffers } = await supabase
+          .from('post_auction_offers')
+          .select('buyer_id, offer_amount')
+          .in('id', otherOfferIds);
+
+        if (rejectedOffers) {
+          for (const ro of rejectedOffers) {
+            if (notifiedIds.has(ro.buyer_id)) continue;
+            notifiedIds.add(ro.buyer_id);
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('email, first_name, company_name')
+              .eq('id', ro.buyer_id)
+              .single();
+
+            if (profile?.email) {
+              await supabase.functions.invoke('send-auction-notification', {
+                body: {
+                  email: profile.email,
+                  name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                  type: 'lost',
+                  motorhomeModel: motorhomeName,
+                  auctionUrl: 'https://caravanwert.de/kaufen',
+                  yourBid: `€${Number(ro.offer_amount).toLocaleString()}`,
+                  currentBid: `€${salePrice.toLocaleString()}`,
+                },
+              });
+            }
           }
         }
       }

@@ -185,12 +185,17 @@ export default function AdminAuctionDetail() {
       return cancelAuctionAsAdmin(id);
     },
     onSuccess: (result) => {
-      const offerInfo = result.expiredOffersCount > 0
-        ? ` · ${result.expiredOffersCount} offene Angebote storniert`
-        : "";
+      const parts: string[] = [];
+      if (result.expiredOffersCount > 0) parts.push(`${result.expiredOffersCount} Angebote storniert`);
+      if (result.uniqueBiddersNotified > 0) parts.push(`${result.uniqueBiddersNotified} Bieter informiert`);
+      if (result.sellerMailSent) parts.push("Verkäufer informiert");
+      const suffix = parts.length ? ` · ${parts.join(" · ")}` : "";
       toast.success(
-        (isFestpreis ? "Inserat erfolgreich abgebrochen" : "Auktion erfolgreich abgebrochen") + offerInfo
+        (isFestpreis ? "Inserat erfolgreich abgebrochen" : "Auktion erfolgreich abgebrochen") + suffix,
       );
+      if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
+        toast.warning("Einige Benachrichtigungen konnten nicht versendet werden – siehe Error Logs");
+      }
       logEvent({ action: "auction_cancelled", entityType: "auction", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
       queryClient.invalidateQueries({ queryKey: ["adminAuctionOffers", id] });

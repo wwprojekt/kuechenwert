@@ -57,8 +57,8 @@
 
 ### Offene Aufgaben
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
-  - HIGH: `purchase_contracts cancel` (`AdminContracts`) → kein Mail an Käufer/Verkäufer
-  - HIGH: `cancelAuctionAsAdmin` informiert nur Festpreis-Anbieter, nicht Verkäufer/klassische Bieter; `AdminMotorhomes.cancelAuctionMutation` versendet gar nichts
+  - [x] HIGH: `purchase_contracts cancel` (`AdminContracts`) → atomic via Edge Function `cancel-purchase-contract` (Käufer + Verkäufer Mail, Motorhome-Reset, Audit, Error-Logs) [17.04.2026]
+  - [x] HIGH: `cancelAuctionAsAdmin` / `AdminMotorhomes.cancelAuctionMutation` → atomic via Edge Function `cancel-auction-as-admin` (Verkäufer + alle Bieter + Festpreis-Anbieter + Kaufchance-Invitees informiert, Audit, Error-Logs) [17.04.2026]
   - HIGH: `AdminPostAuctionOffers.handleEndKaufchance` / `handleBackToAuction` (Bulk-Reject ohne Mail)
   - HIGH: `admin_delete_bid` SQL-RPC – betroffener Bieter wird nicht benachrichtigt
   - HIGH: `complete-handover` Edge Function – kein Mail an Käufer/Verkäufer

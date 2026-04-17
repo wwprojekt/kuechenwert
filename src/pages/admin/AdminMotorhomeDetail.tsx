@@ -282,10 +282,15 @@ export default function AdminMotorhomeDetail() {
       return cancelAuctionAsAdmin(relevantAuction.id);
     },
     onSuccess: (result) => {
-      const offerInfo = result.expiredOffersCount > 0
-        ? ` · ${result.expiredOffersCount} offene Angebote storniert`
-        : "";
-      toast.success(`Auktion erfolgreich abgebrochen${offerInfo}`);
+      const parts: string[] = [];
+      if (result.expiredOffersCount > 0) parts.push(`${result.expiredOffersCount} Angebote storniert`);
+      if (result.uniqueBiddersNotified > 0) parts.push(`${result.uniqueBiddersNotified} Bieter informiert`);
+      if (result.sellerMailSent) parts.push("Verkäufer informiert");
+      const suffix = parts.length ? ` · ${parts.join(" · ")}` : "";
+      toast.success(`Auktion erfolgreich abgebrochen${suffix}`);
+      if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
+        toast.warning("Einige Benachrichtigungen konnten nicht versendet werden – siehe Error Logs");
+      }
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
     },
     onError: () => toast.error("Fehler beim Abbrechen der Auktion"),

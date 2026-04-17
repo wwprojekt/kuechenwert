@@ -214,3 +214,11 @@ verify_jwt = false
 # --- Invoice Cancellation (atomic cancel + Storno email) ---
 [functions.cancel-invoice]
 verify_jwt = false
+
+# --- Auction Cancellation as Admin (atomic cancel + expire offers + notify all parties) ---
+[functions.cancel-auction-as-admin]
+verify_jwt = false
+
+# --- Purchase Contract Cancellation (atomic cancel + reset motorhome + email both parties) ---
+[functions.cancel-purchase-contract]
+verify_jwt = false

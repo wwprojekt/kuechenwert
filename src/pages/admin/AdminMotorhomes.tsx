@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 
 import { toast } from "sonner";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -317,18 +318,22 @@ export default function AdminMotorhomes() {
   });
 
   const cancelAuctionMutation = useMutation({
-    mutationFn: async (auctionId: string) => {
-      const { error } = await supabase
-        .from("auctions")
-        .update({ status: "cancelled" })
-        .eq("id", auctionId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich abgebrochen");
+    mutationFn: (auctionId: string) => cancelAuctionAsAdmin(auctionId),
+    onSuccess: (result) => {
+      const parts: string[] = [];
+      if (result.expiredOffersCount > 0) parts.push(`${result.expiredOffersCount} Angebote storniert`);
+      if (result.uniqueBiddersNotified > 0) parts.push(`${result.uniqueBiddersNotified} Bieter informiert`);
+      if (result.sellerMailSent) parts.push("Verkäufer informiert");
+      const suffix = parts.length ? ` · ${parts.join(" · ")}` : "";
+      toast.success(`Auktion abgebrochen${suffix}`);
+      if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
+        toast.warning(
+          `${result.bidderMailsFailed} Mail(s) konnten nicht versendet werden – siehe Error Logs`,
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
     },
-    onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
+    onError: (e: Error) => toast.error(`Fehler beim Abbrechen: ${e.message}`),
   });
 
   const handleAuctionAction = () => {

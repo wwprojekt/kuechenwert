@@ -238,62 +238,49 @@ export default function AdminContracts() {
       id: string;
       reason: string;
     }) => {
-      // 1) Vertrag stornieren
-      const { data: cancelled, error } = await supabase
-        .from("purchase_contracts")
-        .update({
-          status: "cancelled",
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: reason,
-        })
-        .eq("id", id)
-        .select("id, motorhome_id")
-        .single();
+      // Atomic server-side flow: cancel + reset motorhome + email both
+      // parties + audit log in one Edge Function call.
+      const { data, error } = await invokeWithAuth("cancel-purchase-contract", {
+        body: {
+          contractId: id,
+          reason,
+          sendEmail: true,
+        },
+      });
       if (error) throw error;
-
-      // 2) Motorhome-Status zurücksetzen, damit das Fahrzeug nicht
-      //    weiter fälschlich als "verkauft" geführt wird, wenn der
-      //    einzige aktive Vertrag storniert wurde.
-      if (cancelled?.motorhome_id) {
-        const motorhomeId = cancelled.motorhome_id;
-
-        // Existieren noch andere aktive Verträge für dieses Fahrzeug?
-        const { data: otherActive, error: otherErr } = await supabase
-          .from("purchase_contracts")
-          .select("id")
-          .eq("motorhome_id", motorhomeId)
-          .eq("status", "active")
-          .limit(1);
-        if (otherErr) throw otherErr;
-
-        if (!otherActive || otherActive.length === 0) {
-          // Hat das Motorhome aktuell eine laufende Auktion?
-          const { data: liveAuction, error: aucErr } = await supabase
-            .from("auctions")
-            .select("id, status")
-            .eq("motorhome_id", motorhomeId)
-            .in("status", ["active", "draft", "kaufchance"])
-            .limit(1);
-          if (aucErr) throw aucErr;
-
-          const newStatus = liveAuction && liveAuction.length > 0 ? "active" : "pending";
-
-          const { error: mhErr } = await supabase
-            .from("motorhomes")
-            .update({
-              status: newStatus,
-              sold_at: null,
-              sold_to: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", motorhomeId)
-            .eq("status", "sold"); // nur wenn vorher 'sold' war
-          if (mhErr) throw mhErr;
-        }
-      }
+      const result = data as {
+        success?: boolean;
+        contractNumber?: string;
+        motorhomeReset?: "pending" | "active" | null;
+        buyerMailSent?: boolean;
+        sellerMailSent?: boolean;
+        buyerMailError?: string | null;
+        sellerMailError?: string | null;
+      } | null;
+      if (!result?.success) throw new Error("Stornierung fehlgeschlagen");
+      return {
+        contractNumber: result.contractNumber ?? "",
+        motorhomeReset: result.motorhomeReset ?? null,
+        buyerMailSent: !!result.buyerMailSent,
+        sellerMailSent: !!result.sellerMailSent,
+        buyerMailError: result.buyerMailError ?? null,
+        sellerMailError: result.sellerMailError ?? null,
+      };
     },
-    onSuccess: () => {
-      toast({ title: "Vertrag storniert" });
+    onSuccess: (result) => {
+      const mailParts: string[] = [];
+      if (result.buyerMailSent) mailParts.push("Käufer informiert");
+      if (result.sellerMailSent) mailParts.push("Verkäufer informiert");
+      const mailHint = mailParts.length
+        ? mailParts.join(" · ")
+        : "ACHTUNG: Es konnte keine Storno-E-Mail versendet werden – bitte Parteien manuell informieren.";
+      const motorhomeHint = result.motorhomeReset
+        ? ` · Fahrzeugstatus auf "${result.motorhomeReset}" zurückgesetzt`
+        : "";
+      toast({
+        title: "Vertrag storniert",
+        description: `${mailHint}${motorhomeHint}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["adminContracts"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       setCancelDialogOpen(false);

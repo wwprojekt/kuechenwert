@@ -1,127 +1,67 @@
 /**
  * Shared helper for the admin "Auktion abbrechen" action.
  *
- * Steps:
- *   1. Update the auction row to status = 'cancelled'
- *   2. Fetch still-open post_auction_offers (pending / countered)
- *   3. Mark those offers as 'expired' with a seller_response
- *   4. Best-effort notify each unique proposer via send-auction-notification
- *      (type: 'lost', listingEnded: true) so they don't see a phantom offer
- *      forever.
+ * Calls the atomic `cancel-auction-as-admin` Edge Function which does in
+ * one server-side request:
+ *   1. Update the auction row to status='cancelled'
+ *   2. Expire open post_auction_offers
+ *   3. Notify the SELLER, all classical BIDDERS, all post-auction-offer
+ *      proposers and all kaufchance-invitees via Resend
+ *   4. Write an audit_log + persist any email failures to error_logs
  *
- * The auction cancel step is authoritative — the offer cleanup + emails are
- * best-effort and never cause the mutation to fail.
+ * Pre-Refactor (April 17, 2026): The cancellation + offer expiry + bidder
+ * notify ran in the browser. Tab close in the middle = stuck offers and no
+ * email. Now everything lives on the server.
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 
 export interface CancelAuctionResult {
   expiredOffersCount: number;
-  notifiedProposers: number;
+  invitationCount: number;
+  uniqueBiddersNotified: number;
+  bidderMailsFailed: number;
+  sellerMailSent: boolean;
+  sellerMailError: string | null;
+  vehicleTitle: string;
 }
 
-export async function cancelAuctionAsAdmin(auctionId: string): Promise<CancelAuctionResult> {
-  // 1. Pre-fetch open offers so we can notify their proposers afterwards.
-  const { data: openOffers } = await supabase
-    .from("post_auction_offers")
-    .select("buyer_id, offer_amount")
-    .eq("auction_id", auctionId)
-    .in("status", ["pending", "countered"]);
+export async function cancelAuctionAsAdmin(
+  auctionId: string,
+  reason?: string | null,
+): Promise<CancelAuctionResult> {
+  const { data, error } = await invokeWithAuth("cancel-auction-as-admin", {
+    body: {
+      auctionId,
+      reason: reason ?? null,
+      sendEmail: true,
+    },
+  });
 
-  // 2. Primary action: cancel the auction. This is the ONLY step we throw on.
-  const { error: cancelError } = await supabase
-    .from("auctions")
-    .update({ status: "cancelled" })
-    .eq("id", auctionId);
-  if (cancelError) throw cancelError;
+  if (error) throw error;
 
-  let expiredOffersCount = 0;
-  let notifiedProposers = 0;
+  const result = data as {
+    success?: boolean;
+    expiredOffersCount?: number;
+    invitationCount?: number;
+    uniqueBiddersNotified?: number;
+    bidderMailsFailed?: number;
+    sellerMailSent?: boolean;
+    sellerMailError?: string | null;
+    vehicleTitle?: string;
+  } | null;
 
-  // 3. Best-effort: expire open offers.
-  if (openOffers && openOffers.length > 0) {
-    try {
-      const { error: expireError, count } = await supabase
-        .from("post_auction_offers")
-        .update({
-          status: "expired",
-          seller_response: "Inserat wurde vom Administrator abgebrochen",
-          updated_at: new Date().toISOString(),
-        }, { count: "exact" })
-        .eq("auction_id", auctionId)
-        .in("status", ["pending", "countered"]);
-      if (expireError) {
-        console.error("[cancelAuctionAsAdmin] Failed to expire offers:", expireError);
-      } else {
-        expiredOffersCount = count ?? openOffers.length;
-      }
-    } catch (e) {
-      console.error("[cancelAuctionAsAdmin] Expire offers threw:", e);
-    }
-
-    // 4. Best-effort: notify each unique proposer. We intentionally do NOT
-    // await these in a way that blocks the UI thread on a slow SMTP.
-    try {
-      const uniqueBuyerIds = Array.from(
-        new Set(openOffers.map((o: { buyer_id: string }) => o.buyer_id).filter(Boolean))
-      );
-      if (uniqueBuyerIds.length > 0) {
-        const { data: motorhomeRow } = await supabase
-          .from("auctions")
-          .select("motorhome:motorhomes(manufacturer, model, year)")
-          .eq("id", auctionId)
-          .maybeSingle();
-        const m = (motorhomeRow as any)?.motorhome;
-        const motorhomeName = m
-          ? `${m.manufacturer || ""} ${m.model || ""}`.trim()
-          : "Inserat";
-
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, email, first_name, company_name")
-          .in("id", uniqueBuyerIds);
-
-        for (const buyerId of uniqueBuyerIds) {
-          const profile = profiles?.find((p: any) => p.id === buyerId);
-          if (!profile?.email) continue;
-          const myOffers = openOffers.filter(
-            (o: { buyer_id: string; offer_amount: number }) => o.buyer_id === buyerId
-          );
-          const highestOffer = myOffers.reduce(
-            (max: number, o: { offer_amount: number }) =>
-              Number(o.offer_amount) > max ? Number(o.offer_amount) : max,
-            0
-          );
-          try {
-            await supabase.functions.invoke("send-auction-notification", {
-              body: {
-                email: profile.email,
-                name:
-                  profile.company_name ||
-                  profile.first_name ||
-                  profile.email.split("@")[0],
-                type: "lost",
-                motorhomeModel: motorhomeName,
-                auctionUrl: "https://caravanwert.de/kaufen",
-                yourBid: `€${highestOffer.toLocaleString("de-DE")}`,
-                currentBid: `€${highestOffer.toLocaleString("de-DE")}`,
-                isFestpreis: true,
-                listingEnded: true,
-              },
-            });
-            notifiedProposers += 1;
-          } catch (notifyErr) {
-            console.error(
-              `[cancelAuctionAsAdmin] Notify proposer ${buyerId} failed:`,
-              notifyErr
-            );
-          }
-        }
-      }
-    } catch (e) {
-      console.error("[cancelAuctionAsAdmin] Notify proposers block threw:", e);
-    }
+  if (!result?.success) {
+    throw new Error("Auktion konnte nicht abgebrochen werden");
   }
 
-  return { expiredOffersCount, notifiedProposers };
+  return {
+    expiredOffersCount: result.expiredOffersCount ?? 0,
+    invitationCount: result.invitationCount ?? 0,
+    uniqueBiddersNotified: result.uniqueBiddersNotified ?? 0,
+    bidderMailsFailed: result.bidderMailsFailed ?? 0,
+    sellerMailSent: !!result.sellerMailSent,
+    sellerMailError: result.sellerMailError ?? null,
+    vehicleTitle: result.vehicleTitle ?? "Inserat",
+  };
 }

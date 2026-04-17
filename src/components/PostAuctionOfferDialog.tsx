@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Euro, TrendingUp, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Send, Euro, TrendingUp, CheckCircle, XCircle, Loader2, MessageCircleReply, ArrowLeft } from "lucide-react";
 import { withSessionRetry, ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 
@@ -54,6 +54,10 @@ export function PostAuctionOfferDialog({
   const [message, setMessage] = useState("");
   const [existingOffer, setExistingOffer] = useState<ExistingOffer | null>(null);
   const [isLoadingOffer, setIsLoadingOffer] = useState(false);
+  // When user clicks "Eigenes Gegenangebot" inside renderCounteredView,
+  // we switch into a sub-view that lets them type their own amount
+  // instead of just Accept/Reject.
+  const [showBuyerCounterForm, setShowBuyerCounterForm] = useState(false);
 
   const fetchExistingOffer = useCallback(async () => {
     if (!user) return;
@@ -82,8 +86,10 @@ export function PostAuctionOfferDialog({
       fetchExistingOffer();
       setOfferAmount("");
       setMessage("");
+      setShowBuyerCounterForm(false);
     } else {
       setExistingOffer(null);
+      setShowBuyerCounterForm(false);
     }
   };
 
@@ -91,6 +97,7 @@ export function PostAuctionOfferDialog({
     setIsOpen(false);
     setOfferAmount("");
     setMessage("");
+    setShowBuyerCounterForm(false);
     onOfferSent?.();
   };
 
@@ -250,6 +257,84 @@ export function PostAuctionOfferDialog({
     }
   };
 
+  // ─── Submit own counter-counter offer (buyer responds to seller's counter
+  //     with a different amount instead of just Accept/Reject) ───
+  const handleSubmitBuyerCounter = async () => {
+    if (!user || !existingOffer) return;
+    const newAmount = parseGermanNumber(offerAmount);
+    if (isNaN(newAmount) || newAmount <= 0) {
+      toast({ title: 'Ungültiger Betrag', description: 'Bitte geben Sie einen gültigen Betrag ein.', variant: 'destructive' });
+      return;
+    }
+    const sellerCounter = Number(existingOffer.counter_offer_amount ?? 0);
+    if (sellerCounter > 0 && newAmount >= sellerCounter) {
+      toast({
+        title: 'Hinweis: Betrag ≥ Gegenangebot',
+        description: `Wenn Ihr Gegenvorschlag ${newAmount.toLocaleString('de-DE')} € beträgt und damit ≥ ${sellerCounter.toLocaleString('de-DE')} €, sollten Sie das Gegenangebot besser direkt annehmen.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) {
+        toast({ title: "Sitzung abgelaufen", description: "Bitte melden Sie sich erneut an.", variant: "destructive" });
+        return;
+      }
+
+      const newExpiresAt = new Date();
+      newExpiresAt.setHours(newExpiresAt.getHours() + 24);
+
+      const { data: updated, error } = await supabase
+        .from('post_auction_offers')
+        .update({
+          status: 'pending',
+          offer_amount: newAmount,
+          counter_offer_amount: null,
+          seller_response: null,
+          message: message.trim() || `Gegenvorschlag des Käufers: ${newAmount.toLocaleString('de-DE')} €`,
+          expires_at: newExpiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingOffer.id)
+        .eq('buyer_id', user.id)
+        .eq('status', 'countered')
+        .select('id');
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte erneut versuchen.' });
+        await fetchExistingOffer();
+        return;
+      }
+
+      try {
+        await invokeWithAuth('notify-offer-action', {
+          body: {
+            action: 'new_offer',
+            auctionId,
+            buyerId: user.id,
+            offerAmount: newAmount,
+            message: `Käufer hat Ihr Gegenangebot über ${sellerCounter.toLocaleString('de-DE')} € mit einem eigenen Vorschlag von ${newAmount.toLocaleString('de-DE')} € beantwortet.`,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify seller about buyer counter:', notifyErr);
+      }
+
+      toast({
+        title: 'Gegenvorschlag gesendet',
+        description: `Ihr Vorschlag über ${newAmount.toLocaleString('de-DE')} € wurde an den Verkäufer übermittelt.`,
+      });
+      closeAndNotify();
+    } catch (err) {
+      console.error('Error submitting buyer counter:', err);
+      toast({ title: 'Fehler', description: 'Gegenvorschlag konnte nicht gesendet werden.', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // ─── Reject counter-offer ───
   const handleRejectCounterOffer = async () => {
     if (!user || !existingOffer) return;
@@ -309,14 +394,23 @@ export function PostAuctionOfferDialog({
           <p className="text-sm text-muted-foreground italic">&quot;{existingOffer!.seller_response}&quot;</p>
         )}
         <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
-          Hinweis: Wenn Sie das Gegenangebot ablehnen, können Sie danach ein neues, eigenes Angebot abgeben.
+          Sie können das Gegenangebot annehmen, ablehnen — oder einen <strong>eigenen Gegenvorschlag</strong> an den Verkäufer senden.
         </p>
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button className="flex-1 bg-green-500 hover:bg-green-600" disabled={isSubmitting} onClick={handleAcceptCounterOffer}>
+        <DialogFooter className="flex flex-col gap-2">
+          <Button className="w-full bg-green-500 hover:bg-green-600" disabled={isSubmitting} onClick={handleAcceptCounterOffer}>
             <CheckCircle className="w-4 h-4 mr-2" />
-            {isSubmitting ? "Wird verarbeitet..." : "Annehmen"}
+            {isSubmitting ? "Wird verarbeitet..." : `Annehmen (${existingOffer!.counter_offer_amount?.toLocaleString('de-DE')} €)`}
           </Button>
-          <Button variant="destructive" className="flex-1" disabled={isSubmitting} onClick={handleRejectCounterOffer}>
+          <Button
+            variant="outline"
+            className="w-full border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            disabled={isSubmitting}
+            onClick={() => { setOfferAmount(""); setMessage(""); setShowBuyerCounterForm(true); }}
+          >
+            <MessageCircleReply className="w-4 h-4 mr-2" />
+            Eigenes Gegenangebot
+          </Button>
+          <Button variant="destructive" className="w-full" disabled={isSubmitting} onClick={handleRejectCounterOffer}>
             <XCircle className="w-4 h-4 mr-2" />
             Ablehnen
           </Button>
@@ -324,6 +418,73 @@ export function PostAuctionOfferDialog({
       </div>
     </>
   );
+
+  const renderBuyerCounterView = () => {
+    const sellerCounter = Number(existingOffer!.counter_offer_amount ?? 0);
+    const suggestion = sellerCounter > 0 ? Math.max(1, Math.round(sellerCounter * 0.92)) : 0;
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>Eigenes Gegenangebot senden</DialogTitle>
+          <DialogDescription>
+            Senden Sie dem Verkäufer für &quot;{vehicleTitle}&quot; einen eigenen Vorschlag.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="p-3 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Gegenangebot des Verkäufers:</span>
+              <span className="font-bold text-blue-600">{sellerCounter.toLocaleString('de-DE')} €</span>
+            </div>
+            {existingOffer!.offer_amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ihr ursprüngliches Angebot:</span>
+                <span className="font-semibold">{existingOffer!.offer_amount.toLocaleString('de-DE')} €</span>
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="buyer-counter-amount">Ihr Gegenvorschlag *</Label>
+            <div className="relative">
+              <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="buyer-counter-amount"
+                type="text"
+                inputMode="decimal"
+                placeholder={suggestion ? `z.B. ${suggestion.toLocaleString('de-DE')}` : 'Betrag in €'}
+                value={offerAmount}
+                onChange={(e) => setOfferAmount(formatBidDisplay(e.target.value))}
+                className="pl-9"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Geben Sie einen Betrag ein, der unter dem Gegenangebot des Verkäufers liegt.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="buyer-counter-message">Nachricht an den Verkäufer (optional)</Label>
+            <Textarea
+              id="buyer-counter-message"
+              placeholder="z.B. Begründung für Ihren Vorschlag, Hinweise zu Mängeln…"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[70px]"
+            />
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowBuyerCounterForm(false)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Zurück
+            </Button>
+            <Button disabled={isSubmitting || !offerAmount} onClick={handleSubmitBuyerCounter}>
+              <Send className="w-4 h-4 mr-2" />
+              {isSubmitting ? "Wird gesendet..." : "Gegenvorschlag senden"}
+            </Button>
+          </DialogFooter>
+        </div>
+      </>
+    );
+  };
 
   const renderRaiseView = () => (
     <>
@@ -422,7 +583,7 @@ export function PostAuctionOfferDialog({
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : existingOffer?.status === 'countered' ? (
-          renderCounteredView()
+          showBuyerCounterForm ? renderBuyerCounterView() : renderCounteredView()
         ) : existingOffer?.status === 'pending' ? (
           renderRaiseView()
         ) : (

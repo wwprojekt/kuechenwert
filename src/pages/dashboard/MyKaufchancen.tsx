@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { Input } from "@/components/ui/input";
-import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw, TrendingUp } from "lucide-react";
+import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw, TrendingUp, MessageCircleReply } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -93,6 +93,8 @@ export default function MyKaufchancen() {
   const [activeTab, setActiveTab] = useState("browse");
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
   const [raiseAmounts, setRaiseAmounts] = useState<Record<string, string>>({});
+  // Per-offer text for "eigenes Gegenangebot" input (status='countered' offers).
+  const [counterAmounts, setCounterAmounts] = useState<Record<string, string>>({});
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const isMountedRef = useRef(true);
   const isLoadingRef = useRef(false);
@@ -491,6 +493,85 @@ export default function MyKaufchancen() {
     }
   };
 
+  // Send the buyer's own counter to a seller-counter (status='countered'),
+  // converting the row back to status='pending' with a new offer_amount.
+  // This unblocks the "Preisvorstellung des Verkäufers" deadlock where the
+  // dialog only offered Accept / Reject.
+  const handleBuyerCounter = async (e: React.MouseEvent, offer: MyOffer) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newAmount = parseGermanNumber(counterAmounts[offer.id]);
+    if (isNaN(newAmount) || newAmount <= 0) {
+      toast({ title: 'Ungültiger Betrag', description: 'Bitte geben Sie einen gültigen Betrag ein.', variant: 'destructive' });
+      return;
+    }
+    const sellerCounter = Number(offer.counter_offer_amount ?? 0);
+    if (sellerCounter > 0 && newAmount >= sellerCounter) {
+      toast({
+        title: 'Betrag ≥ Gegenangebot',
+        description: `Wenn Ihr Vorschlag (${newAmount.toLocaleString('de-DE')} €) ≥ ${sellerCounter.toLocaleString('de-DE')} € ist, sollten Sie das Gegenangebot lieber direkt annehmen.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setRespondingOfferId(offer.id);
+    try {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { showSessionExpired('/dashboard/kaufchancen'); return; }
+
+      const newExpiresAt = new Date();
+      newExpiresAt.setHours(newExpiresAt.getHours() + 24);
+
+      const { data: updated, error } = await supabase
+        .from('post_auction_offers')
+        .update({
+          status: 'pending',
+          offer_amount: newAmount,
+          counter_offer_amount: null,
+          seller_response: null,
+          message: `Gegenvorschlag des Käufers: ${newAmount.toLocaleString('de-DE')} €`,
+          expires_at: newExpiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', offer.id)
+        .eq('buyer_id', user!.id)
+        .eq('status', 'countered')
+        .select('id');
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        toast({ title: 'Hinweis', description: 'Der Status hat sich bereits geändert. Bitte Seite neu laden.' });
+        loadData();
+        return;
+      }
+
+      try {
+        await invokeWithAuth('notify-offer-action', {
+          body: {
+            action: 'new_offer',
+            auctionId: offer.auction_id,
+            buyerId: user!.id,
+            offerAmount: newAmount,
+            message: `Käufer hat Ihr Gegenangebot über ${sellerCounter.toLocaleString('de-DE')} € mit einem eigenen Vorschlag von ${newAmount.toLocaleString('de-DE')} € beantwortet.`,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify seller about buyer counter:', notifyErr);
+      }
+
+      toast({
+        title: 'Gegenvorschlag gesendet',
+        description: `Ihr Vorschlag über ${newAmount.toLocaleString('de-DE')} € wurde an den Verkäufer übermittelt.`,
+      });
+      setCounterAmounts(prev => ({ ...prev, [offer.id]: '' }));
+      loadData();
+    } catch (err) {
+      console.error('Error submitting buyer counter:', err);
+      toast({ title: 'Fehler', description: 'Gegenvorschlag konnte nicht gesendet werden.', variant: 'destructive' });
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
@@ -822,26 +903,48 @@ export default function MyKaufchancen() {
 
                           {/* Counter-offer actions */}
                           {offer.status === 'countered' && offer.counter_offer_amount && (
-                            <div className="flex gap-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                              <Button
-                                size="sm"
-                                className="flex-1 bg-green-500 hover:bg-green-600"
-                                disabled={respondingOfferId === offer.id}
-                                onClick={(e) => handleAcceptCounterOffer(e, offer)}
-                              >
-                                <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                                Annehmen
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="flex-1"
-                                disabled={respondingOfferId === offer.id}
-                                onClick={(e) => handleRejectCounterOffer(e, offer)}
-                              >
-                                <XCircle className="w-3.5 h-3.5 mr-1" />
-                                Ablehnen
-                              </Button>
+                            <div className="space-y-1.5 mt-2 pt-1.5 border-t border-border/40" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                              <div className="flex gap-1.5">
+                                <Button
+                                  size="sm"
+                                  className="flex-1 bg-green-500 hover:bg-green-600"
+                                  disabled={respondingOfferId === offer.id}
+                                  onClick={(e) => handleAcceptCounterOffer(e, offer)}
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                                  Annehmen
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="flex-1"
+                                  disabled={respondingOfferId === offer.id}
+                                  onClick={(e) => handleRejectCounterOffer(e, offer)}
+                                >
+                                  <XCircle className="w-3.5 h-3.5 mr-1" />
+                                  Ablehnen
+                                </Button>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder={`< ${Number(offer.counter_offer_amount).toLocaleString('de-DE')} €`}
+                                  value={counterAmounts[offer.id] || ''}
+                                  onChange={(e) => setCounterAmounts(prev => ({ ...prev, [offer.id]: formatBidDisplay(e.target.value) }))}
+                                  className="flex-1 h-9 text-sm"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                  disabled={respondingOfferId === offer.id || !counterAmounts[offer.id]}
+                                  onClick={(e) => handleBuyerCounter(e, offer)}
+                                >
+                                  <MessageCircleReply className="w-3.5 h-3.5 mr-1" />
+                                  Gegenvorschlag
+                                </Button>
+                              </div>
                             </div>
                           )}
 

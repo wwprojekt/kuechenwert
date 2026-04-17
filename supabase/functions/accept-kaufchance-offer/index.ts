@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
+import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
 
 /**
  * Edge Function: accept-kaufchance-offer
@@ -338,6 +339,29 @@ Deno.serve(async (req) => {
     } catch (invoiceError: any) {
       console.error('Error in invoice flow:', invoiceError);
       errors.push(`Rechnungserstellung komplett fehlgeschlagen: ${invoiceError.message}`);
+    }
+
+    // ─── 7b. Google Ads sale conversion (only after invoice confirmed) ───
+    if (invoiceSuccess) {
+      const saleResult = await uploadSaleConversionToGoogleAds({
+        supabase,
+        source: 'accept-kaufchance-offer',
+        auctionId: auction.id,
+        motorhomeId: auction.motorhome.id,
+        sellerId: auction.motorhome.seller_id,
+        dealerId: buyerId,
+        saleAmount: salePrice,
+        clickIds: {
+          gclid: auction.motorhome?.gclid,
+          gbraid: auction.motorhome?.gbraid,
+          wbraid: auction.motorhome?.wbraid,
+        },
+      });
+      if (saleResult.attempted && !saleResult.success) {
+        errors.push(`Google Ads Sale-Conversion: ${saleResult.error || 'Unbekannter Fehler'}`);
+      }
+    } else {
+      console.log('[accept-kaufchance-offer] Invoice not created successfully, skipping Google Ads sale conversion');
     }
 
     // ─── 8. Generate purchase contract ───

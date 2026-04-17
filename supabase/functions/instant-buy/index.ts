@@ -3,6 +3,7 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, RATE_LIMITS } from '../_shared/rate-limiter.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
+import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
 
 /**
  * Edge Function: instant-buy
@@ -386,6 +387,29 @@ Deno.serve(async (req) => {
       errors.push(`Rechnungserstellung komplett fehlgeschlagen: ${invoiceError.message}`);
       // Don't fail the purchase if invoice creation fails
       // The admin can manually create the invoice later
+    }
+
+    // ─── 8b. GOOGLE ADS SALE CONVERSION (only after invoice confirmed) ──
+    if (invoiceSuccess) {
+      const saleResult = await uploadSaleConversionToGoogleAds({
+        supabase: supabaseAdmin,
+        source: 'instant-buy',
+        auctionId,
+        motorhomeId: motorhome.id,
+        sellerId: motorhome.seller_id,
+        dealerId: user.id,
+        saleAmount: instantPrice,
+        clickIds: {
+          gclid: motorhome.gclid,
+          gbraid: motorhome.gbraid,
+          wbraid: motorhome.wbraid,
+        },
+      });
+      if (saleResult.attempted && !saleResult.success) {
+        errors.push(`Google Ads Sale-Conversion: ${saleResult.error || 'Unbekannter Fehler'}`);
+      }
+    } else {
+      console.log('[instant-buy] Invoice not created successfully, skipping Google Ads sale conversion');
     }
 
     // ─── 9. WINNER NOTIFICATION ─────────────────────────────────

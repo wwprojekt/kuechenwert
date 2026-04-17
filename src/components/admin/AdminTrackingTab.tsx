@@ -26,6 +26,7 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  Loader2,
   RefreshCw,
   ServerCog,
   Tag,
@@ -38,6 +39,24 @@ import {
   type ConversionValueKey,
   type TrackingConfig,
 } from "@/lib/trackingConfig";
+import { supabase } from "@/integrations/supabase/client";
+
+interface GadsDiagnosticAction {
+  id: string;
+  name: string;
+  status: string;
+  type: string;
+  category: string;
+  primary_for_goal: boolean;
+}
+
+interface GadsDiagnosticResponse {
+  SALE_ENV_VALUE?: string | null;
+  LENGTH?: number | null;
+  FIRST_CHAR?: number | null;
+  actions?: GadsDiagnosticAction[];
+  error?: string;
+}
 
 type TrackingFormValue = Partial<TrackingConfig> | null | undefined;
 
@@ -140,12 +159,37 @@ function readLiveStatus(): LiveStatus {
 export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabProps) {
   const cfg = ensureConfig(value);
   const [live, setLive] = useState<LiveStatus>(() => readLiveStatus());
+  const [gadsDiag, setGadsDiag] = useState<GadsDiagnosticResponse | null>(null);
+  const [gadsDiagLoading, setGadsDiagLoading] = useState(false);
+  const [gadsDiagError, setGadsDiagError] = useState<string | null>(null);
 
   useEffect(() => {
     setLive(readLiveStatus());
     const t = window.setInterval(() => setLive(readLiveStatus()), 2000);
     return () => window.clearInterval(t);
   }, []);
+
+  const runGadsDiagnostic = async () => {
+    setGadsDiagLoading(true);
+    setGadsDiagError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke<GadsDiagnosticResponse>("gads-diagnostic", {
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.error) {
+        setGadsDiagError(data.error);
+        setGadsDiag(null);
+      } else {
+        setGadsDiag(data ?? null);
+      }
+    } catch (e: any) {
+      setGadsDiagError(e?.message ?? String(e));
+      setGadsDiag(null);
+    } finally {
+      setGadsDiagLoading(false);
+    }
+  };
 
   const update = (patch: Partial<TrackingConfig>) => onChange({ ...cfg, ...patch });
   const updateGa4 = (p: Partial<TrackingConfig["ga4"]>) => update({ ga4: { ...cfg.ga4, ...p } });
@@ -492,6 +536,148 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               Aktuell: <strong>{cfg.meta_pixel.pixel_id || "—"}</strong>
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Google Ads Live-Diagnose (gads-diagnostic Edge Function) */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ServerCog className="w-5 h-5 text-primary" />
+                Google Ads API – Live-Diagnose
+              </CardTitle>
+              <CardDescription>
+                Ruft die Edge Function <code>gads-diagnostic</code> auf, prüft die Supabase-Secrets, fragt
+                die Google-Ads-API live ab und listet alle aktuellen Conversion-Aktionen mit Status, Typ und
+                Kategorie. Erspart das manuelle Abrufen via Konsole.
+              </CardDescription>
+            </div>
+            <Button onClick={runGadsDiagnostic} disabled={gadsDiagLoading} size="sm">
+              {gadsDiagLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Prüfe…
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Live-Check ausführen
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!gadsDiag && !gadsDiagError && !gadsDiagLoading && (
+            <p className="text-sm text-muted-foreground">
+              Klicken Sie auf <strong>Live-Check ausführen</strong>, um die aktuelle Google-Ads-Konfiguration zu prüfen.
+            </p>
+          )}
+
+          {gadsDiagError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="flex gap-2">
+                <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Diagnose fehlgeschlagen.</strong>
+                  <pre className="mt-1 text-xs whitespace-pre-wrap break-all">{gadsDiagError}</pre>
+                  <p className="mt-1 text-xs">
+                    Häufigste Ursache: ein Secret ist nicht gesetzt (z. B. <code>GADS_OAUTH_REFRESH_TOKEN</code>),
+                    oder der Refresh-Token wurde widerrufen.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gadsDiag && (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <LiveStatusItem
+                  label="OAuth + API erreichbar"
+                  ok
+                  detail={`${gadsDiag.actions?.length ?? 0} Conversion-Aktionen geladen`}
+                />
+                <LiveStatusItem
+                  label="GADS_SALE_CONVERSION_ACTION_ID"
+                  ok={!!gadsDiag.SALE_ENV_VALUE}
+                  detail={gadsDiag.SALE_ENV_VALUE ?? "nicht gesetzt"}
+                />
+                <LiveStatusItem
+                  label="Aktionen UPLOAD_CLICKS-fähig"
+                  ok={(gadsDiag.actions ?? []).some((a) => a.type === "UPLOAD_CLICKS" && a.status === "ENABLED")}
+                  detail={`${
+                    (gadsDiag.actions ?? []).filter((a) => a.type === "UPLOAD_CLICKS" && a.status === "ENABLED").length
+                  } aktiv`}
+                />
+              </div>
+
+              <div className="overflow-x-auto rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr className="text-left">
+                      <th className="px-3 py-2 font-medium">ID</th>
+                      <th className="px-3 py-2 font-medium">Name</th>
+                      <th className="px-3 py-2 font-medium">Typ</th>
+                      <th className="px-3 py-2 font-medium">Kategorie</th>
+                      <th className="px-3 py-2 font-medium">Status</th>
+                      <th className="px-3 py-2 font-medium text-center">Primary</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(gadsDiag.actions ?? []).map((a) => {
+                      const isSaleAction = a.id === gadsDiag.SALE_ENV_VALUE;
+                      const isOfflineLead = a.id === cfg.server_side.gads_offline_conversion_action_id;
+                      return (
+                        <tr key={a.id} className="border-t">
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {a.id}
+                            {isSaleAction && <Badge variant="default" className="ml-2 text-[10px]">Sale-Action</Badge>}
+                            {isOfflineLead && <Badge variant="secondary" className="ml-2 text-[10px]">Lead-Action</Badge>}
+                          </td>
+                          <td className="px-3 py-2">{a.name}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant={a.type === "UPLOAD_CLICKS" ? "default" : "outline"} className="text-[10px]">
+                              {a.type}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">{a.category}</td>
+                          <td className="px-3 py-2">
+                            <Badge
+                              variant={a.status === "ENABLED" ? "default" : a.status === "REMOVED" ? "destructive" : "secondary"}
+                              className="text-[10px]"
+                            >
+                              {a.status}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {a.primary_for_goal ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 text-xs">
+                <div className="flex gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-amber-800 dark:text-amber-200">
+                    Nur <strong>UPLOAD_CLICKS</strong>-Aktionen können per API hochgeladen werden (z. B. Lead-Conversions
+                    aus <code>track-conversion</code> oder Sale-Conversions aus <code>close-auction</code>).
+                    <strong> WEBPAGE</strong>-Aktionen werden direkt via gtag.js im Browser gefeuert.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

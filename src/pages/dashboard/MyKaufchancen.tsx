@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Zap, Car, Clock, Euro, CheckCircle, XCircle, Trophy, RefreshCw, TrendingUp, MessageCircleReply } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -246,7 +247,12 @@ export default function MyKaufchancen() {
       setMyOffers((offersData as unknown as MyOffer[]) || []);
       setLastRefresh(new Date());
     } catch (error) {
-      console.error("Error loading kaufchancen:", error);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(error)) {
+        logger.warn("MyKaufchancen: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading kaufchancen:", error);
+      }
     } finally {
       isLoadingRef.current = false;
       if (isMountedRef.current) setLoading(false);
@@ -519,8 +525,9 @@ export default function MyKaufchancen() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) { showSessionExpired('/dashboard/kaufchancen'); return; }
 
-      const newExpiresAt = new Date();
-      newExpiresAt.setHours(newExpiresAt.getHours() + 24);
+      const { data: auctionForExpiry } = await supabase
+        .from('auctions').select('kaufchance_expires_at').eq('id', offer.auction_id).single();
+      const counterExpiresAt = auctionForExpiry?.kaufchance_expires_at ?? null;
 
       const { data: updated, error } = await supabase
         .from('post_auction_offers')
@@ -530,7 +537,7 @@ export default function MyKaufchancen() {
           counter_offer_amount: null,
           seller_response: null,
           message: `Gegenvorschlag des Käufers: ${newAmount.toLocaleString('de-DE')} €`,
-          expires_at: newExpiresAt.toISOString(),
+          expires_at: counterExpiresAt,
           updated_at: new Date().toISOString(),
         })
         .eq('id', offer.id)

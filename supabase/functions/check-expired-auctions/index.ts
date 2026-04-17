@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
  * Edge Function: check-expired-auctions
@@ -507,6 +508,21 @@ Deno.serve(async (req) => {
 
     console.log(`Processing completed: ${successCount} successful, ${failCount} failed, ${orphanCount} orphan offers swept`);
 
+    if (failCount > 0) {
+      await logEdgeError(supabase, {
+        component: 'check-expired-auctions',
+        message: `Cron: ${failCount} Auktion(en) konnten nicht geschlossen/relisted werden`,
+        severity: failCount >= 3 ? 'high' : 'medium',
+        category: 'auction',
+        metadata: {
+          successCount,
+          failCount,
+          orphanCount,
+          failures: results.filter(r => !r.success),
+        },
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -520,6 +536,19 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Error in check-expired-auctions:', error);
+    try {
+      const supabaseLog = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+      await logEdgeError(supabaseLog, {
+        component: 'check-expired-auctions',
+        message: `Cron: Unerwarteter Fehler beim Prüfen abgelaufener Auktionen: ${error?.message || 'unbekannt'}`,
+        severity: 'critical',
+        category: 'auction',
+        originalError: error,
+      });
+    } catch { /* swallow */ }
     return new Response(
       JSON.stringify({ error: error.message }),
       {

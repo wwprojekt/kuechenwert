@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, TrendingUp, CheckCircle, XCircle, Loader2, MessageCircleReply, ArrowLeft } from "lucide-react";
-import { withSessionRetry, ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession, invokeWithAuth, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 
 interface ExistingOffer {
@@ -74,7 +75,12 @@ export function PostAuctionOfferDialog({
         .maybeSingle();
       setExistingOffer(data as ExistingOffer | null);
     } catch (err) {
-      console.error('Error fetching existing offer:', err);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(err)) {
+        logger.warn('PostAuctionOfferDialog: transient network error fetching existing offer', err);
+      } else {
+        console.error('Error fetching existing offer:', err);
+      }
     } finally {
       setIsLoadingOffer(false);
     }
@@ -166,13 +172,14 @@ export function PostAuctionOfferDialog({
         return;
       }
 
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
+      const offerExpiresAt = !isFestpreis && auction.kaufchance_expires_at
+        ? auction.kaufchance_expires_at
+        : null;
 
       await withSessionRetry(async () => {
         const { error } = await supabase.from("post_auction_offers").insert({
           auction_id: auctionId, buyer_id: user.id, offer_amount: amount,
-          message: message.trim() || null, expires_at: expiresAt.toISOString(),
+          message: message.trim() || null, expires_at: offerExpiresAt,
         });
         if (error) throw error;
       }, 'PostAuctionOffer.insert');
@@ -283,8 +290,9 @@ export function PostAuctionOfferDialog({
         return;
       }
 
-      const newExpiresAt = new Date();
-      newExpiresAt.setHours(newExpiresAt.getHours() + 24);
+      const { data: auctionForExpiry } = await supabase
+        .from('auctions').select('kaufchance_expires_at').eq('id', auctionId).single();
+      const counterExpiresAt = auctionForExpiry?.kaufchance_expires_at ?? null;
 
       const { data: updated, error } = await supabase
         .from('post_auction_offers')
@@ -294,7 +302,7 @@ export function PostAuctionOfferDialog({
           counter_offer_amount: null,
           seller_response: null,
           message: message.trim() || `Gegenvorschlag des Käufers: ${newAmount.toLocaleString('de-DE')} €`,
-          expires_at: newExpiresAt.toISOString(),
+          expires_at: counterExpiresAt,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingOffer.id)

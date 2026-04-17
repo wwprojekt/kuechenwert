@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, button } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
  * Edge Function: close-auction
@@ -374,6 +375,27 @@ Deno.serve(async (req) => {
       // Get top-2 unique bidders
       const topBidders = getTopBidders(auction.bids, 2);
       console.log('Top bidders identified:', topBidders);
+
+      // ─── Bug 3 fix: clean stale invitations from previous rounds ────────
+      // Without this, a re-close, manual restart, or admin re-run would
+      // leave phantom rows for bidders who are no longer in the new top-2.
+      // post_auction_offers are independent (no FK to invitations), so this
+      // is safe and never destroys offer data. Sweeping ALL invitations for
+      // this auction is the simplest correct strategy: the loop below then
+      // re-inserts exactly the current top-2.
+      try {
+        const { error: deleteStaleErr } = await supabase
+          .from('kaufchance_invitations')
+          .delete()
+          .eq('auction_id', auctionId);
+        if (deleteStaleErr) {
+          console.error('Error deleting stale invitations:', deleteStaleErr);
+          errors.push(`Alte Einladungen löschen fehlgeschlagen: ${deleteStaleErr.message}`);
+        }
+      } catch (e: any) {
+        console.error('Exception deleting stale invitations:', e);
+        errors.push(`Alte Einladungen löschen fehlgeschlagen: ${e.message}`);
+      }
 
       // Create kaufchance_invitations for top-2 bidders
       for (let i = 0; i < topBidders.length; i++) {
@@ -1050,6 +1072,22 @@ Deno.serve(async (req) => {
       await sendAdminEmail(supabase, `Auktion beendet ohne Verkauf: ${motorhomeName}`, adminContent);
     }
 
+    if (errors.length > 0) {
+      await logEdgeError(supabase, {
+        component: 'close-auction',
+        message: `Auktion ${auctionId} geschlossen mit ${errors.length} Folge-Fehlern (Status: ${newStatus})`,
+        severity: errors.length >= 3 ? 'high' : 'medium',
+        category: 'auction',
+        metadata: {
+          auctionId,
+          status: newStatus,
+          soldTo,
+          amount: highestBid?.amount || null,
+          errors,
+        },
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1062,6 +1100,19 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Error in close-auction:', error);
+    try {
+      const supabaseLog = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+      await logEdgeError(supabaseLog, {
+        component: 'close-auction',
+        message: `Unerwarteter Fehler beim Schließen einer Auktion: ${error?.message || 'unbekannt'}`,
+        severity: 'critical',
+        category: 'auction',
+        originalError: error,
+      });
+    } catch { /* swallow */ }
     return new Response(
       JSON.stringify({ error: error.message }),
       {

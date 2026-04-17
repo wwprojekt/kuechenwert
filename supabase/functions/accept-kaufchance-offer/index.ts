@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
+import { logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
  * Edge Function: accept-kaufchance-offer
@@ -187,119 +188,109 @@ Deno.serve(async (req) => {
       ? Number(offer.counter_offer_amount)
       : Number(offer.offer_amount);
 
+    // ─── kaufchance_min_price enforcement ───
+    // The seller-set minimum price must not be undercut when the seller (or admin
+    // acting on the seller's behalf) accepts a buyer offer. The buyer is exempt:
+    // when the buyer accepts a seller's counter-offer, the seller has already
+    // implicitly approved the price by sending that counter, so the minimum no
+    // longer applies. Festpreis proposals also have no kaufchance_min_price.
+    if (
+      !isFestpreisProposal &&
+      auction.kaufchance_min_price != null &&
+      Number(auction.kaufchance_min_price) > 0 &&
+      salePrice < Number(auction.kaufchance_min_price) &&
+      !(isBuyer && offer.status === 'countered')
+    ) {
+      const minPriceFmt = `€${Number(auction.kaufchance_min_price).toLocaleString('de-DE')}`;
+      const salePriceFmt = `€${salePrice.toLocaleString('de-DE')}`;
+      console.warn(
+        `Reject accept: salePrice ${salePriceFmt} below kaufchance_min_price ${minPriceFmt} (auction ${auction.id})`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: `Annahme nicht möglich: ${salePriceFmt} liegt unter dem festgelegten Mindestpreis ${minPriceFmt}. Bitte Mindestpreis anpassen oder ein höheres Gegenangebot senden.`,
+          code: 'BELOW_MIN_PRICE',
+          minPrice: Number(auction.kaufchance_min_price),
+          salePrice,
+        }),
+        { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
+      );
+    }
+
     const buyerId = offer.buyer_id;
     const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
     const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
 
     console.log(`Accepting Kaufchance offer: ${offerId}, buyer: ${buyerId}, price: €${salePrice}`);
 
-    // ─── 3. Update offer status to 'accepted' ───
-    const { error: updateOfferError } = await supabase
-      .from('post_auction_offers')
-      .update({
-        status: 'accepted',
-        responded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', offerId);
+    // ─── 3-6. Atomic DB transition (offer + other offers + auction + motorhome) ───
+    // All four state changes happen in a single Postgres transaction. If any
+    // step fails, everything is rolled back automatically — no more split-brain
+    // states (auction sold but motorhome still available, etc.).
+    const expectedStatus = isFestpreisProposal ? 'active' : 'kaufchance';
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      'accept_kaufchance_offer_atomic',
+      {
+        p_offer_id: offerId,
+        p_expected_auction_status: expectedStatus,
+        p_user_id: user.id,
+      },
+    );
 
-    if (updateOfferError) {
-      console.error('Error updating offer status:', updateOfferError);
+    if (rpcError) {
+      console.error('RPC accept_kaufchance_offer_atomic failed:', rpcError);
+      await logEdgeError(supabase, {
+        component: 'accept-kaufchance-offer',
+        message: `Atomare Annahme fehlgeschlagen (RPC-Fehler): ${rpcError.message}`,
+        severity: 'high',
+        category: 'kaufchance',
+        originalError: rpcError,
+        metadata: { offerId, auctionId: auction.id },
+        userId: user.id,
+      });
       return new Response(
-        JSON.stringify({ error: 'Failed to update offer status' }),
-        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Status-Update fehlgeschlagen. Bitte erneut versuchen.' }),
+        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
       );
     }
 
-    // ─── 4. Snapshot other offers before rejecting (for rollback) ───
-    const { data: otherOffers } = await supabase
+    const rpcResult = rpcData as {
+      success: boolean;
+      error?: string;
+      offer_status?: string;
+      auction_status?: string;
+      sale_price?: number;
+    };
+
+    if (!rpcResult?.success) {
+      console.warn('accept_kaufchance_offer_atomic returned failure:', rpcResult);
+      // Map known DB errors to user-friendly messages + correct HTTP codes
+      const code = rpcResult?.error || 'unknown';
+      const map: Record<string, { status: number; msg: string }> = {
+        offer_not_found:        { status: 404, msg: 'Angebot nicht gefunden.' },
+        auction_not_found:      { status: 404, msg: 'Auktion nicht gefunden.' },
+        motorhome_not_found:    { status: 404, msg: 'Fahrzeug nicht gefunden.' },
+        offer_not_open:         { status: 409, msg: `Angebot kann nicht angenommen werden (Status: ${rpcResult.offer_status}).` },
+        auction_status_mismatch:{ status: 409, msg: isFestpreisProposal ? 'Das Inserat ist nicht mehr aktiv.' : 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.' },
+        motorhome_already_sold: { status: 409, msg: 'Dieses Fahrzeug wurde bereits verkauft.' },
+      };
+      const mapped = map[code] || { status: 500, msg: `Annahme fehlgeschlagen: ${code}` };
+      return new Response(
+        JSON.stringify({ error: mapped.msg, code }),
+        { status: mapped.status, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // No "otherOfferIds" snapshot needed any more — rejection is part of the
+    // atomic RPC. The variable is kept for downstream notification reuse below.
+    const { data: rejectedAfter } = await supabase
       .from('post_auction_offers')
-      .select('id, status')
+      .select('id, buyer_id, offer_amount')
       .eq('auction_id', offer.auction_id)
       .neq('id', offerId)
-      .in('status', ['pending', 'countered']);
-
-    const otherOfferIds = otherOffers?.map((o: { id: string }) => o.id) || [];
-    const otherOfferSnapshots = otherOffers || [];
-
-    // Reject other offers
-    if (otherOfferIds.length > 0) {
-      try {
-        const { error: rejectError } = await supabase
-          .from('post_auction_offers')
-          .update({
-            status: 'rejected',
-            seller_response: 'Ein anderes Angebot wurde angenommen.',
-            responded_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .in('id', otherOfferIds);
-
-        if (rejectError) {
-          console.error('Error rejecting other offers:', rejectError);
-          errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${rejectError.message}`);
-        }
-      } catch (e: any) {
-        console.error('Error rejecting other offers:', e);
-        errors.push(`Andere Angebote ablehnen fehlgeschlagen: ${e.message}`);
-      }
-    }
-
-    // ─── 5. Update auction status to 'sold' (with row count verification) ───
-    const expectedStatus = isFestpreisProposal ? 'active' : 'kaufchance';
-    const { data: auctionUpdateData, error: updateAuctionError } = await supabase
-      .from('auctions')
-      .update({
-        status: 'sold',
-        current_bid: salePrice,
-      })
-      .eq('id', auction.id)
-      .eq('status', expectedStatus)
-      .select('id');
-
-    if (updateAuctionError || !auctionUpdateData || auctionUpdateData.length === 0) {
-      const reason = updateAuctionError
-        ? `Error: ${updateAuctionError.message}`
-        : 'Race condition: 0 rows updated';
-      console.error('Auction update failed, rolling back all offer changes:', reason);
-
-      // Full rollback: revert accepted offer AND re-open rejected offers
-      await supabase.from('post_auction_offers')
-        .update({ status: offer.status, responded_at: null, updated_at: new Date().toISOString() })
-        .eq('id', offerId);
-
-      for (const snap of otherOfferSnapshots) {
-        await supabase.from('post_auction_offers')
-          .update({ status: snap.status, seller_response: null, responded_at: null, updated_at: new Date().toISOString() })
-          .eq('id', snap.id);
-      }
-
-      const errorMsg = updateAuctionError
-        ? 'Status-Update fehlgeschlagen. Bitte erneut versuchen.'
-        : isFestpreisProposal ? 'Das Inserat ist nicht mehr aktiv.' : 'Die Auktion befindet sich nicht mehr in der Kaufchance-Phase.';
-      const statusCode = updateAuctionError ? 500 : 409;
-
-      return new Response(
-        JSON.stringify({ error: errorMsg }),
-        { status: statusCode, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ─── 6. Update motorhome status to 'sold' ───
-    const { error: updateMotorhomeError } = await supabase
-      .from('motorhomes')
-      .update({
-        status: 'sold',
-        sold_to: buyerId,
-        sold_at: new Date().toISOString(),
-        sale_type: isFestpreisProposal ? 'price_proposal' : 'kaufchance',
-      })
-      .eq('id', auction.motorhome.id);
-
-    if (updateMotorhomeError) {
-      console.error('Error updating motorhome status:', updateMotorhomeError);
-      errors.push(`Motorhome-Status-Update fehlgeschlagen: ${updateMotorhomeError.message}`);
-    }
+      .eq('status', 'rejected')
+      .gte('updated_at', new Date(Date.now() - 60_000).toISOString());
+    const otherOfferIds = (rejectedAfter || []).map((o) => o.id);
 
     // ─── 7. Create invoice ───
     let invoiceSuccess = false;
@@ -771,6 +762,26 @@ Deno.serve(async (req) => {
       console.error('Error sending admin notification:', adminError);
     }
 
+    // ─── Persist any accumulated non-fatal errors so admins can see them ──
+    if (errors.length > 0) {
+      await logEdgeError(supabase, {
+        component: 'accept-kaufchance-offer',
+        message: `Verkauf abgeschlossen, aber ${errors.length} Folge-Fehler aufgetreten`,
+        severity: errors.length >= 3 ? 'high' : 'medium',
+        category: 'kaufchance',
+        metadata: {
+          offerId,
+          auctionId: auction.id,
+          buyerId,
+          salePrice,
+          invoiceSuccess,
+          contractSuccess,
+          errors,
+        },
+        userId: user.id,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -785,6 +796,14 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Error in accept-kaufchance-offer:', error);
+    await logEdgeError(supabase, {
+      component: 'accept-kaufchance-offer',
+      message: `Unerwarteter Fehler: ${error?.message || 'unbekannt'}`,
+      severity: 'high',
+      category: 'kaufchance',
+      originalError: error,
+      userId: user.id,
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -268,7 +268,8 @@ export default function AdminPostAuctionOffers() {
       if (error) throw error;
       return (data || []) as PostAuctionOffer[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 45000,
   });
 
   const { data: auctionMap = {} } = useQuery({
@@ -340,7 +341,8 @@ export default function AdminPostAuctionOffers() {
       const seen = new Set<string>();
       return merged.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; }) as AuctionInfo[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 90000,
+    staleTime: 45000,
   });
 
   // Collect all profile IDs we need (stable dependency for queryKey)
@@ -916,8 +918,8 @@ export default function AdminPostAuctionOffers() {
         return;
       }
 
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 48); // 48h Frist
+      const adminAuction = auctionMap[auctionId];
+      const adminOfferExpiresAt = adminAuction?.kaufchance_expires_at ?? null;
 
       const { error } = await supabase
         .from('post_auction_offers')
@@ -927,7 +929,7 @@ export default function AdminPostAuctionOffers() {
           offer_amount: amount,
           message: adminOfferMessage || 'Angebot erstellt durch Admin',
           status: 'pending',
-          expires_at: expiresAt.toISOString(),
+          expires_at: adminOfferExpiresAt,
         });
       if (error) {
         // Race-condition fallback: between our pre-check and insert another
@@ -1062,8 +1064,8 @@ export default function AdminPostAuctionOffers() {
           return;
         }
 
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 48);
+        const proactiveAuction = auctionMap[auctionId];
+        const proactiveExpiresAt = proactiveAuction?.kaufchance_expires_at ?? null;
         let createErrors = 0;
 
         for (const inv of invitations) {
@@ -1076,7 +1078,7 @@ export default function AdminPostAuctionOffers() {
               counter_offer_amount: amount,
               status: 'countered',
               seller_response: sellerActionMessage || `Preisvorstellung des Verkäufers: ${amount.toLocaleString('de-DE')} €`,
-              expires_at: expiresAt.toISOString(),
+              expires_at: proactiveExpiresAt,
             });
           if (error) {
             console.error('Failed to create proactive counter offer:', error);

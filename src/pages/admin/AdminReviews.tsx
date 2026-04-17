@@ -189,7 +189,8 @@ export default function AdminReviews() {
       if (error) throw error;
       return (data || []) as DealerReview[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    staleTime: 60000,
   });
 
   const { data: profileMap = {} } = useQuery({

@@ -14,7 +14,7 @@
  * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE_NAME = `caravanwert-static-${CACHE_VERSION}`;
 const ASSETS_CACHE_NAME = `caravanwert-assets-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `caravanwert-dynamic-${CACHE_VERSION}`;
@@ -101,6 +101,15 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
 
+  // Supabase requests: pass through directly without any SW interception.
+  // The SW was previously cloning every response body and writing it to a
+  // CacheStorage entry keyed by the full PostgREST URL. For long admin
+  // sessions this (a) doubles memory while the clone is held, (b) keeps
+  // hundreds of 1-2 MB JSON blobs on disk, and (c) slows every Supabase
+  // request by an extra read/write cycle. Supabase + the browser HTTP cache
+  // handle freshness already – no offline story needed for live data.
+  if (isApiRequest(url)) return;
+
   // Route to the correct handler
   if (isHashedBuildAsset(url)) {
     event.respondWith(handleHashedAsset(request));
@@ -108,8 +117,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleImmutableAsset(request));
   } else if (isImage(url)) {
     event.respondWith(handleImage(request));
-  } else if (isApiRequest(url)) {
-    event.respondWith(handleApiRequest(request));
   } else if (isNavigationRequest(request)) {
     event.respondWith(handleNavigation(request));
   }
@@ -235,58 +242,6 @@ async function handleImage(request) {
   } catch (error) {
     console.error('Service Worker: Image fetch failed', error);
     return new Response('', { status: 503 });
-  }
-}
-
-/**
- * NETWORK-FIRST for API / Supabase requests with 5-minute cache fallback.
- */
-async function handleApiRequest(request) {
-  try {
-    const cache = await caches.open(DYNAMIC_CACHE_NAME);
-
-    try {
-      const networkResponse = await fetch(request);
-
-      if (networkResponse.ok) {
-        const headers = new Headers(networkResponse.headers);
-        headers.set('sw-cached-at', Date.now().toString());
-
-        const responseToCache = new Response(networkResponse.clone().body, {
-          status: networkResponse.status,
-          statusText: networkResponse.statusText,
-          headers: headers,
-        });
-
-        cache.put(request, responseToCache);
-      }
-
-      return networkResponse;
-    } catch (networkError) {
-      const cachedResponse = await cache.match(request);
-
-      if (cachedResponse) {
-        const cachedAt = cachedResponse.headers.get('sw-cached-at');
-        const age = Date.now() - parseInt(cachedAt || '0');
-        const maxAge = 5 * 60 * 1000; // 5 minutes
-
-        if (age < maxAge) {
-          console.log('Service Worker: Serving cached API response');
-          return cachedResponse;
-        }
-      }
-
-      throw networkError;
-    }
-  } catch (error) {
-    console.error('Service Worker: API fetch failed', error);
-    return new Response(
-      JSON.stringify({ error: 'Service temporarily unavailable' }),
-      {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
   }
 }
 

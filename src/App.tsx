@@ -167,10 +167,14 @@ const queryClient = new QueryClient({
       retry: 2,
       // Retry with exponential backoff
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Refetch on window focus for critical data
-      refetchOnWindowFocus: true,
-      // Don't refetch on reconnect by default
-      refetchOnReconnect: 'always',
+      // Do NOT refetch every time the user alt-tabs back.
+      // Admin pages alone run ~25 queries; focus-refetch caused a visible
+      // freeze whenever an admin switched tabs. Individual hot queries can
+      // still opt-in via refetchOnWindowFocus: true on their own useQuery.
+      refetchOnWindowFocus: false,
+      // Only refetch on reconnect – not "always" (which re-runs even if
+      // the connection never actually dropped, just visibility flickered).
+      refetchOnReconnect: true,
     },
     mutations: {
       // Retry mutations once

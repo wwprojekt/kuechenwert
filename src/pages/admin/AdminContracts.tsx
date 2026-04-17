@@ -184,7 +184,8 @@ export default function AdminContracts() {
       if (error) throw error;
       return (data || []) as PurchaseContract[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    staleTime: 60000,
   });
 
   // ---- Statistics ----

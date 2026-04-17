@@ -144,7 +144,10 @@ export default function AdminAuctionDetail() {
       return data || [];
     },
     enabled: !!id,
-    refetchInterval: 30000,
+    // Realtime subscription on `bids` already invalidates this;
+    // poll only as a safety net.
+    refetchInterval: 90000,
+    staleTime: 30000,
   });
 
   // Activate auction mutation

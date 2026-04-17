@@ -1,7 +1,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { execSync } from "child_process";
 import { componentTagger } from "lovable-tagger";
+
+// Resolve the current git SHA once per build so it can be injected into the
+// bundle as VITE_APP_VERSION and logged with every error. This is what makes
+// retroactive stack-decoding reliable: a production error_logs row carries the
+// SHA, and `npm run decode-stack` can rebuild that exact commit locally to
+// produce matching sourcemaps.
+function resolveGitSha(): string {
+  // Prefer the CI-provided commit hash (Netlify sets COMMIT_REF) so builds
+  // that happen without a .git directory still report the correct SHA.
+  if (process.env.COMMIT_REF) return process.env.COMMIT_REF.slice(0, 12);
+  try {
+    return execSync("git rev-parse --short=12 HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -15,7 +34,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Expose the build SHA to the client so errorLogService can report it as
+    // app_version on every error row. NOTE: wrapped in JSON.stringify per
+    // Vite's define-contract (raw string would be interpreted as an identifier).
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(resolveGitSha()),
+  },
   build: {
+    // "hidden" emits .map files next to the bundles but OMITS the
+    // //# sourceMappingURL=... comment. Browsers never request maps in prod;
+    // our post-build `strip-sourcemaps.mjs` then moves them out of dist/ so
+    // Netlify never serves them publicly.
+    sourcemap: "hidden",
     rollupOptions: {
       output: {
         manualChunks(id) {

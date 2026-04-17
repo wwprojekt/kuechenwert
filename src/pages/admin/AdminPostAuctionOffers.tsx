@@ -1277,6 +1277,15 @@ export default function AdminPostAuctionOffers() {
                 const auctionOffers = offers.filter(o => o.auction_id === auction.id);
                 const pendingOffers = auctionOffers.filter(o => o.status === 'pending');
                 const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
+                const effectiveReserve = auction.reserve_price ?? motorhome?.reserve_price ?? null;
+                const sortedOffers = [...auctionOffers].sort(
+                  (a, b) => Number(b.offer_amount || 0) - Number(a.offer_amount || 0)
+                );
+                const highestOffer = sortedOffers[0]?.offer_amount ?? null;
+                const highestDiff =
+                  effectiveReserve !== null && highestOffer !== null
+                    ? Number(highestOffer) - Number(effectiveReserve)
+                    : null;
 
                 return (
                   <div
@@ -1309,6 +1318,15 @@ export default function AdminPostAuctionOffers() {
                             <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
+                          {highestDiff !== null && (
+                            <span className={highestDiff >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                              Höchstes Angebot Δ Reserve:{' '}
+                              <strong>
+                                {highestDiff >= 0 ? '+' : ''}
+                                {highestDiff.toLocaleString('de-DE')} €
+                              </strong>
+                            </span>
+                          )}
                           {(auction.auction_round ?? 1) > 1 && (
                             <span>Runde: <strong>{auction.auction_round}</strong></span>
                           )}
@@ -1378,6 +1396,73 @@ export default function AdminPostAuctionOffers() {
                         </Button>
                       </div>
                     </div>
+
+                    {sortedOffers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-dashed">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          Angebote im Detail
+                        </p>
+                        <div className="space-y-1.5">
+                          {sortedOffers.map((offer) => {
+                            const buyer = profileMap[offer.buyer_id];
+                            const buyerName = buyer
+                              ? (buyer.company_name
+                                  || `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim()
+                                  || buyer.email
+                                  || 'Händler')
+                              : 'Händler';
+                            const offerDiff =
+                              effectiveReserve !== null
+                                ? Number(offer.offer_amount) - Number(effectiveReserve)
+                                : null;
+                            const counterDiff =
+                              effectiveReserve !== null && offer.counter_offer_amount
+                                ? Number(offer.counter_offer_amount) - Number(effectiveReserve)
+                                : null;
+                            return (
+                              <div
+                                key={offer.id}
+                                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs bg-muted/40 rounded px-2 py-1.5"
+                              >
+                                <span className="font-medium truncate max-w-[200px]" title={buyerName}>
+                                  {buyerName}
+                                </span>
+                                <span>
+                                  Händler-Angebot:{' '}
+                                  <strong className="text-blue-600">
+                                    {Number(offer.offer_amount).toLocaleString('de-DE')} €
+                                  </strong>
+                                  {offerDiff !== null && (
+                                    <span className={`ml-1 ${offerDiff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                      ({offerDiff >= 0 ? '+' : ''}
+                                      {offerDiff.toLocaleString('de-DE')} €)
+                                    </span>
+                                  )}
+                                </span>
+                                {offer.counter_offer_amount && (
+                                  <span>
+                                    Verkäufer-Gegenangebot:{' '}
+                                    <strong className="text-amber-600">
+                                      {Number(offer.counter_offer_amount).toLocaleString('de-DE')} €
+                                    </strong>
+                                    {counterDiff !== null && (
+                                      <span className={`ml-1 ${counterDiff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        ({counterDiff >= 0 ? '+' : ''}
+                                        {counterDiff.toLocaleString('de-DE')} €)
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                                <OfferStatusBadge status={offer.status} expiresAt={offer.expires_at} />
+                                <span className="text-muted-foreground ml-auto">
+                                  {format(new Date(offer.created_at), 'dd.MM. HH:mm', { locale: de })}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

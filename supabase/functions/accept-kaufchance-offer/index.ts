@@ -188,32 +188,22 @@ Deno.serve(async (req) => {
       ? Number(offer.counter_offer_amount)
       : Number(offer.offer_amount);
 
-    // ─── kaufchance_min_price enforcement ───
-    // The seller-set minimum price must not be undercut when the seller (or admin
-    // acting on the seller's behalf) accepts a buyer offer. The buyer is exempt:
-    // when the buyer accepts a seller's counter-offer, the seller has already
-    // implicitly approved the price by sending that counter, so the minimum no
-    // longer applies. Festpreis proposals also have no kaufchance_min_price.
+    // ─── kaufchance_min_price ist KEIN Hard-Block ───
+    // Sinn der Nachverhandlung ist explizit, dass UNTER dem ursprünglichen
+    // Wunschpreis verhandelt werden darf. Der Verkäufer (oder Admin in seinem
+    // Namen) ist mündig: wenn er ein Angebot annimmt, das unter dem von ihm
+    // gesetzten Mindestpreis liegt, ist das eine bewusste Entscheidung.
+    // Wir loggen es nur informativ, blocken aber nicht.
     if (
       !isFestpreisProposal &&
       auction.kaufchance_min_price != null &&
       Number(auction.kaufchance_min_price) > 0 &&
-      salePrice < Number(auction.kaufchance_min_price) &&
-      !(isBuyer && offer.status === 'countered')
+      salePrice < Number(auction.kaufchance_min_price)
     ) {
-      const minPriceFmt = `€${Number(auction.kaufchance_min_price).toLocaleString('de-DE')}`;
-      const salePriceFmt = `€${salePrice.toLocaleString('de-DE')}`;
-      console.warn(
-        `Reject accept: salePrice ${salePriceFmt} below kaufchance_min_price ${minPriceFmt} (auction ${auction.id})`,
-      );
-      return new Response(
-        JSON.stringify({
-          error: `Annahme nicht möglich: ${salePriceFmt} liegt unter dem festgelegten Mindestpreis ${minPriceFmt}. Bitte Mindestpreis anpassen oder ein höheres Gegenangebot senden.`,
-          code: 'BELOW_MIN_PRICE',
-          minPrice: Number(auction.kaufchance_min_price),
-          salePrice,
-        }),
-        { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
+      console.log(
+        `[info] Acceptance below kaufchance_min_price (auction ${auction.id}): ` +
+        `salePrice=€${salePrice}, minPrice=€${Number(auction.kaufchance_min_price)} ` +
+        `(allowed — seller's discretion).`,
       );
     }
 

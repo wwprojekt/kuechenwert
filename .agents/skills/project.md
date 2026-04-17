@@ -45,7 +45,7 @@
 - [x] Bug 5: AdminAuctions Recycling – Delete-before-activate + Error-Handling (14.04.2026)
 - [x] Bug 6: DashboardOverview N+1 → 3 Batch-Queries (14.04.2026)
 - [x] Kaufchance Variante A+B: "Anderen Betrag vorschlagen"-Button im Dialog + Inline Counter-Offer im MyKaufchancen Dashboard (17.04.2026)
-- [x] Kaufchance Bug 2: kaufchance_min_price im accept-kaufchance-offer Edge Function enforcen (17.04.2026)
+- [x] Kaufchance Bug 2 (REVERTED): Server-Hard-Block für kaufchance_min_price wieder entfernt – der Verkäufer ist mündig und darf bewusst unter seinem Mindestpreis verkaufen, das ist gerade der Sinn der Nachverhandlung. Es bleibt nur ein informatives Server-Log. (17.04.2026)
 - [x] Kaufchance Bug 7: Stille Mail-/Notification-Fehler über logEdgeError in error_logs persistieren (accept-kaufchance-offer, close-auction, check-expired-auctions) (17.04.2026)
 - [x] Kaufchance Bug 3: close-auction löscht jetzt alte kaufchance_invitations vor UPSERT + One-Time Cleanup-Migration für Phantom-Invitations (17.04.2026)
 - [x] Kaufchance Bug 1: post_auction_offers.expires_at jetzt konsistent zu auction.kaufchance_expires_at (Frontend + One-Time Sync-Migration) (17.04.2026)

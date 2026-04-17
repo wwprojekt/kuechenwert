@@ -4,6 +4,7 @@
  */
 
 import { logger } from './logger';
+import { isNetworkError } from './sessionGuard';
 
 export interface ErrorContext {
   userId?: string;
@@ -89,11 +90,9 @@ class ErrorLogger {
 
       // Filter out network errors during automatic Supabase token refresh
       // These occur when _refreshAccessToken fails due to unstable connection (2G, background tab)
+      // Single source of truth: isNetworkError() covers Chrome/Firefox/Safari wording
       const stackStr = event.reason?.stack || '';
-      if (
-        (reasonStr.includes('Failed to fetch') || reasonStr.includes('Load failed')) &&
-        stackStr.includes('_refreshAccessToken')
-      ) {
+      if (isNetworkError(event.reason) && stackStr.includes('_refreshAccessToken')) {
         return;
       }
 

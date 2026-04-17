@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle, Send } from "lucide-react";
-import { withSessionRetry, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { z } from "zod";
@@ -69,7 +70,12 @@ export default function MyMessages() {
       setMessages(data || []);
       setLoadError(false);
     } catch (error) {
-      console.error("Error loading messages:", error);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(error)) {
+        logger.warn("MyMessages: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading messages:", error);
+      }
       setLoadError(true);
     } finally {
       setLoading(false);

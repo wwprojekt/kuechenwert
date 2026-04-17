@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { FileCheck, Download, Car, Euro, Calendar, Loader2, FolderOpen, Hash, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 
 interface PurchaseContract {
@@ -49,7 +50,14 @@ export default function MyContracts() {
       if (error) throw error;
       setContracts((data as PurchaseContract[]) || []);
     } catch (error) {
-      console.error("Error loading contracts:", error);
+      // Transiente Netzwerkfehler (User-Verbindungsabbruch, Tab-Wakeup etc.) nicht
+      // als CONSOLE_ERROR ins error_logs spülen – sie sind nicht actionable.
+      // Der nächste Focus/Reconnect lädt die Daten automatisch nach.
+      if (isNetworkError(error)) {
+        logger.warn("MyContracts: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading contracts:", error);
+      }
     } finally {
       setLoading(false);
     }

@@ -13,7 +13,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { ensureValidRLSSession } from '@/lib/sessionGuard';
+import { ensureValidRLSSession, isNetworkError } from '@/lib/sessionGuard';
 import { translateError, getPageTitle, getGermanErrorMessage, type ErrorCategory, type ErrorSeverity } from './germanErrors';
 import { logger } from './logger';
 
@@ -586,11 +586,9 @@ export function installGlobalErrorHandlers(): void {
       reasonName === 'AbortError'
     ) return;
     // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
+    // (single source of truth: isNetworkError() deckt Chrome/Firefox/Safari ab)
     const stackStr = reason instanceof Error ? (reason.stack || '') : '';
-    if (
-      (message.includes('Failed to fetch') || message.includes('Load failed')) &&
-      stackStr.includes('_refreshAccessToken')
-    ) return;
+    if (isNetworkError(reason) && stackStr.includes('_refreshAccessToken')) return;
     const translated = translateError(message);
     logErrorToSupabase({
       errorCode: 'GLOBAL_UNHANDLED_REJECTION',
@@ -630,12 +628,10 @@ export function installGlobalErrorHandlers(): void {
       // Ignoriere Browser-Extension-Fehler
       if (errorArg.message?.includes('Object Not Found Matching Id')) return;
       // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
-      // Diese entstehen wenn _refreshAccessToken bei instabiler Verbindung (2G, Safari-Hintergrund) fehlschlägt.
+      // Diese entstehen wenn _refreshAccessToken bei instabiler Verbindung (2G, Safari-/Firefox-Hintergrund) fehlschlägt.
       // Der Supabase-Client versucht es automatisch erneut, daher sind diese Fehler nicht actionable.
-      if (
-        (errorArg.message?.includes('Failed to fetch') || errorArg.message?.includes('Load failed')) &&
-        errorArg.stack?.includes('_refreshAccessToken')
-      ) return;
+      // Single source of truth: isNetworkError() deckt Chrome/Firefox/Safari/Edge etc. ab
+      if (isNetworkError(errorArg) && errorArg.stack?.includes('_refreshAccessToken')) return;
       const translated = translateError(errorArg.message);
       logErrorToSupabase({
         errorCode: 'CONSOLE_ERROR',

@@ -9,7 +9,8 @@ import { FileText, Download, Car, Euro, Calendar, Loader2, FolderOpen } from "lu
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { openPrivateDocument } from "@/lib/storageUtils";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
 
 interface PurchaseContract {
@@ -47,7 +48,12 @@ export default function MyDocuments() {
       if (error) throw error;
       setContracts((data as PurchaseContract[]) || []);
     } catch (error) {
-      console.error("Error loading documents:", error);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(error)) {
+        logger.warn("MyDocuments: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading documents:", error);
+      }
     } finally {
       setLoading(false);
     }

@@ -18,7 +18,8 @@ import { FileText, Download, Clock, CheckCircle, AlertCircle, Euro, TrendingUp, 
 import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useToast } from "@/hooks/use-toast";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -104,7 +105,12 @@ export default function MyInvoices() {
       setInvoices((data as unknown as Invoice[]) || []);
       setLoadError(false);
     } catch (error) {
-      console.error("Error loading invoices:", error);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(error)) {
+        logger.warn("MyInvoices: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading invoices:", error);
+      }
       setLoadError(true);
     } finally {
       setLoading(false);

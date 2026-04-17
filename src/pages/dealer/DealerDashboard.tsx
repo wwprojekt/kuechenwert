@@ -40,7 +40,8 @@ import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Link } from "react-router-dom";
 import { FavoriteButton } from "@/components/FavoriteButton";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -118,7 +119,12 @@ const DealerDashboard = () => {
         .eq("dealer_id", user.id)
         .maybeSingle();
       if (error) {
-        console.error("Error fetching dealer level:", error);
+        // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+        if (isNetworkError(error)) {
+          logger.warn("DealerDashboard: transient network error fetching dealer level", error);
+        } else {
+          console.error("Error fetching dealer level:", error);
+        }
         return null;
       }
       return data;
@@ -201,7 +207,13 @@ const DealerDashboard = () => {
         .limit(20);
 
       if (auctionsError) {
-        console.error("Error fetching active auctions:", auctionsError);
+        // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+        // (TanStack Query retried den Fetch dank queryClient-Defaults automatisch)
+        if (isNetworkError(auctionsError)) {
+          logger.warn("DealerDashboard: transient network error fetching active auctions", auctionsError);
+        } else {
+          console.error("Error fetching active auctions:", auctionsError);
+        }
         throw auctionsError;
       }
 

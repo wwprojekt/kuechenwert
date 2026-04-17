@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, Car, Calendar, Gauge, Trash2 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { CountryFlag } from "@/components/CountryFlag";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -84,7 +85,12 @@ export default function MyFavorites() {
       setFavorites((data as unknown as FavoriteVehicle[]) || []);
       setLoadError(false);
     } catch (error) {
-      console.error("Error loading favorites:", error);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(error)) {
+        logger.warn("MyFavorites: transient network error, will retry on next focus/reconnect", error);
+      } else {
+        console.error("Error loading favorites:", error);
+      }
       setLoadError(true);
     } finally {
       setLoading(false);

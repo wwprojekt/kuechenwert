@@ -51,7 +51,8 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
-import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -276,7 +277,12 @@ export default function ListingDetail() {
       if (error) throw error;
       setKaufchanceOffers(data || []);
     } catch (err) {
-      console.error('Error loading kaufchance offers:', err);
+      // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
+      if (isNetworkError(err)) {
+        logger.warn('ListingDetail: transient network error loading kaufchance offers', err);
+      } else {
+        console.error('Error loading kaufchance offers:', err);
+      }
     } finally {
       setKaufchanceLoading(false);
     }

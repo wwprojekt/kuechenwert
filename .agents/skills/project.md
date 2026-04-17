@@ -50,8 +50,23 @@
 - [x] Kaufchance Bug 3: close-auction löscht jetzt alte kaufchance_invitations vor UPSERT + One-Time Cleanup-Migration für Phantom-Invitations (17.04.2026)
 - [x] Kaufchance Bug 1: post_auction_offers.expires_at jetzt konsistent zu auction.kaufchance_expires_at (Frontend + One-Time Sync-Migration) (17.04.2026)
 - [x] Kaufchance Bug 4: accept-kaufchance-offer in atomare Postgres RPC `accept_kaufchance_offer_atomic` ausgelagert (kein Split-Brain mehr möglich) (17.04.2026)
+- [x] Vertragsstrafen atomar: Neue Edge Function `create-and-send-seller-penalty` (Auth → RPC → PDF → E-Mail → audit_logs in einem Server-Call). `CreateSellerPenaltyDialog` ruft diese statt 3-step-Browser-Chain. Stille Mail-Fehler landen in `error_logs`. (17.04.2026)
+- [x] Admin-Support-Antwort lügt nicht mehr: `AdminMessages.handleRespond` hat bisher nur `support_messages.admin_response` in der DB gesetzt und einen "Antwort gesendet"-Toast angezeigt – ohne dass je eine Mail rausging. Ruft jetzt `send-admin-email` mit `reply_to_message_type: 'support'`, das beides in einem Schritt macht. (17.04.2026)
 
 ### Offene Aufgaben
+- [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
+  - HIGH: `AdminFinancials.cancelInvoiceMutation` → kein Storno-Mail an Händler
+  - HIGH: `RecordPaymentDialog` → keine Zahlungsbestätigung an Händler
+  - HIGH: `purchase_contracts cancel` (`AdminContracts`) → kein Mail an Käufer/Verkäufer
+  - HIGH: `cancelAuctionAsAdmin` informiert nur Festpreis-Anbieter, nicht Verkäufer/klassische Bieter; `AdminMotorhomes.cancelAuctionMutation` versendet gar nichts
+  - HIGH: `AdminPostAuctionOffers.handleEndKaufchance` / `handleBackToAuction` (Bulk-Reject ohne Mail)
+  - HIGH: `admin_delete_bid` SQL-RPC – betroffener Bieter wird nicht benachrichtigt
+  - HIGH: `complete-handover` Edge Function – kein Mail an Käufer/Verkäufer
+  - HIGH: `deleteDealerApplication` – kein Mail an Bewerber
+  - HIGH: User/Dealer-Suspend (`AdminUsers`/`AdminDealers`/`UserEditDialog`) – kein Sperr-Mail
+  - HIGH: `admin-delete-user` – kein Lösch-Mail
+  - MEDIUM: Claim-Status-Wechsel, Appointment-Status-Wechsel, Doc-Verify, Review-Moderation, Rollen-Wechsel, Auction-Activate, Kaufchance-Min-Preis/Verlängerung
+  - LOW: Blog-Publish, Commission-Tier-Änderung
 - [ ] Bug 2: motorhomes RLS – sensible Spalten (reserve_price, contract_url, VIN, Kennzeichen) mit Column-Level Grants / View schützen (40+ Dateien betroffen, phased approach)
 - [ ] Bug 4 (DB): EXCLUSION-Constraint auf appointments(station_id, appointment_date) für echte TOCTOU-Absicherung
 - [ ] Bug 7: RESEND_API_KEY in Supabase Edge Function Secrets prüfen/erneuern

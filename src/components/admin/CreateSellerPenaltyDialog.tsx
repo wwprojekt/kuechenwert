@@ -44,7 +44,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Check, ChevronsUpDown, Mail, Scale } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { sendInvoiceWithPdf } from "@/lib/invoiceGenerator";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 
 const penaltyReasons = [
   {
@@ -223,38 +223,45 @@ export function CreateSellerPenaltyDialog({
         }
       }
 
-      const { data: invoiceId, error } = await supabase.rpc(
-        "create_seller_penalty_invoice",
+      // Atomic server-side flow: RPC + PDF + email + audit_log in one call.
+      // This replaces the old 3-step browser chain that could leave drafts
+      // hanging if the tab/network died between steps.
+      const { data, error } = await invokeWithAuth(
+        "create-and-send-seller-penalty",
         {
-          seller_id_param: sellerId,
-          auction_id_param: effectiveAuctionId,
-          motorhome_id_param: effectiveMotorhomeId,
-          penalty_reason_param: reason,
-          notes_param: notes || null,
+          body: {
+            sellerId,
+            reason,
+            auctionId: effectiveAuctionId,
+            motorhomeId: effectiveMotorhomeId,
+            notes: notes || null,
+            sendEmail: sendImmediately,
+          },
         }
       );
 
       if (error) throw error;
-      if (!invoiceId) throw new Error("Rechnung wurde nicht erstellt");
 
-      let emailSent = false;
-      let emailError: string | null = null;
-      let pdfGenerated = false;
+      const result = data as {
+        success?: boolean;
+        invoiceId?: string;
+        invoiceNumber?: string | null;
+        recipientEmail?: string | null;
+        emailSent?: boolean;
+        pdfGenerated?: boolean;
+        emailError?: string | null;
+      } | null;
 
-      if (sendImmediately) {
-        try {
-          const result = await sendInvoiceWithPdf(invoiceId as string);
-          emailSent = true;
-          pdfGenerated = result.pdfGenerated;
-        } catch (err) {
-          emailError =
-            err instanceof Error
-              ? err.message
-              : "Unbekannter Fehler beim E-Mail-Versand";
-        }
+      if (!result?.success || !result.invoiceId) {
+        throw new Error("Rechnung wurde nicht erstellt");
       }
 
-      return { invoiceId, emailSent, emailError, pdfGenerated };
+      return {
+        invoiceId: result.invoiceId,
+        emailSent: !!result.emailSent,
+        emailError: result.emailError ?? null,
+        pdfGenerated: !!result.pdfGenerated,
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });

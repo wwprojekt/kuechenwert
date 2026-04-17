@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
-import { useAuth } from "@/contexts/AuthContext";
+import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +77,6 @@ interface SupportMessage {
 }
 
 export default function AdminMessages() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -168,24 +166,55 @@ export default function AdminMessages() {
   const handleRespond = async () => {
     if (!selectedMessage || !response.trim()) return;
 
+    const recipientEmail = selectedMessage.user?.email?.trim();
+    if (!recipientEmail) {
+      toast({
+        title: "Keine E-Mail-Adresse",
+        description:
+          "Für diese Nachricht ist keine Empfänger-E-Mail hinterlegt. Antwort kann nicht zugestellt werden.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from("support_messages")
-        .update({
-          admin_response: response.trim(),
-          responded_by: user?.id,
-          responded_at: new Date().toISOString(),
-          status: "resolved",
-        })
-        .eq("id", selectedMessage.id);
+      const trimmed = response.trim();
+      const recipientName =
+        selectedMessage.user?.first_name || selectedMessage.user?.last_name
+          ? `${selectedMessage.user?.first_name ?? ""} ${selectedMessage.user?.last_name ?? ""}`.trim()
+          : undefined;
+
+      // Convert plain text response to safe HTML (newlines → <br/>, escape <,>,&)
+      const escaped = trimmed
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      const bodyHtml = `<p>${escaped.replace(/\n/g, "<br/>")}</p>`;
+      const subject = selectedMessage.subject?.toLowerCase().startsWith("re:")
+        ? selectedMessage.subject
+        : `Re: ${selectedMessage.subject || "Ihre Anfrage"}`;
+
+      // send-admin-email also marks the original support_message as resolved,
+      // sets admin_response / responded_at / responded_by — so a single call
+      // replaces the previous DB-only "fake send" we used to do here.
+      const { error } = await invokeWithAuth("send-admin-email", {
+        body: {
+          to: recipientEmail,
+          subject,
+          body_html: bodyHtml,
+          recipient_name: recipientName,
+          reply_to_message_id: selectedMessage.id,
+          reply_to_message_type: "support",
+        },
+      });
 
       if (error) throw error;
 
       toast({
-        title: "Antwort gesendet",
-        description: "Die Nachricht wurde erfolgreich beantwortet",
+        title: "Antwort versendet",
+        description: `E-Mail an ${recipientEmail} gesendet und Nachricht als erledigt markiert.`,
       });
 
       setSelectedMessage(null);
@@ -194,9 +223,11 @@ export default function AdminMessages() {
       fetchMessages();
     } catch (error) {
       console.error("Error responding to message:", error);
+      const message =
+        error instanceof Error ? error.message : "Unbekannter Fehler";
       toast({
-        title: "Fehler",
-        description: "Antwort konnte nicht gesendet werden",
+        title: "E-Mail-Versand fehlgeschlagen",
+        description: `${message}. Die Antwort wurde NICHT zugestellt – bitte erneut versuchen.`,
         variant: "destructive",
       });
     } finally {

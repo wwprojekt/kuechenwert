@@ -202,3 +202,7 @@ verify_jwt = false
 # --- Disposition Follow-up Emails ---
 [functions.send-disposition-email]
 verify_jwt = false
+
+# --- Seller Penalty (atomic create + send) ---
+[functions.create-and-send-seller-penalty]
+verify_jwt = false

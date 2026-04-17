@@ -5,10 +5,8 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 import { parseGermanNumber } from "@/lib/parseGermanNumber";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -67,7 +65,6 @@ export function RecordPaymentDialog({
   open,
   onOpenChange,
 }: RecordPaymentDialogProps) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState<string>("");
@@ -93,9 +90,7 @@ export function RecordPaymentDialog({
 
   const recordPaymentMutation = useMutation({
     mutationFn: async () => {
-      if (!invoice || !user) throw new Error("Missing invoice or user");
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
+      if (!invoice) throw new Error("Missing invoice");
 
       const paymentAmount = parseGermanNumber(amount);
       if (isNaN(paymentAmount) || paymentAmount <= 0) {
@@ -106,50 +101,43 @@ export function RecordPaymentDialog({
         throw new Error("Betrag übersteigt offenen Restbetrag");
       }
 
-      // Calculate new totals
-      const newAmountPaid = currentPaid + paymentAmount;
-      const newRemaining = totalAmount - newAmountPaid;
+      // Atomic server-side flow: insert payment_history + update invoice +
+      // send confirmation email + audit log in one call. This replaces the
+      // old 2-step browser update which never sent the dealer a receipt.
+      const { data, error } = await invokeWithAuth(
+        "record-invoice-payment",
+        {
+          body: {
+            invoiceId: invoice.id,
+            amount: paymentAmount,
+            paymentMethod,
+            paymentReference: reference || null,
+            notes: notes || null,
+            sendEmail: true,
+          },
+        },
+      );
 
-      // Determine new status
-      let newStatus = "partial";
-      let paidAt = null;
-      if (newRemaining <= 0.01) {
-        newStatus = "paid";
-        paidAt = new Date().toISOString();
+      if (error) throw error;
+
+      const result = data as {
+        success?: boolean;
+        newPaymentStatus?: string;
+        fullyPaid?: boolean;
+        emailSent?: boolean;
+        emailError?: string | null;
+      } | null;
+
+      if (!result?.success) {
+        throw new Error("Zahlung konnte nicht gebucht werden");
       }
 
-      // 1. Insert payment record into dealer_payment_history
-      const { error: historyError } = await supabase
-        .from("dealer_payment_history")
-        .insert({
-          dealer_id: invoice.dealer_id,
-          invoice_id: invoice.id,
-          amount: paymentAmount,
-          payment_method: paymentMethod,
-          payment_reference: reference || null,
-          notes: notes || null,
-          processed_by: user.id,
-          status: "completed",
-        });
-
-      if (historyError) throw historyError;
-
-      // 2. Update invoice with new amount_paid and status
-      const { error: invoiceError } = await supabase
-        .from("invoices")
-        .update({
-          amount_paid: newAmountPaid,
-          payment_status: newStatus,
-          payment_method: paymentMethod,
-          payment_reference: reference || null,
-          ...(paidAt ? { paid_at: paidAt } : {}),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", invoice.id);
-
-      if (invoiceError) throw invoiceError;
-
-      return { newStatus, paymentAmount };
+      return {
+        newStatus: result.newPaymentStatus ?? (result.fullyPaid ? "paid" : "partial"),
+        paymentAmount,
+        emailSent: !!result.emailSent,
+        emailError: result.emailError ?? null,
+      };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
@@ -157,8 +145,11 @@ export function RecordPaymentDialog({
       queryClient.invalidateQueries({ queryKey: ["overdue-invoices"] });
 
       const statusText = data.newStatus === "paid" ? "vollständig bezahlt" : "Teilzahlung erfasst";
+      const emailHint = data.emailSent
+        ? "Bestätigungs-E-Mail an Händler versendet."
+        : "ACHTUNG: Bestätigungs-E-Mail konnte nicht versendet werden – bitte manuell informieren.";
       toast.success(`Zahlung erfasst`, {
-        description: `€${data.paymentAmount.toLocaleString("de-DE")} - ${statusText}`,
+        description: `€${data.paymentAmount.toLocaleString("de-DE")} – ${statusText}. ${emailHint}`,
       });
 
       onOpenChange(false);

@@ -52,11 +52,11 @@
 - [x] Kaufchance Bug 4: accept-kaufchance-offer in atomare Postgres RPC `accept_kaufchance_offer_atomic` ausgelagert (kein Split-Brain mehr möglich) (17.04.2026)
 - [x] Vertragsstrafen atomar: Neue Edge Function `create-and-send-seller-penalty` (Auth → RPC → PDF → E-Mail → audit_logs in einem Server-Call). `CreateSellerPenaltyDialog` ruft diese statt 3-step-Browser-Chain. Stille Mail-Fehler landen in `error_logs`. (17.04.2026)
 - [x] Admin-Support-Antwort lügt nicht mehr: `AdminMessages.handleRespond` hat bisher nur `support_messages.admin_response` in der DB gesetzt und einen "Antwort gesendet"-Toast angezeigt – ohne dass je eine Mail rausging. Ruft jetzt `send-admin-email` mit `reply_to_message_type: 'support'`, das beides in einem Schritt macht. (17.04.2026)
+- [x] Zahlungsbestätigung atomar: Neue Edge Function `record-invoice-payment` (Auth → payment_history insert → invoice update → Quittungs-Mail → audit_logs in einem Server-Call). `RecordPaymentDialog` ruft diese statt 2-step-Browser-Update. Händler bekommt jetzt automatisch eine Bestätigung mit Zahlungsdetails + Restbetrag. (17.04.2026)
+- [x] Storno atomar: Neue Edge Function `cancel-invoice` (Auth → invoice cancel → Storno-Mail mit optionalem Grund → audit_logs). `AdminFinancials.cancelInvoiceMutation` + AlertDialog ruft diese statt stiller Browser-Update. Händler erfährt jetzt von Stornierungen und bekommt ggf. Erstattungs-Hinweis bei Teilzahlung. (17.04.2026)
 
 ### Offene Aufgaben
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
-  - HIGH: `AdminFinancials.cancelInvoiceMutation` → kein Storno-Mail an Händler
-  - HIGH: `RecordPaymentDialog` → keine Zahlungsbestätigung an Händler
   - HIGH: `purchase_contracts cancel` (`AdminContracts`) → kein Mail an Käufer/Verkäufer
   - HIGH: `cancelAuctionAsAdmin` informiert nur Festpreis-Anbieter, nicht Verkäufer/klassische Bieter; `AdminMotorhomes.cancelAuctionMutation` versendet gar nichts
   - HIGH: `AdminPostAuctionOffers.handleEndKaufchance` / `handleBackToAuction` (Bulk-Reject ohne Mail)

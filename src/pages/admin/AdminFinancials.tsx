@@ -14,6 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -83,6 +85,7 @@ export default function AdminFinancials() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [activeTab, setActiveTab] = useState('invoices');
   const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -365,30 +368,42 @@ export default function AdminFinancials() {
   });
 
   const cancelInvoiceMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
-
-      const { error } = await supabase
-        .from('invoices')
-        .update({
-          status: 'cancelled',
-          payment_status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', invoiceId);
+    mutationFn: async ({ invoiceId, reason }: { invoiceId: string; reason: string | null }) => {
+      // Atomic server-side flow: cancel invoice + send Storno email + audit log.
+      // Replaces the silent client-side update which never informed the dealer.
+      const { data, error } = await invokeWithAuth("cancel-invoice", {
+        body: {
+          invoiceId,
+          reason,
+          sendEmail: true,
+        },
+      });
       if (error) throw error;
+      const result = data as {
+        success?: boolean;
+        emailSent?: boolean;
+        emailError?: string | null;
+      } | null;
+      if (!result?.success) throw new Error("Stornierung fehlgeschlagen");
+      return {
+        emailSent: !!result.emailSent,
+        emailError: result.emailError ?? null,
+      };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
+      const emailHint = data.emailSent
+        ? 'Storno-E-Mail an Händler versendet.'
+        : 'ACHTUNG: Storno-E-Mail konnte nicht versendet werden – bitte manuell informieren.';
       toast({
         title: 'Rechnung storniert',
-        description: 'Die Rechnung wurde erfolgreich storniert.',
+        description: `Die Rechnung wurde erfolgreich storniert. ${emailHint}`,
       });
       setDeleteDialogOpen(false);
       setInvoiceToDelete(null);
+      setCancelReason('');
     },
     onError: (error: Error) => {
       toast({
@@ -1347,15 +1362,31 @@ export default function AdminFinancials() {
               </p>
               <p className="text-amber-700 font-medium mt-3">
                 Die Rechnung wird als storniert markiert und bleibt aus Aufbewahrungsgründen im System erhalten.
-                Offene Forderungen werden auf 0 gesetzt.
+                Offene Forderungen werden auf 0 gesetzt. Der Händler erhält automatisch eine Storno-E-Mail.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="cancel-reason">Grund der Stornierung (optional, wird in der E-Mail mitgeteilt)</Label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="z.B. Auftrag rückgängig gemacht, Versehen, Kulanz …"
+              rows={3}
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setCancelReason('')}>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => invoiceToDelete && cancelInvoiceMutation.mutate(invoiceToDelete.id)}
+              onClick={() =>
+                invoiceToDelete &&
+                cancelInvoiceMutation.mutate({
+                  invoiceId: invoiceToDelete.id,
+                  reason: cancelReason.trim() || null,
+                })
+              }
               disabled={cancelInvoiceMutation.isPending}
             >
               {cancelInvoiceMutation.isPending ? 'Wird storniert...' : 'Rechnung stornieren'}

@@ -33,6 +33,12 @@ import { handleAndLogError, handleApiError, handleBusinessError } from "@/lib/er
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { trackVehicleViewed } from "@/lib/gadsConversionService";
+import {
+  getGoogleAdsId,
+  getConversionLabel,
+  getConversionValue,
+  isGoogleAdsEnabled,
+} from "@/lib/trackingConfig";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
@@ -650,14 +656,22 @@ const AuctionDetail = () => {
         throw new Error(data.error);
       }
 
-      // Google Ads: Sofortkauf-Conversion
+      // Google Ads: Sofortkauf-Conversion (IDs/Labels aus dynamischer Tracking-Config,
+      // editierbar im Admin-Backend → Einstellungen → Tracking)
       try {
         const safeGtag = window.gtag || ((...args: unknown[]) => window.dataLayer?.push(args));
-        safeGtag('event', 'conversion', {
-          send_to: 'AW-18033517246/JO7oCPuNkY4cEL7FhpdD',
-          value: motorhome.instant_price,
-          currency: 'EUR',
-        });
+        if (isGoogleAdsEnabled()) {
+          // Sofortkauf nutzt das WIZARD_ABGESCHLOSSEN-Label (Lead → Kauf-Flow);
+          // Wert kommt aus tracking_config.google_ads.values.INSTANT_BUY (0 = Kaufpreis verwenden).
+          const cfgValue = getConversionValue('INSTANT_BUY');
+          const value = cfgValue && cfgValue > 0 ? cfgValue : motorhome.instant_price;
+          safeGtag('event', 'conversion', {
+            send_to: `${getGoogleAdsId()}/${getConversionLabel('WIZARD_ABGESCHLOSSEN')}`,
+            value,
+            currency: 'EUR',
+            transaction_id: id,
+          });
+        }
         safeGtag('event', 'purchase', {
           event_category: 'Auction',
           event_label: `instant_buy_${motorhome.manufacturer}_${motorhome.model}`,

@@ -111,36 +111,129 @@
          Loading them after the app improves FCP/LCP by 1-3 seconds on mobile.
          ═══════════════════════════════════════════════════════════════════ -->
     <script>
-      // Load third-party scripts after first paint to avoid blocking rendering
-      function loadDeferredScripts() {
-        // Google Tag (gtag.js) – GA4 + Google Ads
-        var g = document.createElement('script');
-        g.async = true;
-        g.src = 'https://www.googletagmanager.com/gtag/js?id=G-H4BCV8DS0B';
-        g.onload = function() {
-          gtag('js', new Date());
-          gtag('config', 'G-H4BCV8DS0B', {
-            send_page_view: true,
+      // Default tracking IDs (initial page load fallback). The Admin-Backend can
+      // override these at runtime via site_settings.tracking_config – the React
+      // app reads the DB row, dispatches a 'tracking-config-updated' window event
+      // and the listener below re-initialises gtag/fbq with the new IDs if they
+      // differ. Cached overrides are kept in localStorage so the *next* full
+      // page load already uses the latest IDs without waiting for the DB call.
+      window.__TRACKING_BOOT__ = {
+        ga4: 'G-H4BCV8DS0B',
+        gads: 'AW-18033517246',
+        gtm: '',
+        fb:  '1846623132710484',
+        loaded: { ga4: '', gads: '', gtm: '', fb: '' }
+      };
+      try {
+        var cached = JSON.parse(localStorage.getItem('tracking-config-cache') || 'null');
+        if (cached && typeof cached === 'object') {
+          if (cached.ga4)  window.__TRACKING_BOOT__.ga4  = String(cached.ga4);
+          if (cached.gads) window.__TRACKING_BOOT__.gads = String(cached.gads);
+          if (cached.gtm)  window.__TRACKING_BOOT__.gtm  = String(cached.gtm);
+          if (cached.fb)   window.__TRACKING_BOOT__.fb   = String(cached.fb);
+        }
+      } catch (e) {}
+
+      function configureGtag(ga4Id, gadsId, sendPageView, allowEnhanced) {
+        if (typeof gtag !== 'function') return;
+        if (ga4Id && window.__TRACKING_BOOT__.loaded.ga4 !== ga4Id) {
+          gtag('config', ga4Id, {
+            send_page_view: sendPageView !== false,
             cookie_domain: 'caravanwert.de',
             cookie_flags: 'SameSite=Lax;Secure',
           });
-          gtag('config', 'AW-18033517246', {
+          window.__TRACKING_BOOT__.loaded.ga4 = ga4Id;
+        }
+        if (gadsId && window.__TRACKING_BOOT__.loaded.gads !== gadsId) {
+          gtag('config', gadsId, {
             send_page_view: false,
-            allow_enhanced_conversions: true,
+            allow_enhanced_conversions: allowEnhanced !== false,
           });
+          window.__TRACKING_BOOT__.loaded.gads = gadsId;
+        }
+      }
+
+      function loadGtagJs(ga4Id, gadsId, gtmId) {
+        // We only need ONE gtag.js script tag – it accepts events for any
+        // configured GA4/AW/GTM ID. Load with the GA4 ID (or GTM if no GA4).
+        var primary = ga4Id || gtmId || gadsId;
+        if (!primary) return;
+        var existing = document.querySelector('script[data-tracking-loader="1"]');
+        if (existing && existing.getAttribute('data-id') === primary) return;
+        if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+        var g = document.createElement('script');
+        g.async = true;
+        g.setAttribute('data-tracking-loader', '1');
+        g.setAttribute('data-id', primary);
+        g.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(primary);
+        g.onload = function() {
+          gtag('js', new Date());
+          configureGtag(ga4Id, gadsId, true, true);
+          if (gtmId && /^GTM-[A-Z0-9]+$/.test(gtmId)) {
+            // GTM container – loaded via gtag.js syntax (works for both GA4 + GTM)
+            gtag('config', gtmId);
+          }
         };
         document.head.appendChild(g);
+      }
 
-        // Meta Pixel – DSGVO-konform, revoked bis Consent
-        try{!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-        if(typeof fbq==='function'){fbq('consent','revoke');fbq('init','1846623132710484');}}catch(e){}
+      function loadFbq(pixelId) {
+        if (!pixelId) return;
+        if (window.__TRACKING_BOOT__.loaded.fb === pixelId) return;
+        try {
+          if (typeof fbq !== 'function') {
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+          }
+          if (typeof fbq === 'function') {
+            fbq('consent','revoke');
+            fbq('init', pixelId);
+            window.__TRACKING_BOOT__.loaded.fb = pixelId;
+          }
+        } catch (e) {}
+      }
 
-        // Cloudflare Turnstile
+      function loadDeferredScripts() {
+        var b = window.__TRACKING_BOOT__;
+        loadGtagJs(b.ga4, b.gads, b.gtm);
+        loadFbq(b.fb);
+
+        // Cloudflare Turnstile (statisch – kein Tracking-Config-Eingriff nötig)
         var t = document.createElement('script');
         t.async = true;
         t.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         document.head.appendChild(t);
       }
+
+      // React publishes the loaded tracking-config via this event. We persist
+      // it in localStorage so the next page load uses the fresh IDs immediately,
+      // and we re-init scripts on the fly if the IDs changed.
+      window.addEventListener('tracking-config-updated', function (e) {
+        try {
+          var cfg = (e && e.detail) || null;
+          if (!cfg) return;
+          var newIds = {
+            ga4:  cfg.ga4 && cfg.ga4.measurement_id ? String(cfg.ga4.measurement_id) : '',
+            gads: cfg.google_ads && cfg.google_ads.conversion_id ? String(cfg.google_ads.conversion_id) : '',
+            gtm:  cfg.gtm && cfg.gtm.enabled && cfg.gtm.container_id ? String(cfg.gtm.container_id) : '',
+            fb:   cfg.meta_pixel && cfg.meta_pixel.pixel_id ? String(cfg.meta_pixel.pixel_id) : ''
+          };
+          try { localStorage.setItem('tracking-config-cache', JSON.stringify(newIds)); } catch (err) {}
+          var b = window.__TRACKING_BOOT__;
+          // Only re-init gtag if neither the GA4 nor the Ads ID have been
+          // configured yet for the new IDs (configureGtag is idempotent).
+          if (newIds.ga4 && newIds.ga4 !== b.loaded.ga4) {
+            b.ga4 = newIds.ga4;
+            loadGtagJs(newIds.ga4, newIds.gads || b.gads, newIds.gtm || b.gtm);
+          } else if (newIds.gads && newIds.gads !== b.loaded.gads) {
+            b.gads = newIds.gads;
+            configureGtag(b.ga4, newIds.gads, true, !!(cfg.google_ads && cfg.google_ads.allow_enhanced_conversions));
+          }
+          if (newIds.fb && newIds.fb !== b.loaded.fb) {
+            b.fb = newIds.fb;
+            loadFbq(newIds.fb);
+          }
+        } catch (err) {}
+      });
 
       // Use requestIdleCallback if available, otherwise setTimeout
       if ('requestIdleCallback' in window) {

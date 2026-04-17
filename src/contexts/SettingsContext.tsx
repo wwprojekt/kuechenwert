@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { setTrackingConfig, type TrackingConfig } from "@/lib/trackingConfig";
 
 interface SiteSettings {
   id: string;
@@ -61,6 +62,9 @@ interface SiteSettings {
   dunning_level3_fee: number | null;
   dunning_restrict_at_level: number | null;
   dunning_auto_enabled: boolean | null;
+  // Centralized tracking configuration (GA4, Google Ads, GTM, Meta Pixel,
+  // server-side IDs). Editable via Admin Backend → Einstellungen → Tracking.
+  tracking_config: TrackingConfig | null;
 }
 
 interface SettingsContextType {
@@ -90,6 +94,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (data) {
         setSettings(data as SiteSettings);
         applyBranding(data as SiteSettings);
+        // Publish tracking config to a synchronous global so non-React
+        // service files (gadsConversionService, etc.) can read it without
+        // round-tripping through React state.
+        setTrackingConfig((data as { tracking_config?: unknown }).tracking_config);
       }
     } catch (error) {
       logger.error('Error loading settings:', error);
@@ -165,6 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const newSettings = payload.new as SiteSettings;
           setSettings(newSettings);
           applyBranding(newSettings);
+          setTrackingConfig((newSettings as { tracking_config?: unknown }).tracking_config);
         }
       )
       .subscribe();

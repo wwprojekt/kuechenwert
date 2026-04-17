@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Brain, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Brain, Eye, EyeOff, CheckCircle2, XCircle, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { logger } from "@/lib/logger";
+import AdminTrackingTab from "@/components/admin/AdminTrackingTab";
+import type { TrackingConfig } from "@/lib/trackingConfig";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -246,7 +248,7 @@ export default function AdminSettings() {
       </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Allgemein</span>
@@ -266,6 +268,10 @@ export default function AdminSettings() {
           <TabsTrigger value="seo" className="gap-2">
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline">SEO</span>
+          </TabsTrigger>
+          <TabsTrigger value="tracking" className="gap-2">
+            <Activity className="w-4 h-4" />
+            <span className="hidden sm:inline">Tracking</span>
           </TabsTrigger>
           <TabsTrigger value="auction" className="gap-2">
             <span className="hidden sm:inline">Auktionen</span>
@@ -1185,23 +1191,22 @@ export default function AdminSettings() {
                   placeholder="Keywords durch Komma getrennt"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="google-analytics">Google Analytics ID</Label>
-                <Input
-                  id="google-analytics"
-                  value={formData.google_analytics_id || ''}
-                  onChange={(e) => updateField('google_analytics_id', e.target.value)}
-                  placeholder="G-XXXXXXXXXX"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="google-tag-manager">Google Tag Manager ID</Label>
-                <Input
-                  id="google-tag-manager"
-                  value={formData.google_tag_manager_id || ''}
-                  onChange={(e) => updateField('google_tag_manager_id', e.target.value)}
-                  placeholder="GTM-XXXXXXX"
-                />
+              <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-sm">
+                <div className="flex gap-2">
+                  <Activity className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-blue-800 dark:text-blue-300">
+                    <strong>Google Analytics, Google Ads, Meta Pixel & Conversion-Labels</strong> verwalten Sie
+                    jetzt zentral im Tab{" "}
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange('tracking')}
+                      className="font-medium underline hover:no-underline"
+                    >
+                      Tracking
+                    </button>
+                    . Hier in den SEO-Einstellungen werden nur noch die Meta-Tags verwaltet.
+                  </div>
+                </div>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
@@ -1217,6 +1222,14 @@ export default function AdminSettings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tracking Settings */}
+        <TabsContent value="tracking" className="space-y-6">
+          <AdminTrackingTab
+            value={(formData.tracking_config ?? null) as Partial<TrackingConfig> | null}
+            onChange={(next) => updateField('tracking_config', next)}
+          />
         </TabsContent>
 
         {/* Auction Settings */}

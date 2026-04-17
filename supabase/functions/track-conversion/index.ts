@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
 
@@ -6,6 +7,54 @@ const TRACK_CONVERSION_RATE_LIMIT = {
   windowMs: 60 * 1000, // 1 minute
   maxRequests: 20,      // max 20 conversion events per minute per client
 };
+
+// Default tracking config – used as fallback when neither the DB nor env vars
+// provide a value. Mirrors site_settings.tracking_config defaults.
+const DEFAULT_GA4_MEASUREMENT_ID = "G-H4BCV8DS0B";
+const DEFAULT_OFFLINE_LEAD_ACTION_ID = "7576040066";
+const DEFAULT_GADS_LOGIN_CUSTOMER_ID = "9746508145";
+
+interface TrackingConfigShape {
+  ga4?: { measurement_id?: string };
+  google_ads?: {
+    values?: Record<string, number>;
+  };
+  server_side?: {
+    gads_offline_conversion_action_id?: string;
+    gads_login_customer_id?: string;
+  };
+}
+
+let trackingConfigCache: { value: TrackingConfigShape; loadedAt: number } | null = null;
+const TRACKING_CONFIG_TTL_MS = 60_000; // 60s in-memory cache, avoids hammering DB on every event
+
+async function loadTrackingConfig(): Promise<TrackingConfigShape> {
+  const now = Date.now();
+  if (trackingConfigCache && now - trackingConfigCache.loadedAt < TRACKING_CONFIG_TTL_MS) {
+    return trackingConfigCache.value;
+  }
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) {
+      trackingConfigCache = { value: {}, loadedAt: now };
+      return {};
+    }
+    const sb = createClient(supabaseUrl, serviceKey);
+    const { data } = await sb
+      .from("site_settings")
+      .select("tracking_config")
+      .eq("id", "00000000-0000-0000-0000-000000000000")
+      .maybeSingle();
+    const cfg = (data?.tracking_config ?? {}) as TrackingConfigShape;
+    trackingConfigCache = { value: cfg, loadedAt: now };
+    return cfg;
+  } catch (err) {
+    console.warn("[track-conversion] Failed to load tracking_config from DB:", err);
+    trackingConfigCache = { value: {}, loadedAt: now };
+    return {};
+  }
+}
 
 /**
  * Server-Side Conversion Tracking Edge Function
@@ -23,13 +72,22 @@ const TRACK_CONVERSION_RATE_LIMIT = {
  * - Server-Side GA4 Measurement Protocol (diese Funktion) -> Fallback/Ergänzung
  * - GCLID wird an GA4 gesendet -> GA4 leitet an Google Ads weiter (über Verknüpfung)
  * 
- * Erforderliche Supabase Secrets:
+ * Konfiguration (Resolution-Order: ENV > DB site_settings.tracking_config > Default):
+ * - GA4 Measurement ID: ENV GA4_MEASUREMENT_ID > tracking_config.ga4.measurement_id > G-H4BCV8DS0B
+ * - Offline Conversion Action ID: ENV GADS_OFFLINE_LEAD_ACTION_ID > tracking_config.server_side.gads_offline_conversion_action_id > 7576040066
+ * - Login Customer ID (MCC): ENV GADS_LOGIN_CUSTOMER_ID > tracking_config.server_side.gads_login_customer_id > 9746508145
+ *
+ * Conversion-Werte (€) werden ebenfalls aus tracking_config.google_ads.values gelesen.
+ *
+ * Erforderliche Supabase Secrets (sensitive Tokens, NICHT im Admin-Backend):
  * - GA4_API_SECRET: Measurement Protocol API Secret
- * - GA4_MEASUREMENT_ID: GA4 Measurement ID (z.B. G-H4BCV8DS0B)
+ * - SUPABASE_SERVICE_ROLE_KEY: für DB-Zugriff auf tracking_config
+ * - (optional) GADS_CUSTOMER_ID, GADS_DEVELOPER_TOKEN, GADS_OAUTH_*: für direkte Google Ads API Uploads
  */
 
 const GA4_API_SECRET = Deno.env.get("GA4_API_SECRET");
-const GA4_MEASUREMENT_ID = Deno.env.get("GA4_MEASUREMENT_ID") || "G-H4BCV8DS0B";
+// Resolution order: ENV override > site_settings.tracking_config.ga4.measurement_id > default
+const GA4_MEASUREMENT_ID_ENV = Deno.env.get("GA4_MEASUREMENT_ID");
 
 interface ConversionRequest {
   event_name: string;
@@ -180,7 +238,30 @@ const CONVERSION_VALUE_MAP: Record<string, number> = {
   dealer_register: 1.0,
 };
 
-function getConversionValue(leadType: string): number {
+function getConversionValue(leadType: string, cfg?: TrackingConfigShape): number {
+  // 1) prefer admin-managed value from tracking_config (mapped lead_type -> conversion key)
+  const dbValues = cfg?.google_ads?.values ?? {};
+  const leadTypeToKey: Record<string, string> = {
+    wizard: "WIZARD_ABGESCHLOSSEN",
+    wizard_abgeschlossen: "WIZARD_ABGESCHLOSSEN",
+    wizard_completed: "WIZARD_ABGESCHLOSSEN",
+    terminbuchung: "TERMINBUCHUNG",
+    kontakt: "KONTAKTFORMULAR_GESENDET",
+    kontaktformular_gesendet: "KONTAKTFORMULAR_GESENDET",
+    contact_form: "KONTAKTFORMULAR_GESENDET",
+    wertermittlung: "WERTERMITTLUNG_LEAD",
+    wertermittlung_lead: "WERTERMITTLUNG_LEAD",
+    wertrechner: "WERTRECHNER_LEAD",
+    wertrechner_lead: "WERTRECHNER_LEAD",
+    landing_page_lead: "LANDING_PAGE_LEAD",
+    wizard_gestartet: "WIZARD_GESTARTET",
+    wizard_started: "WIZARD_GESTARTET",
+    wizard_fahrzeugdaten: "WIZARD_FAHRZEUGDATEN",
+    wizard_vehicle_data: "WIZARD_FAHRZEUGDATEN",
+  };
+  const key = leadTypeToKey[leadType];
+  if (key && typeof dbValues[key] === "number") return dbValues[key];
+  // 2) fallback to in-file map for unmapped lead_types (e.g. dealer_register)
   return CONVERSION_VALUE_MAP[leadType] ?? 5.0;
 }
 
@@ -198,6 +279,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Load admin-managed tracking config (60s in-memory cache).
+    // Resolution order for each value: ENV override > DB config > hardcoded default.
+    const trackingCfg = await loadTrackingConfig();
+    const ga4MeasurementId =
+      GA4_MEASUREMENT_ID_ENV?.trim() ||
+      (trackingCfg.ga4?.measurement_id?.trim() ?? "") ||
+      DEFAULT_GA4_MEASUREMENT_ID;
+    const offlineLeadActionId =
+      Deno.env.get("GADS_OFFLINE_LEAD_ACTION_ID")?.trim() ||
+      (trackingCfg.server_side?.gads_offline_conversion_action_id?.trim() ?? "") ||
+      DEFAULT_OFFLINE_LEAD_ACTION_ID;
+    const gadsLoginCustomerId =
+      Deno.env.get("GADS_LOGIN_CUSTOMER_ID")?.trim() ||
+      (trackingCfg.server_side?.gads_login_customer_id?.trim() ?? "") ||
+      DEFAULT_GADS_LOGIN_CUSTOMER_ID;
+
     const data: ConversionRequest = await req.json();
     const {
       event_name = "generate_lead",
@@ -272,7 +369,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (estimated_min) eventParams.estimated_value_min = estimated_min;
         if (estimated_max) eventParams.estimated_value_max = estimated_max;
         // Differenzierter Conversion Value nach Lead-Qualität
-        eventParams.value = getConversionValue(lead_type);
+        eventParams.value = getConversionValue(lead_type, trackingCfg);
         eventParams.currency = "EUR";
 
         // GA4 Client-ID: Vom Client übernommen oder serverseitig generiert
@@ -303,7 +400,7 @@ const handler = async (req: Request): Promise<Response> => {
           };
         }
 
-        const ga4Url = `https://www.google-analytics.com/mp/collect?measurement_id=${GA4_MEASUREMENT_ID}&api_secret=${GA4_API_SECRET}`;
+        const ga4Url = `https://www.google-analytics.com/mp/collect?measurement_id=${ga4MeasurementId}&api_secret=${GA4_API_SECRET}`;
 
         const ga4Response = await fetch(ga4Url, {
           method: "POST",
@@ -366,15 +463,12 @@ const handler = async (req: Request): Promise<Response> => {
         // 2. Conversion-Daten vorbereiten
         const conversionDateTime = new Date().toISOString().replace("T", " ").replace("Z", "+00:00");
         // Differenzierter Conversion Value nach Lead-Qualität
-        const conversionValue = getConversionValue(lead_type);
+        const conversionValue = getConversionValue(lead_type, trackingCfg);
 
-        // Single UPLOAD_CLICKS conversion action for all offline lead conversions.
-        // Lead differentiation happens via conversionValue (quality-based) and
-        // custom_variables would be used for detailed reporting in Google Ads.
-        // The WEBPAGE-type actions (7545833199–7545833220) remain active for
-        // client-side gtag tracking; this UPLOAD_CLICKS action is exclusively
-        // for server-side API uploads with Enhanced Conversions for Leads.
-        const OFFLINE_LEAD_CONVERSION_ACTION_ID = '7576040066';
+        // Offline-Lead Conversion Action ID: editierbar im Admin-Backend
+        // (site_settings.tracking_config.server_side.gads_offline_conversion_action_id)
+        // mit Env-Variable GADS_OFFLINE_LEAD_ACTION_ID als Override.
+        const OFFLINE_LEAD_CONVERSION_ACTION_ID = offlineLeadActionId;
 
         {
           const customerId = GADS_CUSTOMER_ID.replace(/-/g, "");
@@ -450,7 +544,7 @@ const handler = async (req: Request): Promise<Response> => {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${accessToken}`,
               "developer-token": GADS_DEVELOPER_TOKEN,
-              "login-customer-id": "9746508145", // MCC WohnWert Verwaltungskonto
+              "login-customer-id": gadsLoginCustomerId, // editierbar im Admin-Backend
             },
             body: JSON.stringify(gadsPayload),
           });

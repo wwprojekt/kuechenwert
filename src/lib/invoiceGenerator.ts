@@ -369,6 +369,48 @@ class InvoiceGeneratorService {
   }
 
   /**
+   * Generate fresh PDF + send invoice email in one go.
+   *
+   * Used for:
+   * - Auto-send after creating a Vertragsstrafe (CreateSellerPenaltyDialog)
+   * - Manual "Send/Resend" button in AdminFinancials
+   *
+   * This guarantees the email always carries an up-to-date PDF attachment
+   * regardless of whether `pdf_url` was already set on the invoice.
+   *
+   * Errors during PDF generation are NOT fatal: the email will still be sent
+   * (without attachment) so the recipient at least gets the notification.
+   */
+  async sendInvoiceWithPdf(invoiceId: string): Promise<{ pdfGenerated: boolean }> {
+    let pdfBase64: string | undefined;
+    let pdfGenerated = false;
+
+    try {
+      const { data: pdfResult, error: pdfError } = await invokeWithAuth(
+        'generate-invoice-pdf',
+        { body: { invoiceId } }
+      );
+
+      if (pdfError) {
+        logger.error('PDF generation failed before email send:', pdfError);
+      } else if (pdfResult && typeof pdfResult === 'object' && 'pdfBase64' in pdfResult) {
+        pdfBase64 = (pdfResult as { pdfBase64?: string }).pdfBase64;
+        pdfGenerated = !!pdfBase64;
+      }
+    } catch (pdfErr) {
+      logger.error('Unexpected error generating PDF before email send:', pdfErr);
+    }
+
+    const { error: emailError } = await invokeWithAuth('send-invoice-email', {
+      body: { invoiceId, pdfBase64 },
+    });
+
+    if (emailError) throw emailError;
+
+    return { pdfGenerated };
+  }
+
+  /**
    * Mark invoice as paid (full payment)
    */
   async markInvoicePaid(
@@ -654,6 +696,9 @@ export const generateInvoicePDF = (invoiceId: string) =>
 
 export const sendInvoiceEmail = (invoiceId: string) =>
   invoiceGenerator.sendInvoiceEmail(invoiceId);
+
+export const sendInvoiceWithPdf = (invoiceId: string) =>
+  invoiceGenerator.sendInvoiceWithPdf(invoiceId);
 
 export const markInvoicePaid = (invoiceId: string, paymentMethod: string, paymentReference?: string) =>
   invoiceGenerator.markInvoicePaid(invoiceId, paymentMethod, paymentReference);

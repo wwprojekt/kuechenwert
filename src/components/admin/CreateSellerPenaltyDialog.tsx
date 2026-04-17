@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -40,9 +41,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { AlertTriangle, Check, ChevronsUpDown, Scale } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown, Mail, Scale } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { sendInvoiceWithPdf } from "@/lib/invoiceGenerator";
 
 const penaltyReasons = [
   {
@@ -95,6 +97,7 @@ export function CreateSellerPenaltyDialog({
   const [auctionId, setAuctionId] = useState(preSelectedAuctionId || "");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [sendImmediately, setSendImmediately] = useState(true);
   const [sellerSearchOpen, setSellerSearchOpen] = useState(false);
   const [sellerSearchQuery, setSellerSearchQuery] = useState("");
 
@@ -104,6 +107,7 @@ export function CreateSellerPenaltyDialog({
       setAuctionId(preSelectedAuctionId || "");
       setReason("");
       setNotes("");
+      setSendImmediately(true);
       setSellerSearchQuery("");
     }
   }, [open, preSelectedSellerId, preSelectedAuctionId]);
@@ -219,7 +223,7 @@ export function CreateSellerPenaltyDialog({
         }
       }
 
-      const { data, error } = await supabase.rpc(
+      const { data: invoiceId, error } = await supabase.rpc(
         "create_seller_penalty_invoice",
         {
           seller_id_param: sellerId,
@@ -231,16 +235,50 @@ export function CreateSellerPenaltyDialog({
       );
 
       if (error) throw error;
-      return data;
+      if (!invoiceId) throw new Error("Rechnung wurde nicht erstellt");
+
+      let emailSent = false;
+      let emailError: string | null = null;
+      let pdfGenerated = false;
+
+      if (sendImmediately) {
+        try {
+          const result = await sendInvoiceWithPdf(invoiceId as string);
+          emailSent = true;
+          pdfGenerated = result.pdfGenerated;
+        } catch (err) {
+          emailError =
+            err instanceof Error
+              ? err.message
+              : "Unbekannter Fehler beim E-Mail-Versand";
+        }
+      }
+
+      return { invoiceId, emailSent, emailError, pdfGenerated };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
 
-      toast.success("Vertragsstrafe erstellt", {
-        description:
-          "Strafrechnung über 399,00 € wurde erfolgreich angelegt.",
-      });
+      if (!sendImmediately) {
+        toast.success("Vertragsstrafe als Entwurf erstellt", {
+          description:
+            "Rechnung über 399,00 € angelegt. Versand über die Finanzübersicht.",
+        });
+      } else if (result.emailSent) {
+        toast.success("Vertragsstrafe erstellt & versendet", {
+          description: result.pdfGenerated
+            ? "Strafrechnung über 399,00 € wurde mit PDF an den Verkäufer gemailt."
+            : "Strafrechnung wurde gemailt. PDF konnte nicht generiert werden – bitte in der Finanzübersicht prüfen.",
+        });
+      } else {
+        toast.error("Vertragsstrafe erstellt – E-Mail-Versand fehlgeschlagen", {
+          description:
+            (result.emailError || "Unbekannter Fehler") +
+            " Bitte in der Finanzübersicht erneut senden.",
+          duration: 8000,
+        });
+      }
 
       onOpenChange(false);
     },
@@ -436,14 +474,41 @@ export function CreateSellerPenaltyDialog({
             />
           </div>
 
+          {/* Send immediately toggle */}
+          <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="send-immediately"
+              checked={sendImmediately}
+              onCheckedChange={(checked) => setSendImmediately(checked === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1 leading-tight">
+              <Label
+                htmlFor="send-immediately"
+                className="flex items-center gap-1.5 cursor-pointer font-medium"
+              >
+                <Mail className="h-4 w-4" />
+                Rechnung sofort an Verkäufer per E-Mail senden
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Generiert ein PDF und versendet die Rechnung mit Anhang. Der
+                Status wird automatisch auf <strong>„Versendet"</strong>{" "}
+                gesetzt. Ohne Haken bleibt die Rechnung als Entwurf in der
+                Finanzübersicht.
+              </p>
+            </div>
+          </div>
+
           {/* Warning */}
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Es wird eine rechtsverbindliche Rechnung über{" "}
-              <strong>399,00 €</strong> erstellt und dem Verkäufer zugeordnet.
-              Die Rechnung wird als Entwurf angelegt und kann über die
-              Finanzübersicht versendet werden.
+              <strong>399,00 €</strong> erstellt und dem Verkäufer zugeordnet
+              (Zahlungsziel 14 Tage).
+              {sendImmediately
+                ? " Die Rechnung wird unmittelbar nach dem Erstellen per E-Mail an den Verkäufer versendet."
+                : " Die Rechnung wird als Entwurf angelegt und muss manuell aus der Finanzübersicht versendet werden."}
             </AlertDescription>
           </Alert>
 
@@ -463,8 +528,12 @@ export function CreateSellerPenaltyDialog({
               }
             >
               {createPenaltyMutation.isPending
-                ? "Wird erstellt..."
-                : "Vertragsstrafe erstellen"}
+                ? sendImmediately
+                  ? "Wird erstellt & versendet..."
+                  : "Wird erstellt..."
+                : sendImmediately
+                  ? "Vertragsstrafe erstellen & senden"
+                  : "Vertragsstrafe als Entwurf erstellen"}
             </Button>
           </DialogFooter>
         </form>

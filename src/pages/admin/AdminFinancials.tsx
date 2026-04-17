@@ -54,7 +54,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { sendInvoiceEmail } from '@/lib/invoiceGenerator';
+import { sendInvoiceWithPdf } from '@/lib/invoiceGenerator';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -344,13 +344,15 @@ export default function AdminFinancials() {
 
   const sendEmailMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      await sendInvoiceEmail(invoiceId);
+      return sendInvoiceWithPdf(invoiceId);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
       toast({
-        title: 'Erfolg',
-        description: 'Rechnung per E-Mail versendet',
+        title: 'Rechnung versendet',
+        description: result.pdfGenerated
+          ? 'Die Rechnung wurde mit aktuellem PDF an den Empfänger gemailt.'
+          : 'Rechnung gemailt, PDF konnte nicht generiert werden – bitte prüfen.',
       });
     },
     onError: (error: any) => {
@@ -907,9 +909,16 @@ export default function AdminFinancials() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => sendEmailMutation.mutate(invoice.id)}
-                            disabled={sendEmailMutation.isPending || !!invoice.sent_at}
-                            title={invoice.sent_at ? `Versendet am ${new Date(invoice.sent_at).toLocaleDateString('de-DE')}` : 'Rechnung per E-Mail senden'}
+                            onClick={() => {
+                              if (invoice.sent_at) {
+                                if (!window.confirm(
+                                  `Rechnung ${invoice.invoice_number} wurde bereits am ${new Date(invoice.sent_at).toLocaleDateString('de-DE')} versendet. Erneut senden?`
+                                )) return;
+                              }
+                              sendEmailMutation.mutate(invoice.id);
+                            }}
+                            disabled={sendEmailMutation.isPending}
+                            title={invoice.sent_at ? `Versendet am ${new Date(invoice.sent_at).toLocaleDateString('de-DE')} – Klick: erneut senden` : 'Rechnung per E-Mail senden'}
                           >
                             <Mail className="h-4 w-4" />
                           </Button>

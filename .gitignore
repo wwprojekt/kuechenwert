@@ -35,8 +35,3 @@ worker/__pycache__/
 temp-*.json
 cookies.txt
 dokploy_cookies.txt
-
-# Hidden production sourcemaps (emitted by `vite build`, moved out of dist/
-# by scripts/strip-sourcemaps.mjs). Kept locally for decoding production
-# stacks via `npm run decode-stack`, never committed or deployed.
-.sourcemaps/

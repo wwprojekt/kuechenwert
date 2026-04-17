@@ -238,19 +238,64 @@ export default function AdminContracts() {
       id: string;
       reason: string;
     }) => {
-      const { error } = await supabase
+      // 1) Vertrag stornieren
+      const { data: cancelled, error } = await supabase
         .from("purchase_contracts")
         .update({
           status: "cancelled",
           cancelled_at: new Date().toISOString(),
           cancellation_reason: reason,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id, motorhome_id")
+        .single();
       if (error) throw error;
+
+      // 2) Motorhome-Status zurücksetzen, damit das Fahrzeug nicht
+      //    weiter fälschlich als "verkauft" geführt wird, wenn der
+      //    einzige aktive Vertrag storniert wurde.
+      if (cancelled?.motorhome_id) {
+        const motorhomeId = cancelled.motorhome_id;
+
+        // Existieren noch andere aktive Verträge für dieses Fahrzeug?
+        const { data: otherActive, error: otherErr } = await supabase
+          .from("purchase_contracts")
+          .select("id")
+          .eq("motorhome_id", motorhomeId)
+          .eq("status", "active")
+          .limit(1);
+        if (otherErr) throw otherErr;
+
+        if (!otherActive || otherActive.length === 0) {
+          // Hat das Motorhome aktuell eine laufende Auktion?
+          const { data: liveAuction, error: aucErr } = await supabase
+            .from("auctions")
+            .select("id, status")
+            .eq("motorhome_id", motorhomeId)
+            .in("status", ["active", "draft", "kaufchance"])
+            .limit(1);
+          if (aucErr) throw aucErr;
+
+          const newStatus = liveAuction && liveAuction.length > 0 ? "active" : "pending";
+
+          const { error: mhErr } = await supabase
+            .from("motorhomes")
+            .update({
+              status: newStatus,
+              sold_at: null,
+              sold_to: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", motorhomeId)
+            .eq("status", "sold"); // nur wenn vorher 'sold' war
+          if (mhErr) throw mhErr;
+        }
+      }
     },
     onSuccess: () => {
       toast({ title: "Vertrag storniert" });
       queryClient.invalidateQueries({ queryKey: ["adminContracts"] });
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       setCancelDialogOpen(false);
       setCancelReason("");
       setCancelContractId(null);

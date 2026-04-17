@@ -346,7 +346,7 @@ const RegisterHaendler = () => {
       }
 
       // Google Ads: Enhanced Conversions + Händler-Registrierung
-      await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone });
+      await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone, postalCode: validated.companyPostalCode, country: validated.country });
       trackUserRegistered('dealer_registration');
       trackMetaCompleteRegistration({ content_name: 'Haendler-Registrierung' });
       trackMetaSubmitApplication({ content_name: 'Haendler-Bewerbung' });

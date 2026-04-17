@@ -713,13 +713,57 @@ async function sha256(value: string): Promise<string> {
 }
 
 /**
+ * Normalisiert ein Land in den von Google Ads erwarteten 2-Letter ISO-3166-1
+ * Code (z. B. "DE", "AT", "CH"). Akzeptiert auch deutsche Namen ("Deutschland")
+ * und gibt sonst undefined zurück.
+ */
+function normalizeCountryCode(country?: string): string | undefined {
+  if (!country) return undefined;
+  const trimmed = country.trim();
+  if (trimmed.length === 2) return trimmed.toUpperCase();
+  const map: Record<string, string> = {
+    deutschland: 'DE',
+    germany: 'DE',
+    österreich: 'AT',
+    oesterreich: 'AT',
+    austria: 'AT',
+    schweiz: 'CH',
+    switzerland: 'CH',
+    niederlande: 'NL',
+    netherlands: 'NL',
+    belgien: 'BE',
+    belgium: 'BE',
+    frankreich: 'FR',
+    france: 'FR',
+    luxemburg: 'LU',
+    luxembourg: 'LU',
+    italien: 'IT',
+    italy: 'IT',
+    spanien: 'ES',
+    spain: 'ES',
+    polen: 'PL',
+    poland: 'PL',
+  };
+  return map[trimmed.toLowerCase()];
+}
+
+/**
  * Setzt Enhanced Conversion Daten für Google Ads
  * Muss VOR dem Conversion-Event aufgerufen werden
- * 
+ *
  * Die Daten werden automatisch gehasht und an Google gesendet.
  * Google nutzt diese Daten um Conversions auch ohne Third-Party-Cookies
  * korrekt zuzuordnen (besonders wichtig für Safari/ITP).
- * 
+ *
+ * Wichtig (Google Ads Spec):
+ *  - email + phone_number → Top-Level
+ *  - first_name + last_name → MÜSSEN innerhalb von `address` liegen und
+ *    benötigen ZUSÄTZLICH `postal_code` + `country`, sonst rejected Google
+ *    die Adress-Daten und löst Diagnose
+ *    "Pflichtfelder in Adressen fehlen" aus.
+ *  - Ohne PLZ + Land werden first_name/last_name daher bewusst NICHT gesendet
+ *    (besser kein Adress-Feld als ein unvollständiges).
+ *
  * @param userData - Nutzerdaten (mindestens E-Mail empfohlen)
  */
 export async function setEnhancedConversionData(userData: {
@@ -727,31 +771,45 @@ export async function setEnhancedConversionData(userData: {
   phone?: string;
   firstName?: string;
   lastName?: string;
+  postalCode?: string;
+  country?: string;
 }): Promise<void> {
   try {
     if (typeof window === 'undefined') return;
 
-    const enhancedData: Record<string, string> = {};
+    const enhancedData: Record<string, unknown> = {};
 
     if (userData.email) {
       enhancedData.email = userData.email.trim().toLowerCase();
     }
     if (userData.phone) {
-      // Normalisiere Telefonnummer: Entferne Leerzeichen, Bindestriche, Klammern
-      const normalizedPhone = userData.phone.replace(/[\s\-()]/g, '');
-      enhancedData.phone_number = normalizedPhone;
+      // gtag.js entfernt zwar selbst Formatierungs-Zeichen, sicherheitshalber
+      // bereinigen wir Leerzeichen, Bindestriche, Klammern etc.
+      enhancedData.phone_number = userData.phone.replace(/[\s\-()]/g, '');
     }
-    if (userData.firstName) {
-      enhancedData.first_name = userData.firstName.trim();
-    }
-    if (userData.lastName) {
-      enhancedData.last_name = userData.lastName.trim();
+
+    // Adress-Block nur senden wenn ALLE Pflichtfelder vorhanden sind.
+    // Google Ads rejected sonst die Daten mit Fehler
+    // "Pflichtfelder in Adressen fehlen (Vorname, Nachname,
+    // Postleitzahl und/oder Land)".
+    const firstName = userData.firstName?.trim();
+    const lastName = userData.lastName?.trim();
+    const postalCode = userData.postalCode?.trim();
+    const country = normalizeCountryCode(userData.country);
+
+    if (firstName && lastName && postalCode && country) {
+      enhancedData.address = {
+        first_name: firstName,
+        last_name: lastName,
+        postal_code: postalCode,
+        country,
+      };
     }
 
     // Nur senden wenn mindestens ein Feld vorhanden ist
     if (Object.keys(enhancedData).length === 0) return;
 
-    // Methode 1: gtag('set', 'user_data', ...) – empfohlene Methode
+    // gtag('set', 'user_data', ...) – empfohlene Methode (auto-Hashing in gtag.js)
     safeGtag('set', 'user_data', enhancedData);
 
     if (process.env.NODE_ENV === 'development') {
@@ -775,6 +833,8 @@ export async function setEnhancedConversionFromForm(formData: {
   phone?: string;
   firstName?: string;
   lastName?: string;
+  postalCode?: string;
+  country?: string;
 }): Promise<void> {
   const email = formData.customerEmail || formData.email;
   const phone = formData.customerPhone || formData.phone;
@@ -789,5 +849,12 @@ export async function setEnhancedConversionFromForm(formData: {
     lastName = parts.slice(1).join(' ') || '';
   }
 
-  await setEnhancedConversionData({ email, phone, firstName, lastName });
+  await setEnhancedConversionData({
+    email,
+    phone,
+    firstName,
+    lastName,
+    postalCode: formData.postalCode,
+    country: formData.country,
+  });
 }

@@ -169,7 +169,7 @@ export async function approveDealerApplication(applicationId: string): Promise<v
       });
     }
   } catch (emailError) {
-    console.warn('Failed to send approval email, but application was approved:', emailError);
+    console.error('Failed to send approval email, but application was approved:', emailError);
   }
 }
 
@@ -238,23 +238,55 @@ export async function rejectDealerApplication(applicationId: string, reason: str
       });
     }
   } catch (emailError) {
-    console.warn('Failed to send rejection email, but application was rejected:', emailError);
+    console.error('Failed to send rejection email, but application was rejected:', emailError);
   }
 }
 
+export interface DeleteDealerApplicationResult {
+  success: boolean;
+  applicationId: string;
+  companyName: string | null;
+  mailSent: boolean;
+  mailError: string | null;
+  message: string;
+}
+
 /**
- * Delete dealer application (for rejected/unwanted applications)
+ * Delete dealer application (for rejected/unwanted applications).
+ *
+ * Atomic via the `admin-delete-dealer-application` Edge Function: deletes the
+ * row AND sends a notification email to the applicant in the same transaction.
+ * Result tells the caller whether the email succeeded.
  */
-export async function deleteDealerApplication(applicationId: string): Promise<void> {
+export async function deleteDealerApplication(
+  applicationId: string,
+  options: { reason?: string; sendEmail?: boolean } = {},
+): Promise<DeleteDealerApplicationResult> {
   const sessionValid = await ensureValidRLSSession();
   if (!sessionValid) throw new Error("Session abgelaufen");
 
-  const { error } = await supabase
-    .from('dealer_applications')
-    .delete()
-    .eq('id', applicationId);
+  const { data, error } = await invokeWithAuth("admin-delete-dealer-application", {
+    body: {
+      applicationId,
+      reason: options.reason ?? null,
+      sendEmail: options.sendEmail !== false,
+    },
+  });
 
   if (error) {
-    throw new Error(`Delete error: ${error.message}`);
+    const msg = (error as { message?: string }).message || "Bewerbung konnte nicht gelöscht werden";
+    throw new Error(msg);
   }
+
+  const result = data as Partial<DeleteDealerApplicationResult> & { error?: string };
+  if (result?.error) throw new Error(result.error);
+
+  return {
+    success: result.success ?? true,
+    applicationId: result.applicationId ?? applicationId,
+    companyName: result.companyName ?? null,
+    mailSent: result.mailSent ?? false,
+    mailError: result.mailError ?? null,
+    message: result.message ?? "Händlerbewerbung wurde gelöscht",
+  };
 }

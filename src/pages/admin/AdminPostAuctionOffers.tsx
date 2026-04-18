@@ -694,36 +694,35 @@ export default function AdminPostAuctionOffers() {
     if (!sessionValid) return;
     setEndingKaufchance(auctionId);
     try {
-      const { data: auctionData, error: auctionFetchError } = await supabase
-        .from('auctions')
-        .select('motorhome_id')
-        .eq('id', auctionId)
-        .single();
-      if (auctionFetchError) throw auctionFetchError;
+      const { data, error } = await invokeWithAuth('end-kaufchance', {
+        body: { auctionId, mode: 'end_unsold' },
+      });
+      if (error) throw error;
+      const result = data as {
+        success?: boolean;
+        rejectedOffers?: number;
+        deletedInvitations?: number;
+        uniqueRecipientsNotified?: number;
+        bidderMailsFailed?: number;
+        sellerMailSent?: boolean;
+        sellerMailError?: string | null;
+        error?: string;
+      };
+      if (result?.error) throw new Error(result.error);
 
-      const { error: auctionError } = await supabase
-        .from('auctions')
-        .update({ status: 'ended', updated_at: new Date().toISOString() })
-        .eq('id', auctionId);
-      if (auctionError) throw auctionError;
-
-      if (auctionData?.motorhome_id) {
-        const { error: mhErr } = await supabase
-          .from('motorhomes')
-          .update({ status: 'not_sold', updated_at: new Date().toISOString() })
-          .eq('id', auctionData.motorhome_id);
-        if (mhErr) throw mhErr;
+      const parts: string[] = ['Auktion als "nicht verkauft" markiert.'];
+      if ((result.rejectedOffers ?? 0) > 0) parts.push(`${result.rejectedOffers} Angebote abgelehnt.`);
+      if ((result.deletedInvitations ?? 0) > 0) parts.push(`${result.deletedInvitations} Kaufchance-Einladungen entfernt.`);
+      const totalRecipients = (result.uniqueRecipientsNotified ?? 0) + (result.sellerMailSent ? 1 : 0);
+      if (totalRecipients > 0) parts.push(`${totalRecipients} E-Mail(s) versendet.`);
+      if ((result.bidderMailsFailed ?? 0) > 0 || result.sellerMailError) {
+        parts.push('⚠️ Manche E-Mails sind fehlgeschlagen – bitte error_logs prüfen.');
       }
-
-      // Alle ausstehenden Angebote ablehnen
-      const { error: offersRejectErr } = await supabase
-        .from('post_auction_offers')
-        .update({ status: 'rejected', seller_response: 'Kaufchance beendet durch Admin', updated_at: new Date().toISOString() })
-        .eq('auction_id', auctionId)
-        .in('status', ['pending', 'countered']);
-      if (offersRejectErr) throw offersRejectErr;
-
-      toast({ title: 'Kaufchance beendet', description: 'Auktion wurde als "nicht verkauft" markiert.' });
+      toast({
+        title: 'Kaufchance beendet',
+        description: parts.join(' '),
+        variant: (result.bidderMailsFailed ?? 0) > 0 || result.sellerMailError ? 'destructive' : 'default',
+      });
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       setKaufchanceDetailOpen(false);
@@ -780,11 +779,11 @@ export default function AdminPostAuctionOffers() {
     }
   };
 
-  // ---- Zurück in Auktion: Bestehende Auktion recyceln (UPDATE statt INSERT) ----
-  // WICHTIG: Die auctions-Tabelle hat einen UNIQUE Constraint auf motorhome_id,
-  // daher kann keine zweite Auktion für dasselbe Wohnmobil erstellt werden.
-  // Stattdessen wird die bestehende Auktion zurückgesetzt: neuer Status, neue Zeiten,
-  // neuer Mindestpreis. Alte Bids und Offers werden archiviert/gelöscht.
+  // ---- Zurück in Auktion: atomic via Edge Function `end-kaufchance` (mode='restart_auction') ----
+  // Die Edge-Function setzt die bestehende Auktion auf 'active' zurück (neuer
+  // Mindestpreis + neue 7-Tage-Laufzeit), löscht alte Bids/Invitations,
+  // lehnt offene Festpreis-Angebote ab UND informiert alle Bieter, Festpreis-
+  // Anbieter und Kaufchance-Invitees per E-Mail (sowie den Verkäufer).
   const handleBackToAuction = async () => {
     if (!backToAuctionAuctionId) return;
     const sessionValid = await ensureValidRLSSession();
@@ -792,80 +791,46 @@ export default function AdminPostAuctionOffers() {
     const auctionId = backToAuctionAuctionId;
     setBackToAuctionLoading(auctionId);
     try {
-      // 1. Lade aktuelle Auktionsdaten
-      const { data: currentAuction, error: fetchErr } = await supabase
-        .from('auctions')
-        .select('motorhome_id, reserve_price, starting_bid, auction_round, motorhome:motorhomes(reserve_price, postal_code, city, sale_channel, instant_price)')
-        .eq('id', auctionId)
-        .single();
-      if (fetchErr) throw fetchErr;
+      const newReservePriceParsed = backToAuctionReservePrice ? parseFloat(backToAuctionReservePrice) : NaN;
+      const { data, error } = await invokeWithAuth('end-kaufchance', {
+        body: {
+          auctionId,
+          mode: 'restart_auction',
+          newReservePrice: !isNaN(newReservePriceParsed) ? newReservePriceParsed : null,
+          durationDays: 7,
+        },
+      });
+      if (error) throw error;
+      const result = data as {
+        success?: boolean;
+        rejectedOffers?: number;
+        deletedInvitations?: number;
+        newEndTime?: string | null;
+        uniqueRecipientsNotified?: number;
+        bidderMailsFailed?: number;
+        sellerMailSent?: boolean;
+        sellerMailError?: string | null;
+        error?: string;
+      };
+      if (result?.error) throw new Error(result.error);
 
-      const motorhomeId = currentAuction?.motorhome_id;
-      if (!motorhomeId) throw new Error('Kein Wohnmobil mit dieser Auktion verknüpft.');
-
-      // Prüfe PLZ (wie bei normaler Aktivierung)
-      const mh = currentAuction?.motorhome as any;
-      if (!mh?.postal_code) {
-        throw new Error('Das Wohnmobil hat keine PLZ. Bitte zuerst die Fahrzeugdaten vervollständigen.');
+      const endTime = result.newEndTime ? new Date(result.newEndTime) : null;
+      const parts: string[] = endTime
+        ? [`Auktion neu gestartet! Läuft bis ${endTime.toLocaleDateString('de-DE')} ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}.`]
+        : ['Auktion neu gestartet.'];
+      if (!isNaN(newReservePriceParsed)) parts.push(`Mindestpreis: ${newReservePriceParsed.toLocaleString('de-DE')} €.`);
+      if ((result.rejectedOffers ?? 0) > 0) parts.push(`${result.rejectedOffers} Angebote abgelehnt.`);
+      if ((result.deletedInvitations ?? 0) > 0) parts.push(`${result.deletedInvitations} Einladungen entfernt.`);
+      const totalRecipients = (result.uniqueRecipientsNotified ?? 0) + (result.sellerMailSent ? 1 : 0);
+      if (totalRecipients > 0) parts.push(`${totalRecipients} E-Mail(s) versendet.`);
+      if ((result.bidderMailsFailed ?? 0) > 0 || result.sellerMailError) {
+        parts.push('⚠️ Manche E-Mails sind fehlgeschlagen – bitte error_logs prüfen.');
       }
-
-      // 2. Alle ausstehenden Kaufchance-Angebote ablehnen
-      await supabase
-        .from('post_auction_offers')
-        .update({ status: 'rejected', seller_response: 'Kaufchance beendet – zurück in Auktion', updated_at: new Date().toISOString() })
-        .eq('auction_id', auctionId)
-        .in('status', ['pending', 'countered']);
-
-      // 3. Alle Kaufchance-Einladungen löschen
-      await supabase
-        .from('kaufchance_invitations')
-        .delete()
-        .eq('auction_id', auctionId);
-
-      // 4. Alle alten Bids löschen (damit die neue Auktion sauber startet)
-      await supabase
-        .from('bids')
-        .delete()
-        .eq('auction_id', auctionId);
-
-      // 5. Neuen Mindestpreis bestimmen
-      const newReservePrice = backToAuctionReservePrice
-        ? parseFloat(backToAuctionReservePrice)
-        : (currentAuction?.reserve_price || (mh as any)?.reserve_price || null);
-
-      // 6. Bestehende Auktion recyceln: Status auf 'active', neue Zeiten, neuer Mindestpreis
-      const startTime = new Date();
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-
-      const { error: updateErr } = await supabase
-        .from('auctions')
-        .update({
-          status: 'active' as any,
-          current_bid: null,
-          reserve_price: newReservePrice && !isNaN(newReservePrice) ? newReservePrice : null,
-          starting_bid: currentAuction?.starting_bid ?? 50,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          kaufchance_expires_at: null,
-          kaufchance_min_price: null,
-          auction_round: ((currentAuction as any)?.auction_round ?? 1) + 1,
-          auto_relist: true,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', auctionId);
-      if (updateErr) throw updateErr;
-
-      // 7. Motorhome-Status auf 'active' setzen
-      const { error: mhActiveErr } = await supabase
-        .from('motorhomes')
-        .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', motorhomeId);
-      if (mhActiveErr) throw mhActiveErr;
 
       toast({
         title: 'Zurück in Auktion',
-        description: `Auktion neu gestartet! Läuft 7 Tage bis ${endTime.toLocaleDateString('de-DE')} ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}.${newReservePrice ? ` Mindestpreis: ${Number(newReservePrice).toLocaleString('de-DE')} €` : ''}`,
+        description: parts.join(' '),
+        variant: (result.bidderMailsFailed ?? 0) > 0 || result.sellerMailError ? 'destructive' : 'default',
       });
 
       queryClient.invalidateQueries({ queryKey: ["adminKaufchanceAuctions"] });

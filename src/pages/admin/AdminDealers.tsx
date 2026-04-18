@@ -11,6 +11,7 @@ import {
   rejectDealerApplication,
   deleteDealerApplication,
 } from "@/lib/dealerApplications";
+import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -397,14 +398,19 @@ export default function AdminDealers() {
     },
   });
 
-  // Delete dealer application mutation
   const deleteMutation = useMutation({
-    mutationFn: deleteDealerApplication,
-    onSuccess: () => {
+    mutationFn: (applicationId: string) => deleteDealerApplication(applicationId),
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
+      const desc = result.mailSent
+        ? "Der Händlerantrag wurde gelöscht und der Bewerber per E-Mail informiert."
+        : result.mailError
+          ? `Der Antrag wurde gelöscht, aber die E-Mail konnte nicht gesendet werden: ${result.mailError}`
+          : "Der Händlerantrag wurde gelöscht (keine E-Mail-Adresse hinterlegt).";
       toast({
         title: "Antrag gelöscht",
-        description: "Der Händlerantrag wurde erfolgreich gelöscht.",
+        description: desc,
+        variant: result.mailSent || !result.mailError ? "default" : "destructive",
       });
       setShowDeleteDialog(false);
       setSelectedApplication(null);
@@ -492,27 +498,22 @@ export default function AdminDealers() {
   });
 
   const suspendMutation = useMutation({
-    mutationFn: async ({ dealerId, suspend }: { dealerId: string; suspend: boolean }) => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          is_suspended: suspend,
-          suspended_at: suspend ? new Date().toISOString() : null,
-          suspended_reason: suspend ? "Vom Administrator gesperrt" : null,
-        })
-        .eq("id", dealerId);
-      if (error) throw error;
-    },
-    onSuccess: (_, { suspend }) => {
+    mutationFn: ({ dealerId, suspend }: { dealerId: string; suspend: boolean }) =>
+      adminSuspendUser(dealerId, suspend),
+    onSuccess: (result, { suspend }) => {
       queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
+      const baseDesc = suspend
+        ? "Der Händler kann sich nicht mehr anmelden."
+        : "Der Händler kann sich wieder anmelden.";
+      const mailDesc = result.mailSent
+        ? " Der Händler wurde per E-Mail informiert."
+        : result.mailError
+          ? ` E-Mail-Versand fehlgeschlagen: ${result.mailError}`
+          : "";
       toast({
         title: suspend ? "Händler gesperrt" : "Händler entsperrt",
-        description: suspend
-          ? "Der Händler kann sich nicht mehr anmelden."
-          : "Der Händler kann sich wieder anmelden.",
+        description: `${baseDesc}${mailDesc}`,
+        variant: result.mailError ? "destructive" : "default",
       });
     },
     onError: (error: Error) => {

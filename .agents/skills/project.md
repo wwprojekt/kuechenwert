@@ -59,12 +59,12 @@
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
   - [x] HIGH: `purchase_contracts cancel` (`AdminContracts`) → atomic via Edge Function `cancel-purchase-contract` (Käufer + Verkäufer Mail, Motorhome-Reset, Audit, Error-Logs) [17.04.2026]
   - [x] HIGH: `cancelAuctionAsAdmin` / `AdminMotorhomes.cancelAuctionMutation` → atomic via Edge Function `cancel-auction-as-admin` (Verkäufer + alle Bieter + Festpreis-Anbieter + Kaufchance-Invitees informiert, Audit, Error-Logs) [17.04.2026]
-  - HIGH: `AdminPostAuctionOffers.handleEndKaufchance` / `handleBackToAuction` (Bulk-Reject ohne Mail)
-  - HIGH: `admin_delete_bid` SQL-RPC – betroffener Bieter wird nicht benachrichtigt
-  - HIGH: `complete-handover` Edge Function – kein Mail an Käufer/Verkäufer
-  - HIGH: `deleteDealerApplication` – kein Mail an Bewerber
-  - HIGH: User/Dealer-Suspend (`AdminUsers`/`AdminDealers`/`UserEditDialog`) – kein Sperr-Mail
-  - HIGH: `admin-delete-user` – kein Lösch-Mail
+  - [x] HIGH: `AdminPostAuctionOffers.handleEndKaufchance` / `handleBackToAuction` → atomic via Edge Function `end-kaufchance` (mode=`end_unsold`/`restart_auction`, alle Bieter+Vorschläger+Kaufchance-Invitees + Verkäufer informiert, Audit, Error-Logs) [17.04.2026]
+  - [x] HIGH: `admin_delete_bid` → atomic Wrapper Edge Function `admin-delete-bid` (RPC + Mail an betroffenen Bieter inkl. höchstes-Gebot-Hinweis, Audit, Error-Logs) [17.04.2026]
+  - [x] HIGH: `complete-handover` Edge Function – jetzt Käufer- und Verkäufer-Mail mit Übergabedetails + optionalem PDF-Link, Audit, Error-Logs [17.04.2026]
+  - [x] HIGH: `deleteDealerApplication` → atomic via Edge Function `admin-delete-dealer-application` (Mail an Bewerber inkl. optionalem Grund VOR Löschung, Audit, Error-Logs) [17.04.2026]
+  - [x] HIGH: User/Dealer-Suspend (`AdminUsers`/`AdminDealers`/`AdminDealerDetail`/`UserEditDialog`) → atomic via Edge Function `admin-suspend-user` (Sperr-/Entsperr-Mail mit optionalem Grund, Audit, Error-Logs) [17.04.2026]
+  - [x] HIGH: `admin-delete-user` – Lösch-Mail VOR Account-Löschung mit optionalem Grund, Audit, Error-Logs [17.04.2026]
   - MEDIUM: Claim-Status-Wechsel, Appointment-Status-Wechsel, Doc-Verify, Review-Moderation, Rollen-Wechsel, Auction-Activate, Kaufchance-Min-Preis/Verlängerung
   - LOW: Blog-Publish, Commission-Tier-Änderung
 - [ ] Bug 2: motorhomes RLS – sensible Spalten (reserve_price, contract_url, VIN, Kennzeichen) mit Column-Level Grants / View schützen (40+ Dateien betroffen, phased approach)

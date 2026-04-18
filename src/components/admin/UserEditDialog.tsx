@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft, MapPin } from "lucide-react";
 import { logger } from "@/lib/logger";
 
@@ -143,7 +144,10 @@ export function UserEditDialog({
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session abgelaufen");
 
-      // Update profile including address fields
+      // Update profile including address fields. Suspension status is handled
+      // separately below via the atomic admin-suspend-user Edge Function so the
+      // affected user receives a notification email when the state actually
+      // changes.
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -161,14 +165,39 @@ export function UserEditDialog({
           company_zip: formData.company_zip || null,
           company_city: formData.company_city || null,
           company_country: formData.company_country || null,
-          // Status
-          is_suspended: isSuspended,
-          suspended_at: isSuspended ? new Date().toISOString() : null,
-          suspended_reason: isSuspended ? suspendedReason : null,
         })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
+
+      // Apply suspend toggle atomically (only if it actually changed) so the
+      // user receives the suspend/unsuspend email + audit_log + admin_emails.
+      let suspensionResult: { mailSent: boolean; mailError: string | null; changed: boolean } = {
+        mailSent: false,
+        mailError: null,
+        changed: false,
+      };
+      const previousSuspended = !!user.is_suspended;
+      const reasonChanged =
+        isSuspended &&
+        previousSuspended &&
+        (suspendedReason || "") !== (user.suspended_reason || "");
+      if (isSuspended !== previousSuspended || reasonChanged) {
+        try {
+          const r = await adminSuspendUser(user.id, isSuspended, {
+            reason: isSuspended ? (suspendedReason || undefined) : undefined,
+          });
+          suspensionResult = { mailSent: r.mailSent, mailError: r.mailError, changed: true };
+        } catch (e) {
+          // Surface the error but don't roll back the rest of the profile update.
+          logger.error("admin-suspend-user failed:", e);
+          suspensionResult = {
+            mailSent: false,
+            mailError: e instanceof Error ? e.message : String(e),
+            changed: true,
+          };
+        }
+      }
 
       // ── Seller → Dealer upgrade path ──────────────────────────────
       if (isSellerToDealerUpgrade) {
@@ -276,8 +305,10 @@ export function UserEditDialog({
           .in("role", rolesToRemove);
         if (removeError) throw removeError;
       }
+
+      return { suspensionResult };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       queryClient.invalidateQueries({ queryKey: ["adminUserDetail"] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
@@ -289,9 +320,21 @@ export function UserEditDialog({
             "Ein Händlerantrag wurde erstellt. Der Benutzer wurde per E-Mail benachrichtigt. Sie finden den Antrag unter Händler → Offene Anträge.",
         });
       } else {
+        const susp = result?.suspensionResult;
+        let suspNote = "";
+        if (susp?.changed) {
+          if (susp.mailSent) {
+            suspNote = isSuspended
+              ? " Sperrung wurde aktiviert und der Benutzer per E-Mail informiert."
+              : " Sperrung wurde aufgehoben und der Benutzer per E-Mail informiert.";
+          } else if (susp.mailError) {
+            suspNote = ` Sperrung aktualisiert, aber E-Mail-Versand fehlgeschlagen: ${susp.mailError}`;
+          }
+        }
         toast({
           title: "Gespeichert",
-          description: "Benutzer wurde erfolgreich aktualisiert.",
+          description: `Benutzer wurde erfolgreich aktualisiert.${suspNote}`,
+          variant: susp?.changed && susp.mailError ? "destructive" : "default",
         });
       }
       onOpenChange(false);

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/sessionGuard";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -208,13 +209,31 @@ export default function AdminAuctionDetail() {
 
   const deleteBidMutation = useMutation({
     mutationFn: async (bidId: string) => {
-      const { data, error } = await supabase.rpc("admin_delete_bid", { p_bid_id: bidId });
+      const { data, error } = await invokeWithAuth("admin-delete-bid", {
+        body: { bidId },
+      });
       if (error) throw error;
-      if (data && !data.success) throw new Error(data.error);
-      return data;
+      const result = data as {
+        success?: boolean;
+        deletedAmount?: number;
+        wasHighest?: boolean;
+        newCurrentBid?: number | null;
+        mailSent?: boolean;
+        mailError?: string | null;
+        error?: string;
+      };
+      if (result?.error) throw new Error(result.error);
+      return result;
     },
     onSuccess: (data) => {
-      toast.success(`Gebot über ${formatPrice(data.deleted_amount)} gelöscht`);
+      const baseMsg = `Gebot über ${formatPrice(data.deletedAmount ?? 0)} gelöscht`;
+      if (data.mailSent) {
+        toast.success(`${baseMsg}. Bieter wurde per E-Mail informiert.`);
+      } else if (data.mailError) {
+        toast.warning(`${baseMsg} – E-Mail-Versand fehlgeschlagen: ${data.mailError}`);
+      } else {
+        toast.success(`${baseMsg} (keine E-Mail-Adresse für Bieter hinterlegt)`);
+      }
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
     onError: (error: any) => {

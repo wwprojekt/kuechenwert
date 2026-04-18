@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { approveDealerApplication, rejectDealerApplication, deleteDealerApplication } from "@/lib/dealerApplications";
+import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -324,14 +325,19 @@ export default function AdminDealerDetail() {
     },
   });
 
-  // Delete dealer application mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!id) throw new Error('Application ID is required');
-      await deleteDealerApplication(id);
+      return await deleteDealerApplication(id);
     },
-    onSuccess: () => {
-      toast.success("Händlerantrag gelöscht");
+    onSuccess: (result) => {
+      if (result.mailSent) {
+        toast.success("Händlerantrag gelöscht. Bewerber wurde per E-Mail informiert.");
+      } else if (result.mailError) {
+        toast.warning(`Antrag gelöscht – E-Mail-Versand fehlgeschlagen: ${result.mailError}`);
+      } else {
+        toast.success("Händlerantrag gelöscht (keine E-Mail-Adresse hinterlegt).");
+      }
       logEvent({ action: "delete", entityType: "dealer", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       navigate("/admin/dealers");
@@ -342,25 +348,20 @@ export default function AdminDealerDetail() {
     },
   });
 
-  // Suspend dealer mutation
   const suspendMutation = useMutation({
     mutationFn: async (suspend: boolean) => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          is_suspended: suspend,
-          suspended_at: suspend ? new Date().toISOString() : null,
-          suspended_reason: suspend ? "Händlerkonto gesperrt" : null,
-        })
-        .eq("id", dealer?.user_id);
-
-      if (error) throw error;
+      if (!dealer?.user_id) throw new Error("Händler nicht geladen");
+      return await adminSuspendUser(dealer.user_id, suspend);
     },
-    onSuccess: (_, suspend) => {
-      toast.success(suspend ? "Händler gesperrt" : "Händler entsperrt");
+    onSuccess: (result, suspend) => {
+      const baseMsg = suspend ? "Händler gesperrt" : "Händler entsperrt";
+      if (result.mailSent) {
+        toast.success(`${baseMsg} – Händler wurde per E-Mail informiert.`);
+      } else if (result.mailError) {
+        toast.warning(`${baseMsg} – E-Mail-Versand fehlgeschlagen: ${result.mailError}`);
+      } else {
+        toast.success(baseMsg);
+      }
       logEvent({ action: suspend ? "user_suspended" : "user_unsuspended", entityType: "dealer", entityId: id, details: { user_id: dealer?.user_id } });
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
     },

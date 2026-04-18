@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,34 +137,28 @@ export default function AdminUsers() {
   });
 
   const toggleSuspendMutation = useMutation({
-    mutationFn: async ({ userId, suspend }: { userId: string; suspend: boolean }) => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          is_suspended: suspend,
-          suspended_at: suspend ? new Date().toISOString() : null,
-          suspended_reason: suspend ? "Vom Administrator gesperrt" : null,
-        })
-        .eq("id", userId);
-
-      if (error) throw error;
-    },
-    onSuccess: (_, { suspend }) => {
+    mutationFn: ({ userId, suspend }: { userId: string; suspend: boolean }) =>
+      adminSuspendUser(userId, suspend),
+    onSuccess: (result, { suspend }) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      const baseDesc = suspend
+        ? "Der Benutzer kann sich nicht mehr anmelden."
+        : "Der Benutzer kann sich wieder anmelden.";
+      const mailDesc = result.mailSent
+        ? " Der Benutzer wurde per E-Mail informiert."
+        : result.mailError
+          ? ` E-Mail-Versand fehlgeschlagen: ${result.mailError}`
+          : "";
       toast({
         title: suspend ? "Benutzer gesperrt" : "Benutzer entsperrt",
-        description: suspend
-          ? "Der Benutzer kann sich nicht mehr anmelden."
-          : "Der Benutzer kann sich wieder anmelden.",
+        description: `${baseDesc}${mailDesc}`,
+        variant: result.mailError ? "destructive" : "default",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Fehler",
-        description: "Status konnte nicht geändert werden.",
+        description: error.message || "Status konnte nicht geändert werden.",
         variant: "destructive",
       });
     },

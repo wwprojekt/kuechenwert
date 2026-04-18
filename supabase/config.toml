@@ -222,3 +222,19 @@ verify_jwt = false
 # --- Purchase Contract Cancellation (atomic cancel + reset motorhome + email both parties) ---
 [functions.cancel-purchase-contract]
 verify_jwt = false
+
+# --- Kaufchance End / Auction Restart (atomic + notify seller + bidders) ---
+[functions.end-kaufchance]
+verify_jwt = false
+
+# --- Admin Suspend/Unsuspend User (atomic + suspension email) ---
+[functions.admin-suspend-user]
+verify_jwt = false
+
+# --- Admin Delete Dealer Application (atomic + applicant email) ---
+[functions.admin-delete-dealer-application]
+verify_jwt = false
+
+# --- Admin Delete Bid (atomic via SQL RPC + bidder email) ---
+[functions.admin-delete-bid]
+verify_jwt = false

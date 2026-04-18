@@ -11,7 +11,7 @@ import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCc
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
 import MotorhomeCard from "@/components/MotorhomeCard";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateServiceSchema } from "@/lib/seo";
@@ -20,7 +20,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { anonymizePostalCode } from "@/lib/plzCoordinates";
 import { trackEvent } from "@/lib/analyticsService";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
+import { handleAndLogError } from "@/lib/errorLogService";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
@@ -79,7 +80,27 @@ const Kaufen = () => {
   });
   const { toast } = useToast();
 
-  const fetchAuctions = useCallback(async (retryCount = 0) => {
+  // ── Concurrency guards ────────────────────────────────────────────────
+  // Realtime can re-trigger fetchAuctions while a previous call is still in
+  // flight (especially with flaky mobile networks). Without dedup we'd:
+  //   - waste bandwidth (parallel identical queries)
+  //   - log the same "Failed to fetch" multiple times
+  //   - show a toast even though a successful refetch is seconds away
+  // hasInitialDataRef tracks whether we have shown auctions at least once,
+  // so we can suppress the "load failed" toast on background refreshes.
+  const inFlightRef = useRef(false);
+  const hasInitialDataRef = useRef(false);
+
+  const fetchAuctions = useCallback(async (retryCount = 0, isBackgroundRefresh = false) => {
+      // Dedup: skip if a fetch is already running. The in-flight call will
+      // pick up the latest data anyway. Realtime triggers will catch the
+      // *next* change; we don't lose updates here.
+      if (retryCount === 0 && inFlightRef.current) {
+        logger.debug("Kaufen: fetchAuctions skipped (already in flight)");
+        return;
+      }
+      if (retryCount === 0) inFlightRef.current = true;
+
       try {
         const { data: auctionData, error: auctionError } = await supabase
           .from("auctions")
@@ -97,6 +118,7 @@ const Kaufen = () => {
         if (auctionError) throw auctionError;
 
         setAuctions(auctionData || []);
+        hasInitialDataRef.current = true;
 
         if (auctionData && auctionData.length > 0) {
           const auctionIds = auctionData.map(a => a.id);
@@ -115,16 +137,38 @@ const Kaufen = () => {
         if (retryCount < 2) {
           logger.warn(`Auction fetch failed (attempt ${retryCount + 1}), retrying...`);
           await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
-          return fetchAuctions(retryCount + 1);
+          return fetchAuctions(retryCount + 1, isBackgroundRefresh);
         }
-        logger.error("Error fetching auctions:", error);
-        toast({
-          title: "Fehler",
-          description: "Auktionen konnten nicht geladen werden. Bitte Seite neu laden.",
-          variant: "destructive",
+
+        // Final failure after 3 attempts. Route through handleAndLogError —
+        // it translates to German, sets the dedup marker so the global
+        // console.error interceptor doesn't write a second log entry, and
+        // chooses the right severity for pure network errors.
+        const germanMsg = handleAndLogError(error, {
+          componentName: "Kaufen.fetchAuctions",
+          category: "api",
+          severity: isNetworkError(error) ? "low" : "medium",
         });
+
+        // Suppress the "please reload" toast on background refreshes when
+        // we already have data on screen. The user can still browse the
+        // marketplace — the next Realtime event or page action will trigger
+        // a fresh fetch.
+        const shouldShowToast = !isBackgroundRefresh || !hasInitialDataRef.current;
+        if (shouldShowToast) {
+          toast({
+            title: "Fehler",
+            description: isNetworkError(error)
+              ? germanMsg
+              : "Auktionen konnten nicht geladen werden. Bitte Seite neu laden.",
+            variant: "destructive",
+          });
+        }
       } finally {
-        if (retryCount === 0 || retryCount >= 2) setIsLoading(false);
+        if (retryCount === 0 || retryCount >= 2) {
+          inFlightRef.current = false;
+          setIsLoading(false);
+        }
       }
   }, [toast]);
 
@@ -147,7 +191,9 @@ const Kaufen = () => {
         },
         () => {
           if (!isSubscribed) return;
-          fetchAuctions();
+          // Background refresh: don't toast on transient network failure if
+          // we already have auctions on screen.
+          fetchAuctions(0, true);
         }
       )
       .subscribe();

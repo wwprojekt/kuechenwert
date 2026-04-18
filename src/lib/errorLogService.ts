@@ -632,12 +632,38 @@ export function installGlobalErrorHandlers(): void {
       // Der Supabase-Client versucht es automatisch erneut, daher sind diese Fehler nicht actionable.
       // Single source of truth: isNetworkError() deckt Chrome/Firefox/Safari/Edge etc. ab
       if (isNetworkError(errorArg) && errorArg.stack?.includes('_refreshAccessToken')) return;
+
       const translated = translateError(errorArg.message);
+
+      // ── Dedup gegen handleAndLogError ────────────────────────────────
+      // Wenn derselbe Fehler in den letzten 2 Sekunden bereits über
+      // handleAndLogError protokolliert wurde (Toast-Pfad), wird er hier
+      // nicht erneut als CONSOLE_ERROR doppelt geschrieben. Vorher hatten
+      // wir z.B. bei Login (Safari "Load failed") und Edge-Function-Fehlern
+      // immer zwei Einträge pro Fehler — einer aus dem Mutation-onError,
+      // einer aus dem console.error des Supabase-Clients.
+      const w = window as unknown as {
+        __lastLoggedErrorMessage?: string;
+        __lastLoggedErrorTime?: number;
+      };
+      if (
+        w.__lastLoggedErrorMessage === translated.message &&
+        typeof w.__lastLoggedErrorTime === 'number' &&
+        Date.now() - w.__lastLoggedErrorTime < 2000
+      ) {
+        return; // Same error already logged via the toast path — skip duplicate
+      }
+
+      // Reine Netzwerkfehler werden als 'low' geloggt — sie sind nicht
+      // actionable (Internet, 2G, Tab im Hintergrund) und sollten nicht
+      // im "Mittel"-Bucket des Admin-Dashboards rauschen.
+      const severity: ErrorSeverity = isNetworkError(errorArg) ? 'low' : 'medium';
+
       logErrorToSupabase({
         errorCode: 'CONSOLE_ERROR',
         errorMessage: translated.message,
         errorCategory: translated.category,
-        severity: 'medium',
+        severity,
         pagePath: window.location.pathname,
         pageTitle: getPageTitle(window.location.pathname),
         originalError: errorArg.message,

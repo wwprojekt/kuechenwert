@@ -10,17 +10,26 @@ import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@s
 import { parseGermanNumber, formatBidDisplay } from '@/lib/parseGermanNumber';
 import PageLayout from "@/components/PageLayout";
 
-async function parseFunctionsErrorBody(error: FunctionsHttpError): Promise<Record<string, any>> {
-  const ctx = error.context;
-  if (!ctx) return {};
-  if (typeof ctx === 'string') {
-    try { return JSON.parse(ctx); } catch { return { error: ctx }; }
+/**
+ * Read the parsed Edge Function error body.
+ *
+ * `invokeWithAuth` already calls `parseFunctionsError` internally and
+ * stores the parsed body on the error as `parsedBody`. We MUST read from
+ * that cached value — calling `error.context.text()` again would throw
+ * because the Response stream has already been consumed by sessionGuard.
+ */
+function readFunctionsErrorBody(error: FunctionsHttpError): Record<string, any> {
+  const cached = (error as unknown as { parsedBody?: unknown }).parsedBody;
+  if (cached && typeof cached === 'object') {
+    return cached as Record<string, any>;
   }
-  if (typeof ctx === 'object' && typeof ctx.text !== 'function') return ctx;
-  try {
-    const text = await ctx.text();
-    try { return JSON.parse(text); } catch { return text ? { error: text } : {}; }
-  } catch { return {}; }
+  // Fallback for callers that bypass invokeWithAuth: best-effort sync read.
+  const ctx = error.context as unknown;
+  if (!ctx) return {};
+  if (typeof ctx === 'object' && ctx !== null && typeof (ctx as { text?: unknown }).text !== 'function') {
+    return ctx as Record<string, any>;
+  }
+  return {};
 }
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -642,7 +651,7 @@ const AuctionDetail = () => {
       if (error) {
         let errorMsg = error.message || 'Kauf konnte nicht abgeschlossen werden';
         if (error instanceof FunctionsHttpError) {
-          const body = await parseFunctionsErrorBody(error);
+          const body = readFunctionsErrorBody(error);
           if (body.error) errorMsg = body.error;
         } else if (error instanceof FunctionsRelayError) {
           errorMsg = 'Verbindungsfehler zum Server. Bitte versuchen Sie es erneut.';
@@ -803,7 +812,7 @@ const AuctionDetail = () => {
         let serverMinimumBid: number | undefined;
         let serverCurrentBid: number | undefined;
         if (error instanceof FunctionsHttpError) {
-          const body = await parseFunctionsErrorBody(error);
+          const body = readFunctionsErrorBody(error);
           if (body.error) errorMsg = body.error;
           if (body.minimum_bid) serverMinimumBid = body.minimum_bid;
           if (body.current_bid) serverCurrentBid = body.current_bid;

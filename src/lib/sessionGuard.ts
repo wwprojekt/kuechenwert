@@ -478,28 +478,147 @@ export class SessionExpiredError extends Error {
  * @returns { data, error } vom Edge Function Aufruf
  */
 /**
- * Extract a human-readable error message from a FunctionsHttpError.
- * In @supabase/supabase-js v2.100+, error.context is the already-parsed
- * response body (object or string), NOT a Response object.
+ * Robustly extract human-readable error info from a FunctionsHttpError.
+ *
+ * Handles every shape `error.context` can take across supabase-js versions:
+ *   - Response object (newer versions, has .text() and .status)
+ *   - Plain object (older versions, already-parsed JSON body)
+ *   - String (raw JSON or plain text body)
+ *   - HTML (Cloudflare/edge-proxy 5xx pages)
+ *
+ * Looks for the message in every common field name used by our Edge
+ * Functions and Supabase internals: error, message, error_description,
+ * details, hint, msg.
+ *
+ * Returns:
+ *   - message: best human-readable string (German if Edge Function set it)
+ *   - status:  HTTP status code if available (only from Response objects)
+ *   - body:    parsed body for callers that need extra fields like
+ *              minimum_bid, current_bid (used by AuctionDetail's bid flow)
  */
-function extractFunctionsErrorMessage(error: Error): string {
-  if (!(error instanceof FunctionsHttpError)) return error.message;
-  const ctx = (error as FunctionsHttpError).context;
-  if (!ctx) return error.message;
-  if (typeof ctx === 'string') {
-    try { const j = JSON.parse(ctx); return j?.error || ctx; } catch { return ctx; }
-  }
-  if (typeof ctx === 'object' && ctx.error) return ctx.error;
-  return error.message;
+export interface FunctionsErrorInfo {
+  message: string;
+  status?: number;
+  body?: Record<string, unknown> | string;
 }
 
-function isFunctions401(error: Error): boolean {
-  if (!(error instanceof FunctionsHttpError)) return false;
-  const ctx = (error as FunctionsHttpError).context;
-  if (!ctx || typeof ctx !== 'object') return false;
-  const msg = (typeof ctx.error === 'string' ? ctx.error : '').toLowerCase();
-  return msg.includes('unauthorized') || msg.includes('nicht autorisiert')
-    || msg.includes('ungültiger token') || msg.includes('kein authorization');
+export async function parseFunctionsError(error: Error): Promise<FunctionsErrorInfo> {
+  if (!(error instanceof FunctionsHttpError)) {
+    return { message: error.message };
+  }
+
+  const ctx = (error as FunctionsHttpError).context as unknown;
+  if (!ctx) return { message: error.message };
+
+  let status: number | undefined;
+  let body: unknown = ctx;
+
+  // Case 1: ctx is a Response object (supabase-js v2.100+)
+  if (
+    typeof ctx === 'object' &&
+    ctx !== null &&
+    typeof (ctx as { text?: unknown }).text === 'function'
+  ) {
+    const response = ctx as Response;
+    status = response.status;
+    try {
+      const text = await response.text();
+      if (text) {
+        try { body = JSON.parse(text); }
+        catch { body = text; }
+      } else {
+        body = null;
+      }
+    } catch {
+      // Body already consumed (e.g. stream locked) — fall through with null body
+      body = null;
+    }
+  }
+
+  // Case 2: ctx is a string — try JSON, fall back to text
+  if (typeof body === 'string') {
+    const trimmed = body.trim();
+
+    // HTML body (Cloudflare 5xx, nginx 502 page, etc.) — no useful inner message
+    if (trimmed.startsWith('<')) {
+      const fallback = status
+        ? `Server returned ${status}`
+        : error.message;
+      return { message: fallback, status, body: trimmed.slice(0, 500) };
+    }
+
+    try { body = JSON.parse(trimmed); }
+    catch {
+      return {
+        message: trimmed.slice(0, 200) || error.message,
+        status,
+        body: trimmed,
+      };
+    }
+  }
+
+  // Case 3: ctx is (now) an object — pull message from common field names
+  if (typeof body === 'object' && body !== null) {
+    const o = body as Record<string, unknown>;
+    const msg =
+      (typeof o.error === 'string' && o.error) ||
+      (typeof o.message === 'string' && o.message) ||
+      (typeof o.error_description === 'string' && o.error_description) ||
+      (typeof o.details === 'string' && o.details) ||
+      (typeof o.hint === 'string' && o.hint) ||
+      (typeof o.msg === 'string' && o.msg) ||
+      error.message;
+    return { message: msg as string, status, body: o };
+  }
+
+  return { message: error.message, status };
+}
+
+/**
+ * Detect 401-Unauthorized from an Edge Function error.
+ * Prefers HTTP status if available; falls back to message-pattern matching
+ * for older supabase-js versions where status is not exposed.
+ */
+function isFunctions401Info(info: FunctionsErrorInfo): boolean {
+  if (info.status === 401) return true;
+  if (info.status !== undefined) return false; // status known, just not 401
+  const msg = info.message.toLowerCase();
+  return (
+    msg.includes('unauthorized') ||
+    msg.includes('nicht autorisiert') ||
+    msg.includes('ungültiger token') ||
+    msg.includes('kein authorization')
+  );
+}
+
+/**
+ * Detect retryable server-side failures (502/503/504).
+ * These are infrastructure-level (cold start, deploy, gateway) — a single
+ * automatic retry after a short pause hides them from the user without
+ * adding meaningful load.
+ */
+function isFunctions5xx(info: FunctionsErrorInfo): boolean {
+  return info.status !== undefined && info.status >= 500 && info.status < 600;
+}
+
+/**
+ * Replace the message on the original error so callers preserve type
+ * checks like `error instanceof FunctionsHttpError`. Also stamp the
+ * extracted info on the error so callers (e.g. AuctionDetail bid flow)
+ * can read body/status without re-parsing.
+ */
+function decorateError(error: Error, info: FunctionsErrorInfo): Error {
+  if (info.message && info.message !== error.message) {
+    try { Object.assign(error, { message: info.message }); }
+    catch { /* Error.message is writable in all modern browsers, but be safe */ }
+  }
+  try {
+    Object.assign(error, {
+      httpStatus: info.status,
+      parsedBody: info.body,
+    });
+  } catch { /* ignore */ }
+  return error;
 }
 
 export async function invokeWithAuth(
@@ -511,41 +630,52 @@ export async function invokeWithAuth(
     throw new SessionExpiredError();
   }
 
-  const { data, error } = await supabase.functions.invoke(functionName, {
+  const invoke = () => supabase.functions.invoke(functionName, {
     body: options?.body,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (error && isFunctions401(error)) {
-    logger.warn(`${functionName}: 401, retrying with fresh token...`);
-    accessToken = await getFreshAccessToken();
-    if (!accessToken) {
-      throw new SessionExpiredError();
-    }
+  let { data, error } = await invoke();
 
-    const retry = await supabase.functions.invoke(functionName, {
-      body: options?.body,
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (retry.error && isFunctions401(retry.error)) {
-      throw new SessionExpiredError();
-    }
-
-    if (retry.error) {
-      const msg = extractFunctionsErrorMessage(retry.error);
-      return { data: null, error: msg !== retry.error.message ? Object.assign(retry.error, { message: msg }) : retry.error };
-    }
-    return retry;
-  }
-
+  // ── 5xx retry (infrastructure hiccup) ────────────────────────────────
+  // 502/503/504 are typically Edge Function cold starts or gateway blips.
+  // One quick automatic retry hides them from the user. Only one retry to
+  // avoid amplifying real outages.
   if (error) {
-    const msg = extractFunctionsErrorMessage(error);
-    if (msg !== error.message) {
-      Object.assign(error, { message: msg });
+    const info = await parseFunctionsError(error);
+    if (isFunctions5xx(info)) {
+      logger.warn(`${functionName}: ${info.status}, waiting 600ms then retrying once...`);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const retry = await invoke();
+      data = retry.data;
+      error = retry.error;
     }
-    return { data: null, error };
   }
 
-  return { data, error };
+  // ── 401 retry with fresh token ───────────────────────────────────────
+  if (error) {
+    const info = await parseFunctionsError(error);
+    if (isFunctions401Info(info)) {
+      logger.warn(`${functionName}: 401, retrying with fresh token...`);
+      accessToken = await getFreshAccessToken();
+      if (!accessToken) {
+        throw new SessionExpiredError();
+      }
+
+      const retry = await invoke();
+
+      if (retry.error) {
+        const retryInfo = await parseFunctionsError(retry.error);
+        if (isFunctions401Info(retryInfo)) {
+          throw new SessionExpiredError();
+        }
+        return { data: null, error: decorateError(retry.error, retryInfo) };
+      }
+      return { data: retry.data, error: null };
+    }
+
+    return { data: null, error: decorateError(error, info) };
+  }
+
+  return { data, error: null };
 }

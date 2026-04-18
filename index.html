@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" translate="no">
   <head>
     <meta charset="UTF-8" />
     <!-- interactive-widget=resizes-content tells Chrome to resize the layout
@@ -8,6 +8,17 @@
          iOS Safari ignores this, but also respects position:sticky within
          scrollable containers. viewport-fit=cover enables env(safe-area-*). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+
+    <!-- Block automatic browser translation (Chrome/Edge/Safari/Firefox).
+         Reason: Chrome's auto-translate replaces text nodes inside React's
+         DOM with <font> wrappers. When React tries to remove a text node
+         it owns, the node is no longer a child of its parent, throwing
+         "Failed to execute 'removeChild' on 'Node'" and breaking the
+         provider tree (cascading "useSettings must be used within a
+         SettingsProvider" errors after recovery remount).
+         The site is German-only — translation breaks the app and is not
+         worth the residual benefit for a tiny minority of non-DE visitors. -->
+    <meta name="google" content="notranslate" />
     
     <!-- Favicon — webp for smaller size, png fallback for Apple -->
     <link rel="icon" type="image/webp" href="/favicon.webp" />
@@ -94,7 +105,7 @@
     </script>
   </head>
 
-  <body>
+  <body class="notranslate">
     <!-- Clixtell noscript-Fallback -->
     <noscript><img src='//tracker.clixtell.com/track/t.gif' height="1" width="1" style="display:none"></noscript>
     <!-- Meta Pixel noscript-Fallback -->

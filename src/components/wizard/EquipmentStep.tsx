@@ -172,46 +172,57 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                 </SelectContent>
               </Select>
 
-              {formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0 ? (
-                <div className="flex flex-wrap gap-2 items-center">
-                  {getPowerOptionsForBaseVehicle(formData.baseVehicle).map(ps => (
-                    <button
-                      key={ps}
-                      type="button"
-                      onClick={() => {
-                        const newPs = formData.power_ps === ps ? null : ps;
-                        updateFormData({ power_ps: newPs, power_kw: newPs ? psToKw(newPs) : null });
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap",
-                        formData.power_ps === ps
-                          ? "bg-primary text-white border-primary shadow-sm"
-                          : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
-                      )}
-                    >
-                      {formatPower(ps)}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
+              {/* PS-Eingabe: Quick-Select Chips (sofern vorhanden) PLUS dauerhaftes
+                  Freitext-Feld. Chips alleine waren ein Killer für ~17 abgebrochene
+                  Sessions/90 Tage, weil exotische PS-Werte (Tuning-Chips, sehr alte
+                  Generationen) keine Wahl hatten. */}
+              <div className="space-y-2">
+                {formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {getPowerOptionsForBaseVehicle(formData.baseVehicle).map(ps => (
+                      <button
+                        key={ps}
+                        type="button"
+                        onClick={() => {
+                          const newPs = formData.power_ps === ps ? null : ps;
+                          updateFormData({ power_ps: newPs, power_kw: newPs ? psToKw(newPs) : null });
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap",
+                          formData.power_ps === ps
+                            ? "bg-primary text-white border-primary shadow-sm"
+                            : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                      >
+                        {formatPower(ps)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
                   <Input
                     type="number"
                     inputMode="numeric"
-                    placeholder="Leistung in PS"
+                    placeholder={
+                      formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0
+                        ? "Andere PS-Zahl?"
+                        : "Leistung in PS"
+                    }
                     value={formData.power_ps || ""}
                     onChange={(e) => {
                       const ps = e.target.value ? parseInt(e.target.value) : null;
                       updateFormData({ power_ps: ps, power_kw: ps ? psToKw(ps) : null });
                     }}
                     min={0}
-                    className="h-10"
+                    className="h-10 max-w-[180px]"
                   />
-                  {formData.power_ps && (
-                    <p className="text-xs text-muted-foreground">= {formatPower(formData.power_ps)}</p>
-                  )}
+                  {formData.power_ps ? (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      = {formatPower(formData.power_ps)}
+                    </span>
+                  ) : null}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}

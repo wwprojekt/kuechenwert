@@ -33,10 +33,23 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+// Normalisiert für die Suche: lowercase + alle Nicht-Alphanumerischen weg.
+// "T 65" → "t65", "CaraCore" → "caracore", "Cara Core" → "caracore",
+// "Concord-Compact" → "concordcompact". Damit fängt die Eingabe "T65"
+// die Liste mit "T 65" ab und "Cara Core" findet "CaraCore".
+const normalizeForSearch = (s: string): string =>
+  s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
 const fuzzyScore = (query: string, target: string): number => {
   const q = query.toLowerCase();
   const t = target.toLowerCase();
   if (t.includes(q)) return 1;
+
+  // Whitespace-/Sonderzeichen-insensitiver Match (z.B. "t65" → "T 65")
+  const qN = normalizeForSearch(query);
+  const tN = normalizeForSearch(target);
+  if (qN.length >= 2 && tN.includes(qN)) return 0.95;
+
   if (q.length < 2 || t.length < 2) return 0;
 
   const qBigrams = new Set<string>();
@@ -106,26 +119,48 @@ const SearchableSelect = ({
       if (popular && popular.length > 0) {
         const popularSet = new Set(popular);
         const rest = optionsWithoutAndere.filter((o) => !popularSet.has(o));
-        return { popular: popular.filter((p) => options.includes(p)), rest, andere: andereOption };
+        return { popular: popular.filter((p) => options.includes(p)), rest, andere: andereOption, customInput: null };
       }
-      return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
+      return { popular: [], rest: optionsWithoutAndere, andere: andereOption, customInput: null };
     }
     const lower = searchTerm.trim().toLowerCase();
-    if (!lower) return { popular: [], rest: optionsWithoutAndere, andere: andereOption };
+    if (!lower) return { popular: [], rest: optionsWithoutAndere, andere: andereOption, customInput: null };
+    // Whitespace-/Sonderzeichen-insensitive Variante des Such-Strings.
+    // Damit "T65" auch "T 65" findet und "Cara Core" auch "CaraCore".
+    const lowerN = normalizeForSearch(lower);
     const startsWith: string[] = [];
     const contains: string[] = [];
+    const normMatches: string[] = [];
     const fuzzy: { option: string; score: number }[] = [];
+    let exactMatch = false;
     for (const o of optionsWithoutAndere) {
       const oLower = o.toLowerCase();
-      if (oLower.startsWith(lower)) startsWith.push(o);
-      else if (oLower.includes(lower)) contains.push(o);
-      else {
+      const oN = normalizeForSearch(o);
+      if (oLower === lower) exactMatch = true;
+      if (oLower.startsWith(lower)) {
+        startsWith.push(o);
+      } else if (oLower.includes(lower)) {
+        contains.push(o);
+      } else if (lowerN.length >= 2 && oN.includes(lowerN)) {
+        normMatches.push(o);
+      } else {
         const score = fuzzyScore(lower, oLower);
         if (score > 0) fuzzy.push({ option: o, score });
       }
     }
     fuzzy.sort((a, b) => b.score - a.score);
-    return { popular: [], rest: [...startsWith, ...contains, ...fuzzy.map(f => f.option)], andere: andereOption };
+    // Wenn die Eingabe NICHT exakt einem Listeneintrag entspricht, bieten wir
+    // sie als prominenten "Eingabe übernehmen"-Button ganz oben an.
+    // Das ist die kritische UX gegen Wizard-Abbrüche bei seltenen Marken/Modellen
+    // – der Nutzer darf nie das Gefühl haben, dass die Liste ihn blockiert.
+    const trimmedQuery = searchTerm.trim();
+    const customInput = !exactMatch && trimmedQuery.length >= 2 ? trimmedQuery : null;
+    return {
+      popular: [],
+      rest: [...startsWith, ...contains, ...normMatches, ...fuzzy.map(f => f.option)],
+      andere: andereOption,
+      customInput,
+    };
   }, [options, popular, query, escapeLabel, isFocused]);
 
   useEffect(() => {
@@ -240,6 +275,23 @@ const SearchableSelect = ({
       />
       {open && (
         <div className={cn("absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg overflow-y-auto", dropdownMaxH)}>
+          {/* Free-Text-Übernahme ganz oben: macht klar, dass der User
+              jede Eingabe verwenden darf – wichtigster Anti-Abbruch-Hebel
+              für Schritt 2 des Verkaufs-Wizards. */}
+          {results.customInput && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(results.customInput!)}
+              className="w-full text-left px-4 py-3 text-sm bg-primary/5 hover:bg-primary/10 active:bg-primary/15 border-b transition-colors flex items-center gap-2"
+            >
+              <Check className="w-4 h-4 text-primary flex-shrink-0" />
+              <span>
+                <span className="text-muted-foreground">Eingabe übernehmen: </span>
+                <strong className="text-foreground">„{results.customInput}"</strong>
+              </span>
+            </button>
+          )}
           {results.popular.length > 0 && (
             <>
               <div className="px-3 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Beliebt</div>
@@ -305,9 +357,9 @@ const SearchableSelect = ({
               </button>
             </>
           )}
-          {results.rest.length === 0 && results.popular.length === 0 && query.trim().length > 0 && isFocused && (
+          {results.rest.length === 0 && results.popular.length === 0 && !results.customInput && query.trim().length > 0 && query.trim().length < 2 && isFocused && (
             <div className="px-4 py-3 text-sm text-muted-foreground">
-              <p>Kein Treffer für „{query}" — <strong className="text-foreground">einfach eintippen</strong> und mit Eingabetaste bestätigen.</p>
+              <p>Bitte mindestens 2 Zeichen eingeben.</p>
             </div>
           )}
         </div>

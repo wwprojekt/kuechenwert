@@ -86,6 +86,13 @@ interface UseWizardSessionReturn {
   anonymousId: string;
   /** The step the session was on when loaded (null if new session). Let the caller restore to this step. */
   initialStep: number | null;
+  /**
+   * Form data persisted from a previous wizard run (null if new session or
+   * if the row had no form_data). The caller should merge this into the
+   * `useWizardForm` state BEFORE the step-guard runs, otherwise the user
+   * gets bounced back to step 2 with an empty form on resume.
+   */
+  restoredFormData: Partial<WizardFormData> | null;
   isReady: boolean;
   saveProgress: (
     currentStep: number,
@@ -100,6 +107,7 @@ interface UseWizardSessionReturn {
 export const useWizardSession = (): UseWizardSessionReturn => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [initialStep, setInitialStep] = useState<number | null>(null);
+  const [restoredFormData, setRestoredFormData] = useState<Partial<WizardFormData> | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [anonymousId, setAnonymousId] = useState<string>(() => getAnonymousId());
 
@@ -124,6 +132,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           customer_name?: string | null;
           customer_email?: string | null;
           customer_phone?: string | null;
+          form_data?: Record<string, unknown> | null;
         } | null = null;
 
         // 1. Highest priority: session ID from URL (cross-device resume link)
@@ -139,7 +148,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             if (user) {
               const { data: byId } = await supabase
                 .from("wizard_sessions")
-                .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone, user_id")
+                .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone, form_data, user_id")
                 .eq("id", urlContact.sessionParam)
                 .maybeSingle();
               if (byId && byId.user_id === user.id) {
@@ -159,7 +168,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           if (sessionValid) {
             const { data } = await supabase
               .from("wizard_sessions")
-              .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone")
+              .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone, form_data")
               .eq("user_id", user.id)
               .eq("status", "in_progress")
               .order("updated_at", { ascending: false })
@@ -189,6 +198,25 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             ? existingSession.current_step
             : null;
           setInitialStep(restoreTo);
+
+          // Restore form_data so we don't bounce the user back to step 2 with
+          // empty fields. Photos are File objects and can't be serialized to
+          // JSON; the count is kept under photos_count for admin display.
+          // We strip both before merging into the form so the photo state stays
+          // an empty File[] (re-uploads happen client-side anyway).
+          if (existingSession.form_data && typeof existingSession.form_data === "object") {
+            const formDataCopy = { ...(existingSession.form_data as Record<string, unknown>) };
+            delete formDataCopy.photos;
+            delete formDataCopy.photos_count;
+            // Only expose if there's at least one filled field that the wizard cares about.
+            // Avoid spamming React with empty {} updates on brand-new sessions.
+            const hasUsefulData = Object.values(formDataCopy).some(
+              (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
+            );
+            if (hasUsefulData) {
+              setRestoredFormData(formDataCopy as Partial<WizardFormData>);
+            }
+          }
 
           // Update session with contact data from URL if not already set
           const updatePayload: Record<string, unknown> = {};
@@ -475,6 +503,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     sessionId,
     anonymousId,
     initialStep,
+    restoredFormData,
     isReady,
     saveProgress,
     markCompleted,

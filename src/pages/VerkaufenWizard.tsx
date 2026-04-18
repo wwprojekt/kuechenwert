@@ -44,25 +44,45 @@ const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
   const { formData, updateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors } = useWizardForm();
-  const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep } = useWizardSession();
+  const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep, restoredFormData } = useWizardSession();
   const hasRestoredRef = useRef(false);
+  // Tracks whether session-hydration finished. The step-guard MUST NOT run
+  // before this flips true – otherwise it bounces resumed users back to
+  // step 2 with empty fields (because formData is still {}).
+  const [isHydrated, setIsHydrated] = useState(false);
+  const hasMergedRestoredRef = useRef(false);
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { turnstileToken, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue] = useHoneypot();
 
-  // H1: Restore the step the user was on when they left. Only runs when the
-  // session finishes loading and the user did not already land on a specific
-  // step via URL (?step=X, ?source=wertrechner, …).
+  // H1: Restore form data + step the user was on when they left. Only runs
+  // when the session finishes loading and the user did not already land on
+  // a specific step via URL (?step=X, ?source=wertrechner, …).
+  //
+  // ORDER MATTERS: we merge form_data into the wizard FIRST, then restore the
+  // step. Otherwise the step-guard below sees an empty formData and bounces
+  // the user back to step 2. This caused ~30 % of resumed sessions to abandon
+  // (analyzed via wizard_sessions: stuck-on-step-2 with all required fields
+  // empty).
   useEffect(() => {
     if (!isReady) return;
-    if (hasRestoredRef.current) return;
-    if (initialStep && initialStep >= 1 && initialStep <= 8) {
+
+    // Merge restored form data once, even if no step restore is needed.
+    if (restoredFormData && !hasMergedRestoredRef.current) {
+      updateFormData(restoredFormData);
+      hasMergedRestoredRef.current = true;
+    }
+
+    if (!hasRestoredRef.current && initialStep && initialStep >= 1 && initialStep <= 8) {
       setCurrentStep(initialStep);
       hasRestoredRef.current = true;
     }
-  }, [isReady, initialStep]);
+
+    // Mark hydration as done so the step-guard can run without false-positives.
+    setIsHydrated(true);
+  }, [isReady, initialStep, restoredFormData, updateFormData]);
 
   // Check if user is already authenticated and prefill profile data.
   // Listens to auth state changes so a user who logs in DURING the wizard
@@ -253,7 +273,13 @@ const VerkaufenWizard = () => {
   // Prüft ALLE kritischen Pflichtfelder aus vorherigen Steps und setzt zurück zum
   // frühesten fehlenden Step. Die Reihenfolge ist wichtig – wir springen zum ersten
   // fehlenden Pflichtfeld, nicht zum letzten.
+  //
+  // WICHTIG: erst aktiv NACH der Hydration, damit ein Resume mit
+  // `current_step = 4` nicht in der Sekunde, in der formData noch {} ist,
+  // zurück auf Step 2 gebounct wird. Das war die Ursache für die hohe
+  // Abbruchrate auf Step 2 nach dem Wizard-Refactor 2026-04-16.
   useEffect(() => {
+    if (!isHydrated) return;
     if (!formData.bodyType && currentStep > 1) {
       setCurrentStep(1);
       return;
@@ -271,6 +297,7 @@ const VerkaufenWizard = () => {
       setCurrentStep(7);
     }
   }, [
+    isHydrated,
     currentStep,
     formData.bodyType,
     formData.manufacturer,

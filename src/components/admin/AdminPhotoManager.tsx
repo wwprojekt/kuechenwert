@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { optimizeImage, validateImageFile, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
+import { detectFromFile, HEIC_FAMILY } from "@/lib/imageMagicDetect";
 
 // dnd-kit imports
 import {
@@ -374,27 +375,47 @@ export function AdminPhotoManager({
             continue;
           }
 
+          // Magic-byte sniff: file.type can lie (iOS Safari mislabels HEIC
+          // as image/jpeg; users rename .HEIC to .jpeg). Always trust the
+          // bytes. This prevents the HEIC-stored-as-JPEG corruption that
+          // hid the Hobby Optima photos for weeks.
+          const detected = await detectFromFile(file);
+          if (HEIC_FAMILY.has(detected.format)) {
+            toast.error(
+              `"${file.name}": HEIC/HEIF wird von Browsern nicht angezeigt – bitte als JPG exportieren oder iPhone-Format auf 'Maximale Kompatibilität' stellen.`,
+            );
+            continue;
+          }
+          if (detected.format === "unknown") {
+            toast.error(`"${file.name}": Bildformat nicht erkannt.`);
+            continue;
+          }
+
           // Optimize image before upload (converts to JPEG)
           let uploadFile: File;
           let fileExt: string;
+          let contentType: string;
           try {
             const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
             uploadFile = optimized.file;
-            fileExt = optimized.format; // Use output format extension (e.g. 'jpeg')
+            fileExt = optimized.format;
+            contentType = uploadFile.type || `image/${fileExt}`;
           } catch (optimizeError) {
-            // Fallback: upload original file if optimization fails (e.g. HEIC on unsupported browsers)
+            // Optimization can fail on perfectly valid JPEGs (e.g. exotic
+            // EXIF rotation). Since the magic-byte check above already
+            // ruled out HEIC, falling back to the original bytes is safe
+            // — but use the *detected* extension/MIME, never the user's
+            // potentially wrong filename.
             logger.warn(`Image optimization failed for ${file.name}, uploading original:`, optimizeError);
             uploadFile = file;
-            fileExt = file.name.split(".").pop() || 'jpg';
+            fileExt = detected.extension;
+            contentType = detected.mime;
           }
           const fileName = `${motorhomeId}/${Date.now()}_${i}.${fileExt}`;
 
-          // Upload to storage
           const { error: uploadError } = await supabase.storage
             .from("motorhome-photos")
-            .upload(fileName, uploadFile, {
-              contentType: uploadFile.type || `image/${fileExt}`,
-            });
+            .upload(fileName, uploadFile, { contentType });
 
           if (uploadError) {
             logger.error("Upload error:", uploadError);

@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { optimizeImage, validateImageFile, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
+import { detectFromFile, HEIC_FAMILY } from "@/lib/imageMagicDetect";
 import { withSessionRetry } from "@/lib/sessionGuard";
 import { handleAndLogError } from "@/lib/errorLogService";
 
@@ -406,27 +407,50 @@ export function SellerPhotoManager({
             continue;
           }
 
+          // Magic-byte sniff: file.type lies on iOS Safari, and users
+          // sometimes rename .HEIC to .jpeg. Trust only the bytes.
+          const detected = await detectFromFile(file);
+          if (HEIC_FAMILY.has(detected.format)) {
+            toast({
+              title: "HEIC nicht unterstützt",
+              description: `"${file.name}": HEIC/HEIF wird von Browsern nicht angezeigt – bitte als JPG exportieren oder iPhone-Format auf 'Maximale Kompatibilität' stellen.`,
+              variant: "destructive",
+            });
+            continue;
+          }
+          if (detected.format === "unknown") {
+            toast({
+              title: "Bildformat nicht erkannt",
+              description: `"${file.name}": Datei ist kein erkanntes Bildformat.`,
+              variant: "destructive",
+            });
+            continue;
+          }
+
           // Optimize image before upload (converts to JPEG)
           let uploadFile: File;
           let fileExt: string;
+          let contentType: string;
           try {
             const optimized = await optimizeImage(file, OPTIMIZATION_PRESETS.STANDARD);
             uploadFile = optimized.file;
-            fileExt = optimized.format; // Use output format extension (e.g. 'jpeg')
+            fileExt = optimized.format;
+            contentType = uploadFile.type || `image/${fileExt}`;
           } catch (optimizeError) {
-            // Fallback: upload original file if optimization fails (e.g. HEIC on unsupported browsers)
+            // Optimization can fail on perfectly valid JPEGs (e.g. exotic
+            // EXIF rotation). Since the magic-byte check already ruled out
+            // HEIC, the original bytes are safe to upload — but use the
+            // *detected* extension/MIME, never the user's filename.
             logger.warn(`Image optimization failed for ${file.name}, uploading original:`, optimizeError);
             uploadFile = file;
-            fileExt = file.name.split(".").pop() || 'jpg';
+            fileExt = detected.extension;
+            contentType = detected.mime;
           }
           const fileName = `${motorhomeId}/${Date.now()}_${i}.${fileExt}`;
 
-          // Upload to storage
           const { error: uploadError } = await supabase.storage
             .from("motorhome-photos")
-            .upload(fileName, uploadFile, {
-              contentType: uploadFile.type || `image/${fileExt}`,
-            });
+            .upload(fileName, uploadFile, { contentType });
 
           if (uploadError) {
             logger.error("Upload error:", uploadError);

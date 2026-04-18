@@ -25,17 +25,18 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { detectImageFormat, HEIC_FAMILY } from "../_shared/image-detect.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Browser-renderable formats only. HEIC/HEIF removed because no major
+// desktop browser can decode them in <img> tags — they were the root cause
+// of the "13 invisible photos" Hobby Optima incident (2026-04-18).
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
-  "image/jpg",
   "image/webp",
-  "image/heic",
-  "image/heif",
   "image/avif",
   "image/gif",
 ];
@@ -168,30 +169,59 @@ Deno.serve(async (req: Request) => {
     }
 
     const uploadedUrls: string[] = [];
+    const rejectedFiles: Array<{ name: string; reason: string }> = [];
 
     for (let i = 0; i < photos.length; i++) {
       const file = photos[i];
 
-      // Validate file type
-      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-        console.warn(`Skipping file ${file.name}: unsupported type ${file.type}`);
-        continue;
-      }
+      // ── Trust nothing the client tells us ──────────────────────────────
+      // file.type and file.name extension are user-controlled and were
+      // exactly what produced the HEIC-as-JPEG storage corruption bug
+      // (iPhone Safari sometimes labels HEIC payloads as image/jpeg, and
+      // rename to .jpeg before upload also slips through). Always sniff
+      // the actual bytes here and use the *detected* format from now on.
 
-      // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         console.warn(`Skipping file ${file.name}: too large (${file.size} bytes)`);
+        rejectedFiles.push({ name: file.name, reason: `too large (${Math.round(file.size / 1024 / 1024)} MB)` });
         continue;
       }
 
-      // Upload to wizard_temp/{sessionId}/ folder
-      const fileExt = file.name.split(".").pop() || "jpg";
-      const fileName = `wizard_temp/${sessionId}/${Date.now()}_${i}.${fileExt}`;
+      const headBuf = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+      const detected = detectImageFormat(headBuf);
+
+      if (HEIC_FAMILY.has(detected.format)) {
+        console.warn(`Rejecting HEIC file ${file.name} (browsers can't render HEIC)`);
+        rejectedFiles.push({
+          name: file.name,
+          reason: "HEIC/HEIF wird von Browsern nicht angezeigt – bitte als JPG exportieren oder iPhone-Kameraformat auf 'Maximale Kompatibilität' stellen",
+        });
+        continue;
+      }
+
+      if (detected.format === "unknown") {
+        console.warn(`Rejecting ${file.name}: unrecognized image format (header: ${Array.from(headBuf.slice(0, 8)).map((b) => b.toString(16).padStart(2, "0")).join(" ")})`);
+        rejectedFiles.push({ name: file.name, reason: "Kein erkanntes Bildformat" });
+        continue;
+      }
+
+      // Cross-check legacy whitelist for safety, but allow the *detected*
+      // mime to pass even if `file.type` was missing/wrong.
+      if (!ALLOWED_MIME_TYPES.includes(detected.mime)) {
+        console.warn(`Rejecting ${file.name}: detected ${detected.format} not in allow-list`);
+        rejectedFiles.push({ name: file.name, reason: `${detected.format} nicht erlaubt` });
+        continue;
+      }
+
+      // Upload to wizard_temp/{sessionId}/ folder.
+      // Use the *detected* extension and content-type so storage objects
+      // are always self-consistent with their actual byte content.
+      const fileName = `wizard_temp/${sessionId}/${Date.now()}_${i}.${detected.extension}`;
 
       const { error: uploadError } = await adminClient.storage
         .from("motorhome-photos")
         .upload(fileName, file, {
-          contentType: file.type,
+          contentType: detected.mime,
           upsert: false,
         });
 
@@ -313,6 +343,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         urls: uploadedUrls,
         count: uploadedUrls.length,
+        rejected: rejectedFiles,
       }),
       { status: 200, headers }
     );

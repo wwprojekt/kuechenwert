@@ -16,6 +16,26 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    // Vite's default modulePreload walks the entry's transitive async-import
+    // graph and emits <link rel="modulepreload"> for every reachable chunk.
+    // For our SPA that means heavy admin-only bundles (recharts, the rich
+    // text editor) get fetched on every public page load — wasted bytes for
+    // 99 % of visitors. We curate the preload list so the entry HTML only
+    // hints at chunks the user will likely need on first interaction.
+    modulePreload: {
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((dep) => {
+          // Heavy chunks that are only needed on a tiny minority of routes
+          // are loaded on demand by the lazy chunk that uses them, instead
+          // of being preloaded on every public page hit. Keep this list
+          // conservative — anything used by Login/Register/Wizard/Hero
+          // (vendor-forms, vendor-icons, vendor-query) MUST stay preloaded
+          // to avoid a regression on the most common landing pages.
+          if (dep.includes("vendor-recharts")) return false; // only AdminAnalytics
+          if (dep.includes("vendor-editor")) return false; // only AdminBlog
+          return true;
+        }),
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

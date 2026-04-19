@@ -12,7 +12,7 @@ import {
   getBreadcrumbsFromPath,
 } from "@/lib/seo";
 import type { RatgeberConfig } from "@/data/ratgeber/ratgeber-types";
-import { ratgeberPages } from "@/data/ratgeber/ratgeber-index";
+import { findRatgeberMetaBySlugs } from "@/data/ratgeber/ratgeber-index";
 
 interface RatgeberTemplateProps {
   config: RatgeberConfig;
@@ -29,17 +29,13 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
 
   const structuredData = [articleSchema, breadcrumbSchema];
 
-  const relatedLinks = config.relatedSlugs
-    .map((slug) => {
-      const page = ratgeberPages[slug];
-      if (!page) return null;
-      return {
-        title: page.h1,
-        description: page.metaDescription.slice(0, 120) + "...",
-        href: page.path,
-      };
-    })
-    .filter(Boolean) as { title: string; description: string; href: string }[];
+  // Related links resolved via meta only — no need to fetch the full
+  // RatgeberConfig of every related page (each one is its own lazy chunk).
+  const relatedLinks = findRatgeberMetaBySlugs(config.relatedSlugs).map((m) => ({
+    title: m.h1,
+    description: m.metaDescription.slice(0, 120) + "...",
+    href: m.path,
+  }));
 
   return (
     <PageLayout

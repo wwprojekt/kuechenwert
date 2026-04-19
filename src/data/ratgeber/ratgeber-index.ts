@@ -1,80 +1,84 @@
+// Public API for ratgeber data.
+//
+// IMPORTANT: this file must stay tiny. Do NOT add static `import` statements
+// for any of the heavy ratgeber-<brand>.ts data files here — they should be
+// reached only through the dynamic loader below so each brand/condition
+// becomes its own lazy chunk (~7–10 KB gzipped instead of one 116 KB blob).
+//
+// The metadata used by the overview page and related-link rendering lives in
+// ratgeber-meta.ts (auto-generated, ~5 KB gzipped).
+
 import type { RatgeberConfig } from "./ratgeber-types";
+import { ratgeberMeta, type RatgeberMeta } from "./ratgeber-meta";
 
-// Hymer
-import { hymerVerkaufen, hymerKosten, hymerWertErmitteln, hymerWieVerkaufe, hymerVersteigern } from "./ratgeber-hymer";
-// Dethleffs
-import { dethleffsVerkaufen, dethleffsKosten, dethleffsWertErmitteln, dethleffsWieVerkaufe, dethleffsVersteigern } from "./ratgeber-dethleffs";
-// Knaus
-import { knausVerkaufen, knausKosten, knausWertErmitteln, knausWieVerkaufe, knausVersteigern } from "./ratgeber-knaus";
-// Bürstner
-import { buerstnerVerkaufen, buerstnerKosten, buerstnerWertErmitteln, buerstnerWieVerkaufe, buerstnerVersteigern } from "./ratgeber-buerstner";
-// Carthago
-import { carthagoVerkaufen, carthagoKosten, carthagoWertErmitteln, carthagoWieVerkaufe, carthagoVersteigern } from "./ratgeber-carthago";
-// Hobby
-import { hobbyVerkaufen, hobbyKosten, hobbyWertErmitteln, hobbyWieVerkaufe, hobbyVersteigern } from "./ratgeber-hobby";
-// Adria
-import { adriaVerkaufen, adriaKosten, adriaWertErmitteln, adriaWieVerkaufe, adriaVersteigern } from "./ratgeber-adria";
-// Weinsberg
-import { weinsbergVerkaufen, weinsbergKosten, weinsbergWertErmitteln, weinsbergWieVerkaufe, weinsbergVersteigern } from "./ratgeber-weinsberg";
-// Carado
-import { caradoVerkaufen, caradoKosten, caradoWertErmitteln, caradoWieVerkaufe, caradoVersteigern } from "./ratgeber-carado";
-// Sunlight
-import { sunlightVerkaufen, sunlightKosten, sunlightWertErmitteln, sunlightWieVerkaufe, sunlightVersteigern } from "./ratgeber-sunlight";
-// Pössl
-import { poesslVerkaufen, poesslKosten, poesslWertErmitteln, poesslWieVerkaufe, poesslVersteigern } from "./ratgeber-poessl";
-// Chausson
-import { chaussonVerkaufen, chaussonKosten, chaussonWertErmitteln, chaussonWieVerkaufe, chaussonVersteigern } from "./ratgeber-chausson";
-// Rapido
-import { rapidoVerkaufen, rapidoKosten, rapidoWertErmitteln, rapidoWieVerkaufe, rapidoVersteigern } from "./ratgeber-rapido";
-// Concorde
-import { concordeVerkaufen, concordeKosten, concordeWertErmitteln, concordeWieVerkaufe, concordeVersteigern } from "./ratgeber-concorde";
-// Laika
-import { laikaVerkaufen, laikaKosten, laikaWertErmitteln, laikaWieVerkaufe, laikaVersteigern } from "./ratgeber-laika";
+export type { RatgeberConfig, RatgeberMeta };
+export { ratgeberMeta };
 
-// Condition guides — damage
-import { motorschaden, wasserschaden, getriebeschaden, unfallschaden, hagelschaden, schimmel } from "./ratgeber-condition-damage";
-// Condition guides — situation
-import { ohneTuev, hoheLaufleistung, reparaturstau, leasingvertrag, trotzFinanzierung, erbfall, scheidung } from "./ratgeber-condition-situation";
+// Vite turns each entry below into its own code-split chunk that is fetched
+// only when a slug routed to that file is actually requested.
+//
+// IMPORTANT: this list MUST mirror every ratgeber-<group>.ts data file. Add
+// a new entry here whenever a new data file is added.
+const dataModules = import.meta.glob<Record<string, unknown>>([
+  "./ratgeber-adria.ts",
+  "./ratgeber-buerstner.ts",
+  "./ratgeber-carado.ts",
+  "./ratgeber-carthago.ts",
+  "./ratgeber-chausson.ts",
+  "./ratgeber-concorde.ts",
+  "./ratgeber-dethleffs.ts",
+  "./ratgeber-hobby.ts",
+  "./ratgeber-hymer.ts",
+  "./ratgeber-knaus.ts",
+  "./ratgeber-laika.ts",
+  "./ratgeber-poessl.ts",
+  "./ratgeber-rapido.ts",
+  "./ratgeber-sunlight.ts",
+  "./ratgeber-weinsberg.ts",
+  "./ratgeber-condition-damage.ts",
+  "./ratgeber-condition-situation.ts",
+]);
 
-const allConfigs: RatgeberConfig[] = [
-  // Hymer
-  hymerVerkaufen, hymerKosten, hymerWertErmitteln, hymerWieVerkaufe, hymerVersteigern,
-  // Dethleffs
-  dethleffsVerkaufen, dethleffsKosten, dethleffsWertErmitteln, dethleffsWieVerkaufe, dethleffsVersteigern,
-  // Knaus
-  knausVerkaufen, knausKosten, knausWertErmitteln, knausWieVerkaufe, knausVersteigern,
-  // Bürstner
-  buerstnerVerkaufen, buerstnerKosten, buerstnerWertErmitteln, buerstnerWieVerkaufe, buerstnerVersteigern,
-  // Carthago
-  carthagoVerkaufen, carthagoKosten, carthagoWertErmitteln, carthagoWieVerkaufe, carthagoVersteigern,
-  // Hobby
-  hobbyVerkaufen, hobbyKosten, hobbyWertErmitteln, hobbyWieVerkaufe, hobbyVersteigern,
-  // Adria
-  adriaVerkaufen, adriaKosten, adriaWertErmitteln, adriaWieVerkaufe, adriaVersteigern,
-  // Weinsberg
-  weinsbergVerkaufen, weinsbergKosten, weinsbergWertErmitteln, weinsbergWieVerkaufe, weinsbergVersteigern,
-  // Carado
-  caradoVerkaufen, caradoKosten, caradoWertErmitteln, caradoWieVerkaufe, caradoVersteigern,
-  // Sunlight
-  sunlightVerkaufen, sunlightKosten, sunlightWertErmitteln, sunlightWieVerkaufe, sunlightVersteigern,
-  // Pössl
-  poesslVerkaufen, poesslKosten, poesslWertErmitteln, poesslWieVerkaufe, poesslVersteigern,
-  // Chausson
-  chaussonVerkaufen, chaussonKosten, chaussonWertErmitteln, chaussonWieVerkaufe, chaussonVersteigern,
-  // Rapido
-  rapidoVerkaufen, rapidoKosten, rapidoWertErmitteln, rapidoWieVerkaufe, rapidoVersteigern,
-  // Concorde
-  concordeVerkaufen, concordeKosten, concordeWertErmitteln, concordeWieVerkaufe, concordeVersteigern,
-  // Laika
-  laikaVerkaufen, laikaKosten, laikaWertErmitteln, laikaWieVerkaufe, laikaVersteigern,
-  // Condition — damage
-  motorschaden, wasserschaden, getriebeschaden, unfallschaden, hagelschaden, schimmel,
-  // Condition — situation
-  ohneTuev, hoheLaufleistung, reparaturstau, leasingvertrag, trotzFinanzierung, erbfall, scheidung,
-];
+const slugToFile = new Map<string, string>();
+for (const m of ratgeberMeta) {
+  slugToFile.set(m.slug, `./${m.dataFile}.ts`);
+}
 
-export const ratgeberPages: Record<string, RatgeberConfig> = Object.fromEntries(
-  allConfigs.map((config) => [config.slug, config])
-);
+function isRatgeberConfig(value: unknown, slug: string): value is RatgeberConfig {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "slug" in value &&
+    (value as { slug: unknown }).slug === slug
+  );
+}
 
-export const allRatgeberConfigs = allConfigs;
+/**
+ * Loads the full RatgeberConfig for a given slug. Returns null when the slug
+ * is unknown or the chunk fails to load. The returned promise resolves with
+ * the cached chunk on subsequent calls — Vite memoises dynamic imports.
+ */
+export async function loadRatgeberConfig(
+  slug: string,
+): Promise<RatgeberConfig | null> {
+  const file = slugToFile.get(slug);
+  if (!file) return null;
+  const loader = dataModules[file];
+  if (!loader) return null;
+  const mod = await loader();
+  for (const value of Object.values(mod)) {
+    if (isRatgeberConfig(value, slug)) return value;
+  }
+  return null;
+}
+
+/**
+ * Resolves a list of related slugs to their meta records (h1, path, etc.)
+ * without triggering any dynamic chunk loads.
+ */
+export function findRatgeberMetaBySlugs(slugs: string[]): RatgeberMeta[] {
+  if (slugs.length === 0) return [];
+  return slugs
+    .map((slug) => ratgeberMeta.find((m) => m.slug === slug))
+    .filter((m): m is RatgeberMeta => Boolean(m));
+}

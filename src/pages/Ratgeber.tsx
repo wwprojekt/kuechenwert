@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Book, Truck, AlertTriangle, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { allRatgeberConfigs } from "@/data/ratgeber/ratgeber-index";
-import type { RatgeberConfig } from "@/data/ratgeber/ratgeber-types";
+import { ratgeberMeta } from "@/data/ratgeber/ratgeber-index";
 
 const brands = [
   { name: "Hymer", slug: "hymer" },
@@ -46,12 +45,12 @@ const itemListSchema = {
   "@type": "ItemList",
   name: "Wohnmobil Ratgeber",
   description: "88 Experten-Ratgeber rund um den Verkauf, die Bewertung und die Versteigerung von Wohnmobilen.",
-  numberOfItems: allRatgeberConfigs.length,
-  itemListElement: allRatgeberConfigs.map((c: RatgeberConfig, i: number) => ({
+  numberOfItems: ratgeberMeta.length,
+  itemListElement: ratgeberMeta.map((m, i) => ({
     "@type": "ListItem",
     position: i + 1,
-    name: c.h1,
-    url: `https://caravanwert.de${c.path}`,
+    name: m.h1,
+    url: `https://caravanwert.de${m.path}`,
   })),
 };
 
@@ -79,7 +78,7 @@ const Ratgeber = () => {
             Marken-spezifische Ratgeber für die 15 beliebtesten Hersteller plus Situationsratgeber für jede Lebenslage.
           </p>
           <p className="text-base text-muted-foreground">
-            <strong>{allRatgeberConfigs.length} Ratgeber</strong> — 15 Marken — 13 Situationen
+            <strong>{ratgeberMeta.length} Ratgeber</strong> — 15 Marken — 13 Situationen
           </p>
         </div>
       </PageHero>

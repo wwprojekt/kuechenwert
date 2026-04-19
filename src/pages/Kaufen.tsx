@@ -102,14 +102,24 @@ const Kaufen = () => {
       if (retryCount === 0) inFlightRef.current = true;
 
       try {
+        // Schmaler Select: Vorher wurden via `auctions(*, motorhomes(*, photos(*)))`
+        // alle ~80 Motorhome-Spalten (inkl. Description / Equipment-Texte) UND
+        // ALLE Foto-Zeilen mit ALLEN Spalten geladen — pro Listing oft >50 KB,
+        // kumuliert mehrere MB JSON für die /kaufen Liste. Hier nur die Felder,
+        // die `MotorhomeCard`, die Filter und die Sortierung wirklich brauchen.
+        // bids(count) lässt PostgREST die Bid-Anzahl serverseitig aggregieren —
+        // spart die zweite Round-Trip + tausende Bid-Zeilen JSON.
         const { data: auctionData, error: auctionError } = await supabase
           .from("auctions")
           .select(`
-            *,
+            id, motorhome_id, current_bid, starting_bid, end_time, created_at,
             motorhome:motorhomes(
-              *,
-              photos:motorhome_photos(*)
-            )
+              id, manufacturer, model, year, mileage, listing_number, body_type,
+              country, postal_code, instant_price, sale_channel, status,
+              account_type, sleeping_places, transmission, accident_free,
+              photos:motorhome_photos(url, display_order)
+            ),
+            bids(count)
           `)
           .eq("status", "active")
           .gt("end_time", new Date().toISOString())
@@ -117,20 +127,16 @@ const Kaufen = () => {
 
         if (auctionError) throw auctionError;
 
-        setAuctions(auctionData || []);
+        // Cast: das Result enthält jetzt bids als [{ count: N }] – das ist
+        // die PostgREST-Aggregate-Form. Wir extrahieren die Zahl unten.
+        setAuctions((auctionData as unknown as AuctionWithMotorhome[]) || []);
         hasInitialDataRef.current = true;
 
         if (auctionData && auctionData.length > 0) {
-          const auctionIds = auctionData.map(a => a.id);
-          const { data: bidsData } = await supabase
-            .from("bids")
-            .select("auction_id")
-            .in("auction_id", auctionIds);
           const counts: Record<string, number> = {};
-          auctionIds.forEach(id => { counts[id] = 0; });
-          (bidsData || []).forEach((bid: any) => {
-            counts[bid.auction_id] = (counts[bid.auction_id] || 0) + 1;
-          });
+          for (const a of auctionData as Array<{ id: string; bids?: Array<{ count: number }> }>) {
+            counts[a.id] = a.bids?.[0]?.count ?? 0;
+          }
           setBidCounts(counts);
         }
       } catch (error: unknown) {

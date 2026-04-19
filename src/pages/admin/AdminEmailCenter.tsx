@@ -347,6 +347,25 @@ export default function AdminEmailCenter() {
 
 // ─── Tab 1: Posteingang (with Realtime + Pagination) ────────────────────────
 
+// Lazy-loaded heavy fields per email row. body_html is intentionally NOT in the
+// list query because it can be 10–500 KB per inbound email (newsletter HTML),
+// which makes a 200-row inbox load 5–100 MB over the wire. We fetch it on
+// demand when a user opens an email and cache by id for the lifetime of the
+// component, so re-opening the same email is free.
+interface EmailBodyContent {
+  body_html: string;
+  body_text: string;
+  // attachments mirrors AdminEmail.attachments (pre-existing any[] | null shape
+  // from the Resend webhook payload — schema is heterogeneous).
+  attachments: AdminEmail["attachments"];
+  resend_id: string | null;
+}
+
+// Narrow shape for the `body_html / body_text / ...` select used by every
+// lazy-load (Inbox/Sent/System). Keeps the cast type-safe without leaking
+// `any` into call sites.
+type EmailBodyRow = Pick<AdminEmail, "body_html" | "body_text" | "attachments" | "resend_id" | "cc" | "bcc">;
+
 function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number) => void }) {
   const { session } = useAuth();
   const [items, setItems] = useState<InboxItem[]>([]);
@@ -366,33 +385,56 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [mailboxFilter, setMailboxFilter] = useState<string>('all');
+  const [bodyCache, setBodyCache] = useState<Map<string, EmailBodyContent>>(new Map());
+  const [loadingBody, setLoadingBody] = useState(false);
+
+  // ── Concurrency + realtime guards ───────────────────────────────────────
+  // - inFlightRef: prevents two parallel fetchInbox calls (Realtime can fire
+  //   bursts of INSERTs from cron-jobs sending dozens of emails in seconds).
+  // - refetchTimerRef: debounces realtime-driven refetches by 1.5s so a cron
+  //   batch results in ONE refresh, not N.
+  // - subRefetchRef: a stable wrapper used inside the realtime channel so the
+  //   channel doesn't have to be torn down/rebuilt every time fetchInbox's
+  //   reference changes.
+  const inFlightRef = useRef(false);
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const subRefetchRef = useRef<() => void>(() => {});
 
   const fetchInbox = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setLoading(true);
     try {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) { setLoading(false); return; }
 
-      const { data: emails } = await supabase
-        .from("admin_emails")
-        .select("*")
-        .eq("direction", "inbound")
-        .eq("is_archived", false)
-        .order("created_at", { ascending: false })
-        .limit(500);
+      // Run the 3 list queries in parallel — they have no dependencies on
+      // each other. Sequential awaits cost 600–1200 ms of RTT for nothing.
+      // body_html is OMITTED here on purpose (lazy-loaded on detail open).
+      const [emailsRes, supportRes, contactRes] = await Promise.all([
+        supabase
+          .from("admin_emails")
+          .select("id, sender_email, sender_name, recipient_email, recipient_name, subject, body_text, status, is_read, is_starred, created_at, email_type, direction, scheduled_at")
+          .eq("direction", "inbound")
+          .eq("is_archived", false)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase
+          .from("support_messages")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("contact_messages")
+          .select("*")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
 
-      const { data: supportMsgs } = await supabase
-        .from("support_messages")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      const { data: contactMsgs } = await supabase
-        .from("contact_messages")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const emails = emailsRes.data;
+      const supportMsgs = supportRes.data;
+      const contactMsgs = contactRes.data;
 
       const userIds = [...new Set((supportMsgs || []).map(m => m.user_id).filter(Boolean) as string[])];
       let profilesMap: Record<string, any> = {};
@@ -470,13 +512,30 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
       console.error("Error fetching inbox:", error);
       toast.error("Posteingang konnte nicht geladen werden");
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
   }, [onUnreadCountChange]);
 
-  useEffect(() => { fetchInbox(); }, [fetchInbox]);
+  // Keep the realtime channel pointing at the latest fetchInbox without
+  // re-subscribing every time the callback identity changes.
+  useEffect(() => {
+    subRefetchRef.current = () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+      refetchTimerRef.current = setTimeout(() => { fetchInbox(); }, 1500);
+    };
+  }, [fetchInbox]);
 
-  // Realtime subscription for new inbound emails
+  useEffect(() => {
+    fetchInbox();
+    return () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    };
+  }, [fetchInbox]);
+
+  // Realtime subscription for new inbound emails / support / contact messages.
+  // The refetch is routed through subRefetchRef so this effect only mounts
+  // once per InboxTab lifecycle (no churn on fetchInbox identity changes).
   useEffect(() => {
     const channel = supabase
       .channel('admin-inbox-realtime')
@@ -487,7 +546,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         filter: 'direction=eq.inbound',
       }, (payload) => {
         toast.info("Neue E-Mail eingegangen", { description: (payload.new as any)?.subject });
-        fetchInbox();
+        subRefetchRef.current();
       })
       .on('postgres_changes', {
         event: 'INSERT',
@@ -495,7 +554,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         table: 'support_messages',
       }, () => {
         toast.info("Neue Support-Nachricht");
-        fetchInbox();
+        subRefetchRef.current();
       })
       .on('postgres_changes', {
         event: 'INSERT',
@@ -503,12 +562,51 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         table: 'contact_messages',
       }, () => {
         toast.info("Neue Kontaktanfrage");
-        fetchInbox();
+        subRefetchRef.current();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetchInbox]);
+  }, []);
+
+  // Lazy-load body_html + attachments + resend_id when an inbound email is
+  // opened in detail view. Cached by id for the component's lifetime; once an
+  // email body is fetched, re-opening it (e.g. after navigating away and back
+  // within the same tab session) is instant.
+  useEffect(() => {
+    if (!selectedItem || selectedItem.source !== 'email') return;
+    if (bodyCache.has(selectedItem.id)) return;
+
+    let cancelled = false;
+    setLoadingBody(true);
+    (async () => {
+      const ok = await ensureValidRLSSession();
+      if (!ok || cancelled) { if (!cancelled) setLoadingBody(false); return; }
+      const { data, error } = await supabase
+        .from('admin_emails')
+        .select('body_html, body_text, attachments, resend_id')
+        .eq('id', selectedItem.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        setLoadingBody(false);
+        return;
+      }
+      const row = data as Partial<EmailBodyRow>;
+      setBodyCache(prev => {
+        const next = new Map(prev);
+        next.set(selectedItem.id, {
+          body_html: row.body_html || '',
+          body_text: row.body_text || '',
+          attachments: (row.attachments ?? []) as AdminEmail["attachments"],
+          resend_id: row.resend_id ?? null,
+        });
+        return next;
+      });
+      setLoadingBody(false);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedItem, bodyCache]);
 
   // Contact history
   const fetchContactHistory = async (email: string) => {
@@ -732,13 +830,20 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
   // Detail view
   if (selectedItem) {
     const orig = selectedItem.original;
+    const cachedBody = selectedItem.source === 'email' ? bodyCache.get(selectedItem.id) : null;
     const messageBody = selectedItem.source === 'email'
-      ? (orig as AdminEmail).body_html || (orig as AdminEmail).body_text
+      ? (cachedBody?.body_html || cachedBody?.body_text || '')
       : selectedItem.source === 'support'
         ? (orig as SupportMessage).message
         : (orig as ContactMessage).message;
 
-    const attachments = selectedItem.source === 'email' ? (orig as AdminEmail).attachments : null;
+    const attachments = selectedItem.source === 'email' ? (cachedBody?.attachments ?? null) : null;
+    // resend_id comes from the lazy-loaded body payload; fall back to anything
+    // that may have been in the list row (older shape) as a defensive default.
+    const emailResendId = selectedItem.source === 'email'
+      ? (cachedBody?.resend_id ?? (orig as AdminEmail).resend_id ?? null)
+      : null;
+    const isBodyLoading = selectedItem.source === 'email' && loadingBody && !cachedBody;
 
     return (<>
       <Card>
@@ -769,7 +874,12 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            {messageBody ? (
+            {isBodyLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Inhalt wird geladen…
+              </div>
+            ) : messageBody ? (
               <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(messageBody) }} className="prose prose-sm max-w-none" />
             ) : (
               <p className="text-muted-foreground italic text-sm">Kein Inhalt verfügbar – der E-Mail-Body konnte beim Empfang nicht geladen werden.</p>
@@ -791,11 +901,11 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                   const handleAttachmentClick = async () => {
                     if (canOpen) {
                       window.open(att.download_url, '_blank');
-                    } else if (att.id && (orig as AdminEmail).resend_id) {
+                    } else if (att.id && emailResendId) {
                       // Fetch fresh download URL from Resend API via Edge Function
                       try {
                         const { data, error } = await invokeWithAuth('fetch-attachment-url', {
-                          body: { emailId: (orig as AdminEmail).resend_id, attachmentId: att.id },
+                          body: { emailId: emailResendId, attachmentId: att.id },
                         });
                         if (error) {
                           toast.error("Anhang konnte nicht geladen werden");
@@ -1324,18 +1434,30 @@ function ComposeTab() {
       .then(({ data }) => setTemplates((data || []) as any));
   }, []);
 
-  const searchRecipients = async (query: string) => {
+  // Debounce profile search so we don't fire a query per keystroke (which
+  // both hammers the DB and creates a flickering suggestion list).
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  const searchRecipients = (query: string) => {
     setTo(query);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
-    const sessionValid = await ensureValidRLSSession();
-    if (!sessionValid) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, email, first_name, last_name, company_name")
-      .or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%,company_name.ilike.%${query}%`)
-      .limit(8);
-    setSuggestions(data || []);
-    setShowSuggestions(true);
+    searchTimerRef.current = setTimeout(async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, email, first_name, last_name, company_name")
+        .or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%,company_name.ilike.%${query}%`)
+        .limit(8);
+      setSuggestions(data || []);
+      setShowSuggestions(true);
+    }, 250);
   };
 
   const selectRecipient = (profile: any) => {
@@ -2143,17 +2265,25 @@ function SentTab() {
   const [filter, setFilter] = useState<"all" | "single" | "broadcast" | "reply">("all");
   const [page, setPage] = useState(1);
 
+  // Cache for lazy-loaded body content (body_html / cc / bcc fetched only when
+  // the user opens an email in detail view). Keeps the list query light.
+  const [bodyCache, setBodyCache] = useState<Map<string, { body_html: string; body_text: string; cc: string | null; bcc: string | null; resend_id: string | null }>>(new Map());
+  const [loadingBody, setLoadingBody] = useState(false);
+
   const fetchSent = async () => {
     setLoading(true);
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) { setLoading(false); return; }
 
+    // body_html / body_text excluded from the list — they're lazy-loaded when
+    // the admin opens an individual email. Limit lowered from 1000 → 500 since
+    // the UI paginates at 25 per page; 500 already covers ~20 pages.
     const query = supabase
       .from('admin_emails')
-      .select('*')
+      .select('id, sender_email, sender_name, recipient_email, recipient_name, subject, status, email_type, direction, created_at, scheduled_at, broadcast_id, broadcast_group')
       .eq('direction', 'outbound')
       .order('created_at', { ascending: false })
-      .limit(1000);
+      .limit(500);
 
     if (filter !== 'all') {
       query.eq('email_type', filter);
@@ -2165,6 +2295,43 @@ function SentTab() {
   };
 
   useEffect(() => { fetchSent(); setPage(1); }, [filter]);
+
+  // Lazy-load body when user opens a sent email
+  useEffect(() => {
+    if (!selectedEmail) return;
+    if (bodyCache.has(selectedEmail.id)) return;
+
+    let cancelled = false;
+    setLoadingBody(true);
+    (async () => {
+      const ok = await ensureValidRLSSession();
+      if (!ok || cancelled) { if (!cancelled) setLoadingBody(false); return; }
+      const { data, error } = await supabase
+        .from('admin_emails')
+        .select('body_html, body_text, cc, bcc, resend_id')
+        .eq('id', selectedEmail.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        setLoadingBody(false);
+        return;
+      }
+      const row = data as Partial<EmailBodyRow>;
+      setBodyCache(prev => {
+        const next = new Map(prev);
+        next.set(selectedEmail.id, {
+          body_html: row.body_html || '',
+          body_text: row.body_text || '',
+          cc: row.cc ?? null,
+          bcc: row.bcc ?? null,
+          resend_id: row.resend_id ?? null,
+        });
+        return next;
+      });
+      setLoadingBody(false);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedEmail, bodyCache]);
 
   const totalPages = Math.ceil(emails.length / PAGE_SIZE);
   const paginatedEmails = emails.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -2184,6 +2351,9 @@ function SentTab() {
   const broadcastCount = emails.filter(e => e.email_type === 'broadcast').length;
 
   if (selectedEmail) {
+    const cachedBody = bodyCache.get(selectedEmail.id);
+    const ccLine = cachedBody?.cc ?? selectedEmail.cc;
+    const resendId = cachedBody?.resend_id ?? selectedEmail.resend_id;
     return (
       <Card>
         <CardHeader>
@@ -2197,15 +2367,22 @@ function SentTab() {
           <CardDescription>
             An <strong>{selectedEmail.recipient_name || selectedEmail.recipient_email}</strong> ({selectedEmail.recipient_email}) am{" "}
             {format(new Date(selectedEmail.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
-            {selectedEmail.cc && <span className="block mt-1">CC: {selectedEmail.cc}</span>}
+            {ccLine && <span className="block mt-1">CC: {ccLine}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html || '') }} className="prose prose-sm max-w-none" />
+            {loadingBody && !cachedBody ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Inhalt wird geladen…
+              </div>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(cachedBody?.body_html || cachedBody?.body_text || '') }} className="prose prose-sm max-w-none" />
+            )}
           </div>
-          {selectedEmail.resend_id && (
-            <p className="text-xs text-muted-foreground mt-4">Resend-ID: {selectedEmail.resend_id}</p>
+          {resendId && (
+            <p className="text-xs text-muted-foreground mt-4">Resend-ID: {resendId}</p>
           )}
         </CardContent>
       </Card>
@@ -2365,58 +2542,110 @@ function StatsTab() {
       if (!sessionValid) { setLoading(false); return; }
 
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartIso = todayStart.toISOString();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch all outbound emails
-      const { data: outbound } = await supabase
-        .from('admin_emails')
-        .select('id, email_type, status, created_at, broadcast_id, broadcast_group, subject')
-        .eq('direction', 'outbound')
-        .order('created_at', { ascending: false });
+      // Server-side aggregation via head:true count queries — runs in Postgres
+      // and transfers ZERO rows over the wire. The previous implementation
+      // pulled the entire outbound table (10K+ rows with metadata) just to
+      // call .filter().length — fine at 100 emails, fatal at 100K.
+      type CountRes = { count: number | null };
+      // Minimal builder surface we use — typing the full PostgrestFilterBuilder
+      // generic chain would require importing it from @supabase/postgrest-js
+      // and threading 5+ type params through every call, which adds noise
+      // without runtime safety.
+      interface CountQuery {
+        eq(col: string, val: string): CountQuery;
+        in(col: string, vals: readonly string[]): CountQuery;
+        gte(col: string, val: string): CountQuery;
+        then<T>(onfulfilled: (v: CountRes) => T): Promise<T>;
+      }
+      const outboundCount = (build: (q: CountQuery) => CountQuery = (q) => q): Promise<CountRes> => {
+        const base = supabase.from('admin_emails').select('id', { count: 'exact', head: true }).eq('direction', 'outbound') as unknown as CountQuery;
+        return build(base) as unknown as Promise<CountRes>;
+      };
 
-      const { data: inbound } = await supabase
-        .from('admin_emails')
-        .select('id')
-        .eq('direction', 'inbound');
+      const [
+        totalSentRes,
+        totalInboundRes,
+        sentTodayRes,
+        sentWeekRes,
+        sentMonthRes,
+        broadcastsRes,
+        singleRes,
+        replyRes,
+        deliveredRes,
+        openedRes,
+        clickedRes,
+        bouncedRes,
+        failedRes,
+        recentBroadcastEmails,
+      ] = await Promise.all([
+        outboundCount(),
+        // Inbound count uses the same head:true trick. Returned shape is
+        // { data, count, error } — only `count` is needed.
+        supabase.from('admin_emails').select('id', { count: 'exact', head: true }).eq('direction', 'inbound').then((r) => ({ count: r.count })),
+        outboundCount((q) => q.gte('created_at', todayStartIso)),
+        outboundCount((q) => q.gte('created_at', weekAgo)),
+        outboundCount((q) => q.gte('created_at', monthAgo)),
+        outboundCount((q) => q.eq('email_type', 'broadcast')),
+        outboundCount((q) => q.eq('email_type', 'single')),
+        outboundCount((q) => q.eq('email_type', 'reply')),
+        outboundCount((q) => q.in('status', ['delivered', 'sent'])),
+        outboundCount((q) => q.in('status', ['opened', 'clicked'])),
+        outboundCount((q) => q.eq('status', 'clicked')),
+        outboundCount((q) => q.eq('status', 'bounced')),
+        outboundCount((q) => q.eq('status', 'failed')),
+        // Recent broadcasts: scope to last 90 days + hard cap at 5000 rows.
+        // Even at 500 recipients per broadcast that covers ~10 distinct
+        // broadcasts, which is exactly what the UI shows below.
+        supabase
+          .from('admin_emails')
+          .select('subject, broadcast_id, broadcast_group, created_at')
+          .eq('direction', 'outbound')
+          .eq('email_type', 'broadcast')
+          .not('broadcast_id', 'is', null)
+          .gte('created_at', ninetyDaysAgo)
+          .order('created_at', { ascending: false })
+          .limit(5000),
+      ]);
 
-      const emails = outbound || [];
+      setStats({
+        totalSent: totalSentRes.count || 0,
+        totalInbound: totalInboundRes.count || 0,
+        sentToday: sentTodayRes.count || 0,
+        sentThisWeek: sentWeekRes.count || 0,
+        sentThisMonth: sentMonthRes.count || 0,
+        broadcasts: broadcastsRes.count || 0,
+        singleEmails: singleRes.count || 0,
+        replies: replyRes.count || 0,
+        delivered: deliveredRes.count || 0,
+        opened: openedRes.count || 0,
+        clicked: clickedRes.count || 0,
+        bounced: bouncedRes.count || 0,
+        failed: failedRes.count || 0,
+      });
 
-      const sentToday = emails.filter(e => e.created_at.startsWith(todayStr)).length;
-      const sentThisWeek = emails.filter(e => e.created_at >= weekAgo).length;
-      const sentThisMonth = emails.filter(e => e.created_at >= monthAgo).length;
-
-      // Group broadcasts
+      type BroadcastRow = Pick<AdminEmail, "subject" | "broadcast_id" | "broadcast_group" | "created_at">;
       const broadcastMap = new Map<string, { subject: string; group: string; count: number; date: string }>();
-      emails.filter(e => e.email_type === 'broadcast' && e.broadcast_id).forEach(e => {
-        const existing = broadcastMap.get(e.broadcast_id!);
+      const broadcastRows = (recentBroadcastEmails.data ?? []) as BroadcastRow[];
+      broadcastRows.forEach((e) => {
+        if (!e.broadcast_id) return;
+        const existing = broadcastMap.get(e.broadcast_id);
         if (existing) {
           existing.count++;
         } else {
-          broadcastMap.set(e.broadcast_id!, {
+          broadcastMap.set(e.broadcast_id, {
             subject: e.subject,
             group: e.broadcast_group || '',
             count: 1,
             date: e.created_at,
           });
         }
-      });
-
-      setStats({
-        totalSent: emails.length,
-        totalInbound: (inbound || []).length,
-        sentToday,
-        sentThisWeek,
-        sentThisMonth,
-        broadcasts: emails.filter(e => e.email_type === 'broadcast').length,
-        singleEmails: emails.filter(e => e.email_type === 'single').length,
-        replies: emails.filter(e => e.email_type === 'reply').length,
-        delivered: emails.filter(e => e.status === 'delivered' || e.status === 'sent').length,
-        opened: emails.filter(e => e.status === 'opened' || e.status === 'clicked').length,
-        clicked: emails.filter(e => e.status === 'clicked').length,
-        bounced: emails.filter(e => e.status === 'bounced').length,
-        failed: emails.filter(e => e.status === 'failed').length,
       });
 
       setRecentBroadcasts(
@@ -2711,20 +2940,26 @@ function SystemEmailsTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
+  // Body cache for lazy-loaded detail view (same pattern as InboxTab/SentTab)
+  const [bodyCache, setBodyCache] = useState<Map<string, { body_html: string; body_text: string; resend_id: string | null }>>(new Map());
+  const [loadingBody, setLoadingBody] = useState(false);
+
   const fetchSystemEmails = useCallback(async () => {
     setLoading(true);
     try {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) { setLoading(false); return; }
 
-      // Fetch all outbound emails that are NOT manual (single, reply, broadcast)
+      // Fetch all outbound emails that are NOT manual (single, reply, broadcast).
+      // body_html / body_text excluded — lazy-loaded on detail open. Limit
+      // lowered 1000 → 500 (UI paginates 25 per page).
       const { data, error } = await supabase
         .from('admin_emails')
-        .select('*')
+        .select('id, sender_email, sender_name, recipient_email, recipient_name, subject, status, email_type, direction, created_at, scheduled_at')
         .eq('direction', 'outbound')
         .not('email_type', 'in', '("single","reply","broadcast")')
         .order('created_at', { ascending: false })
-        .limit(1000);
+        .limit(500);
 
       if (error) throw error;
       setEmails((data || []) as AdminEmail[]);
@@ -2737,6 +2972,41 @@ function SystemEmailsTab() {
   }, []);
 
   useEffect(() => { fetchSystemEmails(); }, [fetchSystemEmails]);
+
+  // Lazy-load body when user opens a system email
+  useEffect(() => {
+    if (!selectedEmail) return;
+    if (bodyCache.has(selectedEmail.id)) return;
+
+    let cancelled = false;
+    setLoadingBody(true);
+    (async () => {
+      const ok = await ensureValidRLSSession();
+      if (!ok || cancelled) { if (!cancelled) setLoadingBody(false); return; }
+      const { data, error } = await supabase
+        .from('admin_emails')
+        .select('body_html, body_text, resend_id')
+        .eq('id', selectedEmail.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        setLoadingBody(false);
+        return;
+      }
+      const row = data as Partial<EmailBodyRow>;
+      setBodyCache(prev => {
+        const next = new Map(prev);
+        next.set(selectedEmail.id, {
+          body_html: row.body_html || '',
+          body_text: row.body_text || '',
+          resend_id: row.resend_id ?? null,
+        });
+        return next;
+      });
+      setLoadingBody(false);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedEmail, bodyCache]);
 
   // Filter by type and search
   const filteredEmails = emails.filter(e => {
@@ -2788,6 +3058,8 @@ function SystemEmailsTab() {
 
   // Detail view
   if (selectedEmail) {
+    const cachedBody = bodyCache.get(selectedEmail.id);
+    const resendId = cachedBody?.resend_id ?? selectedEmail.resend_id;
     return (
       <Card>
         <CardHeader>
@@ -2806,11 +3078,18 @@ function SystemEmailsTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-muted/50 rounded-lg border">
-            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html || selectedEmail.body_text || '') }} className="prose prose-sm max-w-none" />
+            {loadingBody && !cachedBody ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Inhalt wird geladen…
+              </div>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(cachedBody?.body_html || cachedBody?.body_text || '') }} className="prose prose-sm max-w-none" />
+            )}
           </div>
-          {selectedEmail.resend_id && (
+          {resendId && (
             <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">
-              <ExternalLink className="w-3 h-3" /> Resend-ID: {selectedEmail.resend_id}
+              <ExternalLink className="w-3 h-3" /> Resend-ID: {resendId}
             </p>
           )}
         </CardContent>

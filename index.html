@@ -45,13 +45,12 @@
       try{var c=JSON.parse(localStorage.getItem('cookie-consent')||'null');if(c&&c.marketing){gtag('set','ads_data_redaction',false);gtag('consent','update',{'analytics_storage':c.analytics?'granted':'denied','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','functionality_storage':'granted','personalization_storage':'granted'})}else if(c&&c.analytics){gtag('consent','update',{'analytics_storage':'granted','functionality_storage':'granted','personalization_storage':'granted'})}}catch(e){}
     </script>
     
-    <!-- Clixtell Click Fraud Protection — must load early to capture all visits -->
-    <script type='text/javascript'>
-    var script=document.createElement('script');var prefix=document.location.protocol;
-    script.async=true;script.type='text/javascript';
-    var target=prefix+'//scripts.clixtell.com/track.js';
-    script.src=target;var elem=document.head;elem.appendChild(script);
-    </script>
+    <!-- Clixtell wird in loadDeferredScripts() unten geladen, nach erstem Paint
+         und nur wenn der User Marketing/Analytics-Consent gegeben hat. Das
+         frühere unkonditionale Inline-Script lud `track.js` + `recorder.js`
+         (Session-Recorder, mehrere hundert KB JS) auf jedem Pageload, hookte
+         Maus-/Scroll-Events und crashte regelmäßig mit "Cannot read length".
+         DSGVO-konform laden wir es erst nach explizitem Consent. -->
 
     <!-- Primary Meta Tags -->
     <title>CaravanWert - Deutschlands führende Wohnmobil-Handelsplattform</title>
@@ -203,10 +202,31 @@
         } catch (e) {}
       }
 
+      function hasMarketingConsent() {
+        try {
+          var c = JSON.parse(localStorage.getItem('cookie-consent') || 'null');
+          return !!(c && c.marketing);
+        } catch (e) { return false; }
+      }
+
+      function loadClixtell() {
+        if (window.__CLIXTELL_LOADED__) return;
+        // Click Fraud Protection ist Marketing-Tracking → nur mit Consent.
+        // Vorher unkonditional inline geladen, was DSGVO-Probleme + ~300 KB
+        // recorder.js + häufige Konsolen-Crashes verursachte.
+        if (!hasMarketingConsent()) return;
+        window.__CLIXTELL_LOADED__ = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = (document.location.protocol === 'https:' ? 'https:' : 'http:') + '//scripts.clixtell.com/track.js';
+        document.head.appendChild(s);
+      }
+
       function loadDeferredScripts() {
         var b = window.__TRACKING_BOOT__;
         loadGtagJs(b.ga4, b.gads, b.gtm);
         loadFbq(b.fb);
+        loadClixtell();
 
         // Cloudflare Turnstile (statisch – kein Tracking-Config-Eingriff nötig)
         var t = document.createElement('script');
@@ -214,6 +234,13 @@
         t.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         document.head.appendChild(t);
       }
+
+      // Wenn Consent erst nachträglich erteilt wird (CookieBanner Akzeptieren),
+      // Clixtell sofort nachladen — der CookieBanner dispatched dieses Event
+      // (siehe src/components/CookieBanner.tsx + CookieSettingsModal.tsx).
+      window.addEventListener('consent-updated', function () {
+        loadClixtell();
+      });
 
       // React publishes the loaded tracking-config via this event. We persist
       // it in localStorage so the next page load uses the fresh IDs immediately,

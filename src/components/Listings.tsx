@@ -10,17 +10,26 @@ const Listings = () => {
   const { data: auctions, isLoading } = useQuery({
     queryKey: ['home-auctions'],
     queryFn: async () => {
+      // Performance: nur die für die Karten benötigten Spalten + serverseitig
+      // EIN Foto pro Auktion (geordnet nach display_order). Vorher wurde via
+      // motorhomes(*) + photos(*) pro Listing das ganze Motorhome-Schema und
+      // ~30 Foto-Zeilen geladen, obwohl die Card nur die Hero-Photo zeigt.
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('auctions')
         .select(`
-          *,
+          id, motorhome_id, current_bid, starting_bid, end_time, created_at,
           motorhome:motorhomes(
-            *,
-            photos:motorhome_photos(*)
+            id, manufacturer, model, year, mileage, body_type, country,
+            instant_price, sale_channel, status, account_type,
+            sleeping_places, seats, description,
+            photos:motorhome_photos(url, display_order)
           )
         `)
         .eq('status', 'active')
-        .gt('end_time', new Date().toISOString())
+        .gt('end_time', nowIso)
+        .order('display_order', { referencedTable: 'motorhome.photos', ascending: true })
+        .limit(1, { referencedTable: 'motorhome.photos' })
         .order('end_time', { ascending: true })
         .limit(4);
 
@@ -54,10 +63,9 @@ const Listings = () => {
               const motorhome = auction.motorhome;
               if (!motorhome) return null;
 
-              const sortedPhotos = [...(motorhome.photos || [])].sort(
-                (a: any, b: any) => (a.display_order ?? 999) - (b.display_order ?? 999)
-              );
-              const primaryPhoto = sortedPhotos[0]?.url || '';
+              // Server liefert pro Listing nur die erste Foto-Zeile (geordnet
+              // nach display_order). Kein clientseitiges Sortieren mehr nötig.
+              const primaryPhoto = motorhome.photos?.[0]?.url || '';
               
               return (
                 <MotorhomeCard

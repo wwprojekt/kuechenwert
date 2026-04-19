@@ -211,10 +211,29 @@ const Kaufen = () => {
     fetchAuctions();
   }, [fetchAuctions]);
 
-  // Real-time updates for new auctions with stale update prevention
+  // Real-time updates for new auctions with stale update prevention.
+  //
+  // Debouncing: Während eines aktiven Bietsturms feuert Realtime u.U. mehrere
+  // postgres_changes pro Sekunde (jedes Bid-Update ändert auctions.current_bid).
+  // Ohne Debounce würde das in jeder Sekunde einen 860 ms Refetch triggern, der
+  // den Server unter Last setzt und die Liste optisch flackern lässt. 1500 ms
+  // Debounce sammelt schnell hintereinander folgende Events zu einem Refetch.
+  //
+  // Wahrnehmung: Die Bid-Counts werden somit max 1.5 s später aktualisiert —
+  // der Card-Timer läuft visuell weiter, weil er via useNow() lokal tickt.
   useEffect(() => {
-    let isSubscribed = true; // Track mount state
+    let isSubscribed = true;
+    let debounceId: ReturnType<typeof setTimeout> | null = null;
     
+    const scheduleRefetch = () => {
+      if (!isSubscribed) return;
+      if (debounceId) clearTimeout(debounceId);
+      debounceId = setTimeout(() => {
+        if (!isSubscribed) return;
+        fetchAuctions(0, true);
+      }, 1500);
+    };
+
     const channel = supabase
       .channel("auctions-changes")
       .on(
@@ -224,17 +243,13 @@ const Kaufen = () => {
           schema: "public",
           table: "auctions",
         },
-        () => {
-          if (!isSubscribed) return;
-          // Background refresh: don't toast on transient network failure if
-          // we already have auctions on screen.
-          fetchAuctions(0, true);
-        }
+        scheduleRefetch
       )
       .subscribe();
 
     return () => {
-      isSubscribed = false; // Mark as unmounted
+      isSubscribed = false;
+      if (debounceId) clearTimeout(debounceId);
       supabase.removeChannel(channel);
     };
   }, [fetchAuctions]);

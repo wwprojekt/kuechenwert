@@ -14,7 +14,7 @@
  * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE_NAME = `caravanwert-static-${CACHE_VERSION}`;
 const ASSETS_CACHE_NAME = `caravanwert-assets-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `caravanwert-dynamic-${CACHE_VERSION}`;
@@ -422,4 +422,4 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   );
 });
 
-console.log('Service Worker: Loaded (v3 – No precache for index.html, Network-First for build assets)');
+console.log(`Service Worker: Loaded (${CACHE_VERSION} – No precache for index.html, Network-First for build assets, Supabase pass-through)`);

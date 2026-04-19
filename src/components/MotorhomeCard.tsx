@@ -3,12 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CountryFlag } from "@/components/CountryFlag";
-import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useNow } from "@/hooks/useNow";
+import { getResponsiveImageProps } from "@/lib/imageTransform";
+
+/**
+ * Sizes-Hinweis für die Karten-Hero-Images. Spiegelt das Grid in Kaufen.tsx
+ * (1 col mobile, 2 cols sm, 3 cols lg, 4 cols xl) plus Filter-Sidebar wider.
+ * Browser nutzt das, um aus dem srcset die kleinste passende Version zu laden.
+ */
+const CARD_IMAGE_SIZES = "(min-width: 1280px) 22vw, (min-width: 1024px) 28vw, (min-width: 640px) 45vw, 92vw";
 
 interface MotorhomeCardProps {
   // Core vehicle info
@@ -153,15 +161,55 @@ const MotorhomeCard = ({
   accountType,
   linkTo
 }: MotorhomeCardProps) => {
-  const { user } = useAuth();
   const { isDealer, isAdmin } = useUserRole();
   const canSeePrices = isDealer || isAdmin;
 
-  const [timeRemaining, setTimeRemaining] = useState("");
-  const [isEndingSoon, setIsEndingSoon] = useState(false);
-  const [isHotbid, setIsHotbid] = useState(false);
-  const [urgency, setUrgency] = useState<UrgencyLevel>('relaxed');
-  const [seconds, setSeconds] = useState(0);
+  // Globaler 1-Hz-Tick statt eigenem setInterval pro Karte. Bei 12 sichtbaren Karten
+  // läuft so EIN Timer in der App statt zwölf — siehe src/hooks/useNow.ts.
+  // useNow ist günstig wenn die Karte gar kein Auktions-Countdown braucht (kein Tick),
+  // deshalb hier conditional via tickEnabled steuern.
+  const tickEnabled = isAuction && !!endTime;
+  const now = useNow();
+
+  // Abgeleitete Timer-Werte komplett aus `now` + `endTime` berechnen.
+  // Vorher: 5 setState pro Sekunde + extra useEffect. Jetzt: ein useMemo,
+  // der nur dann neu rechnet, wenn sich `now` (1×/sec) oder `endTime` ändert.
+  const timer = useMemo(() => {
+    if (!tickEnabled) {
+      return {
+        timeRemaining: '',
+        urgency: 'relaxed' as UrgencyLevel,
+        isEndingSoon: false,
+        isHotbid: false,
+      };
+    }
+    const end = new Date(endTime as string).getTime();
+    const distance = end - now;
+
+    if (distance <= 0) {
+      return { timeRemaining: 'Beendet', urgency: 'ended' as UrgencyLevel, isEndingSoon: false, isHotbid: false };
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((distance % (1000 * 60)) / 1000);
+
+    let timeRemaining: string;
+    if (days > 0) timeRemaining = `${days}T ${hours}h`;
+    else if (hours > 0) timeRemaining = `${hours}h ${minutes}m`;
+    else if (minutes > 0) timeRemaining = `${minutes}m ${secs}s`;
+    else timeRemaining = `${secs}s`;
+
+    return {
+      timeRemaining,
+      urgency: getUrgencyLevel(distance),
+      isEndingSoon: distance < 60 * 60 * 1000,
+      isHotbid: distance < 5 * 60 * 1000,
+    };
+  }, [now, endTime, tickEnabled]);
+
+  const { timeRemaining, urgency, isEndingSoon, isHotbid } = timer;
 
   const displayPrice = isAuction 
     ? (currentBid || startingBid || 0)
@@ -171,47 +219,15 @@ const MotorhomeCard = ({
   const isEnded = timeRemaining === 'Beendet';
   const hasInstantSale = instantPrice && Number(instantPrice) > 0;
 
-  useEffect(() => {
-    if (!isAuction || !endTime) return;
-
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const end = new Date(endTime).getTime();
-      const distance = end - now;
-
-      if (distance < 0) {
-        setTimeRemaining("Beendet");
-        setUrgency('ended');
-        return;
-      }
-
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const secs = Math.floor((distance % (1000 * 60)) / 1000);
-
-      setIsEndingSoon(distance < 60 * 60 * 1000);
-      setIsHotbid(distance < 5 * 60 * 1000);
-      setUrgency(getUrgencyLevel(distance));
-      setSeconds(secs);
-
-      if (days > 0) {
-        setTimeRemaining(`${days}T ${hours}h`);
-      } else if (hours > 0) {
-        setTimeRemaining(`${hours}h ${minutes}m`);
-      } else if (minutes > 0) {
-        setTimeRemaining(`${minutes}m ${secs}s`);
-      } else {
-        setTimeRemaining(`${secs}s`);
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [isAuction, endTime]);
-
   const timerStyles = useMemo(() => getTimerStyles(urgency), [urgency]);
+
+  // Responsive Image-URL via Supabase Image Transformation. Ersetzt das vorherige
+  // 300 KB Original-JPEG durch eine ~30 KB transformierte Version, plus srcset für
+  // höhere Pixel-Dichten. Bei Nicht-Supabase-URLs unverändertes Verhalten.
+  const responsiveImage = useMemo(
+    () => getResponsiveImageProps(image, { sizes: CARD_IMAGE_SIZES, defaultWidth: 480, quality: 70 }),
+    [image]
+  );
 
   // Determine if we should show the blink animation (last 5 minutes)
   const shouldBlink = urgency === 'hotbid';
@@ -296,7 +312,9 @@ const MotorhomeCard = ({
           <div className="aspect-[4/3] overflow-hidden bg-muted">
             {image ? (
               <img
-                src={image}
+                src={responsiveImage.src}
+                srcSet={responsiveImage.srcSet || undefined}
+                sizes={responsiveImage.srcSet ? responsiveImage.sizes : undefined}
                 alt={`${manufacturer} ${model}`}
                 width={640}
                 height={480}

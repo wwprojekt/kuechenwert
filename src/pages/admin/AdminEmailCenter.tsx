@@ -410,11 +410,17 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
       // Run the 3 list queries in parallel — they have no dependencies on
       // each other. Sequential awaits cost 600–1200 ms of RTT for nothing.
-      // body_html is OMITTED here on purpose (lazy-loaded on detail open).
+      //
+      // Both body_html AND body_text are OMITTED here on purpose. The list
+      // UI renders only sender, subject and date — the `preview` field on
+      // InboxItem is computed but never displayed (verified via grep). For
+      // newsletter-heavy inboxes body_text alone can be 5–50 KB per row,
+      // so dropping it saves another 1–10 MB of wire payload per refresh.
+      // body_text is still lazy-loaded on detail open via the body cache.
       const [emailsRes, supportRes, contactRes] = await Promise.all([
         supabase
           .from("admin_emails")
-          .select("id, sender_email, sender_name, recipient_email, recipient_name, subject, body_text, status, is_read, is_starred, created_at, email_type, direction, scheduled_at")
+          .select("id, sender_email, sender_name, recipient_email, recipient_name, subject, status, is_read, is_starred, created_at, email_type, direction, scheduled_at")
           .eq("direction", "inbound")
           .eq("is_archived", false)
           .order("created_at", { ascending: false })
@@ -453,6 +459,9 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
 
       const inboxItems: InboxItem[] = [];
 
+      // preview is intentionally empty — the row UI does not render it
+      // (verified). body_text is fetched lazily into the body cache when an
+      // item is opened, which is where the body is actually shown.
       (emails || []).forEach((e: any) => {
         inboxItems.push({
           id: e.id,
@@ -461,7 +470,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           from_email: e.sender_email,
           to_email: e.recipient_email || '',
           subject: e.subject,
-          preview: (e.body_text || '').substring(0, 120),
+          preview: '',
           status: e.status,
           is_read: e.is_read,
           is_starred: e.is_starred,

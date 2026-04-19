@@ -16,7 +16,9 @@
 - Use `SECURITY INVOKER` for all new database functions
 - Keep components small and focused (< 200 lines)
 - Keep diffs small and focused on one feature
-- **ALWAYS push to GitHub after every commit** (`git push origin main`)
+- **ALWAYS work directly on `main` and push after every commit** (`git push origin main`)
+  - Dokploy auto-deploys ONLY from `main` — feature/fix branches do NOT trigger deploys
+  - If a tool/CI auto-creates a feature branch (e.g. `cursor/*`), immediately fast-forward merge to `main` and push: `git checkout main && git merge --ff-only <branch> && git push origin main`
 
 ## Don't
 - Do NOT call React Hooks after an early return
@@ -27,6 +29,7 @@
 - Do NOT add new heavy dependencies without checking existing alternatives
 - Do NOT use `rm -rf` on project directories
 - Do NOT use `git push --force`
+- Do NOT leave commits stranded on a feature/fix branch — Dokploy only deploys from `main`. Always fast-forward into `main` and push there.
 
 ## Commands
 
@@ -70,8 +73,10 @@ Before every commit:
 4. Diff is small and focused on one feature/fix
 5. Update the TODO list in `project.md` (mark completed tasks)
 6. Commit message format: `feat(scope): short description` or `fix(scope): short description`
-7. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
-8. If push fails: `git pull --rebase origin main && git push origin main`
+7. **Verify you are on `main`**: `git branch --show-current` MUST print `main`. If not, switch first (`git checkout main`) — never commit on `cursor/*` or other feature branches because Dokploy will not deploy them.
+8. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
+9. If push fails: `git pull --rebase origin main && git push origin main`
+10. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. Dokploy webhook triggers auto-build/deploy within ~1 minute of the push appearing on `origin/main`.
 
 ## Good Examples (copy these patterns)
 - **Functional component with hooks**: `src/pages/AuctionDetail.tsx`

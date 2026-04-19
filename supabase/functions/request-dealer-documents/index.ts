@@ -96,10 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <noreply@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@caravanwert.de>`,
         to: [dealer_email],
         subject: subject,
         html: html,
+        reply_to: 'info@caravanwert.de',
       }),
     });
 
@@ -143,16 +144,18 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('id', dealer_application_id);
     }
 
-    // Log in admin_emails table
+    // Log in admin_emails table with the proper email_type so the Email Center
+    // can group/filter dealer document requests separately from generic 'auto' mails.
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'noreply@caravanwert.de',
+        sender_email: 'info@caravanwert.de',
         sender_name: settingsData.site_name,
         recipient_email: dealer_email,
         recipient_name: dealer_name,
         subject: subject,
         body_html: html,
-        email_type: 'auto',
+        body_text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+        email_type: 'dealer_documents_request',
         direction: 'outbound',
         status: 'sent',
         resend_id: emailResult.id,

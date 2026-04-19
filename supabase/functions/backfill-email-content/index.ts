@@ -9,8 +9,17 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
 
 /**
  * Backfill email content for inbound emails that were stored without body/attachments.
- * This is a one-time utility to fix emails received before the inbound-webhook was updated
- * to fetch full content from the Resend Received Email API.
+ *
+ * ⚠️  ONE-TIME UTILITY ⚠️
+ * This function was used to fix emails received before the inbound-webhook
+ * was updated to fetch full content from the Resend Received Email API.
+ * After the backfill ran successfully, it should NOT be invoked routinely –
+ * it consumes Resend API quota and only handles the empty-body case.
+ *
+ * Auth: admin/service_role only (checkServiceRoleOrAdmin).
+ *
+ * If you no longer need this function, you can safely delete the directory
+ * after running `supabase functions delete backfill-email-content`.
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {

@@ -621,7 +621,9 @@ export const useWizardForm = () => {
         // Tracking wird VOR der Navigation ausgeführt (schnell, client-seitig)
         const txId1 = generateTransactionId('wizard');
         (window as any).__lastTransactionId = txId1;
-        setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone, postalCode: formData.zipCode, country: formData.country }).catch(() => {});
+        setEnhancedConversionFromForm({ customerEmail: formData.customerEmail, customerName: formData.customerName, customerPhone: formData.customerPhone, postalCode: formData.zipCode, country: formData.country }).catch((err) => {
+          console.error('[useWizardForm] setEnhancedConversionFromForm failed (non-blocking):', err);
+        });
         trackWizardCompleted(`${formData.manufacturer || 'Unbekannt'} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`, txId1);
         trackEvent('wizard_completed', { category: 'business', properties: { manufacturer: formData.manufacturer, model: formData.model, bodyType: formData.bodyType, saleChannel: formData.saleChannel, path: 'guest' } });
 

@@ -776,10 +776,24 @@ Deno.serve(async (req) => {
       ? error.message
       : 'Ein unbekannter Fehler ist aufgetreten';
 
+    // Map auth-related errors to 401 so the frontend's Session-Expired
+    // handling (SessionExpiredError + redirect to /login) can fire.
+    // Everything else stays 400 (business-rule rejection, NOT 500 / generic
+    // error) so users see the friendly German message instead of a generic
+    // "Bei der Anfrage ist ein Fehler aufgetreten".
+    const isAuthError =
+      errorMessage.startsWith('Nicht autorisiert') ||
+      errorMessage === 'Unauthorized' ||
+      errorMessage === 'No authorization header';
+
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({
+        error: isAuthError
+          ? 'Sitzung abgelaufen – bitte melden Sie sich erneut an'
+          : errorMessage,
+      }),
       {
-        status: 400,
+        status: isAuthError ? 401 : 400,
         headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       },
     );

@@ -120,6 +120,26 @@ const handler = async (req: Request): Promise<Response> => {
     const result = await response.json();
     console.log('Vehicle question notification sent to:', recipients.join(', '));
 
+    // Log in admin_emails so the Email Center shows the notification.
+    // Failure to log must not break the user-visible API response.
+    try {
+      await supabase.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: `${settingsData.site_name} System`,
+        recipient_email: recipients.join(', '),
+        subject,
+        body_html: html,
+        body_text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+        email_type: 'vehicle_question',
+        direction: 'outbound',
+        status: 'sent',
+        resend_id: result.id,
+        is_read: true,
+      });
+    } catch (logErr) {
+      console.error('Failed to log vehicle question email in admin_emails:', logErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Admin notification sent',

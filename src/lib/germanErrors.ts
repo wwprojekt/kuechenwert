@@ -79,6 +79,10 @@ const AUTH_ERROR_MAP: Record<string, string> = {
   'Invalid refresh token': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'Token expired': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'JWT expired': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+  // Internes Sentinel von SessionExpiredError (sessionGuard.ts). Sollte dank
+  // Auto-Dialog + Toast-Filter eigentlich nie sichtbar werden – aber Defense-in-Depth
+  // für den Fall, dass die Message irgendwo doch zur Übersetzung durchkommt.
+  'SESSION_EXPIRED': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'invalid claim: missing sub claim': 'Sitzungsfehler. Bitte melden Sie sich erneut an.',
   'Auth session missing': 'Sie sind nicht angemeldet. Bitte melden Sie sich an.',
   'Unauthorized': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',

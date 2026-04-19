@@ -39,20 +39,23 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Check if user has a valid reset session
+  // Check if user has a valid reset session.
+  //
+  // We use getUser() (server-side validation) instead of the cached getSession()
+  // so an expired/forged token in localStorage cannot trick the form into
+  // showing the new-password input. The actual recovery session is created
+  // automatically by Supabase when the user opens the link in this URL and
+  // is then surfaced via the PASSWORD_RECOVERY auth event below.
   useEffect(() => {
+    let cancelled = false;
+
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // User should have a session after clicking the reset link
-      if (session) {
-        setIsValidSession(true);
-      } else {
-        setIsValidSession(false);
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      setIsValidSession(!!user);
     };
 
-    checkSession();
+    void checkSession();
 
     // Listen for auth state changes (when user clicks the reset link)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -61,7 +64,10 @@ const ResetPassword = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -238,3 +238,19 @@ verify_jwt = false
 # --- Admin Delete Bid (atomic via SQL RPC + bidder email) ---
 [functions.admin-delete-bid]
 verify_jwt = false
+
+# --- Kaufchance Offer Action (notify seller / bidders) ---
+[functions.notify-offer-action]
+verify_jwt = false
+
+# --- HEIC Photo Conversion Maintenance Tool ---
+[functions.fix-heic-photos]
+verify_jwt = false
+
+# --- Google Ads Diagnostic (admin-only conversion-action lister) ---
+[functions.gads-diagnostic]
+verify_jwt = false
+
+# --- Resend Purchase Contract (admin re-sends contract email) ---
+[functions.resend-purchase-contract]
+verify_jwt = false

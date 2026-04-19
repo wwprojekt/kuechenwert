@@ -275,6 +275,8 @@ export default function DashboardOverview() {
     queryKey: ["dealerStats", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
 
       const [bidsRes, wonRes, inventoryRes] = await Promise.all([
         supabase
@@ -329,6 +331,8 @@ export default function DashboardOverview() {
     queryKey: ["dealerActivity", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
 
       const { data: recentBids } = await supabase
         .from("bids")

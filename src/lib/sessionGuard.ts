@@ -249,7 +249,7 @@ export async function ensureValidSession(): Promise<{
           return { user: session.user, wasRefreshed: false, sessionExpired: false };
         }
         return { user: null, wasRefreshed: false, sessionExpired: false };
-      } catch (retryErr) {
+      } catch (_retryErr) {
         logger.log('ensureValidSession: Retry nach Lock-Fehler ebenfalls fehlgeschlagen');
         // Letzter Fallback: getSession() ist lokal und braucht keinen Lock
         try {
@@ -464,6 +464,48 @@ export class SessionExpiredError extends Error {
 }
 
 /**
+ * Globaler SessionExpired-Handler.
+ *
+ * Wird vom `SessionExpiredProvider` (siehe `SessionExpiredDialog.tsx`) beim Mount registriert
+ * und von `invokeWithAuth` automatisch aufgerufen, sobald die Session unwiederbringlich
+ * abgelaufen ist. Damit erscheint der Dialog AUCH dann, wenn ein Aufrufer die geworfene
+ * `SessionExpiredError` nicht explizit per `instanceof` prüft.
+ *
+ * Architektur-Hintergrund: Bei ~150 `invokeWithAuth`-Aufrufstellen ist das pro-Aufrufer
+ * Pattern (`if (err instanceof SessionExpiredError) showSessionExpired(...)`) nicht
+ * skalierbar. Vergisst auch nur eine Stelle die Prüfung, sieht der Nutzer den nichtssagenden
+ * Toast „SESSION_EXPIRED". Mit dieser Registry passiert das nicht mehr – der Dialog
+ * erscheint immer, der Aufrufer-spezifische Toast wird zusätzlich vom Toast-Wrapper
+ * (use-toast.ts) als Business-Event erkannt und unterdrückt.
+ */
+type SessionExpiredHandler = (redirectPath?: string) => void;
+
+let _sessionExpiredHandler: SessionExpiredHandler | null = null;
+
+export function registerSessionExpiredHandler(
+  handler: SessionExpiredHandler
+): () => void {
+  _sessionExpiredHandler = handler;
+  return () => {
+    if (_sessionExpiredHandler === handler) {
+      _sessionExpiredHandler = null;
+    }
+  };
+}
+
+function notifySessionExpired(): void {
+  if (!_sessionExpiredHandler) return;
+  try {
+    const path =
+      typeof window !== 'undefined' ? window.location.pathname : undefined;
+    _sessionExpiredHandler(path);
+  } catch (e) {
+    // Handler-Fehler dürfen NIEMALS die throw-Kette unterbrechen
+    logger.warn('notifySessionExpired: handler threw', e);
+  }
+}
+
+/**
  * Sichere Edge Function Aufrufe mit automatischem Token-Refresh + 401-Retry.
  * 
  * Verwendung: Statt `supabase.functions.invoke('fn', { body })` direkt,
@@ -627,6 +669,7 @@ export async function invokeWithAuth(
 ): Promise<{ data: unknown; error: null } | { data: null; error: Error }> {
   let accessToken = await getFreshAccessToken();
   if (!accessToken) {
+    notifySessionExpired();
     throw new SessionExpiredError();
   }
 
@@ -659,6 +702,7 @@ export async function invokeWithAuth(
       logger.warn(`${functionName}: 401, retrying with fresh token...`);
       accessToken = await getFreshAccessToken();
       if (!accessToken) {
+        notifySessionExpired();
         throw new SessionExpiredError();
       }
 
@@ -667,6 +711,7 @@ export async function invokeWithAuth(
       if (retry.error) {
         const retryInfo = await parseFunctionsError(retry.error);
         if (isFunctions401Info(retryInfo)) {
+          notifySessionExpired();
           throw new SessionExpiredError();
         }
         return { data: null, error: decorateError(retry.error, retryInfo) };

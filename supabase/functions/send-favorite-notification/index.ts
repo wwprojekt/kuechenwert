@@ -182,14 +182,16 @@ Deno.serve(async (req) => {
 
         if (res.ok) {
           sent++;
-          // Per-user log for dedup (email_type: favorite_price_change for anti-spam check)
+          // Per-user log for dedup (email_type: favorite_price_change for anti-spam check).
+          // Store the FULL HTML so the Email Center preview is meaningful.
           supabase.from("admin_emails").insert({
             sender_email: "info@caravanwert.de",
             sender_name: "CaravanWert",
             recipient_email: user.email,
             recipient_id: user.id,
             subject,
-            body_html: '', body_text: '',
+            body_html: html,
+            body_text: html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
             email_type: event_type === "price_change" ? "favorite_price_change" : "favorite_notification",
             direction: "outbound", status: "sent", is_read: true,
           }).then(({ error: logErr }) => { if (logErr) console.error('Per-user log error:', logErr); });

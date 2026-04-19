@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Euro, TrendingUp, CheckCircle, XCircle, Loader2, MessageCircleReply, ArrowLeft } from "lucide-react";
-import { withSessionRetry, ensureValidRLSSession, invokeWithAuth, isNetworkError } from "@/lib/sessionGuard";
+import { withSessionRetry, ensureValidRLSSession, invokeWithAuth, isNetworkError, SessionExpiredError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
 
@@ -195,6 +195,10 @@ export function PostAuctionOfferDialog({
       toast({ title: "Angebot gesendet", description: "Ihr Angebot wurde erfolgreich übermittelt. Der Verkäufer wird benachrichtigt." });
       closeAndNotify();
     } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        // Dialog wird via sessionGuard.notifySessionExpired() bereits angezeigt – kein Toast.
+        return;
+      }
       console.error("Error sending offer:", error);
       toast({ title: "Fehler", description: "Angebot konnte nicht gesendet werden. Bitte versuchen Sie es erneut.", variant: "destructive" });
     } finally {
@@ -236,6 +240,7 @@ export function PostAuctionOfferDialog({
       toast({ title: 'Angebot erhöht', description: `Ihr Angebot wurde auf ${newAmount.toLocaleString('de-DE')} € erhöht.` });
       closeAndNotify();
     } catch (err) {
+      if (err instanceof SessionExpiredError) return;
       console.error('Error raising offer:', err);
       toast({ title: 'Fehler', description: 'Angebot konnte nicht erhöht werden.', variant: 'destructive' });
     } finally {
@@ -257,6 +262,7 @@ export function PostAuctionOfferDialog({
       });
       closeAndNotify();
     } catch (err: any) {
+      if (err instanceof SessionExpiredError) return;
       console.error('Error accepting counter offer:', err);
       toast({ title: 'Fehler', description: err.message || 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
     } finally {
@@ -336,6 +342,7 @@ export function PostAuctionOfferDialog({
       });
       closeAndNotify();
     } catch (err) {
+      if (err instanceof SessionExpiredError) return;
       console.error('Error submitting buyer counter:', err);
       toast({ title: 'Fehler', description: 'Gegenvorschlag konnte nicht gesendet werden.', variant: 'destructive' });
     } finally {
@@ -371,6 +378,7 @@ export function PostAuctionOfferDialog({
       toast({ title: 'Gegenangebot abgelehnt', description: 'Sie haben das Gegenangebot abgelehnt. Sie können ein neues Angebot abgeben.' });
       setExistingOffer(null);
     } catch (err) {
+      if (err instanceof SessionExpiredError) return;
       console.error('Error rejecting counter offer:', err);
       toast({ title: 'Fehler', description: 'Aktion konnte nicht durchgeführt werden.', variant: 'destructive' });
     } finally {

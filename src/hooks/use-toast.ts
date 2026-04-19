@@ -146,6 +146,21 @@ function toast({ ...props }: Toast) {
     });
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
+  // ── Session-Expired-Filter (höchste Priorität) ──────────────────────
+  // Wenn invokeWithAuth() eine SessionExpiredError wirft, hat sessionGuard.ts
+  // bereits den globalen SessionExpiredDialog ausgelöst. Der Aufrufer fängt den
+  // Fehler aber typischerweise generisch (`catch (err) { toast({ description: err.message }) }`)
+  // und würde dem Nutzer ein verwirrendes „SESSION_EXPIRED" zusätzlich zum Dialog zeigen.
+  // Hier unterdrücken wir Toasts mit dieser Sentinel-Message komplett (kein Render, kein Log).
+  const rawDescription = typeof props.description === 'string' ? props.description : '';
+  const rawTitle = typeof props.title === 'string' ? props.title : '';
+  if (
+    props.variant === "destructive" &&
+    (rawDescription === 'SESSION_EXPIRED' || rawTitle === 'SESSION_EXPIRED')
+  ) {
+    return { id, dismiss, update };
+  }
+
   // ── Automatisches Error-Logging für destructive Toasts ──────────────
   // Jeder Fehler-Toast wird automatisch ins Fehlerprotokoll geschrieben,
   // ABER nur wenn der Fehler nicht bereits über handleAndLogError() geloggt wurde.

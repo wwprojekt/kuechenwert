@@ -143,7 +143,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const resendResult = await emailResponse.json();
 
-    // Log in admin_emails
+    // Log in admin_emails – store the FULL HTML (incl. layout/footer/branding)
+    // so the Email Center preview matches what the recipient actually saw.
     await supabase.from('admin_emails').insert({
       sender_email: 'info@caravanwert.de',
       sender_name: settingsData.site_name,
@@ -151,8 +152,8 @@ const handler = async (req: Request): Promise<Response> => {
       recipient_name: name || null,
       recipient_id: userId,
       subject,
-      body_html: emailContent,
-      body_text: emailContent.replace(/<[^>]*>/g, ''),
+      body_html: html,
+      body_text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
       email_type: 'welcome',
       direction: 'outbound',
       status: 'sent',

@@ -14,7 +14,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { ensureValidRLSSession, isNetworkError } from '@/lib/sessionGuard';
-import { translateError, getPageTitle, getGermanErrorMessage, type ErrorCategory, type ErrorSeverity } from './germanErrors';
+import { translateError, getPageTitle, type ErrorCategory, type ErrorSeverity } from './germanErrors';
 import { logger } from './logger';
 
 // ============================================================================
@@ -585,10 +585,11 @@ export function installGlobalErrorHandlers(): void {
       message.includes('isAcquireTimeout') ||
       reasonName === 'AbortError'
     ) return;
-    // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
-    // (single source of truth: isNetworkError() deckt Chrome/Firefox/Safari ab)
-    const stackStr = reason instanceof Error ? (reason.stack || '') : '';
-    if (isNetworkError(reason) && stackStr.includes('_refreshAccessToken')) return;
+    // SessionExpiredError nicht protokollieren – Dialog wurde bereits ausgelöst.
+    if (reason instanceof Error && (reason.name === 'SessionExpiredError' || reason.message === 'SESSION_EXPIRED')) return;
+    // Transiente Netzwerkfehler nicht protokollieren – nicht actionable
+    // (siehe ausführlichen Kommentar im console.error-Interceptor unten).
+    if (isNetworkError(reason)) return;
     const translated = translateError(message);
     logErrorToSupabase({
       errorCode: 'GLOBAL_UNHANDLED_REJECTION',
@@ -627,11 +628,30 @@ export function installGlobalErrorHandlers(): void {
     if (errorArg) {
       // Ignoriere Browser-Extension-Fehler
       if (errorArg.message?.includes('Object Not Found Matching Id')) return;
-      // Ignoriere Netzwerkfehler bei automatischem Supabase Token-Refresh
-      // Diese entstehen wenn _refreshAccessToken bei instabiler Verbindung (2G, Safari-/Firefox-Hintergrund) fehlschlägt.
-      // Der Supabase-Client versucht es automatisch erneut, daher sind diese Fehler nicht actionable.
-      // Single source of truth: isNetworkError() deckt Chrome/Firefox/Safari/Edge etc. ab
-      if (isNetworkError(errorArg) && errorArg.stack?.includes('_refreshAccessToken')) return;
+
+      // SessionExpiredError vollständig ignorieren:
+      // Der globale SessionExpiredDialog wird bereits von sessionGuard.ts ausgelöst
+      // und Aufrufer-Toasts werden in use-toast.ts unterdrückt. Es gibt nichts zu
+      // protokollieren – die Session ist abgelaufen, das ist erwartetes Verhalten.
+      if (errorArg.name === 'SessionExpiredError' || errorArg.message === 'SESSION_EXPIRED') return;
+
+      // Transiente Netzwerkfehler aus dem globalen Interceptor filtern.
+      //
+      // Begründung:
+      // - "Load failed" (Safari) / "Failed to fetch" (Chrome) / "NetworkError" (Firefox)
+      //   entstehen bei instabiler Verbindung, Tab-Wechsel, Sleep-Aufwachen etc.
+      // - Sie sind NICHT actionable: Der Nutzer kann nichts tun, der Browser/Supabase
+      //   versucht es automatisch erneut.
+      // - Wenn der Fehler tatsächlich eine User-Action betrifft, wird er über den
+      //   sichtbaren Pfad (toast() → toast-auto-capture, oder explizit handleApiError())
+      //   bereits geloggt. Hier im console.error-Interceptor landen NUR Fehler,
+      //   die niemand explizit gefangen hat (z.B. Hintergrund-Refresh, ein
+      //   useQuery der nach 3 Retries aufgibt aber kein Toast zeigt).
+      // - Vorheriger Versuch via stack.includes('_refreshAccessToken') versagte in
+      //   Safari, weil der Production-Bundle Funktionsnamen mangelt.
+      // Falls wir später Hintergrund-Netzwerkfehler-Trends sehen wollen, ginge das
+      // über Supabase-Realtime oder ein dediziertes APM-Tool deutlich präziser.
+      if (isNetworkError(errorArg)) return;
 
       const translated = translateError(errorArg.message);
 
@@ -654,16 +674,11 @@ export function installGlobalErrorHandlers(): void {
         return; // Same error already logged via the toast path — skip duplicate
       }
 
-      // Reine Netzwerkfehler werden als 'low' geloggt — sie sind nicht
-      // actionable (Internet, 2G, Tab im Hintergrund) und sollten nicht
-      // im "Mittel"-Bucket des Admin-Dashboards rauschen.
-      const severity: ErrorSeverity = isNetworkError(errorArg) ? 'low' : 'medium';
-
       logErrorToSupabase({
         errorCode: 'CONSOLE_ERROR',
         errorMessage: translated.message,
         errorCategory: translated.category,
-        severity,
+        severity: 'medium',
         pagePath: window.location.pathname,
         pageTitle: getPageTitle(window.location.pathname),
         originalError: errorArg.message,

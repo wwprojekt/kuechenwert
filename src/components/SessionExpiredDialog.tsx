@@ -1,4 +1,4 @@
-import { useState, useCallback, createContext, useContext } from "react";
+import { useState, useCallback, createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LogIn, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isTokenValid } from "@/lib/sessionGuard";
+import { isTokenValid, registerSessionExpiredHandler } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 
 interface SessionExpiredContextType {
@@ -36,6 +36,13 @@ export function SessionExpiredProvider({ children }: { children: React.ReactNode
     if (path) setRedirectPath(path);
     setOpen(true);
   }, []);
+
+  // Globale Registry: invokeWithAuth() löst den Dialog automatisch aus, sobald
+  // die Session unwiederbringlich abgelaufen ist – ohne dass jeder Aufrufer
+  // SessionExpiredError per instanceof prüfen muss.
+  useEffect(() => {
+    return registerSessionExpiredHandler(showSessionExpired);
+  }, [showSessionExpired]);
 
   const handleRetry = async () => {
     setRecovering(true);

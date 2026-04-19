@@ -117,7 +117,10 @@ export default function DealerListingCreate() {
         throw new Error("Auktion konnte nicht erstellt werden: " + auctionError.message);
       }
 
-      // Notify admin about new dealer listing
+      // Notify admin about new dealer listing.
+      // Fire-and-forget so a failed admin notification never blocks the
+      // dealer's listing creation, but log errors instead of silently
+      // swallowing them so we can spot Resend / rate-limit regressions.
       supabase.functions.invoke("send-lead-notification", {
         body: {
           type: "wizard",
@@ -128,7 +131,9 @@ export default function DealerListingCreate() {
           country: "DE",
           source: "dealer_dashboard",
         },
-      }).catch(() => { /* fire-and-forget */ });
+      }).catch((err) => {
+        console.error("[DealerListingCreate] send-lead-notification failed (non-blocking):", err);
+      });
 
       return result;
     },

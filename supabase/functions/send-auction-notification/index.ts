@@ -11,7 +11,19 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface AuctionEmailRequest {
   email: string;
   name: string;
-  type: "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon" | "auction_started" | "seller_sold" | "seller_not_sold" | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted" | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected" | "buyer_counter_offer" | "kaufchance_expired" | "seller_buyer_rejected" | "seller_auto_relisted" | "auction_relisted";
+  type:
+    | "new_auction" | "new_bid" | "outbid" | "won" | "lost" | "ending_soon"
+    | "auction_started" | "seller_sold" | "seller_not_sold"
+    | "kaufchance_invite" | "seller_kaufchance" | "seller_relisted"
+    | "seller_new_offer" | "admin_new_offer" | "buyer_offer_rejected"
+    | "buyer_counter_offer" | "kaufchance_expired" | "seller_buyer_rejected"
+    | "seller_auto_relisted" | "auction_relisted"
+    // Festpreis lifecycle
+    | "seller_festpreis_extended"
+    | "admin_festpreis_needs_price"
+    // Soft brake (round warning)
+    | "seller_festpreis_round_warning"
+    | "seller_auction_round_warning";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -32,6 +44,11 @@ interface AuctionEmailRequest {
   isFestpreis?: boolean;
   // Flag: listing only ended/expired (not sold) – used for lost-subject
   listingEnded?: boolean;
+  // Festpreis auto-extend / soft brake fields
+  roundNumber?: string;       // e.g. "2"  – currently active round number
+  extendedUntil?: string;     // formatted new end_time after auto-extension
+  sellerName?: string;        // used for admin_festpreis_needs_price body
+  motorhomeId?: string;       // optional, for admin deep-link
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -44,7 +61,12 @@ const handler = async (req: Request): Promise<Response> => {
   if (!auth.authorized) return auth.response;
 
   try {
-    const { email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime, customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount, offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis, listingEnded }: AuctionEmailRequest = await req.json();
+    const {
+      email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime,
+      customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount,
+      offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis, listingEnded,
+      roundNumber, extendedUntil, sellerName, motorhomeId,
+    }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
 
@@ -469,6 +491,97 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;
+
+      case "seller_festpreis_extended": {
+        // Festpreis-Inserat wurde automatisch um 7 Tage verlängert (kein Käufer
+        // hat den Festpreis akzeptiert). Verkäufer wird informiert + zum
+        // Preis-Senken angeregt.
+        const round = roundNumber || '2';
+        subject = `Ihr Festpreis-Inserat wurde verlängert: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph(`Ihr Festpreis-Inserat wurde leider noch nicht verkauft und deshalb <strong>automatisch um 7 Tage verlängert</strong>. Sie befinden sich nun in <strong>Runde ${round}</strong>.`)}
+          ${infoBox('Inserat-Details', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Aktueller Festpreis', currentBid) : ''}
+            ${extendedUntil ? detailRow('Neues Ablaufdatum', extendedUntil) : (endTime ? detailRow('Neues Ablaufdatum', endTime) : '')}
+            ${detailRow('Runde', String(round))}
+          `, 'info', settingsData)}
+          ${paragraph('<strong>Tipp: Senken Sie Ihren Festpreis</strong>')}
+          ${paragraph('Erfahrungsgemäß steigt die Kaufwahrscheinlichkeit deutlich, wenn der Festpreis um 5–10 % gesenkt wird. Sie können den Preis jederzeit in Ihrem Dashboard anpassen.')}
+          ${button('Festpreis im Dashboard anpassen', auctionUrl, settingsData)}
+          ${paragraph('<strong>Sie möchten die automatische Verlängerung beenden?</strong> Sie können die automatische Wiedereinstellung jederzeit in Ihrem Dashboard unter dem Inserat deaktivieren.')}
+          ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+      }
+
+      case "admin_festpreis_needs_price": {
+        // Admin-Hilferuf: Festpreis-Inserat ist abgelaufen, hat aber NULL/0 als
+        // instant_price. Admin muss manuell einen Preis setzen.
+        subject = `[Admin] Festpreis fehlt: ${motorhomeModel} – manuelle Aktion nötig`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${paragraph('<strong>Ein Festpreis-Inserat ist abgelaufen, hat aber keinen Festpreis hinterlegt.</strong> Bitte setzen Sie manuell einen Festpreis im Admin-Dashboard, damit das Inserat wieder verkauft werden kann.')}
+          ${infoBox('Inserat-Details', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${sellerName ? detailRow('Verkäufer', sellerName) : ''}
+            ${motorhomeId ? detailRow('Motorhome-ID', motorhomeId) : ''}
+            ${detailRow('Status', 'Aktiv (24h Sichtbarkeit) – instant_price = NULL/0')}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Was passiert ohne Aktion?</strong> Das Inserat bleibt 24 Stunden aktiv sichtbar und wird danach beendet. Es gibt keine weitere automatische Verlängerung.')}
+          ${button('Im Admin-Dashboard öffnen', auctionUrl, settingsData)}
+        `;
+        break;
+      }
+
+      case "seller_festpreis_round_warning": {
+        // Soft brake: Festpreis-Inserat ist in Runde >=2 → Verkäufer wird sanft
+        // erinnert, dass das Inserat noch nicht verkauft wurde, und bekommt
+        // konkrete Handlungsempfehlungen.
+        const round = roundNumber || '2';
+        subject = `Runde ${round}: ${motorhomeModel} – Tipps für einen schnelleren Verkauf`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph(`Ihr Festpreis-Inserat befindet sich bereits in <strong>Runde ${round}</strong>. Damit es schneller verkauft wird, haben wir ein paar Empfehlungen für Sie zusammengestellt.`)}
+          ${infoBox('Inserat-Details', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Aktueller Festpreis', currentBid) : ''}
+            ${detailRow('Runde', String(round))}
+            ${endTime ? detailRow('Aktuelles Ablaufdatum', endTime) : ''}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Unsere Empfehlungen:</strong>')}
+          ${paragraph('<strong>1.</strong> Festpreis senken (5–10 % deutlich erhöht die Kaufquote)<br><strong>2.</strong> Auf Auktion umstellen, um Händler-Konkurrenz zu nutzen<br><strong>3.</strong> Fotos und Beschreibung prüfen und ggf. ergänzen')}
+          ${button('Inserat im Dashboard anpassen', auctionUrl, settingsData)}
+          ${paragraph(`Gern beraten wir Sie persönlich. Erreichbar unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+      }
+
+      case "seller_auction_round_warning": {
+        // Soft brake: Auktion ist in Runde >=2 → Verkäufer wird sanft erinnert.
+        const round = roundNumber || '2';
+        subject = `Runde ${round}: Auktion ${motorhomeModel} – Mindestpreis prüfen`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph(`Ihre Auktion läuft bereits in <strong>Runde ${round}</strong>. Bisher wurde noch keine Einigung erzielt. Damit Ihr Fahrzeug zügig den passenden Käufer findet, hier ein paar Hinweise.`)}
+          ${infoBox('Auktion-Details', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Aktuelles Höchstgebot', currentBid) : detailRow('Gebote', 'Noch keine Gebote in dieser Runde')}
+            ${reservePrice ? detailRow('Aktueller Mindestpreis', reservePrice) : ''}
+            ${detailRow('Runde', String(round))}
+            ${endTime ? detailRow('Auktionsende', endTime) : ''}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Unsere Empfehlungen:</strong>')}
+          ${paragraph('<strong>1.</strong> Mindestpreis prüfen – ist er marktrealistisch?<br><strong>2.</strong> Nachtrag mit zusätzlichen Informationen veröffentlichen (z. B. neue Reifen, frischer TÜV)<br><strong>3.</strong> Automatische Wiedereinstellung deaktivieren, wenn Sie das Fahrzeug aus dem Verkauf nehmen möchten')}
+          ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Wir beraten Sie gern persönlich unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+      }
 
       case "ending_soon":
         subject = "Auktion endet bald!";

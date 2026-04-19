@@ -230,6 +230,8 @@ export default function ListingDetail() {
     },
   });
 
+  const isFestpreisListing = motorhome?.sale_channel === 'instant_price';
+
   const toggleAutoRelistMutation = useMutation({
     mutationFn: async (newValue: boolean) => {
       if (!resolvedAuction?.id) throw new Error("Keine Auktion");
@@ -245,19 +247,22 @@ export default function ListingDetail() {
     onSuccess: (newValue) => {
       queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
       setShowOptOutConfirm(false);
+      const isFestpreis = isFestpreisListing;
       toast({
-        title: newValue ? 'Automatische Wiedereinstellung aktiviert' : 'Automatische Wiedereinstellung deaktiviert',
+        title: newValue ? 'Automatische Verlängerung aktiviert' : 'Automatische Verlängerung deaktiviert',
         description: newValue
-          ? 'Ihr Fahrzeug wird nach der Kaufchance-Phase erneut versteigert.'
-          : 'Ihr Fahrzeug wird nach Ablauf der Kaufchance nicht erneut eingestellt.',
+          ? (isFestpreis
+              ? 'Ihr Festpreis-Inserat wird nach Ablauf automatisch um 7 Tage verlängert.'
+              : 'Ihr Fahrzeug wird nach der Kaufchance-Phase erneut versteigert.')
+          : (isFestpreis
+              ? 'Ihr Festpreis-Inserat wird nach Ablauf nicht mehr automatisch verlängert.'
+              : 'Ihr Fahrzeug wird nach Ablauf der Kaufchance nicht erneut eingestellt.'),
       });
     },
     onError: (error: Error) => {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     },
   });
-
-  const isFestpreisListing = motorhome?.sale_channel === 'instant_price';
 
   // ── Kaufchance / Preisvorschlag: Angebote für den Seller laden ──
   const loadKaufchanceOffers = async () => {
@@ -1250,15 +1255,19 @@ export default function ListingDetail() {
               )}
             </div>
 
-            {/* Auto-Relist Info & Opt-out — only for Kaufchance, not Festpreis */}
-            {!isFestpreisListing && isSeller && (
+            {/* Auto-Relist / Auto-Verlängerung Info & Opt-out
+                Auktion (Kaufchance): wird nach Kaufchance-Ende erneut versteigert
+                Festpreis (active):   wird nach Ablauf automatisch um 7 Tage verlängert */}
+            {isSeller && (
               <div className={`p-4 rounded-lg border ${auction.auto_relist !== false ? 'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-800' : 'bg-muted/50 border-border'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <RotateCw className="w-4 h-4 text-teal-600" />
                       <p className="font-medium text-sm">
-                        Automatische Wiedereinstellung {auction.auto_relist !== false ? 'aktiv' : 'deaktiviert'}
+                        {isFestpreisListing
+                          ? `Automatische Verlängerung (alle 7 Tage) ${auction.auto_relist !== false ? 'aktiv' : 'deaktiviert'}`
+                          : `Automatische Wiedereinstellung ${auction.auto_relist !== false ? 'aktiv' : 'deaktiviert'}`}
                       </p>
                       {(auction.auction_round ?? 1) > 1 && (
                         <Badge variant="outline" className="text-xs">Runde {auction.auction_round}</Badge>
@@ -1266,8 +1275,12 @@ export default function ListingDetail() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {auction.auto_relist !== false
-                        ? 'Wird keine Einigung erzielt, wird Ihr Fahrzeug automatisch erneut versteigert (gem. AGB §6).'
-                        : 'Ihr Fahrzeug wird nach Ablauf der Kaufchance nicht erneut eingestellt.'}
+                        ? (isFestpreisListing
+                            ? 'Wird Ihr Festpreis-Inserat nicht innerhalb von 7 Tagen verkauft, wird es automatisch um weitere 7 Tage verlängert. Bestehende Preisvorschläge bleiben dabei aktiv.'
+                            : 'Wird keine Einigung erzielt, wird Ihr Fahrzeug automatisch erneut versteigert (gem. AGB §6).')
+                        : (isFestpreisListing
+                            ? 'Ihr Festpreis-Inserat wird nach Ablauf nicht mehr automatisch verlängert.'
+                            : 'Ihr Fahrzeug wird nach Ablauf der Kaufchance nicht erneut eingestellt.')}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
@@ -1289,7 +1302,9 @@ export default function ListingDetail() {
                     ) : (
                       <div className="flex flex-col gap-2 items-end">
                         <p className="text-xs text-destructive font-medium text-right max-w-[200px]">
-                          Ihr Fahrzeug wird nach Ablauf nicht mehr automatisch versteigert. Sicher?
+                          {isFestpreisListing
+                            ? 'Ihr Festpreis-Inserat wird nach Ablauf nicht mehr verlängert. Sicher?'
+                            : 'Ihr Fahrzeug wird nach Ablauf nicht mehr automatisch versteigert. Sicher?'}
                         </p>
                         <div className="flex gap-2">
                           <Button size="sm" variant="ghost" onClick={() => setShowOptOutConfirm(false)}>

@@ -5,15 +5,19 @@
  * Name und E-Mail werden bereits in Step 5 (QuickContactStep) erfasst und hier vorausgefüllt.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, User as UserIcon, Gavel, Zap, MapPin, Users, TrendingUp, CheckCircle2, Info, ChevronDown, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MARKETING_CONFIG, formatMarketingDuration } from "@/lib/marketing-config";
 
 interface SaleChannelStepProps {
   formData: WizardFormData;
@@ -22,6 +26,8 @@ interface SaleChannelStepProps {
 }
 
 export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: SaleChannelStepProps) => {
+  const [marketingDetailsOpen, setMarketingDetailsOpen] = useState(false);
+
   // Pre-select recommended option to reduce friction (user can change).
   // Runs once on mount: re-running on saleChannel change would undo the
   // user's choice if they switch away and back, and updateFormData is
@@ -33,6 +39,30 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Channel-spezifische Marketing-Phase-Daten für Aufklärungs-Box + Auto-Senkung-Toggle.
+  // Quelle: src/lib/marketing-config.ts (gespiegelt von _shared/marketing-config.ts).
+  const isAuction = formData.saleChannel === "auction";
+  const isInstantPrice = formData.saleChannel === "instant_price";
+  const showMarketingPhase = isAuction || isInstantPrice;
+
+  // Effektives dynamic_pricing für die UI (null = Channel-Default).
+  const dynamicPricingDefault = isInstantPrice
+    ? MARKETING_CONFIG.INSTANT_PRICE_DYNAMIC_PRICING_DEFAULT
+    : MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT;
+  const dynamicPricingValue =
+    formData.dynamicPricing != null ? formData.dynamicPricing : dynamicPricingDefault;
+
+  const reductionPct = isInstantPrice
+    ? MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_REDUCTION * 100
+    : MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION * 100;
+  const perRoundPct = isInstantPrice
+    ? MARKETING_CONFIG.INSTANT_PRICE_REDUCTION_PER_ROUND * 100
+    : MARKETING_CONFIG.AUCTION_REDUCTION_PER_ROUND * 100;
+  const totalDays = isInstantPrice
+    ? MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS
+    : MARKETING_CONFIG.AUCTION_DURATION_DAYS * MARKETING_CONFIG.AUCTION_MAX_ROUNDS +
+      MARKETING_CONFIG.AUCTION_MAX_ROUNDS;
 
   return (
     <div className="space-y-3 sm:space-y-6 animate-fade-in">
@@ -226,6 +256,127 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
           <p className="text-xs text-muted-foreground">
             Unter diesem Preis wird nicht verkauft. Lassen Sie das Feld leer für maximale Reichweite.
           </p>
+        </div>
+      )}
+
+      {/* ===== MARKETINGPHASE: AUFKLÄRUNG + PFLICHT-CONSENT + AUTO-SENKUNG ===== */}
+      {/*
+        Pflicht-Consent für die Marketingphase. Wird nur bei Auktion / Festpreis
+        angezeigt – Ankaufstationen laufen unter dem normalen Ankauf-Modell ohne
+        Auto-Relist. Conversion-Sprache zuerst, juristische Details optional
+        per Aufklapper – alles, was zur AGB-Bindung gehört, steht im Aufklapper.
+      */}
+      {showMarketingPhase && (
+        <div className="space-y-3 animate-fade-in">
+          <Card className="border-primary/30 bg-primary/[0.03] p-4 sm:p-5 rounded-xl space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <h3 className="text-sm sm:text-base font-semibold text-foreground">
+                  So verkaufen wir Ihr Fahrzeug am besten
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {isAuction
+                    ? `${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h Kaufchance, bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden – ohne Verkauf wird der Mindestpreis pro Runde leicht angepasst, damit Händler aktiv bieten. Sie können die Senkung jederzeit im Dashboard stoppen.`
+                    : `${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage Festpreis-Inserat, automatische Verlängerung bis max. ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage. Sie behalten jederzeit die volle Kontrolle über Preis und Sichtbarkeit.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Details-Aufklapper – juristische Klartext-Erklärung */}
+            <Collapsible open={marketingDetailsOpen} onOpenChange={setMarketingDetailsOpen}>
+              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs sm:text-sm text-primary hover:underline">
+                <Info className="w-3.5 h-3.5" />
+                {marketingDetailsOpen ? "Details schließen" : "Details ansehen"}
+                <ChevronDown
+                  className={cn(
+                    "w-3.5 h-3.5 transition-transform",
+                    marketingDetailsOpen && "rotate-180",
+                  )}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 space-y-2 text-xs text-muted-foreground leading-relaxed">
+                <p>
+                  <strong className="text-foreground">Bindungsdauer:</strong> {formatMarketingDuration(isAuction ? "auction" : "instant_price")}.
+                </p>
+                <p>
+                  <strong className="text-foreground">Automatische Preissenkung:</strong> Pro Runde max. {perRoundPct.toFixed(0)} %, insgesamt max. {reductionPct.toFixed(0)} % vom heute eingegebenen Wunschpreis. Unter diese Untergrenze wird Ihr Fahrzeug niemals verkauft.
+                </p>
+                <p>
+                  <strong className="text-foreground">Ihre Kontrolle:</strong> Sie können die automatische Verlängerung und Preissenkung jederzeit im Dashboard ein- und ausschalten – auch während einer laufenden Kaufchance. Bei wichtigem Grund (z. B. Verkauf an Privat) gilt unsere außerordentliche Kündigungsklausel der AGB §6.
+                </p>
+                <p>
+                  <strong className="text-foreground">Was passiert nach {totalDays} Tagen?</strong> Wir kontaktieren Sie per E-Mail mit drei Optionen: erneut einstellen, Preis anpassen oder archivieren. Es passiert nichts ohne Ihre aktive Bestätigung.
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Auto-Senkung Toggle (Default richtet sich nach Channel) */}
+            <div className="flex items-start justify-between gap-3 border-t border-primary/10 pt-3">
+              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                <TrendingDown className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="dynamicPricing" className="text-sm font-medium text-foreground cursor-pointer">
+                    Automatische Preisanpassung
+                    {isAuction && (
+                      <span className="ml-2 text-xs font-normal text-green-600 dark:text-green-400">
+                        Empfohlen
+                      </span>
+                    )}
+                  </Label>
+                  <p className="text-xs text-muted-foreground leading-snug">
+                    {dynamicPricingValue
+                      ? `Reserve sinkt pro Runde um max. ${perRoundPct.toFixed(0)} % (Boden: ${reductionPct.toFixed(0)} % unter Wunschpreis).`
+                      : "Wunschpreis bleibt konstant – Sie entscheiden manuell."}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="dynamicPricing"
+                checked={dynamicPricingValue}
+                onCheckedChange={(v) => updateFormData({ dynamicPricing: v })}
+                className="flex-shrink-0 mt-0.5"
+              />
+            </div>
+          </Card>
+
+          {/* Pflicht-Checkbox – juristisch verankert in AGB §6 */}
+          <div
+            className={cn(
+              "flex items-start gap-3 rounded-lg border p-3 sm:p-3.5 transition-colors",
+              fieldErrors.marketingConsent
+                ? "border-red-500 bg-red-50/50 dark:bg-red-950/10"
+                : formData.marketingConsent
+                  ? "border-green-500/40 bg-green-50/50 dark:bg-green-950/10"
+                  : "border-border bg-muted/30",
+            )}
+          >
+            <Checkbox
+              id="marketingConsent"
+              checked={formData.marketingConsent}
+              onCheckedChange={(v) => updateFormData({ marketingConsent: v === true })}
+              className="mt-0.5 flex-shrink-0"
+              aria-describedby={fieldErrors.marketingConsent ? "marketingConsent-error" : undefined}
+            />
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="marketingConsent" className="text-sm font-medium cursor-pointer leading-snug">
+                Ich verstehe und akzeptiere die Marketingphase{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Ich stimme der bis zu {totalDays}-tägigen Bindungsphase und der automatischen Preisanpassung gemäß{" "}
+                <a href="/agb" target="_blank" rel="noopener" className="text-primary hover:underline">AGB §6</a>{" "}
+                zu. Ich kann sie jederzeit im Dashboard deaktivieren.
+              </p>
+              {fieldErrors.marketingConsent && (
+                <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in">
+                  {fieldErrors.marketingConsent}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

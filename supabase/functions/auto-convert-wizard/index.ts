@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 import { edgeLogger } from "../_shared/edgeLogger.ts";
+import { MARKETING_CONFIG } from "../_shared/marketing-config.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -455,6 +456,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Marketingphase-Consent ist PFLICHT für `auction` und `instant_price`
+    // (juristische Absicherung der Marketingphase, AGB §6). Alte Sessions ohne
+    // explizite Bestätigung dürfen NICHT auto-konvertiert werden – der User
+    // muss neu durch den Wizard, damit er das Consent-UI sieht.
+    const requiresMarketingConsent =
+      mappedData.sale_channel === "auction" || mappedData.sale_channel === "instant_price";
+    if (requiresMarketingConsent && formData.marketingConsent !== true) {
+      edgeLogger.warn(
+        `Refusing to convert wizard session ${body.sessionId}: marketingConsent missing for sale_channel='${mappedData.sale_channel}'`,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Für Auktion und Sofortkauf ist die Bestätigung der Marketingphase erforderlich. Bitte stellen Sie Ihr Fahrzeug erneut über den Verkäufer-Wizard ein, um die aktuellen Bedingungen zu bestätigen.",
+          field: "marketingConsent",
+          code: "MARKETING_CONSENT_REQUIRED",
+        }),
+        { status: 422, headers },
+      );
+    }
+
     // Fallbacks for required fields
     const manufacturer = mappedData.manufacturer || "Unbekannt";
     const model = mappedData.model || "Unbekannt";
@@ -538,14 +560,73 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // 4. Create Auction listing (for both 'auction' and 'instant_price' channels)
-    // instant_price vehicles use the auction as a listing container but disable bidding
+    // instant_price vehicles use the auction as a listing container but disable bidding.
+    //
+    // Marketing-Phase Felder (Phase 1 / Phase 2 Rollout):
+    //   * seller_initial_reserve / seller_initial_instant_price: Anker für die
+    //     Reduktionslogik (-6 % Floor Auktion, -10 % Floor Festpreis). Bleibt
+    //     unsichtbar für Käufer/Händler (siehe auctions_public View).
+    //   * dynamic_pricing: Verkäufer-Opt-in für automatische Preissenkung pro
+    //     Runde. Default richtet sich nach dem Channel (siehe MARKETING_CONFIG).
+    //   * agb_version_at_start: Snapshot der akzeptierten AGB-Version.
+    //   * marketing_phase_started_at / max_until werden ERST bei der Admin-
+    //     Aktivierung gesetzt (Phase 3/4), nicht beim Draft-Insert.
+    //   * starting_bid: 40-60 % vom Reserve (compute_random_starting_bid RPC),
+    //     damit Händler den Reserve nicht reverse-engineeren können.
     if (motorhomePayload.sale_channel === "auction" || motorhomePayload.sale_channel === "instant_price") {
       const isInstantOnly = motorhomePayload.sale_channel === "instant_price";
+      const reserveForAuction = isInstantOnly
+        ? motorhomePayload.instant_price
+        : motorhomePayload.reserve_price;
+
+      // Channel-Default für dynamic_pricing nutzen, wenn der User nichts geändert hat.
+      const dynamicPricingForInsert = formData.dynamicPricing != null
+        ? Boolean(formData.dynamicPricing)
+        : isInstantOnly
+          ? MARKETING_CONFIG.INSTANT_PRICE_DYNAMIC_PRICING_DEFAULT
+          : MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT;
+
+      // Aktuelle AGB-Version snapshotten – non-fatal falls RPC nicht verfügbar.
+      let agbVersion: string | null = null;
+      try {
+        const { data: agbData, error: agbErr } = await adminClient.rpc(
+          "get_current_agb_version",
+        );
+        if (!agbErr && typeof agbData === "string" && agbData.length > 0) {
+          agbVersion = agbData;
+        }
+      } catch (agbRpcErr) {
+        edgeLogger.warn("get_current_agb_version RPC failed (non-critical):", agbRpcErr);
+      }
+
+      // Random Startgebot 40-60 % vom Reserve (nur Auktion). Festpreis: 0.
+      let startingBid = 0;
+      if (!isInstantOnly && reserveForAuction && Number(reserveForAuction) > 0) {
+        try {
+          const { data: bidData, error: bidErr } = await adminClient.rpc(
+            "compute_random_starting_bid",
+            { p_reserve_price: Number(reserveForAuction) },
+          );
+          if (!bidErr && typeof bidData === "number" && bidData > 0) {
+            startingBid = bidData;
+          } else {
+            startingBid = 50;
+          }
+        } catch (bidRpcErr) {
+          edgeLogger.warn("compute_random_starting_bid RPC failed, falling back to 50:", bidRpcErr);
+          startingBid = 50;
+        }
+      }
+
       const { error: auctionInsertErr } = await adminClient.from("auctions").insert({
         motorhome_id: motorhome.id,
-        starting_bid: isInstantOnly ? 0 : 50,
-        reserve_price: isInstantOnly ? motorhomePayload.instant_price : motorhomePayload.reserve_price,
+        starting_bid: startingBid,
+        reserve_price: reserveForAuction,
         status: "draft",
+        seller_initial_reserve: reserveForAuction,
+        seller_initial_instant_price: isInstantOnly ? motorhomePayload.instant_price : null,
+        dynamic_pricing: dynamicPricingForInsert,
+        agb_version_at_start: agbVersion,
       });
       if (auctionInsertErr) {
         throw new Error(`Failed to create auction: ${auctionInsertErr.message}`);

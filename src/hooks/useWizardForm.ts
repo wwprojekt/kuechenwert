@@ -11,6 +11,7 @@ import { getTrackingData, getStoredClickIds } from "@/lib/clickIdService";
 import { trackEvent } from "@/lib/analyticsService";
 import { ensureValidSession, ensureValidRLSSession, isSessionOrRLSError, isNetworkError, withNetworkRetry } from "@/lib/sessionGuard";
 import { optimizeImage, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
+import { MARKETING_CONFIG } from "@/lib/marketing-config";
 
 const STORAGE_KEY = "verkaufen_wizard_draft";
 
@@ -98,6 +99,14 @@ export interface WizardFormData {
   saleChannel: string;
   instantPrice: number | null;
   reservePrice: number | null;
+  // Pflicht-Consent für die Marketingphase (Auktion / Festpreis).
+  // Phase 1 des Marketing-Phase-Rollouts – juristisch verankert in AGB §6.
+  // Wird im SaleChannelStep abgefragt, sobald saleChannel ∈ {auction, instant_price}.
+  marketingConsent: boolean;
+  // Verkäufer-Wunsch für automatische Preissenkung pro Runde.
+  // null = noch nicht entschieden → Channel-Default greift
+  // (true bei Auktion, false bei Festpreis, siehe MARKETING_CONFIG).
+  dynamicPricing: boolean | null;
   additional_equipment?: string;
   vehicle_identification_number?: string;
   license_plate?: string;
@@ -192,6 +201,8 @@ const initialFormData: WizardFormData = {
   saleChannel: "",
   instantPrice: null,
   reservePrice: null,
+  marketingConsent: false,
+  dynamicPricing: null,
   additional_equipment: undefined,
   vehicle_identification_number: undefined,
   license_plate: undefined,
@@ -279,16 +290,36 @@ const phoneSchema = z
   );
 
 // Step 7: Sale Channel & Contact (saleChannel + phone required, name+email already captured)
+//
+// Marketingphase-Consent (`marketingConsent`) ist PFLICHT für `auction` und
+// `instant_price` (juristische Absicherung der Marketingphase, AGB §6).
+// Für `station` ist kein Consent nötig – dort gilt das normale Ankauf-Modell.
 const step7Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   customerPhone: phoneSchema,
   instantPrice: z.number().nullable().optional(),
-}).refine(
-  (data) => data.saleChannel !== 'instant_price' || (data.instantPrice != null && data.instantPrice > 0),
-  { message: "Bitte geben Sie Ihren Wunschpreis ein", path: ['instantPrice'] },
-);
+  marketingConsent: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  if (data.saleChannel === 'instant_price' && !(data.instantPrice != null && data.instantPrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['instantPrice'],
+      message: "Bitte geben Sie Ihren Wunschpreis ein",
+    });
+  }
+  if (
+    (data.saleChannel === 'auction' || data.saleChannel === 'instant_price') &&
+    data.marketingConsent !== true
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['marketingConsent'],
+      message: "Bitte bestätigen Sie die Marketingphase, um fortzufahren",
+    });
+  }
+});
 
 // Step 8: Location & Account (Standort + Passwort - letzter Schritt)
 // bodyType, manufacturer und saleChannel werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit.
@@ -304,6 +335,9 @@ const step8Schema = z.object({
   // requires a positive price" as the very last gate before submit (the same
   // rule lives in step7Schema, the DB CHECK and the auto-convert-wizard guard).
   instantPrice: z.number().nullable().optional(),
+  // marketingConsent ist hier ebenfalls gespiegelt, damit ein Direkt-Sprung
+  // zu Step 8 per ?step=8 die Pflicht-Bestätigung nicht umgeht.
+  marketingConsent: z.boolean().optional(),
   customerName: z.string().min(1, "Name fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerEmail: z.string().email("E-Mail-Adresse fehlt oder ung\u00fcltig \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerPhone: phoneSchema,
@@ -312,10 +346,25 @@ const step8Schema = z.object({
   zipCode: z.string().min(3, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(10, "PLZ ist zu lang"),
   city: z.string().min(1, "Ort ist erforderlich"),
   country: z.string().min(2, "Bitte w\u00e4hlen Sie ein Land"),
-}).refine(
-  (data) => data.saleChannel !== 'instant_price' || (data.instantPrice != null && data.instantPrice > 0),
-  { message: "Sofortkauf ben\u00f6tigt einen Wunschpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7", path: ['instantPrice'] },
-);
+}).superRefine((data, ctx) => {
+  if (data.saleChannel === 'instant_price' && !(data.instantPrice != null && data.instantPrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['instantPrice'],
+      message: "Sofortkauf ben\u00f6tigt einen Wunschpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+    });
+  }
+  if (
+    (data.saleChannel === 'auction' || data.saleChannel === 'instant_price') &&
+    data.marketingConsent !== true
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['marketingConsent'],
+      message: "Bitte bestätigen Sie die Marketingphase \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+    });
+  }
+});
 
 // Passwort-Validierung f\u00fcr Gast-Submit (Step 8 ohne bestehendes Login).
 // Verlangt 8+ Zeichen, 1 Gro\u00df-, 1 Kleinbuchstabe und 1 Ziffer.
@@ -434,6 +483,7 @@ export const useWizardForm = () => {
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
             instantPrice: formData.instantPrice,
+            marketingConsent: formData.marketingConsent,
           });
           break;
         case 8:
@@ -442,6 +492,7 @@ export const useWizardForm = () => {
             manufacturer: formData.manufacturer,
             saleChannel: formData.saleChannel,
             instantPrice: formData.instantPrice,
+            marketingConsent: formData.marketingConsent,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
@@ -926,16 +977,91 @@ export const useWizardForm = () => {
       }
 
       // Create auction listing (for both 'auction' and 'instant_price' channels)
-      // instant_price vehicles use the auction as a listing container but disable bidding
+      // instant_price vehicles use the auction as a listing container but disable bidding.
+      //
+      // Marketing-Phase Felder (Phase 1 / Phase 2 Rollout):
+      //   * seller_initial_reserve / seller_initial_instant_price: Anker für die
+      //     Reduktionslogik (-6 % Floor Auktion, -10 % Floor Festpreis). Bleibt
+      //     unsichtbar für Käufer/Händler.
+      //   * dynamic_pricing: Verkäufer-Opt-in für automatische Preissenkung pro
+      //     Runde. Default richtet sich nach dem Channel (Auktion: an, Festpreis: aus).
+      //   * agb_version_at_start: Snapshot der akzeptierten AGB-Version zum
+      //     Aktivierungs-Zeitpunkt (juristische Absicherung pro Inserat).
+      //   * marketing_phase_started_at / max_until werden ERST bei der Admin-
+      //     Aktivierung gesetzt (Phase 3/4), nicht beim Draft-Insert.
+      //   * starting_bid wird über compute_random_starting_bid auf 40-60 % vom
+      //     Reserve-Preis gesetzt, damit Händler den Reserve nicht reverse-engineeren
+      //     können. Festpreis-Inserate bleiben bei starting_bid=0.
       if (formData.saleChannel === 'auction' || formData.saleChannel === 'instant_price') {
+        const isInstantOnly = formData.saleChannel === 'instant_price';
+        const reserveForAuction = isInstantOnly ? formData.instantPrice : formData.reservePrice;
+
+        // Channel-Default für dynamic_pricing nutzen, wenn der User nichts geändert hat.
+        const dynamicPricingForInsert =
+          formData.dynamicPricing != null
+            ? formData.dynamicPricing
+            : isInstantOnly
+              ? MARKETING_CONFIG.INSTANT_PRICE_DYNAMIC_PRICING_DEFAULT
+              : MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT;
+
+        // Aktuelle AGB-Version snapshotten – non-fatal falls RPC nicht verfügbar
+        // ist (z. B. älteres DB-Schema), dann bleibt agb_version_at_start NULL.
+        // RPC ist ans DB Schema 20260414180100_update_agb_kaufchance_auto_relist.sql
+        // gebunden; types.ts kennt sie aber via generierter rpc-Map.
+        let agbVersion: string | null = null;
+        try {
+          const { data: agbData, error: agbErr } = await supabase.rpc('get_current_agb_version');
+          if (!agbErr && typeof agbData === 'string' && agbData.length > 0) {
+            agbVersion = agbData;
+          }
+        } catch (agbRpcErr) {
+          logger.warn('get_current_agb_version RPC failed (non-critical):', agbRpcErr);
+        }
+
+        // Random Startgebot 40-60 % vom Reserve (nur Auktion). Festpreis: 0.
+        // Verhindert Reverse-Engineering des Reserve-Preises durch Händler,
+        // siehe migration 20260420212000_random_starting_bid_rpc.sql.
+        // RPC noch nicht in types.ts → cast über supabase.rpc.
+        let startingBid = 0;
+        if (!isInstantOnly && reserveForAuction && reserveForAuction > 0) {
+          try {
+            const { data: bidData, error: bidErr } = await (
+              supabase as unknown as {
+                rpc: (
+                  fn: 'compute_random_starting_bid',
+                  args: { p_reserve_price: number },
+                ) => Promise<{ data: number | null; error: unknown }>;
+              }
+            ).rpc('compute_random_starting_bid', { p_reserve_price: reserveForAuction });
+            if (!bidErr && typeof bidData === 'number' && bidData > 0) {
+              startingBid = bidData;
+            } else {
+              startingBid = 50;
+            }
+          } catch (bidRpcErr) {
+            logger.warn('compute_random_starting_bid RPC failed, falling back to 50:', bidRpcErr);
+            startingBid = 50;
+          }
+        }
+
+        // Cast über `Record<string, unknown>` weil seller_initial_*, dynamic_pricing,
+        // agb_version_at_start in den lokalen supabase-types.ts noch nicht regeneriert
+        // sind (Migration 20260420210000 ist deployt, aber types.ts wird noch nicht
+        // gepflegt um die ~1900 Strict-Generic-Errors über die ganze Codebase zu vermeiden).
+        const auctionInsertPayload: Record<string, unknown> = {
+          motorhome_id: motorhome.id,
+          starting_bid: startingBid,
+          reserve_price: reserveForAuction,
+          status: 'draft',
+          seller_initial_reserve: reserveForAuction,
+          seller_initial_instant_price: isInstantOnly ? formData.instantPrice : null,
+          dynamic_pricing: dynamicPricingForInsert,
+          agb_version_at_start: agbVersion,
+        };
         const { error: auctionError } = await supabase
           .from('auctions')
-          .insert({
-            motorhome_id: motorhome.id,
-            starting_bid: formData.saleChannel === 'instant_price' ? 0 : 50,
-            reserve_price: formData.saleChannel === 'instant_price' ? formData.instantPrice : formData.reservePrice,
-            status: 'draft',
-          });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .insert(auctionInsertPayload as any);
 
         if (auctionError) {
           await rollbackMotorhome('auction insert failed');

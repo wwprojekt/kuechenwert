@@ -176,6 +176,17 @@ export async function activateAuctionForMotorhome(
       if (delErr) throw delErr;
     }
 
+    // dynamic_pricing & auto_relist: wenn die bestehende Auktion noch keinen
+    // Anker (seller_initial_reserve) hatte, war sie aus einem Pre-P4-Pfad
+    // (Dealer-Quick-Insert oder Bestand) angelegt. In dem Fall müssen wir die
+    // Marketing-Phase-Defaults nachziehen, damit der Soft-Brake & die
+    // automatische Preis-Reduktion greifen können.
+    const needsDefaults = existingSellerInitialReserve == null
+      && existingSellerInitialInstantPrice == null;
+    const dynamicPricingDefault = isInstantOnly
+      ? MARKETING_CONFIG.INSTANT_PRICE_DYNAMIC_PRICING_DEFAULT
+      : MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT;
+
     const updateData: Record<string, unknown> = {
       status: "active",
       starting_bid: startingBid,
@@ -194,6 +205,9 @@ export async function activateAuctionForMotorhome(
       // auction_round explizit zurücksetzen (Recycling einer
       // abgeschlossenen alten Auktion startet wieder bei Runde 1).
       auction_round: 1,
+      ...(needsDefaults
+        ? { dynamic_pricing: dynamicPricingDefault, auto_relist: true }
+        : {}),
     };
 
     const { error: updateErr } = await supabase

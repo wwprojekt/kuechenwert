@@ -537,7 +537,7 @@ Deno.serve(async (req) => {
         }
       } else {
         // Soft-Brake-Trigger: Eligibility nicht erfüllt → Auktion endet endgültig.
-        // Phase 6 hängt hier die "3-Buttons-Mail" an. Aktuell: nur loggen.
+        // Phase-4 Audit-Fix #6: 3-Buttons-Mail an den Verkäufer senden.
         const reason = !autoRelistEnabled
           ? 'auto_relist_off'
           : maxRoundsReached
@@ -549,6 +549,37 @@ Deno.serve(async (req) => {
           `[soft-brake] auction=${auctionId} round=${currentRound} ` +
           `seller_initial_reserve=${sellerInitialReserveNum} reason=${reason}`
         );
+
+        if (auction.motorhome?.seller_id && reason !== 'unknown') {
+          try {
+            const { data: sellerProfile } = await supabase
+              .from('profiles')
+              .select('email, first_name')
+              .eq('id', auction.motorhome.seller_id)
+              .single();
+            if (sellerProfile?.email) {
+              const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`;
+              const reserveFmt = effectiveReservePrice
+                ? `€${Number(effectiveReservePrice).toLocaleString('de-DE')}`
+                : '—';
+              await supabase.functions.invoke('send-auction-notification', {
+                body: {
+                  email: sellerProfile.email,
+                  name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                  type: 'seller_soft_brake',
+                  motorhomeModel: motorhomeName,
+                  auctionUrl: dashboardUrl,
+                  roundNumber: String(currentRound),
+                  reservePrice: reserveFmt,
+                  softBrakeReason: reason,
+                  isAuctionType: true,
+                },
+              }).catch((e: any) => console.error('Soft-brake mail (auction) failed:', e?.message));
+            }
+          } catch (e: any) {
+            console.error('Seller lookup for soft-brake failed:', e?.message);
+          }
+        }
       }
     }
 

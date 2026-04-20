@@ -254,3 +254,7 @@ verify_jwt = false
 # --- Resend Purchase Contract (admin re-sends contract email) ---
 [functions.resend-purchase-contract]
 verify_jwt = false
+
+# --- Phase-4: One-shot opt-in mail to existing/Bestand listings ---
+[functions.send-existing-listings-opt-in]
+verify_jwt = false

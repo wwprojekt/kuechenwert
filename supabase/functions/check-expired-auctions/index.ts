@@ -127,12 +127,13 @@ Deno.serve(async (req) => {
             const previouslyNotified = !!auction.festpreis_admin_notified_at;
 
             // Phase 3: NEU-System-Marker + Marketing-Phase-Cap-Check (Soft-Brake)
+            // Phase-4 Audit-Fix #7: cap-check gilt auch für BESTAND-Festpreise
+            // sobald die Opt-in-Mail marketing_phase_max_until gesetzt hat.
             const sellerInitialInstantPrice = auction.seller_initial_instant_price != null
               ? Number(auction.seller_initial_instant_price)
               : null;
             const isNewSystemFestpreis = sellerInitialInstantPrice !== null && sellerInitialInstantPrice > 0;
             const phaseExpired =
-              isNewSystemFestpreis &&
               auction.marketing_phase_max_until != null &&
               new Date(auction.marketing_phase_max_until).getTime() <= Date.now();
 
@@ -211,6 +212,37 @@ Deno.serve(async (req) => {
                 : phaseExpired
                   ? 'marketing_phase_expired'
                   : 'admin_grace_expired';
+
+              // Phase-4 Audit-Fix #10: Wenn Festpreis-Marketing-Phase final
+              // erreicht wurde, sendet eine eigene Cap-Reached-Mail an den
+              // Verkäufer (statt nur stille Beendigung). Bei auto_relist_off
+              // bleibt es beim Standard-Verhalten – Verkäufer hat aktiv
+              // entschieden, das Inserat enden zu lassen.
+              if (!endError && mh.seller_id && (phaseExpired || endReason === 'marketing_phase_expired')) {
+                try {
+                  const { data: sellerProfile } = await supabase
+                    .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
+                  if (sellerProfile?.email) {
+                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: sellerProfile.email,
+                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        type: 'seller_festpreis_cap_reached',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: dashboardUrl,
+                        currentBid: instantPriceNum
+                          ? `€${instantPriceNum.toLocaleString('de-DE')}`
+                          : undefined,
+                        roundNumber: String(auction.auction_round || 1),
+                      },
+                    }).catch((e: any) => console.error('Festpreis cap-reached mail failed:', e?.message));
+                  }
+                } catch (e: any) {
+                  console.error('Festpreis cap-reached seller lookup failed:', e?.message);
+                }
+              }
+
               results.push({
                 auctionId: auction.id,
                 type: 'instant_price_ended',
@@ -578,8 +610,14 @@ Deno.serve(async (req) => {
               : null;
             const isNewSystemListing = sellerInitialReserveNum !== null && sellerInitialReserveNum > 0;
 
-            // ── Eligibility-Check für NEUE Inserate (Soft-Brake-Trigger) ─────
-            let softBrakeReason: string | null = null;
+            // ── Eligibility-Check (Soft-Brake-Trigger) ───────────────────────
+            // NEU-Inserate: max_rounds + marketing_phase_max_until.
+            // BESTAND-Inserate (Phase-4 Audit-Fix #7): nur marketing_phase_max_until
+            // — wird durch Opt-in-Mail (send-existing-listings-opt-in) auf
+            // now() + EXISTING_LISTINGS_GRACE_DAYS gesetzt. Bestand ohne
+            // Opt-in-Mail (max_until IS NULL) hat KEINEN Cap und läuft weiter
+            // wie bisher (Alt-Logik).
+            let softBrakeReason: 'max_rounds_reached' | 'marketing_phase_expired' | null = null;
             if (isNewSystemListing) {
               if (currentRound >= MARKETING_CONFIG.AUCTION_MAX_ROUNDS) {
                 softBrakeReason = 'max_rounds_reached';
@@ -589,6 +627,11 @@ Deno.serve(async (req) => {
               ) {
                 softBrakeReason = 'marketing_phase_expired';
               }
+            } else if (
+              kaufchance.marketing_phase_max_until &&
+              new Date(kaufchance.marketing_phase_max_until).getTime() <= Date.now()
+            ) {
+              softBrakeReason = 'marketing_phase_expired';
             }
 
             const shouldRelist = kaufchance.auto_relist !== false && !softBrakeReason;
@@ -897,21 +940,44 @@ Deno.serve(async (req) => {
                 }
               } catch (e) { console.error('Bidder notification error:', e); }
 
-              // Notify seller
+              // Notify seller. Phase-4 Audit-Fix #6: für NEU-Inserate die
+              // 3-Buttons Soft-Brake-Mail senden, sonst wie bisher.
               if (mh?.seller_id) {
                 try {
                   const { data: sellerProfile } = await supabase
                     .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
-                    await supabase.functions.invoke('send-auction-notification', {
-                      body: {
-                        email: sellerProfile.email,
-                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
-                        type: 'kaufchance_expired',
-                        motorhomeModel: motorhomeName,
-                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
-                      },
-                    }).catch((e: any) => console.error(`Failed to notify seller:`, e));
+                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+
+                    if (softBrakeReason) {
+                      // 3-Buttons Soft-Brake-Mail (Auktion) — NEU + BESTAND
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: sellerProfile.email,
+                          name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                          type: 'seller_soft_brake',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: dashboardUrl,
+                          roundNumber: String(currentRound),
+                          reservePrice: kaufchance.reserve_price
+                            ? `€${Number(kaufchance.reserve_price).toLocaleString('de-DE')}`
+                            : undefined,
+                          softBrakeReason,
+                          isAuctionType: true,
+                        },
+                      }).catch((e: any) => console.error('Soft-brake mail (kaufchance) failed:', e?.message));
+                    } else {
+                      // Klassische "kaufchance_expired"-Mail (auto_relist=off oder Bestand)
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: sellerProfile.email,
+                          name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                          type: 'kaufchance_expired',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: dashboardUrl,
+                        },
+                      }).catch((e: any) => console.error(`Failed to notify seller:`, e));
+                    }
                   }
                 } catch (e) { console.error('Seller notification error:', e); }
               }

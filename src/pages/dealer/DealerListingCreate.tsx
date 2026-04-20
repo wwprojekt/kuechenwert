@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
+import { MARKETING_CONFIG } from "@/lib/marketing-config";
 import {
   popularManufacturers,
   wohnwagenManufacturers,
@@ -103,12 +104,20 @@ export default function DealerListingCreate() {
         return data;
       }, "DealerListingCreate.insert");
 
-      // Create draft auction so admin can activate it
+      // Create draft auction so admin can activate it.
+      // P4-Hardening: Marketing-Phase-Felder werden direkt mit angelegt, damit
+      // die Reduktions-Logik (-2% pro Runde, -6% Floor) auch bei Händler-
+      // Inseraten greift, sobald der Admin sie aktiviert. Ohne diese Anker
+      // bleibt dynamic_pricing=false und der Soft-Brake greift nicht.
+      const reserveNum = reservePrice ? Number(reservePrice) : null;
       const { error: auctionError } = await supabase.from("auctions").insert({
         motorhome_id: result.id,
-        starting_bid: 50,
-        reserve_price: reservePrice ? Number(reservePrice) : null,
+        starting_bid: 50, // wird beim Admin-Aktivieren via activate-auction.ts neu gewürfelt
+        reserve_price: reserveNum,
         status: "draft",
+        seller_initial_reserve: reserveNum,
+        dynamic_pricing: MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT,
+        auto_relist: true,
       });
 
       if (auctionError) {

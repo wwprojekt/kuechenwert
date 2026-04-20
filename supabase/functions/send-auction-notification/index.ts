@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph, button, customerBadge, amountDisplay } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { MARKETING_CONFIG } from '../_shared/marketing-config.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -23,7 +24,16 @@ interface AuctionEmailRequest {
     | "admin_festpreis_needs_price"
     // Soft brake (round warning)
     | "seller_festpreis_round_warning"
-    | "seller_auction_round_warning";
+    | "seller_auction_round_warning"
+    // Phase-4 Audit-Fix #6: 3-Buttons-Mail wenn Marketing-Phase endgültig abläuft
+    | "seller_soft_brake"
+    // Phase-4 Audit-Fix #10: Festpreis erreicht 30-Tage-Cap (eigener Mailtype,
+    // statt nur generic seller_not_sold), erklärt Cap + nächste Schritte
+    | "seller_festpreis_cap_reached"
+    // Phase-4 Audit-Fix #8: Opt-in Mail an Bestand-Inserate. Erklärt das neue
+    // Phase-4-System, kündigt 60-Tage Soft-Cap transparent an, gibt Toggles im
+    // Dashboard frei (Verkäufer entscheidet selbst über dynamic_pricing).
+    | "seller_existing_listing_optin";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -49,6 +59,11 @@ interface AuctionEmailRequest {
   extendedUntil?: string;     // formatted new end_time after auto-extension
   sellerName?: string;        // used for admin_festpreis_needs_price body
   motorhomeId?: string;       // optional, for admin deep-link
+  // Phase-4 Audit-Fix #6/#10: Soft-Brake & Festpreis-Cap Felder
+  softBrakeReason?: 'max_rounds_reached' | 'marketing_phase_expired' | 'auto_relist_off';
+  isAuctionType?: boolean;    // true=Auktion, false=Festpreis (für Soft-Brake-Mail)
+  // Phase-4 Audit-Fix #8: Opt-in Mail Felder
+  softCapDate?: string;       // formatted date (z.B. "20.06.2026") wann Bestand-Soft-Cap greift
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -66,6 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
       customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount,
       offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis, listingEnded,
       roundNumber, extendedUntil, sellerName, motorhomeId,
+      softBrakeReason, isAuctionType, softCapDate,
     }: AuctionEmailRequest = await req.json();
 
     console.log(`Sending ${type} notification to:`, email);
@@ -305,6 +321,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Ihre Möglichkeiten:</strong>')}
           ${paragraph('<strong>1.</strong> Angebote im Dashboard einsehen<br><strong>2.</strong> Angebote annehmen, ablehnen oder Gegenangebote machen<br><strong>3.</strong> Unser Team unterstützt Sie bei der Verhandlung')}
           ${button('Angebote im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`<strong>Hinweis zum Auto-System:</strong> Wenn die Kaufchance ohne Einigung endet, wird Ihr Inserat automatisch in eine neue Auktionsrunde überführt (max. ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden insgesamt, max. -${Math.round(MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION * 100)} % Mindestpreis-Reduktion). Sie können beide Automatiken (Wiedereinstellung und Preissenkung) jederzeit im Dashboard deaktivieren.`)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
@@ -322,7 +339,7 @@ const handler = async (req: Request): Promise<Response> => {
           `, 'success', settingsData)}
           ${paragraph('Ihr Fahrzeug ist ab sofort wieder f&uuml;r alle gepr&uuml;ften H&auml;ndler sichtbar und es k&ouml;nnen neue Gebote abgegeben werden.')}
           ${paragraph('<strong>Was bedeutet das f&uuml;r Sie?</strong>')}
-          ${paragraph('<strong>1.</strong> Ihr Fahrzeug wird erneut 7 Tage lang versteigert<br><strong>2.</strong> Sie werden &uuml;ber eingehende Gebote informiert<br><strong>3.</strong> Unser Team begleitet Sie w&auml;hrend des gesamten Prozesses')}
+          ${paragraph(`<strong>1.</strong> Ihr Fahrzeug wird erneut <strong>${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage</strong> lang versteigert<br><strong>2.</strong> Sie werden &uuml;ber eingehende Gebote informiert<br><strong>3.</strong> Unser Team begleitet Sie w&auml;hrend des gesamten Prozesses`)}
           ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
           ${paragraph('Mit freundlichen Gr&uuml;&szlig;en,<br>Ihr ' + settingsData.site_name + ' Team')}
@@ -467,8 +484,8 @@ const handler = async (req: Request): Promise<Response> => {
             ${reservePrice ? detailRow('Neuer Mindestpreis', reservePrice) : ''}
           `, 'success', settingsData)}
           ${paragraph('<strong>Was bedeutet das f\u00fcr Sie?</strong>')}
-          ${paragraph('<strong>1.</strong> Ihr Fahrzeug wird erneut 7 Tage lang versteigert<br><strong>2.</strong> Alle gepr\u00fcften H\u00e4ndler k\u00f6nnen neue Gebote abgeben<br><strong>3.</strong> Der Mindestpreis wurde ggf. basierend auf den Verhandlungen angepasst')}
-          ${paragraph('<strong>M\u00f6chten Sie die automatische Wiedereinstellung deaktivieren?</strong> Sie k\u00f6nnen dies jederzeit in Ihrem Dashboard unter Ihrem Inserat einstellen.')}
+          ${paragraph(`<strong>1.</strong> Ihr Fahrzeug wird erneut <strong>${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage</strong> lang versteigert<br><strong>2.</strong> Alle gepr\u00fcften H\u00e4ndler k\u00f6nnen neue Gebote abgeben<br><strong>3.</strong> Der Mindestpreis wurde ggf. angepasst (Reduktion bis maximal -${Math.round(MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION * 100)} % vom urspr\u00fcnglichen Wert)`)}
+          ${paragraph(`<strong>Sie haben jederzeit die Kontrolle:</strong><br>\u2022 <strong>Auto-Wiedereinstellung</strong> deaktivieren: Auktion endet nach dieser Runde<br>\u2022 <strong>Automatische Preissenkung</strong> deaktivieren: Mindestpreis bleibt stabil<br>Beide Toggles finden Sie im Dashboard unter Ihrem Inserat.`)}
           ${button('Im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
         `;
@@ -493,15 +510,15 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "seller_festpreis_extended": {
-        // Festpreis-Inserat wurde automatisch um 7 Tage verlängert (kein Käufer
-        // hat den Festpreis akzeptiert). Verkäufer wird informiert + zum
-        // Preis-Senken angeregt.
+        // Festpreis-Inserat wurde automatisch um INSTANT_PRICE_DURATION_DAYS
+        // verlängert (kein Käufer hat den Festpreis akzeptiert). Verkäufer
+        // wird informiert + zum Preis-Senken angeregt.
         const round = roundNumber || '2';
         subject = `Ihr Festpreis-Inserat wurde verlängert: ${motorhomeModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
-          ${paragraph(`Ihr Festpreis-Inserat wurde leider noch nicht verkauft und deshalb <strong>automatisch um 7 Tage verlängert</strong>. Sie befinden sich nun in <strong>Runde ${round}</strong>.`)}
+          ${paragraph(`Ihr Festpreis-Inserat wurde leider noch nicht verkauft und deshalb <strong>automatisch um ${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage verlängert</strong>. Sie befinden sich nun in <strong>Runde ${round}</strong>.`)}
           ${infoBox('Inserat-Details', `
             ${detailRow('Fahrzeug', motorhomeModel)}
             ${currentBid ? detailRow('Aktueller Festpreis', currentBid) : ''}
@@ -511,7 +528,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>Tipp: Senken Sie Ihren Festpreis</strong>')}
           ${paragraph('Erfahrungsgemäß steigt die Kaufwahrscheinlichkeit deutlich, wenn der Festpreis um 5–10 % gesenkt wird. Sie können den Preis jederzeit in Ihrem Dashboard anpassen.')}
           ${button('Festpreis im Dashboard anpassen', auctionUrl, settingsData)}
-          ${paragraph('<strong>Sie möchten die automatische Verlängerung beenden?</strong> Sie können die automatische Wiedereinstellung jederzeit in Ihrem Dashboard unter dem Inserat deaktivieren.')}
+          ${paragraph(`<strong>Sie haben jederzeit die Kontrolle:</strong><br>\u2022 <strong>Auto-Verlängerung</strong> deaktivieren: Inserat endet zum aktuellen Ablaufdatum<br>\u2022 <strong>Automatische Preissenkung</strong> deaktivieren: Festpreis bleibt stabil<br>Beide Toggles finden Sie im Dashboard unter dem Inserat.`)}
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
         `;
         break;
@@ -579,6 +596,95 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph('<strong>1.</strong> Mindestpreis prüfen – ist er marktrealistisch?<br><strong>2.</strong> Nachtrag mit zusätzlichen Informationen veröffentlichen (z. B. neue Reifen, frischer TÜV)<br><strong>3.</strong> Automatische Wiedereinstellung deaktivieren, wenn Sie das Fahrzeug aus dem Verkauf nehmen möchten')}
           ${button('Auktion im Dashboard ansehen', auctionUrl, settingsData)}
           ${paragraph(`Wir beraten Sie gern persönlich unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+        `;
+        break;
+      }
+
+      case "seller_soft_brake": {
+        // Phase-4 Audit-Fix #6: Endgültige Soft-Brake-Mail mit 3 Buttons.
+        // Wird gesendet, wenn die Marketing-Phase final ausläuft (max rounds
+        // erreicht oder marketing_phase_max_until überschritten oder Verkäufer
+        // hat auto_relist deaktiviert). Erklärt den Status, gibt 3 klare CTAs.
+        const reason = softBrakeReason || 'max_rounds_reached';
+        const channelLabel = isAuctionType === false ? 'Festpreis-Inserat' : 'Auktion';
+        const reasonText: Record<string, string> = {
+          max_rounds_reached: `Ihr ${channelLabel} hat die maximale Anzahl von ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden erreicht und die Marketing-Phase ist damit abgeschlossen.`,
+          marketing_phase_expired: `Die vereinbarte Marketing-Phase für Ihr ${channelLabel} ist abgelaufen.`,
+          auto_relist_off: `Die Auto-Wiedereinstellung Ihres ${channelLabel}s ist deaktiviert und die aktuelle Runde ist beendet.`,
+        };
+        subject = `Marketing-Phase abgeschlossen: ${motorhomeModel} – wie geht es weiter?`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph(`<strong>${reasonText[reason] || reasonText.max_rounds_reached}</strong>`)}
+          ${infoBox('Inserat-Status', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${roundNumber ? detailRow('Erreichte Runde', String(roundNumber)) : ''}
+            ${reservePrice ? detailRow('Letzter Mindestpreis', reservePrice) : ''}
+            ${detailRow('Status', 'Beendet – keine automatische Wiedereinstellung')}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>Drei Optionen, um Ihr Fahrzeug erfolgreich zu verkaufen:</strong>')}
+          ${button('1. Erneut starten (frische Marketing-Phase)', auctionUrl + '?action=restart', settingsData)}
+          ${button('2. Mindestpreis anpassen und neu starten', auctionUrl + '?action=adjust-price', settingsData)}
+          ${button('3. Inserat archivieren (vom Markt nehmen)', auctionUrl + '?action=archive', settingsData)}
+          ${paragraph('Alle drei Aktionen führen Sie sicher durch Ihr Dashboard. Sie müssen sich nur einmal einloggen und auf den passenden Button klicken.')}
+          ${paragraph(`<em>Wir beraten Sie gern persönlich: <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.</em>`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+      }
+
+      case "seller_festpreis_cap_reached": {
+        // Phase-4 Audit-Fix #10: Festpreis hat die 30-Tage-Marketing-Phase
+        // erreicht. Eigene Mail (statt generic seller_not_sold), erklärt den
+        // Cap und führt zu den nächsten Schritten.
+        subject = `Ihr Festpreis-Inserat ist beendet: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph(`Ihr Festpreis-Inserat hat die vereinbarte Marketing-Phase von <strong>${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tagen</strong> erreicht und ist nun beendet.`)}
+          ${infoBox('Inserat-Übersicht', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${currentBid ? detailRow('Letzter Festpreis', currentBid) : ''}
+            ${roundNumber ? detailRow('Verlängerungs-Runden', String(roundNumber)) : ''}
+            ${detailRow('Status', 'Beendet – Marketing-Phase abgeschlossen')}
+          `, 'warning', settingsData)}
+          ${paragraph('<strong>So geht es weiter:</strong>')}
+          ${paragraph('<strong>1.</strong> Inserat erneut starten – mit angepasstem Festpreis<br><strong>2.</strong> Auf Auktion umstellen, um Händler-Wettbewerb zu nutzen<br><strong>3.</strong> Persönliche Beratung durch unser Team')}
+          ${button('Optionen im Dashboard ansehen', auctionUrl, settingsData)}
+          ${paragraph(`Wir beraten Sie gern: <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+      }
+
+      case "seller_existing_listing_optin": {
+        // Phase-4 Audit-Fix #8: Einmalige Opt-in-Info-Mail für Bestand-Inserate.
+        // Erklärt das neue Phase-4-System, kündigt 60-Tage Soft-Cap transparent
+        // an, weist auf Dashboard-Toggles hin (Verkäufer kann freiwillig
+        // dynamic_pricing + auto_relist nutzen).
+        subject = `Wichtige Info zu Ihrem Inserat: ${motorhomeModel} – neue Vermarktungs-Optionen`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('<strong>Wir haben unser Vermarktungs-System verbessert</strong>, damit Ihr Fahrzeug schneller den passenden Käufer findet. Diese Mail informiert Sie über die Änderungen, die Ihr aktives Inserat betreffen.')}
+          ${infoBox('Ihr Inserat', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${reservePrice ? detailRow('Aktueller Mindestpreis', reservePrice) : ''}
+            ${detailRow('Status', 'Aktiv – nach bisheriger Logik')}
+          `, 'info', settingsData)}
+          ${paragraph(`<strong>Was ist neu?</strong>`)}
+          ${paragraph(`\u2022 <strong>Dynamische Preissenkung</strong>: -${Math.round(MARKETING_CONFIG.AUCTION_REDUCTION_PER_ROUND * 100)} % pro Runde, max. -${Math.round(MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION * 100)} % vom Initial-Wert (rechtlich abgesichert in §6 AGB).<br>\u2022 <strong>Auto-Wiedereinstellung</strong>: bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Auktionsrunden à ${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h Kaufchance.<br>\u2022 <strong>Frische Vermarktungs-Phase</strong>: 16 Tage Auktion / ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage Festpreis – danach klare Beendigung statt unbegrenzter Verlängerung.`)}
+          ${infoBox('Übergangsregelung für Ihr Inserat', `
+            ${detailRow('Soft-Cap-Datum', softCapDate || `${MARKETING_CONFIG.EXISTING_LISTINGS_GRACE_DAYS} Tage ab heute`)}
+            ${detailRow('Status nach Soft-Cap', 'Inserat wird automatisch beendet')}
+            ${detailRow('Vor Soft-Cap', 'Ihr Inserat läuft wie bisher weiter')}
+          `, 'warning', settingsData)}
+          ${paragraph(`<strong>Sie haben drei Optionen:</strong>`)}
+          ${paragraph(`<strong>1. Nichts tun</strong> – Ihr Inserat läuft bis zum Soft-Cap-Datum unverändert weiter und endet dann automatisch.<br><strong>2. In Phase 4 wechseln</strong> – Aktivieren Sie im Dashboard die Toggles "Auto-Wiedereinstellung" und "Dynamische Preissenkung", um die neuen Vorteile zu nutzen.<br><strong>3. Inserat manuell verlängern</strong> – Bearbeiten Sie Ihr Inserat im Dashboard, um Preis oder Beschreibung anzupassen.`)}
+          ${button('Inserat im Dashboard öffnen', auctionUrl, settingsData)}
+          ${paragraph(`<em>Diese Mail erhalten Sie einmalig pro aktivem Bestand-Inserat. Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.</em>`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
         `;
         break;
       }

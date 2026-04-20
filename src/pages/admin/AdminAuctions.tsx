@@ -42,6 +42,8 @@ import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { MARKETING_CONFIG } from "@/lib/marketing-config";
 
 // ============================================================================
 // Live Countdown for active auctions
@@ -150,7 +152,7 @@ async function sendRelistNotification(motorhomeId: string, endTime: Date) {
     const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
     const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
 
-    const { data, error } = await invokeWithAuth("send-auction-notification", {
+    const { error } = await invokeWithAuth("send-auction-notification", {
       body: {
         email: seller.email,
         name: sellerName,
@@ -349,119 +351,30 @@ export default function AdminAuctions() {
   }
 
   // ---- Handle ?create=motorhomeId URL parameter ----
+  // Aktivierung läuft über den zentralen Helper `activateAuctionForMotorhome`,
+  // der MARKETING_CONFIG (3-Tage-Dauer, Random-Startbid 40-60 %, seller_initial_*)
+  // anwendet. NICHT inline duplizieren – alle Aktivierungen müssen identisch sein.
   const createAuctionMutation = useMutation({
     mutationFn: async (motorhomeId: string) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session expired");
 
-      // Prüfe ob IRGENDEINE Auktion für dieses Motorhome existiert (egal welcher Status)
-      const { data: existing } = await supabase
-        .from("auctions")
-        .select("id, status")
-        .eq("motorhome_id", motorhomeId)
-        .maybeSingle();
-
-      // Fetch motorhome Daten (reserve_price + PLZ-Check + sale_channel)
-      const { data: motorhome } = await supabase
-        .from("motorhomes")
-        .select("reserve_price, postal_code, city, sale_channel, instant_price")
-        .eq("id", motorhomeId)
-        .single();
-
-      // PLZ-Check: Ohne PLZ kann keine Auktion live gehen
-      if (!motorhome?.postal_code) {
-        throw new Error("PLZ_MISSING");
-      }
-
-      // Auktionszeiten: Sofort live, 7 Tage Laufzeit
-      const now = new Date();
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-
-      if (existing) {
-        // Wenn Auktion bereits active ist, einfach dorthin navigieren
-        if (existing.status === "active") {
-          return { id: existing.id, motorhomeId, alreadyExists: true, recycled: false };
-        }
-
-        // Bestehende Auktion recyceln und sofort aktivieren
-        const isInstantOnly = motorhome?.sale_channel === 'instant_price';
-        const updateData: Record<string, unknown> = {
-          status: "active",
-          starting_bid: isInstantOnly ? 0 : 50,
-          current_bid: null,
-          start_time: now.toISOString(),
-          end_time: endTime.toISOString(),
-          kaufchance_expires_at: null,
-          kaufchance_min_price: null,
-        };
-
-        if (isInstantOnly && motorhome?.instant_price) {
-          updateData.reserve_price = Number(motorhome.instant_price);
-        } else if (motorhome?.reserve_price) {
-          updateData.reserve_price = motorhome.reserve_price;
-        }
-
-        // Clean up old data BEFORE reactivating to avoid stale bids in new auction
-        const { error: bidsDelErr } = await supabase.from("bids").delete().eq("auction_id", existing.id);
-        if (bidsDelErr) throw new Error(`Alte Gebote konnten nicht gelöscht werden: ${bidsDelErr.message}`);
-        const { error: invDelErr } = await supabase.from("kaufchance_invitations").delete().eq("auction_id", existing.id);
-        if (invDelErr) throw new Error(`Alte Einladungen konnten nicht gelöscht werden: ${invDelErr.message}`);
-        const { error: offDelErr } = await supabase.from("post_auction_offers").delete().eq("auction_id", existing.id);
-        if (offDelErr) throw new Error(`Alte Angebote konnten nicht gelöscht werden: ${offDelErr.message}`);
-
-        const { error: updateError } = await supabase
-          .from("auctions")
-          .update(updateData)
-          .eq("id", existing.id);
-
-        if (updateError) throw updateError;
-
-        // Motorhome-Status auf active setzen
-        const { error: mhErr } = await supabase.from("motorhomes").update({ status: "active" }).eq("id", motorhomeId);
-        if (mhErr) throw mhErr;
-
-        return { id: existing.id, motorhomeId, alreadyExists: false, recycled: true };
-      }
-
-      // Keine Auktion vorhanden: Neue erstellen und sofort aktivieren
-      const isInstantNew = motorhome?.sale_channel === 'instant_price';
-      const insertData: Record<string, unknown> = {
-        motorhome_id: motorhomeId,
-        starting_bid: isInstantNew ? 0 : 50,
-        status: "active",
-        start_time: now.toISOString(),
-        end_time: endTime.toISOString(),
+      const result = await activateAuctionForMotorhome(motorhomeId);
+      return {
+        id: result.auctionId,
+        motorhomeId,
+        alreadyExists: result.alreadyActive,
+        recycled: result.recycled,
       };
-
-      if (isInstantNew && motorhome?.instant_price) {
-        insertData.reserve_price = Number(motorhome.instant_price);
-      } else if (motorhome?.reserve_price) {
-        insertData.reserve_price = motorhome.reserve_price;
-      }
-
-      const { data: auction, error } = await supabase
-        .from("auctions")
-        .insert(insertData)
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      // Motorhome-Status auf active setzen
-      const { error: mhActiveErr } = await supabase.from("motorhomes").update({ status: "active" }).eq("id", motorhomeId);
-      if (mhActiveErr) throw mhActiveErr;
-
-      return { id: auction.id, motorhomeId, alreadyExists: false, recycled: false };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
       if (result.alreadyExists) {
         toast.info("Es existiert bereits eine laufende Auktion für dieses Fahrzeug");
       } else if (result.recycled) {
-        toast.success("Auktion wurde zurückgesetzt und ist jetzt live (7 Tage)");
+        toast.success(`Auktion wurde zurückgesetzt und ist jetzt live (${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage)`);
       } else {
-        toast.success("Auktion erfolgreich erstellt und ist jetzt live (7 Tage)");
+        toast.success(`Auktion erfolgreich erstellt und ist jetzt live (${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage)`);
       }
       setSearchParams({});
       setActiveTab("active");
@@ -595,31 +508,13 @@ export default function AdminAuctions() {
     },
   });
 
+  // Aktiviert eine bestehende (Draft-)Auktion. Verwendet den zentralen
+  // Helper, damit MARKETING_CONFIG-Dauer + Random-Startbid + seller_initial_*
+  // konsistent gesetzt werden – auch wenn diese Auktion vom auto-convert-
+  // wizard angelegt wurde.
   const activateAuctionMutation = useMutation({
     mutationFn: async (auction: { id: string; motorhome_id: string }) => {
-      const { data: mh } = await supabase
-        .from('motorhomes')
-        .select('postal_code, city')
-        .eq('id', auction.motorhome_id)
-        .maybeSingle();
-
-      if (!mh?.postal_code) {
-        throw new Error('PLZ_MISSING');
-      }
-
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-
-      const { error } = await supabase
-        .from('auctions')
-        .update({
-          status: 'active',
-          end_time: endTime.toISOString(),
-          start_time: new Date().toISOString()
-        })
-        .eq('id', auction.id);
-
-      if (error) throw error;
+      await activateAuctionForMotorhome(auction.motorhome_id);
       return auction;
     },
     onSuccess: (auction) => {
@@ -641,61 +536,37 @@ export default function AdminAuctions() {
   });
 
   // ---- Relist Auction (ended/cancelled -> active) ----
+  // Manueller Admin-Relist eines beendeten Inserats. Nutzt activateAuctionForMotorhome
+  // für 3-Tage-Dauer + Random-Startbid; auction_round wird vom DB-Trigger NICHT
+  // hochgesetzt – wir machen das hier explizit, damit der Soft-Brake greift.
   const relistAuctionMutation = useMutation({
     mutationFn: async (auction: { id: string; motorhome_id: string }) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session expired");
 
-      const { data: mh } = await supabase
-        .from('motorhomes')
-        .select('postal_code, city')
-        .eq('id', auction.motorhome_id)
-        .maybeSingle();
-
-      if (!mh?.postal_code) {
-        throw new Error('PLZ_MISSING');
-      }
-
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-
-      // Delete old bids BEFORE reactivating to avoid stale data in the new auction
-      const { error: bidsDelErr } = await supabase
-        .from('bids')
-        .delete()
-        .eq('auction_id', auction.id);
-      if (bidsDelErr) throw new Error(`Alte Gebote konnten nicht gelöscht werden: ${bidsDelErr.message}`);
-
-      // Get current round
+      // Aktuelle Runde lesen (für Auto-Increment)
       const { data: currentAuction } = await supabase
         .from('auctions')
         .select('auction_round')
         .eq('id', auction.id)
         .single();
 
-      // Reset auction to active with new 7-day period
-      const { error } = await supabase
+      // Hauptaktivierung über zentralen Helper (resettet inkl. bids/invitations/offers)
+      const result = await activateAuctionForMotorhome(auction.motorhome_id);
+
+      // auction_round + auto_relist nachziehen (Helper resettet auf 1 –
+      // das ist für reine Recyles korrekt, beim manuellen Relist wollen
+      // wir aber die Runde fortsetzen, damit Soft-Brake greift).
+      const nextRound = (currentAuction?.auction_round ?? 1) + 1;
+      const { error: roundErr } = await supabase
         .from('auctions')
-        .update({
-          status: 'active',
-          start_time: new Date().toISOString(),
-          end_time: endTime.toISOString(),
-          current_bid: null,
-          kaufchance_expires_at: null,
-          kaufchance_min_price: null,
-          auction_round: (currentAuction?.auction_round || 1) + 1,
-          auto_relist: true,
-        })
-        .eq('id', auction.id);
+        .update({ auction_round: nextRound, auto_relist: true })
+        .eq('id', result.auctionId);
+      if (roundErr) throw roundErr;
 
-      if (error) throw error;
-
-      // Update motorhome status back to active
-      const { error: mhErr } = await supabase
-        .from('motorhomes')
-        .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', auction.motorhome_id);
-      if (mhErr) throw mhErr;
+      // endTime (3 Tage ab now) für Notification rekonstruieren
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + MARKETING_CONFIG.AUCTION_DURATION_DAYS);
 
       return { ...auction, endTime };
     },

@@ -70,6 +70,7 @@ import {
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { CreateSellerPenaltyDialog } from "@/components/admin/CreateSellerPenaltyDialog";
 import { logger } from "@/lib/logger";
+import { activateAuctionForMotorhome } from "@/lib/activate-auction";
 
 export default function AdminAuctionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -152,21 +153,12 @@ export default function AdminAuctionDetail() {
   });
 
   // Activate auction mutation
+  // Verwendet zentralen Helper für 3-Tage-Dauer + Random-Startbid +
+  // Marketing-Phase-Setup (DB-Trigger).
   const activateAuctionMutation = useMutation({
     mutationFn: async () => {
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-
-      const { error } = await supabase
-        .from("auctions")
-        .update({
-          status: "active",
-          start_time: new Date().toISOString(),
-          end_time: endTime.toISOString(),
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      if (!auction?.motorhome_id) throw new Error("Motorhome ID missing on auction");
+      await activateAuctionForMotorhome(auction.motorhome_id);
     },
     onSuccess: () => {
       toast.success(isFestpreis ? "Inserat erfolgreich aktiviert" : "Auktion erfolgreich aktiviert");

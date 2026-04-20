@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
+import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { MARKETING_CONFIG } from "@/lib/marketing-config";
 
 import { toast } from "sonner";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -254,7 +256,7 @@ export default function AdminMotorhomes() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; motorhomeName: string } | null>(null);
+  const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; motorhomeId: string; motorhomeName: string } | null>(null);
   const [auctionActionType, setAuctionActionType] = useState<"activate" | "cancel" | null>(null);
 
   // Filters & Search
@@ -300,25 +302,25 @@ export default function AdminMotorhomes() {
   });
 
   // ---- Auction Mutations ----
+  // Aktivierung läuft über zentralen Helper – siehe src/lib/activate-auction.ts
+  // (3-Tage-Dauer + Random-Startbid + seller_initial_* + Marketing-Trigger).
   const activateAuctionMutation = useMutation({
-    mutationFn: async (auctionId: string) => {
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-      const { error } = await supabase
-        .from("auctions")
-        .update({
-          status: "active",
-          start_time: new Date().toISOString(),
-          end_time: endTime.toISOString(),
-        })
-        .eq("id", auctionId);
-      if (error) throw error;
+    mutationFn: async (motorhomeId: string) => {
+      await activateAuctionForMotorhome(motorhomeId);
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich aktiviert");
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
     },
-    onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
+    onError: (e: Error) => {
+      if (e.message === "PLZ_MISSING") {
+        toast.error("Bitte zuerst die PLZ eintragen, bevor die Auktion aktiviert wird.");
+      } else if (e.message === "RESERVE_MISSING") {
+        toast.error("Bitte zuerst den Reservepreis eintragen, bevor die Auktion aktiviert wird.");
+      } else {
+        toast.error("Fehler beim Aktivieren der Auktion");
+      }
+    },
   });
 
   const cancelAuctionMutation = useMutation({
@@ -343,8 +345,11 @@ export default function AdminMotorhomes() {
   const handleAuctionAction = () => {
     if (!auctionActionTarget || !auctionActionType) return;
     const aId = auctionActionTarget.auction.id;
-    if (auctionActionType === "activate") activateAuctionMutation.mutate(aId);
-    else if (auctionActionType === "cancel") cancelAuctionMutation.mutate(aId);
+    if (auctionActionType === "activate") {
+      activateAuctionMutation.mutate(auctionActionTarget.motorhomeId);
+    } else if (auctionActionType === "cancel") {
+      cancelAuctionMutation.mutate(aId);
+    }
     setAuctionActionTarget(null);
     setAuctionActionType(null);
   };
@@ -739,14 +744,14 @@ export default function AdminMotorhomes() {
                                 Auktion anzeigen
                               </DropdownMenuItem>
                               {mAuction.status === "draft" && (
-                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("activate"); }}>
+                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeId: motorhome.id, motorhomeName: mName }); setAuctionActionType("activate"); }}>
                                   <Play className="w-4 h-4 mr-2" />
                                   Auktion aktivieren
                                 </DropdownMenuItem>
                               )}
                               {(mAuction.status === "active" || mAuction.status === "draft" || mAuction.status === "kaufchance") && (
                                 <DropdownMenuItem
-                                  onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeName: mName }); setAuctionActionType("cancel"); }}
+                                  onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeId: motorhome.id, motorhomeName: mName }); setAuctionActionType("cancel"); }}
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <Ban className="w-4 h-4 mr-2" />
@@ -1027,7 +1032,7 @@ export default function AdminMotorhomes() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {auctionActionType === "activate" && (
-                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird für 7 Tage aktiviert und ist dann öffentlich sichtbar.</>
+                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird für {MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage aktiviert und ist dann öffentlich sichtbar.</>
               )}
               {auctionActionType === "cancel" && (
                 <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet. Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.</>

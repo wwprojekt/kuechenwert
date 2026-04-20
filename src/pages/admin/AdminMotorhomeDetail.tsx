@@ -8,6 +8,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
+import { activateAuctionForMotorhome } from "@/lib/activate-auction";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -258,22 +259,26 @@ export default function AdminMotorhomeDetail() {
   })();
 
   // Auction mutations
+  // Aktivierung über zentralen Helper (3-Tage-Dauer + Random-Startbid +
+  // seller_initial_* + Marketing-Trigger).
   const activateAuctionMutation = useMutation({
     mutationFn: async () => {
-      if (!relevantAuction) throw new Error("No auction");
-      const endTime = new Date();
-      endTime.setDate(endTime.getDate() + 7);
-      const { error } = await supabase
-        .from("auctions")
-        .update({ status: "active", start_time: new Date().toISOString(), end_time: endTime.toISOString() })
-        .eq("id", relevantAuction.id);
-      if (error) throw error;
+      if (!motorhome?.id) throw new Error("No motorhome");
+      await activateAuctionForMotorhome(motorhome.id);
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich aktiviert");
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
     },
-    onError: () => toast.error("Fehler beim Aktivieren der Auktion"),
+    onError: (e: Error) => {
+      if (e.message === "PLZ_MISSING") {
+        toast.error("Bitte zuerst die PLZ eintragen, bevor die Auktion aktiviert wird.");
+      } else if (e.message === "RESERVE_MISSING") {
+        toast.error("Bitte zuerst den Reservepreis eintragen, bevor die Auktion aktiviert wird.");
+      } else {
+        toast.error("Fehler beim Aktivieren der Auktion");
+      }
+    },
   });
 
   const cancelAuctionMutation = useMutation({

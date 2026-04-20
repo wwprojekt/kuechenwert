@@ -53,13 +53,18 @@ export default function ListingEdit() {
   });
 
   // ── Auction status query: check if auction is live ──
+  // Wir holen explizit auch reserve_price + seller_initial_reserve, damit der
+  // PriceChangeRequestDialog den AKTUELLEN (potenziell durch dynamic_pricing
+  // reduzierten) Reserve und den ORIGINAL-Wunsch des Verkaeufers anzeigen
+  // kann. motorhomes.reserve_price wird vom Cron NICHT mit-reduziert, daher
+  // ist dieser Wert NICHT die korrekte "Aktuell"-Anzeige fuer Live-Auktionen.
   const { data: auctionData } = useQuery({
     queryKey: ["motorhomeAuction", id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
         .from("auctions")
-        .select("id, status")
+        .select("id, status, reserve_price, seller_initial_reserve, seller_initial_instant_price")
         .eq("motorhome_id", id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -276,6 +281,15 @@ export default function ListingEdit() {
       // reserve_price = instant_price gesetzt.
       if (canEditPricesSelf && isAuctionListing && !data.instant_price && !data.reserve_price) {
         throw new Error("Mindestpreis ist Pflicht für Auktions-Inserate (AGB §6.4 c).");
+      }
+      // Pflicht-Sofortpreis fuer Sofortkauf-Inserate (sale_channel='instant_price').
+      // Ohne diesen Guard koennte ein Verkaeufer im Draft das Feld leeren und
+      // sein Listing waere preislos. Server-seitig wuerde die RPC mit ERRCODE
+      // 23514 fehlschlagen; dieser Guard liefert dem Nutzer aber sofort eine
+      // verstaendliche Meldung im UI.
+      const isInstantPriceListing = motorhome?.sale_channel === 'instant_price';
+      if (canEditPricesSelf && isInstantPriceListing && !data.instant_price) {
+        throw new Error("Sofortkauf-Preis ist Pflicht für Sofortkauf-Inserate.");
       }
 
       const updateData: any = {
@@ -974,8 +988,17 @@ export default function ListingEdit() {
           onOpenChange={setPriceRequestDialogOpen}
           motorhomeId={id}
           saleChannel={motorhome.sale_channel}
-          currentReserve={motorhome.reserve_price ?? null}
+          // Aktueller (live) Reserve = auctions.reserve_price (vom Cron
+          // potenziell reduziert). Fallback auf motorhomes.reserve_price wenn
+          // (noch) keine Auktions-Row existiert.
+          currentReserve={auctionData?.reserve_price ?? motorhome.reserve_price ?? null}
           currentInstant={motorhome.instant_price ?? null}
+          // seller_initial_reserve = der vom Verkaeufer urspruenglich
+          // eingetragene Wunsch-Mindestpreis (vor Dynamic Pricing).
+          // Nur anzeigen wenn er sich vom aktuellen Reserve unterscheidet,
+          // damit der Verkaeufer transparent sieht, was bereits reduziert
+          // wurde.
+          initialReserve={auctionData?.seller_initial_reserve ?? null}
         />
       )}
 

@@ -31,8 +31,18 @@ export interface PriceChangeRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   motorhomeId: string;
   saleChannel: "auction" | "instant_price" | "station" | string | null | undefined;
+  /**
+   * Aktueller, gueltiger Mindestpreis. Bei Live-Auktionen ist das der
+   * potenziell durch Dynamic Pricing reduzierte Wert aus auctions.reserve_price.
+   */
   currentReserve: number | null | undefined;
   currentInstant: number | null | undefined;
+  /**
+   * Optional: Der vom Verkaeufer urspruenglich eingetragene Wunsch-Mindestpreis
+   * (auctions.seller_initial_reserve). Wenn vorhanden UND vom currentReserve
+   * verschieden, zeigen wir beide Werte transparent an.
+   */
+  initialReserve?: number | null;
 }
 
 const fmtEuro = (v: number | null | undefined) =>
@@ -45,6 +55,7 @@ export function PriceChangeRequestDialog({
   saleChannel,
   currentReserve,
   currentInstant,
+  initialReserve,
 }: PriceChangeRequestDialogProps) {
   const isInstantPrice = saleChannel === "instant_price";
   const showInstantField = isInstantPrice;
@@ -164,6 +175,15 @@ export function PriceChangeRequestDialog({
               </div>
               <p className="text-xs text-muted-foreground">
                 Aktuell: <span className="font-medium text-foreground">{fmtEuro(currentReserve)}</span>
+                {initialReserve != null && currentReserve != null && Number(initialReserve) !== Number(currentReserve) && (
+                  <>
+                    {" "}
+                    <span className="text-muted-foreground/70">
+                      (Ihr Wunsch beim Einstellen: {fmtEuro(initialReserve)} – durch automatische
+                      Anpassung nach Kaufchance reduziert)
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           )}

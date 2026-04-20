@@ -63,8 +63,13 @@ const CARD_QUALITY = 80;
 const MEDIUM_WIDTH = 1024;
 const MEDIUM_QUALITY = 82;
 
-const MAX_BATCH_SIZE = 10;
-const DEFAULT_BATCH_SIZE = 5;
+// Erhöht von 10 → 20 (2026-04-20): 44 active covers waren noch un-prozessiert
+// → User sah 5-13 MB Original-JPGs. Sequentielle WASM-Verarbeitung pro Photo
+// braucht ~2-3 s, 20 × 3 s = 60 s Worst-Case. pg_cron timeout ist 60000 ms,
+// also genau auf der Kante — wir trauen uns das aber zu, weil 90 % der Photos
+// schneller fertig sind und Skip-Cases (>2 MB original) sofort returnen.
+const MAX_BATCH_SIZE = 20;
+const DEFAULT_BATCH_SIZE = 10;
 
 // Skip-Threshold: Originale ≤ 2 MB sind sicher für jsquash-WASM in 256 MB
 // Function-Memory. Empirisch bestätigt 2026-04-20: 1.4 MB JPEG mit 2040×1530

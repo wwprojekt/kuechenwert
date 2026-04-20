@@ -292,10 +292,31 @@ async function renderWithRestApi(url, env) {
 // können ohne KV-Purge.
 
 const AUCTIONS_API_PATH = "/api/auctions/active";
-const AUCTIONS_CACHE_KEY = "api:auctions:active:v1";
+const AUCTIONS_CACHE_KEY = "api:auctions:active:v2";
 const AUCTIONS_FRESH_MS = 30 * 1000;   // 30 s frisch
 const AUCTIONS_STALE_MS = 90 * 1000;   // 90 s gesamt (60 s SWR-Fenster)
 const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
+
+// On-the-fly Image-Transformation Fallback für Photos OHNE pre-resized Variant
+// (process-photo Edge Function noch nicht durchgelaufen oder original zu gross).
+// Bei /kaufen sind das aktuell 44 von 77 active covers — die werden sonst als
+// 1-13 MB Original-JPG ausgeliefert und blockieren die Page-Load.
+//
+// Supabase Image Transformation: <project>/storage/v1/render/image/public/<path>
+// Cloudflare cached die Antwort ans Edge (1 Jahr immutable), Pro-Plan-Quota
+// 100k/month, gezählt nur per unique URL → kein Skalierungsproblem.
+const STORAGE_OBJECT_PREFIX = "/storage/v1/object/public/";
+const STORAGE_RENDER_PREFIX = "/storage/v1/render/image/public/";
+
+function transformImageUrl(originalUrl, width, quality) {
+  if (!originalUrl || typeof originalUrl !== "string") return originalUrl;
+  // Funktioniert nur für Public-Bucket-URLs (motorhome-photos).
+  // Already-transformed oder externe URLs bleiben unverändert.
+  if (!originalUrl.includes(STORAGE_OBJECT_PREFIX)) return originalUrl;
+  const transformed = originalUrl.replace(STORAGE_OBJECT_PREFIX, STORAGE_RENDER_PREFIX);
+  const sep = transformed.includes("?") ? "&" : "?";
+  return `${transformed}${sep}width=${width}&quality=${quality}&resize=contain`;
+}
 
 function corsHeaders() {
   // Same-origin in Production (caravanwert.de → caravanwert.de/api/...) braucht
@@ -369,28 +390,40 @@ async function fetchAuctionsFromSupabase(env) {
     .map((a) => a.motorhome_id)
     .filter(Boolean);
 
-  let photoMap = {};
-  if (motorhomeIds.length > 0) {
-    const photosUrl = `${supabaseBase}/motorhome_photos?select=` +
-      encodeURIComponent("url,card_url,medium_url,motorhome_id") +
-      `&display_order=eq.0&motorhome_id=in.(${motorhomeIds.join(",")})`;
+    let photoMap = {};
+    if (motorhomeIds.length > 0) {
+      const photosUrl = `${supabaseBase}/motorhome_photos?select=` +
+        encodeURIComponent("url,card_url,medium_url,motorhome_id") +
+        `&display_order=eq.0&motorhome_id=in.(${motorhomeIds.join(",")})`;
 
-    const photosRes = await fetch(photosUrl, { headers });
-    if (photosRes.ok) {
-      const rows = await photosRes.json();
-      for (const p of rows) {
-        if (!p.motorhome_id) continue;
-        const small = p.card_url || p.medium_url || p.url;
-        if (!small) continue;
-        photoMap[p.motorhome_id] = {
-          url: small,
-          medium_url: p.medium_url || null,
-          display_order: 0
-        };
+      const photosRes = await fetch(photosUrl, { headers });
+      if (photosRes.ok) {
+        const rows = await photosRes.json();
+        for (const p of rows) {
+          if (!p.motorhome_id) continue;
+          if (!p.url && !p.card_url && !p.medium_url) continue;
+
+          // Bevorzugt: pre-resized Variant (process-photo Edge Function).
+          // Fallback: On-the-fly Image-Transformation auf das Original
+          // (löst die "5 MB JPG"-Loads für noch unprozessierte Photos).
+          // Weiterer Fallback: Raw-Original (nur falls Original-URL fehlt
+          // ODER nicht im public bucket liegt, sehr selten).
+          const small = p.card_url
+            ? p.card_url
+            : (p.url ? transformImageUrl(p.url, 480, 70) : p.medium_url);
+          const medium = p.medium_url
+            ? p.medium_url
+            : (p.url ? transformImageUrl(p.url, 1024, 75) : null);
+
+          photoMap[p.motorhome_id] = {
+            url: small,
+            medium_url: medium,
+            display_order: 0
+          };
+        }
       }
+      // Photo-Fehler ist non-blocking (wie im Frontend)
     }
-    // Photo-Fehler ist non-blocking (wie im Frontend)
-  }
 
   // Bid-Counts aggregieren
   const bidCounts = {};

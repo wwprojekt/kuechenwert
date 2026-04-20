@@ -238,7 +238,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
             Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren.
           </p>
           <p className="text-xs text-muted-foreground/80 leading-snug">
-            Anpassbar bis zur Freigabe durch unser Team. Danach jederzeit per Klick aus Ihrem Dashboard anfragen.
+            Im Entwurf direkt änderbar. Sobald das Inserat live ist, stellen Sie per Klick im Dashboard eine Preisänderungs-Anfrage – das CaravanWert-Team setzt sie zeitnah um.
           </p>
         </div>
       )}
@@ -280,7 +280,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 <span className="font-medium">Tipp:</span> Wählen Sie den niedrigsten Preis, zu dem Sie noch verkaufen würden – Händler überbieten ihn in der Auktion meist deutlich.
               </p>
               <p className="text-xs text-muted-foreground/70 leading-snug">
-                Anpassbar bis zur Freigabe durch unser Team. Danach jederzeit per Klick aus Ihrem Dashboard anfragen.
+                Im Entwurf direkt änderbar. Sobald das Inserat live ist, stellen Sie per Klick im Dashboard eine Preisänderungs-Anfrage – das CaravanWert-Team setzt sie zeitnah um.
               </p>
             </div>
           )}
@@ -307,8 +307,8 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   {isAuction
-                    ? `${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h exklusive Kaufchance, bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden mit aktiven Händlergeboten. Sie behalten jederzeit die volle Kontrolle im Dashboard.`
-                    : `${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage Festpreis-Inserat, automatische Verlängerung bis max. ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage. Sie behalten jederzeit die volle Kontrolle über Preis und Sichtbarkeit.`}
+                    ? `${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h exklusive Kaufchance, bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden mit aktiven Händlergeboten. Automatische Preisanpassung und Wiedereinstellung können Sie jederzeit im Dashboard deaktivieren.`
+                    : `${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage Festpreis-Inserat, automatische Verlängerung bis max. ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage. Automatische Verlängerung und Preisanpassung können Sie jederzeit im Dashboard deaktivieren.`}
                 </p>
               </div>
             </div>
@@ -334,6 +334,9 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 </p>
                 <p>
                   <strong className="text-foreground">Ihre Kontrolle:</strong> Sie können die automatische Verlängerung und Preisanpassung jederzeit im Dashboard ein- und ausschalten – auch während einer laufenden Kaufchance. Bei wichtigem Grund (z. B. Verkauf an Privat) gilt unsere außerordentliche Kündigungsklausel der AGB §6.
+                </p>
+                <p>
+                  <strong className="text-foreground">Preisänderung:</strong> Solange das Inserat im Entwurf ist, ändern Sie Mindest- und Sofortpreis direkt im Dashboard. Sobald es live ist, stellen Sie eine Preisänderungs-Anfrage per Klick – das CaravanWert-Team setzt sie zeitnah um (typisch innerhalb weniger Stunden).
                 </p>
                 <p>
                   <strong className="text-foreground">Was passiert nach {totalDays} Tagen?</strong> Wir kontaktieren Sie per E-Mail mit drei Optionen: erneut einstellen, Preis anpassen oder archivieren. Es passiert nichts ohne Ihre aktive Bestätigung.
@@ -396,7 +399,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
               <p className="text-xs text-muted-foreground leading-snug">
                 Ich stimme der bis zu {totalDays}-tägigen Bindungsphase und der automatischen Preisanpassung gemäß{" "}
                 <a href="/agb" target="_blank" rel="noopener" className="text-primary hover:underline">AGB §6</a>{" "}
-                zu. Ich kann sie jederzeit im Dashboard deaktivieren.
+                zu. Die automatische Preisanpassung kann ich jederzeit im Dashboard deaktivieren.
               </p>
               {fieldErrors.marketingConsent && (
                 <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in">

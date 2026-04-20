@@ -36,9 +36,19 @@ Deno.serve(async (req) => {
     console.log(`Checking for expired auctions at ${now}...`);
 
     // ─── 1. Active auctions whose end_time has passed ──────────────
+    // We need festpreis-specific fields (instant_price, seller_id) for the
+    // auto-extend path, plus auto_relist + auction_round + festpreis_admin_notified_at.
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
-      .select('id, end_time, status, motorhome_id, motorhomes!inner(sale_channel, manufacturer, model)')
+      .select(`
+        id, end_time, status, motorhome_id,
+        auto_relist, auction_round, reserve_price,
+        festpreis_admin_notified_at,
+        motorhomes!inner(
+          id, sale_channel, manufacturer, model,
+          instant_price, seller_id
+        )
+      `)
       .eq('status', 'active')
       .lt('end_time', now);
 
@@ -49,79 +59,257 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${expiredAuctions?.length || 0} expired active auctions`);
 
-    // Close each expired auction via close-auction Edge Function
-    // For instant_price listings: end directly (no Kaufchance/bidder flows)
+    // Close each expired auction via close-auction Edge Function.
+    // For festpreis (instant_price) listings, replace the old "end immediately"
+    // path with a tiered auto-lifecycle:
+    //   • auto_relist === false                  → end (existing behavior)
+    //   • instant_price > 0                      → extend by 7 days, increment
+    //                                              auction_round, keep offers
+    //                                              alive, notify seller (+ soft
+    //                                              brake handled in commit 4)
+    //   • instant_price NULL/0 + first encounter → 24h grace, send admin alert,
+    //                                              set festpreis_admin_notified_at
+    //   • instant_price NULL/0 + already alerted → end (admin had 24h)
     const results = [];
     if (expiredAuctions && expiredAuctions.length > 0) {
       for (const auction of expiredAuctions) {
         try {
-          const saleChannel = (auction.motorhomes as any)?.sale_channel;
+          const mh = (auction.motorhomes as any) || {};
+          const saleChannel = mh.sale_channel;
 
-          // Instant-price-only listings: simply mark as ended (no bidder/Kaufchance logic)
+          // Instant-price-only listings: lifecycle handled inline
           if (saleChannel === 'instant_price') {
-            console.log(`Ending instant-price listing ${auction.id} (no Kaufchance)...`);
-            const { error: endError } = await supabase
-              .from('auctions')
-              .update({ status: 'ended', updated_at: now })
-              .eq('id', auction.id);
+            const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
+            const instantPriceNum = Number(mh.instant_price ?? 0);
+            const hasValidPrice = Number.isFinite(instantPriceNum) && instantPriceNum > 0;
+            const autoRelist = auction.auto_relist !== false; // default true
+            const previouslyNotified = !!auction.festpreis_admin_notified_at;
 
-            if (!endError && auction.motorhome_id) {
-              const { error: mhErr } = await supabase
-                .from('motorhomes')
+            // ── Path A: seller opted out OR admin grace window already used ──
+            const shouldEnd = !autoRelist || (!hasValidPrice && previouslyNotified);
+
+            if (shouldEnd) {
+              console.log(
+                `[festpreis-end] auction=${auction.id} motorhome=${auction.motorhome_id} ` +
+                `autoRelist=${autoRelist} hasValidPrice=${hasValidPrice} previouslyNotified=${previouslyNotified}`
+              );
+
+              const { error: endError } = await supabase
+                .from('auctions')
                 .update({ status: 'ended', updated_at: now })
-                .eq('id', auction.motorhome_id);
-              if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
-            }
+                .eq('id', auction.id);
 
-            // Expire any pending price proposals and notify proposers
-            const { data: expiredOffers } = await supabase
-              .from('post_auction_offers')
-              .select('buyer_id, offer_amount')
-              .eq('auction_id', auction.id)
-              .in('status', ['pending', 'countered']);
+              if (!endError && auction.motorhome_id) {
+                const { error: mhErr } = await supabase
+                  .from('motorhomes')
+                  .update({ status: 'ended', updated_at: now })
+                  .eq('id', auction.motorhome_id);
+                if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
+              }
 
-            const { error: expireOffersErr } = await supabase
-              .from('post_auction_offers')
-              .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
-              .eq('auction_id', auction.id)
-              .in('status', ['pending', 'countered']);
-            if (expireOffersErr) console.error(`Failed to expire offers for ${auction.id}:`, expireOffersErr);
+              // Expire any pending price proposals and notify proposers
+              const { data: expiredOffers } = await supabase
+                .from('post_auction_offers')
+                .select('buyer_id, offer_amount')
+                .eq('auction_id', auction.id)
+                .in('status', ['pending', 'countered']);
 
-            // Notify proposers that their offers expired
-            if (expiredOffers && expiredOffers.length > 0) {
-              const motorhomeName = `${(auction.motorhomes as any)?.manufacturer || ''} ${(auction.motorhomes as any)?.model || ''}`.trim();
-              for (const eo of expiredOffers) {
-                try {
-                  const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('email, first_name, company_name')
-                    .eq('id', eo.buyer_id)
-                    .single();
-                  if (profile?.email) {
-                    await supabase.functions.invoke('send-auction-notification', {
-                      body: {
-                        email: profile.email,
-                        name: profile.company_name || profile.first_name || profile.email.split('@')[0],
-                        type: 'lost',
-                        motorhomeModel: motorhomeName,
-                        auctionUrl: 'https://caravanwert.de/kaufen',
-                        yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
-                        isFestpreis: true,
-                        listingEnded: true,
-                      },
-                    });
+              const { error: expireOffersErr } = await supabase
+                .from('post_auction_offers')
+                .update({ status: 'expired', seller_response: 'Inserat abgelaufen', updated_at: now })
+                .eq('auction_id', auction.id)
+                .in('status', ['pending', 'countered']);
+              if (expireOffersErr) console.error(`Failed to expire offers for ${auction.id}:`, expireOffersErr);
+
+              if (expiredOffers && expiredOffers.length > 0) {
+                for (const eo of expiredOffers) {
+                  try {
+                    const { data: profile } = await supabase
+                      .from('profiles')
+                      .select('email, first_name, company_name')
+                      .eq('id', eo.buyer_id)
+                      .single();
+                    if (profile?.email) {
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: profile.email,
+                          name: profile.company_name || profile.first_name || profile.email.split('@')[0],
+                          type: 'lost',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: 'https://caravanwert.de/kaufen',
+                          yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
+                          isFestpreis: true,
+                          listingEnded: true,
+                        },
+                      });
+                    }
+                  } catch (notifyErr: any) {
+                    console.error(`Failed to notify proposer ${eo.buyer_id}:`, notifyErr.message);
                   }
-                } catch (notifyErr: any) {
-                  console.error(`Failed to notify proposer ${eo.buyer_id}:`, notifyErr.message);
                 }
               }
+
+              results.push({
+                auctionId: auction.id,
+                type: 'instant_price_ended',
+                reason: !autoRelist ? 'auto_relist_off' : 'admin_grace_expired',
+                success: !endError,
+                error: endError?.message,
+              });
+              continue;
+            }
+
+            // ── Path B: instant_price > 0 → 7-day auto-extend ───────────────
+            if (hasValidPrice) {
+              const newEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+              const newRound = (auction.auction_round || 1) + 1;
+
+              console.log(
+                `[festpreis-extend] auction=${auction.id} round=${auction.auction_round}->${newRound} ` +
+                `instant_price=${instantPriceNum} newEnd=${newEnd}`
+              );
+
+              const { error: extError } = await supabase
+                .from('auctions')
+                .update({
+                  end_time: newEnd,
+                  auction_round: newRound,
+                  // Reset admin marker if it was ever set — price is now valid
+                  festpreis_admin_notified_at: null,
+                  updated_at: now,
+                })
+                .eq('id', auction.id);
+
+              if (extError) {
+                console.error(`Failed to auto-extend festpreis ${auction.id}:`, extError);
+                results.push({
+                  auctionId: auction.id,
+                  type: 'festpreis_extend',
+                  success: false,
+                  error: extError.message,
+                });
+                continue;
+              }
+
+              // Keep motorhome.updated_at in sync so dashboards refresh
+              if (auction.motorhome_id) {
+                await supabase
+                  .from('motorhomes')
+                  .update({ updated_at: now })
+                  .eq('id', auction.motorhome_id);
+              }
+
+              // Notify seller about auto-extension. Offers stay alive (β1).
+              if (mh.seller_id) {
+                try {
+                  const { data: sellerProfile } = await supabase
+                    .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
+                  if (sellerProfile?.email) {
+                    const endFmt = new Date(newEnd).toLocaleDateString('de-DE', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    });
+                    await supabase.functions.invoke('send-auction-notification', {
+                      body: {
+                        email: sellerProfile.email,
+                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        type: 'seller_festpreis_extended',
+                        motorhomeModel: motorhomeName,
+                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
+                        currentBid: `€${instantPriceNum.toLocaleString('de-DE')}`,
+                        endTime: endFmt,
+                        extendedUntil: endFmt,
+                        roundNumber: String(newRound),
+                      },
+                    }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
+                  }
+                } catch (e: any) {
+                  console.error('Festpreis seller lookup failed:', e?.message);
+                }
+              }
+
+              results.push({
+                auctionId: auction.id,
+                type: 'festpreis_extend',
+                success: true,
+                data: { round: newRound, endTime: newEnd, instantPrice: instantPriceNum },
+              });
+              continue;
+            }
+
+            // ── Path C: instant_price NULL/0, first encounter → 24h grace + admin alert
+            const grace = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+            console.log(
+              `[festpreis-admin-alert] auction=${auction.id} motorhome=${auction.motorhome_id} ` +
+              `instant_price NULL/0 → 24h grace, end_time=${grace}`
+            );
+
+            const { error: graceError } = await supabase
+              .from('auctions')
+              .update({
+                end_time: grace,
+                festpreis_admin_notified_at: now,
+                updated_at: now,
+              })
+              .eq('id', auction.id);
+
+            if (graceError) {
+              console.error(`Failed to set 24h grace on ${auction.id}:`, graceError);
+              results.push({
+                auctionId: auction.id,
+                type: 'festpreis_admin_alert',
+                success: false,
+                error: graceError.message,
+              });
+              continue;
+            }
+
+            // Send admin alert (recipient: site_settings.contact_email or admins).
+            // Anti-spam: send-auction-notification logs to admin_emails;
+            // duplicate suppression handled by the 24h grace marker itself
+            // (we won't re-enter this branch until grace expires).
+            try {
+              const { data: settings } = await supabase
+                .from('site_settings').select('contact_email, site_name').limit(1).maybeSingle();
+              const adminEmail = settings?.contact_email || 'info@caravanwert.de';
+
+              // Lookup seller name for richer admin context
+              let sellerNameStr: string | undefined;
+              if (mh.seller_id) {
+                const { data: sp } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name, company_name, email')
+                  .eq('id', mh.seller_id)
+                  .single();
+                if (sp) {
+                  sellerNameStr = sp.company_name
+                    || `${sp.first_name || ''} ${sp.last_name || ''}`.trim()
+                    || sp.email
+                    || mh.seller_id;
+                }
+              }
+
+              await supabase.functions.invoke('send-auction-notification', {
+                body: {
+                  email: adminEmail,
+                  name: 'Admin',
+                  type: 'admin_festpreis_needs_price',
+                  motorhomeModel: motorhomeName,
+                  auctionUrl: `https://caravanwert.de/admin/auctions`,
+                  motorhomeId: mh.id,
+                  sellerName: sellerNameStr,
+                },
+              }).catch((e: any) => console.error('Festpreis admin alert mail:', e?.message));
+            } catch (e: any) {
+              console.error('Festpreis admin alert lookup failed:', e?.message);
             }
 
             results.push({
               auctionId: auction.id,
-              type: 'instant_price_expired',
-              success: !endError,
-              error: endError?.message,
+              type: 'festpreis_admin_alert',
+              success: true,
+              data: { graceEnd: grace, motorhomeId: mh.id },
             });
             continue;
           }

@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`*, dealer:profiles(first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, customer_number, vat_id), auction:auctions(motorhome:motorhomes(manufacturer, model)), items:invoice_items(*)`)
+      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(motorhome:motorhomes(manufacturer, model)), items:invoice_items(*)`)
       .eq('id', invoiceId).single();
     if (invoiceError || !invoice) throw new Error(`Invoice not found: ${invoiceError?.message}`);
 
@@ -83,17 +83,32 @@ Deno.serve(async (req) => {
     const md = settings?.managing_director || '';
     const hrb = settings?.hrb_number || '';
 
-    const dlrName = invoice.dealer?.company_name || `${invoice.dealer?.first_name||''} ${invoice.dealer?.last_name||''}`.trim() || 'Händler';
+    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const personalName = `${invoice.dealer?.first_name||''} ${invoice.dealer?.last_name||''}`.trim();
+    // Penalty recipients are typically private sellers → use personal name + private
+    // address. Commission recipients are dealers → prefer company name + company
+    // address. In both cases we fall back to the other set so the PDF always shows
+    // a complete recipient block (important for printing & postal mailing).
+    const dlrName = isPenalty
+      ? (personalName || invoice.dealer?.company_name || 'Verkäufer')
+      : (invoice.dealer?.company_name || personalName || 'Händler');
     const dlrEmail = invoice.dealer?.email || '';
-    const dlrStreet = invoice.dealer?.company_street || '';
-    const dlrZip = invoice.dealer?.company_zip || '';
-    const dlrCity = invoice.dealer?.company_city || '';
-    const dlrCountry = invoice.dealer?.company_country || invoice.dealer_country || 'DE';
+    const dlrStreet = isPenalty
+      ? (invoice.dealer?.address_street || invoice.dealer?.company_street || '')
+      : (invoice.dealer?.company_street || invoice.dealer?.address_street || '');
+    const dlrZip = isPenalty
+      ? (invoice.dealer?.address_zip || invoice.dealer?.company_zip || '')
+      : (invoice.dealer?.company_zip || invoice.dealer?.address_zip || '');
+    const dlrCity = isPenalty
+      ? (invoice.dealer?.address_city || invoice.dealer?.company_city || '')
+      : (invoice.dealer?.company_city || invoice.dealer?.address_city || '');
+    const dlrCountry = isPenalty
+      ? (invoice.dealer?.address_country || invoice.dealer?.company_country || invoice.dealer_country || 'DE')
+      : (invoice.dealer?.company_country || invoice.dealer?.address_country || invoice.dealer_country || 'DE');
     const dlrVatId = invoice.dealer?.vat_id || '';
     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
     const isRC = invoice.reverse_charge === true;
 
-    const isPenalty = invoice.invoice_type === 'seller_penalty';
     const penaltyReasonLabel = isPenalty
       ? (PENALTY_REASON_LABELS[invoice.penalty_reason] || invoice.penalty_reason || 'Vertragsstrafe')
       : '';
@@ -138,12 +153,17 @@ Deno.serve(async (req) => {
     doc.setDrawColor(229,231,235); doc.line(ml,y+1,ml+90,y+1);
     y+=5;
 
-    // Recipient with full address
+    // Recipient with full address (German postal layout, suitable for windowed envelopes)
+    let ry=y+4;
+    const dlrSalutation = (invoice.dealer?.salutation || '').trim();
+    if(isPenalty && dlrSalutation){
+      doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(9); doc.setFont('helvetica','normal');
+      doc.text(dlrSalutation,ml,ry); ry+=5;
+    }
     doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text(dlrName,ml,y+4);
+    doc.text(dlrName,ml,ry); ry+=5;
     doc.setFont('helvetica','normal'); doc.setFontSize(9);
     doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b);
-    let ry=y+9;
     if(dlrStreet){doc.text(dlrStreet,ml,ry);ry+=4;}
     if(dlrZip||dlrCity){doc.text(`${dlrZip} ${dlrCity}`.trim(),ml,ry);ry+=4;}
     if(dlrCountry&&dlrCountry!=='DE'){doc.text(COUNTRY_NAMES[dlrCountry]||dlrCountry,ml,ry);ry+=4;}

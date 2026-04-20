@@ -126,6 +126,29 @@ export default function AdminFinancials() {
     });
   };
 
+  // Force-regenerate the invoice PDF (overwrites the file in storage). Useful
+  // when the template has changed or the recipient address was updated after
+  // the original PDF was created.
+  const regenerateInvoicePdf = async (invoice: any) => {
+    toast({ title: 'PDF wird neu erstellt …' });
+    const { error: genError } = await invokeWithAuth('generate-invoice-pdf', {
+      body: { invoiceId: invoice.id },
+    });
+    if (genError) {
+      toast({
+        title: 'Neugenerierung fehlgeschlagen',
+        description: genError.message ?? 'Unbekannter Fehler',
+        variant: 'destructive',
+      });
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+    toast({
+      title: 'PDF neu erstellt',
+      description: `Rechnung ${invoice.invoice_number} wurde neu generiert.`,
+    });
+  };
+
   // Fetch all invoices with customer_number
   const { data: invoices, isLoading: invoicesLoading } = useQuery({
     queryKey: ['admin-invoices'],
@@ -920,6 +943,14 @@ export default function AdminFinancials() {
                             title="Rechnung ansehen"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => regenerateInvoicePdf(invoice)}
+                            title="PDF neu generieren (z. B. nach Adressänderung)"
+                          >
+                            <RefreshCw className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"

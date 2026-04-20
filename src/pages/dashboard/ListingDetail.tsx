@@ -109,8 +109,6 @@ export default function ListingDetail() {
             dynamic_pricing,
             marketing_phase_started_at,
             marketing_phase_max_until,
-            seller_initial_reserve,
-            seller_initial_instant_price,
             last_price_reduction_at,
             reserve_price
           )
@@ -145,8 +143,6 @@ export default function ListingDetail() {
             dynamic_pricing,
             marketing_phase_started_at,
             marketing_phase_max_until,
-            seller_initial_reserve,
-            seller_initial_instant_price,
             last_price_reduction_at,
             reserve_price
           )
@@ -194,6 +190,38 @@ export default function ListingDetail() {
       };
     },
     enabled: !!resolvedAuction?.id,
+  });
+
+  // ── Marketing-Anker (seller_initial_*): via SECURITY DEFINER RPC ──
+  // Die zwei Anker-Spalten sind seit P4-Hardening NICHT mehr direkt
+  // selectable für authenticated/anon (column-REVOKE auf public.auctions).
+  // Die RPC `get_auction_marketing_anchors` erlaubt nur Owner und Admin
+  // den Lesezugriff. Wir laden die Anker nur wenn wir Seller sind und
+  // eine Auktion existiert — Käufer-Pfade brauchen die Werte nicht.
+  const isSellerForAnchors = motorhome?._isSeller === true;
+  const motorhomeIdForAnchors = motorhome?.id as string | undefined;
+  const { data: marketingAnchors } = useQuery({
+    queryKey: ["marketingAnchors", motorhomeIdForAnchors],
+    queryFn: async () => {
+      if (!motorhomeIdForAnchors) return null;
+      const { data, error } = await supabase.rpc(
+        "get_auction_marketing_anchors",
+        { p_motorhome_id: motorhomeIdForAnchors },
+      );
+      if (error) {
+        // 42501 (insufficient_privilege) → User ist weder Owner noch Admin.
+        // Im seller-Pfad sollte das nicht passieren; defensiv null zurück.
+        return null;
+      }
+      const row = Array.isArray(data) ? data[0] : null;
+      return row
+        ? {
+            sellerInitialReserve: row.seller_initial_reserve,
+            sellerInitialInstantPrice: row.seller_initial_instant_price,
+          }
+        : null;
+    },
+    enabled: !!motorhomeIdForAnchors && isSellerForAnchors && !!resolvedAuction,
   });
 
   // ── Addenda: Nachträge für diese Auktion laden ──
@@ -1263,6 +1291,16 @@ export default function ListingDetail() {
           auction={resolvedAuction}
           motorhome={motorhome}
           isFestpreis={isFestpreisListing}
+          sellerInitialReserve={
+            marketingAnchors?.sellerInitialReserve != null
+              ? Number(marketingAnchors.sellerInitialReserve)
+              : null
+          }
+          sellerInitialInstantPrice={
+            marketingAnchors?.sellerInitialInstantPrice != null
+              ? Number(marketingAnchors.sellerInitialInstantPrice)
+              : null
+          }
           dynamicPricingPending={toggleDynamicPricingMutation.isPending}
           showDynamicPricingOptOut={showDynamicPricingOptOut}
           onShowDynamicPricingOptOut={setShowDynamicPricingOptOut}
@@ -1698,6 +1736,10 @@ interface MarketingPhaseCardProps {
   auction: any;
   motorhome: any;
   isFestpreis: boolean;
+  /** Original-Reserve vom Verkäufer (RPC-Call, da column-REVOKE auf auctions.seller_initial_reserve). */
+  sellerInitialReserve: number | null;
+  /** Original-Festpreis vom Verkäufer (RPC-Call). */
+  sellerInitialInstantPrice: number | null;
   dynamicPricingPending: boolean;
   showDynamicPricingOptOut: boolean;
   onShowDynamicPricingOptOut: (v: boolean) => void;
@@ -1708,15 +1750,19 @@ function MarketingPhaseCard({
   auction,
   motorhome,
   isFestpreis,
+  sellerInitialReserve,
+  sellerInitialInstantPrice,
   dynamicPricingPending,
   showDynamicPricingOptOut,
   onShowDynamicPricingOptOut,
   onToggleDynamicPricing,
 }: MarketingPhaseCardProps) {
   const channel: 'auction' | 'instant_price' = isFestpreis ? 'instant_price' : 'auction';
+  // Anker-Preis: bevorzugt aus RPC, Fallback (Bestand-Inserate ohne Anker) auf
+  // motorhomes.instant_price / motorhomes.reserve_price.
   const sellerInitial: number | null = isFestpreis
-    ? (auction.seller_initial_instant_price ?? motorhome.instant_price ?? null)
-    : (auction.seller_initial_reserve ?? auction.reserve_price ?? motorhome.reserve_price ?? null);
+    ? (sellerInitialInstantPrice ?? motorhome.instant_price ?? null)
+    : (sellerInitialReserve ?? auction.reserve_price ?? motorhome.reserve_price ?? null);
 
   const round = auction.auction_round ?? 1;
   const dynamicPricing = auction.dynamic_pricing !== false;

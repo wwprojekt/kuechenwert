@@ -22,7 +22,13 @@ export default function AdminAnalytics() {
       const [usersRes, motorhomesRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact" }),
         supabase.from("motorhomes").select("*, seller:profiles!left(*)"),
-        supabase.from("auctions").select("*"),
+        // P4-Hardening: explizite Whitelist statt select("*"). Das Tabellen-
+        // SELECT-Privileg auf authenticated wurde widerrufen — select("*")
+        // würde jetzt mit "permission denied" failen. Wir lesen nur die
+        // tatsächlich benötigten Felder (Stats, Revenue, Success-Rate).
+        supabase
+          .from("auctions")
+          .select("id, status, current_bid, motorhome_id, created_at, end_time"),
         supabase.from("bids").select("*"),
         supabase.from("appointments").select("*"),
       ]);

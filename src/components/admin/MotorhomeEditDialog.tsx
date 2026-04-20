@@ -379,6 +379,14 @@ export function MotorhomeEditDialog({
       queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
       queryClient.invalidateQueries({ queryKey: ["adminMotorhome"] });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
+      // P4-Fix: Wenn Admin Reserve/Sofortpreis ändert, feuert der DB-Trigger
+      // disable_dynamic_pricing_on_manual_edit und setzt dynamic_pricing=false.
+      // Damit der Verkäufer die neue dynamic_pricing-Einstellung im
+      // Dashboard sofort sieht (statt erst nach Hard-Refresh), invalidieren
+      // wir auch die seller-seitigen Caches.
+      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail"] });
+      queryClient.invalidateQueries({ queryKey: ["sellerTimeline"] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
         title: "Gespeichert",
         description: "Wohnmobil wurde erfolgreich aktualisiert.",

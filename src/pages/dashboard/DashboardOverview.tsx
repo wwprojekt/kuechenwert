@@ -151,13 +151,24 @@ export default function DashboardOverview() {
     queryFn: async () => {
       if (!user) return null;
 
-      // Get all motorhomes with their auctions and photos
+      // Get all motorhomes with their auctions and photos.
+      // P4-Hardening: explizite Auktions-Spalten statt auction:auctions(*) —
+      // das Tabellen-SELECT auf authenticated wurde widerrufen, * würde failen.
+      // Wir whitelisten exakt die Felder die der Timeline-Renderer + die
+      // Kaufchance-Anzeige unten brauchen (KEIN seller_initial_*).
       const { data: motorhomes, error } = await supabase
         .from("motorhomes")
         .select(
           `
           *,
-          auction:auctions(*),
+          auction:auctions(
+            id, status, start_time, end_time, current_bid, starting_bid,
+            reserve_price, kaufchance_expires_at, kaufchance_min_price,
+            auto_relist, auction_round, dynamic_pricing,
+            marketing_phase_started_at, marketing_phase_max_until,
+            last_price_reduction_at, soft_close_extension_minutes,
+            created_at, updated_at
+          ),
           photos:motorhome_photos(url, display_order)
         `
         )
@@ -347,11 +358,14 @@ export default function DashboardOverview() {
         ...new Set(recentBids.map((b) => b.auction_id)),
       ].slice(0, 5);
 
+      // P4-Hardening: explizite Whitelist statt select("*"); seller_initial_*
+      // sind via Column-REVOKE für authenticated geblockt — * würde 403.
       const { data: auctions } = await supabase
         .from("auctions")
         .select(
           `
-          *,
+          id, status, start_time, end_time, current_bid, starting_bid,
+          reserve_price, kaufchance_expires_at, created_at,
           motorhome:motorhomes!inner (
             id, manufacturer, model, year, sale_channel, instant_price,
             photos:motorhome_photos (url, display_order)

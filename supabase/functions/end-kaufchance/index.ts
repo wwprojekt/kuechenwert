@@ -317,6 +317,11 @@ Deno.serve(async (req) => {
         kaufchance_min_price: null,
         auction_round: ((auction.auction_round as number | null) ?? 1) + 1,
         auto_relist: true,
+        // P4-Fix (BUG5): Beim Admin-Restart einer Auktion ist die "Stable
+        // Price" Anzeige zurückzusetzen. Sonst würde der Käufer einen
+        // missleadenden Badge "Preis stabil seit X Tagen" sehen, obwohl
+        // die Auktion gerade neu gestartet wurde.
+        last_price_reduction_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', auctionId);

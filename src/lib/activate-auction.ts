@@ -111,12 +111,36 @@ export async function activateAuctionForMotorhome(
   const now = new Date();
   const endTime = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-  // 4) Bestehende Auktion prüfen (1:1 zu motorhomes)
+  // 4) Bestehende Auktion prüfen (1:1 zu motorhomes).
+  // P4-Hardening: seller_initial_* sind via column-REVOKE für authenticated
+  // geblockt — wir holen sie über die SECURITY DEFINER RPC
+  // `get_auction_marketing_anchors` (Owner+Admin sehen sie). Für die Status-
+  // Prüfung selbst (id + status) reicht ein normaler SELECT.
   const { data: existing } = await supabase
     .from("auctions")
-    .select("id, status, seller_initial_reserve, seller_initial_instant_price")
+    .select("id, status")
     .eq("motorhome_id", motorhomeId)
     .maybeSingle();
+
+  let existingSellerInitialReserve: number | null = null;
+  let existingSellerInitialInstantPrice: number | null = null;
+  if (existing) {
+    const { data: anchors } = await supabase.rpc(
+      "get_auction_marketing_anchors",
+      { p_motorhome_id: motorhomeId },
+    );
+    const anchorRow = Array.isArray(anchors) ? anchors[0] : null;
+    if (anchorRow) {
+      existingSellerInitialReserve =
+        anchorRow.seller_initial_reserve != null
+          ? Number(anchorRow.seller_initial_reserve)
+          : null;
+      existingSellerInitialInstantPrice =
+        anchorRow.seller_initial_instant_price != null
+          ? Number(anchorRow.seller_initial_instant_price)
+          : null;
+    }
+  }
 
   // Berechne marketing-phase-max-until LOKAL für die Result-Rückgabe.
   // (Der DB-Trigger setzt den Wert, aber wir brauchen ihn schon hier
@@ -164,9 +188,9 @@ export async function activateAuctionForMotorhome(
       // Anker für Reduktions-Logik: nur setzen, falls noch nicht da
       // (Recycling einer wirklich neuen System-Auktion behält ihren Anker).
       seller_initial_reserve:
-        existing.seller_initial_reserve ?? (isInstantOnly ? null : reservePrice),
+        existingSellerInitialReserve ?? (isInstantOnly ? null : reservePrice),
       seller_initial_instant_price:
-        existing.seller_initial_instant_price ?? (isInstantOnly ? reservePrice : null),
+        existingSellerInitialInstantPrice ?? (isInstantOnly ? reservePrice : null),
       // auction_round explizit zurücksetzen (Recycling einer
       // abgeschlossenen alten Auktion startet wieder bei Runde 1).
       auction_round: 1,

@@ -4560,6 +4560,14 @@ export type Database = {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
       }
+      get_auction_marketing_anchors: {
+        Args: { p_motorhome_id: string }
+        Returns: {
+          auction_id: string
+          seller_initial_reserve: number | null
+          seller_initial_instant_price: number | null
+        }[]
+      }
       toggle_auto_relist: {
         Args: { p_auction_id: string; p_value: boolean }
         Returns: boolean

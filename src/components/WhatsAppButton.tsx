@@ -25,6 +25,14 @@ export const WhatsAppButton = () => {
     return null;
   }
 
+  // Auktions-Detailseiten haben auf Mobile eine sticky Bid-Bar am unteren
+  // Rand. Damit der WhatsApp-Button die Bar nicht überlappt, schieben wir
+  // ihn dort höher (nur auf Mobile, ab sm: zurück zur Standard-Position).
+  const isAuctionPage = location.pathname.startsWith('/auktion/');
+  const positionClasses = isAuctionPage
+    ? 'fixed bottom-24 left-4 sm:bottom-8 sm:left-8 z-50'
+    : 'fixed bottom-8 left-4 sm:left-8 z-50';
+
   // Don't render if no phone number configured
   if (!settings?.whatsapp_number && !settings?.support_phone) {
     return null;
@@ -43,7 +51,7 @@ export const WhatsAppButton = () => {
   };
 
   return (
-    <div className="fixed bottom-8 left-4 sm:left-8 z-50">
+    <div className={positionClasses}>
       {isExpanded && (
         <Card className="mb-4 p-4 w-80 max-w-[calc(100vw-4rem)] sm:max-w-80 shadow-lg animate-fade-in">
           <div className="flex items-start justify-between mb-3">

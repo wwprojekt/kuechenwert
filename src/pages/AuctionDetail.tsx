@@ -945,7 +945,14 @@ const AuctionDetail = () => {
 
   if (auctionLoadState === 'not_found') {
     return (
-      <PageLayout breadcrumbs={true} title="Nicht gefunden" description="Auktion nicht gefunden">
+      <PageLayout
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Auktionen', path: '/kaufen' },
+        ]}
+        title="Nicht gefunden"
+        description="Auktion nicht gefunden"
+      >
         <div className="container py-20 text-center space-y-4">
           <h1 className="text-2xl font-bold">Auktion nicht gefunden</h1>
           <p className="text-muted-foreground">Diese Auktion existiert nicht oder wurde entfernt.</p>
@@ -957,7 +964,14 @@ const AuctionDetail = () => {
 
   if (auctionLoadState === 'error') {
     return (
-      <PageLayout breadcrumbs={true} title="Fehler" description="Auktion konnte nicht geladen werden">
+      <PageLayout
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Auktionen', path: '/kaufen' },
+        ]}
+        title="Fehler"
+        description="Auktion konnte nicht geladen werden"
+      >
         <div className="container py-20 text-center space-y-4">
           <h1 className="text-2xl font-bold">Fehler beim Laden</h1>
           <p className="text-muted-foreground">Die Auktion konnte nicht geladen werden. Bitte versuchen Sie es erneut.</p>
@@ -972,7 +986,14 @@ const AuctionDetail = () => {
 
   if (!auction || !motorhome) {
     return (
-      <PageLayout breadcrumbs={true} title="Lädt..." description="Auktion wird geladen">
+      <PageLayout
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Auktionen', path: '/kaufen' },
+        ]}
+        title="Lädt..."
+        description="Auktion wird geladen"
+      >
         <AuctionDetailSkeleton />
       </PageLayout>
     );
@@ -1023,7 +1044,11 @@ const AuctionDetail = () => {
 
   return (
     <PageLayout
-      breadcrumbs={true}
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'Auktionen', path: '/kaufen' },
+        { name: `${motorhome.manufacturer} ${motorhome.model}`, path: `/auktion/${id}` },
+      ]}
       title={`${motorhome.manufacturer} ${motorhome.model}`}
       description={motorhome.sale_channel === 'instant_price'
         ? `${motorhome.manufacturer} ${motorhome.model} - Festpreis: €${Number(motorhome.instant_price || 0).toLocaleString()}`
@@ -1039,7 +1064,7 @@ const AuctionDetail = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
         
-        <div className="container mx-auto px-4 max-w-7xl py-6 relative z-10">
+        <div className="container mx-auto px-4 max-w-7xl pt-6 pb-32 lg:pb-6 relative z-10">
           {/* Simple Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -1233,6 +1258,168 @@ const AuctionDetail = () => {
                     </div>
                   )}
                 </div>
+              </Card>
+
+              {/*
+                MOBILE-ONLY: Quick-Info-Karte direkt unter der Foto-Galerie.
+                Händler scannen hier in <5s die wichtigsten Daten + Preis +
+                Timer und können per CTA zur Bid-Form springen. Auf Desktop
+                übernimmt die rechte Sidebar diese Rolle (lg:hidden).
+              */}
+              <Card className="lg:hidden p-4 space-y-4">
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight">
+                    {motorhome.manufacturer} {motorhome.model}
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <span>{motorhome.body_type} · {motorhome.year}</span>
+                    {motorhome.account_type === 'dealer' ? (
+                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                        Händler
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
+                        Privat
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {motorhome.postal_code && (() => {
+                  const anonymizedPlz = anonymizePostalCode(motorhome.postal_code);
+                  const vehicleCoords = getPlzCoordinates(motorhome.postal_code);
+                  const dealerCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
+                  const distanceKm = vehicleCoords && dealerCoords
+                    ? calculateDistance(
+                        { latitude: vehicleCoords.lat, longitude: vehicleCoords.lng },
+                        { latitude: dealerCoords.lat, longitude: dealerCoords.lng }
+                      )
+                    : null;
+                  return (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                      <span className="inline-flex items-center gap-1 flex-1 min-w-0">
+                        {motorhome.country && <CountryFlag countryCode={motorhome.country} showCode={true} size="sm" />}
+                        {motorhome.country ? '-' : ''}{anonymizedPlz}
+                      </span>
+                      {distanceKm !== null && (
+                        <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex-shrink-0">
+                          <Navigation className="w-3 h-3" />
+                          ca. {formatDistance(distanceKm)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* KPI-Streifen: 4 wichtigste Werte auf einen Blick */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
+                    <Calendar className="w-4 h-4 text-primary mb-1" />
+                    <span className="text-[10px] text-muted-foreground leading-none">Baujahr</span>
+                    <span className="text-sm font-semibold mt-0.5">{motorhome.year}</span>
+                  </div>
+                  <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
+                    <Gauge className="w-4 h-4 text-primary mb-1" />
+                    <span className="text-[10px] text-muted-foreground leading-none">KM</span>
+                    <span className="text-sm font-semibold tabular-nums mt-0.5">
+                      {motorhome.mileage < 10000
+                        ? motorhome.mileage.toLocaleString('de-DE')
+                        : `${Math.round(motorhome.mileage / 1000)}k`}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
+                    <Zap className="w-4 h-4 text-primary mb-1" />
+                    <span className="text-[10px] text-muted-foreground leading-none">PS</span>
+                    <span className="text-sm font-semibold mt-0.5">{motorhome.engine_power_hp || '—'}</span>
+                  </div>
+                  <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
+                    <Bed className="w-4 h-4 text-primary mb-1" />
+                    <span className="text-[10px] text-muted-foreground leading-none">Schläft</span>
+                    <span className="text-sm font-semibold mt-0.5">{motorhome.sleeping_places || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Kompakter Preis + Timer + CTA */}
+                {motorhome.status !== 'sold' && timeRemaining !== 'Beendet' && (
+                  <div className={`flex items-center gap-3 pt-1 -mx-1 px-3 py-2.5 rounded-lg transition-colors ${
+                    bidStatusAnimation === 'pulse-green'
+                      ? 'bg-emerald-50 ring-1 ring-emerald-300'
+                      : bidStatusAnimation === 'pulse-red'
+                      ? 'bg-red-50 ring-1 ring-red-300'
+                      : isHighestBidder
+                      ? 'bg-emerald-50/60'
+                      : wasOutbid
+                      ? 'bg-red-50/60'
+                      : 'bg-primary/5'
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-muted-foreground leading-none mb-1">
+                        {motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}
+                      </p>
+                      {canSeePrices ? (
+                        <p className={`text-2xl font-bold leading-none truncate ${
+                          motorhome.sale_channel === 'instant_price'
+                            ? 'text-yellow-600'
+                            : isHighestBidder
+                            ? 'text-emerald-600'
+                            : wasOutbid
+                            ? 'text-red-600'
+                            : 'text-primary'
+                        }`}>
+                          €{(motorhome.sale_channel === 'instant_price'
+                            ? Number(motorhome.instant_price || 0)
+                            : currentBid).toLocaleString('de-DE')}
+                        </p>
+                      ) : (
+                        <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Lock className="w-3.5 h-3.5 text-amber-500" />
+                          Nur für Händler
+                        </p>
+                      )}
+                      {hasBid && canSeePrices && (
+                        <p className={`text-[11px] mt-1 font-medium ${isHighestBidder ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {isHighestBidder ? '✓ Höchstbietender' : `✗ Überboten (Ihr: €${userHighestBid.toLocaleString('de-DE')})`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[11px] text-muted-foreground leading-none mb-1 flex items-center justify-end gap-1">
+                        <Clock className="w-3 h-3" />
+                        Endet in
+                      </p>
+                      <p className={`text-lg font-bold tabular-nums leading-none ${isEndingSoon ? 'text-destructive animate-pulse' : ''}`}>
+                        {timeRemaining}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Vehicle-spezifische Badges (Unfallfrei, Nichtraucher, etc.) */}
+                {(motorhome.accident_free || motorhome.non_smoker || motorhome.service_history_available || motorhome.tuv_new) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {motorhome.accident_free && (
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                        <CheckCircle className="w-3 h-3" />Unfallfrei
+                      </Badge>
+                    )}
+                    {motorhome.non_smoker && (
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                        <Shield className="w-3 h-3" />Nichtraucher
+                      </Badge>
+                    )}
+                    {motorhome.service_history_available && (
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                        <Award className="w-3 h-3" />Serviceheft
+                      </Badge>
+                    )}
+                    {motorhome.tuv_new && (
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                        <CheckCircle className="w-3 h-3" />TÜV neu
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </Card>
 
               {/* Comprehensive Vehicle Information */}
@@ -1666,10 +1853,14 @@ const AuctionDetail = () => {
 
             </div>
 
-            {/* Simplified Right column - Bidding Sidebar */}
-            <div className="lg:col-span-1 space-y-6 order-first lg:order-last">
+            {/* Right column - Bidding Sidebar
+                Mobile: erscheint NACH Foto + MobileBidSummary + Tabs (kein order-first mehr).
+                Desktop: rechts neben dem Content (lg:order-last). */}
+            <div id="bid-actions" className="lg:col-span-1 space-y-6 lg:order-last scroll-mt-20">
               <Card className="p-6 lg:sticky lg:top-24 space-y-6">
-                <div>
+                {/* Header-Block (Titel/Body/Standort) ist auf Mobile durch
+                    MobileBidSummary oben ersetzt, daher hier hidden lg:block */}
+                <div className="hidden lg:block">
                   <h1 className="text-2xl font-bold mb-2">
                     {motorhome.manufacturer} {motorhome.model}
                   </h1>
@@ -1724,9 +1915,10 @@ const AuctionDetail = () => {
                   })()}
                 </div>
 
-                {/* Trust Indicators & Vehicle Badges */}
-                <div className="space-y-3">
-                  {/* Platform Trust Badges */}
+                {/* Trust Indicators & Vehicle Badges — hidden on Mobile,
+                    weil Vehicle-Badges bereits in MobileBidSummary und
+                    Platform-Trust-Badges weniger relevant für Händler */}
+                <div className="hidden lg:block space-y-3">
                   <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-green-600" />
@@ -1742,7 +1934,6 @@ const AuctionDetail = () => {
                     </div>
                   </div>
                   
-                  {/* Vehicle Condition Badges */}
                   <div className="flex flex-wrap gap-2">
                     {motorhome.accident_free && (
                       <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
@@ -1771,9 +1962,11 @@ const AuctionDetail = () => {
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="hidden lg:block" />
 
-                {/* Timer */}
+                {/* Timer — auf Mobile durch MobileBidSummary ersetzt, außer
+                    Hotbid-Phase (rot animiert) — die wird auch auf Mobile
+                    prominent angezeigt, damit Händler den Zeitdruck spüren */}
                 {isEndingSoon && timeRemaining !== "Beendet" ? (
                   <div className="text-center p-4 -mx-2 rounded-xl bg-gradient-to-br from-destructive/10 via-destructive/5 to-orange-500/10 border-2 border-destructive/30 animate-pulse">
                     <div className="flex items-center justify-center gap-2 mb-1">
@@ -1793,7 +1986,7 @@ const AuctionDetail = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="text-center">
+                  <div className="hidden lg:block text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Clock className="w-5 h-5 text-primary" />
                       <p className="text-sm font-medium">
@@ -1815,11 +2008,12 @@ const AuctionDetail = () => {
                   </div>
                 )}
 
-                <Separator />
+                <Separator className="hidden lg:block" />
 
-                {/* Current bid with Live Status — hidden for instant-price-only listings */}
+                {/* Current bid with Live Status — auf Mobile durch
+                    MobileBidSummary ersetzt (sonst doppelter Preis) */}
                 {motorhome.sale_channel !== 'instant_price' && (
-                <div className={`relative rounded-xl p-4 -mx-2 transition-all duration-500 ${
+                <div className={`hidden lg:block relative rounded-xl p-4 -mx-2 transition-all duration-500 ${
                   bidStatusAnimation === 'pulse-green'
                     ? 'bg-emerald-50 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-100'
                     : bidStatusAnimation === 'pulse-red'
@@ -2461,6 +2655,75 @@ const AuctionDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Sticky Mobile Bid-Bar — immer sichtbar während des Scrollens, damit
+          Händler aus jeder Position bieten können. Nicht angezeigt wenn die
+          Auktion bereits beendet/verkauft ist (nichts zu tun). */}
+      {motorhome.status !== 'sold' && timeRemaining !== 'Beendet' && (
+        <div
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md border-t border-border shadow-2xl px-3 py-2.5"
+          style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex items-center gap-2.5 max-w-2xl mx-auto pl-14">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-1.5 leading-none mb-0.5">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Gebot'}
+                </span>
+                <span className="text-[10px] text-muted-foreground">·</span>
+                <span className={`text-[10px] font-semibold tabular-nums ${isEndingSoon ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {timeRemaining}
+                </span>
+              </div>
+              {canSeePrices ? (
+                <p className={`text-lg font-bold leading-tight truncate ${
+                  motorhome.sale_channel === 'instant_price'
+                    ? 'text-yellow-600'
+                    : isHighestBidder
+                    ? 'text-emerald-600'
+                    : wasOutbid
+                    ? 'text-red-600'
+                    : 'text-foreground'
+                }`}>
+                  €{(motorhome.sale_channel === 'instant_price'
+                    ? Number(motorhome.instant_price || 0)
+                    : currentBid).toLocaleString('de-DE')}
+                </p>
+              ) : (
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-amber-500" />
+                  Nur für Händler
+                </p>
+              )}
+            </div>
+            <Button
+              size="lg"
+              onClick={() => {
+                const el = document.getElementById('bid-actions');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className={`flex-shrink-0 h-12 px-5 font-semibold ${
+                motorhome.sale_channel === 'instant_price'
+                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                  : auction.status === 'kaufchance'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white'
+                  : ''
+              }`}
+            >
+              {motorhome.sale_channel === 'instant_price' ? (
+                <><Zap className="w-4 h-4 mr-1.5" />Kaufen</>
+              ) : auction.status === 'kaufchance' ? (
+                <><Zap className="w-4 h-4 mr-1.5" />Angebot</>
+              ) : (
+                <><Gavel className="w-4 h-4 mr-1.5" />Bieten</>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* High-bid confirmation dialog — replaces window.confirm() which fails on mobile */}
       <AlertDialog open={!!highBidConfirm} onOpenChange={(open) => { if (!open) setHighBidConfirm(null); }}>
         <AlertDialogContent>

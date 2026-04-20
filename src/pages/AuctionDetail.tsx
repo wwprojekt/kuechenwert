@@ -105,6 +105,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Maximize,
   AlertTriangle,
   MapPin,
@@ -132,7 +133,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -170,6 +170,13 @@ const AuctionDetail = () => {
   const [highBidConfirm, setHighBidConfirm] = useState<{ amount: number; currentBid: number } | null>(null);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // Ausstattung wird auf eigenen "Reiter" gelegt — als Accordion-Karte,
+  // die per Default zu ist (User-Wunsch: Übersicht/Technik/Zustand sofort
+  // sichtbar, Ausstattung nur auf Klick).
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  // Beschreibungs-Toggle für Mobile (lange Beschreibungen einklappen).
+  const [descExpanded, setDescExpanded] = useState(false);
 
   // Touch-Gesten für Photo-Galerie auf Mobile.
   // touchMoved trennt Swipe (≥10px Bewegung) von Tap (≤10px).
@@ -1522,19 +1529,43 @@ const AuctionDetail = () => {
                 )}
               </Card>
 
-              {/* Comprehensive Vehicle Information */}
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-                  <TabsTrigger value="overview">Übersicht</TabsTrigger>
-                  <TabsTrigger value="technical">Technik</TabsTrigger>
-                  <TabsTrigger value="features">Ausstattung</TabsTrigger>
-                  <TabsTrigger value="condition">Zustand</TabsTrigger>
-                </TabsList>
+              {/* === Sub-Nav (Mobile/Tablet) ============================
+                   Scrollt zu den 4 Sektionen unten. Sticky am oberen
+                   Viewport-Rand, damit Nutzer beim Lesen der Daten
+                   schnell zwischen Übersicht/Technik/Zustand/Ausstattung
+                   springen können — verhindert ewiges Scrollen.
+                   Auf Desktop nicht nötig (alles passt sowieso). */}
+              <div className="lg:hidden sticky top-0 z-30 -mt-2 py-2 bg-background/90 backdrop-blur-md">
+                <div className="flex gap-1.5 overflow-x-auto rounded-full shadow-md border border-border bg-card p-1.5">
+                  {[
+                    { id: 'overview', label: 'Übersicht', icon: Info },
+                    { id: 'technical', label: 'Technik', icon: Cog },
+                    { id: 'condition', label: 'Zustand', icon: CheckCircle },
+                    { id: 'features', label: 'Ausstattung', icon: Award },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        // Bei Ausstattung erst aufklappen, dann scrollen
+                        if (s.id === 'features' && !featuresOpen) setFeaturesOpen(true);
+                        setTimeout(() => {
+                          document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, s.id === 'features' && !featuresOpen ? 60 : 0);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-transparent hover:bg-primary/10 active:bg-primary/20 text-foreground whitespace-nowrap transition-colors"
+                    >
+                      <s.icon className="w-3.5 h-3.5 text-primary" />
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                <TabsContent value="overview" className="space-y-6">
-                  <Card className="p-6">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <Info className="w-6 h-6 text-primary" />
+              {/* === Sektion 1: Fahrzeug-Übersicht ====================== */}
+              <Card id="overview" className="p-4 sm:p-6 scroll-mt-20">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
+                      <Info className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                       Fahrzeug-Übersicht
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1611,16 +1642,31 @@ const AuctionDetail = () => {
                       </div>
                     </div>
 
-                    {/* Fahrzeugbeschreibung */}
+                    {/* Fahrzeugbeschreibung — auf Mobile bei langen Texten
+                        gekürzt (line-clamp-6) mit "Mehr anzeigen"-Toggle.
+                        Auf Tablet+ (sm:) immer komplett. */}
                     {motorhome.description && (
                       <div className="mt-6">
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
                           <FileText className="w-5 h-5 text-primary" />
                           Beschreibung
                         </h3>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        <p
+                          className={`text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed ${
+                            !descExpanded && motorhome.description.length > 400 ? 'line-clamp-6 sm:line-clamp-none' : ''
+                          }`}
+                        >
                           {motorhome.description}
                         </p>
+                        {motorhome.description.length > 400 && (
+                          <button
+                            type="button"
+                            onClick={() => setDescExpanded(!descExpanded)}
+                            className="sm:hidden mt-2 text-sm font-medium text-primary hover:underline"
+                          >
+                            {descExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -1667,60 +1713,19 @@ const AuctionDetail = () => {
                         </p>
                       </div>
                     )}
-                  </Card>
+              </Card>
 
-                  {/* Vehicle Question Form */}
-                  <VehicleQuestionForm 
-                    motorhomeId={motorhome.id} 
-                    vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
-                  />
-                </TabsContent>
-
-                <TabsContent value="technical" className="space-y-6">
-                  <Card className="p-6">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <Cog className="w-6 h-6 text-primary" />
+              {/* === Sektion 2: Technische Daten ========================
+                   Baujahr/KM/Kraftstoff/Getriebe/Leistung sind bereits
+                   in der Übersicht oben — hier nur ergänzende technische
+                   Werte (Schadstoffklasse, Hubraum, Reifen) plus die
+                   3 Spezialboxen Abmessungen/Tanks/Energie. */}
+              <Card id="technical" className="p-4 sm:p-6 scroll-mt-20">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
+                      <Cog className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                       Technische Daten
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Baujahr</p>
-                          <p className="font-semibold">{motorhome.year}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Gauge className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Kilometerstand</p>
-                          <p className="font-semibold">{motorhome.mileage.toLocaleString()} km</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Fuel className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Kraftstoff</p>
-                          <p className="font-semibold">{motorhome.fuel_type || 'Nicht angegeben'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Zap className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Leistung</p>
-                          <p className="font-semibold">
-                            {motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : 'Nicht angegeben'}
-                            {motorhome.power_kw && ` (${motorhome.power_kw} kW)`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Cog className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Getriebe</p>
-                          <p className="font-semibold">{motorhome.transmission || 'Nicht angegeben'}</p>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Shield className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
@@ -1757,7 +1762,7 @@ const AuctionDetail = () => {
                       )}
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                       <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
                         <div className="flex items-center gap-2 mb-3">
                           <Ruler className="w-5 h-5 text-primary" />
@@ -1813,18 +1818,89 @@ const AuctionDetail = () => {
                         </div>
                       </div>
                     </div>
-                  </Card>
-                </TabsContent>
+              </Card>
 
-                <TabsContent value="features" className="space-y-6">
-                  <Card className="p-6">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <Award className="w-6 h-6 text-primary" />
-                      Ausstattung & Features
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
+              {/* === Sektion 3: Fahrzeug-Zustand ========================
+                   Vier farbige Boxen mit den wichtigsten Zustands-
+                   indikatoren. Auf Mobile als 2-Spalten-Grid kompakt. */}
+              <Card id="condition" className="p-4 sm:p-6 scroll-mt-20">
+                <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                  Fahrzeugzustand
+                </h2>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base">Unfallfreiheit</span>
+                    </div>
+                    <Badge variant={motorhome.accident_free ? 'default' : 'destructive'} className="text-[11px] sm:text-xs">
+                      {motorhome.accident_free ? 'Unfallfrei' : 'Unfall vorhanden'}
+                    </Badge>
+                  </div>
+
+                  <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base">Raucher</span>
+                    </div>
+                    <Badge variant={motorhome.non_smoker ? 'default' : 'secondary'} className="text-[11px] sm:text-xs">
+                      {motorhome.non_smoker ? 'Nichtraucher' : 'Raucherfahrzeug'}
+                    </Badge>
+                  </div>
+
+                  <div className="p-3 sm:p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base">Serviceheft</span>
+                    </div>
+                    <Badge variant={motorhome.service_history_available ? 'default' : 'secondary'} className="text-[11px] sm:text-xs">
+                      {motorhome.service_history_available ? 'Verfügbar' : 'Nicht verfügbar'}
+                    </Badge>
+                  </div>
+
+                  <div className="p-3 sm:p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 flex-shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base">TÜV/HU</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {motorhome.tuev_valid_until
+                        ? `bis ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
+                        : 'Nicht angegeben'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* === Reiter: Ausstattung (Accordion) =====================
+                   User-Wunsch: "ausstattung soll wie jetzt bleiben mit
+                   eigenem reiter". Hier als kollabierbare Karte im
+                   Reiter-Look — Default eingeklappt, damit die Seite
+                   kurz bleibt. Sub-Nav oben kann sie auch öffnen. */}
+              <Card id="features" className="overflow-hidden scroll-mt-20">
+                <button
+                  type="button"
+                  onClick={() => setFeaturesOpen(!featuresOpen)}
+                  aria-expanded={featuresOpen}
+                  aria-controls="features-content"
+                  className="w-full flex items-center justify-between p-4 sm:p-6 hover:bg-muted/30 active:bg-muted/50 transition-colors"
+                >
+                  <span className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                    <Award className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                    Ausstattung &amp; Features
+                  </span>
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="hidden sm:inline">{featuresOpen ? 'Einklappen' : 'Anzeigen'}</span>
+                    <ChevronDown className={`w-5 h-5 transition-transform ${featuresOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {featuresOpen && (
+                  <div id="features-content" className="px-4 sm:px-6 pb-4 sm:pb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="space-y-3 sm:space-y-4">
                         <h3 className="font-semibold flex items-center gap-2">
                           <Home className="w-5 h-5 text-primary" />
                           Innenausstattung
@@ -1862,7 +1938,7 @@ const AuctionDetail = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <h3 className="font-semibold flex items-center gap-2">
                           <Car className="w-5 h-5 text-primary" />
                           Außenausstattung
@@ -1889,72 +1965,22 @@ const AuctionDetail = () => {
                         </div>
                       </div>
                     </div>
-                  </Card>
-                </TabsContent>
+                  </div>
+                )}
+              </Card>
 
-                <TabsContent value="condition" className="space-y-6">
-                  <Card className="p-6">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-primary" />
-                      Fahrzeugzustand
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="font-semibold">Unfallfreiheit</span>
-                          </div>
-                          <Badge variant={motorhome.accident_free ? 'default' : 'destructive'}>
-                            {motorhome.accident_free ? 'Unfallfrei' : 'Unfall vorhanden'}
-                          </Badge>
-                        </div>
-                        
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Shield className="w-5 h-5 text-blue-600" />
-                            <span className="font-semibold">Raucherfahrzeug</span>
-                          </div>
-                          <Badge variant={motorhome.non_smoker ? 'default' : 'secondary'}>
-                            {motorhome.non_smoker ? 'Nichtraucher' : 'Raucherfahrzeug'}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Award className="w-5 h-5 text-purple-600" />
-                            <span className="font-semibold">Serviceheft</span>
-                          </div>
-                          <Badge variant={motorhome.service_history_available ? 'default' : 'secondary'}>
-                            {motorhome.service_history_available ? 'Verfügbar' : 'Nicht verfügbar'}
-                          </Badge>
-                        </div>
-                        
-                        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Calendar className="w-5 h-5 text-orange-600" />
-                            <span className="font-semibold">TÜV/HU</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {motorhome.tuev_valid_until 
-                              ? `Gültig bis: ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
-                              : 'Nicht angegeben'
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+              {/* Vehicle Question Form — eigene Karte am Schluss
+                  (war vorher im Übersicht-Tab eingebettet) */}
+              <VehicleQuestionForm
+                motorhomeId={motorhome.id}
+                vehicleTitle={`${motorhome.manufacturer} ${motorhome.model}`}
+              />
 
             </div>
 
             {/* Right column - Bidding Sidebar
-                Mobile: erscheint NACH Foto + MobileBidSummary + Tabs (kein order-first mehr).
+                Mobile: erscheint NACH Foto + MobileBidSummary + Sektionen
+                (Übersicht/Technik/Zustand/Ausstattung).
                 Desktop: rechts neben dem Content (lg:order-last). */}
             <div id="bid-actions" className="lg:col-span-1 space-y-6 lg:order-last scroll-mt-20">
               <Card className="p-6 lg:sticky lg:top-24 space-y-6">

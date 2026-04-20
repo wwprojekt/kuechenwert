@@ -10,10 +10,17 @@ const Listings = () => {
   const { data: auctions, isLoading } = useQuery({
     queryKey: ['home-auctions'],
     queryFn: async () => {
-      // Performance: nur die für die Karten benötigten Spalten + serverseitig
-      // EIN Foto pro Auktion (geordnet nach display_order). Vorher wurde via
-      // motorhomes(*) + photos(*) pro Listing das ganze Motorhome-Schema und
-      // ~30 Foto-Zeilen geladen, obwohl die Card nur die Hero-Photo zeigt.
+      // Performance: 2-Roundtrip-Strategie statt nested embed.
+      // Hintergrund: Der vorherige `photos:motorhome_photos(url, display_order)`
+      // Embed mit `.order(..., { referencedTable: 'motorhome.photos' })` und
+      // `.limit(1, { referencedTable: 'motorhome.photos' })` funktioniert NICHT
+      // korrekt mit PostgREST (400-Fehler beim nested order, Limit greift nicht
+      // auf den Embed). Resultat war: pro Auction wurden ALLE ~20 Photos
+      // mitgeschickt → ~80 Bilder im Browser für die Homepage statt 4.
+      // Siehe Kaufen.tsx für die ausführliche Diagnose.
+      //
+      // Fix: Auctions ohne photos selecten, dann eine zweite Query auf
+      // motorhome_photos mit display_order=0 (= Cover-Foto, DB-verifiziert).
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('auctions')
@@ -23,19 +30,56 @@ const Listings = () => {
           motorhome:motorhomes(
             id, manufacturer, model, year, mileage, body_type, country,
             instant_price, sale_channel, status, account_type,
-            sleeping_places, seats, description,
-            photos:motorhome_photos(url, display_order)
+            sleeping_places, seats, description
           )
         `)
         .eq('status', 'active')
         .gt('end_time', nowIso)
-        .order('display_order', { referencedTable: 'motorhome.photos', ascending: true })
-        .limit(1, { referencedTable: 'motorhome.photos' })
         .order('end_time', { ascending: true })
         .limit(4);
 
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) return [];
+
+      const motorhomeIds = data
+        .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
+        .filter((id): id is string => Boolean(id));
+
+      let coverByMotorhomeId = new Map<string, string>();
+      if (motorhomeIds.length > 0) {
+        const { data: photoRows } = await supabase
+          .from('motorhome_photos')
+          .select('url, motorhome_id')
+          .in('motorhome_id', motorhomeIds)
+          .eq('display_order', 0);
+
+        if (photoRows) {
+          coverByMotorhomeId = new Map(
+            (photoRows as Array<{ url: string; motorhome_id: string }>)
+              .filter((p) => p.url && p.motorhome_id)
+              .map((p) => [p.motorhome_id, p.url])
+          );
+        }
+      }
+
+      return data.map((a) => {
+        const typed = a as unknown as {
+          motorhome_id?: string;
+          motorhome?: { id?: string } | null;
+        };
+        const cover = typed.motorhome_id
+          ? coverByMotorhomeId.get(typed.motorhome_id)
+          : undefined;
+        return {
+          ...(a as object),
+          motorhome: typed.motorhome
+            ? {
+                ...typed.motorhome,
+                photos: cover ? [{ url: cover, display_order: 0 }] : [],
+              }
+            : null,
+        };
+      });
     }
   });
   return (

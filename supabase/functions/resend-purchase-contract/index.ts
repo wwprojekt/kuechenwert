@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow } from '../_shared/email-builder.ts';
+import { sendContractSentNotification } from '../_shared/contract-notification.ts';
 
 /**
  * Edge Function: resend-purchase-contract
@@ -169,6 +170,22 @@ Deno.serve(async (req) => {
         }).then(() => {}).catch((e: any) => console.error('Failed to log seller email:', e));
 
         console.log('Contract resent to seller:', sellerProfile.email);
+
+        const sellerDownloadUrl: string = (contract as any).contract_url || '';
+        if (sellerDownloadUrl) {
+          await sendContractSentNotification({
+            resendApiKey: RESEND_API_KEY,
+            supabase,
+            settingsData,
+            recipientEmail: sellerProfile.email,
+            recipientName: sellerName,
+            contractNumber,
+            vehicleName,
+            salePrice: Number(contract.sale_price),
+            downloadUrl: sellerDownloadUrl,
+            party: 'seller',
+          });
+        }
       } catch (e: any) {
         console.error('Error resending contract to seller:', e);
         results.push({ target: 'seller', email: sellerProfile.email, success: false, error: e.message });
@@ -233,6 +250,22 @@ Deno.serve(async (req) => {
         }).then(() => {}).catch((e: any) => console.error('Failed to log buyer email:', e));
 
         console.log('Contract resent to buyer:', buyerProfile.email);
+
+        const buyerDownloadUrl: string = (contract as any).buyer_contract_url || (contract as any).contract_url || '';
+        if (buyerDownloadUrl) {
+          await sendContractSentNotification({
+            resendApiKey: RESEND_API_KEY,
+            supabase,
+            settingsData,
+            recipientEmail: buyerProfile.email,
+            recipientName: buyerName,
+            contractNumber,
+            vehicleName,
+            salePrice: Number(contract.sale_price),
+            downloadUrl: buyerDownloadUrl,
+            party: 'buyer',
+          });
+        }
       } catch (e: any) {
         console.error('Error resending contract to buyer:', e);
         results.push({ target: 'buyer', email: buyerProfile.email, success: false, error: e.message });

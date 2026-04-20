@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, RATE_LIMITS } from '../_shared/rate-limiter.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
+import { sendContractSentNotification } from '../_shared/contract-notification.ts';
 
 /**
  * Edge Function: instant-buy
@@ -452,6 +453,8 @@ Deno.serve(async (req) => {
         contractSuccess = true;
         contractNumber = contractResult.contractNumber;
         contractPdfBase64 = contractResult.pdfBase64 || '';
+        const sellerContractUrl: string = contractResult.contractUrl || '';
+        const buyerContractUrl: string = contractResult.buyerContractUrl || contractResult.contractUrl || '';
         console.log('Purchase contract generated:', contractNumber);
 
         // Send contract to both parties via email
@@ -535,6 +538,21 @@ Deno.serve(async (req) => {
             } catch (logErr) {
               console.error('Failed to log seller contract email:', logErr);
             }
+
+            if (RESEND_API_KEY && sellerContractUrl) {
+              await sendContractSentNotification({
+                resendApiKey: RESEND_API_KEY,
+                supabase: supabaseAdmin,
+                settingsData,
+                recipientEmail: sellerProfile.email,
+                recipientName: sellerName,
+                contractNumber,
+                vehicleName: motorhomeName,
+                salePrice: instantPrice,
+                downloadUrl: sellerContractUrl,
+                party: 'seller',
+              });
+            }
           } catch (e: any) {
             console.error('Error sending contract to seller:', e);
             errors.push(`Kaufvertrag-E-Mail an Verkäufer fehlgeschlagen: ${e.message}`);
@@ -604,6 +622,21 @@ Deno.serve(async (req) => {
               if (logError) console.error('Failed to log buyer contract email:', logError);
             } catch (logErr) {
               console.error('Failed to log buyer contract email:', logErr);
+            }
+
+            if (RESEND_API_KEY && buyerContractUrl) {
+              await sendContractSentNotification({
+                resendApiKey: RESEND_API_KEY,
+                supabase: supabaseAdmin,
+                settingsData,
+                recipientEmail: buyerProfile.email,
+                recipientName: buyerName,
+                contractNumber,
+                vehicleName: motorhomeName,
+                salePrice: instantPrice,
+                downloadUrl: buyerContractUrl,
+                party: 'buyer',
+              });
             }
           } catch (e: any) {
             console.error('Error sending contract to buyer:', e);

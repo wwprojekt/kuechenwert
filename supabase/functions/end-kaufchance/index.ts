@@ -9,6 +9,7 @@ import {
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
+import { MARKETING_CONFIG } from '../_shared/marketing-config.ts';
 
 /**
  * Edge Function: end-kaufchance
@@ -169,7 +170,12 @@ Deno.serve(async (req) => {
   const mode: Mode = body.mode;
   const reason = body.reason?.trim() || null;
   const sendEmail = body.sendEmail !== false;
-  const durationDays = Math.max(1, Math.min(30, Number(body.durationDays ?? 7)));
+  // Phase 3: Default-Dauer auf MARKETING_CONFIG.AUCTION_DURATION_DAYS (3 Tage)
+  // gesenkt — Admin kann via durationDays-Override aber 1-30 Tage wählen.
+  const durationDays = Math.max(
+    1,
+    Math.min(30, Number(body.durationDays ?? MARKETING_CONFIG.AUCTION_DURATION_DAYS))
+  );
 
   if (!auctionId) {
     return new Response(JSON.stringify({ error: 'auctionId ist erforderlich' }), { status: 400, headers });
@@ -278,13 +284,33 @@ Deno.serve(async (req) => {
     // delete bids first so the new auction starts clean
     await supabaseAdmin.from('bids').delete().eq('auction_id', auctionId);
 
+    // Phase 3: Random-Startgebot statt fixem Wert. Schützt vor
+    // Reverse-Engineering der Reserve durch Händler über mehrere Runden.
+    // Bei RPC-Fehler fallen wir auf den bestehenden starting_bid (oder 50)
+    // zurück, damit Admin-Restarts nie hängen bleiben.
+    let restartStartingBid = auction.starting_bid ?? 50;
+    if (newReserve != null && Number(newReserve) > 0) {
+      try {
+        const { data: bidData, error: bidErr } = await supabaseAdmin.rpc('compute_random_starting_bid', {
+          p_reserve_price: Number(newReserve),
+        });
+        if (!bidErr && typeof bidData === 'number' && bidData > 0) {
+          restartStartingBid = bidData;
+        } else if (bidErr) {
+          edgeLogger.error('compute_random_starting_bid RPC error in end-kaufchance', bidErr);
+        }
+      } catch (e) {
+        edgeLogger.error('compute_random_starting_bid threw in end-kaufchance', e);
+      }
+    }
+
     const { error: aErr } = await supabaseAdmin
       .from('auctions')
       .update({
         status: 'active',
         current_bid: null,
         reserve_price: newReserve,
-        starting_bid: auction.starting_bid ?? 50,
+        starting_bid: restartStartingBid,
         start_time: startTime.toISOString(),
         end_time: restartEndTime.toISOString(),
         kaufchance_expires_at: null,

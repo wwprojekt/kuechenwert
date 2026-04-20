@@ -5,6 +5,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
+import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketing-config.ts';
 
 /**
  * Edge Function: close-auction
@@ -346,10 +347,201 @@ Deno.serve(async (req) => {
       console.log('No bids placed on auction');
     }
 
-    // Calculate kaufchance expiry (72 hours from now)
-    const kaufchanceExpiresAt = isKaufchance 
-      ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+    // Calculate kaufchance expiry: MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS
+    // (24h ab Phase 3, vorher hartcodiert 72h)
+    const kaufchanceExpiresAt = isKaufchance
+      ? new Date(Date.now() + MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS * 60 * 60 * 1000).toISOString()
       : null;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ─── AUTO-RELIST FOR NO-BID AUCTIONS (Phase 3 Marketing-Phase Logik) ──
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Wenn eine Auktion ohne Gebote endet, soll sie automatisch erneut
+    // eingestellt werden – mit reduzierter Reserve und neuem zufälligem
+    // Startgebot. Voraussetzung: Es ist ein Inserat unter der neuen
+    // Marketingphase-Logik (`seller_initial_reserve` gesetzt).
+    //
+    // Eligibility (alle müssen TRUE sein):
+    //   1. Kein Gebot vorhanden                           → newStatus === 'ended'
+    //   2. sale_channel === 'auction' (nicht instant_price; das ist
+    //      schon weiter oben gehandelt worden)
+    //   3. seller_initial_reserve IS NOT NULL              → neue Logik
+    //   4. auto_relist !== false                           → Verkäufer-Opt-In
+    //   5. auction_round < AUCTION_MAX_ROUNDS              → max 4 Runden
+    //   6. marketing_phase_max_until > now()               → Bindungs-Cap nicht
+    //                                                       überschritten
+    //
+    // Wenn alle erfüllt: relist; sonst klassisches "ended".
+    // (Soft-Brake-Mail kommt in Phase 6 – hier loggen wir nur den Grund.)
+    const isNoBidsAuctionEnding =
+      newStatus === 'ended' && !highestBid && auction.motorhome?.sale_channel === 'auction';
+    const sellerInitialReserveNum = auction.seller_initial_reserve != null
+      ? Number(auction.seller_initial_reserve)
+      : null;
+
+    if (isNoBidsAuctionEnding && sellerInitialReserveNum !== null && sellerInitialReserveNum > 0) {
+      const autoRelistEnabled = auction.auto_relist !== false;
+      const currentRound = Number(auction.auction_round || 1);
+      const maxRoundsReached = currentRound >= MARKETING_CONFIG.AUCTION_MAX_ROUNDS;
+      const maxUntil = auction.marketing_phase_max_until
+        ? new Date(auction.marketing_phase_max_until)
+        : null;
+      const phaseExpired = maxUntil != null && maxUntil.getTime() <= Date.now();
+      const isEligible = autoRelistEnabled && !maxRoundsReached && !phaseExpired;
+
+      if (isEligible) {
+        // Reserve reduzieren – nur wenn dynamic_pricing aktiviert
+        const dynamicPricing = auction.dynamic_pricing !== false;
+        const currentReserveNum = Number(effectiveReservePrice ?? sellerInitialReserveNum);
+        const newReserve = dynamicPricing
+          ? computeNextReducedReserve(currentReserveNum, sellerInitialReserveNum, 'auction')
+          : currentReserveNum;
+
+        // Neues Random-Startgebot 40-60% von Reserve, gerundet auf 50er
+        let newStartingBid = 50;
+        try {
+          const { data: bidData, error: bidErr } = await supabase.rpc('compute_random_starting_bid', {
+            p_reserve_price: newReserve,
+          });
+          if (!bidErr && typeof bidData === 'number' && bidData > 0) {
+            newStartingBid = bidData;
+          } else if (bidErr) {
+            console.warn('compute_random_starting_bid RPC error, fallback 50:', bidErr.message);
+          }
+        } catch (e: any) {
+          console.warn('compute_random_starting_bid threw, fallback 50:', e?.message);
+        }
+
+        const newRound = currentRound + 1;
+        const startTime = new Date();
+        const endTime = new Date(
+          Date.now() + MARKETING_CONFIG.AUCTION_DURATION_DAYS * 24 * 60 * 60 * 1000
+        );
+        const nowIso = new Date().toISOString();
+
+        const { error: relistErr } = await supabase
+          .from('auctions')
+          .update({
+            status: 'active',
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            current_bid: null,
+            starting_bid: newStartingBid,
+            reserve_price: newReserve,
+            auction_round: newRound,
+            // marketing_phase_started_at + max_until werden NICHT zurückgesetzt
+            // – die Bindung läuft kontinuierlich (siehe Phase-1-Schema-Doku).
+            updated_at: nowIso,
+          })
+          .eq('id', auctionId);
+
+        if (relistErr) {
+          console.error(`Auto-relist UPDATE failed for ${auctionId}:`, relistErr);
+          errors.push(`Auto-Relist fehlgeschlagen: ${relistErr.message}`);
+          // Fall through to normal "ended" path as defensive fallback
+        } else {
+          // Motorhome-Status synchronisieren
+          if (auction.motorhome?.id) {
+            const { error: mhErr } = await supabase
+              .from('motorhomes')
+              .update({
+                status: 'active',
+                reserve_price: newReserve,
+                updated_at: nowIso,
+              })
+              .eq('id', auction.motorhome.id);
+            if (mhErr) console.error(`Motorhome sync after relist ${auctionId}:`, mhErr);
+          }
+
+          // Verkäufer informieren (gleicher Template-Type wie bei Kaufchance-Relist
+          // in check-expired-auctions, damit alle Auto-Relist-Mails konsistent sind)
+          if (auction.motorhome?.seller_id) {
+            try {
+              const { data: sellerProfile } = await supabase
+                .from('profiles')
+                .select('email, first_name')
+                .eq('id', auction.motorhome.seller_id)
+                .single();
+              if (sellerProfile?.email) {
+                const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`;
+                const endTimeFmt = endTime.toLocaleDateString('de-DE', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                });
+                const reserveFmt = `€${newReserve.toLocaleString('de-DE')}`;
+
+                await supabase.functions.invoke('send-auction-notification', {
+                  body: {
+                    email: sellerProfile.email,
+                    name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                    type: 'seller_auto_relisted',
+                    motorhomeModel: motorhomeName,
+                    auctionUrl: dashboardUrl,
+                    endTime: endTimeFmt,
+                    reservePrice: reserveFmt,
+                    currentBid: `Runde ${newRound}`,
+                  },
+                }).catch((e: any) => console.error('Seller relist mail failed:', e?.message));
+
+                // Ab Runde 2 zusätzlich Soft-Warning mit konkreten Empfehlungen
+                if (newRound >= 2) {
+                  await supabase.functions.invoke('send-auction-notification', {
+                    body: {
+                      email: sellerProfile.email,
+                      name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                      type: 'seller_auction_round_warning',
+                      motorhomeModel: motorhomeName,
+                      auctionUrl: dashboardUrl,
+                      endTime: endTimeFmt,
+                      reservePrice: reserveFmt,
+                      roundNumber: String(newRound),
+                    },
+                  }).catch((e: any) => console.error('Seller round_warning mail failed:', e?.message));
+                }
+              }
+            } catch (e: any) {
+              console.error('Seller profile lookup failed during relist:', e?.message);
+            }
+          }
+
+          console.log(
+            `[auto-relist] auction=${auctionId} round=${currentRound}->${newRound} ` +
+            `reserve=${currentReserveNum}->${newReserve} startbid=${newStartingBid} ` +
+            `dynamic_pricing=${dynamicPricing}`
+          );
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              status: 'active',
+              outcome: 'auto_relisted',
+              round: newRound,
+              newReserve,
+              newStartingBid,
+              endTime: endTime.toISOString(),
+              dynamicPricing,
+              errors: errors.length > 0 ? errors : undefined,
+            }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        // Soft-Brake-Trigger: Eligibility nicht erfüllt → Auktion endet endgültig.
+        // Phase 6 hängt hier die "3-Buttons-Mail" an. Aktuell: nur loggen.
+        const reason = !autoRelistEnabled
+          ? 'auto_relist_off'
+          : maxRoundsReached
+            ? 'max_rounds_reached'
+            : phaseExpired
+              ? 'marketing_phase_expired'
+              : 'unknown';
+        console.log(
+          `[soft-brake] auction=${auctionId} round=${currentRound} ` +
+          `seller_initial_reserve=${sellerInitialReserveNum} reason=${reason}`
+        );
+      }
+    }
 
     // Update auction status
     const updateData: any = { status: newStatus };

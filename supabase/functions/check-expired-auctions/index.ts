@@ -2,6 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
+import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketing-config.ts';
+
+const CRON_LOCK_KEY = 'check-expired-auctions';
+const CRON_LOCK_TTL_MINUTES = 5;
 
 /**
  * Edge Function: check-expired-auctions
@@ -33,17 +37,54 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const now = new Date().toISOString();
+
+    // ─── Concurrency guard: only one Cron-Run gleichzeitig ─────────
+    //
+    // Verhindert, dass zwei parallele Cron-Trigger (z.B. wegen langer
+    // Vorgängerläufe + Minuten-Schedule) dieselbe expired Auktion zweimal
+    // schließen / relisten / E-Mails verschicken. Stale-Lock-TTL fängt
+    // Crash-Szenarios auf (siehe Migration 20260420221000).
+    //
+    // Hinweis: pg_advisory_lock kann hier NICHT verwendet werden, weil
+    // Supabase über PgBouncer (transaction pooling) jede Statement potenziell
+    // auf einer anderen Connection ausführt → Session-Locks unzuverlässig.
+    const { data: lockAcquired, error: lockError } = await supabase.rpc('try_acquire_cron_lock', {
+      p_key: CRON_LOCK_KEY,
+      p_ttl_minutes: CRON_LOCK_TTL_MINUTES,
+    });
+
+    if (lockError) {
+      console.error('Failed to acquire cron lock:', lockError);
+      // Defensive: weiter machen, aber loggen. Fehlende Lock-RPC darf nicht
+      // den ganzen Cron blockieren (z.B. während Deploy bevor Migration durch ist).
+    } else if (lockAcquired === false) {
+      console.log(`[skipped] cron lock '${CRON_LOCK_KEY}' is held by another instance — exiting early`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          skipped: true,
+          reason: 'cron_lock_held',
+          message: 'Another instance is still processing — skipped this tick.',
+        }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Checking for expired auctions at ${now}...`);
 
     // ─── 1. Active auctions whose end_time has passed ──────────────
     // We need festpreis-specific fields (instant_price, seller_id) for the
     // auto-extend path, plus auto_relist + auction_round + festpreis_admin_notified_at.
+    //
+    // Phase 3 ergänzt seller_initial_instant_price, dynamic_pricing,
+    // marketing_phase_max_until — für Reduktions-/Cap-Logik beim Festpreis-Extend.
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
       .select(`
         id, end_time, status, motorhome_id,
         auto_relist, auction_round, reserve_price,
         festpreis_admin_notified_at,
+        seller_initial_instant_price, dynamic_pricing, marketing_phase_max_until,
         motorhomes!inner(
           id, sale_channel, manufacturer, model,
           instant_price, seller_id
@@ -85,8 +126,18 @@ Deno.serve(async (req) => {
             const autoRelist = auction.auto_relist !== false; // default true
             const previouslyNotified = !!auction.festpreis_admin_notified_at;
 
-            // ── Path A: seller opted out OR admin grace window already used ──
-            const shouldEnd = !autoRelist || (!hasValidPrice && previouslyNotified);
+            // Phase 3: NEU-System-Marker + Marketing-Phase-Cap-Check (Soft-Brake)
+            const sellerInitialInstantPrice = auction.seller_initial_instant_price != null
+              ? Number(auction.seller_initial_instant_price)
+              : null;
+            const isNewSystemFestpreis = sellerInitialInstantPrice !== null && sellerInitialInstantPrice > 0;
+            const phaseExpired =
+              isNewSystemFestpreis &&
+              auction.marketing_phase_max_until != null &&
+              new Date(auction.marketing_phase_max_until).getTime() <= Date.now();
+
+            // ── Path A: seller opted out OR admin grace window already used OR cap reached ──
+            const shouldEnd = !autoRelist || (!hasValidPrice && previouslyNotified) || phaseExpired;
 
             if (shouldEnd) {
               console.log(
@@ -155,24 +206,54 @@ Deno.serve(async (req) => {
                 }
               }
 
+              const endReason = !autoRelist
+                ? 'auto_relist_off'
+                : phaseExpired
+                  ? 'marketing_phase_expired'
+                  : 'admin_grace_expired';
               results.push({
                 auctionId: auction.id,
                 type: 'instant_price_ended',
-                reason: !autoRelist ? 'auto_relist_off' : 'admin_grace_expired',
+                reason: endReason,
                 success: !endError,
                 error: endError?.message,
               });
               continue;
             }
 
-            // ── Path B: instant_price > 0 → 7-day auto-extend ───────────────
+            // ── Path B: instant_price > 0 → Auto-Extend ─────────────────────
+            //
+            // NEU-System: INSTANT_PRICE_DURATION_DAYS (3 Tage) + optionale
+            //   Reduktion (-2 % pro Runde, Floor -10 %) wenn dynamic_pricing=true.
+            // LEGACY: 7 Tage Verlängerung, kein Preis-Update (Alt-Verhalten).
             if (hasValidPrice) {
-              const newEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+              const durationDays = isNewSystemFestpreis
+                ? MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS
+                : 7;
+              const newEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
               const newRound = (auction.auction_round || 1) + 1;
+
+              // Optionale Preis-Reduktion für NEU-System mit dynamic_pricing=true
+              const dynamicPricing = (auction as { dynamic_pricing?: boolean | null }).dynamic_pricing === true;
+              let nextInstantPrice: number | null = null;
+              if (isNewSystemFestpreis && dynamicPricing) {
+                nextInstantPrice = computeNextReducedReserve(
+                  instantPriceNum,
+                  sellerInitialInstantPrice!,
+                  'instant_price'
+                );
+                if (nextInstantPrice >= instantPriceNum) {
+                  // Floor erreicht oder Rundungsglitch → keine sichtbare Senkung,
+                  // also Update überspringen, sonst fluten wir admin_emails / favoriten
+                  // mit "neuer Preis"-Mails ohne realen Effekt.
+                  nextInstantPrice = null;
+                }
+              }
 
               console.log(
                 `[festpreis-extend] auction=${auction.id} round=${auction.auction_round}->${newRound} ` +
-                `instant_price=${instantPriceNum} newEnd=${newEnd}`
+                `instant_price=${instantPriceNum} -> ${nextInstantPrice ?? 'unchanged'} ` +
+                `duration=${durationDays}d newEnd=${newEnd} system=${isNewSystemFestpreis ? 'new' : 'legacy'}`
               );
 
               const { error: extError } = await supabase
@@ -185,6 +266,19 @@ Deno.serve(async (req) => {
                   updated_at: now,
                 })
                 .eq('id', auction.id);
+
+              // Wenn Preis-Reduktion aktiv: instant_price auf motorhomes updaten.
+              // (auctions.reserve_price wird hier NICHT touchiert — Festpreis hat
+              //  keine Reserve. Quelle der Wahrheit ist motorhomes.instant_price.)
+              if (!extError && nextInstantPrice != null && auction.motorhome_id) {
+                const { error: priceErr } = await supabase
+                  .from('motorhomes')
+                  .update({ instant_price: nextInstantPrice, updated_at: now })
+                  .eq('id', auction.motorhome_id);
+                if (priceErr) {
+                  console.error(`Festpreis price reduction failed for ${auction.motorhome_id}:`, priceErr);
+                }
+              }
 
               if (extError) {
                 console.error(`Failed to auto-extend festpreis ${auction.id}:`, extError);
@@ -224,7 +318,10 @@ Deno.serve(async (req) => {
                     });
                     const sellerNameStr = sellerProfile.first_name || sellerProfile.email.split('@')[0];
                     const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
-                    const currentBidStr = `€${instantPriceNum.toLocaleString('de-DE')}`;
+                    // Wenn dynamic_pricing den Preis gerade gesenkt hat, kommunizieren
+                    // wir den NEUEN Preis – sonst wirkt die Mail wie "alte Daten".
+                    const effectiveInstantPrice = nextInstantPrice ?? instantPriceNum;
+                    const currentBidStr = `€${effectiveInstantPrice.toLocaleString('de-DE')}`;
 
                     // Bug-fix #8: per-(seller,auction,round) dedup. The cron runs every
                     // minute; if a deploy or DB hiccup re-processes the same expired
@@ -427,9 +524,14 @@ Deno.serve(async (req) => {
     }
 
     // ─── 2. Kaufchance auctions whose kaufchance_expires_at has passed ──
+    // Phase 3: zusätzlich seller_initial_reserve, dynamic_pricing,
+    // marketing_phase_max_until — werden für Reduktions-/Cap-Logik gebraucht.
     const { data: expiredKaufchancen, error: kaufchanceError } = await supabase
       .from('auctions')
-      .select('id, kaufchance_expires_at, status, auto_relist, auction_round, reserve_price')
+      .select(`
+        id, kaufchance_expires_at, status, auto_relist, auction_round, reserve_price,
+        seller_initial_reserve, dynamic_pricing, marketing_phase_max_until
+      `)
       .eq('status', 'kaufchance')
       .lt('kaufchance_expires_at', now);
 
@@ -452,36 +554,102 @@ Deno.serve(async (req) => {
             const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
 
             // ── AUTO-RELIST: default on (matches DB NOT NULL + frontend `!== false`) ──
-            if (kaufchance.auto_relist !== false) {
-              console.log(`Auto-relisting kaufchance ${kaufchance.id} (round ${kaufchance.auction_round})...`);
+            //
+            // Phase 3 verzweigt hier nach Listing-Typ:
+            //   * NEUE Inserate (seller_initial_reserve != NULL):
+            //       – Reserve nach computeNextReducedReserve (-2% pro Runde, Floor -6%)
+            //       – Startgebot: compute_random_starting_bid RPC (40-60 % von Reserve)
+            //       – Auktionsdauer: MARKETING_CONFIG.AUCTION_DURATION_DAYS (3 Tage)
+            //       – Soft-Brake bei auction_round >= AUCTION_MAX_ROUNDS oder
+            //         marketing_phase_max_until überschritten
+            //   * BESTAND-Inserate (seller_initial_reserve == NULL):
+            //       – Alt-Logik: lowest counter-offer wird neuer Reserve
+            //       – Startgebot bleibt unverändert (50 € fallback aus DB)
+            //       – Auktionsdauer: 7 Tage (Alt-Verhalten)
+            //       – Keine Cap-Checks (laufen nach Phase 7 mit Soft-Cap aus)
+            const currentRound = Number(kaufchance.auction_round || 1);
+            const sellerInitialReserveNum = kaufchance.seller_initial_reserve != null
+              ? Number(kaufchance.seller_initial_reserve)
+              : null;
+            const isNewSystemListing = sellerInitialReserveNum !== null && sellerInitialReserveNum > 0;
+
+            // ── Eligibility-Check für NEUE Inserate (Soft-Brake-Trigger) ─────
+            let softBrakeReason: string | null = null;
+            if (isNewSystemListing) {
+              if (currentRound >= MARKETING_CONFIG.AUCTION_MAX_ROUNDS) {
+                softBrakeReason = 'max_rounds_reached';
+              } else if (
+                kaufchance.marketing_phase_max_until &&
+                new Date(kaufchance.marketing_phase_max_until).getTime() <= Date.now()
+              ) {
+                softBrakeReason = 'marketing_phase_expired';
+              }
+            }
+
+            const shouldRelist = kaufchance.auto_relist !== false && !softBrakeReason;
+
+            if (shouldRelist) {
+              console.log(`Auto-relisting kaufchance ${kaufchance.id} (round ${currentRound}, system=${isNewSystemListing ? 'new' : 'legacy'})...`);
 
               // Baseline reserve (auction row, else motorhome — same idea as close-auction)
-              let newReservePrice =
-                kaufchance.reserve_price ?? (mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null;
+              let newReservePrice: number | null =
+                (kaufchance.reserve_price as number | null)
+                ?? ((mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null);
 
-              // Bug-fix #6: scope the lowest counter-offer query to the
-              // CURRENT round (the one being closed). Previously this pulled
-              // every counter-offer ever made on this auction_id, including
-              // expired ones from older rounds, and could undercut the
-              // seller with a stale 4 500 € counter from round 1 even though
-              // they had moved up to 6 000 € in round 3.
-              // post_auction_offers.auction_round is now stamped via trigger
-              // on insert (migration 20260420010000).
-              const currentRound = kaufchance.auction_round || 1;
-              const { data: allOffers } = await supabase
-                .from('post_auction_offers')
-                .select('counter_offer_amount')
-                .eq('auction_id', kaufchance.id)
-                .eq('auction_round', currentRound)
-                .not('counter_offer_amount', 'is', null);
-
-              if (allOffers && allOffers.length > 0) {
-                const lowestCounterOffer = Math.min(
-                  ...allOffers.map((o: { counter_offer_amount: unknown }) => Number(o.counter_offer_amount))
+              if (isNewSystemListing) {
+                // NEU: Reduktion nach Marketingphase-Logik
+                const dynamicPricing = (kaufchance as { dynamic_pricing?: boolean | null }).dynamic_pricing !== false;
+                const baseReserve = Number(newReservePrice ?? sellerInitialReserveNum);
+                newReservePrice = dynamicPricing
+                  ? computeNextReducedReserve(baseReserve, sellerInitialReserveNum!, 'auction')
+                  : baseReserve;
+                console.log(
+                  `[new-system] reserve ${baseReserve} -> ${newReservePrice} ` +
+                  `(dynamic_pricing=${dynamicPricing}, floor=${(sellerInitialReserveNum! * (1 - MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION)).toFixed(0)})`
                 );
-                if (lowestCounterOffer > 0) {
-                  newReservePrice = lowestCounterOffer;
-                  console.log(`New reserve price from lowest seller counter-offer (round ${currentRound}): ${newReservePrice}`);
+              } else {
+                // LEGACY: lowest counter-offer wird neuer Reserve
+                // Bug-fix #6: scope the lowest counter-offer query to the
+                // CURRENT round (the one being closed). Previously this pulled
+                // every counter-offer ever made on this auction_id, including
+                // expired ones from older rounds, and could undercut the
+                // seller with a stale 4 500 € counter from round 1 even though
+                // they had moved up to 6 000 € in round 3.
+                // post_auction_offers.auction_round is now stamped via trigger
+                // on insert (migration 20260420010000).
+                const { data: allOffers } = await supabase
+                  .from('post_auction_offers')
+                  .select('counter_offer_amount')
+                  .eq('auction_id', kaufchance.id)
+                  .eq('auction_round', currentRound)
+                  .not('counter_offer_amount', 'is', null);
+
+                if (allOffers && allOffers.length > 0) {
+                  const lowestCounterOffer = Math.min(
+                    ...allOffers.map((o: { counter_offer_amount: unknown }) => Number(o.counter_offer_amount))
+                  );
+                  if (lowestCounterOffer > 0) {
+                    newReservePrice = lowestCounterOffer;
+                    console.log(`[legacy] reserve from lowest counter-offer (round ${currentRound}): ${newReservePrice}`);
+                  }
+                }
+              }
+
+              // Neues Random-Startgebot — nur für NEUE Inserate (Legacy bleibt
+              // bei seinem ursprünglichen starting_bid, sonst overwrite-Risiko).
+              let newStartingBid: number | null = null;
+              if (isNewSystemListing && newReservePrice != null && newReservePrice > 0) {
+                try {
+                  const { data: bidData, error: bidErr } = await supabase.rpc('compute_random_starting_bid', {
+                    p_reserve_price: Number(newReservePrice),
+                  });
+                  if (!bidErr && typeof bidData === 'number' && bidData > 0) {
+                    newStartingBid = bidData;
+                  } else if (bidErr) {
+                    console.warn('compute_random_starting_bid RPC error, keeping previous:', bidErr.message);
+                  }
+                } catch (e: any) {
+                  console.warn('compute_random_starting_bid threw, keeping previous:', e?.message);
                 }
               }
 
@@ -492,23 +660,31 @@ Deno.serve(async (req) => {
                 .eq('auction_id', kaufchance.id);
 
               // Transition auction first — avoids orphaned state if update fails after deletes
-              const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-              const newRound = (kaufchance.auction_round || 1) + 1;
+              const durationDays = isNewSystemListing
+                ? MARKETING_CONFIG.AUCTION_DURATION_DAYS
+                : 7;
+              const endTime = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+              const newRound = currentRound + 1;
+
+              const updatePayload: Record<string, unknown> = {
+                status: 'active',
+                start_time: now,
+                end_time: endTime,
+                current_bid: null,
+                kaufchance_expires_at: null,
+                kaufchance_min_price: null,
+                reserve_price: newReservePrice,
+                auction_round: newRound,
+                auto_relist: true,
+                updated_at: now,
+              };
+              if (newStartingBid != null) {
+                updatePayload.starting_bid = newStartingBid;
+              }
 
               const { error: relistError } = await supabase
                 .from('auctions')
-                .update({
-                  status: 'active',
-                  start_time: now,
-                  end_time: endTime,
-                  current_bid: null,
-                  kaufchance_expires_at: null,
-                  kaufchance_min_price: null,
-                  reserve_price: newReservePrice,
-                  auction_round: newRound,
-                  auto_relist: true,
-                  updated_at: now,
-                })
+                .update(updatePayload)
                 .eq('id', kaufchance.id);
 
               if (relistError) {
@@ -634,12 +810,31 @@ Deno.serve(async (req) => {
                 }
               } catch (e) { console.error('Buyer notification error:', e); }
 
-              console.log(`Auto-relisted ${kaufchance.id} → round ${newRound}, reserve ${newReservePrice}`);
-              results.push({ auctionId: kaufchance.id, type: 'auto_relist', success: true, data: { round: newRound, reservePrice: newReservePrice } });
+              console.log(`Auto-relisted ${kaufchance.id} → round ${newRound}, reserve ${newReservePrice}, startbid ${newStartingBid ?? 'unchanged'}`);
+              results.push({
+                auctionId: kaufchance.id,
+                type: 'auto_relist',
+                success: true,
+                data: {
+                  round: newRound,
+                  reservePrice: newReservePrice,
+                  startingBid: newStartingBid,
+                  system: isNewSystemListing ? 'new' : 'legacy',
+                },
+              });
 
             } else {
-              // ── OPT-OUT: Seller disabled auto-relist → end auction as before ──
-              console.log(`Closing expired kaufchance ${kaufchance.id} (auto_relist=false)...`);
+              // ── OPT-OUT oder SOFT-BRAKE: Auktion endgültig beenden ──
+              //
+              // Tritt ein wenn:
+              //   * Verkäufer hat auto_relist deaktiviert, ODER
+              //   * NEU-Inserat hat AUCTION_MAX_ROUNDS erreicht, ODER
+              //   * NEU-Inserat hat marketing_phase_max_until überschritten
+              //
+              // Phase 6 baut hier die "3-Buttons-Mail" (Soft-Brake) ein.
+              // Aktuell: ende sauber, Standard-Notifications.
+              const endReason = softBrakeReason || 'auto_relist_off';
+              console.log(`Closing expired kaufchance ${kaufchance.id} (${endReason})...`);
 
               const { error: updateError } = await supabase
                 .from('auctions')
@@ -814,6 +1009,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Lock freigeben (best-effort; bei Fehler greift TTL als Fallback)
+    try {
+      await supabase.rpc('release_cron_lock', { p_key: CRON_LOCK_KEY });
+    } catch (relErr: any) {
+      console.error('release_cron_lock failed (non-fatal, TTL covers):', relErr?.message);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -839,6 +1041,9 @@ Deno.serve(async (req) => {
         category: 'auction',
         originalError: error,
       });
+      // Lock auch im Error-Fall freigeben, sonst blockiert sie für TTL-Dauer
+      await supabaseLog.rpc('release_cron_lock', { p_key: CRON_LOCK_KEY })
+        .catch((relErr: any) => console.error('release_cron_lock in error path failed:', relErr?.message));
     } catch { /* swallow */ }
     return new Response(
       JSON.stringify({ error: error.message }),

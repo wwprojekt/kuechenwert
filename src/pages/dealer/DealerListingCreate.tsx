@@ -62,12 +62,22 @@ export default function DealerListingCreate() {
 
   const effectiveModel = model === "__custom" ? customModel : model;
   const isWohnwagen = vehicleType === "Wohnwagen";
-  const isValid = manufacturer && effectiveModel && bodyType && year && (isWohnwagen || mileage) && condition;
+  const reservePriceNum = reservePrice ? Number(reservePrice) : 0;
+  // Mindestpreis ist Pflicht bei Auktions-Inseraten – juristische Absicherung der
+  // automatischen Preisanpassung (AGB §6.4 c) Reduktionsboden -6 %). Ohne Wunsch-
+  // Mindestpreis kann der Floor nicht definiert werden, und der seller_initial_reserve
+  // bliebe NULL. sale_channel ist hier hartcodiert auf 'auction'.
+  const isValid =
+    manufacturer && effectiveModel && bodyType && year && (isWohnwagen || mileage) && condition &&
+    reservePriceNum > 0;
 
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Nicht authentifiziert");
       if (!isValid) throw new Error("Bitte füllen Sie alle Pflichtfelder aus");
+      if (!(reservePriceNum > 0)) {
+        throw new Error("Mindestpreis ist Pflicht für Auktions-Inserate (AGB §6.4 c).");
+      }
 
       const finalModel = model === "__custom" ? customModel : model;
 
@@ -345,18 +355,22 @@ export default function DealerListingCreate() {
               </div>
             </div>
 
-            {/* Reserve Price (optional) */}
+            {/* Reserve Price (Pflicht) */}
             <div className="space-y-2">
-              <Label>Mindestpreis in € (optional)</Label>
+              <Label htmlFor="dealer-reserve-price" className="flex items-center gap-1">
+                Mindestpreis in € <span className="text-red-500">*</span>
+              </Label>
               <Input
+                id="dealer-reserve-price"
                 type="text"
                 inputMode="numeric"
                 value={reservePrice}
                 onChange={(e) => setReservePrice(e.target.value.replace(/\D/g, ''))}
                 placeholder="z.B. 25000"
+                aria-invalid={reservePrice !== "" && reservePriceNum <= 0}
               />
               <p className="text-xs text-muted-foreground">
-                Wird nicht verkauft wenn das Höchstgebot unter diesem Preis liegt.
+                Pflichtfeld. Wird nicht verkauft, wenn das Höchstgebot unter diesem Preis liegt. Notwendig für die juristische Absicherung der automatischen Preisanpassung (AGB §6.4).
               </p>
             </div>
 

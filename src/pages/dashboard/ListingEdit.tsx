@@ -72,6 +72,10 @@ export default function ListingEdit() {
   const isAuctionLive = auctionData?.status === 'active' || auctionData?.status === 'kaufchance';
   // Mindestpreis darf NUR vom Admin geändert werden - sobald eine Auktion existiert (egal welcher Status)
   const hasAuction = !!auctionData;
+  // Auktions-Inserate ohne Sofortkauf brauchen einen Mindestpreis (AGB §6.4 c)
+  // Reduktionsboden -6 %). Solange noch keine Auktion erstellt wurde, kann der
+  // Verkäufer die Felder bearbeiten – ab dann ist alles disabled (s. unten).
+  const isAuctionListing = motorhome?.sale_channel === 'auction';
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ["motorhomePhotos", id],
@@ -238,6 +242,13 @@ export default function ListingEdit() {
       // Safety check: prevent edits while auction is live
       if (isAuctionLive) {
         throw new Error("Bearbeitung gesperrt: Die Auktion ist aktiv. Nutzen Sie die Nachtrag-Funktion.");
+      }
+
+      // Mindestpreis-Pflicht für Auktions-Inserate ohne Sofortkauf.
+      // Greift nur, solange noch keine Auktion erstellt wurde (danach ist das Feld
+      // ohnehin disabled). Bei Sofortkauf wird reserve_price = instant_price gesetzt.
+      if (!hasAuction && isAuctionListing && !data.instant_price && !data.reserve_price) {
+        throw new Error("Mindestpreis ist Pflicht für Auktions-Inserate (AGB §6.4 c).");
       }
 
       const updateData: any = {
@@ -500,7 +511,15 @@ export default function ListingEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="reserve_price">Mindestpreis (optional)</Label>
+                    <Label htmlFor="reserve_price" className="flex items-center gap-1">
+                      Mindestpreis
+                      {isAuctionListing && !formData.instant_price && (
+                        <span className="text-red-500" aria-hidden="true">*</span>
+                      )}
+                      {!isAuctionListing && (
+                        <span className="text-muted-foreground text-xs ml-1">(optional)</span>
+                      )}
+                    </Label>
                     <Input
                       id="reserve_price"
                       type="text"
@@ -509,9 +528,17 @@ export default function ListingEdit() {
                       onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value.replace(/\D/g, '') })}
                       placeholder="z.B. 40000"
                       disabled={!!formData.instant_price || hasAuction}
+                      aria-invalid={
+                        isAuctionListing && !formData.instant_price && !hasAuction && !formData.reserve_price
+                      }
                     />
                     {hasAuction && (
                       <p className="text-xs text-amber-600 font-medium">Der Mindestpreis kann nur vom Admin geändert werden, sobald eine Auktion erstellt wurde.</p>
+                    )}
+                    {!hasAuction && isAuctionListing && !formData.instant_price && (
+                      <p className="text-xs text-muted-foreground">
+                        Pflichtfeld bei Auktions-Inseraten. Wird nicht verkauft, wenn das Höchstgebot unter diesem Preis liegt (AGB §6.4).
+                      </p>
                     )}
                   </div>
                 </div>

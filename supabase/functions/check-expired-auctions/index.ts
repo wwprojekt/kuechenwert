@@ -2,7 +2,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
-import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketing-config.ts';
+import {
+  MARKETING_CONFIG,
+  computeNextReducedReserve,
+  computeKaufchanceRelistReserve,
+} from '../_shared/marketing-config.ts';
 
 const CRON_LOCK_KEY = 'check-expired-auctions';
 const CRON_LOCK_TTL_MINUTES = 5;
@@ -645,15 +649,49 @@ Deno.serve(async (req) => {
                 ?? ((mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null);
 
               if (isNewSystemListing) {
-                // NEU: Reduktion nach Marketingphase-Logik
+                // NEU (Audit Round 5): Verkäufer-Counter-Offer als Anker.
+                //
+                // Statt blind currentReserve × 0,98 zu rechnen, schauen wir ob
+                // der Verkäufer in der gerade abgelaufenen Kaufchance-Runde ein
+                // counter_offer_amount gesetzt hat (= "OK das wäre für mich
+                // noch akzeptabel"). Wenn ja → das ist sein eigenes Markt-
+                // Signal, näher an der Realität als seine ursprüngliche Reserve.
+                //
+                // Wir nehmen das NIEDRIGSTE counter_offer_amount der CURRENT
+                // round (nicht ältere Runden), zerlegen es nach derselben
+                // -2%/Floor-Logik wie standard. Filter auf auction_round =
+                // currentRound + status sinnvoll, damit stale Counter aus
+                // älteren Runden nicht als Anker missverstanden werden.
+                //
+                // offer_amount (Käufer-Gebot) wird bewusst NICHT als Anker
+                // verwendet — das hat der Verkäufer ja explizit abgelehnt,
+                // wir würden gegen seinen Willen drunter gehen.
                 const dynamicPricing = (kaufchance as { dynamic_pricing?: boolean | null }).dynamic_pricing !== false;
                 const baseReserve = Number(newReservePrice ?? sellerInitialReserveNum);
-                newReservePrice = dynamicPricing
-                  ? computeNextReducedReserve(baseReserve, sellerInitialReserveNum!, 'auction')
-                  : baseReserve;
+
+                const { data: sellerCountersThisRound } = await supabase
+                  .from('post_auction_offers')
+                  .select('counter_offer_amount')
+                  .eq('auction_id', kaufchance.id)
+                  .eq('auction_round', currentRound)
+                  .not('counter_offer_amount', 'is', null);
+
+                const counterAmounts = (sellerCountersThisRound ?? [])
+                  .map((r: { counter_offer_amount: unknown }) => Number(r.counter_offer_amount));
+
+                const reduced = computeKaufchanceRelistReserve(
+                  baseReserve,
+                  sellerInitialReserveNum!,
+                  dynamicPricing,
+                  counterAmounts,
+                );
+                newReservePrice = reduced.newReserve;
+
                 console.log(
-                  `[new-system] reserve ${baseReserve} -> ${newReservePrice} ` +
-                  `(dynamic_pricing=${dynamicPricing}, floor=${(sellerInitialReserveNum! * (1 - MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION)).toFixed(0)})`
+                  `[new-system] kaufchance-relist auction=${kaufchance.id} ` +
+                  `round=${currentRound} reserve ${baseReserve} -> ${reduced.newReserve} ` +
+                  `(source=${reduced.source}, anchor=${reduced.anchor}, ` +
+                  `dynamic_pricing=${dynamicPricing}, floor=${(sellerInitialReserveNum! * (1 - MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION)).toFixed(0)})`
                 );
               } else {
                 // LEGACY: lowest counter-offer wird neuer Reserve

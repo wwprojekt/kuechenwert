@@ -9,7 +9,7 @@ import {
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
-import { MARKETING_CONFIG } from '../_shared/marketing-config.ts';
+import { MARKETING_CONFIG, computeKaufchanceRelistReserve } from '../_shared/marketing-config.ts';
 
 /**
  * Edge Function: end-kaufchance
@@ -192,6 +192,7 @@ Deno.serve(async (req) => {
     .from('auctions')
     .select(`
       id, status, current_bid, starting_bid, reserve_price, end_time, motorhome_id, auction_round,
+      seller_initial_reserve, dynamic_pricing,
       motorhome:motorhomes(
         id, manufacturer, model, year, postal_code, sale_channel, instant_price, reserve_price, seller_id,
         seller:profiles!motorhomes_seller_id_fkey(id, email, first_name, last_name, company_name)
@@ -254,6 +255,8 @@ Deno.serve(async (req) => {
 
   // ─── Step 1: state mutation ────────────────────────────────────────────
   let restartEndTime: Date | null = null;
+  let actualNewReserve: number | null = null;
+  let reserveSourceForAudit: 'admin_override' | 'seller_counter_offer' | 'standard_minus_2pct' | 'no_change' | 'legacy_keep' | 'n/a' = 'n/a';
   if (mode === 'end_unsold') {
     const { error: aErr } = await supabaseAdmin
       .from('auctions')
@@ -277,9 +280,65 @@ Deno.serve(async (req) => {
     const startTime = new Date();
     restartEndTime = new Date();
     restartEndTime.setDate(restartEndTime.getDate() + durationDays);
-    const newReserve = body.newReservePrice && Number(body.newReservePrice) > 0
-      ? Number(body.newReservePrice)
-      : (auction.reserve_price ?? motorhome?.reserve_price ?? null);
+
+    // Reserve-Berechnung Priorität:
+    //   1. Admin gibt newReservePrice manuell vor → übernehmen.
+    //   2. Sonst (= Admin überlässt es dem System):
+    //      Wenn das ein NEU-System-Inserat ist (seller_initial_reserve != NULL)
+    //      → gleiche Logik wie der Cron-Auto-Relist: Verkäufer-Counter-Offer
+    //        der CURRENT round als Anker × 0,98, Floor-respektiert.
+    //      Wenn LEGACY-Inserat → einfach den letzten reserve_price beibehalten
+    //        (alte Logik, keine Reduktion ohne explizite Marketingphase-Daten).
+    const auctionLifecycle = auction as {
+      seller_initial_reserve?: number | null;
+      dynamic_pricing?: boolean | null;
+      auction_round?: number | null;
+    };
+    const sellerInitialReserveNum = auctionLifecycle.seller_initial_reserve != null
+      ? Number(auctionLifecycle.seller_initial_reserve)
+      : null;
+    const isNewSystemListing = sellerInitialReserveNum != null && sellerInitialReserveNum > 0;
+    const dynamicPricing = auctionLifecycle.dynamic_pricing !== false;
+    const currentRoundForOffers = Number(auctionLifecycle.auction_round ?? 1);
+    const fallbackReserve = auction.reserve_price ?? motorhome?.reserve_price ?? null;
+
+    let newReserve: number | null;
+
+    if (body.newReservePrice && Number(body.newReservePrice) > 0) {
+      newReserve = Number(body.newReservePrice);
+      reserveSourceForAudit = 'admin_override';
+    } else if (isNewSystemListing && fallbackReserve != null && Number(fallbackReserve) > 0) {
+      const { data: sellerCountersThisRound } = await supabaseAdmin
+        .from('post_auction_offers')
+        .select('counter_offer_amount')
+        .eq('auction_id', auctionId)
+        .eq('auction_round', currentRoundForOffers)
+        .not('counter_offer_amount', 'is', null);
+
+      const counterAmounts = (sellerCountersThisRound ?? [])
+        .map((r: { counter_offer_amount: unknown }) => Number(r.counter_offer_amount));
+
+      const reduced = computeKaufchanceRelistReserve(
+        Number(fallbackReserve),
+        sellerInitialReserveNum!,
+        dynamicPricing,
+        counterAmounts,
+      );
+      newReserve = reduced.newReserve;
+      reserveSourceForAudit = reduced.source;
+      edgeLogger.info('end-kaufchance restart reserve computed', {
+        auctionId,
+        round: currentRoundForOffers,
+        baseReserve: Number(fallbackReserve),
+        newReserve,
+        source: reduced.source,
+        anchor: reduced.anchor,
+      });
+    } else {
+      newReserve = fallbackReserve;
+      reserveSourceForAudit = 'legacy_keep';
+    }
+    actualNewReserve = newReserve;
 
     // delete bids first so the new auction starts clean
     await supabaseAdmin.from('bids').delete().eq('auction_id', auctionId);
@@ -554,6 +613,8 @@ Deno.serve(async (req) => {
         bidder_mails_sent: bidderMailsSent,
         bidder_mails_failed: bidderMailsFailed,
         new_reserve_price: mode === 'restart_auction' ? body.newReservePrice ?? null : null,
+        actual_new_reserve_used: actualNewReserve,
+        reserve_source: reserveSourceForAudit,
         new_end_time: restartEndTime?.toISOString() ?? null,
         reason,
         send_email_requested: sendEmail,

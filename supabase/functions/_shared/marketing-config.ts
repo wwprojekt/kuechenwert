@@ -149,3 +149,94 @@ export function computeNextReducedReserve(
   const reduced = Math.round(currentReserve * (1 - perRound));
   return Math.max(reduced, floor);
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Kaufchance-driven Reserve-Reduktion (Phase 4 / Audit Round 5)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Kontext: Wenn eine Kaufchance abläuft ohne Acceptance und die Auktion
+// auto-relisted wird, war die alte Logik blind: einfach `currentReserve × 0,98`.
+// Das ignoriert ein wertvolles Markt-Signal: die Counter-Offers, die der
+// VERKÄUFER während der Kaufchance den Käufern gemacht hat (= "OK, ich würde
+// XX € akzeptieren"). Wenn der Käufer diesen Counter abgelehnt hat, hat der
+// Verkäufer SELBST signalisiert, was sein wahrer Schmerzpunkt ist.
+//
+// Neue Logik:
+//   1. Suche das niedrigste counter_offer_amount der aktuellen Runde
+//      (= Verkäufer hat selbst gesagt "das wäre für mich noch OK").
+//   2. Wenn vorhanden UND < currentReserve: neuer Reserve = counter × 0,98
+//   3. Floor-Schutz greift weiter (nie unter seller_initial × 0,94 für Auktion)
+//   4. Wenn kein Counter existiert (Verkäufer hat nur abgelehnt): Fallback auf
+//      computeNextReducedReserve(currentReserve, ...) — alte Logik.
+//
+// Anti-Vertrauensbruch: Wir benutzen NIEMALS das offer_amount (Käufer-Gebot)
+// als Anker, weil der Verkäufer das ja explizit abgelehnt hat. Wir würden
+// sonst gegen seinen ausdrücklichen Willen unter sein "Nein" gehen.
+//
+// Idempotenz: pure function, keine Side-Effects. Caller bringt die Daten
+// (counter_offers) als Array mit, damit der Helper ohne Supabase-Client
+// arbeitet und in beiden Edge Functions (check-expired-auctions UND
+// end-kaufchance) wiederverwendbar ist.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type KaufchanceRelistAnchorSource =
+  | 'seller_counter_offer'  // Verkäufer-Counter war Anker
+  | 'standard_minus_2pct'   // Fallback: alte -2% Logik (kein Counter, oder Counter ≥ Reserve)
+  | 'no_change';            // dynamic_pricing OFF → Reserve bleibt
+
+export interface KaufchanceRelistResult {
+  /** Der neue Reserve-Preis nach Reduktion (Floor-respektiert) */
+  newReserve: number;
+  /** Welche Logik den Anker geliefert hat (für Logging/Audit) */
+  source: KaufchanceRelistAnchorSource;
+  /** Der Anker-Wert vor der ×0,98-Reduktion (für Debug-Logs); null wenn no_change */
+  anchor: number | null;
+}
+
+/**
+ * Berechnet den neuen Reserve für einen Kaufchance-Auto-Relist.
+ *
+ * @param currentReserve  Reserve vor dem Relist (= kaufchance_min_price)
+ * @param sellerInitial   seller_initial_reserve (für Floor-Berechnung)
+ * @param dynamicPricing  Verkäufer-Opt-in. Wenn false → kein Reduce, source='no_change'
+ * @param sellerCounterOffersThisRound  Array von counter_offer_amount-Werten der
+ *                                      aktuellen Runde (NUR Verkäufer-Counter, nicht
+ *                                      Käufer-Offer). Caller filtert vorher auf
+ *                                      auction_round = currentRound + status sinnvoll.
+ *                                      Null/undefined/leer ist erlaubt → Fallback.
+ */
+export function computeKaufchanceRelistReserve(
+  currentReserve: number,
+  sellerInitial: number,
+  dynamicPricing: boolean,
+  sellerCounterOffersThisRound: ReadonlyArray<number | null | undefined> | null | undefined,
+): KaufchanceRelistResult {
+  if (!dynamicPricing) {
+    return { newReserve: currentReserve, source: 'no_change', anchor: null };
+  }
+
+  const validCounters = (sellerCounterOffersThisRound ?? [])
+    .map((v) => (v == null ? NaN : Number(v)))
+    .filter((v) => Number.isFinite(v) && v > 0);
+
+  const floor = computeReserveFloor(sellerInitial, 'auction');
+
+  if (validCounters.length > 0) {
+    const lowestCounter = Math.min(...validCounters);
+
+    // Sanity: nur als Anker nehmen, wenn Counter < currentReserve.
+    // Sonst hätte der Verkäufer effektiv hochgekontert (ein höherer Counter
+    // wäre eine Erhöhung des Wunschpreises) → würden wir den als Anker × 0,98
+    // nehmen, käme evtl. ein höherer oder gleicher Reserve raus → kontra-
+    // produktiv, dann lieber Fallback auf -2% von currentReserve.
+    if (lowestCounter < currentReserve) {
+      const reducedFromCounter = Math.round(lowestCounter * (1 - MARKETING_CONFIG.AUCTION_REDUCTION_PER_ROUND));
+      const newReserve = Math.max(reducedFromCounter, floor);
+      return { newReserve, source: 'seller_counter_offer', anchor: lowestCounter };
+    }
+  }
+
+  // Fallback: standard -2 % von currentReserve, Floor-respektiert.
+  const standard = computeNextReducedReserve(currentReserve, sellerInitial, 'auction');
+  return { newReserve: standard, source: 'standard_minus_2pct', anchor: currentReserve };
+}

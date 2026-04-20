@@ -237,12 +237,17 @@ export default function ListingDetail() {
       if (!resolvedAuction?.id) throw new Error("Keine Auktion");
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session expired");
-      const { error } = await supabase
-        .from('auctions')
-        .update({ auto_relist: newValue })
-        .eq('id', resolvedAuction.id);
+      // Bug-fix #2: use SECURITY DEFINER RPC instead of direct UPDATE.
+      // The previous "Seller can toggle auto_relist" RLS policy was column-blind
+      // and would have allowed sellers to mutate reserve_price, end_time, etc.
+      // toggle_auto_relist verifies ownership + status server-side and only
+      // writes the auto_relist column.
+      const { data, error } = await supabase.rpc('toggle_auto_relist', {
+        p_auction_id: resolvedAuction.id,
+        p_value: newValue,
+      });
       if (error) throw error;
-      return newValue;
+      return (data as boolean | null) ?? newValue;
     },
     onSuccess: (newValue) => {
       queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });

@@ -200,6 +200,11 @@ Deno.serve(async (req) => {
               }
 
               // Notify seller about auto-extension. Offers stay alive (β1).
+              //
+              // Soft brake (commit 4): extended mail already contains a price-cut
+              // tip, so it is itself the first nudge at round 2. From round 3
+              // onwards we additionally fire seller_festpreis_round_warning, an
+              // escalating mail with concrete recommendations + opt-out reminder.
               if (mh.seller_id) {
                 try {
                   const { data: sellerProfile } = await supabase
@@ -209,19 +214,38 @@ Deno.serve(async (req) => {
                       day: '2-digit', month: '2-digit', year: 'numeric',
                       hour: '2-digit', minute: '2-digit',
                     });
+                    const sellerNameStr = sellerProfile.first_name || sellerProfile.email.split('@')[0];
+                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    const currentBidStr = `€${instantPriceNum.toLocaleString('de-DE')}`;
+
                     await supabase.functions.invoke('send-auction-notification', {
                       body: {
                         email: sellerProfile.email,
-                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        name: sellerNameStr,
                         type: 'seller_festpreis_extended',
                         motorhomeModel: motorhomeName,
-                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
-                        currentBid: `€${instantPriceNum.toLocaleString('de-DE')}`,
+                        auctionUrl: dashboardUrl,
+                        currentBid: currentBidStr,
                         endTime: endFmt,
                         extendedUntil: endFmt,
                         roundNumber: String(newRound),
                       },
                     }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
+
+                    if (newRound >= 3) {
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: sellerProfile.email,
+                          name: sellerNameStr,
+                          type: 'seller_festpreis_round_warning',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: dashboardUrl,
+                          currentBid: currentBidStr,
+                          endTime: endFmt,
+                          roundNumber: String(newRound),
+                        },
+                      }).catch((e: any) => console.error('Festpreis seller round_warning mail:', e?.message));
+                    }
                   }
                 } catch (e: any) {
                   console.error('Festpreis seller lookup failed:', e?.message);
@@ -458,24 +482,45 @@ Deno.serve(async (req) => {
               const endTimeFormatted = new Date(endTime).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
               const reserveFormatted = newReservePrice ? `${Number(newReservePrice).toLocaleString('de-DE')} €` : 'nicht gesetzt';
 
-              // Notify seller about auto-relist
+              // Notify seller about auto-relist + soft brake (commit 4):
+              // seller_auto_relisted is a status mail without recommendations.
+              // From round 2 onwards we additionally send seller_auction_round_warning
+              // which carries concrete tips (reserve check, addendum, opt-out).
               if (mh?.seller_id) {
                 try {
                   const { data: sellerProfile } = await supabase
                     .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
+                    const sellerNameStr = sellerProfile.first_name || sellerProfile.email.split('@')[0];
+                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+
                     await supabase.functions.invoke('send-auction-notification', {
                       body: {
                         email: sellerProfile.email,
-                        name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+                        name: sellerNameStr,
                         type: 'seller_auto_relisted',
                         motorhomeModel: motorhomeName,
-                        auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
+                        auctionUrl: dashboardUrl,
                         endTime: endTimeFormatted,
                         reservePrice: reserveFormatted,
                         currentBid: `Runde ${newRound}`,
                       },
                     }).catch((e: any) => console.error(`Failed to notify seller:`, e));
+
+                    if (newRound >= 2) {
+                      await supabase.functions.invoke('send-auction-notification', {
+                        body: {
+                          email: sellerProfile.email,
+                          name: sellerNameStr,
+                          type: 'seller_auction_round_warning',
+                          motorhomeModel: motorhomeName,
+                          auctionUrl: dashboardUrl,
+                          endTime: endTimeFormatted,
+                          reservePrice: reserveFormatted,
+                          roundNumber: String(newRound),
+                        },
+                      }).catch((e: any) => console.error('Auction seller round_warning mail:', e?.message));
+                    }
                   }
                 } catch (e) { console.error('Seller notification error:', e); }
               }

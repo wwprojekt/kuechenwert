@@ -74,16 +74,24 @@ Deno.serve(async (req) => {
     //   * status IN ('active', 'kaufchance')
     //   * seller_initial_reserve IS NULL  (Alt-Logik, kein Phase-4)
     //   * marketing_phase_max_until IS NULL  (noch keine Opt-in-Mail erhalten)
+    //   * created_at < CUTOVER_DATE  (echtes Bestand, NICHT Pre-P3 Drafts ohne Reserve)
+    //
+    // Cutover-Datum ist der Phase-3-Deploy: 2026-04-19 00:00:00+00.
+    // Inserate, die ab diesem Datum erstellt wurden und noch keinen Anker
+    // haben, sind kaputte Drafts (Admin hat sie ohne Reserve aktiviert) —
+    // die brauchen Admin-Aufmerksamkeit, KEINE Opt-in-Mail.
+    const CUTOVER_DATE = '2026-04-19T00:00:00+00:00';
     let query = supabase
       .from('auctions')
       .select(`
         id, motorhome_id, reserve_price, status, created_at,
         marketing_phase_max_until, seller_initial_reserve,
-        motorhomes!inner(id, manufacturer, model, sale_channel, seller_id, instant_price)
+        motorhomes!inner(id, manufacturer, model, sale_channel, seller_id, instant_price, reserve_price)
       `)
       .in('status', ['active', 'kaufchance'])
       .is('seller_initial_reserve', null)
       .is('marketing_phase_max_until', null)
+      .lt('created_at', CUTOVER_DATE)
       .order('created_at', { ascending: true });
 
     if (limit) query = query.limit(limit);
@@ -108,7 +116,29 @@ Deno.serve(async (req) => {
       const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
 
       try {
-        // Verkäufer-Profil laden
+        // Effektiven Anker-Preis ermitteln: bei vielen Bestand-Inseraten
+        // ist auctions.reserve_price=NULL aber motorhomes.reserve_price gesetzt
+        // (Pre-P3-Drift). Wir nehmen den ersten verfügbaren Wert.
+        const effectiveReserve = (listing.reserve_price && Number(listing.reserve_price) > 0)
+          ? Number(listing.reserve_price)
+          : (mh.reserve_price && Number(mh.reserve_price) > 0
+              ? Number(mh.reserve_price)
+              : (mh.instant_price && Number(mh.instant_price) > 0
+                  ? Number(mh.instant_price)
+                  : null));
+
+        // Skip wenn überhaupt kein Preis-Anker vorhanden ist —
+        // diese Inserate sind kaputt und brauchen Admin-Aufmerksamkeit,
+        // keine Opt-in-Mail (sonst würde "—" als Preis stehen).
+        if (effectiveReserve == null) {
+          results.push({
+            auctionId: listing.id,
+            action: 'skipped_no_email',
+            error: 'no reserve/instant price anchor',
+          });
+          continue;
+        }
+
         if (!mh.seller_id) {
           results.push({ auctionId: listing.id, action: 'skipped_no_email', error: 'seller_id missing' });
           continue;
@@ -162,11 +192,7 @@ Deno.serve(async (req) => {
 
         // Mail mit Dashboard-Link senden
         const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
-        const reserveFmt = listing.reserve_price
-          ? `€${Number(listing.reserve_price).toLocaleString('de-DE')}`
-          : (mh.instant_price
-              ? `€${Number(mh.instant_price).toLocaleString('de-DE')}`
-              : '—');
+        const reserveFmt = `€${effectiveReserve.toLocaleString('de-DE')}`;
 
         const sellerNameStr = sellerProfile.company_name
           || sellerProfile.first_name

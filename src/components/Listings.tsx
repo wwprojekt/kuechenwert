@@ -45,19 +45,22 @@ const Listings = () => {
         .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
         .filter((id): id is string => Boolean(id));
 
+      // Cover-Foto + pre-resized card-Variante (480px, ~30 KB). card_url wird
+      // asynchron von resize-photo-variants gefüllt; bis dahin Fallback auf
+      // die Original-URL, damit Cards auch für unverarbeitete Photos laden.
       let coverByMotorhomeId = new Map<string, string>();
       if (motorhomeIds.length > 0) {
         const { data: photoRows } = await supabase
           .from('motorhome_photos')
-          .select('url, motorhome_id')
+          .select('url, card_url, motorhome_id')
           .in('motorhome_id', motorhomeIds)
           .eq('display_order', 0);
 
         if (photoRows) {
           coverByMotorhomeId = new Map(
-            (photoRows as Array<{ url: string; motorhome_id: string }>)
-              .filter((p) => p.url && p.motorhome_id)
-              .map((p) => [p.motorhome_id, p.url])
+            (photoRows as Array<{ url: string; card_url: string | null; motorhome_id: string }>)
+              .filter((p) => (p.card_url || p.url) && p.motorhome_id)
+              .map((p) => [p.motorhome_id, p.card_url || p.url])
           );
         }
       }

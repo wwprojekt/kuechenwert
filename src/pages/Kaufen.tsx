@@ -174,11 +174,16 @@ const Kaufen = () => {
           .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
           .filter((id): id is string => Boolean(id));
 
+        // Cover-Foto + pre-resized card-Variante (480px, ~25-40 KB JPEG).
+        // card_url wird async im Hintergrund via resize-photo-variants Edge
+        // Function gefüllt. Fallback auf Original-URL (url), damit die Seite
+        // auch für noch unverarbeitete Bilder funktioniert. Der Payload
+        // sinkt so von ~150-300 KB pro Card auf ~30 KB, ohne Breaking Change.
         let firstPhotoByMotorhomeId = new Map<string, string>();
         if (motorhomeIds.length > 0) {
           const { data: photoRows, error: photoErr } = await supabase
             .from("motorhome_photos")
-            .select("url, motorhome_id")
+            .select("url, card_url, motorhome_id")
             .in("motorhome_id", motorhomeIds)
             .eq("display_order", 0);
 
@@ -186,9 +191,9 @@ const Kaufen = () => {
             logger.warn("Kaufen: cover-photo query failed (non-blocking)", photoErr);
           } else if (photoRows) {
             firstPhotoByMotorhomeId = new Map(
-              (photoRows as Array<{ url: string; motorhome_id: string }>)
-                .filter((p) => p.url && p.motorhome_id)
-                .map((p) => [p.motorhome_id, p.url])
+              (photoRows as Array<{ url: string; card_url: string | null; motorhome_id: string }>)
+                .filter((p) => (p.card_url || p.url) && p.motorhome_id)
+                .map((p) => [p.motorhome_id, p.card_url || p.url])
             );
           }
         }

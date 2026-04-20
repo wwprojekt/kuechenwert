@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_emails: {
@@ -531,6 +506,13 @@ export type Database = {
             referencedRelation: "auctions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "auction_addenda_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       auctions: {
@@ -689,6 +671,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -912,6 +901,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claims_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "claims_dealer_id_fkey"
             columns: ["dealer_id"]
             isOneToOne: false
@@ -973,6 +969,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_calculations_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -1117,6 +1120,21 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      cron_run_locks: {
+        Row: {
+          key: string
+          locked_at: string
+        }
+        Insert: {
+          key: string
+          locked_at?: string
+        }
+        Update: {
+          key?: string
+          locked_at?: string
         }
         Relationships: []
       }
@@ -1400,6 +1418,13 @@ export type Database = {
             referencedRelation: "auctions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dealer_notifications_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       dealer_payment_history: {
@@ -1576,6 +1601,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_reviews_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -1983,6 +2015,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_dealer_id_fkey"
             columns: ["dealer_id"]
             isOneToOne: false
@@ -2029,6 +2068,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2151,27 +2197,42 @@ export type Database = {
       }
       motorhome_photos: {
         Row: {
+          card_url: string | null
           created_at: string | null
           display_order: number | null
           id: string
           is_primary: boolean | null
+          medium_url: string | null
           motorhome_id: string
+          processed_at: string | null
+          processing_attempts: number
+          processing_error: string | null
           url: string
         }
         Insert: {
+          card_url?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
           is_primary?: boolean | null
+          medium_url?: string | null
           motorhome_id: string
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_error?: string | null
           url: string
         }
         Update: {
+          card_url?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
           is_primary?: boolean | null
+          medium_url?: string | null
           motorhome_id?: string
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_error?: string | null
           url?: string
         }
         Relationships: [
@@ -2664,6 +2725,13 @@ export type Database = {
             referencedRelation: "auctions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "post_auction_offers_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -2868,6 +2936,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_contracts_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -4068,6 +4143,71 @@ export type Database = {
         }
         Relationships: []
       }
+      auctions_public: {
+        Row: {
+          auction_round: number | null
+          created_at: string | null
+          current_bid: number | null
+          end_time: string | null
+          id: string | null
+          kaufchance_expires_at: string | null
+          kaufchance_min_price: number | null
+          last_price_reduction_at: string | null
+          marketing_phase_started_at: string | null
+          motorhome_id: string | null
+          reserve_price: number | null
+          soft_close_extension_minutes: number | null
+          start_time: string | null
+          starting_bid: number | null
+          status: Database["public"]["Enums"]["auction_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          auction_round?: number | null
+          created_at?: string | null
+          current_bid?: number | null
+          end_time?: string | null
+          id?: string | null
+          kaufchance_expires_at?: string | null
+          kaufchance_min_price?: number | null
+          last_price_reduction_at?: string | null
+          marketing_phase_started_at?: string | null
+          motorhome_id?: string | null
+          reserve_price?: number | null
+          soft_close_extension_minutes?: number | null
+          start_time?: string | null
+          starting_bid?: number | null
+          status?: Database["public"]["Enums"]["auction_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          auction_round?: number | null
+          created_at?: string | null
+          current_bid?: number | null
+          end_time?: string | null
+          id?: string | null
+          kaufchance_expires_at?: string | null
+          kaufchance_min_price?: number | null
+          last_price_reduction_at?: string | null
+          marketing_phase_started_at?: string | null
+          motorhome_id?: string | null
+          reserve_price?: number | null
+          soft_close_extension_minutes?: number | null
+          start_time?: string | null
+          starting_bid?: number | null
+          status?: Database["public"]["Enums"]["auction_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_motorhome_id_fkey"
+            columns: ["motorhome_id"]
+            isOneToOne: true
+            referencedRelation: "motorhomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bids_public: {
         Row: {
           amount: number | null
@@ -4102,6 +4242,13 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -4325,6 +4472,10 @@ export type Database = {
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_error_logs: { Args: never; Returns: undefined }
       cleanup_old_notifications: { Args: never; Returns: undefined }
+      compute_random_starting_bid: {
+        Args: { p_reserve_price: number }
+        Returns: number
+      }
       create_auction_invoice: {
         Args: { auction_id_param: string; dealer_id_param: string }
         Returns: string
@@ -4418,6 +4569,38 @@ export type Database = {
       generate_listing_number: { Args: never; Returns: string }
       generate_release_pin: { Args: never; Returns: string }
       generate_sepa_reference: { Args: never; Returns: string }
+      get_auction_marketing_anchors: {
+        Args: { p_motorhome_id: string }
+        Returns: {
+          auction_id: string
+          seller_initial_instant_price: number
+          seller_initial_reserve: number
+        }[]
+      }
+      get_auction_owner_meta: {
+        Args: { p_auction_id: string }
+        Returns: {
+          agb_version_at_start: string
+          auction_id: string
+          auto_relist: boolean
+          dynamic_pricing: boolean
+          marketing_phase_max_until: string
+          seller_initial_instant_price: number
+          seller_initial_reserve: number
+        }[]
+      }
+      get_auctions_owner_meta_bulk: {
+        Args: { p_auction_ids: string[] }
+        Returns: {
+          agb_version_at_start: string
+          auction_id: string
+          auto_relist: boolean
+          dynamic_pricing: boolean
+          marketing_phase_max_until: string
+          seller_initial_instant_price: number
+          seller_initial_reserve: number
+        }[]
+      }
       get_current_agb_version: { Args: never; Returns: string }
       get_dealer_tax_info: {
         Args: { p_dealer_id: string }
@@ -4556,17 +4739,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      release_cron_lock: { Args: { p_key: string }; Returns: undefined }
       restrict_dealer_account: {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
-      }
-      get_auction_marketing_anchors: {
-        Args: { p_motorhome_id: string }
-        Returns: {
-          auction_id: string
-          seller_initial_reserve: number | null
-          seller_initial_instant_price: number | null
-        }[]
       }
       toggle_auto_relist: {
         Args: { p_auction_id: string; p_value: boolean }
@@ -4574,6 +4750,10 @@ export type Database = {
       }
       toggle_dynamic_pricing: {
         Args: { p_auction_id: string; p_value: boolean }
+        Returns: boolean
+      }
+      try_acquire_cron_lock: {
+        Args: { p_key: string; p_ttl_minutes?: number }
         Returns: boolean
       }
       update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }
@@ -4632,7 +4812,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "Reparaturbed??????rftig"
+        | "Reparaturbedürftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -4764,9 +4944,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       air_conditioning_type: ["Keine", "Fahrerhaus", "Wohnraum", "Beides"],
@@ -4805,7 +4982,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "Reparaturbed??????rftig",
+        "Reparaturbedürftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

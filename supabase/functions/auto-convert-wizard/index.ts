@@ -477,6 +477,28 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Auktion: Mindestpreis ist PFLICHT (juristische Absicherung der
+    // automatischen Preisanpassung gemäß AGB §6.4 – ohne Wunsch-Mindestpreis
+    // kann der Reduktionsboden -6 % nicht definiert werden, und der
+    // seller_initial_reserve würde NULL bleiben → -6 %-Floor wäre wirkungslos).
+    if (
+      mappedData.sale_channel === "auction" &&
+      !(typeof mappedData.reserve_price === "number" && mappedData.reserve_price > 0)
+    ) {
+      edgeLogger.warn(
+        `Refusing to convert wizard session ${body.sessionId}: reserve_price missing or <= 0 for sale_channel='auction'`,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Für Auktionen ist die Angabe eines Mindestpreises erforderlich. Bitte stellen Sie Ihr Fahrzeug erneut über den Verkäufer-Wizard ein und tragen Sie Ihren Wunsch-Mindestpreis ein.",
+          field: "reservePrice",
+          code: "RESERVE_PRICE_REQUIRED",
+        }),
+        { status: 422, headers },
+      );
+    }
+
     // Fallbacks for required fields
     const manufacturer = mappedData.manufacturer || "Unbekannt";
     const model = mappedData.model || "Unbekannt";

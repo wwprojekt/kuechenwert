@@ -296,6 +296,7 @@ const phoneSchema = z
 // Für `station` ist kein Consent nötig – dort gilt das normale Ankauf-Modell.
 const step7Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
+  reservePrice: z.number().nullable().optional(),
   customerName: z.string().min(1, "Name ist erforderlich"),
   customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   customerPhone: phoneSchema,
@@ -307,6 +308,16 @@ const step7Schema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['instantPrice'],
       message: "Bitte geben Sie Ihren Wunschpreis ein",
+    });
+  }
+  // Auktion: Mindestpreis ist Pflicht (juristische Absicherung der
+  // automatischen Preisanpassung gemäß AGB §6.4 – ohne Wunsch-Mindestpreis
+  // gibt es keinen Reduktionsboden, an dem die -6%-Begrenzung greifen kann).
+  if (data.saleChannel === 'auction' && !(data.reservePrice != null && data.reservePrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['reservePrice'],
+      message: "Bitte geben Sie Ihren Wunsch-Mindestpreis ein",
     });
   }
   if (
@@ -335,6 +346,10 @@ const step8Schema = z.object({
   // requires a positive price" as the very last gate before submit (the same
   // rule lives in step7Schema, the DB CHECK and the auto-convert-wizard guard).
   instantPrice: z.number().nullable().optional(),
+  // reservePrice ist gespiegelt, damit ein Direkt-Sprung zu Step 8 per ?step=8
+  // die Pflicht-Eingabe für Auktionen nicht umgeht (gleiche Logik wie in
+  // step7Schema und auto-convert-wizard-Guard).
+  reservePrice: z.number().nullable().optional(),
   // marketingConsent ist hier ebenfalls gespiegelt, damit ein Direkt-Sprung
   // zu Step 8 per ?step=8 die Pflicht-Bestätigung nicht umgeht.
   marketingConsent: z.boolean().optional(),
@@ -352,6 +367,13 @@ const step8Schema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['instantPrice'],
       message: "Sofortkauf ben\u00f6tigt einen Wunschpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+    });
+  }
+  if (data.saleChannel === 'auction' && !(data.reservePrice != null && data.reservePrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['reservePrice'],
+      message: "Auktion ben\u00f6tigt einen Mindestpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7",
     });
   }
   if (
@@ -479,6 +501,7 @@ export const useWizardForm = () => {
         case 7:
           step7Schema.parse({
             saleChannel: formData.saleChannel,
+            reservePrice: formData.reservePrice,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
@@ -492,6 +515,7 @@ export const useWizardForm = () => {
             manufacturer: formData.manufacturer,
             saleChannel: formData.saleChannel,
             instantPrice: formData.instantPrice,
+            reservePrice: formData.reservePrice,
             marketingConsent: formData.marketingConsent,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
@@ -767,6 +791,7 @@ export const useWizardForm = () => {
             .from('motorhome-photos')
             .upload(fileName, uploadFile, {
               contentType: uploadFile.type || `image/${fileExt}`,
+              cacheControl: "31536000, immutable",
             });
 
           if (uploadError) throw uploadError;

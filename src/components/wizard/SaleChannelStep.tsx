@@ -242,20 +242,37 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
       {formData.saleChannel === "auction" && (
         <div className="space-y-2 animate-fade-in">
-          <Label htmlFor="reservePrice">Mindestpreis (optional)</Label>
+          <Label
+            htmlFor="reservePrice"
+            className={cn("flex items-center gap-1", fieldErrors.reservePrice && "text-red-600")}
+          >
+            Mindestpreis <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
             <Input
               id="reservePrice"
               type="number"
               inputMode="numeric"
               pattern="[0-9]*"
-            placeholder="z.B. 35000"
-            value={formData.reservePrice || ""}
-            onChange={(e) => updateFormData({ reservePrice: e.target.value ? parseInt(e.target.value) : null })}
-            min={0}
-          />
-          <p className="text-xs text-muted-foreground">
-            Unter diesem Preis wird nicht verkauft. Lassen Sie das Feld leer für maximale Reichweite.
-          </p>
+              placeholder="z.B. 35000"
+              value={formData.reservePrice || ""}
+              onChange={(e) => updateFormData({ reservePrice: e.target.value ? parseInt(e.target.value) : null })}
+              min={1}
+              aria-invalid={Boolean(fieldErrors.reservePrice)}
+              aria-describedby={fieldErrors.reservePrice ? "reservePrice-error" : undefined}
+              className={cn("pl-8", fieldErrors.reservePrice && "border-red-500 ring-red-500/20 ring-2")}
+            />
+          </div>
+          {fieldErrors.reservePrice ? (
+            <p id="reservePrice-error" className="text-sm text-red-600 font-medium animate-fade-in">
+              {fieldErrors.reservePrice}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Unter diesem Preis wird Ihr Fahrzeug nicht verkauft. Pflichtfeld zur juristischen Absicherung der automatischen Preisanpassung (AGB §6.4).
+            </p>
+          )}
         </div>
       )}
 

@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS kaufchance_invitations (
 -- RLS for kaufchance_invitations
 ALTER TABLE kaufchance_invitations ENABLE ROW LEVEL SECURITY;
 
--- Bidders can see their own invitations
+DROP POLICY IF EXISTS "Users can view their own invitations" ON kaufchance_invitations;
 CREATE POLICY "Users can view their own invitations" ON kaufchance_invitations
   FOR SELECT USING (
     bidder_id = auth.uid() OR
@@ -61,6 +61,7 @@ BEGIN
   END;
 END $$;
 
+DROP POLICY IF EXISTS "Sellers buyers and admins can update offers" ON post_auction_offers;
 CREATE POLICY "Sellers buyers and admins can update offers" ON post_auction_offers
   FOR UPDATE USING (
     -- Buyer can update their own offer (e.g., accept counter-offer)

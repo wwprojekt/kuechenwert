@@ -1,6 +1,8 @@
 -- Add missing DELETE and UPDATE policies for legal_documents
 -- Allows dealers to delete/replace their own documents before admin verification
+-- Idempotent: drop-if-exists pattern.
 
+DROP POLICY IF EXISTS "Users can delete own legal documents" ON public.legal_documents;
 CREATE POLICY "Users can delete own legal documents"
   ON public.legal_documents
   FOR DELETE
@@ -12,6 +14,7 @@ CREATE POLICY "Users can delete own legal documents"
     )
   );
 
+DROP POLICY IF EXISTS "Users can update own legal documents" ON public.legal_documents;
 CREATE POLICY "Users can update own legal documents"
   ON public.legal_documents
   FOR UPDATE

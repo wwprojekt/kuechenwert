@@ -69,8 +69,3 @@ BEGIN
   RETURN GREATEST(50, LEAST(v_rounded, v_max_allowed));
 END;
 $$;
-
-COMMENT ON FUNCTION public.compute_random_starting_bid IS
-  'Berechnet ein zufälliges Startgebot zwischen 40-60 % der Reserve, abgerundet auf 50er-Vielfaches. Schützt den Reserve-Preis vor Reverse-Engineering durch Händler.';
-
-GRANT EXECUTE ON FUNCTION public.compute_random_starting_bid(NUMERIC) TO authenticated, service_role;

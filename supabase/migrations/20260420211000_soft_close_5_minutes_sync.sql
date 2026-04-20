@@ -152,11 +152,3 @@ BEGIN
   );
 END;
 $$;
-
--- ─── 3. handle_autobid_atomic: identisch lassen, aber sicherheitshalber neu CREATE
---    (war schon 5 Min, hier nur noch dokumentiert dass es synchron ist.)
---    Wir machen KEIN CREATE OR REPLACE, weil die existierende Definition
---    in 20260321000000 bereits korrekt ist. Andernfalls würden wir die
---    DROP+CREATE Sequenz zwingen, was unnötig Risiko bringt.
-COMMENT ON FUNCTION public.place_bid_atomic IS
-  'Atomares Bid-Placement mit pg_advisory_xact_lock + 5-Min Soft-Close. Synchron mit handle_autobid_atomic.';

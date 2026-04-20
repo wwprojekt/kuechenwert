@@ -68,8 +68,8 @@ ADD COLUMN IF NOT EXISTS contract_number TEXT;
 -- 5. Enable RLS
 ALTER TABLE public.purchase_contracts ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies
--- Admin full access
+-- 6. RLS Policies (idempotent: drop-if-exists vor jedem CREATE POLICY)
+DROP POLICY IF EXISTS "Admin full access to purchase_contracts" ON public.purchase_contracts;
 CREATE POLICY "Admin full access to purchase_contracts"
   ON public.purchase_contracts FOR ALL
   USING (
@@ -79,17 +79,17 @@ CREATE POLICY "Admin full access to purchase_contracts"
     EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin')
   );
 
--- Buyers can read their own contracts
+DROP POLICY IF EXISTS "Buyers can read own purchase_contracts" ON public.purchase_contracts;
 CREATE POLICY "Buyers can read own purchase_contracts"
   ON public.purchase_contracts FOR SELECT
   USING (buyer_id = auth.uid());
 
--- Sellers can read their own contracts
+DROP POLICY IF EXISTS "Sellers can read own purchase_contracts" ON public.purchase_contracts;
 CREATE POLICY "Sellers can read own purchase_contracts"
   ON public.purchase_contracts FOR SELECT
   USING (seller_id = auth.uid());
 
--- Service role full access (for Edge Functions)
+DROP POLICY IF EXISTS "Service role full access to purchase_contracts" ON public.purchase_contracts;
 CREATE POLICY "Service role full access to purchase_contracts"
   ON public.purchase_contracts FOR ALL
   USING (auth.role() = 'service_role')

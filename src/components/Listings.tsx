@@ -10,17 +10,64 @@ const Listings = () => {
   const { data: auctions, isLoading } = useQuery({
     queryKey: ['home-auctions'],
     queryFn: async () => {
-      // Performance: 2-Roundtrip-Strategie statt nested embed.
-      // Hintergrund: Der vorherige `photos:motorhome_photos(url, display_order)`
-      // Embed mit `.order(..., { referencedTable: 'motorhome.photos' })` und
-      // `.limit(1, { referencedTable: 'motorhome.photos' })` funktioniert NICHT
-      // korrekt mit PostgREST (400-Fehler beim nested order, Limit greift nicht
-      // auf den Embed). Resultat war: pro Auction wurden ALLE ~20 Photos
-      // mitgeschickt → ~80 Bilder im Browser für die Homepage statt 4.
-      // Siehe Kaufen.tsx für die ausführliche Diagnose.
-      //
-      // Fix: Auctions ohne photos selecten, dann eine zweite Query auf
-      // motorhome_photos mit display_order=0 (= Cover-Foto, DB-verifiziert).
+      // ─────────────────────────────────────────────────────────────────
+      // PRIMARY: Edge-Cached Worker (caravanwert.de/api/auctions/active)
+      // ─────────────────────────────────────────────────────────────────
+      // Liefert vorgekochtes JSON mit ALLEN active Auctions (CF KV cache).
+      // Wir brauchen für die Homepage nur die ersten 4 (sortiert nach
+      // end_time asc) — slice ist negligible.
+      // Bei Fehler/Timeout (>3 s): transparent fallback auf direkte Queries.
+      try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('/api/auctions/active', {
+          signal: controller.signal,
+          credentials: 'omit',
+          headers: { accept: 'application/json' },
+        });
+        window.clearTimeout(timeoutId);
+        if (res.ok) {
+          const payload = (await res.json()) as { auctions?: unknown[] };
+          const list = Array.isArray(payload.auctions) ? payload.auctions : [];
+          // Worker liefert pro Auction motorhome.photos = [{url, medium_url, display_order}]
+          // → exakt das Format das die Render-Logik unten erwartet.
+          return list.slice(0, 4) as Array<{
+            id: string;
+            current_bid: number | null;
+            starting_bid: number | null;
+            end_time: string;
+            created_at: string;
+            last_price_reduction_at?: string | null;
+            marketing_phase_started_at?: string | null;
+            motorhome_id?: string | null;
+            motorhome: {
+              id: string;
+              manufacturer: string;
+              model: string;
+              year: number;
+              mileage: number;
+              body_type: string | null;
+              country: string | null;
+              instant_price: number | null;
+              sale_channel: string | null;
+              status: string;
+              account_type: string | null;
+              sleeping_places: number | null;
+              seats: number | null;
+              description: string | null;
+              photos: Array<{ url: string; medium_url: string | null; display_order: number }>;
+            } | null;
+          }>;
+        }
+      } catch {
+        // Network-Error, AbortError, JSON-Parse — fallback unten
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // FALLBACK: Direkte 2-Roundtrip-Strategie (auctions + photos).
+      // (Hintergrund: nested embed `motorhome.photos(...)` mit referencedTable
+      // order/limit ist in PostgREST buggy, deshalb 2 Queries — siehe Kaufen.tsx.)
+      // ─────────────────────────────────────────────────────────────────
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('auctions')

@@ -101,8 +101,66 @@ const Kaufen = () => {
       }
       if (retryCount === 0) inFlightRef.current = true;
 
+      // ─────────────────────────────────────────────────────────────────
+      // PRIMARY PATH: Edge-Cached Worker (caravanwert.de/api/auctions/active)
+      // ─────────────────────────────────────────────────────────────────
+      // Der Worker (CF Edge KV) liefert ein vorgekochtes JSON mit
+      // {auctions, bidCounts} aus — typisch <100 ms TTFB ab CF Edge.
+      // Cache-Strategie: 30 s FRESH → 60 s STALE-WHILE-REVALIDATE → sync-Refresh.
+      //
+      // Bei JEDEM Fehler (Network-Error, AbortError, non-200, JSON-Parse-Error)
+      // fallen wir transparent zurück auf die direkte 3-Roundtrip-Supabase-
+      // Logik unten. Kein User-facing Error, kein Datenverlust.
+      //
+      // Wichtig: Wir verzichten bei Retries (>0) auf den Worker-Pfad — wenn
+      // der erste Versuch direkt zu Supabase ging, soll der Retry konsistent
+      // dort weiterprobieren statt zwischen den Pfaden zu springen.
+      if (retryCount === 0) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+          const res = await fetch("/api/auctions/active", {
+            signal: controller.signal,
+            credentials: "omit",
+            headers: { accept: "application/json" },
+          });
+          window.clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const payload = (await res.json()) as {
+              auctions?: AuctionWithMotorhome[];
+              bidCounts?: Record<string, number>;
+            };
+            const list = Array.isArray(payload.auctions) ? payload.auctions : [];
+            setAuctions(list);
+            setBidCounts(payload.bidCounts ?? {});
+            hasInitialDataRef.current = true;
+            // Logging optional — hilft beim Debuggen ob/wie der Cache greift
+            const cacheStatus = res.headers.get("x-cache-status") ?? "unknown";
+            const cacheAgeMs = res.headers.get("x-cache-age-ms") ?? "?";
+            logger.debug(
+              `Kaufen: worker hit (${cacheStatus}, age=${cacheAgeMs}ms, ${list.length} auctions)`
+            );
+            inFlightRef.current = false;
+            setIsLoading(false);
+            return;
+          }
+          logger.warn(
+            `Kaufen: worker returned ${res.status}, falling back to direct supabase`
+          );
+        } catch (workerErr) {
+          // Network-Error, AbortError (>3 s), JSON-Parse — alles unkritisch,
+          // wir machen einfach den klassischen Pfad.
+          logger.warn(
+            "Kaufen: worker fetch failed, falling back to direct supabase",
+            workerErr
+          );
+        }
+      }
+
       try {
         // ─────────────────────────────────────────────────────────────────
+        // FALLBACK PATH: Direkte Supabase-Queries (3 Roundtrips)
         // Performance-Strategie für /kaufen (re-architected 2026-04-20)
         // ─────────────────────────────────────────────────────────────────
         // Der vorherige nested Embed `motorhome.photos(...)` mit den Optionen

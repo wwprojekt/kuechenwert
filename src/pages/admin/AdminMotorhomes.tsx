@@ -244,8 +244,12 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
 export default function AdminMotorhomes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sellerFilter = searchParams.get("seller")?.trim() || "";
+  // Bug-fix #4: ?filter=festpreis_no_price one-click view powered by the
+  // bell counter. We keep it as a URL param so the bell link is stable
+  // and the filter survives reloads / sharing.
+  const flagFilter = searchParams.get("filter")?.trim() || "";
   const [selectedMotorhome, setSelectedMotorhome] = useState<MotorhomeWithRelations | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -438,6 +442,16 @@ export default function AdminMotorhomes() {
       filtered = filtered.filter((m) => m.motorhome_photos && m.motorhome_photos.length > 0);
     }
 
+    // Bug-fix #4: festpreis-without-price flag filter
+    if (flagFilter === "festpreis_no_price") {
+      filtered = filtered.filter(
+        (m) =>
+          m.sale_channel === "instant_price" &&
+          m.status === "available" &&
+          (m.instant_price == null || Number(m.instant_price) <= 0),
+      );
+    }
+
     // Sorting
     filtered.sort((a, b) => {
       let cmp = 0;
@@ -459,7 +473,7 @@ export default function AdminMotorhomes() {
     });
 
     return { filteredMotorhomes: filtered, tabCounts };
-  }, [motorhomes, activeTab, sellerFilter, searchQuery, conditionFilter, saleChannelFilter, photoFilter, sortKey, sortDir]);
+  }, [motorhomes, activeTab, sellerFilter, searchQuery, conditionFilter, saleChannelFilter, photoFilter, flagFilter, sortKey, sortDir]);
 
   // ---- Quick Stats ----
   const stats = useMemo(() => {
@@ -531,7 +545,7 @@ export default function AdminMotorhomes() {
   const MH_PAGE_SIZE = 20;
 
   // Reset Seite bei Filter-Änderung
-  useEffect(() => { setMhPage(1); }, [activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter]);
+  useEffect(() => { setMhPage(1); }, [activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter, flagFilter]);
 
   // ---- Render Table ----
   const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => {
@@ -910,6 +924,31 @@ export default function AdminMotorhomes() {
           </Select>
         </div>
 
+        {/* Bug-fix #4: festpreis-without-price banner so the admin always
+             knows why the list is shrunk and can clear the URL filter inline. */}
+        {flagFilter === "festpreis_no_price" && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>
+                Filter aktiv: Festpreis-Inserate ohne hinterlegten Sofortpreis. Bitte
+                Sofortpreis nachtragen oder Verkaufsweg auf "Auktion" ändern.
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("filter");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              Filter entfernen
+            </Button>
+          </div>
+        )}
+
         {/* Loading state */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -921,11 +960,11 @@ export default function AdminMotorhomes() {
             <div className="flex items-center justify-between mt-2 mb-1">
               <p className="text-sm text-muted-foreground">
                 {filteredMotorhomes.length} Ergebnis{filteredMotorhomes.length !== 1 ? "se" : ""}
-                {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all") && (
+                {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all" || flagFilter) && (
                   <span> (gefiltert)</span>
                 )}
               </p>
-              {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all") && (
+              {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all" || flagFilter) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -934,6 +973,11 @@ export default function AdminMotorhomes() {
                     setConditionFilter("all");
                     setSaleChannelFilter("all");
                     setPhotoFilter("all");
+                    if (flagFilter) {
+                      const next = new URLSearchParams(searchParams);
+                      next.delete("filter");
+                      setSearchParams(next, { replace: true });
+                    }
                   }}
                 >
                   Filter zurücksetzen

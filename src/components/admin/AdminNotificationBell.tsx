@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Link } from "react-router-dom";
-import { Bell, UserPlus, Mail, MessageCircle, Building2, FileWarning, Star, Calendar } from "lucide-react";
+import { Bell, UserPlus, Mail, MessageCircle, Building2, FileWarning, Star, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -31,7 +31,7 @@ export function useAdminNotificationCounts() {
       const [
         wizardRes, valuationRes, supportRes, contactRes,
         dealerRes, questionsRes, unreadEmailsRes, reviewsRes,
-        claimsRes, appointmentsRes, offersRes,
+        claimsRes, appointmentsRes, offersRes, festpreisNoPriceRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
@@ -44,6 +44,17 @@ export function useAdminNotificationCounts() {
         supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
         supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split("T")[0]),
         supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).in("status", ["pending", "countered"]),
+        // Bug-fix #4: surface festpreis listings that are missing a price.
+        // The DB CHECK constraint (motorhomes_instant_price_positive, NOT VALID)
+        // blocks new violators, but legacy rows + the cron auto-extend window
+        // mean admins still need a one-click view. This count powers both the
+        // bell badge and the /admin/motorhomes?filter=festpreis_no_price view.
+        supabase
+          .from("motorhomes")
+          .select("*", { count: "exact", head: true })
+          .eq("sale_channel", "instant_price")
+          .eq("status", "available")
+          .or("instant_price.is.null,instant_price.eq.0"),
       ]);
 
       return {
@@ -57,6 +68,7 @@ export function useAdminNotificationCounts() {
         claims: claimsRes.count || 0,
         appointments: appointmentsRes.count || 0,
         offers: offersRes.count || 0,
+        festpreisNoPrice: festpreisNoPriceRes.count || 0,
       };
     },
     // Badge counts are not time-critical; 90 s is plenty and cuts the total
@@ -83,6 +95,13 @@ export function AdminNotificationBell() {
     { label: "Offene Reklamationen", count: data?.claims || 0, path: "/admin/claims", icon: FileWarning, color: "text-red-600" },
     { label: "Anstehende Termine", count: data?.appointments || 0, path: "/admin/appointments", icon: Calendar, color: "text-teal-600" },
     { label: "Offene Angebote", count: data?.offers || 0, path: "/admin/offers", icon: Building2, color: "text-green-600" },
+    {
+      label: "Festpreis ohne Preis",
+      count: data?.festpreisNoPrice || 0,
+      path: "/admin/motorhomes?filter=festpreis_no_price",
+      icon: AlertTriangle,
+      color: "text-rose-600",
+    },
   ];
 
   const activeItems = items.filter((i) => i.count > 0);

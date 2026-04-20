@@ -300,6 +300,10 @@ const step8Schema = z.object({
   saleChannel: z.enum(['instant_price', 'auction', 'station'], {
     errorMap: () => ({ message: "Bitte w\u00e4hlen Sie einen Verkaufsweg \u2013 gehen Sie zur\u00fcck zu Schritt 7" }),
   }),
+  // instantPrice is mirrored here so we can cross-validate "instant_price
+  // requires a positive price" as the very last gate before submit (the same
+  // rule lives in step7Schema, the DB CHECK and the auto-convert-wizard guard).
+  instantPrice: z.number().nullable().optional(),
   customerName: z.string().min(1, "Name fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerEmail: z.string().email("E-Mail-Adresse fehlt oder ung\u00fcltig \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerPhone: phoneSchema,
@@ -308,7 +312,10 @@ const step8Schema = z.object({
   zipCode: z.string().min(3, "Bitte geben Sie eine g\u00fcltige PLZ ein").max(10, "PLZ ist zu lang"),
   city: z.string().min(1, "Ort ist erforderlich"),
   country: z.string().min(2, "Bitte w\u00e4hlen Sie ein Land"),
-});
+}).refine(
+  (data) => data.saleChannel !== 'instant_price' || (data.instantPrice != null && data.instantPrice > 0),
+  { message: "Sofortkauf ben\u00f6tigt einen Wunschpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7", path: ['instantPrice'] },
+);
 
 // Passwort-Validierung f\u00fcr Gast-Submit (Step 8 ohne bestehendes Login).
 // Verlangt 8+ Zeichen, 1 Gro\u00df-, 1 Kleinbuchstabe und 1 Ziffer.
@@ -434,6 +441,7 @@ export const useWizardForm = () => {
             bodyType: formData.bodyType,
             manufacturer: formData.manufacturer,
             saleChannel: formData.saleChannel,
+            instantPrice: formData.instantPrice,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,

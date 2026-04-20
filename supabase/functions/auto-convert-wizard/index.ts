@@ -431,7 +431,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     // 3. Create Motorhome
     const mappedData = mapWizardToMotorhome(formData);
-    
+
+    // Invariant: a sale_channel='instant_price' listing MUST carry a strictly
+    // positive instant_price. Without this guard we silently created the bug
+    // class fixed by hotfix e29b40cb (Sofortkauf listing with no price).
+    // The DB also enforces this via the motorhomes_instant_price_positive
+    // CHECK constraint (NOT VALID for legacy rows); we fail early here so
+    // the user sees a meaningful error instead of a generic 500.
+    if (
+      mappedData.sale_channel === "instant_price" &&
+      (mappedData.instant_price == null || Number(mappedData.instant_price) <= 0)
+    ) {
+      edgeLogger.warn(
+        `Refusing to convert wizard session ${body.sessionId}: sale_channel='instant_price' but instant_price is null/0`,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Sofortkauf-Inserate benötigen einen Festpreis größer 0. Bitte tragen Sie einen Wunschpreis ein und versuchen Sie es erneut.",
+          field: "instantPrice",
+        }),
+        { status: 422, headers },
+      );
+    }
+
     // Fallbacks for required fields
     const manufacturer = mappedData.manufacturer || "Unbekannt";
     const model = mappedData.model || "Unbekannt";

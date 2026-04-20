@@ -396,6 +396,18 @@ export function MotorhomeEditDialog({
   });
 
   const handleSave = () => {
+    if (
+      formData.sale_channel === "instant_price" &&
+      (formData.instant_price == null || Number(formData.instant_price) <= 0)
+    ) {
+      toast({
+        title: "Sofortpreis fehlt",
+        description:
+          "Sofortkauf-Inserate ben\u00f6tigen einen Sofortpreis gr\u00f6\u00dfer 0 \u20ac. Bitte tragen Sie einen Preis ein oder \u00e4ndern Sie den Verkaufsweg.",
+        variant: "destructive",
+      });
+      return;
+    }
     updateMutation.mutate(formData);
   };
 

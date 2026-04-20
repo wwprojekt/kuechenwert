@@ -2589,6 +2589,7 @@ export type Database = {
       post_auction_offers: {
         Row: {
           auction_id: string
+          auction_round: number
           buyer_id: string
           counter_offer_amount: number | null
           created_at: string | null
@@ -2604,6 +2605,7 @@ export type Database = {
         }
         Insert: {
           auction_id: string
+          auction_round?: number
           buyer_id: string
           counter_offer_amount?: number | null
           created_at?: string | null
@@ -2619,6 +2621,7 @@ export type Database = {
         }
         Update: {
           auction_id?: string
+          auction_round?: number
           buyer_id?: string
           counter_offer_amount?: number | null
           created_at?: string | null

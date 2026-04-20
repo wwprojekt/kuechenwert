@@ -422,11 +422,20 @@ Deno.serve(async (req) => {
               let newReservePrice =
                 kaufchance.reserve_price ?? (mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null;
 
-              // Lowest seller counter_offer_amount becomes new reserve price for next round
+              // Bug-fix #6: scope the lowest counter-offer query to the
+              // CURRENT round (the one being closed). Previously this pulled
+              // every counter-offer ever made on this auction_id, including
+              // expired ones from older rounds, and could undercut the
+              // seller with a stale 4 500 € counter from round 1 even though
+              // they had moved up to 6 000 € in round 3.
+              // post_auction_offers.auction_round is now stamped via trigger
+              // on insert (migration 20260420010000).
+              const currentRound = kaufchance.auction_round || 1;
               const { data: allOffers } = await supabase
                 .from('post_auction_offers')
                 .select('counter_offer_amount')
                 .eq('auction_id', kaufchance.id)
+                .eq('auction_round', currentRound)
                 .not('counter_offer_amount', 'is', null);
 
               if (allOffers && allOffers.length > 0) {
@@ -435,7 +444,7 @@ Deno.serve(async (req) => {
                 );
                 if (lowestCounterOffer > 0) {
                   newReservePrice = lowestCounterOffer;
-                  console.log(`New reserve price from lowest seller counter-offer: ${newReservePrice}`);
+                  console.log(`New reserve price from lowest seller counter-offer (round ${currentRound}): ${newReservePrice}`);
                 }
               }
 

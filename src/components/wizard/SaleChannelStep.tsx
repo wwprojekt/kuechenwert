@@ -235,7 +235,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
             <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.instantPrice}</p>
           )}
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren. Sie können den Preis später jederzeit im Dashboard anpassen.
+            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren. <span className="font-medium text-foreground">Bitte sorgfältig wählen:</span> nach dem Aktivieren des Inserats wird der Preis vom CaravanWert-Team verwaltet (Anpassung jederzeit per E-Mail an info@caravanwert.de möglich).
           </p>
         </div>
       )}
@@ -271,10 +271,10 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
           ) : (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                <span className="font-medium text-foreground">Schutz für Sie:</span> Niemand kann Ihr Fahrzeug unter diesem Preis kaufen. Sie können den Preis später jederzeit im Dashboard anpassen.
+                <span className="font-medium text-foreground">Schutz für Sie:</span> Niemand kann Ihr Fahrzeug unter diesem Preis kaufen.
               </p>
               <p className="text-xs text-muted-foreground/80 leading-relaxed">
-                <span className="font-medium">Tipp:</span> Setzen Sie den absoluten Tiefstpreis, den Sie noch akzeptieren würden – nicht Ihren Wunsch-Verkaufspreis. Händler bieten in der Auktion oft deutlich höher.
+                <span className="font-medium">Tipp:</span> Setzen Sie den absoluten Tiefstpreis, den Sie noch akzeptieren würden – nicht Ihren Wunsch-Verkaufspreis. Händler bieten in der Auktion oft deutlich höher. <span className="text-muted-foreground/70">Bitte sorgfältig wählen – nach dem Aktivieren wird der Mindestpreis vom CaravanWert-Team verwaltet (Anpassung per E-Mail an info@caravanwert.de möglich).</span>
               </p>
             </div>
           )}

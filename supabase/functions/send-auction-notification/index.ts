@@ -627,6 +627,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log in admin_emails for System tab
     try {
+      // Bug-fix #8: write a structured dedup-key marker into body_text so
+      // downstream callers (e.g. check-expired-auctions per-auction-per-round
+      // dedup) can ilike-probe admin_emails without parsing the full HTML.
+      // Format: `dedup:<auctionUrl>|round:<roundNumber>` — both fields are
+      // guaranteed-unique for the festpreis lifecycle and harmless for other
+      // notification types.
+      const dedupMarker = [
+        auctionUrl ? `dedup:${auctionUrl}` : '',
+        roundNumber ? `round:${roundNumber}` : '',
+        motorhomeId ? `motorhome:${motorhomeId}` : '',
+      ].filter(Boolean).join('|');
+
       await supabase.from('admin_emails').insert({
         sender_email: 'info@caravanwert.de',
         sender_name: settingsData.site_name,
@@ -634,7 +646,7 @@ const handler = async (req: Request): Promise<Response> => {
         recipient_name: name || null,
         subject,
         body_html: html,
-        body_text: '',
+        body_text: dedupMarker,
         email_type: `auction_${type}`,
         direction: 'outbound',
         status: 'sent',

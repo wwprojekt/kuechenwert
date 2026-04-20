@@ -226,33 +226,70 @@ Deno.serve(async (req) => {
                     const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
                     const currentBidStr = `€${instantPriceNum.toLocaleString('de-DE')}`;
 
-                    await supabase.functions.invoke('send-auction-notification', {
-                      body: {
-                        email: sellerProfile.email,
-                        name: sellerNameStr,
-                        type: 'seller_festpreis_extended',
-                        motorhomeModel: motorhomeName,
-                        auctionUrl: dashboardUrl,
-                        currentBid: currentBidStr,
-                        endTime: endFmt,
-                        extendedUntil: endFmt,
-                        roundNumber: String(newRound),
-                      },
-                    }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
+                    // Bug-fix #8: per-(seller,auction,round) dedup. The cron runs every
+                    // minute; if a deploy or DB hiccup re-processes the same expired
+                    // listing inside the same round we don't want the seller to get
+                    // duplicate "extended" mails. send-auction-notification stamps each
+                    // outbound mail with a `dedup:<auctionUrl>|round:<n>|motorhome:<id>`
+                    // marker in body_text exactly so we can probe it here.
+                    const dedupExtended = `dedup:${dashboardUrl}|round:${newRound}%`;
+                    const { data: sentExtended } = await supabase
+                      .from('admin_emails')
+                      .select('id')
+                      .eq('recipient_email', sellerProfile.email)
+                      .eq('email_type', 'auction_seller_festpreis_extended')
+                      .gte('created_at', new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString())
+                      .ilike('body_text', dedupExtended)
+                      .limit(1);
 
-                    if (newRound >= 2) {
+                    if (!sentExtended || sentExtended.length === 0) {
                       await supabase.functions.invoke('send-auction-notification', {
                         body: {
                           email: sellerProfile.email,
                           name: sellerNameStr,
-                          type: 'seller_festpreis_round_warning',
+                          type: 'seller_festpreis_extended',
                           motorhomeModel: motorhomeName,
                           auctionUrl: dashboardUrl,
                           currentBid: currentBidStr,
                           endTime: endFmt,
+                          extendedUntil: endFmt,
                           roundNumber: String(newRound),
                         },
-                      }).catch((e: any) => console.error('Festpreis seller round_warning mail:', e?.message));
+                      }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
+                    } else {
+                      console.log(`Festpreis extend mail deduped for motorhome ${mh.id} (already sent < 25h ago)`);
+                    }
+
+                    if (newRound >= 2) {
+                      // Same per-round dedup applied to the soft-brake warning. The
+                      // round number changes each extension so a probe across the
+                      // last 25h with the round-stamped body_text marker is exact.
+                      const dedupWarning = `dedup:${dashboardUrl}|round:${newRound}%`;
+                      const { data: sentWarning } = await supabase
+                        .from('admin_emails')
+                        .select('id')
+                        .eq('recipient_email', sellerProfile.email)
+                        .eq('email_type', 'auction_seller_festpreis_round_warning')
+                        .gte('created_at', new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString())
+                        .ilike('body_text', dedupWarning)
+                        .limit(1);
+
+                      if (!sentWarning || sentWarning.length === 0) {
+                        await supabase.functions.invoke('send-auction-notification', {
+                          body: {
+                            email: sellerProfile.email,
+                            name: sellerNameStr,
+                            type: 'seller_festpreis_round_warning',
+                            motorhomeModel: motorhomeName,
+                            auctionUrl: dashboardUrl,
+                            currentBid: currentBidStr,
+                            endTime: endFmt,
+                            roundNumber: String(newRound),
+                          },
+                        }).catch((e: any) => console.error('Festpreis seller round_warning mail:', e?.message));
+                      } else {
+                        console.log(`Festpreis round_warning mail deduped for motorhome ${mh.id} round ${newRound}`);
+                      }
                     }
                   }
                 } catch (e: any) {

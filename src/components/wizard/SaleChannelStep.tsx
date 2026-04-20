@@ -296,7 +296,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   {isAuction
-                    ? `${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h Kaufchance, bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden – ohne Verkauf wird der Mindestpreis pro Runde leicht angepasst, damit Händler aktiv bieten. Sie können die Senkung jederzeit im Dashboard stoppen.`
+                    ? `${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS}h exklusive Kaufchance, bis zu ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden mit aktiven Händlergeboten. Sie behalten jederzeit die volle Kontrolle im Dashboard.`
                     : `${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage Festpreis-Inserat, automatische Verlängerung bis max. ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage. Sie behalten jederzeit die volle Kontrolle über Preis und Sichtbarkeit.`}
                 </p>
               </div>
@@ -319,10 +319,10 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                   <strong className="text-foreground">Bindungsdauer:</strong> {formatMarketingDuration(isAuction ? "auction" : "instant_price")}.
                 </p>
                 <p>
-                  <strong className="text-foreground">Automatische Preissenkung:</strong> Pro Runde max. {perRoundPct.toFixed(0)} %, insgesamt max. {reductionPct.toFixed(0)} % vom heute eingegebenen Wunschpreis. Unter diese Untergrenze wird Ihr Fahrzeug niemals verkauft.
+                  <strong className="text-foreground">Automatische Preisanpassung:</strong> Pro Runde max. {perRoundPct.toFixed(0)} %, insgesamt max. {reductionPct.toFixed(0)} % vom heute eingegebenen Wunschpreis. Unter diesem Sicherheitsboden wird Ihr Fahrzeug niemals verkauft.
                 </p>
                 <p>
-                  <strong className="text-foreground">Ihre Kontrolle:</strong> Sie können die automatische Verlängerung und Preissenkung jederzeit im Dashboard ein- und ausschalten – auch während einer laufenden Kaufchance. Bei wichtigem Grund (z. B. Verkauf an Privat) gilt unsere außerordentliche Kündigungsklausel der AGB §6.
+                  <strong className="text-foreground">Ihre Kontrolle:</strong> Sie können die automatische Verlängerung und Preisanpassung jederzeit im Dashboard ein- und ausschalten – auch während einer laufenden Kaufchance. Bei wichtigem Grund (z. B. Verkauf an Privat) gilt unsere außerordentliche Kündigungsklausel der AGB §6.
                 </p>
                 <p>
                   <strong className="text-foreground">Was passiert nach {totalDays} Tagen?</strong> Wir kontaktieren Sie per E-Mail mit drei Optionen: erneut einstellen, Preis anpassen oder archivieren. Es passiert nichts ohne Ihre aktive Bestätigung.
@@ -345,8 +345,8 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
                   </Label>
                   <p className="text-xs text-muted-foreground leading-snug">
                     {dynamicPricingValue
-                      ? `Reserve sinkt pro Runde um max. ${perRoundPct.toFixed(0)} % (Boden: ${reductionPct.toFixed(0)} % unter Wunschpreis).`
-                      : "Wunschpreis bleibt konstant – Sie entscheiden manuell."}
+                      ? `Erhöht Ihre Verkaufschance. Sicherheitsboden: ${reductionPct.toFixed(0)} % unter Wunschpreis – darunter wird nie verkauft.`
+                      : "Wunschpreis bleibt konstant – Sie entscheiden manuell über jede Anpassung."}
                   </p>
                 </div>
               </div>

@@ -80,6 +80,7 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           .from('motorhome-photos')
           .upload(filePath, file, {
             contentType: file.type || `image/${fileExt}`,
+            cacheControl: "31536000, immutable",
           });
 
         if (uploadError) throw uploadError;

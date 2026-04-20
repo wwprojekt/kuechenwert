@@ -196,7 +196,7 @@ Deno.serve(async (req: Request) => {
         .upload(storagePath, jpegBytes, {
           contentType: "image/jpeg",
           upsert: true,
-          cacheControl: "public, max-age=31536000, immutable",
+          cacheControl: "31536000, immutable",
         });
       if (upErr) {
         result.errors.push({ id: row.id, url: row.url, message: `upload failed: ${upErr.message}` });

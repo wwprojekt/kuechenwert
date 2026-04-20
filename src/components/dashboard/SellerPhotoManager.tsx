@@ -450,7 +450,10 @@ export function SellerPhotoManager({
 
           const { error: uploadError } = await supabase.storage
             .from("motorhome-photos")
-            .upload(fileName, uploadFile, { contentType });
+            .upload(fileName, uploadFile, {
+              contentType,
+              cacheControl: "31536000, immutable",
+            });
 
           if (uploadError) {
             logger.error("Upload error:", uploadError);

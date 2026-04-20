@@ -257,10 +257,18 @@ Deno.serve(async (req: Request) => {
       // are always self-consistent with their actual byte content.
       const fileName = `wizard_temp/${sessionId}/${Date.now()}_${i}.${detected.extension}`;
 
+      // CacheControl: Supabase Storage SDK pre-pendet `max-age=` automatisch.
+      // Wir liefern also nur Sekunden + zusätzliche Direktiven. Resultat:
+      // `Cache-Control: max-age=31536000, immutable` → CDN/Browser cachen
+      // 1 Jahr. Vorher (kein cacheControl) erbten Originale den Bucket-
+      // Default `max-age=3600` → jeder Visit nach 1 h holte die 1-2 MB
+      // Originale wieder vom Origin. Wizard-Originals sind unveränderlich
+      // (Snapshot zum Upload-Zeitpunkt), `immutable` ist sicher.
       const { error: uploadError } = await adminClient.storage
         .from("motorhome-photos")
         .upload(fileName, file, {
           contentType: detected.mime,
+          cacheControl: "31536000, immutable",
           upsert: false,
         });
 

@@ -123,6 +123,7 @@ export const DamageDocumentation = ({
         .from('motorhome-photos')
         .upload(fileName, uploadFile, {
           contentType: uploadFile.type || `image/${fileExt}`,
+          cacheControl: "31536000, immutable",
         });
 
       if (uploadError) throw uploadError;

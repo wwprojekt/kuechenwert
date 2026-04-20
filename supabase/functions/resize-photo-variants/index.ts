@@ -346,7 +346,7 @@ async function generateAndUploadVariant(
       contentType: "image/jpeg",
       upsert: true,
       // Variants sind per photoId immutable — wir cachen 1 Jahr + immutable.
-      cacheControl: "public, max-age=31536000, immutable",
+      cacheControl: "31536000, immutable",
     });
 
   if (upError) {

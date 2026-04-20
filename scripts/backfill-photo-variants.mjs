@@ -31,7 +31,9 @@ const BUCKET = "motorhome-photos";
 const CARD_WIDTH = 480;
 const MEDIUM_WIDTH = 1024;
 const WEBP_QUALITY = 78;
-const VARIANT_CACHE_CONTROL = "public, max-age=31536000, immutable";
+// Supabase Storage SDK pre-pendet `max-age=` automatisch — wir übergeben nur
+// Sekunden + Zusatz-Direktiven. Wird zu: `Cache-Control: max-age=31536000, immutable`
+const VARIANT_CACHE_CONTROL = "31536000, immutable";
 
 const args = process.argv.slice(2);
 function arg(name, def) {

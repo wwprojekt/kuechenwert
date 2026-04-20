@@ -73,7 +73,13 @@ const MAX_INPUT_BYTES = 2 * 1024 * 1024;
 
 // Cache: 1 Jahr (immutable). Variant-Pfade enthalten {photo_id} + {size},
 // d.h. eine Datei ändert sich nie. Cloudflare cached → kostenlose CDN.
-const VARIANT_CACHE_CONTROL = "public, max-age=31536000, immutable";
+// HINWEIS: Supabase Storage SDK pre-pendet automatisch `max-age=` an diesen
+// Wert. Wir übergeben also NUR die Sekunden + zusätzliche Direktiven.
+// Resultat im Response-Header: `Cache-Control: max-age=31536000, immutable`.
+// Vorher hatten wir hier `"public, max-age=31536000, immutable"` — das wurde
+// zu `max-age=public, max-age=31536000, immutable` (kaputter Header, von
+// Browsern + CDN teilweise ignoriert).
+const VARIANT_CACHE_CONTROL = "31536000, immutable";
 
 // ─── CORS ──────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [

@@ -10,14 +10,18 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { StablePriceBadge } from "@/components/StablePriceBadge";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNow } from "@/hooks/useNow";
-import { getResponsiveImageProps } from "@/lib/imageTransform";
+// Image transform removed 2026-04-20 — Supabase Image Transform quota was
+// being burned ($5/1000 origin images/mo, scaling with views). Replacement
+// solution = pre-resize at upload (see upload-wizard-photos), which generates
+// card_url + medium_url variants stored as static files. Until that lands,
+// we serve the original Storage URL directly. Slightly bigger payload (~150KB
+// vs ~50KB per card) but zero recurring cost and zero transformation latency.
 
 /**
  * Sizes-Hinweis für die Karten-Hero-Images. Spiegelt das Grid in Kaufen.tsx
  * (1 col mobile, 2 cols sm, 3 cols lg, 4 cols xl) plus Filter-Sidebar wider.
  * Browser nutzt das, um aus dem srcset die kleinste passende Version zu laden.
  */
-const CARD_IMAGE_SIZES = "(min-width: 1280px) 22vw, (min-width: 1024px) 28vw, (min-width: 640px) 45vw, 92vw";
 
 interface MotorhomeCardProps {
   // Core vehicle info
@@ -229,14 +233,6 @@ const MotorhomeCard = ({
 
   const timerStyles = useMemo(() => getTimerStyles(urgency), [urgency]);
 
-  // Responsive Image-URL via Supabase Image Transformation. Ersetzt das vorherige
-  // 300 KB Original-JPEG durch eine ~30 KB transformierte Version, plus srcset für
-  // höhere Pixel-Dichten. Bei Nicht-Supabase-URLs unverändertes Verhalten.
-  const responsiveImage = useMemo(
-    () => getResponsiveImageProps(image, { sizes: CARD_IMAGE_SIZES, defaultWidth: 480, quality: 70 }),
-    [image]
-  );
-
   // Determine if we should show the blink animation (last 5 minutes)
   const shouldBlink = urgency === 'hotbid';
   // Softer pulse for critical (5-15 min)
@@ -320,9 +316,7 @@ const MotorhomeCard = ({
           <div className="aspect-[4/3] overflow-hidden bg-muted">
             {image ? (
               <img
-                src={responsiveImage.src}
-                srcSet={responsiveImage.srcSet || undefined}
-                sizes={responsiveImage.srcSet ? responsiveImage.sizes : undefined}
+                src={image}
                 alt={`${manufacturer} ${model}`}
                 width={640}
                 height={480}

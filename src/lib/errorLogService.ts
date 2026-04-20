@@ -279,6 +279,26 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
 
     const errorHash = generateErrorHash(entry);
 
+    // ── Dedup-Marker fuer den globalen console.error-Interceptor ────────
+    // React ruft nach `componentDidCatch` automatisch `console.error(error)`
+    // auf. Ohne diesen Marker wuerde der Interceptor unten (siehe
+    // installGlobalErrorHandlers) denselben Fehler ein zweites Mal als
+    // CONSOLE_ERROR/medium protokollieren — ein klassischer doppelter Eintrag
+    // pro ErrorBoundary-Treffer (siehe Bug-Report 20.04.2026, beide Eintraege
+    // hatten identischen Hash err_lpcvga + err_naru9c, gleiche Session,
+    // gleicher Stack). Dasselbe Marker-Pattern verwendet handleAndLogError
+    // bereits fuer den Toast-Pfad. Wir setzen hier zusaetzlich einen Marker
+    // fuer den unuebersetzten Original-Fehlertext, weil das genau die
+    // Zeichenkette ist, die der Interceptor in `errorArg.message` sieht.
+    if (typeof window !== 'undefined' && entry.originalError) {
+      const w = window as unknown as {
+        __lastLoggedOriginalError?: string;
+        __lastLoggedOriginalErrorTime?: number;
+      };
+      w.__lastLoggedOriginalError = entry.originalError;
+      w.__lastLoggedOriginalErrorTime = Date.now();
+    }
+
     const { error } = await supabase.rpc('log_error', {
       p_error_code: entry.errorCode,
       p_error_message: entry.errorMessage,
@@ -655,16 +675,27 @@ export function installGlobalErrorHandlers(): void {
 
       const translated = translateError(errorArg.message);
 
-      // ── Dedup gegen handleAndLogError ────────────────────────────────
-      // Wenn derselbe Fehler in den letzten 2 Sekunden bereits über
-      // handleAndLogError protokolliert wurde (Toast-Pfad), wird er hier
-      // nicht erneut als CONSOLE_ERROR doppelt geschrieben. Vorher hatten
-      // wir z.B. bei Login (Safari "Load failed") und Edge-Function-Fehlern
-      // immer zwei Einträge pro Fehler — einer aus dem Mutation-onError,
-      // einer aus dem console.error des Supabase-Clients.
+      // ── Dedup gegen handleAndLogError und logErrorToSupabase ─────────
+      // Zwei voneinander unabhängige Pfade können denselben Fehler innerhalb
+      // weniger Millisekunden in den Logger schicken:
+      //
+      // 1. Toast-Pfad: handleAndLogError(...) -> setzt
+      //    __lastLoggedErrorMessage = translated.message (deutsch).
+      //    Beispiele: Mutation-onError + console.error des Supabase-Clients.
+      //
+      // 2. ErrorBoundary-Pfad: componentDidCatch -> logErrorToSupabase(...)
+      //    -> setzt __lastLoggedOriginalError = originalError (roher Text,
+      //    z.B. "Minified React error #300").
+      //    React ruft danach automatisch console.error(error) auf, was hier
+      //    landet — ohne diesen Check als zweiter CONSOLE_ERROR-Eintrag mit
+      //    identischer Stack-Trace (siehe Bug-Report 20.04.2026).
+      //
+      // Beide Marker werden geprueft. Match = Duplikat = skip.
       const w = window as unknown as {
         __lastLoggedErrorMessage?: string;
         __lastLoggedErrorTime?: number;
+        __lastLoggedOriginalError?: string;
+        __lastLoggedOriginalErrorTime?: number;
       };
       if (
         w.__lastLoggedErrorMessage === translated.message &&
@@ -672,6 +703,13 @@ export function installGlobalErrorHandlers(): void {
         Date.now() - w.__lastLoggedErrorTime < 2000
       ) {
         return; // Same error already logged via the toast path — skip duplicate
+      }
+      if (
+        w.__lastLoggedOriginalError === errorArg.message &&
+        typeof w.__lastLoggedOriginalErrorTime === 'number' &&
+        Date.now() - w.__lastLoggedOriginalErrorTime < 2000
+      ) {
+        return; // Same error already logged via ErrorBoundary path — skip duplicate
       }
 
       logErrorToSupabase({

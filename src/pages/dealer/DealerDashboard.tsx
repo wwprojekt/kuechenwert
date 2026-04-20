@@ -69,42 +69,128 @@ const DealerDashboard = () => {
   }, [audioEnabled]);
 
   // ─── Realtime: Audio-Benachrichtigung bei neuen Geboten ───────────────
+  //
+  // Vorher: Channel ohne Filter → bekam JEDEN Bid auf JEDE Auktion im
+  // gesamten System geliefert, nur damit ggf. ein Sound abgespielt wird.
+  // Bei N parallel offenen Dealer-Dashboards × M Bids/h = N×M Deliveries —
+  // sehr teuer.
+  //
+  // Jetzt: Wir holen einmal beim Mount die Liste der Auktions-IDs auf denen
+  // dieser Dealer aktiv geboten hat (Status active), und subscriben mit
+  // `auction_id=in.(...)` Server-Filter. So bekommt der Browser nur Bids auf
+  // Auktionen die für diesen Dealer relevant sind. Re-Sync beim window-focus.
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel("dashboard-bid-audio")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "bids",
-        },
-        async (payload: any) => {
-          // Eigene Gebote ignorieren (der Händler weiß, dass er geboten hat)
-          if (payload.new.bidder_id === user.id) return;
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-          // Daten sofort aktualisieren (statt 30s Polling abzuwarten)
-          queryClient.invalidateQueries({ queryKey: ["dealerStats", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["allActiveAuctions", user.id] });
+    async function setup() {
+      // Schritt 1: Alle auction_ids holen auf denen dieser Dealer geboten hat.
+      // `supabase as any` umgeht den Supabase-TS-Generics-Recursion-Bug,
+      // der bei `.eq()` auf bestimmten Tables die Type-Inferenz sprengt.
+      // Selbes Pattern wie an vielen anderen Stellen im Codebase.
+      const sb = supabase as unknown as {
+        from: (table: string) => {
+          select: (cols: string) => {
+            eq: (
+              col: string,
+              val: string,
+            ) => Promise<{ data: Array<{ auction_id?: string | null; id?: string }> | null }>;
+            in: (
+              col: string,
+              vals: string[],
+            ) => {
+              eq: (
+                col: string,
+                val: string,
+              ) => Promise<{ data: Array<{ id: string }> | null }>;
+            };
+          };
+        };
+      };
 
-          // Audio abspielen wenn aktiviert
-          if (audioEnabledRef.current) {
-            await audioRef.current.playNotification("bid");
+      const bidsRes = await sb.from("bids").select("auction_id").eq("bidder_id", user!.id);
+      if (cancelled) return;
+
+      const allAuctionIds = Array.from(
+        new Set(
+          (bidsRes.data ?? [])
+            .map((r) => r.auction_id ?? null)
+            .filter((x): x is string => !!x),
+        ),
+      );
+
+      if (allAuctionIds.length === 0) return;
+
+      // Schritt 2: Davon nur die aktiven behalten.
+      const auctionsRes = await sb
+        .from("auctions")
+        .select("id")
+        .in("id", allAuctionIds)
+        .eq("status", "active");
+
+      if (cancelled) return;
+
+      const auctionIds = (auctionsRes.data ?? []).map((a) => a.id);
+
+      if (auctionIds.length === 0) {
+        // Dealer hat aktuell auf keiner aktiven Auktion geboten → kein
+        // Realtime-Subscription nötig. Spart Websocket + Server-Last.
+        return;
+      }
+
+      // PostgREST in.()-Syntax: kommagetrennte Werte ohne Quotes
+      const filter = `auction_id=in.(${auctionIds.join(",")})`;
+
+      channel = supabase
+        .channel(`dashboard-bid-audio-${user!.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "bids",
+            filter,
+          },
+          async (payload: { new: { bidder_id?: string; amount?: number } }) => {
+            const newBid = payload.new;
+            if (newBid.bidder_id === user!.id) return;
+
+            queryClient.invalidateQueries({ queryKey: ["dealerStats", user!.id] });
+            queryClient.invalidateQueries({ queryKey: ["allActiveAuctions", user!.id] });
+
+            if (audioEnabledRef.current) {
+              await audioRef.current.playNotification("bid");
+            }
+
+            toast({
+              title: "Neues Gebot!",
+              description: `€${Number(newBid.amount ?? 0).toLocaleString("de-DE")} auf eine Auktion`,
+            });
           }
+        )
+        .subscribe();
+    }
 
-          // Toast-Benachrichtigung anzeigen
-          toast({
-            title: "Neues Gebot!",
-            description: `€${Number(payload.new.amount).toLocaleString("de-DE")} auf eine Auktion`,
-          });
-        }
-      )
-      .subscribe();
+    void setup();
+
+    // Wenn der Dealer in einem anderen Tab eine neue Auktion bietet, der Tab
+    // hier aber im Hintergrund war: beim Re-Focus die Subscription neu
+    // aufbauen, damit der neue auction_id-Filter korrekt ist.
+    const onFocus = () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      void setup();
+    };
+    window.addEventListener("focus", onFocus);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user, queryClient, toast]);
 

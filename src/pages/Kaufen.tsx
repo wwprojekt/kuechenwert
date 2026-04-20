@@ -299,46 +299,28 @@ const Kaufen = () => {
     fetchAuctions();
   }, [fetchAuctions]);
 
-  // Real-time updates for new auctions with stale update prevention.
+  // Auf /kaufen ist Realtime-Live-Updates auf jedes Auctions-Update Overkill.
   //
-  // Debouncing: Während eines aktiven Bietsturms feuert Realtime u.U. mehrere
-  // postgres_changes pro Sekunde (jedes Bid-Update ändert auctions.current_bid).
-  // Ohne Debounce würde das in jeder Sekunde einen 860 ms Refetch triggern, der
-  // den Server unter Last setzt und die Liste optisch flackern lässt. 1500 ms
-  // Debounce sammelt schnell hintereinander folgende Events zu einem Refetch.
+  // Vorher: Channel ohne Filter auf table=auctions → JEDER current_bid-Update
+  // (also jedes Gebot im ganzen System) triggerte einen Listen-Refetch der
+  // gesamten Marketplace-Page, debounced auf 1.5 s. Bei einer Bid-Welle waren
+  // das 40 Refetches/Minute pro offenem /kaufen-Tab × N Tabs.
   //
-  // Wahrnehmung: Die Bid-Counts werden somit max 1.5 s später aktualisiert —
-  // der Card-Timer läuft visuell weiter, weil er via useNow() lokal tickt.
+  // Jetzt: Polling alle 30 s + Refetch beim Window-Focus. Für eine
+  // Browse-Page reicht das vollständig — Bid-Counts können maximal 30 s
+  // veraltet sein, und der Card-Timer läuft sowieso lokal via useNow() weiter.
+  // User die Live-Bidding sehen wollen klicken auf eine Auktion, dort gibt es
+  // den scharfen postgres_changes-Channel auf bids+auctions (gefiltert auf
+  // diese eine ID).
   useEffect(() => {
-    let isSubscribed = true;
-    let debounceId: ReturnType<typeof setTimeout> | null = null;
-    
-    const scheduleRefetch = () => {
-      if (!isSubscribed) return;
-      if (debounceId) clearTimeout(debounceId);
-      debounceId = setTimeout(() => {
-        if (!isSubscribed) return;
-        fetchAuctions(0, true);
-      }, 1500);
-    };
-
-    const channel = supabase
-      .channel("auctions-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "auctions",
-        },
-        scheduleRefetch
-      )
-      .subscribe();
-
+    const intervalId = window.setInterval(() => {
+      fetchAuctions(0, true);
+    }, 30_000);
+    const onFocus = () => fetchAuctions(0, true);
+    window.addEventListener("focus", onFocus);
     return () => {
-      isSubscribed = false;
-      if (debounceId) clearTimeout(debounceId);
-      supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
     };
   }, [fetchAuctions]);
 

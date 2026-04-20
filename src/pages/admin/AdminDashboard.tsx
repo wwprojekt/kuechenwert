@@ -880,7 +880,15 @@ export default function AdminDashboard() {
   const { data: metrics } = usePerformanceMetrics();
   const queryClient = useQueryClient();
 
-  // Realtime: Sofortige Updates bei neuen Geboten, Leads, Nachrichten
+  // Realtime: Sofortige Updates bei neuen Geboten / Auktions-Änderungen.
+  //
+  // Vorher waren hier zusätzlich Listener auf `wizard_sessions`, `admin_emails`
+  // und `dealer_applications` — diese Tabellen sind NICHT in der
+  // `supabase_realtime` Publication (admin_emails wurde 2026-04-20 explizit
+  // entfernt wegen WAL-Last, die anderen waren nie drin), die Listener haben
+  // nie gefeuert. Sie wurden entfernt, damit kein Websocket-Slot verschwendet
+  // wird. Die zugehörigen Queries (adminUrgentLeads, adminUnreadCounts,
+  // adminActionItems) haben bereits eigenes refetchInterval-Polling.
   useEffect(() => {
     const channel = supabase.channel("admin-dashboard-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bids" }, () => {
@@ -888,27 +896,9 @@ export default function AdminDashboard() {
         queryClient.invalidateQueries({ queryKey: ["adminActiveAuctions"] });
         queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wizard_sessions" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["adminUrgentLeads"] });
-        queryClient.invalidateQueries({ queryKey: ["adminActionItems"] });
-        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
-        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "wizard_sessions" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["adminUrgentLeads"] });
-        queryClient.invalidateQueries({ queryKey: ["adminActionItems"] });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_emails" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
-        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
-      })
       .on("postgres_changes", { event: "*", schema: "public", table: "auctions" }, () => {
         queryClient.invalidateQueries({ queryKey: ["adminActiveAuctions"] });
         queryClient.invalidateQueries({ queryKey: ["adminDashboardStats"] });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "dealer_applications" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["adminUnreadCounts"] });
-        queryClient.invalidateQueries({ queryKey: ["adminActivityTimeline"] });
       })
       .subscribe();
 

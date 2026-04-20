@@ -150,38 +150,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Settings ändern sich praktisch nie zur Laufzeit (nur Admin im Backend).
+  // Früher gab es einen Realtime-Channel auf `site_settings`, aber die Tabelle
+  // ist nicht in der `supabase_realtime` Publication, also hat dieser Channel
+  // sowieso nie gefeuert — er hat nur einen Websocket-Slot belegt.
+  // Stattdessen: Initial laden, fertig. Wer Settings im Admin ändert, sieht das
+  // Ergebnis nach Reload (oder ruft `refreshSettings()` manuell auf).
   useEffect(() => {
-    let isSubscribed = true; // Track mount state for stale update prevention
-    
     loadSettings();
-
-    // Subscribe to settings changes
-    const channel = supabase
-      .channel('site_settings_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'site_settings',
-          filter: `id=eq.${SETTINGS_ID}`
-        },
-        (payload) => {
-          // Guard: Only update if component is still mounted
-          if (!isSubscribed) return;
-          
-          const newSettings = payload.new as SiteSettings;
-          setSettings(newSettings);
-          applyBranding(newSettings);
-          setTrackingConfig((newSettings as { tracking_config?: unknown }).tracking_config);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      isSubscribed = false; // Mark as unmounted
-      supabase.removeChannel(channel);
-    };
   }, [loadSettings]);
 
   return (

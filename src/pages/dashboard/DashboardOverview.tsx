@@ -49,59 +49,23 @@ export default function DashboardOverview() {
 
   const isDealer = primaryRole === "dealer";
 
-  // ── Realtime: Auto-refresh when admin creates/updates motorhome ──
-  // NOTE: We listen WITHOUT a filter on motorhomes because Supabase Realtime
-  // filters on INSERT events can be unreliable (the filter is applied to the
-  // NEW row, but RLS or timing issues may prevent delivery). Instead we listen
-  // to ALL changes on the table and always invalidate – the React Query cache
-  // will only refetch if the component is mounted.
+  // Früher: postgres_changes-Channel auf motorhomes / motorhome_photos /
+  // post_auction_offers. Zwei der drei Tabellen sind nicht in der
+  // `supabase_realtime` Publication — der Listener hat also nie gefeuert.
+  // post_auction_offers IS in der Pub, aber ohne Filter würde der Channel jede
+  // Offer-Änderung im ganzen System empfangen, nur damit ggf. ein Seller-
+  // Timeline-Refetch passiert. Das war ineffizient.
+  // Stattdessen: window-focus-basiertes Refetching durch React Query (siehe
+  // sellerTimeline-Query unten via refetchOnWindowFocus). Reaktiviert die Daten
+  // sobald der Tab wieder im Vordergrund ist — was 99 % der Fälle abdeckt.
   useEffect(() => {
     if (!user || isDealer) return;
-
-    const channel = supabase
-      .channel(`seller-dashboard-realtime-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "motorhomes",
-        },
-        () => {
-          // Invalidate all seller-relevant queries so data refreshes automatically
-          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["pendingWizardSession", user.id] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "motorhome_photos",
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "post_auction_offers",
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const onFocus = () => {
+      queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["myListings", user.id] });
     };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [user, isDealer, queryClient]);
 
   // ── Profile (customer number) ─────────────────────────────────

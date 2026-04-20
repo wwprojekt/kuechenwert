@@ -100,9 +100,15 @@ Deno.serve(async (req) => {
                 .eq('id', auction.id);
 
               if (!endError && auction.motorhome_id) {
+                // motorhomes.status CHECK constraint allows
+                // ('available', 'active', 'sold', 'pending', 'not_sold', 'reserved').
+                // 'ended' is INVALID and would silently throw 23514 here, leaving
+                // motorhomes stuck on 'available' while the auction is gone.
+                // 'not_sold' matches end-kaufchance + AdminPostAuctionOffers
+                // semantics: the listing was offered but did not transact.
                 const { error: mhErr } = await supabase
                   .from('motorhomes')
-                  .update({ status: 'ended', updated_at: now })
+                  .update({ status: 'not_sold', updated_at: now })
                   .eq('id', auction.motorhome_id);
                 if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
               }
@@ -201,10 +207,12 @@ Deno.serve(async (req) => {
 
               // Notify seller about auto-extension. Offers stay alive (β1).
               //
-              // Soft brake (commit 4): extended mail already contains a price-cut
-              // tip, so it is itself the first nudge at round 2. From round 3
-              // onwards we additionally fire seller_festpreis_round_warning, an
-              // escalating mail with concrete recommendations + opt-out reminder.
+              // Soft brake (commit 4 + bug-fix #5):
+              // User spec δ2 explicitly says soft brake fires at auction_round >= 2.
+              // The "extended" mail is a status notification, the round_warning is
+              // the actual nudge with concrete recommendations + opt-out reminder.
+              // Both fire from round 2 (= first auto-extension) onwards so the
+              // seller never gets only the soft "extended" mail without the warning.
               if (mh.seller_id) {
                 try {
                   const { data: sellerProfile } = await supabase
@@ -232,7 +240,7 @@ Deno.serve(async (req) => {
                       },
                     }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
 
-                    if (newRound >= 3) {
+                    if (newRound >= 2) {
                       await supabase.functions.invoke('send-auction-notification', {
                         body: {
                           email: sellerProfile.email,
@@ -320,7 +328,11 @@ Deno.serve(async (req) => {
                   name: 'Admin',
                   type: 'admin_festpreis_needs_price',
                   motorhomeModel: motorhomeName,
-                  auctionUrl: `https://caravanwert.de/admin/auctions`,
+                  // Bug-fix #3: link straight to the motorhome edit dialog.
+                  // /admin/auctions does not let admins set the missing instant_price;
+                  // /admin/motorhomes/<id> opens the edit row where price + sale_channel
+                  // can be corrected in one click.
+                  auctionUrl: `https://caravanwert.de/admin/motorhomes/${mh.id}`,
                   motorhomeId: mh.id,
                   sellerName: sellerNameStr,
                 },

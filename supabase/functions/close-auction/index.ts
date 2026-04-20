@@ -230,8 +230,12 @@ Deno.serve(async (req) => {
         .eq('id', auctionId);
 
       if (auction.motorhome?.id) {
+        // Bug-fix #1: motorhomes.status CHECK constraint forbids 'ended'
+        // (allowed: available, active, sold, pending, not_sold, reserved).
+        // 'not_sold' matches the semantics used by end-kaufchance and
+        // AdminPostAuctionOffers.handleEndKaufchance for "offered, not transacted".
         await supabase.from('motorhomes')
-          .update({ status: 'ended', updated_at: now })
+          .update({ status: 'not_sold', updated_at: now })
           .eq('id', auction.motorhome.id);
       }
 

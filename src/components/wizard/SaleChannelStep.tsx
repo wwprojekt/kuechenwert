@@ -234,8 +234,8 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
           {fieldErrors.instantPrice && (
             <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.instantPrice}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren.
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren. Sie können den Preis später jederzeit im Dashboard anpassen.
           </p>
         </div>
       )}
@@ -269,9 +269,14 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
               {fieldErrors.reservePrice}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Unter diesem Preis wird Ihr Fahrzeug nicht verkauft. Pflichtfeld zur juristischen Absicherung der automatischen Preisanpassung (AGB §6.4).
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-medium text-foreground">Schutz für Sie:</span> Niemand kann Ihr Fahrzeug unter diesem Preis kaufen. Sie können den Preis später jederzeit im Dashboard anpassen.
+              </p>
+              <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                <span className="font-medium">Tipp:</span> Setzen Sie den absoluten Tiefstpreis, den Sie noch akzeptieren würden – nicht Ihren Wunsch-Verkaufspreis. Händler bieten in der Auktion oft deutlich höher.
+              </p>
+            </div>
           )}
         </div>
       )}

@@ -170,6 +170,31 @@ Before every commit:
 - **NEVER** call React Hooks after an early return – all hooks MUST be unconditionally before any `return`
 - Hooks that need loaded data → move to Child-Component, NOT parent with fallback value
 
+### `public.auctions` Column-Level Grants (P4-Hardening)
+- Table-level `SELECT ON public.auctions` is **REVOKED** for `authenticated` and `anon`. Each public column is granted INDIVIDUALLY (Migrations `20260420260000` + `20260420290100`).
+- **6 columns are intentionally NOT granted** (owner/admin only — readable via `get_auction_owner_meta` / `get_auctions_owner_meta_bulk` RPCs):
+  - `seller_initial_reserve`, `seller_initial_instant_price`
+  - `dynamic_pricing`, `auto_relist`
+  - `marketing_phase_max_until`, `agb_version_at_start`
+- Consequence: ANY query that does `select('*')` on `public.auctions` (directly OR as Supabase relationship embed `auction:auctions(*)`) is rejected with **`42501 permission denied for table auctions`** by PostgREST. This includes `select('*', { count: 'exact', head: true })` for badge counts.
+- **Fix pattern — always use `AUCTION_PUBLIC_COLUMNS`** from `src/lib/auction-columns.ts`:
+
+  ```typescript
+  import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
+
+  // Direct query
+  supabase.from("auctions").select(AUCTION_PUBLIC_COLUMNS)
+
+  // Relationship embed
+  supabase.from("motorhomes").select(`*, auction:auctions(${AUCTION_PUBLIC_COLUMNS})`)
+
+  // Count badge (any granted column works)
+  supabase.from("auctions").select("id", { count: "exact", head: true })
+  ```
+
+- If the page also needs owner-only fields, fetch them via the bulk RPC after the main query and merge (see `src/pages/dashboard/DashboardOverview.tsx`, `src/pages/admin/AdminAuctions.tsx` for canonical examples).
+- **Adding a new column to `public.auctions`?** Decide public-vs-owner and update BOTH the migration AND `AUCTION_PUBLIC_COLUMNS` in the same commit, otherwise pages will silently break the next time anyone touches them.
+
 ### Edge Functions
 - `verify_jwt` matrix:
   - **`true`** for ADMIN-only functions that don't do their own auth (lets the Supabase gateway reject before code runs). Beware: gateway 401 has empty body — frontend errors will be opaque. Use only when frontend doesn't need to distinguish reasons.

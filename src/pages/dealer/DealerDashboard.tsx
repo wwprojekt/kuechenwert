@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { 
@@ -270,11 +271,13 @@ const DealerDashboard = () => {
   const { data: recentAuctions } = useQuery({
     queryKey: ["allActiveAuctions", user?.id],
     queryFn: async () => {
-      // First get all active auctions with left join for resilience
+      // First get all active auctions with left join for resilience.
+      // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
+      // public.auctions ist für authenticated revoked).
       const { data: auctions, error: auctionsError } = await supabase
         .from("auctions")
         .select(`
-          *,
+          ${AUCTION_PUBLIC_COLUMNS},
           motorhome:motorhomes!left(
             id,
             manufacturer,

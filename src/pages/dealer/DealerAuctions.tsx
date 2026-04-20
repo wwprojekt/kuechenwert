@@ -21,6 +21,7 @@ import { anonymizePostalCode, getPlzCoordinates } from "@/lib/plzCoordinates";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 
 interface Auction {
   id: string;
@@ -76,10 +77,14 @@ const DealerAuctions = () => {
 
   const fetchAuctions = useCallback(async () => {
     try {
+      // P4-Hardening: explizite Spalten statt '*' — Tabellen-SELECT auf
+      // public.auctions ist für authenticated revoked. Owner-only Felder
+      // (auto_relist, dynamic_pricing, marketing_phase_max_until,
+      // agb_version_at_start, seller_initial_*) braucht der Dealer nicht.
       const { data, error } = await supabase
         .from('auctions')
         .select(`
-          *,
+          ${AUCTION_PUBLIC_COLUMNS},
           motorhome:motorhomes(
             id,
             manufacturer,

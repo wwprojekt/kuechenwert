@@ -64,9 +64,12 @@ function useDealerBadges() {
         claimsRes,
       ] = await Promise.all([
         // Aktive Auktionen (Gesamtzahl)
+        // P4-Hardening: select() braucht die Spalten aus .eq()/.gt(), sonst
+        // verliert Supabase die Type-Information. '*' geht nicht, weil das
+        // Tabellen-SELECT auf public.auctions für authenticated revoked ist.
         supabase
           .from('auctions')
-          .select('*', { count: 'exact', head: true })
+          .select('id, status, end_time', { count: 'exact', head: true })
           .eq('status', 'active')
           .gt('end_time', new Date().toISOString()),
         // Ungelesene Benachrichtigungen

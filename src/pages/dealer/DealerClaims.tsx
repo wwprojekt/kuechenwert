@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { AUCTION_PUBLIC_COLUMNS } from '@/lib/auction-columns';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,10 +86,12 @@ export default function DealerClaims() {
     queryFn: async () => {
       if (!user) return [];
       
+      // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
+      // public.auctions ist für authenticated revoked).
       const { data, error } = await supabase
         .from('auctions')
         .select(`
-          *,
+          ${AUCTION_PUBLIC_COLUMNS},
           motorhome:motorhomes(manufacturer, model, listing_number)
         `)
         .eq('status', 'sold')

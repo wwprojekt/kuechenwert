@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
 import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -113,7 +114,7 @@ export default function AdminMotorhomeDetail() {
             created_at
           ),
           auctions(
-            *,
+            ${AUCTION_PUBLIC_COLUMNS},
             auction_addenda(id, content, created_at),
             bids(
               id,
@@ -160,6 +161,61 @@ export default function AdminMotorhomeDetail() {
       logger.error("Delete motorhome error:", error);
       toast.error("Fehler beim Löschen des Wohnmobils");
     },
+  });
+
+  // Auction mutations — MÜSSEN vor jedem early return stehen, sonst
+  // verletzt der frühe `if (error) return` die Hook-Order und produziert
+  // den Minified React #300 ("Rendered fewer hooks than previous render").
+  // Aktivierung über zentralen Helper (3-Tage-Dauer + Random-Startbid +
+  // seller_initial_* + Marketing-Trigger).
+  const activateAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!motorhome?.id) throw new Error("No motorhome");
+      await activateAuctionForMotorhome(motorhome.id);
+    },
+    onSuccess: () => {
+      toast.success("Auktion erfolgreich aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+    },
+    onError: (e: Error) => {
+      if (e.message === "PLZ_MISSING") {
+        toast.error("Bitte zuerst die PLZ eintragen, bevor die Auktion aktiviert wird.");
+      } else if (e.message === "RESERVE_MISSING") {
+        toast.error("Bitte zuerst den Reservepreis eintragen, bevor die Auktion aktiviert wird.");
+      } else {
+        toast.error("Fehler beim Aktivieren der Auktion");
+      }
+    },
+  });
+
+  const cancelAuctionMutation = useMutation({
+    mutationFn: async () => {
+      // relevantAuction ist erst weiter unten berechnet, aber der Mutation-
+      // Handler wird nur ausgeführt wenn der Button geklickt wird (also nach
+      // Render-Zeit). Wir greifen über das motorhome auf die aktuelle Auktion
+      // zu, ohne auf relevantAuction zu warten.
+      const auctionData = motorhome?.auctions;
+      const auctionsArr = Array.isArray(auctionData) ? auctionData : auctionData ? [auctionData] : [];
+      const target = auctionsArr.find((a: any) => a?.status === 'active')
+        || auctionsArr.find((a: any) => a?.status === 'kaufchance')
+        || auctionsArr.find((a: any) => a?.status === 'draft')
+        || auctionsArr[0];
+      if (!target?.id) throw new Error("No auction");
+      return cancelAuctionAsAdmin(target.id);
+    },
+    onSuccess: (result) => {
+      const parts: string[] = [];
+      if (result.expiredOffersCount > 0) parts.push(`${result.expiredOffersCount} Angebote storniert`);
+      if (result.uniqueBiddersNotified > 0) parts.push(`${result.uniqueBiddersNotified} Bieter informiert`);
+      if (result.sellerMailSent) parts.push("Verkäufer informiert");
+      const suffix = parts.length ? ` · ${parts.join(" · ")}` : "";
+      toast.success(`Auktion erfolgreich abgebrochen${suffix}`);
+      if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
+        toast.warning("Einige Benachrichtigungen konnten nicht versendet werden – siehe Error Logs");
+      }
+      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+    },
+    onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
   });
 
   if (error) {
@@ -258,48 +314,8 @@ export default function AdminMotorhomeDetail() {
     );
   })();
 
-  // Auction mutations
-  // Aktivierung über zentralen Helper (3-Tage-Dauer + Random-Startbid +
-  // seller_initial_* + Marketing-Trigger).
-  const activateAuctionMutation = useMutation({
-    mutationFn: async () => {
-      if (!motorhome?.id) throw new Error("No motorhome");
-      await activateAuctionForMotorhome(motorhome.id);
-    },
-    onSuccess: () => {
-      toast.success("Auktion erfolgreich aktiviert");
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
-    },
-    onError: (e: Error) => {
-      if (e.message === "PLZ_MISSING") {
-        toast.error("Bitte zuerst die PLZ eintragen, bevor die Auktion aktiviert wird.");
-      } else if (e.message === "RESERVE_MISSING") {
-        toast.error("Bitte zuerst den Reservepreis eintragen, bevor die Auktion aktiviert wird.");
-      } else {
-        toast.error("Fehler beim Aktivieren der Auktion");
-      }
-    },
-  });
-
-  const cancelAuctionMutation = useMutation({
-    mutationFn: async () => {
-      if (!relevantAuction) throw new Error("No auction");
-      return cancelAuctionAsAdmin(relevantAuction.id);
-    },
-    onSuccess: (result) => {
-      const parts: string[] = [];
-      if (result.expiredOffersCount > 0) parts.push(`${result.expiredOffersCount} Angebote storniert`);
-      if (result.uniqueBiddersNotified > 0) parts.push(`${result.uniqueBiddersNotified} Bieter informiert`);
-      if (result.sellerMailSent) parts.push("Verkäufer informiert");
-      const suffix = parts.length ? ` · ${parts.join(" · ")}` : "";
-      toast.success(`Auktion erfolgreich abgebrochen${suffix}`);
-      if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
-        toast.warning("Einige Benachrichtigungen konnten nicht versendet werden – siehe Error Logs");
-      }
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
-    },
-    onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
-  });
+  // (activateAuctionMutation + cancelAuctionMutation sind weiter oben
+  // definiert — hochgezogen wegen Hook-Order vor dem `if (error) return`.)
 
   return (
     <AdminDetailLayout

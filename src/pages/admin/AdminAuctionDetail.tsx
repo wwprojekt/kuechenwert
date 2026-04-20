@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth } from "@/lib/sessionGuard";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
+import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
@@ -84,10 +85,14 @@ export default function AdminAuctionDetail() {
   const { data: auction, isLoading, error } = useQuery({
     queryKey: ["adminAuctionDetail", id],
     queryFn: async () => {
+      // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
+      // public.auctions ist für authenticated revoked, '*' wirft 42501).
+      // Diese Page rendert keine owner-only Felder direkt — daher kein
+      // zusätzlicher Bulk-RPC-Call nötig.
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          *,
+          ${AUCTION_PUBLIC_COLUMNS},
           motorhome:motorhomes (
             *,
             motorhome_photos(id, url, display_order),

@@ -44,6 +44,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { activateAuctionForMotorhome } from "@/lib/activate-auction";
 import { MARKETING_CONFIG } from "@/lib/marketing-config";
+import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 
 // ============================================================================
 // Live Countdown for active auctions
@@ -272,10 +273,13 @@ export default function AdminAuctions() {
   const { data: auctions, isLoading, error: queryError } = useQuery({
     queryKey: ["adminAuctions", bidderFilter],
     queryFn: async () => {
+      // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
+      // public.auctions ist für authenticated revoked, '*' wirft 42501).
+      // Owner-only Felder werden weiter unten via Bulk-RPC nachgeladen.
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          *,
+          ${AUCTION_PUBLIC_COLUMNS},
           motorhome:motorhomes (
             id,
             manufacturer,

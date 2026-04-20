@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CountryFlag } from "@/components/CountryFlag";
+import { StablePriceBadge } from "@/components/StablePriceBadge";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNow } from "@/hooks/useNow";
 import { getResponsiveImageProps } from "@/lib/imageTransform";
@@ -45,6 +46,10 @@ interface MotorhomeCardProps {
   endTime?: string;
   bidCount?: number;
   status?: string;
+  // Marketing-Phase: Stable-Price-Badge ("Preis stabil seit X Tagen")
+  lastPriceReductionAt?: string | null;
+  marketingPhaseStartedAt?: string | null;
+  auctionCreatedAt?: string | null;
   
   // Static listing
   price?: number;
@@ -159,6 +164,9 @@ const MotorhomeCard = ({
   price,
   badge,
   accountType,
+  lastPriceReductionAt,
+  marketingPhaseStartedAt,
+  auctionCreatedAt,
   linkTo
 }: MotorhomeCardProps) => {
   const { isDealer, isAdmin } = useUserRole();
@@ -430,6 +438,16 @@ const MotorhomeCard = ({
                         <div className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
                           {instantPrice?.toLocaleString("de-DE")} €
                         </div>
+                        {!isSold && (
+                          <div className="mt-1">
+                            <StablePriceBadge
+                              variant="compact"
+                              lastPriceReductionAt={lastPriceReductionAt}
+                              marketingPhaseStartedAt={marketingPhaseStartedAt}
+                              fallbackAnchor={auctionCreatedAt}
+                            />
+                          </div>
+                        )}
                       </>
                     ) : (
                       <>
@@ -439,6 +457,16 @@ const MotorhomeCard = ({
                         <div className="text-xl font-bold text-primary">
                           {displayPrice.toLocaleString("de-DE")} €
                         </div>
+                        {isAuction && !isSold && (
+                          <div className="mt-1">
+                            <StablePriceBadge
+                              variant="compact"
+                              lastPriceReductionAt={lastPriceReductionAt}
+                              marketingPhaseStartedAt={marketingPhaseStartedAt}
+                              fallbackAnchor={auctionCreatedAt}
+                            />
+                          </div>
+                        )}
                         {hasInstantSale && !isSold && (
                           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                             <Zap className="w-3 h-3" />

@@ -420,20 +420,29 @@ Deno.serve(async (req) => {
         );
         const nowIso = new Date().toISOString();
 
+        // last_price_reduction_at nur setzen, wenn tatsächlich reduziert wurde
+        // (= dynamic_pricing aktiv UND newReserve < currentReserveNum). Wird im
+        // Käufer-View für den "Stabil seit X Tagen"-Badge ausgewertet.
+        const reduceHappened = dynamicPricing && newReserve < currentReserveNum;
+        const updatePayload: Record<string, unknown> = {
+          status: 'active',
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          current_bid: null,
+          starting_bid: newStartingBid,
+          reserve_price: newReserve,
+          auction_round: newRound,
+          // marketing_phase_started_at + max_until werden NICHT zurückgesetzt
+          // – die Bindung läuft kontinuierlich (siehe Phase-1-Schema-Doku).
+          updated_at: nowIso,
+        };
+        if (reduceHappened) {
+          updatePayload.last_price_reduction_at = nowIso;
+        }
+
         const { error: relistErr } = await supabase
           .from('auctions')
-          .update({
-            status: 'active',
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            current_bid: null,
-            starting_bid: newStartingBid,
-            reserve_price: newReserve,
-            auction_round: newRound,
-            // marketing_phase_started_at + max_until werden NICHT zurückgesetzt
-            // – die Bindung läuft kontinuierlich (siehe Phase-1-Schema-Doku).
-            updated_at: nowIso,
-          })
+          .update(updatePayload)
           .eq('id', auctionId);
 
         if (relistErr) {

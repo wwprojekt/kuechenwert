@@ -535,17 +535,24 @@ export type Database = {
       }
       auctions: {
         Row: {
+          agb_version_at_start: string | null
           auction_round: number
           auto_relist: boolean
           created_at: string
           current_bid: number | null
+          dynamic_pricing: boolean
           end_time: string | null
           festpreis_admin_notified_at: string | null
           id: string
           kaufchance_expires_at: string | null
           kaufchance_min_price: number | null
+          last_price_reduction_at: string | null
+          marketing_phase_max_until: string | null
+          marketing_phase_started_at: string | null
           motorhome_id: string
           reserve_price: number | null
+          seller_initial_instant_price: number | null
+          seller_initial_reserve: number | null
           soft_close_extension_minutes: number
           start_time: string | null
           starting_bid: number
@@ -553,17 +560,24 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agb_version_at_start?: string | null
           auction_round?: number
           auto_relist?: boolean
           created_at?: string
           current_bid?: number | null
+          dynamic_pricing?: boolean
           end_time?: string | null
           festpreis_admin_notified_at?: string | null
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          last_price_reduction_at?: string | null
+          marketing_phase_max_until?: string | null
+          marketing_phase_started_at?: string | null
           motorhome_id: string
           reserve_price?: number | null
+          seller_initial_instant_price?: number | null
+          seller_initial_reserve?: number | null
           soft_close_extension_minutes?: number
           start_time?: string | null
           starting_bid: number
@@ -571,17 +585,24 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agb_version_at_start?: string | null
           auction_round?: number
           auto_relist?: boolean
           created_at?: string
           current_bid?: number | null
+          dynamic_pricing?: boolean
           end_time?: string | null
           festpreis_admin_notified_at?: string | null
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          last_price_reduction_at?: string | null
+          marketing_phase_max_until?: string | null
+          marketing_phase_started_at?: string | null
           motorhome_id?: string
           reserve_price?: number | null
+          seller_initial_instant_price?: number | null
+          seller_initial_reserve?: number | null
           soft_close_extension_minutes?: number
           start_time?: string | null
           starting_bid?: number
@@ -4543,6 +4564,10 @@ export type Database = {
         Args: { p_auction_id: string; p_value: boolean }
         Returns: boolean
       }
+      toggle_dynamic_pricing: {
+        Args: { p_auction_id: string; p_value: boolean }
+        Returns: boolean
+      }
       update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }
       update_dealer_rating_summary: {
         Args: { dealer_id_param: string }
@@ -4599,7 +4624,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "Reparaturbed├╝rftig"
+        | "Reparaturbed??????rftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -4772,7 +4797,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "Reparaturbed├╝rftig",
+        "Reparaturbed??????rftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

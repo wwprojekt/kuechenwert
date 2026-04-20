@@ -19,6 +19,7 @@ const Listings = () => {
         .from('auctions')
         .select(`
           id, motorhome_id, current_bid, starting_bid, end_time, created_at,
+          last_price_reduction_at, marketing_phase_started_at,
           motorhome:motorhomes(
             id, manufacturer, model, year, mileage, body_type, country,
             instant_price, sale_channel, status, account_type,
@@ -87,6 +88,9 @@ const Listings = () => {
                   saleChannel={motorhome.sale_channel}
                   endTime={auction.end_time}
                   status={motorhome.status}
+                  lastPriceReductionAt={(auction as any).last_price_reduction_at}
+                  marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
+                  auctionCreatedAt={auction.created_at}
                   linkTo={`/auktion/${auction.id}`}
                 />
               );

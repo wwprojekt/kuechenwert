@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +6,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown, Handshake } from "lucide-react";
+import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown, Handshake, RefreshCw, Hourglass } from "lucide-react";
+import { MARKETING_CONFIG } from "@/lib/marketing-config";
 import {
   Select,
   SelectContent,
@@ -42,7 +43,9 @@ export default function MyListings() {
             status,
             current_bid,
             starting_bid,
-            end_time
+            end_time,
+            auction_round,
+            marketing_phase_max_until
           )
         `)
         .eq("seller_id", user.id)
@@ -221,24 +224,47 @@ export default function MyListings() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-1">
                         <span className="text-sm text-muted-foreground">Status:</span>
-                        <Badge
-                          variant={auction.status === "active" ? "default" : "secondary"}
-                          className="whitespace-nowrap"
-                        >
-                          {auction.status === "active"
-                            ? "Aktiv"
-                            : auction.status === "draft"
-                            ? "Wartet auf Freischaltung"
-                            : auction.status === "ended"
-                            ? "Beendet"
-                            : auction.status === "sold"
-                            ? "Verkauft"
-                            : auction.status === "kaufchance"
-                            ? "Kaufchance"
-                            : auction.status === "cancelled"
-                            ? "Abgebrochen"
-                            : auction.status}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                          <Badge
+                            variant={auction.status === "active" ? "default" : "secondary"}
+                            className="whitespace-nowrap"
+                          >
+                            {auction.status === "active"
+                              ? "Aktiv"
+                              : auction.status === "draft"
+                              ? "Wartet auf Freischaltung"
+                              : auction.status === "ended"
+                              ? "Beendet"
+                              : auction.status === "sold"
+                              ? "Verkauft"
+                              : auction.status === "kaufchance"
+                              ? "Kaufchance"
+                              : auction.status === "cancelled"
+                              ? "Abgebrochen"
+                              : auction.status}
+                          </Badge>
+                          {/* Marketing-Phase: Runden-Badge ab Runde 2 */}
+                          {auction.auction_round && Number(auction.auction_round) > 1 && (
+                            <Badge variant="outline" className="whitespace-nowrap text-xs gap-1">
+                              <RefreshCw className="w-3 h-3" />
+                              {motorhome.sale_channel === 'instant_price'
+                                ? `Verlängerung ${Number(auction.auction_round) - 1}`
+                                : `Runde ${auction.auction_round} / ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS}`}
+                            </Badge>
+                          )}
+                          {/* Hard-Cap-Warnung wenn Vermarktungsphase < 3 Tage */}
+                          {auction.marketing_phase_max_until && ['active','kaufchance'].includes(auction.status) && (() => {
+                            const ms = new Date(auction.marketing_phase_max_until).getTime() - Date.now();
+                            if (ms <= 0 || ms > 3 * 24 * 60 * 60 * 1000) return null;
+                            const days = Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+                            return (
+                              <Badge className="bg-amber-500 text-white whitespace-nowrap text-xs gap-1">
+                                <Hourglass className="w-3 h-3" />
+                                Endet in {days} Tag{days !== 1 ? 'en' : ''}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
                       </div>
                       {motorhome.sale_channel !== 'instant_price' && (
                       <div className="flex items-center justify-between">

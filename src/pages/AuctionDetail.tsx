@@ -60,6 +60,7 @@ import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { CountryFlag } from "@/components/CountryFlag";
 import { AuctionCommissionOverview } from "@/components/AuctionCommissionOverview";
 import { AuctionDetailSkeleton } from "@/components/skeletons/AuctionDetailSkeleton";
+import { StablePriceBadge } from "@/components/StablePriceBadge";
 import type { Database } from "@/integrations/supabase/types";
 
 // Define types for better type safety
@@ -311,10 +312,34 @@ const AuctionDetail = () => {
       return;
     }
 
+    // P4.2: Whitelist statt select('*') — verhindert dass seller_initial_reserve
+    // / seller_initial_instant_price im JSON an den Käufer-Client durchgereicht
+    // werden (RLS auf `auctions` ist USING(true) für SELECT, schützt also nicht
+    // gegen Spalten-Leakage). seller_initial_* darf NIE auf der Käufer-Seite
+    // landen — sonst kann jeder den Reserve-Floor zurückrechnen.
     const { data, error } = await supabase
       .from("auctions")
       .select(`
-        *,
+        id,
+        motorhome_id,
+        status,
+        starting_bid,
+        current_bid,
+        reserve_price,
+        start_time,
+        end_time,
+        created_at,
+        updated_at,
+        kaufchance_expires_at,
+        kaufchance_min_price,
+        soft_close_extension_minutes,
+        auction_round,
+        auto_relist,
+        dynamic_pricing,
+        marketing_phase_started_at,
+        marketing_phase_max_until,
+        last_price_reduction_at,
+        agb_version_at_start,
         motorhome:motorhomes!left(
           *,
           photos:motorhome_photos(*)
@@ -1820,6 +1845,15 @@ const AuctionDetail = () => {
                       Nur für Händler sichtbar
                     </p>
                   )}
+                  {canSeePrices && (
+                    <div className="mt-1.5">
+                      <StablePriceBadge
+                        lastPriceReductionAt={(auction as any).last_price_reduction_at}
+                        marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
+                        fallbackAnchor={auction.created_at ?? auction.start_time}
+                      />
+                    </div>
+                  )}
                   
                   {/* User's own bid info */}
                   {hasBid && (
@@ -1893,6 +1927,15 @@ const AuctionDetail = () => {
                           }`}>
                             €{motorhome.instant_price.toLocaleString()}
                           </p>
+                          {motorhome.sale_channel === 'instant_price' && (
+                            <div className="mt-1.5">
+                              <StablePriceBadge
+                                lastPriceReductionAt={(auction as any).last_price_reduction_at}
+                                marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
+                                fallbackAnchor={auction.created_at ?? auction.start_time}
+                              />
+                            </div>
+                          )}
                         </div>
                         <Zap className={`w-8 h-8 ${
                           motorhome.sale_channel === 'instant_price' ? 'text-yellow-500' : 'text-primary'

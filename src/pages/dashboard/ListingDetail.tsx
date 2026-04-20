@@ -46,10 +46,14 @@ import {
   Handshake,
   TrendingDown,
   RotateCw,
+  Info,
+  ShieldCheck,
+  Hourglass,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNowStrict, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { MARKETING_CONFIG, computeReserveFloor, computeNextReducedReserve } from "@/lib/marketing-config";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
@@ -101,7 +105,14 @@ export default function ListingDetail() {
             kaufchance_expires_at,
             kaufchance_min_price,
             auto_relist,
-            auction_round
+            auction_round,
+            dynamic_pricing,
+            marketing_phase_started_at,
+            marketing_phase_max_until,
+            seller_initial_reserve,
+            seller_initial_instant_price,
+            last_price_reduction_at,
+            reserve_price
           )
         `)
         .eq("id", id)
@@ -130,7 +141,14 @@ export default function ListingDetail() {
             kaufchance_expires_at,
             kaufchance_min_price,
             auto_relist,
-            auction_round
+            auction_round,
+            dynamic_pricing,
+            marketing_phase_started_at,
+            marketing_phase_max_until,
+            seller_initial_reserve,
+            seller_initial_instant_price,
+            last_price_reduction_at,
+            reserve_price
           )
         `)
         .eq("id", id)
@@ -262,6 +280,35 @@ export default function ListingDetail() {
           : (isFestpreis
               ? 'Ihr Festpreis-Inserat wird nach Ablauf nicht mehr automatisch verlängert.'
               : 'Ihr Fahrzeug wird nach Ablauf der Kaufchance nicht erneut eingestellt.'),
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // ── Dynamic Pricing Toggle (analog zu auto_relist, eigene Bestätigung) ──
+  const [showDynamicPricingOptOut, setShowDynamicPricingOptOut] = useState(false);
+  const toggleDynamicPricingMutation = useMutation({
+    mutationFn: async (newValue: boolean) => {
+      if (!resolvedAuction?.id) throw new Error("Keine Auktion");
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) throw new Error("Session expired");
+      const { data, error } = await supabase.rpc('toggle_dynamic_pricing', {
+        p_auction_id: resolvedAuction.id,
+        p_value: newValue,
+      });
+      if (error) throw error;
+      return (data as boolean | null) ?? newValue;
+    },
+    onSuccess: (newValue) => {
+      queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
+      setShowDynamicPricingOptOut(false);
+      toast({
+        title: newValue ? 'Automatische Preissenkung aktiviert' : 'Automatische Preissenkung deaktiviert',
+        description: newValue
+          ? 'Ihr Mindestpreis wird in jeder neuen Runde automatisch gesenkt – bis zum festgelegten Floor.'
+          : 'Ihr Mindestpreis bleibt in folgenden Runden unverändert. Sie können die Funktion jederzeit wieder aktivieren.',
       });
     },
     onError: (error: Error) => {
@@ -1210,6 +1257,19 @@ export default function ListingDetail() {
         </Card>
       )}
 
+      {/* Marketing-Phasen-Card (Verkäufer-Only, aktive/kaufchance-Auktionen) */}
+      {isSeller && resolvedAuction && ['active', 'kaufchance'].includes(resolvedAuction.status as string) && (
+        <MarketingPhaseCard
+          auction={resolvedAuction}
+          motorhome={motorhome}
+          isFestpreis={isFestpreisListing}
+          dynamicPricingPending={toggleDynamicPricingMutation.isPending}
+          showDynamicPricingOptOut={showDynamicPricingOptOut}
+          onShowDynamicPricingOptOut={setShowDynamicPricingOptOut}
+          onToggleDynamicPricing={(v) => toggleDynamicPricingMutation.mutate(v)}
+        />
+      )}
+
       {/* Kaufchancen-/Preisvorschlag-Sektion */}
       {(auction?.status === 'kaufchance' || (isFestpreisListing && auction?.status === 'active')) && (
         <Card className={`border-2 ${isFestpreisListing ? 'border-blue-200 dark:border-blue-800' : 'border-amber-200 dark:border-amber-800'}`}>
@@ -1625,5 +1685,200 @@ export default function ListingDetail() {
         </Card>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Marketing-Phasen-Card (P4.1): Verkäufer sieht aktuelle Phase, Hard-Cap,
+// Preissenkungs-Hinweis und kann dynamic_pricing toggeln.
+// Zeigt KEINE konkrete Senkungs-Zahl ("Mindestpreis wurde gesenkt" only).
+// Floor-Aufklärung via computeReserveFloor (max -6 % Auktion / -10 % Festpreis).
+// ─────────────────────────────────────────────────────────────────────
+interface MarketingPhaseCardProps {
+  auction: any;
+  motorhome: any;
+  isFestpreis: boolean;
+  dynamicPricingPending: boolean;
+  showDynamicPricingOptOut: boolean;
+  onShowDynamicPricingOptOut: (v: boolean) => void;
+  onToggleDynamicPricing: (v: boolean) => void;
+}
+
+function MarketingPhaseCard({
+  auction,
+  motorhome,
+  isFestpreis,
+  dynamicPricingPending,
+  showDynamicPricingOptOut,
+  onShowDynamicPricingOptOut,
+  onToggleDynamicPricing,
+}: MarketingPhaseCardProps) {
+  const channel: 'auction' | 'instant_price' = isFestpreis ? 'instant_price' : 'auction';
+  const sellerInitial: number | null = isFestpreis
+    ? (auction.seller_initial_instant_price ?? motorhome.instant_price ?? null)
+    : (auction.seller_initial_reserve ?? auction.reserve_price ?? motorhome.reserve_price ?? null);
+
+  const round = auction.auction_round ?? 1;
+  const dynamicPricing = auction.dynamic_pricing !== false;
+  const lastReductionAt = auction.last_price_reduction_at as string | null;
+  const wasReduced = !!lastReductionAt;
+  const maxUntil = auction.marketing_phase_max_until as string | null;
+  const startedAt = auction.marketing_phase_started_at as string | null;
+
+  const floor = sellerInitial && sellerInitial > 0
+    ? computeReserveFloor(Number(sellerInitial), channel)
+    : null;
+
+  // Restzeit bis Hard-Cap. Bei Bestand-Inseraten ohne marketing_phase_max_until
+  // wird es trotzdem schön gerendert (kein Crash).
+  const maxUntilDate = maxUntil ? new Date(maxUntil) : null;
+  const isNearCap = maxUntilDate
+    ? maxUntilDate.getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000
+    : false;
+
+  // Ist diese Auktion überhaupt im neuen System? (Bestand erkennt man am
+  // fehlenden seller_initial_reserve)
+  const isLegacy = sellerInitial == null;
+
+  return (
+    <Card className="border-2 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          Verkaufsphase
+          {round > 1 && !isFestpreis && (
+            <Badge variant="outline" className="text-xs">Runde {round} / {MARKETING_CONFIG.AUCTION_MAX_ROUNDS}</Badge>
+          )}
+          {isFestpreis && round > 1 && (
+            <Badge variant="outline" className="text-xs">Verlängerung {round - 1}</Badge>
+          )}
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          {isFestpreis
+            ? `Festpreis-Inserat: ${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage Laufzeit, automatische Verlängerung bis max. ${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tage Vermarktungsphase (gem. AGB §6).`
+            : `Auktion: ${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage Auktion + ${MARKETING_CONFIG.KAUFCHANCE_DURATION_HOURS} h Kaufchance pro Runde, max. ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS} Runden Vermarktungsphase (gem. AGB §6).`}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Hard-Cap-Countdown */}
+        {maxUntilDate && (
+          <div className={`flex items-center gap-3 p-3 rounded-lg ${isNearCap ? 'bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800' : 'bg-white dark:bg-card border border-border'}`}>
+            <Hourglass className={`w-4 h-4 ${isNearCap ? 'text-amber-600' : 'text-muted-foreground'} flex-shrink-0`} />
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Vermarktungsphase endet</p>
+              <p className="font-semibold text-sm">
+                {format(maxUntilDate, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
+                {' '}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({formatDistanceToNowStrict(maxUntilDate, { addSuffix: true, locale: de })})
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Mindestpreis wurde gesenkt - OHNE konkrete Zahl */}
+        {wasReduced && !isFestpreis && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <TrendingDown className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium text-sm text-amber-900 dark:text-amber-100">Mindestpreis wurde gesenkt</p>
+              <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
+                Im Rahmen der automatischen Marktanpassung wurde Ihr Mindestpreis reduziert
+                (zuletzt {lastReductionAt ? format(new Date(lastReductionAt), 'dd.MM.yyyy', { locale: de }) : '–'}).
+                Die Senkung greift erst bei der nächsten Auktionsrunde.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {wasReduced && isFestpreis && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <TrendingDown className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium text-sm text-amber-900 dark:text-amber-100">Festpreis wurde gesenkt</p>
+              <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
+                Im Rahmen der automatischen Marktanpassung wurde Ihr Festpreis reduziert
+                (zuletzt {lastReductionAt ? format(new Date(lastReductionAt), 'dd.MM.yyyy', { locale: de }) : '–'}).
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* dynamic_pricing Toggle */}
+        <div className={`p-4 rounded-lg border ${dynamicPricing ? 'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-800' : 'bg-muted/40 border-border'}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingDown className="w-4 h-4 text-teal-600" />
+                <p className="font-medium text-sm">
+                  Automatische Preissenkung {dynamicPricing ? 'aktiv' : 'deaktiviert'}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {dynamicPricing
+                  ? (isFestpreis
+                      ? `Ihr Festpreis wird in jeder Verlängerungsrunde automatisch um ${(MARKETING_CONFIG.INSTANT_PRICE_REDUCTION_PER_ROUND * 100).toFixed(0)} % reduziert, bis max. ${(MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_REDUCTION * 100).toFixed(0)} % unter Ihrem Startpreis. Damit erhöhen wir Ihre Verkaufschance.`
+                      : `Ihr Mindestpreis wird ab Runde 2 automatisch um ${(MARKETING_CONFIG.AUCTION_REDUCTION_PER_ROUND * 100).toFixed(0)} % pro Runde reduziert, bis max. ${(MARKETING_CONFIG.AUCTION_MAX_TOTAL_REDUCTION * 100).toFixed(0)} % unter Ihrem Startpreis. Damit erhöhen wir Ihre Verkaufschance.`)
+                  : (isFestpreis
+                      ? 'Ihr Festpreis bleibt in folgenden Verlängerungen unverändert.'
+                      : 'Ihr Mindestpreis bleibt in allen folgenden Runden unverändert.')}
+              </p>
+              {floor != null && dynamicPricing && (
+                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-teal-600" />
+                  Niedrigster automatischer {isFestpreis ? 'Festpreis' : 'Mindestpreis'}:{' '}
+                  <span className="font-semibold">€{floor.toLocaleString('de-DE')}</span>
+                  <span className="text-muted-foreground">— darunter geht es niemals automatisch.</span>
+                </p>
+              )}
+              {isLegacy && (
+                <p className="text-xs text-muted-foreground mt-2 flex items-start gap-1">
+                  <Info className="w-3 h-3 mt-0.5" />
+                  <span>Bestand-Inserat (vor Einführung der neuen Vermarktungsphase erstellt). Die automatische Preissenkung ist hier nicht aktiv.</span>
+                </p>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              {!showDynamicPricingOptOut ? (
+                <Button
+                  variant={dynamicPricing ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={() => {
+                    if (dynamicPricing) {
+                      onShowDynamicPricingOptOut(true);
+                    } else {
+                      onToggleDynamicPricing(true);
+                    }
+                  }}
+                  disabled={dynamicPricingPending || isLegacy}
+                >
+                  {dynamicPricing ? 'Deaktivieren' : 'Aktivieren'}
+                </Button>
+              ) : (
+                <div className="flex flex-col gap-2 items-end">
+                  <p className="text-xs text-destructive font-medium text-right max-w-[220px]">
+                    {isFestpreis
+                      ? 'Ihr Festpreis wird in folgenden Verlängerungen nicht mehr automatisch gesenkt. Sicher?'
+                      : 'Ihr Mindestpreis wird in folgenden Runden nicht mehr automatisch gesenkt. Sicher?'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => onShowDynamicPricingOptOut(false)}>Abbrechen</Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => onToggleDynamicPricing(false)}
+                      disabled={dynamicPricingPending}
+                    >
+                      {dynamicPricingPending ? 'Wird gespeichert...' : 'Ja, deaktivieren'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

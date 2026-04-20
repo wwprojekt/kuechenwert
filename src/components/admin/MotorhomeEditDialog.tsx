@@ -596,6 +596,14 @@ export function MotorhomeEditDialog({
 
             {/* ===== PREISE & VERKAUF TAB ===== */}
             <TabsContent value="prices" className="space-y-4 mt-4">
+              <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
+                <p className="text-xs text-amber-900 dark:text-amber-100">
+                  <strong>Hinweis:</strong> Sobald Sie Mindest- oder Sofortpreis ändern, wird die automatische
+                  Preissenkung (<code>dynamic_pricing</code>) für eine laufende Auktion/Festpreis-Phase
+                  serverseitig deaktiviert (Spec A2 — Verkäuferwille). Der Verkäufer kann sie im Listing-Detail
+                  unter „Verkaufsphase" jederzeit wieder aktivieren.
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("instant_price", "Sofortpreis (€)")}
                 {renderNumberInput("reserve_price", "Mindestpreis (€)")}

@@ -256,15 +256,20 @@ Deno.serve(async (req) => {
                 `duration=${durationDays}d newEnd=${newEnd} system=${isNewSystemFestpreis ? 'new' : 'legacy'}`
               );
 
+              const festpreisUpdate: Record<string, unknown> = {
+                end_time: newEnd,
+                auction_round: newRound,
+                // Reset admin marker if it was ever set — price is now valid
+                festpreis_admin_notified_at: null,
+                updated_at: now,
+              };
+              if (nextInstantPrice != null) {
+                // Reduktion fand statt → für "Stabil seit X Tagen"-Badge markieren
+                festpreisUpdate.last_price_reduction_at = now;
+              }
               const { error: extError } = await supabase
                 .from('auctions')
-                .update({
-                  end_time: newEnd,
-                  auction_round: newRound,
-                  // Reset admin marker if it was ever set — price is now valid
-                  festpreis_admin_notified_at: null,
-                  updated_at: now,
-                })
+                .update(festpreisUpdate)
                 .eq('id', auction.id);
 
               // Wenn Preis-Reduktion aktiv: instant_price auf motorhomes updaten.
@@ -680,6 +685,17 @@ Deno.serve(async (req) => {
               };
               if (newStartingBid != null) {
                 updatePayload.starting_bid = newStartingBid;
+              }
+              // last_price_reduction_at nur setzen wenn Reduce wirklich stattfand
+              // (newReservePrice < altes reserve_price). Wir vergleichen gegen
+              // kaufchance.reserve_price, das der Wert vor dem Auto-Relist ist.
+              const oldReserve = Number((kaufchance as { reserve_price?: number | null }).reserve_price ?? 0);
+              if (
+                isNewSystemListing &&
+                newReservePrice != null &&
+                Number(newReservePrice) < oldReserve
+              ) {
+                updatePayload.last_price_reduction_at = now;
               }
 
               const { error: relistError } = await supabase

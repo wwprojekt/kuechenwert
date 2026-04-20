@@ -11,6 +11,10 @@ kv_namespaces = [
 # Non-sensitive variables
 [vars]
 CF_ACCOUNT_ID = "4e101512091f867faf40ab7798abee0c"
+# Supabase: URL + ANON_KEY sind public (im Frontend-Bundle ausgeliefert).
+# Keine Geheimnisse — Rotation würde sowieso einen Frontend-Rebuild erfordern.
+SUPABASE_URL = "https://zcrwqxsyptjwkuxfacvq.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcndxeHN5cHRqd2t1eGZhY3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMzgwMzcsImV4cCI6MjA4OTYxNDAzN30.5-ds7Fw1392_iyRLKpXVtTkOyZ0-bDIcTivdGEOFrhc"
 
 # Routes
 [[routes]]

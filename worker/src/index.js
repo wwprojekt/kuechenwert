@@ -1,8 +1,10 @@
-// Cloudflare Worker: Pre-Renderer für caravanwert.de
-// Version: v7 (2026-03-24)
+// Cloudflare Worker: Pre-Renderer + Edge-API-Cache für caravanwert.de
+// Version: v8 (2026-04-20)
 // Fixes: Robuste Meta-Tag-Entfernung, korrekter waitForSelector, robots.txt,
 //        og:locale, twitter:image, optimierte robots-Direktive, Fallback-SEO,
 //        synchrones Rendering für Bots, IndexNow-Integration für Bing
+// v8:    /api/auctions/active Endpoint mit KV-Cache + Stale-While-Revalidate
+//        (löst PostgREST-Latenz von 1-2 s auf 30-80 ms für Browse-Pages)
 
 // ─── Bot Detection ──────────────────────────────────────────────────────────
 
@@ -275,12 +277,244 @@ async function renderWithRestApi(url, env) {
   return data.result;
 }
 
+// ─── Edge-API-Cache (Phase 1: /api/auctions/active) ────────────────────────
+//
+// Warum: Frontend-Direktaufrufe an PostgREST kosten 1-2 s pro Query (Network +
+// PostgREST-Compile + JSON-Serialize). Bei 30 s Polling auf /kaufen × N offene
+// Tabs entsteht messbare Last + spürbare Wartezeit beim Page-Open.
+//
+// Strategie: KV als Read-Cache mit Stale-While-Revalidate.
+//   FRESH   (≤ 30 s alt)  → sofort ausliefern
+//   STALE   (≤ 90 s alt)  → sofort ausliefern + Hintergrund-Refresh
+//   EXPIRED (> 90 s alt)  → synchroner Refresh (= heutiges Verhalten als Worst-Case)
+//
+// Cache-Key versioniert (`v1`) damit wir bei Schema-Änderungen sauber rotieren
+// können ohne KV-Purge.
+
+const AUCTIONS_API_PATH = "/api/auctions/active";
+const AUCTIONS_CACHE_KEY = "api:auctions:active:v1";
+const AUCTIONS_FRESH_MS = 30 * 1000;   // 30 s frisch
+const AUCTIONS_STALE_MS = 90 * 1000;   // 90 s gesamt (60 s SWR-Fenster)
+const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
+
+function corsHeaders() {
+  // Same-origin in Production (caravanwert.de → caravanwert.de/api/...) braucht
+  // theoretisch kein CORS, aber wir setzen es defensiv damit auch
+  // localhost-Dev (Vite Port 8080) gegen den live Worker testen kann.
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-headers": "content-type",
+    "access-control-max-age": "86400"
+  };
+}
+
+function jsonResponse(payload, status, extraHeaders = {}) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...corsHeaders(),
+      ...extraHeaders
+    }
+  });
+}
+
+async function fetchAuctionsFromSupabase(env) {
+  // Identisch zur Frontend-Query in src/pages/Kaufen.tsx (3 parallele Calls)
+  // damit das Antwort-Format 1:1 kompatibel ist.
+  const supabaseBase = `${env.SUPABASE_URL}/rest/v1`;
+  const headers = {
+    apikey: env.SUPABASE_ANON_KEY,
+    authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    accept: "application/json"
+  };
+  const nowIso = new Date().toISOString();
+
+  // 1) Auktionen + Motorhomes (nested embed)
+  const auctionsUrl = `${supabaseBase}/auctions?select=` +
+    encodeURIComponent(
+      "id,motorhome_id,current_bid,starting_bid,end_time,created_at," +
+      "last_price_reduction_at,marketing_phase_started_at," +
+      "motorhome:motorhomes(id,manufacturer,model,year,mileage,listing_number," +
+      "body_type,country,postal_code,instant_price,sale_channel,status," +
+      "account_type,sleeping_places,transmission,accident_free)"
+    ) +
+    `&status=eq.active&end_time=gt.${encodeURIComponent(nowIso)}` +
+    `&order=end_time.asc`;
+
+  // 2) Bid-Counts (auction_id only, gefiltert auf aktive Auktionen)
+  const bidsUrl = `${supabaseBase}/bids?select=` +
+    encodeURIComponent("auction_id,auction:auctions!inner(status,end_time)") +
+    `&auction.status=eq.active&auction.end_time=gt.${encodeURIComponent(nowIso)}`;
+
+  const [auctionsRes, bidsRes] = await Promise.all([
+    fetch(auctionsUrl, { headers }),
+    fetch(bidsUrl, { headers })
+  ]);
+
+  if (!auctionsRes.ok) {
+    throw new Error(`auctions fetch ${auctionsRes.status}: ${await auctionsRes.text()}`);
+  }
+  if (!bidsRes.ok) {
+    throw new Error(`bids fetch ${bidsRes.status}: ${await bidsRes.text()}`);
+  }
+
+  const auctions = await auctionsRes.json();
+  const bids = await bidsRes.json();
+
+  // 3) Cover-Photos (display_order=0) — separat weil PostgREST nested order/limit
+  // bei verschachtelten Embeds buggy ist (siehe Kommentar in Kaufen.tsx).
+  const motorhomeIds = auctions
+    .map((a) => a.motorhome_id)
+    .filter(Boolean);
+
+  let photoMap = {};
+  if (motorhomeIds.length > 0) {
+    const photosUrl = `${supabaseBase}/motorhome_photos?select=` +
+      encodeURIComponent("url,card_url,medium_url,motorhome_id") +
+      `&display_order=eq.0&motorhome_id=in.(${motorhomeIds.join(",")})`;
+
+    const photosRes = await fetch(photosUrl, { headers });
+    if (photosRes.ok) {
+      const rows = await photosRes.json();
+      for (const p of rows) {
+        if (!p.motorhome_id) continue;
+        const small = p.card_url || p.medium_url || p.url;
+        if (!small) continue;
+        photoMap[p.motorhome_id] = {
+          url: small,
+          medium_url: p.medium_url || null,
+          display_order: 0
+        };
+      }
+    }
+    // Photo-Fehler ist non-blocking (wie im Frontend)
+  }
+
+  // Bid-Counts aggregieren
+  const bidCounts = {};
+  for (const b of bids) {
+    bidCounts[b.auction_id] = (bidCounts[b.auction_id] || 0) + 1;
+  }
+
+  // Stitch: Photo ins motorhome.photos[]-Array hängen (Frontend-kompatibel)
+  const stitched = auctions.map((a) => {
+    const cover = a.motorhome_id ? photoMap[a.motorhome_id] : null;
+    return {
+      ...a,
+      motorhome: a.motorhome
+        ? { ...a.motorhome, photos: cover ? [cover] : [] }
+        : null
+    };
+  });
+
+  return {
+    auctions: stitched,
+    bidCounts,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+async function refreshAuctionsCache(env) {
+  const fresh = await fetchAuctionsFromSupabase(env);
+  const now = Date.now();
+  const envelope = {
+    data: fresh,
+    fetchedAt: now,
+    freshUntil: now + AUCTIONS_FRESH_MS,
+    staleUntil: now + AUCTIONS_STALE_MS
+  };
+  // KV-Write ist eventually consistent (max ~60 s Propagation), das ist OK
+  // weil unser Stale-Window 60 s ist — schlimmstenfalls hat ein anderer PoP
+  // noch kurz die alten Daten, was unter dem Polling-Intervall liegt.
+  await env.PRERENDER_CACHE.put(AUCTIONS_CACHE_KEY, JSON.stringify(envelope), {
+    expirationTtl: AUCTIONS_KV_TTL
+  });
+  return envelope;
+}
+
+async function handleAuctionsApi(request, env, ctx) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "method not allowed" }, 405);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponse({ error: "supabase env not configured" }, 500);
+  }
+
+  const now = Date.now();
+
+  // 1) Cache lesen
+  let cached = null;
+  try {
+    cached = await env.PRERENDER_CACHE.get(AUCTIONS_CACHE_KEY, { type: "json" });
+  } catch (e) {
+    console.error("KV read error:", e.message);
+  }
+
+  // 2) FRESH path
+  if (cached && now < cached.freshUntil) {
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "FRESH",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=30"
+    });
+  }
+
+  // 3) STALE path: serve cached, refresh in background
+  if (cached && now < cached.staleUntil) {
+    ctx.waitUntil(
+      refreshAuctionsCache(env).catch((e) =>
+        console.error("background refresh failed:", e.message)
+      )
+    );
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "STALE",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=30"
+    });
+  }
+
+  // 4) MISS / EXPIRED path: sync refresh, fall back to stale data on error
+  try {
+    const fresh = await refreshAuctionsCache(env);
+    return jsonResponse(fresh.data, 200, {
+      "x-cache-status": "MISS",
+      "x-cache-age-ms": "0",
+      "cache-control": "public, max-age=30"
+    });
+  } catch (e) {
+    console.error("auctions sync refresh failed:", e.message);
+    if (cached) {
+      // Letzter Notnagel: alte Daten ausliefern auch wenn längst stale
+      return jsonResponse(cached.data, 200, {
+        "x-cache-status": "EMERGENCY",
+        "x-cache-age-ms": String(now - cached.fetchedAt),
+        "cache-control": "public, max-age=10"
+      });
+    }
+    return jsonResponse(
+      { error: "upstream unavailable", message: e.message },
+      502
+    );
+  }
+}
+
 // ─── Main Worker ────────────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const userAgent = request.headers.get("user-agent") || "";
+
+    // ── Edge-API-Cache: /api/auctions/active (vor allen anderen Checks) ──
+    // Wir behandeln auch OPTIONS hier, daher steht es vor dem GET-Filter.
+    if (url.pathname === AUCTIONS_API_PATH) {
+      return handleAuctionsApi(request, env, ctx);
+    }
 
     // Only handle GET requests
     if (request.method !== "GET") {

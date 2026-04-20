@@ -235,7 +235,10 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
             <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.instantPrice}</p>
           )}
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren. <span className="font-medium text-foreground">Bitte sorgfältig wählen:</span> nach dem Aktivieren des Inserats wird der Preis vom CaravanWert-Team verwaltet (Anpassung jederzeit per E-Mail an info@caravanwert.de möglich).
+            Händler können Ihr Fahrzeug sofort zu diesem Preis kaufen – ohne Auktion oder Bieterverfahren.
+          </p>
+          <p className="text-xs text-muted-foreground/80 leading-snug">
+            Anpassbar bis zur Freigabe durch unser Team. Danach jederzeit per Klick aus Ihrem Dashboard anfragen.
           </p>
         </div>
       )}
@@ -273,8 +276,11 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
               <p className="text-xs text-muted-foreground leading-relaxed">
                 <span className="font-medium text-foreground">Schutz für Sie:</span> Niemand kann Ihr Fahrzeug unter diesem Preis kaufen.
               </p>
-              <p className="text-xs text-muted-foreground/80 leading-relaxed">
-                <span className="font-medium">Tipp:</span> Setzen Sie den absoluten Tiefstpreis, den Sie noch akzeptieren würden – nicht Ihren Wunsch-Verkaufspreis. Händler bieten in der Auktion oft deutlich höher. <span className="text-muted-foreground/70">Bitte sorgfältig wählen – nach dem Aktivieren wird der Mindestpreis vom CaravanWert-Team verwaltet (Anpassung per E-Mail an info@caravanwert.de möglich).</span>
+              <p className="text-xs text-muted-foreground/80 leading-snug">
+                <span className="font-medium">Tipp:</span> Wählen Sie den niedrigsten Preis, zu dem Sie noch verkaufen würden – Händler überbieten ihn in der Auktion meist deutlich.
+              </p>
+              <p className="text-xs text-muted-foreground/70 leading-snug">
+                Anpassbar bis zur Freigabe durch unser Team. Danach jederzeit per Klick aus Ihrem Dashboard anfragen.
               </p>
             </div>
           )}

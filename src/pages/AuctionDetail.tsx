@@ -170,6 +170,15 @@ const AuctionDetail = () => {
   const [highBidConfirm, setHighBidConfirm] = useState<{ amount: number; currentBid: number } | null>(null);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // Touch-Gesten für Photo-Galerie auf Mobile.
+  // touchMoved trennt Swipe (≥10px Bewegung) von Tap (≤10px).
+  // lastSwipeAt unterdrückt das nachgelagerte click-Event nach Swipe,
+  // damit nicht gleichzeitig navigiert UND der Lightbox geöffnet wird.
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
+  const touchMovedRef = useRef<boolean>(false);
+  const lastSwipeAtRef = useRef<number>(0);
   const { isFavorite, toggleFavorite, isLoading: isFavLoading } = useFavorites();
   const hotbidSoundPlayed = useRef(false);
   const { playNotification, notifyOutbid } = useAudioNotification();
@@ -1071,10 +1080,11 @@ const AuctionDetail = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate("/kaufen")}
-                className="hover:bg-primary/10"
+                className="hover:bg-primary/10 px-2 sm:px-4"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Zurück zu Auktionen
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Zurück zu Auktionen</span>
+                <span className="sm:hidden ml-1.5">Zurück</span>
               </Button>
               {(neighborAuctions.prev || neighborAuctions.next) && (
                 <div className="flex items-center gap-1 ml-2">
@@ -1123,7 +1133,7 @@ const AuctionDetail = () => {
                 className={`gap-2 ${isFavorite(motorhome.id) ? 'text-red-600 border-red-200' : ''}`}
               >
                 <Heart className={`w-4 h-4 ${isFavorite(motorhome.id) ? 'fill-current' : ''}`} />
-                {isFavorite(motorhome.id) ? 'Beobachtet' : 'Beobachten'}
+                <span className="hidden sm:inline">{isFavorite(motorhome.id) ? 'Beobachtet' : 'Beobachten'}</span>
               </Button>
             </div>
           </div>
@@ -1134,80 +1144,160 @@ const AuctionDetail = () => {
               {/* Enhanced Photo Gallery */}
               <Card className="overflow-hidden shadow-lg">
                 <div className="relative group">
-                  <div className="relative h-[300px] sm:h-[400px] lg:h-[500px] bg-muted overflow-hidden">
+                  <div
+                    className="relative h-[300px] sm:h-[400px] lg:h-[500px] bg-muted overflow-hidden select-none"
+                    onTouchStart={(e) => {
+                      touchStartXRef.current = e.touches[0].clientX;
+                      touchStartYRef.current = e.touches[0].clientY;
+                      touchMovedRef.current = false;
+                    }}
+                    onTouchMove={(e) => {
+                      const dx = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+                      const dy = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+                      if (dx > 10 || dy > 10) touchMovedRef.current = true;
+                    }}
+                    onTouchEnd={(e) => {
+                      if (!touchMovedRef.current || photos.length <= 1) return;
+                      const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+                      const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+                      // Nur als horizontalen Swipe werten, wenn dx > dy (vertikales
+                      // Scrollen der Seite hat dann Vorrang) und ≥50px Bewegung.
+                      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                        if (dx > 0) {
+                          setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1);
+                        } else {
+                          setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0);
+                        }
+                        lastSwipeAtRef.current = Date.now();
+                      }
+                    }}
+                  >
                     {photos.length > 0 ? (
                       <>
                         {/* Hauptbild: medium_url (1024px WebP, ~50-100 KB)
                             statt Original (~150-300 KB JPEG). Fallback auf
                             url, falls Variant noch nicht generiert.
-                            Eager + fetchpriority=high weil das LCP-Element. */}
+                            Eager + fetchpriority=high weil das LCP-Element.
+                            onClick öffnet Lightbox; Swipe-Erkennung in
+                            lastSwipeAtRef unterdrückt das Click nach Swipe. */}
                         <img
                           src={photos[currentPhotoIndex]?.medium_url || photos[currentPhotoIndex]?.url}
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
                           loading="eager"
                           fetchPriority="high"
                           decoding="sync"
-                          className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
+                          onClick={() => {
+                            if (Date.now() - lastSwipeAtRef.current < 300) return;
+                            setIsLightboxOpen(true);
+                          }}
+                          className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105 cursor-zoom-in"
+                          draggable={false}
                         />
                         
                         {/* Photo Navigation */}
                         {photos.length > 1 && (
                           <>
                             <button
-                              onClick={() => setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1)}
+                              onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1); }}
                               className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              aria-label="Vorheriges Foto"
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
-                              onClick={() => setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0)}
+                              onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0); }}
                               className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              aria-label="Nächstes Foto"
                             >
                               <ChevronRight className="w-5 h-5" />
                             </button>
                           </>
                         )}
                         
-                        {/* Photo Counter */}
-                        <div className="absolute bottom-4 left-4 bg-black/75 text-white px-3 py-1 rounded-full text-sm">
-                          {currentPhotoIndex + 1} / {photos.length}
+                        {/* Photo Counter mit Zoom-Hinweis */}
+                        <div className="absolute bottom-4 left-4 bg-black/75 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1.5 pointer-events-none">
+                          <span>{currentPhotoIndex + 1} / {photos.length}</span>
+                          <span className="text-white/70 text-xs hidden sm:inline">· Tippen zum Vergrößern</span>
                         </div>
                         
-                        {/* Fullscreen Button */}
+                        {/* Fullscreen Button — bleibt als zusätzlicher
+                            visueller Hinweis erhalten, dass Foto zoombar ist */}
                         <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
                           <DialogTrigger asChild>
-                            <button className="absolute top-4 right-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full opacity-75 hover:opacity-100 transition-opacity">
+                            <button
+                              className="absolute top-4 right-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                              aria-label="Foto in Vollbild öffnen"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <Maximize className="w-5 h-5" />
                             </button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95">
-                            <div className="relative w-full h-full flex items-center justify-center">
-                              {/* Lightbox: Original-URL (volle Auflösung)
-                                  damit Käufer in Detail zoomen können. */}
+                          <DialogContent className="max-w-7xl w-full h-[100vh] sm:h-[90vh] p-0 bg-black/95 border-0">
+                            <div
+                              className="relative w-full h-full flex items-center justify-center"
+                              onClick={() => setIsLightboxOpen(false)}
+                              onTouchStart={(e) => {
+                                touchStartXRef.current = e.touches[0].clientX;
+                                touchStartYRef.current = e.touches[0].clientY;
+                                touchMovedRef.current = false;
+                              }}
+                              onTouchMove={(e) => {
+                                const dx = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+                                const dy = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+                                if (dx > 10 || dy > 10) touchMovedRef.current = true;
+                              }}
+                              onTouchEnd={(e) => {
+                                if (!touchMovedRef.current || photos.length <= 1) return;
+                                const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+                                const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+                                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                                  if (dx > 0) {
+                                    setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1);
+                                  } else {
+                                    setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0);
+                                  }
+                                  lastSwipeAtRef.current = Date.now();
+                                }
+                              }}
+                            >
+                              {/* Lightbox: Original-URL (volle Auflösung).
+                                  touchAction:pinch-zoom erlaubt natives
+                                  Pinch auf Mobile. stopPropagation, sonst
+                                  schließt der Klick auf den Hintergrund. */}
                               <img
                                 src={photos[currentPhotoIndex]?.url}
                                 alt={`${motorhome.manufacturer} ${motorhome.model}`}
                                 loading="eager"
                                 decoding="async"
-                                className="max-w-full max-h-full object-contain"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ touchAction: 'pinch-zoom' }}
+                                className="max-w-full max-h-full object-contain select-none"
+                                draggable={false}
                               />
                               <button
-                                onClick={() => setIsLightboxOpen(false)}
+                                onClick={(e) => { e.stopPropagation(); setIsLightboxOpen(false); }}
                                 className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
+                                aria-label="Schließen"
                               >
                                 <X className="w-6 h-6" />
                               </button>
+                              {/* Lightbox-Counter unten mittig */}
+                              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-1.5 rounded-full text-sm font-medium pointer-events-none">
+                                {currentPhotoIndex + 1} / {photos.length}
+                              </div>
                               {photos.length > 1 && (
                                 <>
                                   <button
-                                    onClick={() => setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1)}
+                                    onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1); }}
                                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full"
+                                    aria-label="Vorheriges Foto"
                                   >
                                     <ChevronLeft className="w-6 h-6" />
                                   </button>
                                   <button
-                                    onClick={() => setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0)}
+                                    onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0); }}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full"
+                                    aria-label="Nächstes Foto"
                                   >
                                     <ChevronRight className="w-6 h-6" />
                                   </button>
@@ -1216,6 +1306,16 @@ const AuctionDetail = () => {
                             </div>
                           </DialogContent>
                         </Dialog>
+
+                        {/* Fortschrittsbalken am unteren Rand */}
+                        {photos.length > 1 && (
+                          <div className="absolute bottom-0 inset-x-0 h-1 bg-black/20 pointer-events-none">
+                            <div
+                              className="h-full bg-white/90 transition-all duration-300"
+                              style={{ width: `${((currentPhotoIndex + 1) / photos.length) * 100}%` }}
+                            />
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -2243,6 +2343,7 @@ const AuctionDetail = () => {
                         Ihr Gebot (Mindestens €{(currentBid + 50).toLocaleString()})
                       </label>
                       <Input
+                        id="bid-input"
                         type="text"
                         inputMode="decimal"
                         placeholder={`z.B. ${(currentBid + 500).toLocaleString('de-DE')}`}
@@ -2664,7 +2765,7 @@ const AuctionDetail = () => {
           className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md border-t border-border shadow-2xl px-3 py-2.5"
           style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
         >
-          <div className="flex items-center gap-2.5 max-w-2xl mx-auto pl-14">
+          <div className={`flex items-center gap-2.5 max-w-2xl mx-auto ${settings?.whatsapp_number || settings?.support_phone ? 'pl-14' : ''}`}>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-1.5 leading-none mb-0.5">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -2702,6 +2803,15 @@ const AuctionDetail = () => {
                 const el = document.getElementById('bid-actions');
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  // Nach dem Scroll das Bid-Input fokussieren, damit der
+                  // Händler direkt tippen kann (gilt nur für Auktion mit
+                  // sichtbarem Input — bei Festpreis/Kaufchance kein Input).
+                  if (motorhome.sale_channel !== 'instant_price' && auction.status === 'active') {
+                    setTimeout(() => {
+                      const input = document.getElementById('bid-input') as HTMLInputElement | null;
+                      input?.focus({ preventScroll: true });
+                    }, 600);
+                  }
                 }
               }}
               className={`flex-shrink-0 h-12 px-5 font-semibold ${

@@ -13,23 +13,31 @@
 - Use `invokeWithAuth()` for all authenticated Edge Function calls
 - Use shadcn/ui components from `src/components/ui/`
 - Use the shared email template `_shared/email-builder.ts` for all emails
-- Use `SECURITY INVOKER` for all new database functions
+- Use `SECURITY INVOKER` for all new database functions (see exceptions below)
 - Keep components small and focused (< 200 lines)
 - Keep diffs small and focused on one feature
+- **Session-Start Check**: First action in every new session = `git fetch origin main && git status`. If `Your branch is ahead of 'origin/main'`: stranded commits → push immediately before doing anything else (Dokploy is blocked).
+- **Migration File First**: When changing the DB via `apply_migration` MCP tool, write the SQL file under `supabase/migrations/<timestamp>_<name>.sql` FIRST, then apply. The file is the source of truth — without it the change is invisible to git, fresh checkouts, and CI.
+- **Edge Function periodisch → Cron in selber Migration**: If a new Edge Function is meant to run on a schedule (image processing, cleanup, digests, reminders), create the `cron.schedule(...)` call in the SAME migration that documents the function. Multiple production bugs (e.g. `process-photo` 2081 unprocessed photos) came from "function exists but cron was forgotten".
 - **ALWAYS work directly on `main` and push after every commit** (`git push origin main`)
   - Dokploy auto-deploys ONLY from `main` — feature/fix branches do NOT trigger deploys
   - If a tool/CI auto-creates a feature branch (e.g. `cursor/*`), immediately fast-forward merge to `main` and push: `git checkout main && git merge --ff-only <branch> && git push origin main`
+  - Before every push: `git fetch origin main` to detect concurrent agents/devs. If diverged: `git pull --rebase origin main` then push.
 
 ## Don't
 - Do NOT call React Hooks after an early return
 - Do NOT use `getSession()` directly for RLS queries (returns expired tokens)
 - Do NOT access `profiles.role` (does not exist – use `user_roles` table)
-- Do NOT use `verify_jwt: true` for Edge Functions with custom auth
+- Do NOT use `verify_jwt: true` for Edge Functions with **custom auth logic** (gateway 401 has no body — see Edge Functions section for nuances)
 - Do NOT hard-code colors – use Tailwind classes
 - Do NOT add new heavy dependencies without checking existing alternatives
 - Do NOT use `rm -rf` on project directories
 - Do NOT use `git push --force`
 - Do NOT leave commits stranded on a feature/fix branch — Dokploy only deploys from `main`. Always fast-forward into `main` and push there.
+- Do NOT push without first running `git fetch origin main` — concurrent agents may have pushed; surprise divergence wastes a deploy slot
+- Do NOT add new tables to the `supabase_realtime` publication unless a frontend component actually subscribes to them. Each table in the publication writes to WAL for every change → measurable load.
+- Do NOT call `supabase.storage.from(...).upload(file)` without `cacheControl` — see "Storage Uploads" section
+- Do NOT apply a migration via MCP without also writing the file to `supabase/migrations/` first
 
 ## Commands
 
@@ -74,9 +82,11 @@ Before every commit:
 5. Update the TODO list in `project.md` (mark completed tasks)
 6. Commit message format: `feat(scope): short description` or `fix(scope): short description`
 7. **Verify you are on `main`**: `git branch --show-current` MUST print `main`. If not, switch first (`git checkout main`) — never commit on `cursor/*` or other feature branches because Dokploy will not deploy them.
-8. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
-9. If push fails: `git pull --rebase origin main && git push origin main`
-10. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. Dokploy webhook triggers auto-build/deploy within ~1 minute of the push appearing on `origin/main`.
+8. **`git fetch origin main` BEFORE pushing**: detects concurrent commits from parallel agents/devs. If diverged: `git pull --rebase origin main` first.
+9. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
+10. If push fails: `git pull --rebase origin main && git push origin main`
+11. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. Dokploy webhook triggers auto-build/deploy within ~1 minute of the push appearing on `origin/main`.
+12. If the change applied a DB migration via MCP: confirm the corresponding `supabase/migrations/<timestamp>_<name>.sql` file exists AND is part of the commit. Migration without file = invisible to git = unreproducible.
 
 ## Good Examples (copy these patterns)
 - **Functional component with hooks**: `src/pages/AuctionDetail.tsx`
@@ -89,6 +99,10 @@ Before every commit:
 - **Class-based components**: None currently, but do not introduce them
 - **Direct getSession() for RLS**: Any code using `supabase.auth.getSession()` before RLS queries without `ensureValidRLSSession()`
 - **God components**: Components over 300 lines – split into smaller sub-components
+- **Storage upload without `cacheControl`**: Any `.upload(path, file)` call missing the `cacheControl: "31536000, immutable"` option — defaults to 1h cache and breaks edge caching
+- **Edge Function without Cron when periodic**: Deploying a function intended to run on a schedule without also adding the `cron.schedule(...)` migration in the same commit
+- **MCP migration without file**: Calling `apply_migration` without writing `supabase/migrations/<timestamp>_<name>.sql` first
+- **Global Realtime listener**: `supabase.channel("foo").on("postgres_changes", { event: "*", table: "bids" }, ...)` without a `filter` — broadcasts every change in the table to every client
 
 ## Key Architecture Patterns
 
@@ -157,17 +171,48 @@ Before every commit:
 - Hooks that need loaded data → move to Child-Component, NOT parent with fallback value
 
 ### Edge Functions
-- `verify_jwt: true` is problematic for functions with own auth – Gateway 401 has no body
+- `verify_jwt` matrix:
+  - **`true`** for ADMIN-only functions that don't do their own auth (lets the Supabase gateway reject before code runs). Beware: gateway 401 has empty body — frontend errors will be opaque. Use only when frontend doesn't need to distinguish reasons.
+  - **`false`** + own service-role check for functions with custom auth, public flows, or webhook signature verification. Most CaravanWert functions fall here.
 - Catch-all `throw` → 500 is bad for UX. Use specific HTTP codes + readable error messages
 - `supabase_deploy_edge_function` ALWAYS requires the `files` parameter with file contents
+- For periodically-running functions (image processing, cleanup, digests, reminders): the function has NO own auth — instead the cron job in `cron.schedule` passes the service-role key from `vault.decrypted_secrets` in the `Authorization` header. Function reads `req.headers.get("Authorization")` and verifies it matches `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`.
+- `process-photo` skips originals > 2 MB (`processing_error = 'original_too_large'`). Reason: jsquash WASM crashes on large buffers. For these: run `scripts/backfill-photo-variants.mjs` locally (uses native `sharp`).
+
+### Storage Uploads
+**Every** `.from("<bucket>").upload(path, file, options)` call must set `cacheControl`. The Supabase Storage SDK auto-prepends `max-age=` to whatever string you pass:
+
+```typescript
+// CORRECT — produces wire header `Cache-Control: max-age=31536000, immutable`
+.upload(path, file, {
+  contentType: detected.mime,
+  cacheControl: "31536000, immutable",
+  upsert: false,
+})
+
+// WRONG — produces `Cache-Control: max-age=public, max-age=31536000, immutable`
+//         which browsers + CDNs partially ignore
+.upload(path, file, { cacheControl: "public, max-age=31536000, immutable" })
+
+// WRONG — defaults to max-age=3600 (1 hour) → no edge caching
+.upload(path, file, { contentType: detected.mime })
+```
+
+Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-Cookie: __cf_bm`), which forces `Cache-Control: no-cache` on the wire even when metadata is correct. Browsers still benefit (304 revalidation), but for true 1-year edge cache an own Worker proxy is required.
 
 ### Database
 - `profiles.role` does NOT exist – roles ALWAYS via `user_roles` table
 - `search_path` must be set correctly in all functions (security)
-- All DB functions should use `SECURITY INVOKER` unless specifically needed otherwise
+- `SECURITY INVOKER` is the default for new functions. Use `SECURITY DEFINER` ONLY when:
+  - The function must bypass RLS by design (cron-triggered batch jobs, mass aggregations, admin RPCs)
+  - It's called from an Edge Function that already verified caller identity
+  - When using DEFINER: explicitly set `SET search_path = public, pg_catalog` AND add a comment explaining why DEFINER is needed
+- New tables: do NOT add to `supabase_realtime` publication by default. Only add if a frontend component will subscribe. Removing later requires a migration; not adding costs nothing.
 
 ### Realtime
 - Pattern for live updates: Edge Function returns ID + data → Frontend optimistic update → Realtime dedup via ID-Set (ref) → Auto-cleanup after timeout
+- Listener-Hygiene: every `supabase.channel(...)` MUST be filtered server-side (`filter: "column=eq.value"` or `=in.(...)`). Global listeners (no filter) cause every WAL change in that table to push to every connected client → exponential cost.
+- Periodic Refetch via `setInterval` + `window.addEventListener("focus")` is preferable to Realtime for browse pages (e.g. /kaufen). Realtime is for detail pages where users expect live updates.
 
 ## Project Structure
 - `src/App.tsx` – Main router with all routes

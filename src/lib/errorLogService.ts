@@ -18,6 +18,97 @@ import { translateError, getPageTitle, type ErrorCategory, type ErrorSeverity } 
 import { logger } from './logger';
 
 // ============================================================================
+// Helpers: Browser-Translator + chunk-preload detection
+// ============================================================================
+
+/**
+ * Detects errors triggered by browser-side translators (Edge iOS / Microsoft
+ * Translator, Google Translate, Safari iOS Translate) which mutate the DOM
+ * after React has rendered. React then loses track of nodes and throws errors
+ * like `t.textContent`, `Failed to execute 'removeChild'`, `insertBefore`,
+ * `replaceChild` etc.
+ *
+ * Two signals together are very reliable:
+ *  1) The error message matches one of the known DOM-mutation patterns the
+ *     React reconciler emits when nodes vanish under it.
+ *  2) Every frame in the stack points to the current HTML document (the
+ *     translator injects a script directly into the page) — there is not a
+ *     single `/assets/*.js` frame from our own bundle.
+ *
+ * Either signal alone is enough — translator errors should never reach the
+ * error_logs table; they are a symptom of the user enabling translation, not
+ * a bug we can fix in code beyond `<html translate="no">` (already set).
+ */
+function isTranslatorError(message: string, stack?: string): boolean {
+  const msg = message || '';
+  const knownPatterns = [
+    "evaluating 't.textContent'",
+    "undefined is not an object (evaluating 'e.removeChild",
+    "Failed to execute 'removeChild' on 'Node'",
+    "Failed to execute 'insertBefore' on 'Node'",
+    "Failed to execute 'replaceChild' on 'Node'",
+    "The node to be removed is not a child of this node",
+    "The node before which the new node is to be inserted is not a child of this node",
+    "NotFoundError: The object can not be found here",
+  ];
+  if (knownPatterns.some((p) => msg.includes(p))) return true;
+
+  if (!stack) return false;
+  // Stack-only signal: every frame URL is the HTML document of the page
+  // (caravanwert.de/<route>:1:NNN) and none point at our /assets/ bundle.
+  const lines = stack.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('@') || l.includes('@http'));
+  if (lines.length === 0) return false;
+  const hasAssetFrame = /\/assets\/[A-Za-z0-9_.-]+\.(?:js|mjs)/.test(stack);
+  if (hasAssetFrame) return false;
+  // All non-native frames point to the HTML document
+  const nonNative = lines.filter((l) => !l.includes('[native code]'));
+  if (nonNative.length === 0) return false;
+  return nonNative.every((l) => /https?:\/\/[^/]+\/[^@]*:\d+:\d+/.test(l));
+}
+
+/**
+ * Detects Vite/Rollup chunk-preload failures that happen when a long-lived
+ * tab tries to lazy-load a CSS/JS chunk whose hash no longer exists on the
+ * server (after a deploy). Recovery is a single hard reload — the new
+ * `index.html` references the new hashes.
+ *
+ * Patterns observed in production:
+ *   - "Unable to preload CSS for /assets/..."
+ *   - "Failed to fetch dynamically imported module: https://.../assets/..."
+ *   - "Importing a module script failed."
+ *   - "error loading dynamically imported module"
+ */
+function isChunkPreloadError(message: string): boolean {
+  const m = message || '';
+  return (
+    m.includes('Unable to preload CSS for') ||
+    m.includes('Failed to fetch dynamically imported module') ||
+    m.includes('error loading dynamically imported module') ||
+    m.includes('Importing a module script failed')
+  );
+}
+
+/**
+ * One-shot recovery for Vite chunk-preload failures. Reloads the page so the
+ * browser fetches the freshly-deployed `index.html`. Guarded by sessionStorage
+ * so a permanently-broken deploy can never trap the user in a reload loop:
+ * the second occurrence in the same tab session is ignored.
+ */
+function tryRecoverFromChunkPreloadError(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const KEY = 'cw_chunk_reload_done';
+    if (window.sessionStorage.getItem(KEY) === '1') return;
+    window.sessionStorage.setItem(KEY, '1');
+    // Defer one tick so the current event loop finishes
+    window.setTimeout(() => window.location.reload(), 0);
+  } catch {
+    // sessionStorage may be blocked (private mode, embedded webview) — give up
+    // silently rather than risk a loop.
+  }
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -423,6 +514,25 @@ export function handleAndLogError(
     return translated.message;
   }
 
+  // Transient network errors (Safari "Load failed", Chrome "Failed to fetch",
+  // Firefox "NetworkError when attempting to fetch resource") are not
+  // actionable: the user closed the tab, switched off Wi-Fi, or hit a
+  // momentary CDN blip. The toast still fires for UX, but we must not flood
+  // error_logs — see also the global console-error and unhandledrejection
+  // filters below for the same reasoning.
+  if (isNetworkError(error)) {
+    return translated.message;
+  }
+
+  // Browser-translator induced DOM mutation errors are out of our control
+  // (Edge iOS / Microsoft Translator inject scripts despite `<html
+  // translate="no">`). Logging them creates Critical alerts for something
+  // only the user can fix in their browser settings.
+  const stack = error instanceof Error ? error.stack : undefined;
+  if (isTranslatorError(originalMessage, stack)) {
+    return translated.message;
+  }
+
   // Asynchron in Supabase loggen (blockiert nicht die UI)
   logErrorToSupabase({
     errorCode: translated.code,
@@ -555,6 +665,21 @@ export function installGlobalErrorHandlers(): void {
       event.message?.includes('was not released within') ||
       event.message?.includes('Acquiring an exclusive Navigator LockManager lock')
     ) return;
+    // Transient network errors (Safari/Chrome/Firefox variants) are not
+    // actionable bugs — silently drop instead of producing critical alerts.
+    if (isNetworkError(event.error || event.message)) return;
+    // Browser-translator (Edge iOS / Microsoft / Google Translate) injects
+    // scripts that mutate React's DOM and throw `t.textContent` /
+    // `removeChild` / `insertBefore` errors. There is nothing actionable on
+    // our side beyond the `<html translate="no">` we already ship.
+    const stack = event.error?.stack || `at ${event.filename}:${event.lineno}:${event.colno}`;
+    if (isTranslatorError(event.message || '', stack)) return;
+    // Vite chunk-preload failure after a deploy: try a one-shot reload so
+    // the browser fetches the freshly-deployed `index.html`.
+    if (isChunkPreloadError(event.message || '')) {
+      tryRecoverFromChunkPreloadError();
+      return;
+    }
 
     const translated = translateError(event.message || 'Uncaught error');
     logErrorToSupabase({
@@ -610,6 +735,16 @@ export function installGlobalErrorHandlers(): void {
     // Transiente Netzwerkfehler nicht protokollieren – nicht actionable
     // (siehe ausführlichen Kommentar im console.error-Interceptor unten).
     if (isNetworkError(reason)) return;
+    // Vite chunk-preload failure after a deploy (typically surfaces as a
+    // promise rejection from `import()`). One-shot reload so the new
+    // `index.html` is fetched.
+    if (isChunkPreloadError(message)) {
+      tryRecoverFromChunkPreloadError();
+      return;
+    }
+    // Browser-translator (Edge iOS / Microsoft / Google Translate) DOM
+    // mutation errors that bubble up as unhandled rejections.
+    if (isTranslatorError(message, reason instanceof Error ? reason.stack : undefined)) return;
     const translated = translateError(message);
     logErrorToSupabase({
       errorCode: 'GLOBAL_UNHANDLED_REJECTION',
@@ -672,6 +807,18 @@ export function installGlobalErrorHandlers(): void {
       // Falls wir später Hintergrund-Netzwerkfehler-Trends sehen wollen, ginge das
       // über Supabase-Realtime oder ein dediziertes APM-Tool deutlich präziser.
       if (isNetworkError(errorArg)) return;
+
+      // Browser-translator (Edge iOS / Microsoft / Google Translate) DOM
+      // mutation errors. The same error that already passed the
+      // `window.addEventListener('error', ...)` filter is re-emitted here
+      // by React's console.error fallback — without this guard it would
+      // surface as a CONSOLE_ERROR duplicate (see error #2 from
+      // 20.04.2026).
+      if (isTranslatorError(errorArg.message, errorArg.stack)) return;
+
+      // Vite chunk-preload failure: don't log, recovery is already handled
+      // in the `error` / `unhandledrejection` listeners above.
+      if (isChunkPreloadError(errorArg.message)) return;
 
       const translated = translateError(errorArg.message);
 

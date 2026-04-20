@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight } from "lucide-react";
+import { Camera, Upload, X, ImageIcon, Info, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { optimizeImage, OPTIMIZATION_PRESETS } from "@/lib/imageOptimization";
+import { logger } from "@/lib/logger";
 
 const MAX_PHOTOS = 30;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -13,6 +15,17 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 // but the buyer-facing listing can't render them without conversion. We reject
 // them here with a clear message so the user knows they need to export as JPG.
 const REJECTED_EXTENSIONS = [".heic", ".heif"];
+
+// Photos > 1.5 MB werden vor dem Upload auf Browser-Seite re-encoded
+// (Canvas API, max 2400×1600 JPEG q82). Photos darunter sind bereits
+// klein genug — wir sparen die ~1-2 s Compress-Zeit pro Bild.
+//
+// Hintergrund: Vor diesem Fix landeten 14 MB iPhone-Originale ungefiltert
+// auf Storage, die `process-photo` Edge Function (jsquash WASM mit 256 MB
+// Memory-Limit) crashte beim Decode mit HTTP 546. Mit Browser-Compress
+// hier kommt nichts > 2 MB jemals in den Server. Siehe SKIP-LOGIK in
+// `supabase/functions/process-photo/index.ts`.
+const COMPRESS_THRESHOLD_BYTES = 1.5 * 1024 * 1024;
 
 
 interface PhotosStepProps {
@@ -23,6 +36,10 @@ interface PhotosStepProps {
 
 export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosStepProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  // Während Browser-Compression läuft (Canvas decode + resize + encode pro
+  // grossem Foto ~500-1500 ms). Verhindert Doppelklicks und kommuniziert
+  // dem User dass etwas passiert.
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Per-File object-URL cache. Previously the memo regenerated ALL urls on
   // every photos-array change, which caused every <img> to reload and
@@ -61,7 +78,7 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
   }, []);
 
   const addValidFiles = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (files.length === 0) return;
 
       const rejected: { name: string; reason: string }[] = [];
@@ -100,12 +117,49 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
 
       if (validFiles.length === 0) return;
 
-      const combined = [...formData.photos, ...validFiles];
+      // ── Browser-side Compression für grosse Originale ──────────────────
+      // iPhone/Android-Kameras liefern oft 5-14 MB JPEGs. Ohne diesen
+      // Schritt landet das ungeshrinkt auf Storage und sprengt später die
+      // process-photo Edge Function (jsquash WASM, 256 MB Memory). Wir
+      // shrinken pro Foto via Canvas API auf max 2400×1600 JPEG q82 —
+      // Wall-Clock ~500-1500 ms pro Bild auf typischer Hardware.
+      setIsProcessing(true);
+      const processed: File[] = [];
+      let totalSavedKb = 0;
+      try {
+        for (const file of validFiles) {
+          if (file.size <= COMPRESS_THRESHOLD_BYTES) {
+            processed.push(file);
+            continue;
+          }
+          try {
+            const result = await optimizeImage(file, OPTIMIZATION_PRESETS.WIZARD_UPLOAD);
+            processed.push(result.file);
+            totalSavedKb += Math.max(0, Math.round((result.originalSize - result.compressedSize) / 1024));
+          } catch (err) {
+            // Compression failed (z.B. exotic EXIF, defekte Datei). Wir
+            // nehmen das Original — die Server-Side hat noch eine 8 MB
+            // Hard-Limit-Reject-Schranke (siehe upload-wizard-photos).
+            logger.warn(`PhotosStep: compression failed for ${file.name}, using original`, err);
+            processed.push(file);
+          }
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+
+      const combined = [...formData.photos, ...processed];
       const truncated = combined.slice(0, MAX_PHOTOS);
       if (combined.length > MAX_PHOTOS) {
         toast.info(`Maximal ${MAX_PHOTOS} Fotos – zusätzliche Dateien wurden nicht übernommen.`);
+      } else if (totalSavedKb > 100) {
+        // Nur bei spürbarer Ersparnis (>100 KB total) anzeigen, sonst
+        // verwirrt es User mit kleinen Bildern unnötig.
+        toast.success(
+          `${processed.length} Foto${processed.length !== 1 ? "s" : ""} hinzugefügt – ${(totalSavedKb / 1024).toFixed(1)} MB Upload gespart`,
+        );
       } else {
-        toast.success(`${validFiles.length} Foto${validFiles.length !== 1 ? "s" : ""} hinzugefügt`);
+        toast.success(`${processed.length} Foto${processed.length !== 1 ? "s" : ""} hinzugefügt`);
       }
       updateFormData({ photos: truncated });
     },
@@ -114,7 +168,10 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      addValidFiles(Array.from(e.target.files || []));
+      // Fire-and-forget: addValidFiles ist seit Browser-Compress async.
+      // Wir resetten input.value sofort damit dieselbe Datei sich neu
+      // auswählen lässt; etwaige Toasts/Errors zeigt addValidFiles selbst.
+      void addValidFiles(Array.from(e.target.files || []));
       e.target.value = "";
     },
     [addValidFiles]
@@ -136,7 +193,7 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    addValidFiles(Array.from(e.dataTransfer.files));
+    void addValidFiles(Array.from(e.dataTransfer.files));
   }, [addValidFiles]);
 
   const removePhoto = useCallback(
@@ -190,9 +247,11 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
       <Card
         className={cn(
           "border-2 border-dashed transition-colors",
-          isDragging
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-primary/50"
+          isProcessing
+            ? "border-primary/60 bg-primary/5"
+            : isDragging
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/25 hover:border-primary/50"
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -200,14 +259,27 @@ export const PhotosStep = ({ formData, updateFormData, onSkipPhotos }: PhotosSte
       >
         <label
           htmlFor="photo-upload"
-          className="flex flex-col items-center justify-center py-4 sm:py-5 md:py-8 px-4 cursor-pointer"
+          className={cn(
+            "flex flex-col items-center justify-center py-4 sm:py-5 md:py-8 px-4",
+            isProcessing ? "cursor-wait" : "cursor-pointer"
+          )}
         >
-          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+          {isProcessing ? (
+            <Loader2 className="w-8 h-8 text-primary mb-2 animate-spin" />
+          ) : (
+            <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+          )}
           <span className="text-base font-medium text-foreground mb-1">
-            {hasPhotos ? "Weitere Fotos hinzufügen" : "Fotos aus Galerie wählen"}
+            {isProcessing
+              ? "Fotos werden vorbereitet..."
+              : hasPhotos
+                ? "Weitere Fotos hinzufügen"
+                : "Fotos aus Galerie wählen"}
           </span>
           <span className="text-xs text-muted-foreground text-center">
-            Klicken oder Dateien hierher ziehen
+            {isProcessing
+              ? "Grosse Bilder werden für schnellen Upload verkleinert"
+              : "Klicken oder Dateien hierher ziehen"}
           </span>
           <input
             id="photo-upload"

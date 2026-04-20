@@ -30,6 +30,30 @@ import { detectImageFormat, HEIC_FAMILY } from "../_shared/image-detect.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/**
+ * Fire-and-forget Trigger: ruft die `process-photo` Edge Function auf,
+ * damit für eine frisch eingefügte motorhome_photos-Row sofort die
+ * card/medium Variants generiert werden. Wir await den Promise NICHT —
+ * die Wizard-Caller-UX ist so unabhängig von der Verarbeitungszeit.
+ *
+ * Failures werden NUR geloggt: der `resize-photo-variants-backlog` Cron
+ * holt sich solche Photos später garantiert nach (FIFO-Mode).
+ */
+function triggerProcessPhoto(photoId: string): void {
+  fetch(PROCESS_PHOTO_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+    body: JSON.stringify({ photoId }),
+  })
+    .then((res) => {
+      if (!res.ok) console.warn(`process-photo trigger ${photoId}: HTTP ${res.status}`);
+    })
+    .catch((err) => console.warn(`process-photo trigger ${photoId} failed:`, err));
+}
+
 // Browser-renderable formats only. HEIC/HEIF removed because no major
 // desktop browser can decode them in <img> tags — they were the root cause
 // of the "13 invisible photos" Hobby Optima incident (2026-04-18).
@@ -40,8 +64,20 @@ const ALLOWED_MIME_TYPES = [
   "image/avif",
   "image/gif",
 ];
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB (same as wizard frontend limit)
+// Hard-Reject ab 8 MB. Defense-in-Depth: Browser-Compress in PhotosStep.tsx
+// targetiert max 2 MB (WIZARD_UPLOAD preset, 2400×1600 q82). 8 MB lässt
+// Spielraum für (a) ungewöhnliche Bilder, die schlecht komprimieren, und
+// (b) Direct-API-Aufrufe, die den Frontend-Pfad umgehen — würde aber
+// trotzdem die jsquash Edge Function killen, also lehnen wir ab.
+// Vor diesem Limit waren 14 MB iPhone-Originale die Regel und sprengten
+// alles Nachgelagerte: process-photo (HTTP 546), Storage-Egress, Bandbreite.
+const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const MAX_PHOTOS = 30;
+// Async fire-and-forget: nach dem Speichern eines neuen Photos pingen wir
+// die `process-photo` Edge Function, damit `card_url` + `medium_url` ohne
+// Cron-Wartezeit gebaut werden. Failures sind unkritisch, der Cron-Backlog
+// holt die Photos später nach.
+const PROCESS_PHOTO_URL = `${SUPABASE_URL}/functions/v1/process-photo`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -183,7 +219,10 @@ Deno.serve(async (req: Request) => {
 
       if (file.size > MAX_FILE_SIZE) {
         console.warn(`Skipping file ${file.name}: too large (${file.size} bytes)`);
-        rejectedFiles.push({ name: file.name, reason: `too large (${Math.round(file.size / 1024 / 1024)} MB)` });
+        rejectedFiles.push({
+          name: file.name,
+          reason: `Datei zu gross (${Math.round(file.size / 1024 / 1024)} MB) — bitte vor Upload auf max. ${Math.round(MAX_FILE_SIZE / 1024 / 1024)} MB komprimieren oder kleinere Aufnahme wählen`,
+        });
         continue;
       }
 
@@ -288,14 +327,23 @@ Deno.serve(async (req: Request) => {
               display_order: startOrder + index,
             }));
 
-            const { error: photosInsertError } = await adminClient
+            const { data: insertedPhotos, error: photosInsertError } = await adminClient
               .from("motorhome_photos")
-              .insert(photoRecords);
+              .insert(photoRecords)
+              .select("id");
 
             if (photosInsertError) {
               console.error("Failed to insert motorhome photos:", photosInsertError.message);
             } else {
               console.log(`Successfully assigned ${photoRecords.length} photos to motorhome ${motorhomeId}`);
+              // Fire-and-forget: process-photo Edge Function pro Photo
+              // pingen → card_url + medium_url werden sofort gebaut statt
+              // erst beim nächsten Cron. Wir warten NICHT auf die Antwort
+              // (Function läuft bis zu 30 s pro Photo) — für den Wizard-
+              // Caller ist der Response sofort fertig.
+              for (const p of (insertedPhotos as Array<{ id: string }> | null) ?? []) {
+                triggerProcessPhoto(p.id);
+              }
             }
 
             // Move photos from wizard_temp/{sessionId}/ to {sellerId}/

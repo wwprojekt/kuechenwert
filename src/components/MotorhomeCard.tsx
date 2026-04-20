@@ -31,7 +31,13 @@ interface MotorhomeCardProps {
   model: string;
   year: number;
   mileage: number;
+  // image = bevorzugt card_url (480px WebP, ~10-25 KB), Fallback url (Original)
   image: string;
+  // imageMedium = optional medium_url (1024px WebP, ~50-100 KB) für 2x-DPR
+  // Geräte (Retina/4K). Wenn gesetzt, rendert die Karte ein srcset mit beiden
+  // Auflösungen, damit Mobile-Devices mit DPR 1 die kleine und Retina-Geräte
+  // die mittlere Variante laden. Falls nicht gesetzt, bleibt es bei `image`.
+  imageMedium?: string | null;
   listingNumber?: string | null;
   
   // Optional details
@@ -64,6 +70,12 @@ interface MotorhomeCardProps {
   
   // Link
   linkTo: string;
+
+  // LCP-Optimierung: Wenn true wird das Bild eager geladen (kein lazy) und
+  // mit fetchpriority="high" markiert. Sollte bei den ersten 2-4 sichtbaren
+  // Cards einer Liste gesetzt werden, damit der Browser das LCP-Element
+  // sofort priorisiert (Lighthouse-Vorgabe). Default false = lazy wie bisher.
+  priority?: boolean;
 }
 
 // Urgency levels for color-coded countdown
@@ -151,6 +163,7 @@ const MotorhomeCard = ({
   year,
   mileage,
   image,
+  imageMedium,
   listingNumber,
   beds,
   passengers,
@@ -171,7 +184,8 @@ const MotorhomeCard = ({
   lastPriceReductionAt,
   marketingPhaseStartedAt,
   auctionCreatedAt,
-  linkTo
+  linkTo,
+  priority = false,
 }: MotorhomeCardProps) => {
   const { isDealer, isAdmin } = useUserRole();
   const canSeePrices = isDealer || isAdmin;
@@ -317,11 +331,29 @@ const MotorhomeCard = ({
             {image ? (
               <img
                 src={image}
+                // srcset mit zwei Auflösungen, damit der Browser das richtige
+                // Bild für die Pixel-Density wählt:
+                //  - 480w  → DPR 1 auf Karten ~280-360px breit
+                //  - 1024w → DPR 2/3 (Retina/Mobile-HiDPI)
+                // Wenn keine medium_url vorhanden ist, fallen wir auf
+                // `image` als 480w + nochmal als 1024w zurück (kein Bruch,
+                // Browser nimmt schlicht die einzig vorhandene Auflösung).
+                srcSet={
+                  imageMedium && imageMedium !== image
+                    ? `${image} 480w, ${imageMedium} 1024w`
+                    : undefined
+                }
+                sizes="(min-width: 1280px) 360px, (min-width: 1024px) 320px, (min-width: 640px) 50vw, 100vw"
                 alt={`${manufacturer} ${model}`}
                 width={640}
                 height={480}
-                loading="lazy"
-                decoding="async"
+                loading={priority ? "eager" : "lazy"}
+                decoding={priority ? "sync" : "async"}
+                // fetchpriority is a real HTML attribute (W3C Resource Hints).
+                // React types still call it `fetchPriority` but the rendered
+                // attribute name is `fetchpriority` (lower case) — both forms
+                // are accepted by all modern browsers.
+                fetchPriority={priority ? "high" : "auto"}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
             ) : (

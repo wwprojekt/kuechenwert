@@ -476,4 +476,18 @@ export const OPTIMIZATION_PRESETS = {
     quality: 80,
     format: 'webp' as const,
   },
+
+  // Wizard upload: höhere Auflösung als STANDARD (Verkäufer wollen Detail-
+  // schärfe für Käufer in Lightbox), aber garantiert < 2 MB damit die
+  // serverseitige `process-photo` Edge Function (jsquash WASM, 256 MB
+  // Function-Memory) das Original sicher dekodieren kann.
+  // 2400×1600 q82 JPEG produziert empirisch ~600-1500 KB für typische
+  // Wohnmobil-Innenraum-Aufnahmen. Wer high-res-Originale braucht, lädt
+  // sie nachträglich über AdminPhotoManager hoch (kein 2-MB-Limit).
+  WIZARD_UPLOAD: {
+    maxWidth: 2400,
+    maxHeight: 1600,
+    quality: 0.82,
+    format: 'jpeg' as const,
+  },
 } as const;

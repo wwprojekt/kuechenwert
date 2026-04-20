@@ -45,22 +45,37 @@ const Listings = () => {
         .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
         .filter((id): id is string => Boolean(id));
 
-      // Cover-Foto + pre-resized card-Variante (480px, ~30 KB). card_url wird
-      // asynchron von resize-photo-variants gefüllt; bis dahin Fallback auf
-      // die Original-URL, damit Cards auch für unverarbeitete Photos laden.
-      let coverByMotorhomeId = new Map<string, string>();
+      // Cover-Foto + pre-resized Varianten:
+      //  - card_url   480px WebP (~10-25 KB) — Standard-Render
+      //  - medium_url 1024px WebP (~50-100 KB) — Retina via srcset
+      // Async befüllt von der process-photo Edge Function (post-upload).
+      // Fallback: card_url || medium_url || url, damit unprozessierte Photos
+      // weiterhin gerendert werden.
+      type Cover = { small: string; medium: string | null };
+      let coverByMotorhomeId = new Map<string, Cover>();
       if (motorhomeIds.length > 0) {
         const { data: photoRows } = await supabase
           .from('motorhome_photos')
-          .select('url, card_url, motorhome_id')
+          .select('url, card_url, medium_url, motorhome_id')
           .in('motorhome_id', motorhomeIds)
           .eq('display_order', 0);
 
         if (photoRows) {
           coverByMotorhomeId = new Map(
-            (photoRows as Array<{ url: string; card_url: string | null; motorhome_id: string }>)
-              .filter((p) => (p.card_url || p.url) && p.motorhome_id)
-              .map((p) => [p.motorhome_id, p.card_url || p.url])
+            (photoRows as Array<{
+              url: string;
+              card_url: string | null;
+              medium_url: string | null;
+              motorhome_id: string;
+            }>)
+              .filter((p) => (p.card_url || p.medium_url || p.url) && p.motorhome_id)
+              .map((p) => [
+                p.motorhome_id,
+                {
+                  small: p.card_url || p.medium_url || p.url,
+                  medium: p.medium_url,
+                },
+              ])
           );
         }
       }
@@ -78,7 +93,9 @@ const Listings = () => {
           motorhome: typed.motorhome
             ? {
                 ...typed.motorhome,
-                photos: cover ? [{ url: cover, display_order: 0 }] : [],
+                photos: cover
+                  ? [{ url: cover.small, medium_url: cover.medium, display_order: 0 }]
+                  : [],
               }
             : null,
         };
@@ -107,17 +124,25 @@ const Listings = () => {
               </div>
             ))
           ) : auctions && auctions.length > 0 ? (
-            auctions.map((auction) => {
+            auctions.map((auction, idx) => {
               const motorhome = auction.motorhome;
               if (!motorhome) return null;
 
               // Server liefert pro Listing nur die erste Foto-Zeile (geordnet
               // nach display_order). Kein clientseitiges Sortieren mehr nötig.
               const primaryPhoto = motorhome.photos?.[0]?.url || '';
-              
+              const primaryPhotoMedium = (motorhome.photos?.[0] as
+                | { medium_url?: string | null }
+                | undefined)?.medium_url;
+
+              // Erste 4 Cards (xl:grid-cols-4) sind LCP-Kandidaten auf der
+              // Homepage. eager + fetchpriority spart laut Lighthouse ~10 s.
+              const isAboveFold = idx < 4;
+
               return (
                 <MotorhomeCard
                   key={auction.id}
+                  priority={isAboveFold}
                   id={motorhome.id}
                   title={motorhome.description || `${motorhome.manufacturer} ${motorhome.model}`}
                   manufacturer={motorhome.manufacturer}
@@ -125,6 +150,7 @@ const Listings = () => {
                   year={motorhome.year}
                   mileage={motorhome.mileage}
                   image={primaryPhoto}
+                  imageMedium={primaryPhotoMedium ?? null}
                   beds={motorhome.sleeping_places}
                   passengers={motorhome.seats}
                   bodyType={motorhome.body_type}

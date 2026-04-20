@@ -179,11 +179,16 @@ const Kaufen = () => {
         // Function gefüllt. Fallback auf Original-URL (url), damit die Seite
         // auch für noch unverarbeitete Bilder funktioniert. Der Payload
         // sinkt so von ~150-300 KB pro Card auf ~30 KB, ohne Breaking Change.
-        let firstPhotoByMotorhomeId = new Map<string, string>();
+        // Wir holen card_url (480px) und medium_url (1024px). Der Card
+        // verwendet card_url als src und beide via srcset für Retina-Geräte.
+        // Fallback: card_url || medium_url || url, damit auch Photos ohne
+        // Variants (alte oder noch nicht prozessierte) funktionieren.
+        type CoverEntry = { small: string; medium: string | null };
+        let firstPhotoByMotorhomeId = new Map<string, CoverEntry>();
         if (motorhomeIds.length > 0) {
           const { data: photoRows, error: photoErr } = await supabase
             .from("motorhome_photos")
-            .select("url, card_url, motorhome_id")
+            .select("url, card_url, medium_url, motorhome_id")
             .in("motorhome_id", motorhomeIds)
             .eq("display_order", 0);
 
@@ -191,9 +196,20 @@ const Kaufen = () => {
             logger.warn("Kaufen: cover-photo query failed (non-blocking)", photoErr);
           } else if (photoRows) {
             firstPhotoByMotorhomeId = new Map(
-              (photoRows as Array<{ url: string; card_url: string | null; motorhome_id: string }>)
-                .filter((p) => (p.card_url || p.url) && p.motorhome_id)
-                .map((p) => [p.motorhome_id, p.card_url || p.url])
+              (photoRows as Array<{
+                url: string;
+                card_url: string | null;
+                medium_url: string | null;
+                motorhome_id: string;
+              }>)
+                .filter((p) => (p.card_url || p.medium_url || p.url) && p.motorhome_id)
+                .map((p) => [
+                  p.motorhome_id,
+                  {
+                    small: p.card_url || p.medium_url || p.url,
+                    medium: p.medium_url,
+                  },
+                ])
             );
           }
         }
@@ -214,7 +230,11 @@ const Kaufen = () => {
             motorhome: typed.motorhome
               ? {
                   ...typed.motorhome,
-                  photos: cover ? [{ url: cover, display_order: 0 }] : [],
+                  // Wir hängen sowohl url (= small/card) als auch
+                  // medium_url an, damit MotorhomeCard srcset bauen kann.
+                  photos: cover
+                    ? [{ url: cover.small, medium_url: cover.medium, display_order: 0 }]
+                    : [],
                 }
               : null,
           };
@@ -797,15 +817,24 @@ const Kaufen = () => {
               ) : paginatedAuctions.length > 0 ? (
                 <>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {paginatedAuctions.map((auction) => {
+                    {paginatedAuctions.map((auction, idx) => {
                       // Server liefert pro Listing nur die erste Foto-Zeile
                       // (geordnet nach display_order). Kein Client-Side Sort
                       // mehr nötig.
                       const firstPhoto = auction.motorhome?.photos?.[0]?.url;
+                      const firstPhotoMedium = (auction.motorhome?.photos?.[0] as
+                        | { medium_url?: string | null }
+                        | undefined)?.medium_url;
+                      // Erste 3 Cards (Above-the-fold auf Desktop xl:grid-cols-3)
+                      // bekommen eager loading + fetchpriority=high. Lighthouse
+                      // markiert das LCP-Bild aktuell als lazy-loaded → 14 s
+                      // LCP. Mit priority sinkt das auf <2 s.
+                      const isAboveFold = idx < 3;
 
                       return (
                         <MotorhomeCard
                           key={auction.id}
+                          priority={isAboveFold}
                           id={auction.motorhome?.id || auction.motorhome_id}
                           title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
                           manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
@@ -813,6 +842,7 @@ const Kaufen = () => {
                           year={auction.motorhome?.year || 0}
                           mileage={auction.motorhome?.mileage || 0}
                           image={firstPhoto || ''}
+                          imageMedium={firstPhotoMedium ?? null}
                           listingNumber={auction.motorhome?.listing_number}
                           bodyType={auction.motorhome?.body_type}
                           country={auction.motorhome?.country}

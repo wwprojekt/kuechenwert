@@ -1112,9 +1112,16 @@ const AuctionDetail = () => {
                   <div className="relative h-[300px] sm:h-[400px] lg:h-[500px] bg-muted overflow-hidden">
                     {photos.length > 0 ? (
                       <>
+                        {/* Hauptbild: medium_url (1024px WebP, ~50-100 KB)
+                            statt Original (~150-300 KB JPEG). Fallback auf
+                            url, falls Variant noch nicht generiert.
+                            Eager + fetchpriority=high weil das LCP-Element. */}
                         <img
-                          src={photos[currentPhotoIndex]?.url}
+                          src={photos[currentPhotoIndex]?.medium_url || photos[currentPhotoIndex]?.url}
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="sync"
                           className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
                         />
                         
@@ -1150,9 +1157,13 @@ const AuctionDetail = () => {
                           </DialogTrigger>
                           <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95">
                             <div className="relative w-full h-full flex items-center justify-center">
+                              {/* Lightbox: Original-URL (volle Auflösung)
+                                  damit Käufer in Detail zoomen können. */}
                               <img
                                 src={photos[currentPhotoIndex]?.url}
                                 alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                                loading="eager"
+                                decoding="async"
                                 className="max-w-full max-h-full object-contain"
                               />
                               <button
@@ -1205,9 +1216,15 @@ const AuctionDetail = () => {
                                 : "border-border hover:border-primary/50"
                             }`}
                           >
+                            {/* Thumbnail: card_url (480px WebP, ~10-20 KB)
+                                statt Original. Fallback auf url. */}
                             <img
-                              src={photo.url}
+                              src={photo.card_url || photo.url}
                               alt={`Thumbnail ${index + 1}`}
+                              width={80}
+                              height={80}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           </button>

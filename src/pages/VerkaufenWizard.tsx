@@ -736,43 +736,47 @@ const VerkaufenWizard = () => {
         </div>
       </div>
 
-      {/* Mobile sticky bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-lg p-3 safe-bottom sm:hidden">
-        <div className="flex gap-2">
-          {currentStep > 1 && (
-            <Button
-              variant="outline"
-              size="lg"
+      {/* Mobile sticky bottom navigation.
+          Layout-Pattern (Typeform/Stripe-Checkout): primary CTA full-width,
+          back action as a small text-link above. Avoids the unbalanced
+          tiny-arrow + huge-button look and prevents collision with the
+          floating WhatsApp bubble (which is also hidden on this route). */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-lg px-3 pt-2 pb-3 safe-bottom sm:hidden">
+        {currentStep > 1 && (
+          <div className="flex justify-center mb-1.5">
+            <button
+              type="button"
               onClick={handlePrevious}
-              className="min-h-[48px] px-3"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-          )}
-          {isLastStep ? (
-            <>
-              <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-              <Button
-                size="lg"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="gradient-hero hover:gradient-hero-hover flex-1 min-h-[48px] text-base"
-              >
-                {isSubmitting ? "Wird gesendet..." : "Angebot anfordern"}
-                <Check className="w-4 h-4 ml-2" />
-              </Button>
-            </>
-          ) : (
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Zurück
+            </button>
+          </div>
+        )}
+        {isLastStep ? (
+          <>
+            <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
             <Button
               size="lg"
-              onClick={handleNext}
-              className="gradient-hero hover:gradient-hero-hover flex-1 min-h-[48px] text-base"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="gradient-hero hover:gradient-hero-hover w-full min-h-[48px] text-base"
             >
-              {getNextButtonLabel()}
-              <ChevronRight className="w-4 h-4 ml-2" />
+              {isSubmitting ? "Wird gesendet..." : "Angebot anfordern"}
+              <Check className="w-4 h-4 ml-2" />
             </Button>
-          )}
-        </div>
+          </>
+        ) : (
+          <Button
+            size="lg"
+            onClick={handleNext}
+            className="gradient-hero hover:gradient-hero-hover w-full min-h-[48px] text-base"
+          >
+            {getNextButtonLabel()}
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </Button>
+        )}
       </div>
     </PageLayout>
   );

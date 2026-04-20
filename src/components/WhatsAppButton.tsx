@@ -17,8 +17,11 @@ export const WhatsAppButton = () => {
   const { settings } = useSettings();
   const location = useLocation();
 
-  // Hide on admin and dashboard routes
-  const hiddenRoutes = ['/admin', '/dashboard'];
+  // Hide on admin, dashboard and the sales wizard. The wizard already shows a
+  // "Kontaktieren Sie uns" link directly above its sticky bottom nav, and the
+  // floating bubble would visually collide with the back/next buttons on
+  // mobile (both fixed, both z-50, both in the lower-left corner).
+  const hiddenRoutes = ['/admin', '/dashboard', '/verkaufen/wizard'];
   const shouldHide = hiddenRoutes.some(route => location.pathname.startsWith(route));
 
   if (shouldHide) {

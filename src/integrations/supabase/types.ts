@@ -2734,6 +2734,96 @@ export type Database = {
           },
         ]
       }
+      price_change_requests: {
+        Row: {
+          admin_note: string | null
+          auction_id: string | null
+          created_at: string
+          current_instant: number | null
+          current_reserve: number | null
+          id: string
+          motorhome_id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string
+          requested_instant: number | null
+          requested_reserve: number | null
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          auction_id?: string | null
+          created_at?: string
+          current_instant?: number | null
+          current_reserve?: number | null
+          id?: string
+          motorhome_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason: string
+          requested_instant?: number | null
+          requested_reserve?: number | null
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          auction_id?: string | null
+          created_at?: string
+          current_instant?: number | null
+          current_reserve?: number | null
+          id?: string
+          motorhome_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string
+          requested_instant?: number | null
+          requested_reserve?: number | null
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_change_requests_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_change_requests_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_change_requests_motorhome_id_fkey"
+            columns: ["motorhome_id"]
+            isOneToOne: false
+            referencedRelation: "motorhomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_change_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_change_requests_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_restricted: boolean | null
@@ -4760,6 +4850,14 @@ export type Database = {
       update_dealer_rating_summary: {
         Args: { dealer_id_param: string }
         Returns: undefined
+      }
+      update_listing_prices_in_draft: {
+        Args: {
+          p_motorhome_id: string
+          p_new_instant: number
+          p_new_reserve: number
+        }
+        Returns: Json
       }
       update_motorhome_damage_status: {
         Args: { motorhome_id_param: string }

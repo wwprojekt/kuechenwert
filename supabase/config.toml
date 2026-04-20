@@ -163,6 +163,9 @@ verify_jwt = false
 [functions.send-purchase-inquiry-notification]
 verify_jwt = false
 
+[functions.request-price-change]
+verify_jwt = true
+
 # --- Conversion Tracking ---
 [functions.track-conversion]
 verify_jwt = false

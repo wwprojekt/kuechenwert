@@ -12,10 +12,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Lock, FileText } from "lucide-react";
+import { ArrowLeft, Save, Lock, FileText, Mail, Clock } from "lucide-react";
 import { withSessionRetry } from "@/lib/sessionGuard";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SellerPhotoManager } from "@/components/dashboard/SellerPhotoManager";
+import { PriceChangeRequestDialog } from "@/components/dashboard/PriceChangeRequestDialog";
 import { useState, useEffect } from "react";
 
 const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment", "photos", "additional"];
@@ -70,12 +71,37 @@ export default function ListingEdit() {
   });
 
   const isAuctionLive = auctionData?.status === 'active' || auctionData?.status === 'kaufchance';
-  // Mindestpreis darf NUR vom Admin geändert werden - sobald eine Auktion existiert (egal welcher Status)
   const hasAuction = !!auctionData;
-  // Auktions-Inserate ohne Sofortkauf brauchen einen Mindestpreis (AGB §6.4 c)
-  // Reduktionsboden -6 %). Solange noch keine Auktion erstellt wurde, kann der
-  // Verkäufer die Felder bearbeiten – ab dann ist alles disabled (s. unten).
+  // Im 'draft'-Status (vor Admin-Approval) darf der Verkäufer Preise selbst
+  // ändern. Die RPC update_listing_prices_in_draft synchronisiert atomar
+  // motorhomes + auctions (siehe Migration 20260420600000). Sobald die Auktion
+  // einen anderen Status hat (active/kaufchance/ended/sold/cancelled), ist
+  // Self-Service-Editing gesperrt; Verkäufer nutzt dann den
+  // PriceChangeRequestDialog (Option C).
+  const isDraftAuction = auctionData?.status === 'draft';
+  const canEditPricesSelf = !hasAuction || isDraftAuction;
   const isAuctionListing = motorhome?.sale_channel === 'auction';
+
+  const { data: pendingPriceRequest } = useQuery({
+    queryKey: ['pendingPriceRequest', id],
+    queryFn: async () => {
+      if (!id || !user) return null;
+      const { data, error } = await supabase
+        .from('price_change_requests')
+        .select('id, requested_reserve, requested_instant, reason, created_at, status')
+        .eq('motorhome_id', id)
+        .eq('seller_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id && !!user,
+  });
+
+  const [priceRequestDialogOpen, setPriceRequestDialogOpen] = useState(false);
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ["motorhomePhotos", id],
@@ -245,9 +271,10 @@ export default function ListingEdit() {
       }
 
       // Mindestpreis-Pflicht für Auktions-Inserate ohne Sofortkauf.
-      // Greift nur, solange noch keine Auktion erstellt wurde (danach ist das Feld
-      // ohnehin disabled). Bei Sofortkauf wird reserve_price = instant_price gesetzt.
-      if (!hasAuction && isAuctionListing && !data.instant_price && !data.reserve_price) {
+      // Greift solange Verkäufer die Preise selbst editieren darf (kein hasAuction
+      // ODER auctionData.status === 'draft'). Bei Sofortkauf wird
+      // reserve_price = instant_price gesetzt.
+      if (canEditPricesSelf && isAuctionListing && !data.instant_price && !data.reserve_price) {
         throw new Error("Mindestpreis ist Pflicht für Auktions-Inserate (AGB §6.4 c).");
       }
 
@@ -320,15 +347,23 @@ export default function ListingEdit() {
         updateData.mwst_ausweisbar = data.mwst_ausweisbar;
       }
 
-      // Only include prices if they have values
-      // CRITICAL: Wenn eine Auktion existiert, darf der Verkäufer den Mindestpreis NICHT ändern
+      // Preis-Sync:
+      // - Ohne Auktion: direkter motorhomes-Update (nur motorhomes-Felder).
+      // - Auktion = draft: RPC update_listing_prices_in_draft, die motorhomes
+      //   UND auctions atomar synchronisiert (reserve_price,
+      //   seller_initial_reserve, seller_initial_instant_price).
+      // - Auktion live (active/kaufchance): kein Preis-Sync hier; Verkäufer
+      //   nutzt den PriceChangeRequestDialog.
+      const newInstant = data.instant_price ? Number(data.instant_price) : null;
+      const newReserveRaw = data.reserve_price ? Number(data.reserve_price) : null;
+      const effectiveReserve = newInstant ?? newReserveRaw;
+
       if (!hasAuction) {
-        if (data.instant_price) {
-          updateData.instant_price = Number(data.instant_price);
-          // Bei Sofortkauf: reserve_price automatisch auf instant_price setzen
-          updateData.reserve_price = Number(data.reserve_price) || Number(data.instant_price);
-        } else if (data.reserve_price) {
-          updateData.reserve_price = Number(data.reserve_price);
+        if (newInstant != null) {
+          updateData.instant_price = newInstant;
+          updateData.reserve_price = effectiveReserve;
+        } else if (newReserveRaw != null) {
+          updateData.reserve_price = newReserveRaw;
         }
       }
 
@@ -340,6 +375,20 @@ export default function ListingEdit() {
           .eq("seller_id", user.id);
         if (error) throw error;
       }, 'ListingEdit.update');
+
+      if (isDraftAuction) {
+        await withSessionRetry(async () => {
+          const { error: rpcErr } = await supabase.rpc(
+            'update_listing_prices_in_draft',
+            {
+              p_motorhome_id: id,
+              p_new_reserve: newReserveRaw,
+              p_new_instant: newInstant,
+            },
+          );
+          if (rpcErr) throw rpcErr;
+        }, 'ListingEdit.syncDraftPrices');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["motorhomeEdit", id] });
@@ -427,7 +476,7 @@ export default function ListingEdit() {
       {/* Auction Lock Banner */}
       {isAuctionLive && (
         <Card className="border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20">
-          <CardContent className="p-6">
+          <CardContent className="p-6 space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex-shrink-0 p-3 rounded-full bg-orange-100 dark:bg-orange-900/30">
                 <Lock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
@@ -437,19 +486,38 @@ export default function ListingEdit() {
                   Bearbeitung gesperrt
                 </h3>
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Während die Auktion aktiv ist, können Sie das Inserat nicht bearbeiten.
-                  Sie können jedoch einen öffentlichen Nachtrag hinzufügen, der mit Datum und Uhrzeit
-                  auf der Auktionsseite angezeigt wird.
+                  Während die Auktion aktiv ist, können Sie das Inserat nicht direkt bearbeiten.
+                  Stattdessen können Sie einen öffentlichen Nachtrag hinzufügen oder eine
+                  Preisanpassung beim CaravanWert-Team anfragen.
                 </p>
               </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
-                className="border-orange-500 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-shrink-0 w-full sm:w-auto"
+                className="border-orange-500 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-1 sm:flex-initial"
                 onClick={() => navigate(`/dashboard/listings/${id}`)}
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Nachtrag hinzufügen
               </Button>
+              {pendingPriceRequest ? (
+                <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 flex-1">
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>
+                    Preisanfrage in Bearbeitung (eingegangen {new Date(pendingPriceRequest.created_at).toLocaleDateString('de-DE')})
+                  </span>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="border-orange-500 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/30 flex-1 sm:flex-initial"
+                  onClick={() => setPriceRequestDialogOpen(true)}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Preisanpassung anfragen
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -503,7 +571,7 @@ export default function ListingEdit() {
                         setFormData({ ...formData, instant_price: val, ...(val ? { reserve_price: val } : {}) });
                       }}
                       placeholder="z.B. 45000"
-                      disabled={hasAuction}
+                      disabled={!canEditPricesSelf}
                     />
                     {formData.instant_price && (
                       <p className="text-xs text-muted-foreground">Der Mindestpreis wird automatisch auf den Sofortkauf-Preis gesetzt.</p>
@@ -527,13 +595,20 @@ export default function ListingEdit() {
                       value={formData.reserve_price}
                       onChange={(e) => setFormData({ ...formData, reserve_price: e.target.value.replace(/\D/g, '') })}
                       placeholder="z.B. 40000"
-                      disabled={!!formData.instant_price || hasAuction}
+                      disabled={!!formData.instant_price || !canEditPricesSelf}
                       aria-invalid={
-                        isAuctionListing && !formData.instant_price && !hasAuction && !formData.reserve_price
+                        isAuctionListing && !formData.instant_price && canEditPricesSelf && !formData.reserve_price
                       }
                     />
-                    {hasAuction && (
-                      <p className="text-xs text-amber-600 font-medium">Der Mindestpreis kann nur vom Admin geändert werden, sobald eine Auktion erstellt wurde.</p>
+                    {isDraftAuction && (
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                        Inserat ist noch im Entwurf – Preis kann selbst geändert werden. Sobald der Admin freigibt, läuft die Anpassung über das CaravanWert-Team.
+                      </p>
+                    )}
+                    {hasAuction && !isDraftAuction && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        Der Mindestpreis kann nur über das CaravanWert-Team geändert werden, sobald die Auktion läuft (siehe Lock-Banner oben).
+                      </p>
                     )}
                     {!hasAuction && isAuctionListing && !formData.instant_price && (
                       <p className="text-xs text-muted-foreground">
@@ -758,8 +833,8 @@ export default function ListingEdit() {
                       <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Fahrerhaus">Fahrerhaus</SelectItem>
-                        <SelectItem value="Wohnbereich">Wohnbereich</SelectItem>
-                        <SelectItem value="Beide">Beide</SelectItem>
+                        <SelectItem value="Wohnraum">Wohnraum</SelectItem>
+                        <SelectItem value="Beides">Beides</SelectItem>
                         <SelectItem value="Keine">Keine</SelectItem>
                       </SelectContent>
                     </Select>
@@ -892,6 +967,17 @@ export default function ListingEdit() {
           </CardContent>
         </Card>
       </form>
+
+      {motorhome && id && (
+        <PriceChangeRequestDialog
+          open={priceRequestDialogOpen}
+          onOpenChange={setPriceRequestDialogOpen}
+          motorhomeId={id}
+          saleChannel={motorhome.sale_channel}
+          currentReserve={motorhome.reserve_price ?? null}
+          currentInstant={motorhome.instant_price ?? null}
+        />
+      )}
 
       {/* Non-editable info card */}
       <Card className="bg-muted/50 border-2">

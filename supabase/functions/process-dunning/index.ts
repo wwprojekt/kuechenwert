@@ -37,12 +37,15 @@ Deno.serve(async (req) => {
       support_phone: '',
     };
 
-    // Get overdue invoices
+    // Get overdue invoices. Note: `dealer_id` stores the invoice recipient
+    // regardless of role; for seller_penalty invoices it is the private
+    // seller, not a dealer. We therefore also fetch invoice_type and
+    // address_* so the reminder body / restriction logic can adapt.
     const { data: overdueInvoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email, customer_number),
+        dealer:profiles(first_name, last_name, company_name, email, customer_number, salutation),
         reminders:payment_reminders(reminder_level, reminder_date)
       `)
       .eq('payment_status', 'pending')
@@ -212,16 +215,30 @@ Deno.serve(async (req) => {
     return subjects[level] || `Mahnung - Rechnung ${invoiceNumber}`;
   }
 
+  // Pick the proper recipient name + reference depending on invoice_type.
+  // For seller_penalty (private seller) we prefer the personal name + the
+  // word "Konto"; for commission invoices (dealer) we prefer the company
+  // name + the word "Account" (matches the existing dealer-facing wording
+  // in the rest of the platform).
+  function getRecipientContext(invoice: any) {
+    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const personalName = `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim();
+    const recipientName = isPenalty
+      ? (personalName || invoice.dealer?.company_name || 'Kunde')
+      : (invoice.dealer?.company_name || personalName || 'Kunde');
+    const accountWord = isPenalty ? 'Konto' : 'Account';
+    return { isPenalty, recipientName, accountWord };
+  }
+
   function getReminderMessage(level: number, invoice: any, fee: number): string {
-    const dealerName = invoice.dealer.company_name || 
-      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
+    const { recipientName, accountWord } = getRecipientContext(invoice);
 
     const baseInfo = `Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} \u00fcber \u20ac${invoice.gross_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Zahlungsziel war der ${new Date(invoice.due_date).toLocaleDateString('de-DE')}.`;
 
     const messages: Record<number, string> = {
-      1: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nBitte \u00fcberweisen Sie den Betrag zeitnah auf unser Konto.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
-      2: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.\n\nIhr Account wurde eingeschr\u00e4nkt, bis die Zahlung eingegangen ist.`,
-      3: `Sehr geehrte/r ${dealerName},\n\n${baseInfo}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}`,
+      1: `Sehr geehrte/r ${recipientName},\n\n${baseInfo}\n\nBitte \u00fcberweisen Sie den Betrag zeitnah auf unser Konto.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
+      2: `Sehr geehrte/r ${recipientName},\n\n${baseInfo}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.\n\nIhr ${accountWord} wurde eingeschr\u00e4nkt, bis die Zahlung eingegangen ist.`,
+      3: `Sehr geehrte/r ${recipientName},\n\n${baseInfo}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}`,
     };
 
     return messages[level] || messages[1];
@@ -233,8 +250,7 @@ Deno.serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured');
     }
 
-    const dealerName = invoice.dealer.company_name || 
-      `${invoice.dealer.first_name} ${invoice.dealer.last_name}`;
+    const { isPenalty, recipientName, accountWord } = getRecipientContext(invoice);
 
     const levelTitles: Record<number, string> = {
       1: 'Zahlungserinnerung',
@@ -246,9 +262,9 @@ Deno.serve(async (req) => {
 
     // Build email content with email-builder
     const content = `
-      ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${paragraph(`Sehr geehrte/r ${recipientName},`)}
       ${customerBadge(invoice.dealer?.customer_number)}
-      ${paragraph(`unsere Rechnung <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist noch nicht beglichen.`)}
+      ${paragraph(`unsere ${isPenalty ? 'Vertragsstrafen-Rechnung' : 'Rechnung'} <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist noch nicht beglichen.`)}
 
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}
@@ -260,7 +276,7 @@ Deno.serve(async (req) => {
 
       ${amountDisplay('Zu zahlender Gesamtbetrag', `&euro;${reminder.total_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
 
-      ${level >= 2 ? warningBox('Ihr Account wurde eingeschr&auml;nkt, bis die Zahlung eingegangen ist.') : ''}
+      ${level >= 2 ? warningBox(`Ihr ${accountWord} wurde eingeschr&auml;nkt, bis die Zahlung eingegangen ist.`) : ''}
       ${level >= 3 ? warningBox('Dies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.') : ''}
 
       ${infoBox('Bankverbindung', `
@@ -303,7 +319,7 @@ Deno.serve(async (req) => {
         sender_email: 'info@caravanwert.de',
         sender_name: settingsData.site_name,
         recipient_email: invoice.dealer.email,
-        recipient_name: dealerName || null,
+        recipient_name: recipientName || null,
         subject: reminder.subject,
         body_html: emailHtml,
         body_text: '',

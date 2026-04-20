@@ -37,14 +37,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     // FIXED: Use correct column names from invoices table
     // - gross_amount instead of amount
-    // - dealer_id instead of buyer_id
+    // - dealer_id instead of buyer_id (note: for seller_penalty invoices,
+    //   dealer_id stores the SELLER's user id — the column is named dealer
+    //   for historical reasons but holds the invoice recipient regardless of role)
     // - payment_status instead of status for payment filtering
     // - removed dunning_level (not in invoices table)
-    // - auction_id is a FK in invoices, so we can join via auctions(motorhomes(...))
+    // - auction_id is a FK in invoices, but for seller_penalty invoices it
+    //   may be NULL → we read invoice_type and only join the auction context
+    //   when it's a regular commission invoice (otherwise we'd send a
+    //   "Wohnmobil"-Fallback that confuses recipients of a Vertragsstrafe).
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
-        id, invoice_number, gross_amount, due_date, dealer_id, payment_reminder_sent,
+        id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, payment_reminder_sent,
         auctions:auction_id (
           motorhomes:motorhome_id (manufacturer, model, year)
         )
@@ -77,18 +82,35 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const invoice of invoices) {
       try {
-        // Get dealer profile (FIXED: dealer_id instead of buyer_id)
+        // Get profile of the invoice recipient. For commission invoices this is
+        // a dealer; for seller_penalty invoices it's a private seller — same
+        // column either way (dealer_id).
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, email, customer_number')
+          .select('salutation, first_name, last_name, company_name, email, customer_number')
           .eq('id', invoice.dealer_id)
           .single();
 
         if (!profile?.email) continue;
 
-        const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-        const motorhome = (invoice.auctions as any)?.motorhomes;
-        const vehicleStr = motorhome ? `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})` : 'Wohnmobil';
+        const isPenalty = invoice.invoice_type === 'seller_penalty';
+        // Greeting prefers the proper name. For penalty (private seller):
+        // "Vorname Nachname". For commission (dealer): company_name if set,
+        // otherwise the personal name. Both fall back to the other side so we
+        // never end up with an empty greeting line.
+        const personalName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+        const recipientName = isPenalty
+          ? (personalName || profile.company_name || '')
+          : (profile.company_name || personalName || '');
+
+        // Subject line and headline differ slightly: a private seller hasn't
+        // bought anything from us, so calling it a "Rechnung" with vehicle
+        // context is misleading.
+        const refLabel = isPenalty ? 'Vertragsstrafe' : 'Fahrzeug';
+        const motorhome = isPenalty ? null : (invoice.auctions as any)?.motorhomes;
+        const refValue = isPenalty
+          ? 'Vertragsstrafe gem&auml;&szlig; AGB'
+          : (motorhome ? `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})` : 'Vermittlungsprovision');
 
         const dueDate = new Date(invoice.due_date).toLocaleDateString('de-DE', {
           year: 'numeric', month: 'long', day: 'numeric',
@@ -101,12 +123,12 @@ const handler = async (req: Request): Promise<Response> => {
 
         const subject = `Freundliche Zahlungserinnerung – Rechnung ${invoice.invoice_number}`;
         const emailContent = `
-          ${greeting(name || undefined)}
+          ${greeting(recipientName || undefined)}
           ${customerBadge(profile.customer_number)}
           ${paragraph(`Wir m&ouml;chten Sie freundlich daran erinnern, dass die folgende Rechnung noch offen ist:`)}
           ${infoBox('Rechnungsdetails', `
             ${detailRow('Rechnung Nr.', invoice.invoice_number)}
-            ${detailRow('Fahrzeug', vehicleStr)}
+            ${detailRow(refLabel, refValue)}
             ${detailRow('F&auml;llig seit', dueDate)}
           `, 'info', settingsData)}
           ${amountDisplay('Offener Betrag', amount)}
@@ -145,7 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
             sender_email: 'info@caravanwert.de',
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
-            recipient_name: name || null,
+            recipient_name: recipientName || null,
             subject,
             body_html: html,
             body_text: '',

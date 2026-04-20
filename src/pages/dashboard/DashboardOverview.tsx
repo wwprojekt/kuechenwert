@@ -164,8 +164,8 @@ export default function DashboardOverview() {
           auction:auctions(
             id, status, start_time, end_time, current_bid, starting_bid,
             reserve_price, kaufchance_expires_at, kaufchance_min_price,
-            auto_relist, auction_round, dynamic_pricing,
-            marketing_phase_started_at, marketing_phase_max_until,
+            auction_round,
+            marketing_phase_started_at,
             last_price_reduction_at, soft_close_extension_minutes,
             created_at, updated_at
           ),
@@ -176,6 +176,50 @@ export default function DashboardOverview() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // P4-Hardening (Audit Round 3, Bug #14/#15): owner-only Felder
+      // (auto_relist, dynamic_pricing, marketing_phase_max_until,
+      // agb_version_at_start) sind seit column-REVOKE NICHT mehr direkt
+      // selectable für authenticated/anon. Bulk-RPC nachladen + mergen.
+      const allAuctionIdsForOwnerMeta = (motorhomes || [])
+        .map((mh) => {
+          const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+          return a?.id as string | undefined;
+        })
+        .filter((x): x is string => !!x);
+
+      if (allAuctionIdsForOwnerMeta.length > 0) {
+        const { data: metaRows } = await supabase.rpc(
+          "get_auctions_owner_meta_bulk",
+          { p_auction_ids: allAuctionIdsForOwnerMeta },
+        );
+        const metaByAuction = new Map<string, {
+          auto_relist: boolean | null;
+          dynamic_pricing: boolean | null;
+          marketing_phase_max_until: string | null;
+        }>();
+        for (const row of (metaRows || []) as Array<{
+          auction_id: string;
+          auto_relist: boolean | null;
+          dynamic_pricing: boolean | null;
+          marketing_phase_max_until: string | null;
+        }>) {
+          metaByAuction.set(row.auction_id, {
+            auto_relist: row.auto_relist,
+            dynamic_pricing: row.dynamic_pricing,
+            marketing_phase_max_until: row.marketing_phase_max_until,
+          });
+        }
+        for (const mh of motorhomes || []) {
+          const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+          if (a?.id && metaByAuction.has(a.id)) {
+            const meta = metaByAuction.get(a.id)!;
+            (a as Record<string, unknown>).auto_relist = meta.auto_relist;
+            (a as Record<string, unknown>).dynamic_pricing = meta.dynamic_pricing;
+            (a as Record<string, unknown>).marketing_phase_max_until = meta.marketing_phase_max_until;
+          }
+        }
+      }
 
       // Batch-fetch bids, addenda, and offers for all auctions (avoids N+1 queries)
       const auctionIds = (motorhomes || [])

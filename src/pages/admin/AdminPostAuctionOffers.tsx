@@ -282,13 +282,25 @@ export default function AdminPostAuctionOffers() {
         .select(`
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          auction_round, auto_relist,
+          auction_round,
           motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
         `)
         .in("id", auctionIds);
       if (error) throw error;
+      // P4-Hardening: auto_relist via bulk-RPC nachladen (column-REVOKE).
+      const { data: metaRows } = await supabase.rpc(
+        "get_auctions_owner_meta_bulk",
+        { p_auction_ids: auctionIds },
+      );
+      const autoRelistByAuction = new Map<string, boolean | null>();
+      for (const row of (metaRows || []) as Array<{ auction_id: string; auto_relist: boolean | null }>) {
+        autoRelistByAuction.set(row.auction_id, row.auto_relist);
+      }
       const map: Record<string, AuctionInfo> = {};
-      (data || []).forEach((a: any) => { map[a.id] = a; });
+      (data || []).forEach((a: any) => {
+        a.auto_relist = autoRelistByAuction.get(a.id) ?? null;
+        map[a.id] = a;
+      });
       return map;
     },
     enabled: offers.length > 0,
@@ -304,7 +316,7 @@ export default function AdminPostAuctionOffers() {
         .select(`
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
-          auction_round, auto_relist,
+          auction_round,
           motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
         `)
         .eq("status", "kaufchance")
@@ -325,7 +337,7 @@ export default function AdminPostAuctionOffers() {
           .select(`
             id, motorhome_id, status, current_bid, starting_bid, end_time,
             kaufchance_expires_at, kaufchance_min_price, reserve_price,
-            auction_round, auto_relist,
+            auction_round,
             motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
           `)
           .eq("status", "active")
@@ -339,7 +351,24 @@ export default function AdminPostAuctionOffers() {
       // Merge, deduplicate by id
       const merged = [...(kcData || []), ...fpAuctions];
       const seen = new Set<string>();
-      return merged.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; }) as AuctionInfo[];
+      const dedup = merged.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+
+      // P4-Hardening: auto_relist via bulk-RPC nachladen (column-REVOKE).
+      const ids = dedup.map(a => a.id).filter(Boolean) as string[];
+      if (ids.length > 0) {
+        const { data: metaRows } = await supabase.rpc(
+          "get_auctions_owner_meta_bulk",
+          { p_auction_ids: ids },
+        );
+        const autoRelistByAuction = new Map<string, boolean | null>();
+        for (const row of (metaRows || []) as Array<{ auction_id: string; auto_relist: boolean | null }>) {
+          autoRelistByAuction.set(row.auction_id, row.auto_relist);
+        }
+        for (const a of dedup) {
+          (a as any).auto_relist = autoRelistByAuction.get(a.id) ?? null;
+        }
+      }
+      return dedup as AuctionInfo[];
     },
     refetchInterval: 90000,
     staleTime: 45000,

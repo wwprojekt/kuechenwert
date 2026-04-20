@@ -334,12 +334,8 @@ const AuctionDetail = () => {
         kaufchance_min_price,
         soft_close_extension_minutes,
         auction_round,
-        auto_relist,
-        dynamic_pricing,
         marketing_phase_started_at,
-        marketing_phase_max_until,
         last_price_reduction_at,
-        agb_version_at_start,
         motorhome:motorhomes!left(
           *,
           photos:motorhome_photos(*)

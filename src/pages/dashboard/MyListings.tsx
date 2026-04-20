@@ -44,14 +44,45 @@ export default function MyListings() {
             current_bid,
             starting_bid,
             end_time,
-            auction_round,
-            marketing_phase_max_until
+            auction_round
           )
         `)
         .eq("seller_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // marketing_phase_max_until ist seit P4-Hardening (Audit Round 3,
+      // Bug #14/#15) NICHT mehr direkt selectable für authenticated/anon
+      // (column-REVOKE auf public.auctions). Bulk-RPC für owner-only
+      // Felder nachladen und in jede Auktion mergen.
+      const allAuctionIds = (data || [])
+        .map((mh: any) => {
+          const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+          return a?.id as string | undefined;
+        })
+        .filter((x): x is string => !!x);
+
+      const ownerMetaByAuction: Record<string, { marketing_phase_max_until: string | null }> = {};
+      if (allAuctionIds.length > 0) {
+        const { data: metaRows } = await supabase.rpc(
+          "get_auctions_owner_meta_bulk",
+          { p_auction_ids: allAuctionIds },
+        );
+        for (const row of (metaRows || []) as Array<{ auction_id: string; marketing_phase_max_until: string | null }>) {
+          ownerMetaByAuction[row.auction_id] = {
+            marketing_phase_max_until: row.marketing_phase_max_until,
+          };
+        }
+      }
+
+      // Owner-Meta in jede Auktion mergen (backward-compatible Shape).
+      for (const mh of data || []) {
+        const a = Array.isArray((mh as any).auction) ? (mh as any).auction[0] : (mh as any).auction;
+        if (a?.id && ownerMetaByAuction[a.id]) {
+          a.marketing_phase_max_until = ownerMetaByAuction[a.id].marketing_phase_max_until;
+        }
+      }
 
       // Load pending offer counts for active kaufchance or instant_price listings
       const relevantAuctionIds = (data || [])

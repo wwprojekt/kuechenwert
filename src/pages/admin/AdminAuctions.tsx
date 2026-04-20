@@ -307,6 +307,58 @@ export default function AdminAuctions() {
         const ids = new Set((bidRows || []).map((r) => r.auction_id));
         list = list.filter((a) => ids.has(a.id));
       }
+
+      // P4-Hardening (Audit Round 3, Bug #14/#15): owner-only Felder
+      // (auto_relist, dynamic_pricing, marketing_phase_max_until,
+      // agb_version_at_start) sind seit column-REVOKE NICHT mehr direkt
+      // selectable für authenticated/anon. select("*") liefert sie
+      // PostgREST-bedingt einfach nicht zurück. Admin braucht sie aber
+      // für Status-Anzeigen und Toggles → via Bulk-RPC nachladen.
+      const auctionIds = list.map((a) => a.id).filter(Boolean) as string[];
+      if (auctionIds.length > 0) {
+        const { data: metaRows } = await supabase.rpc(
+          "get_auctions_owner_meta_bulk",
+          { p_auction_ids: auctionIds },
+        );
+        const metaByAuction = new Map<string, {
+          auto_relist: boolean | null;
+          dynamic_pricing: boolean | null;
+          marketing_phase_max_until: string | null;
+          agb_version_at_start: string | null;
+          seller_initial_reserve: number | null;
+          seller_initial_instant_price: number | null;
+        }>();
+        for (const row of (metaRows || []) as Array<{
+          auction_id: string;
+          auto_relist: boolean | null;
+          dynamic_pricing: boolean | null;
+          marketing_phase_max_until: string | null;
+          agb_version_at_start: string | null;
+          seller_initial_reserve: number | null;
+          seller_initial_instant_price: number | null;
+        }>) {
+          metaByAuction.set(row.auction_id, {
+            auto_relist: row.auto_relist,
+            dynamic_pricing: row.dynamic_pricing,
+            marketing_phase_max_until: row.marketing_phase_max_until,
+            agb_version_at_start: row.agb_version_at_start,
+            seller_initial_reserve: row.seller_initial_reserve,
+            seller_initial_instant_price: row.seller_initial_instant_price,
+          });
+        }
+        for (const a of list) {
+          const meta = metaByAuction.get(a.id);
+          if (meta) {
+            (a as Record<string, unknown>).auto_relist = meta.auto_relist;
+            (a as Record<string, unknown>).dynamic_pricing = meta.dynamic_pricing;
+            (a as Record<string, unknown>).marketing_phase_max_until = meta.marketing_phase_max_until;
+            (a as Record<string, unknown>).agb_version_at_start = meta.agb_version_at_start;
+            (a as Record<string, unknown>).seller_initial_reserve = meta.seller_initial_reserve;
+            (a as Record<string, unknown>).seller_initial_instant_price = meta.seller_initial_instant_price;
+          }
+        }
+      }
+
       return list;
     },
   });

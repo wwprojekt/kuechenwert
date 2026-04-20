@@ -57,7 +57,7 @@ import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 
 export default function ListingDetail() {
@@ -103,11 +103,8 @@ export default function ListingDetail() {
             created_at,
             kaufchance_expires_at,
             kaufchance_min_price,
-            auto_relist,
             auction_round,
-            dynamic_pricing,
             marketing_phase_started_at,
-            marketing_phase_max_until,
             last_price_reduction_at,
             reserve_price
           )
@@ -137,11 +134,8 @@ export default function ListingDetail() {
             created_at,
             kaufchance_expires_at,
             kaufchance_min_price,
-            auto_relist,
             auction_round,
-            dynamic_pricing,
             marketing_phase_started_at,
-            marketing_phase_max_until,
             last_price_reduction_at,
             reserve_price
           )
@@ -159,9 +153,65 @@ export default function ListingDetail() {
   });
 
   // Helper: Array-safe auction access (Supabase returns object when FK is UNIQUE)
-  const resolvedAuction = motorhome?.auction
+  // Strategy-relevant Felder (auto_relist, dynamic_pricing,
+  // marketing_phase_max_until, agb_version_at_start, seller_initial_*) sind
+  // seit P4-Hardening NICHT mehr direkt selectable für authenticated/anon
+  // (column-REVOKE auf public.auctions). Die werden via
+  // get_auction_owner_meta-RPC (unten) nachgeladen und in resolvedAuction
+  // gemerged, damit die Render-Logik weiter `auction.auto_relist` etc.
+  // lesen kann.
+  const baseAuction = motorhome?.auction
     ? (Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction)
     : null;
+
+  // Owner-Meta (auto_relist, dynamic_pricing, marketing_phase_max_until,
+  // agb_version_at_start) via SECURITY DEFINER RPC. Diese 4 Spalten sind
+  // seit P4-Hardening (Audit Round 3, Bug #14/#15) NICHT mehr direkt für
+  // authenticated/anon selectable — sonst könnte jeder Käufer die
+  // Bid-Strategie reverse-engineeren. Nur Owner und Admin lesen sie über
+  // `get_auction_owner_meta`. Buyer-Pfad bekommt 42501 → null Fallback.
+  const auctionIdForOwnerMeta = baseAuction?.id as string | undefined;
+  const isSellerForOwnerMeta = motorhome?._isSeller === true;
+  const { data: ownerMeta } = useQuery({
+    queryKey: ["auctionOwnerMeta", auctionIdForOwnerMeta],
+    queryFn: async () => {
+      if (!auctionIdForOwnerMeta) return null;
+      const { data, error } = await supabase.rpc(
+        "get_auction_owner_meta",
+        { p_auction_id: auctionIdForOwnerMeta },
+      );
+      if (error) return null;
+      const row = Array.isArray(data) ? data[0] : null;
+      return row
+        ? {
+            autoRelist: row.auto_relist,
+            dynamicPricing: row.dynamic_pricing,
+            marketingPhaseMaxUntil: row.marketing_phase_max_until,
+            agbVersionAtStart: row.agb_version_at_start,
+          }
+        : null;
+    },
+    enabled: !!auctionIdForOwnerMeta && isSellerForOwnerMeta,
+  });
+
+  // Backward-compatible shape: baseAuction (public columns) +
+  // ownerMeta (sensitive columns) → ein einziges Objekt, das die
+  // bestehende Render-Logik unverändert konsumieren kann.
+  const resolvedAuction = useMemo(() => {
+    if (!baseAuction) return null;
+    return {
+      ...baseAuction,
+      auto_relist: ownerMeta?.autoRelist ?? undefined,
+      dynamic_pricing: ownerMeta?.dynamicPricing ?? undefined,
+      marketing_phase_max_until: ownerMeta?.marketingPhaseMaxUntil ?? null,
+      agb_version_at_start: ownerMeta?.agbVersionAtStart ?? null,
+    } as typeof baseAuction & {
+      auto_relist?: boolean | null;
+      dynamic_pricing?: boolean | null;
+      marketing_phase_max_until?: string | null;
+      agb_version_at_start?: string | null;
+    };
+  }, [baseAuction, ownerMeta]);
 
   const { data: bidStats } = useQuery({
     queryKey: ["bidStats", resolvedAuction?.id],
@@ -220,7 +270,7 @@ export default function ListingDetail() {
           }
         : null;
     },
-    enabled: !!motorhomeIdForAnchors && isSellerForAnchors && !!resolvedAuction,
+    enabled: !!motorhomeIdForAnchors && isSellerForAnchors && !!baseAuction,
   });
 
   // ── Addenda: Nachträge für diese Auktion laden ──

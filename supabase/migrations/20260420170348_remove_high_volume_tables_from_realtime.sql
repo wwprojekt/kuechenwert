@@ -1,0 +1,50 @@
+-- ─────────────────────────────────────────────────────────────────────────
+-- Performance: Remove high-volume / no-listener tables from
+-- supabase_realtime publication
+-- ─────────────────────────────────────────────────────────────────────────
+--
+-- Diagnosis (2026-04-20, via pg_stat_statements):
+--   75.3 % + 16.8 % = 92 %  of total DB-CPU time was consumed by
+--   the Realtime WAL-reading query (`SELECT wal->>... FROM ...`).
+--   With 10.4M + 1.7M call samples, the WAL-decoder is the single
+--   hottest workload on the database — far ahead of any user query
+--   (top user query was user_favorites at 0.3 %).
+--
+-- Root cause:
+--   Two tables were published for Realtime that nobody actually
+--   subscribes to in the React app, but they get hammered with writes:
+--
+--   • `admin_emails`        — 13.040 writes / 24h
+--                              (every inbound + outbound email log)
+--                              Subscribed only by /admin/email center,
+--                              which is open by ≤ 1 admin most of the day.
+--                              13k WAL events fanned out for ~0 listeners.
+--
+--   • `push_subscriptions`  — Not subscribed anywhere in src/.
+--                              Only read server-side from Edge Functions
+--                              (send-push-notification etc.).
+--
+-- Effect of this migration:
+--   • Stops both tables from emitting logical-replication events.
+--   • Frees the Realtime WAL-decoder from ~50 % of its workload.
+--   • No user-visible behaviour change — the AdminEmailCenter
+--     subscription is replaced with React-Query polling (30s
+--     refetchInterval) in the accompanying frontend commit.
+--
+-- Rollback (only if a future feature needs Realtime on these tables):
+--   ALTER PUBLICATION supabase_realtime ADD TABLE public.admin_emails;
+--   ALTER PUBLICATION supabase_realtime ADD TABLE public.push_subscriptions;
+-- ─────────────────────────────────────────────────────────────────────────
+
+ALTER PUBLICATION supabase_realtime DROP TABLE public.admin_emails;
+ALTER PUBLICATION supabase_realtime DROP TABLE public.push_subscriptions;
+
+-- Verify (manual check after deploy):
+--   SELECT schemaname, tablename
+--     FROM pg_publication_tables
+--    WHERE pubname = 'supabase_realtime'
+--    ORDER BY tablename;
+--
+-- Expected result: 5 tables remain
+--   auctions, bids, dealer_notifications,
+--   kaufchance_invitations, post_auction_offers

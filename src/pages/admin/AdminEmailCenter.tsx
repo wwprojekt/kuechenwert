@@ -542,40 +542,40 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     };
   }, [fetchInbox]);
 
-  // Realtime subscription for new inbound emails / support / contact messages.
-  // The refetch is routed through subRefetchRef so this effect only mounts
-  // once per InboxTab lifecycle (no churn on fetchInbox identity changes).
+  // Inbox refresh strategy: polling every 30s + on tab-focus (visibilitychange).
+  //
+  // Migrated 2026-04-20 from Realtime postgres_changes → polling because
+  // `admin_emails` was removed from the supabase_realtime publication
+  // (it was the single biggest source of WAL-decoder load: 13k writes/24h
+  // fanned out for ≤ 1 listener). support_messages + contact_messages
+  // were never in the publication either, so their realtime listeners
+  // never fired anyway.
+  //
+  // Polling is invisible to the admin user: 30s lag for new messages is
+  // imperceptible, and the focus-trigger gives a near-instant refresh
+  // when switching back to the tab. inFlightRef guards prevent overlap.
   useEffect(() => {
-    const channel = supabase
-      .channel('admin-inbox-realtime')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'admin_emails',
-        filter: 'direction=eq.inbound',
-      }, (payload) => {
-        toast.info("Neue E-Mail eingegangen", { description: (payload.new as any)?.subject });
-        subRefetchRef.current();
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'support_messages',
-      }, () => {
-        toast.info("Neue Support-Nachricht");
-        subRefetchRef.current();
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'contact_messages',
-      }, () => {
-        toast.info("Neue Kontaktanfrage");
-        subRefetchRef.current();
-      })
-      .subscribe();
+    const POLL_MS = 30_000;
 
-    return () => { supabase.removeChannel(channel); };
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        subRefetchRef.current();
+      }
+    };
+
+    const intervalId = setInterval(tick, POLL_MS);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        subRefetchRef.current();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Lazy-load body_html + attachments + resend_id when an inbound email is

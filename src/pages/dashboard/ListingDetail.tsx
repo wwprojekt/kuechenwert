@@ -35,7 +35,6 @@ import {
   Radio,
   Shield,
   Lock,
-  FileText,
   Send,
   Plus,
   MessageSquarePlus,
@@ -50,15 +49,15 @@ import {
   ShieldCheck,
   Hourglass,
 } from "lucide-react";
-import { format, formatDistanceToNowStrict, differenceInDays } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { MARKETING_CONFIG, computeReserveFloor, computeNextReducedReserve } from "@/lib/marketing-config";
+import { MARKETING_CONFIG, computeReserveFloor } from "@/lib/marketing-config";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
 import { withSessionRetry, invokeWithAuth, SessionExpiredError, ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { parseGermanNumber, formatBidDisplay } from "@/lib/parseGermanNumber";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 
 export default function ListingDetail() {
@@ -86,7 +85,7 @@ export default function ListingDetail() {
       if (!id) return null;
 
       // First try as seller (owner of the listing)
-      const { data: sellerData, error: sellerError } = await supabase
+      const { data: sellerData } = await supabase
         .from("motorhomes")
         .select(`
           *,
@@ -120,7 +119,7 @@ export default function ListingDetail() {
       if (sellerData) return { ...sellerData, _isSeller: true };
 
       // If not found as seller, try as buyer (dealer who purchased via auction)
-      const { data: buyerData, error: buyerError } = await supabase
+      const { data: buyerData } = await supabase
         .from("motorhomes")
         .select(`
           *,
@@ -345,7 +344,10 @@ export default function ListingDetail() {
   });
 
   // ── Kaufchance / Preisvorschlag: Angebote für den Seller laden ──
-  const loadKaufchanceOffers = async () => {
+  // useCallback, damit die Funktion in useEffect-deps stable ist und kein
+  // Re-Render einen neuen Polling-Interval anstösst (bzw. die exhaustive-deps-
+  // Lint-Regel sauber erfüllt wird).
+  const loadKaufchanceOffers = useCallback(async () => {
     const isKaufchance = resolvedAuction?.status === 'kaufchance';
     const isFestpreisActive = isFestpreisListing && resolvedAuction?.status === 'active';
     if (!resolvedAuction?.id || (!isKaufchance && !isFestpreisActive)) return;
@@ -366,16 +368,16 @@ export default function ListingDetail() {
       if (isNetworkError(err)) {
         logger.warn('ListingDetail: transient network error loading kaufchance offers', err);
       } else {
-        console.error('Error loading kaufchance offers:', err);
+        logger.error('Error loading kaufchance offers:', err);
       }
     } finally {
       setKaufchanceLoading(false);
     }
-  };
+  }, [resolvedAuction?.id, resolvedAuction?.status, isFestpreisListing]);
 
   useEffect(() => {
     loadKaufchanceOffers();
-  }, [resolvedAuction?.id, resolvedAuction?.status]);
+  }, [loadKaufchanceOffers]);
 
   useEffect(() => {
     const shouldPoll = resolvedAuction?.status === 'kaufchance' ||
@@ -385,7 +387,7 @@ export default function ListingDetail() {
       loadKaufchanceOffers();
     }, 15000);
     return () => clearInterval(interval);
-  }, [resolvedAuction?.id, resolvedAuction?.status]);
+  }, [resolvedAuction?.status, isFestpreisListing, loadKaufchanceOffers]);
 
   const handleSellerAcceptOffer = async (offerId: string) => {
     setRespondingOfferId(offerId);
@@ -1769,7 +1771,6 @@ function MarketingPhaseCard({
   const lastReductionAt = auction.last_price_reduction_at as string | null;
   const wasReduced = !!lastReductionAt;
   const maxUntil = auction.marketing_phase_max_until as string | null;
-  const startedAt = auction.marketing_phase_started_at as string | null;
 
   const floor = sellerInitial && sellerInitial > 0
     ? computeReserveFloor(Number(sellerInitial), channel)

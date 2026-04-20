@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, Users, Car, Gavel, DollarSign, ArrowUpRight, ArrowDownRight, Eye, Globe, Clock, MousePointer } from "lucide-react";
@@ -152,7 +153,7 @@ export default function AdminAnalytics() {
 
       if (error && error.code !== "42P01") {
         // Table doesn't exist yet - return mock structure
-        console.warn("Analytics tables not yet created");
+        logger.warn("Analytics tables not yet created");
       }
 
       const pageViews = data || [];

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import { useSettings } from "@/contexts/SettingsContext";
+import { proxiedImageUrl } from "@/lib/imageTransform";
 
 interface SiteLogoProps {
   /** 
@@ -29,7 +31,11 @@ export function SiteLogo({
 }: SiteLogoProps) {
   const { settings, loading } = useSettings();
 
-  const logoUrl = settings?.logo_url || "/logo.png";
+  // Logo durch CF-Worker /img/-Proxy leiten (überschreibt Supabase no-cache).
+  // Lokale /logo.png-Fallback wird von proxiedImageUrl unverändert
+  // durchgereicht (kein Storage-Marker im Pfad).
+  const rawLogoUrl = settings?.logo_url || "/logo.png";
+  const logoUrl = useMemo(() => proxiedImageUrl(rawLogoUrl), [rawLogoUrl]);
   const siteName = settings?.site_name || "CaravanWert";
   const siteTagline = settings?.site_tagline || "Deutschlands führende Wohnmobil-Handelsplattform";
 

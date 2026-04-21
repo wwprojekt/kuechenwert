@@ -104,6 +104,13 @@ interface ConversionRequest {
   gclid?: string;
   gbraid?: string;
   wbraid?: string;
+  /**
+   * Microsoft Click ID (Bing Ads). Wird hier nur akzeptiert + geloggt.
+   * Die tatsächliche Bing-Ads-Conversion-API-Integration ist Phase 2 und folgt,
+   * sobald Microsoft Developer Token + OAuth-Refresh-Token vorhanden sind.
+   * Aktuell verlassen wir uns für Bing auf das clientseitige UET-Pixel.
+   */
+  msclkid?: string;
   // Transaction ID für Deduplizierung über alle Tracking-Schichten
   transaction_id?: string;
   // Land des Nutzers für internationale Telefon-Normalisierung
@@ -310,6 +317,7 @@ const handler = async (req: Request): Promise<Response> => {
       gclid: rawGclid,
       gbraid,
       wbraid,
+      msclkid,
       transaction_id,
       country_code,
     } = data;
@@ -327,6 +335,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (gclid) console.log(`[track-conversion] GCLID vorhanden: ${gclid.substring(0, 15)}...`);
     if (gbraid) console.log(`[track-conversion] GBRAID vorhanden`);
     if (wbraid) console.log(`[track-conversion] WBRAID vorhanden`);
+    if (msclkid) console.log(`[track-conversion] MSCLKID vorhanden: ${msclkid.substring(0, 15)}... (wird in Phase 2 an Bing Ads API gesendet)`);
 
     const results: Record<string, unknown> = {};
 

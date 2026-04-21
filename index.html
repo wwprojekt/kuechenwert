@@ -136,7 +136,10 @@
         gads: 'AW-18033517246',
         gtm: '',
         fb:  '1846623132710484',
-        loaded: { ga4: '', gads: '', gtm: '', fb: '' }
+        // Microsoft Advertising (Bing) UET — leer bis im Admin-Backend gesetzt.
+        // Wenn leer wird KEIN UET-Pixel geladen (siehe loadUet()).
+        uet: '',
+        loaded: { ga4: '', gads: '', gtm: '', fb: '', uet: '' }
       };
       try {
         var cached = JSON.parse(localStorage.getItem('tracking-config-cache') || 'null');
@@ -145,6 +148,7 @@
           if (cached.gads) window.__TRACKING_BOOT__.gads = String(cached.gads);
           if (cached.gtm)  window.__TRACKING_BOOT__.gtm  = String(cached.gtm);
           if (cached.fb)   window.__TRACKING_BOOT__.fb   = String(cached.fb);
+          if (cached.uet)  window.__TRACKING_BOOT__.uet  = String(cached.uet);
         }
       } catch (e) {}
 
@@ -206,6 +210,42 @@
         } catch (e) {}
       }
 
+      // Microsoft Advertising (Bing) UET — analog zu Meta Pixel.
+      // - Wird nur geladen wenn `tagId` gesetzt UND Marketing-Consent gegeben.
+      // - Idempotent: gleiche tagId zweimal aufrufen lädt das Pixel nicht doppelt.
+      // - DSGVO: gating durch hasMarketingConsent() (gleiche Logik wie Clixtell).
+      function loadUet(tagId) {
+        if (!tagId) return;
+        if (window.__TRACKING_BOOT__.loaded.uet === tagId) return;
+        if (!hasMarketingConsent()) return;
+        try {
+          // UET-Pixel-Loader (Microsoft Standard-Snippet, nur Tag-ID dynamisch).
+          // Initialisiert window.uetq als Push-Queue und lädt bat.js asynchron.
+          (function(w,d,t,r,u){
+            var f,n,i;
+            w[u]=w[u]||[];
+            f=function(){
+              var o={ti: tagId, enableAutoSpaTracking: true};
+              o.q=w[u];
+              w[u]=new w.UET(o);
+              w[u].push("pageLoad");
+            };
+            n=d.createElement(t);
+            n.src=r;
+            n.async=1;
+            n.onload=n.onreadystatechange=function(){
+              var s=this.readyState;
+              if(s && s!=="loaded" && s!=="complete") return;
+              f();
+              n.onload=n.onreadystatechange=null;
+            };
+            i=d.getElementsByTagName(t)[0];
+            i.parentNode.insertBefore(n,i);
+          })(window,document,"script","//bat.bing.com/bat.js","uetq");
+          window.__TRACKING_BOOT__.loaded.uet = tagId;
+        } catch (e) {}
+      }
+
       function hasMarketingConsent() {
         try {
           var c = JSON.parse(localStorage.getItem('cookie-consent') || 'null');
@@ -230,6 +270,7 @@
         var b = window.__TRACKING_BOOT__;
         loadGtagJs(b.ga4, b.gads, b.gtm);
         loadFbq(b.fb);
+        loadUet(b.uet);
         loadClixtell();
 
         // Cloudflare Turnstile (statisch – kein Tracking-Config-Eingriff nötig)
@@ -244,6 +285,8 @@
       // (siehe src/components/CookieBanner.tsx + CookieSettingsModal.tsx).
       window.addEventListener('consent-updated', function () {
         loadClixtell();
+        // Bing UET wird analog zu Clixtell erst nach Marketing-Consent aktiviert
+        try { loadUet(window.__TRACKING_BOOT__.uet); } catch (e) {}
       });
 
       // React publishes the loaded tracking-config via this event. We persist
@@ -257,7 +300,9 @@
             ga4:  cfg.ga4 && cfg.ga4.measurement_id ? String(cfg.ga4.measurement_id) : '',
             gads: cfg.google_ads && cfg.google_ads.conversion_id ? String(cfg.google_ads.conversion_id) : '',
             gtm:  cfg.gtm && cfg.gtm.enabled && cfg.gtm.container_id ? String(cfg.gtm.container_id) : '',
-            fb:   cfg.meta_pixel && cfg.meta_pixel.pixel_id ? String(cfg.meta_pixel.pixel_id) : ''
+            fb:   cfg.meta_pixel && cfg.meta_pixel.pixel_id ? String(cfg.meta_pixel.pixel_id) : '',
+            uet:  cfg.microsoft_ads && cfg.microsoft_ads.enabled && cfg.microsoft_ads.uet_tag_id
+                    ? String(cfg.microsoft_ads.uet_tag_id) : ''
           };
           try { localStorage.setItem('tracking-config-cache', JSON.stringify(newIds)); } catch (err) {}
           var b = window.__TRACKING_BOOT__;
@@ -273,6 +318,10 @@
           if (newIds.fb && newIds.fb !== b.loaded.fb) {
             b.fb = newIds.fb;
             loadFbq(newIds.fb);
+          }
+          if (newIds.uet && newIds.uet !== b.loaded.uet) {
+            b.uet = newIds.uet;
+            loadUet(newIds.uet);
           }
         } catch (err) {}
       });

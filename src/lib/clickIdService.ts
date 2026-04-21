@@ -28,21 +28,24 @@ const CLICK_ID_EXPIRY_DAYS = 90;
  * Validiert eine GCLID auf grundlegende Korrektheit.
  * Ungültige GCLIDs (zu kurz, ungültige Zeichen) werden nicht gespeichert,
  * um "GCLID kann nicht geparst werden" Fehler in Google Ads zu vermeiden.
- * 
+ *
  * Gültige GCLIDs:
  * - Bestehen aus alphanumerischen Zeichen, Bindestrichen und Unterstrichen
  * - Sind mindestens 30 Zeichen lang
  * - Sind maximal 200 Zeichen lang
+ *
+ * MSCLKID (Microsoft Click ID, Bing Ads) hat eine andere Form:
+ * - Reines Hex (32 Zeichen, lowercase) ODER alphanumerisch
+ * - Bing-Format: GUID-ähnlich, z.B. "a1b2c3d4e5f67890abcdef1234567890"
  */
-function isValidClickId(value: string, type: 'gclid' | 'gbraid' | 'wbraid'): boolean {
+function isValidClickId(value: string, type: 'gclid' | 'gbraid' | 'wbraid' | 'msclkid'): boolean {
   if (!value || typeof value !== 'string') return false;
   const trimmed = value.trim();
-  // GCLIDs sind typischerweise 50-100+ Zeichen lang
   if (type === 'gclid' && (trimmed.length < 30 || trimmed.length > 200)) return false;
-  // GBRAID/WBRAID können kürzer sein
   if ((type === 'gbraid' || type === 'wbraid') && (trimmed.length < 10 || trimmed.length > 200)) return false;
-  // Nur alphanumerische Zeichen, Bindestriche und Unterstriche erlaubt
-  if (!/^[a-zA-Z0-9_\-]+$/.test(trimmed)) return false;
+  // MSCLKID: typisch 32 Hex-Zeichen, akzeptiere defensiv 16–64 alphanumerisch
+  if (type === 'msclkid' && (trimmed.length < 16 || trimmed.length > 64)) return false;
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return false;
   return true;
 }
 
@@ -56,6 +59,7 @@ interface ClickIds {
   gclid: string | null;
   gbraid: string | null;
   wbraid: string | null;
+  msclkid: string | null;
 }
 
 /**
@@ -116,6 +120,9 @@ export function captureClickIds(): void {
     const gclid = params.get("gclid");
     const gbraid = params.get("gbraid");
     const wbraid = params.get("wbraid");
+    // Microsoft / Bing Ads: msclkid wird automatisch an URLs angehängt
+    // wenn Auto-Tagging im Microsoft-Ads-Konto aktiviert ist (Standard).
+    const msclkid = params.get("msclkid");
 
     if (gclid) {
       if (isValidClickId(gclid, 'gclid')) {
@@ -149,6 +156,17 @@ export function captureClickIds(): void {
         logger.log("[ClickIdService] Ungültiger WBRAID verworfen (Länge:", wbraid.length + ")");
       }
     }
+
+    if (msclkid) {
+      if (isValidClickId(msclkid, 'msclkid')) {
+        storeClickId("msclkid", msclkid);
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[ClickIdService] MSCLKID erfasst:", msclkid.substring(0, 10) + "...");
+        }
+      } else {
+        logger.log("[ClickIdService] Ungültiger MSCLKID verworfen (Länge:", msclkid.length + ")");
+      }
+    }
   } catch {
     // Fehler bei Click-ID-Erfassung ignorieren – darf nie die UX beeinträchtigen
   }
@@ -163,6 +181,7 @@ export function getStoredClickIds(): ClickIds {
     gclid: readClickId("gclid"),
     gbraid: readClickId("gbraid"),
     wbraid: readClickId("wbraid"),
+    msclkid: readClickId("msclkid"),
   };
 }
 
@@ -214,6 +233,7 @@ export function getTrackingData(): {
   gclid: string | null;
   gbraid: string | null;
   wbraid: string | null;
+  msclkid: string | null;
   ga4ClientId: string | null;
   userAgent: string;
   referrer: string;

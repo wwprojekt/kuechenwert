@@ -109,6 +109,12 @@ function ensureConfig(value: TrackingFormValue): TrackingConfig {
     },
     gtm: { ...d.gtm, ...(v.gtm ?? {}) },
     meta_pixel: { ...d.meta_pixel, ...(v.meta_pixel ?? {}) },
+    microsoft_ads: {
+      ...d.microsoft_ads,
+      ...(v.microsoft_ads ?? {}),
+      conversion_goals: { ...d.microsoft_ads.conversion_goals, ...(v.microsoft_ads?.conversion_goals ?? {}) },
+      values: { ...d.microsoft_ads.values, ...(v.microsoft_ads?.values ?? {}) },
+    },
     server_side: { ...d.server_side, ...(v.server_side ?? {}) },
   };
 }
@@ -125,32 +131,55 @@ function isValidGtm(id: string): boolean {
 function isValidPixel(id: string): boolean {
   return /^\d{10,20}$/.test(id.trim());
 }
+// Microsoft UET Tag IDs sind reine Zahlen, typischerweise 7–9 Stellen.
+// Empty allowed = noch nicht konfiguriert (Bing-Tracking aus).
+function isValidUetTag(id: string): boolean {
+  return id === "" || /^\d{6,12}$/.test(id.trim());
+}
 
 interface LiveStatus {
   gtagLoaded: boolean;
   gtagId: string;
   fbqLoaded: boolean;
   fbqId: string;
+  uetLoaded: boolean;
+  uetId: string;
   consentMode: boolean;
   configCacheRaw: string | null;
 }
 
 function readLiveStatus(): LiveStatus {
   if (typeof window === "undefined") {
-    return { gtagLoaded: false, gtagId: "", fbqLoaded: false, fbqId: "", consentMode: false, configCacheRaw: null };
+    return {
+      gtagLoaded: false, gtagId: "",
+      fbqLoaded: false, fbqId: "",
+      uetLoaded: false, uetId: "",
+      consentMode: false, configCacheRaw: null,
+    };
   }
   const w = window as unknown as {
     gtag?: (...args: unknown[]) => void;
     fbq?: (...args: unknown[]) => void;
-    __TRACKING_BOOT__?: { ga4?: string; gads?: string; fb?: string; loaded?: { ga4?: string; gads?: string; fb?: string } };
+    uetq?: unknown;
+    UET?: unknown;
+    __TRACKING_BOOT__?: {
+      ga4?: string; gads?: string; fb?: string; uet?: string;
+      loaded?: { ga4?: string; gads?: string; fb?: string; uet?: string };
+    };
     dataLayer?: unknown[];
   };
   const boot = w.__TRACKING_BOOT__;
+  // UET ist "geladen", sobald window.UET-Konstruktor existiert ODER uetq
+  // eine echte Push-Methode hat (nicht mehr nur eine Queue).
+  const uetReady = typeof w.UET !== "undefined" ||
+    (typeof w.uetq === "object" && w.uetq !== null && typeof (w.uetq as { push?: unknown }).push === "function" && !Array.isArray(w.uetq));
   return {
     gtagLoaded: typeof w.gtag === "function" && Array.isArray(w.dataLayer) && w.dataLayer.length > 0,
     gtagId: boot?.loaded?.ga4 || boot?.ga4 || "",
     fbqLoaded: typeof w.fbq === "function",
     fbqId: boot?.loaded?.fb || boot?.fb || "",
+    uetLoaded: uetReady,
+    uetId: boot?.loaded?.uet || boot?.uet || "",
     consentMode: Array.isArray(w.dataLayer) && w.dataLayer.some((x) => Array.isArray(x) && x[0] === "consent"),
     configCacheRaw: (() => { try { return localStorage.getItem("tracking-config-cache"); } catch { return null; } })(),
   };
@@ -209,6 +238,13 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
   const gadsValid = isValidGads(cfg.google_ads.conversion_id);
   const gtmValid = isValidGtm(cfg.gtm.container_id);
   const pixelValid = isValidPixel(cfg.meta_pixel.pixel_id);
+  const uetValid = isValidUetTag(cfg.microsoft_ads.uet_tag_id);
+  const updateMs = (p: Partial<TrackingConfig["microsoft_ads"]>) =>
+    update({ microsoft_ads: { ...cfg.microsoft_ads, ...p } });
+  const updateMsGoal = (key: ConversionLabelKey, goal: string) =>
+    updateMs({ conversion_goals: { ...cfg.microsoft_ads.conversion_goals, [key]: goal } });
+  const updateMsValue = (key: ConversionValueKey, value: number) =>
+    updateMs({ values: { ...cfg.microsoft_ads.values, [key]: value } });
 
   return (
     <div className="space-y-6">
@@ -233,7 +269,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
             <LiveStatusItem
               label="gtag.js (GA4 + Ads)"
               ok={live.gtagLoaded}
@@ -243,6 +279,11 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               label="Meta Pixel (fbq)"
               ok={live.fbqLoaded}
               detail={live.fbqId || "noch nicht geladen"}
+            />
+            <LiveStatusItem
+              label="Bing UET (uetq)"
+              ok={live.uetLoaded}
+              detail={live.uetId || "nicht konfiguriert"}
             />
             <LiveStatusItem
               label="Google Consent Mode v2"
@@ -535,6 +576,143 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
             <p className="text-xs text-muted-foreground">
               Aktuell: <strong>{cfg.meta_pixel.pixel_id || "—"}</strong>
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Microsoft Advertising (Bing) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="w-5 h-5" />
+            Microsoft Advertising (Bing)
+            {!uetValid && (
+              <Badge variant="destructive" className="ml-2">Ungültig</Badge>
+            )}
+            {!cfg.microsoft_ads.enabled && (
+              <Badge variant="secondary" className="ml-2">Inaktiv</Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            UET-Pixel + Custom-Event-Conversions parallel zu Google Ads. Funktioniert
+            additiv — wenn deaktiviert oder Tag-ID leer, ändert sich am bisherigen
+            Google-Tracking nichts. Der msclkid-Click-ID-Capture läuft unabhängig
+            davon (für späteres Server-Side-Sale-Back).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Microsoft Ads aktiviert</Label>
+              <p className="text-sm text-muted-foreground">
+                Lädt das UET-Pixel und feuert Conversion-Events. Erfordert Marketing-Consent.
+              </p>
+            </div>
+            <Switch
+              checked={cfg.microsoft_ads.enabled}
+              onCheckedChange={(v) => updateMs({ enabled: v })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="uet-id">UET Tag ID</Label>
+            <Input
+              id="uet-id"
+              value={cfg.microsoft_ads.uet_tag_id}
+              onChange={(e) => updateMs({ uet_tag_id: e.target.value })}
+              placeholder="z.B. 12345678 (rein numerisch, 7–9 Stellen)"
+              className={!uetValid ? "border-destructive" : ""}
+            />
+            <p className="text-xs text-muted-foreground">
+              Microsoft Advertising → Tools → Conversion Tracking → UET Tags → Tag-ID kopieren.
+              Aktuell: <strong>{cfg.microsoft_ads.uet_tag_id || "—"}</strong>
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enhanced Conversions zulassen</Label>
+              <p className="text-sm text-muted-foreground">
+                Sendet gehashte E-Mail/Telefon mit dem UET-Event. Microsoft empfiehlt das
+                stark für Safari/ITP-Attribution.
+              </p>
+            </div>
+            <Switch
+              checked={cfg.microsoft_ads.allow_enhanced_conversions}
+              onCheckedChange={(v) => updateMs({ allow_enhanced_conversions: v })}
+            />
+          </div>
+
+          {/* Custom Event Goal Names */}
+          <div className="space-y-3 pt-4 border-t">
+            <div>
+              <h4 className="font-medium">Conversion-Goal-Namen (Custom Events)</h4>
+              <p className="text-sm text-muted-foreground">
+                In Microsoft Ads anzulegen als <strong>Conversion Goal Type: Custom Event</strong>{" "}
+                mit <code>Event Action</code> = exakt dem hier eingetragenen String. Die Defaults
+                passen 1:1 zu den Default-Empfehlungen weiter unten in der Anleitung.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {CONVERSION_KEYS.map((key) => {
+                const meta = CONVERSION_LABELS_DE[key];
+                return (
+                  <div key={`uet-${key}`} className="grid grid-cols-12 gap-2 items-center rounded-md border p-3">
+                    <div className="col-span-12 md:col-span-5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{meta.title}</span>
+                        {meta.primary ? (
+                          <Badge variant="default" className="text-xs">PRIMÄR</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">SEKUNDÄR</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{meta.subtitle}</p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">{key}</p>
+                    </div>
+                    <div className="col-span-12 md:col-span-7">
+                      <Input
+                        value={cfg.microsoft_ads.conversion_goals[key] || ""}
+                        onChange={(e) => updateMsGoal(key, e.target.value)}
+                        placeholder="z.B. wizard_completed"
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bing Conversion Werte */}
+          <div className="space-y-3 pt-4 border-t">
+            <div>
+              <h4 className="font-medium">Conversion-Werte für Bing-Smart-Bidding (€)</h4>
+              <p className="text-sm text-muted-foreground">
+                Werden separat von Google Ads gepflegt — Bing-Smart-Bidding kann andere
+                Wertgewichtungen brauchen, weil das Auktionsumfeld günstiger ist.
+              </p>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+              {VALUE_KEYS.map((key) => {
+                const meta = CONVERSION_LABELS_DE[key];
+                return (
+                  <div key={`uetval-${key}`} className="space-y-1">
+                    <Label htmlFor={`uetval-${key}`} className="text-xs">{meta.title}</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={`uetval-${key}`}
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={cfg.microsoft_ads.values[key] ?? 0}
+                        onChange={(e) => updateMsValue(key, parseFloat(e.target.value || "0"))}
+                        className="text-right"
+                      />
+                      <span className="text-sm text-muted-foreground">€</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>

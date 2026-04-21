@@ -1133,6 +1133,7 @@ Deno.serve(async (req) => {
             gclid: auction.motorhome?.gclid,
             gbraid: auction.motorhome?.gbraid,
             wbraid: auction.motorhome?.wbraid,
+            msclkid: auction.motorhome?.msclkid,
           },
         });
         if (saleResult.attempted && !saleResult.success) {

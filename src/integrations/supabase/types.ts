@@ -2318,6 +2318,7 @@ export type Database = {
           manufacturer: string
           mileage: number
           model: string
+          msclkid: string | null
           mwst_ausweisbar: boolean | null
           non_smoker: boolean | null
           number_of_axles: number | null
@@ -2423,6 +2424,7 @@ export type Database = {
           manufacturer: string
           mileage: number
           model: string
+          msclkid?: string | null
           mwst_ausweisbar?: boolean | null
           non_smoker?: boolean | null
           number_of_axles?: number | null
@@ -2528,6 +2530,7 @@ export type Database = {
           manufacturer?: string
           mileage?: number
           model?: string
+          msclkid?: string | null
           mwst_ausweisbar?: boolean | null
           non_smoker?: boolean | null
           number_of_axles?: number | null
@@ -4134,6 +4137,7 @@ export type Database = {
           is_viewed: boolean
           last_activity_at: string | null
           max_step_reached: number
+          msclkid: string | null
           no_answer_email_count: number | null
           no_answer_email_last_sent: string | null
           resume_email_sent_at: string | null
@@ -4169,6 +4173,7 @@ export type Database = {
           is_viewed?: boolean
           last_activity_at?: string | null
           max_step_reached?: number
+          msclkid?: string | null
           no_answer_email_count?: number | null
           no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
@@ -4204,6 +4209,7 @@ export type Database = {
           is_viewed?: boolean
           last_activity_at?: string | null
           max_step_reached?: number
+          msclkid?: string | null
           no_answer_email_count?: number | null
           no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
@@ -4633,6 +4639,7 @@ export type Database = {
           is_viewed: boolean
           last_activity_at: string | null
           max_step_reached: number
+          msclkid: string | null
           no_answer_email_count: number | null
           no_answer_email_last_sent: string | null
           resume_email_sent_at: string | null

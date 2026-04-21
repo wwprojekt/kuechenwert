@@ -684,6 +684,7 @@ export const useWizardForm = () => {
                   gclid: savedClickIds.gclid || null,
                   gbraid: savedClickIds.gbraid || null,
                   wbraid: savedClickIds.wbraid || null,
+                  msclkid: savedClickIds.msclkid || null,
                 },
               }),
               2,
@@ -719,6 +720,7 @@ export const useWizardForm = () => {
                 gclid: savedClickIds.gclid || null,
                 gbraid: savedClickIds.gbraid || null,
                 wbraid: savedClickIds.wbraid || null,
+                msclkid: savedClickIds.msclkid || null,
               }),
               2,
               'wizard-session-insert'
@@ -788,6 +790,7 @@ export const useWizardForm = () => {
               gclid: trackingData.gclid,
               gbraid: trackingData.gbraid,
               wbraid: trackingData.wbraid,
+              msclkid: trackingData.msclkid,
               ga4ClientId: trackingData.ga4ClientId,
               transactionId: txId1,
               skipUserEmail: true,
@@ -1001,6 +1004,7 @@ export const useWizardForm = () => {
                 gclid: trackingData.gclid,
                 gbraid: trackingData.gbraid,
                 wbraid: trackingData.wbraid,
+                msclkid: trackingData.msclkid,
                 ga4ClientId: trackingData.ga4ClientId,
                 transactionId,
                 skipUserEmail: true, // Admin-only – User bekommt bereits die Aktivierungs-E-Mail
@@ -1162,6 +1166,7 @@ export const useWizardForm = () => {
           gclid: trackingData.gclid,
           gbraid: trackingData.gbraid,
           wbraid: trackingData.wbraid,
+          msclkid: trackingData.msclkid,
           ga4ClientId: trackingData.ga4ClientId,
           transactionId,
           skipUserEmail: true, // Admin-only – eingeloggter User braucht keine Bestätigungs-E-Mail

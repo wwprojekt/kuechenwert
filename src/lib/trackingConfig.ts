@@ -54,6 +54,24 @@ export interface TrackingConfig {
     enabled: boolean;
     pixel_id: string;
   };
+  /**
+   * Microsoft Advertising (Bing) — additiv neben Google Ads.
+   * Wenn enabled=false oder uet_tag_id leer ist, wird KEIN UET-Pixel
+   * geladen und KEIN Bing-Conversion-Event gefeuert. Per Default deaktiviert,
+   * damit das Verhalten ohne Konfiguration genau dem vorherigen Stand entspricht.
+   *
+   * conversion_goals mappt unsere internen Conversion-Keys auf die
+   * Event-Action-Strings, die in Microsoft Ads als "Custom Event"
+   * Conversion Goals angelegt werden müssen. Die Werte (`values`) werden
+   * separat geführt, damit Bing-Smart-Bidding eigene Werte bekommen kann.
+   */
+  microsoft_ads: {
+    enabled: boolean;
+    uet_tag_id: string;
+    allow_enhanced_conversions: boolean;
+    conversion_goals: Record<ConversionLabelKey, string>;
+    values: Record<ConversionValueKey, number>;
+  };
   server_side: {
     gads_offline_conversion_action_id: string;
     gads_login_customer_id: string;
@@ -106,6 +124,34 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
   meta_pixel: {
     enabled: true,
     pixel_id: '1846623132710484',
+  },
+  microsoft_ads: {
+    enabled: false,
+    uet_tag_id: '',
+    allow_enhanced_conversions: true,
+    conversion_goals: {
+      WIZARD_ABGESCHLOSSEN: 'wizard_completed',
+      KONTAKTFORMULAR_GESENDET: 'kontakt_lead',
+      WERTERMITTLUNG_LEAD: 'wertermittlung_lead',
+      WERTRECHNER_LEAD: 'wertrechner_lead',
+      TERMINBUCHUNG: 'terminbuchung',
+      LANDING_PAGE_LEAD: 'landing_funnel_start',
+      WIZARD_GESTARTET: 'wizard_started',
+      WIZARD_FAHRZEUGDATEN: 'wizard_vehicle_data',
+      BEWERTUNG_ABGESCHLOSSEN: 'bewertung_abgeschlossen',
+    },
+    values: {
+      WIZARD_ABGESCHLOSSEN: 9.0,
+      TERMINBUCHUNG: 9.0,
+      KONTAKTFORMULAR_GESENDET: 1.0,
+      WERTERMITTLUNG_LEAD: 2.5,
+      WERTRECHNER_LEAD: 2.5,
+      LANDING_PAGE_LEAD: 1.0,
+      WIZARD_GESTARTET: 1.0,
+      WIZARD_FAHRZEUGDATEN: 1.0,
+      BEWERTUNG_ABGESCHLOSSEN: 0,
+      INSTANT_BUY: 0,
+    },
   },
   server_side: {
     gads_offline_conversion_action_id: '7576040066',
@@ -161,6 +207,25 @@ export function mergeTrackingConfig(partial: unknown): TrackingConfig {
       pixel_id: typeof p.meta_pixel?.pixel_id === 'string' && p.meta_pixel.pixel_id.trim()
         ? p.meta_pixel.pixel_id.trim()
         : d.meta_pixel.pixel_id,
+    },
+    microsoft_ads: {
+      enabled: typeof p.microsoft_ads?.enabled === 'boolean'
+        ? p.microsoft_ads.enabled
+        : d.microsoft_ads.enabled,
+      uet_tag_id: typeof p.microsoft_ads?.uet_tag_id === 'string'
+        ? p.microsoft_ads.uet_tag_id.trim()
+        : d.microsoft_ads.uet_tag_id,
+      allow_enhanced_conversions: typeof p.microsoft_ads?.allow_enhanced_conversions === 'boolean'
+        ? p.microsoft_ads.allow_enhanced_conversions
+        : d.microsoft_ads.allow_enhanced_conversions,
+      conversion_goals: {
+        ...d.microsoft_ads.conversion_goals,
+        ...(p.microsoft_ads?.conversion_goals ?? {}),
+      } as Record<ConversionLabelKey, string>,
+      values: {
+        ...d.microsoft_ads.values,
+        ...(p.microsoft_ads?.values ?? {}),
+      } as Record<ConversionValueKey, number>,
     },
     server_side: {
       gads_offline_conversion_action_id: typeof p.server_side?.gads_offline_conversion_action_id === 'string'
@@ -255,4 +320,39 @@ export function isMetaPixelEnabled(): boolean {
 export function isGtmEnabled(): boolean {
   const cfg = getTrackingConfig();
   return cfg.enabled && cfg.gtm.enabled && /^GTM-[A-Z0-9]+$/.test(cfg.gtm.container_id);
+}
+
+// =====================================================================
+// Microsoft Ads (Bing) — Accessors
+// =====================================================================
+
+/**
+ * UET Tag IDs sind reine Ziffern, typischerweise 7–9 Stellen
+ * (Microsoft Ads vergibt aktuell 8-stellige IDs).
+ */
+export function isMicrosoftAdsEnabled(): boolean {
+  const cfg = getTrackingConfig();
+  return (
+    cfg.enabled &&
+    cfg.microsoft_ads.enabled &&
+    /^\d{6,12}$/.test(cfg.microsoft_ads.uet_tag_id.trim())
+  );
+}
+
+export function getMicrosoftUetTagId(): string {
+  return getTrackingConfig().microsoft_ads.uet_tag_id;
+}
+
+export function getMicrosoftConversionGoal(key: ConversionLabelKey): string {
+  const cfg = getTrackingConfig();
+  return (
+    cfg.microsoft_ads.conversion_goals[key] ??
+    DEFAULT_TRACKING_CONFIG.microsoft_ads.conversion_goals[key]
+  );
+}
+
+export function getMicrosoftConversionValue(key: ConversionValueKey): number {
+  const cfg = getTrackingConfig();
+  const v = cfg.microsoft_ads.values[key];
+  return typeof v === 'number' ? v : DEFAULT_TRACKING_CONFIG.microsoft_ads.values[key];
 }

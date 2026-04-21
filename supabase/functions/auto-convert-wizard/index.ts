@@ -520,6 +520,7 @@ const handler = async (req: Request): Promise<Response> => {
       gclid: session.gclid || null,
       gbraid: session.gbraid || null,
       wbraid: session.wbraid || null,
+      msclkid: session.msclkid || null,
     };
 
     const { data: motorhome, error: insertError } = await adminClient

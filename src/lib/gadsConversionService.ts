@@ -20,6 +20,11 @@ import {
   isGoogleAdsEnabled,
   type ConversionLabelKey,
 } from '@/lib/trackingConfig';
+import {
+  sendBingConversion,
+  sendBingCustomEvent,
+  setBingEnhancedConversionData,
+} from '@/lib/uetService';
 
 // TypeScript-Deklaration für gtag
 declare global {
@@ -79,9 +84,9 @@ function safeGtag(...args: unknown[]): void {
       return;
     }
 
-    console.warn('[GadsTracking] Weder window.gtag noch dataLayer verfügbar. Event verworfen:', args);
+    logger.warn('[GadsTracking] Weder window.gtag noch dataLayer verfügbar. Event verworfen:', args);
   } catch (error) {
-    console.warn('[GadsTracking] Fehler beim Senden des Events:', error);
+    logger.warn('[GadsTracking] Fehler beim Senden des Events:', error);
   }
 }
 
@@ -233,6 +238,9 @@ export async function trackLandingPageLead(landingPage: string, vehicleInfo?: st
     landing_page: landingPage,
     vehicle_info: vehicleInfo || '',
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('LANDING_PAGE_LEAD', 'LANDING_PAGE_LEAD', txId);
 }
 
 /**
@@ -262,6 +270,9 @@ export async function trackKontaktformularGesendet(transactionId?: string): Prom
     form_name: 'Kontaktformular',
     form_destination: '/kontakt',
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('KONTAKTFORMULAR_GESENDET', 'KONTAKTFORMULAR_GESENDET', txId);
 }
 
 /**
@@ -292,6 +303,9 @@ export async function trackWertermittlungLead(vehicleInfo?: string, transactionI
     form_name: 'Wertermittlung',
     form_destination: '/wertermittlung',
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('WERTERMITTLUNG_LEAD', 'WERTERMITTLUNG_LEAD', txId);
 }
 
 /**
@@ -322,6 +336,9 @@ export async function trackWertrechnerLead(vehicleInfo?: string, transactionId?:
     form_name: 'Wertrechner',
     form_destination: '/wertrechner',
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('WERTRECHNER_LEAD', 'WERTRECHNER_LEAD', txId);
 }
 
 /**
@@ -344,6 +361,9 @@ export async function trackTerminbuchung(station?: string, transactionId?: strin
     lead_source: 'terminbuchung',
     station: station || '',
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('TERMINBUCHUNG', 'TERMINBUCHUNG', txId);
 }
 
 // ============================================================
@@ -378,6 +398,9 @@ export function trackWizardStarted(source: string): void {
     event_category: 'Wizard',
     wizard_source: source,
   });
+
+  // Microsoft Ads (Bing) — parallel, niemals blocking
+  sendBingConversion('WIZARD_GESTARTET', 'WIZARD_GESTARTET', txId);
 }
 
 /**
@@ -404,6 +427,11 @@ export function trackWizardStep(stepNumber: number, stepName: string): void {
     step_number: stepNumber,
     value: stepNumber,
   });
+
+  // Microsoft Ads (Bing) — Schritt 2 als Mikro-Conversion (Fahrzeugdaten)
+  if (stepNumber === 2) {
+    sendBingConversion('WIZARD_FAHRZEUGDATEN', 'WIZARD_FAHRZEUGDATEN', txId);
+  }
 }
 
 /**
@@ -437,6 +465,9 @@ export async function trackWizardCompleted(vehicleInfo: string, transactionId?: 
     currency: 'EUR',
     lead_source: 'wizard',
   });
+
+  // Microsoft Ads (Bing) — primäre Conversion, parallel und niemals blocking
+  sendBingConversion('WIZARD_ABGESCHLOSSEN', 'WIZARD_ABGESCHLOSSEN', txId);
 }
 
 /**
@@ -596,6 +627,12 @@ function sendContactClickEvent(method: string, pagePath: string): void {
     contact_method: method,
     page_path: pagePath,
   });
+
+  // Microsoft Ads (Bing) — Custom Event für Smart-Bidding-Signal
+  sendBingCustomEvent('contact_click', {
+    contact_method: method,
+    page_path: pagePath,
+  });
 }
 
 // ============================================================
@@ -698,9 +735,12 @@ export function getConversionLabels(): typeof CONVERSION_LABELS {
 
 /**
  * SHA-256 Hash einer Zeichenkette (für Enhanced Conversions)
- * Google erwartet gehashte Daten im Klartext-SHA256-Format
+ * Google erwartet gehashte Daten im Klartext-SHA256-Format.
+ * Aktuell ungenutzt — gtag.js handhabt das Hashing automatisch — aber
+ * absichtlich behalten als Fallback, falls wir Enhanced Conversions
+ * irgendwann wieder ohne gtag.js senden müssen.
  */
-async function sha256(value: string): Promise<string> {
+async function _sha256(value: string): Promise<string> {
   try {
     const encoder = new TextEncoder();
     const data = encoder.encode(value.trim().toLowerCase());
@@ -815,8 +855,19 @@ export async function setEnhancedConversionData(userData: {
     if (process.env.NODE_ENV === 'development') {
       logger.log('[GadsTracking] Enhanced Conversion Data gesetzt:', Object.keys(enhancedData));
     }
+
+    // Microsoft Ads (Bing) — parallel, niemals blocking. UET erwartet
+    // gehashte Werte explizit; setBingEnhancedConversionData kümmert sich um
+    // SHA-256 + Push in die UET-Queue.
+    setBingEnhancedConversionData({
+      email: userData.email,
+      phone: userData.phone,
+    }).catch((err) => {
+      // Bing-Fehler dürfen den Google-Pfad NIE beeinträchtigen
+      logger.warn('[GadsTracking] Bing Enhanced Conversion (non-blocking):', err);
+    });
   } catch (error) {
-    console.warn('[GadsTracking] Enhanced Conversion Data Fehler:', error);
+    logger.warn('[GadsTracking] Enhanced Conversion Data Fehler:', error);
   }
 }
 

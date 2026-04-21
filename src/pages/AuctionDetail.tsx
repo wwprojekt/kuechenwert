@@ -317,7 +317,15 @@ const AuctionDetail = () => {
     staleTime: 10 * 60 * 1000, // PLZ changes very rarely
   });
 
-  // Fetch auction details
+  // Fetch auction details — versucht zuerst den Edge-Cached Worker-Bundle
+  // (/api/auctions/:id, 30-80ms TTFB), fällt bei Fehler auf direkte
+  // Supabase-Calls zurück (1-3s, kann bei Outages auf 30s+ steigen).
+  //
+  // Architektur-Note: Edge-Caching schützt vor Supabase-Gateway-Latenz, ohne
+  // Race-Conditions einzuführen — Realtime-Channel (siehe useEffect unten)
+  // pusht jeden neuen Bid in <1s rein, place_bid_atomic validiert mit
+  // Advisory-Lock serverseitig, sodass auch ein 30s alter Cache-Stand kein
+  // Bid-Stealing erlaubt. Detail-Diskussion: worker/src/index.js Z.300+.
   const fetchAuction = useCallback(async () => {
     if (!id || !isValidUUID(id)) {
       toast({
@@ -329,11 +337,76 @@ const AuctionDetail = () => {
       return;
     }
 
+    // ─── Hauptpfad: Worker-Bundle (Edge-Cached) ───
+    // In Dev (localhost) kein Worker erreichbar → direkt zum Fallback springen.
+    let bundleSucceeded = false;
+    let bundleAuction: AuctionWithMotorhome | null = null;
+    let bundleNotFound = false;
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      try {
+        const res = await fetch(`/api/auctions/${id}`, {
+          headers: { accept: 'application/json' },
+          // 8s timeout über AbortController — wenn Worker langsamer als
+          // direkter Supabase-Call wäre, lieber abbrechen und fallback nehmen.
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.status === 404) {
+          bundleNotFound = true;
+          bundleSucceeded = true;
+        } else if (res.ok) {
+          const bundle = await res.json();
+          if (bundle && bundle.auction) {
+            bundleAuction = bundle.auction as AuctionWithMotorhome;
+            if (Array.isArray(bundle.bids)) setBids(bundle.bids);
+            if (Array.isArray(bundle.addenda)) setAddenda(bundle.addenda);
+            bundleSucceeded = true;
+          }
+        }
+      } catch (e) {
+        // Worker-Fehler ist kein Drama — wir fallen auf direkten Supabase-Call.
+        // Nur loggen, damit wir bei systematischen Problemen Bescheid wissen.
+        console.warn('[AuctionDetail] Worker bundle failed, using direct Supabase fallback:', e instanceof Error ? e.message : e);
+      }
+    }
+
+    if (bundleSucceeded) {
+      if (bundleNotFound) {
+        setAuctionLoadState('not_found');
+        return;
+      }
+      if (bundleAuction) {
+        setAuction(bundleAuction);
+        setAuctionLoadState('loaded');
+        lastAuctionStatusRef.current = bundleAuction.status;
+
+        if (bundleAuction.motorhome) {
+          const mh = bundleAuction.motorhome;
+          const trackingValue = mh.sale_channel === 'instant_price'
+            ? Number(mh.instant_price || 0)
+            : (bundleAuction.current_bid || bundleAuction.starting_bid || 0);
+          trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
+          trackMetaViewContent({
+            content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
+            content_category: mh.body_type || 'Wohnmobil',
+            content_ids: [mh.id],
+            content_type: 'vehicle',
+            value: trackingValue,
+            currency: 'EUR',
+          });
+          trackEvent('auction_viewed', { category: 'auction', label: `${mh.manufacturer} ${mh.model}`, value: trackingValue, properties: { auctionId: bundleAuction.id, manufacturer: mh.manufacturer, model: mh.model, bodyType: mh.body_type } });
+        }
+        return;
+      }
+    }
+
+    // ─── Fallback: Direkte Supabase-Calls (alter Pfad) ───
     // P4.2: Whitelist statt select('*') — verhindert dass seller_initial_reserve
     // / seller_initial_instant_price im JSON an den Käufer-Client durchgereicht
     // werden (RLS auf `auctions` ist USING(true) für SELECT, schützt also nicht
     // gegen Spalten-Leakage). seller_initial_* darf NIE auf der Käufer-Seite
     // landen — sonst kann jeder den Reserve-Floor zurückrechnen.
+    // WICHTIG: Diese Whitelist MUSS exakt mit AUCTION_DETAIL_SELECT in
+    // worker/src/index.js übereinstimmen.
     const { data, error } = await supabase
       .from("auctions")
       .select(`
@@ -388,6 +461,25 @@ const AuctionDetail = () => {
     setAuctionLoadState('loaded');
     lastAuctionStatusRef.current = data.status;
 
+    // Im Fallback-Pfad müssen wir bids + addenda separat nachladen.
+    // (Im Worker-Pfad kamen die schon im Bundle mit.)
+    void supabase
+      .from("bids")
+      .select("*")
+      .eq("auction_id", id)
+      .order("created_at", { ascending: false })
+      .then(({ data: bidsData }) => {
+        if (bidsData) setBids(Array.isArray(bidsData) ? bidsData : []);
+      });
+    void supabase
+      .from("auction_addenda")
+      .select("id, content, created_at")
+      .eq("auction_id", id)
+      .order("created_at", { ascending: true })
+      .then(({ data: addendaData }) => {
+        if (addendaData) setAddenda(addendaData);
+      });
+
     if (data.motorhome) {
       const mh = data.motorhome;
       const trackingValue = mh.sale_channel === 'instant_price'
@@ -409,39 +501,6 @@ const AuctionDetail = () => {
   useEffect(() => {
     fetchAuction();
   }, [fetchAuction]);
-
-  // Fetch bids
-  useEffect(() => {
-    const fetchBids = async () => {
-      const { data, error } = await supabase
-        .from("bids")
-        .select("*")
-        .eq("auction_id", id)
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        setBids(Array.isArray(data) ? data : []);
-      }
-    };
-
-    fetchBids();
-  }, [id]);
-
-  // Fetch addenda (Nachträge)
-  useEffect(() => {
-    const fetchAddenda = async () => {
-      if (!id) return;
-      const { data, error } = await supabase
-        .from("auction_addenda")
-        .select("id, content, created_at")
-        .eq("auction_id", id)
-        .order("created_at", { ascending: true });
-      if (!error && data) {
-        setAddenda(data);
-      }
-    };
-    fetchAddenda();
-  }, [id]);
 
   // Set of bid IDs already known locally (for dedup against Realtime)
   const knownBidIdsRef = useRef<Set<string>>(new Set());

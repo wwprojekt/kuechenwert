@@ -300,6 +300,48 @@ const AUCTIONS_FRESH_MS = 30 * 1000;   // 30 s frisch
 const AUCTIONS_STALE_MS = 90 * 1000;   // 90 s gesamt (60 s SWR-Fenster)
 const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
 
+// ─── Edge-API-Cache (Phase 2: /api/auctions/:id) ───────────────────────────
+//
+// Auctions-Detail-Page (/auktion/:id) macht heute 3 Direktcalls an PostgREST:
+//   1) auctions  (mit motorhome + photos joined) — die langsamste, 1-3s wenn
+//      Supabase normal, BIS 41s wenn Gateway hickt (gemessen 2026-04-21).
+//   2) bids      (alle bids für diese Auktion, ~50-200ms)
+//   3) auction_addenda (~50ms, meist leer)
+//
+// Wir bündeln alle drei in EINEM Worker-Endpoint /api/auctions/:id, cachen
+// das Bundle für 30s FRESH / 90s STALE im KV, und das Frontend bekommt eine
+// Antwort in 30-80ms statt 1-3s.
+//
+// Race-Condition-Diskussion:
+//   - User öffnet Page mit 30s altem Cache → Realtime-Channel (bleibt direkt
+//     zu Supabase WebSocket) füllt frische Bids in ~500ms nach.
+//   - place_bid_atomic RPC validiert serverseitig mit Advisory-Lock →
+//     veraltete Daten können kein "Stealing" verursachen.
+//   - Identisches Race-Window wie heute (Network-Roundtrip ist auch 1-3s).
+//
+// Sicherheit:
+//   - Whitelist EXAKT wie in src/pages/AuctionDetail.tsx Zeile 339-360.
+//     KEINE seller_initial_* Spalten — sonst könnte jeder den Reserve-Floor
+//     zurückrechnen.
+//   - Anon-Key-Permissions begrenzen die Daten ohnehin (RLS auf auctions ist
+//     USING(true), reserve_price ist absichtlich public).
+const AUCTION_DETAIL_PATH_RE = /^\/api\/auctions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const AUCTION_DETAIL_CACHE_PREFIX = "api:auction:detail:v1:";
+const AUCTION_DETAIL_FRESH_MS = 30 * 1000;
+const AUCTION_DETAIL_STALE_MS = 90 * 1000;
+const AUCTION_DETAIL_KV_TTL = 300;
+// Negative-Cache (404 / not-found) kürzer halten damit eine soeben angelegte
+// Auktion schnell sichtbar wird (max 30s Verzögerung statt 5 min).
+const AUCTION_DETAIL_NOTFOUND_KV_TTL = 30;
+// Whitelist 1:1 aus src/pages/AuctionDetail.tsx Z.339-360 übernommen.
+// Bei Änderungen dort BEIDE Stellen aktualisieren!
+const AUCTION_DETAIL_SELECT =
+  "id,motorhome_id,status,starting_bid,current_bid,reserve_price," +
+  "start_time,end_time,created_at,updated_at,kaufchance_expires_at," +
+  "kaufchance_min_price,soft_close_extension_minutes,auction_round," +
+  "marketing_phase_started_at,last_price_reduction_at," +
+  "motorhome:motorhomes!left(*,photos:motorhome_photos(*))";
+
 // On-the-fly Image-Transformation Fallback für Photos OHNE pre-resized Variant
 // (process-photo Edge Function noch nicht durchgelaufen oder original zu gross).
 // Bei /kaufen sind das aktuell 44 von 77 active covers — die werden sonst als
@@ -570,6 +612,178 @@ async function refreshAuctionsCache(env) {
   return envelope;
 }
 
+// ── Auction-Detail-Bundle: auction + bids + addenda in einem Roundtrip ──
+
+async function fetchAuctionDetailFromSupabase(id, env) {
+  const base = `${env.SUPABASE_URL}/rest/v1`;
+  const headers = {
+    apikey: env.SUPABASE_ANON_KEY,
+    authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    accept: "application/json",
+  };
+
+  const auctionUrl =
+    `${base}/auctions?select=${encodeURIComponent(AUCTION_DETAIL_SELECT)}` +
+    `&id=eq.${id}`;
+  const bidsUrl =
+    `${base}/bids?select=*&auction_id=eq.${id}&order=created_at.desc`;
+  const addendaUrl =
+    `${base}/auction_addenda?select=id,content,created_at` +
+    `&auction_id=eq.${id}&order=created_at.asc`;
+
+  // Parallele Fetches — bids + addenda dürfen schiefgehen ohne dass die
+  // ganze Antwort kaputt ist (das Frontend tolerierte das bisher auch).
+  const [aRes, bRes, addRes] = await Promise.all([
+    fetch(auctionUrl, { headers }),
+    fetch(bidsUrl, { headers }),
+    fetch(addendaUrl, { headers }),
+  ]);
+
+  if (!aRes.ok) {
+    throw new Error(`auction fetch ${aRes.status}: ${await aRes.text()}`);
+  }
+  const auctionArr = await aRes.json();
+  const auction = auctionArr[0] || null;
+
+  if (!auction) {
+    return { auction: null, bids: [], addenda: [], notFound: true };
+  }
+
+  // Photo-URLs durch Image-Proxy leiten — gleicher Trick wie /active.
+  // Schützt vor Supabase Storage's hardcoded Cache-Control: no-cache.
+  if (auction.motorhome && Array.isArray(auction.motorhome.photos)) {
+    auction.motorhome.photos = auction.motorhome.photos.map((p) => ({
+      ...p,
+      url: proxiedImageUrl(p.url),
+      card_url: proxiedImageUrl(p.card_url),
+      medium_url: proxiedImageUrl(p.medium_url),
+    }));
+  }
+
+  const bids = bRes.ok ? await bRes.json() : [];
+  const addenda = addRes.ok ? await addRes.json() : [];
+
+  return {
+    auction,
+    bids: Array.isArray(bids) ? bids : [],
+    addenda: Array.isArray(addenda) ? addenda : [],
+    notFound: false,
+  };
+}
+
+async function refreshAuctionDetailCache(id, env) {
+  const fresh = await fetchAuctionDetailFromSupabase(id, env);
+  const now = Date.now();
+  const envelope = {
+    data: fresh,
+    fetchedAt: now,
+    freshUntil: now + AUCTION_DETAIL_FRESH_MS,
+    staleUntil: now + AUCTION_DETAIL_STALE_MS,
+  };
+  // Negative-Cache (auction not found) kürzer aufbewahren — sonst sehen User
+  // eine soeben angelegte Auktion 5 Min lang als 404.
+  const ttl = fresh.notFound
+    ? AUCTION_DETAIL_NOTFOUND_KV_TTL
+    : AUCTION_DETAIL_KV_TTL;
+  await env.PRERENDER_CACHE.put(
+    `${AUCTION_DETAIL_CACHE_PREFIX}${id}`,
+    JSON.stringify(envelope),
+    { expirationTtl: ttl },
+  );
+  return envelope;
+}
+
+async function handleAuctionDetailApi(request, env, ctx, id) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "method not allowed" }, 405);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponse({ error: "supabase env not configured" }, 500);
+  }
+
+  const cacheKey = `${AUCTION_DETAIL_CACHE_PREFIX}${id.toLowerCase()}`;
+  const now = Date.now();
+
+  let cached = null;
+  try {
+    cached = await env.PRERENDER_CACHE.get(cacheKey, { type: "json" });
+  } catch (e) {
+    console.error("KV read error:", e.message);
+  }
+
+  // FRESH path
+  if (cached && now < cached.freshUntil) {
+    if (cached.data && cached.data.notFound) {
+      return jsonResponse({ error: "not found" }, 404, {
+        "x-cache-status": "FRESH",
+        "x-cache-age-ms": String(now - cached.fetchedAt),
+        "cache-control": "public, max-age=30",
+      });
+    }
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "FRESH",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=30",
+    });
+  }
+
+  // STALE path: serve cached, refresh in background
+  if (cached && now < cached.staleUntil) {
+    ctx.waitUntil(
+      refreshAuctionDetailCache(id, env).catch((e) =>
+        console.error("background refresh failed:", e.message),
+      ),
+    );
+    if (cached.data && cached.data.notFound) {
+      return jsonResponse({ error: "not found" }, 404, {
+        "x-cache-status": "STALE",
+        "x-cache-age-ms": String(now - cached.fetchedAt),
+        "cache-control": "public, max-age=30",
+      });
+    }
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "STALE",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=30",
+    });
+  }
+
+  // MISS / EXPIRED path: sync refresh, fall back to stale data on error
+  try {
+    const fresh = await refreshAuctionDetailCache(id, env);
+    if (fresh.data && fresh.data.notFound) {
+      return jsonResponse({ error: "not found" }, 404, {
+        "x-cache-status": "MISS",
+        "x-cache-age-ms": "0",
+        "cache-control": "public, max-age=30",
+      });
+    }
+    return jsonResponse(fresh.data, 200, {
+      "x-cache-status": "MISS",
+      "x-cache-age-ms": "0",
+      "cache-control": "public, max-age=30",
+    });
+  } catch (e) {
+    console.error("auction detail sync refresh failed:", e.message);
+    if (cached) {
+      // Notnagel: alte Daten liefern auch wenn längst stale, damit User auch
+      // bei totaler Supabase-Outage noch eine funktionsfähige Page sieht.
+      return jsonResponse(cached.data, 200, {
+        "x-cache-status": "EMERGENCY",
+        "x-cache-age-ms": String(now - cached.fetchedAt),
+        "cache-control": "public, max-age=10",
+      });
+    }
+    return jsonResponse(
+      { error: "upstream unavailable", message: e.message },
+      502,
+    );
+  }
+}
+
 async function handleAuctionsApi(request, env, ctx) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });
@@ -656,6 +870,12 @@ export default {
     // Wir behandeln auch OPTIONS hier, daher steht es vor dem GET-Filter.
     if (url.pathname === AUCTIONS_API_PATH) {
       return handleAuctionsApi(request, env, ctx);
+    }
+
+    // ── Edge-API-Cache: /api/auctions/:uuid (Detail-Page) ──
+    const detailMatch = url.pathname.match(AUCTION_DETAIL_PATH_RE);
+    if (detailMatch) {
+      return handleAuctionDetailApi(request, env, ctx, detailMatch[1]);
     }
 
     // Only handle GET requests

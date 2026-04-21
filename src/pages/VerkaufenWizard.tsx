@@ -394,9 +394,35 @@ const VerkaufenWizard = () => {
   const progressMap: Record<number, number> = { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
+  // Scroll to the first invalid field after a failed validation. We wait one
+  // animation frame so the field-error CSS classes are rendered first, then
+  // pick whichever marker exists: aria-invalid, role=alert, or the red border.
+  // Without this, the validation toast pops up but the actual error (e.g. the
+  // marketing-consent checkbox 600px down on step 8) stays off-screen and
+  // confuses the user.
+  const scrollToFirstError = () => {
+    requestAnimationFrame(() => {
+      const target = document.querySelector(
+        '[aria-invalid="true"], [role="alert"], .border-red-500',
+      ) as HTMLElement | null;
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        const focusable =
+          target.tagName === "INPUT" || target.tagName === "BUTTON"
+            ? target
+            : (target.querySelector('input, button, [tabindex]:not([tabindex="-1"])') as HTMLElement | null);
+        focusable?.focus({ preventScroll: true });
+      }
+    });
+  };
+
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < steps.length) {
+    if (!isValid) {
+      scrollToFirstError();
+      return;
+    }
+    if (currentStep < steps.length) {
       const nextStep = currentStep + 1;
 
       // Bei Step 5 → 6: Wizard-Session sofort (ohne Debounce) mit Kontaktdaten
@@ -431,7 +457,10 @@ const VerkaufenWizard = () => {
     // Validate the final step (8). step8Schema enthält den Marketing-Consent
     // bereits als conditional Pflichtfeld für auction + instant_price.
     const isValid = await validateStep(steps.length);
-    if (!isValid) return;
+    if (!isValid) {
+      scrollToFirstError();
+      return;
+    }
 
     // Additional password validation for guest submissions. If the user is
     // logged in we skip this – their password is already set.
@@ -439,7 +468,10 @@ const VerkaufenWizard = () => {
     // we just bail out on failure.
     if (!currentUser) {
       const passwordValid = validatePassword(registerPassword, confirmPassword);
-      if (!passwordValid) return;
+      if (!passwordValid) {
+        scrollToFirstError();
+        return;
+      }
     }
 
     // Update contact data in session before submit

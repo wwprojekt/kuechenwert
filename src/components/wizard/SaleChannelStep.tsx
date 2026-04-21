@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { Mail, Phone, Gavel, Zap, MapPin, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Phone, Gavel, Zap, MapPin, Users, TrendingUp, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SaleChannelStepProps {
@@ -42,7 +42,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
     <div className="space-y-3 sm:space-y-6 animate-fade-in">
       <div className="mb-3 sm:mb-6">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2 flex items-center gap-2">
-          <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+          <Phone className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Verkaufsweg & Telefon
         </h2>
         <p className="text-xs sm:text-base text-muted-foreground">

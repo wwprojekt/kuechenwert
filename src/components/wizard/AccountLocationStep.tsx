@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2 } from "lucide-react";
+import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2, Megaphone } from "lucide-react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { EU_COUNTRIES } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -409,36 +409,51 @@ export const AccountLocationStep = ({
           Link bzw. später jederzeit im Dashboard. */}
       {(formData.saleChannel === "auction" || formData.saleChannel === "instant_price") && (
         <div
+          data-marketing-consent
           className={cn(
-            "flex items-start gap-3 rounded-lg border p-3 transition-colors",
+            "flex items-start gap-3 rounded-lg border-2 p-3 sm:p-4 transition-colors",
             fieldErrors.marketingConsent
-              ? "border-red-500 bg-red-50/50 dark:bg-red-950/10"
+              ? "border-red-500 bg-red-50/60 dark:bg-red-950/10 ring-2 ring-red-500/20"
               : formData.marketingConsent
-                ? "border-green-500/40 bg-green-50/40 dark:bg-green-950/10"
-                : "border-border bg-background",
+                ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/10"
+                : "border-primary/20 bg-primary/5",
           )}
         >
-          <Checkbox
-            id="marketingConsent"
-            checked={formData.marketingConsent}
-            onCheckedChange={(v) => updateFormData({ marketingConsent: v === true })}
-            className="mt-0.5 flex-shrink-0"
-            aria-describedby={fieldErrors.marketingConsent ? "marketingConsent-error" : undefined}
+          <Megaphone
+            className={cn(
+              "w-5 h-5 mt-0.5 flex-shrink-0 transition-colors",
+              fieldErrors.marketingConsent
+                ? "text-red-500"
+                : formData.marketingConsent
+                  ? "text-green-600"
+                  : "text-primary",
+            )}
+            aria-hidden="true"
           />
-          <div className="flex-1 space-y-0.5">
-            <Label htmlFor="marketingConsent" className="text-sm font-medium cursor-pointer leading-snug">
-              Ich akzeptiere die Marketingphase gemäß{" "}
-              <a href="/agb" target="_blank" rel="noopener" className="text-primary hover:underline">
-                AGB §6
-              </a>{" "}
-              <span className="text-red-500">*</span>
-            </Label>
-            <p className="text-xs text-muted-foreground leading-snug">
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-start gap-2.5">
+              <Checkbox
+                id="marketingConsent"
+                checked={formData.marketingConsent}
+                onCheckedChange={(v) => updateFormData({ marketingConsent: v === true })}
+                className="mt-0.5 flex-shrink-0"
+                aria-describedby={fieldErrors.marketingConsent ? "marketingConsent-error" : "marketingConsent-desc"}
+                aria-invalid={!!fieldErrors.marketingConsent}
+              />
+              <Label htmlFor="marketingConsent" className="text-sm font-medium cursor-pointer leading-snug">
+                Ich akzeptiere die Marketingphase gemäß{" "}
+                <a href="/agb" target="_blank" rel="noopener" className="text-primary hover:underline">
+                  AGB §6
+                </a>{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+            </div>
+            <p id="marketingConsent-desc" className="text-xs text-muted-foreground leading-snug pl-6">
               Bindung bis zu 16 Tagen mit automatischer Preisanpassung und Mindestpreis-Garantie.
               Jederzeit im Dashboard anpassbar.
             </p>
             {fieldErrors.marketingConsent && (
-              <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in">
+              <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in pl-6" role="alert">
                 {fieldErrors.marketingConsent}
               </p>
             )}

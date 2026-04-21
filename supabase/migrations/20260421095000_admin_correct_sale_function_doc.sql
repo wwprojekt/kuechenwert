@@ -1,0 +1,45 @@
+-- =========================================================================
+-- Doc-only migration for the Edge Function `admin-correct-sale`
+--
+-- Purpose: documents that an admin-only Edge Function exists for correcting
+-- the sale price of an already-sold auction. There is no DB-level object
+-- to create here (the function lives in supabase/functions/admin-correct-sale).
+-- This file exists so that the function is discoverable in the migrations
+-- history (per AGENTS.md "Edge Function periodisch -> Cron in selber
+-- Migration" / "Migration File First" rules).
+--
+-- The function is NOT periodic (no cron). It is invoked manually by an
+-- admin via:
+--   1. supabase.functions.invoke('admin-correct-sale', { body: {...} })
+--   2. SQL: net.http_post(url := '.../functions/v1/admin-correct-sale', ...)
+--      with the service-role key from vault.decrypted_secrets in the
+--      Authorization header.
+--
+-- Workflow performed by the function (see source for details):
+--   1. Cancel all existing purchase_contracts for the auction
+--      + delete corresponding PDFs from the `purchase-contracts` bucket
+--   2. Cancel all existing invoices for the auction
+--      + delete corresponding PDFs from the `invoices` bucket
+--   3. Update auctions.current_bid to the new sale price
+--   4. Update the accepted post_auction_offers row (offer_amount + message
+--      documenting the correction)
+--   5. Insert a NEW invoice with EXPLICIT amounts (net/tax/gross supplied
+--      by the caller, so the correction can match an exact pre-computed
+--      commission and bypass any pricing edge case)
+--   6. Generate the new invoice PDF (`generate-invoice-pdf`)
+--   7. Email the new invoice to the dealer (`send-invoice-email`)
+--   8. Generate a new purchase contract (`generate-purchase-contract`)
+--   9. Email the new contract to seller + buyer via Resend (inline)
+--
+-- Auth: service_role OR admin role (via _shared/auth.ts).
+-- verify_jwt: false (custom auth in the function body).
+--
+-- First production use 2026-04-21:
+--   * Auction 1da429c0-6464-4444-9bdb-752293b50979 (Sunlight I69 L)
+--   * Old sale price 52.000 EUR -> corrected to 54.000 EUR
+--   * Cancelled invoice CA2026-001041 -> new invoice CA2026-001042
+--   * Cancelled contract KV-2026-00014 -> new contract KV-2026-00015
+-- =========================================================================
+
+-- intentionally empty (documentation-only migration)
+SELECT 1;

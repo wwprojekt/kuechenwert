@@ -59,11 +59,11 @@ serve(async (req) => {
       { loc: `${baseUrl}/wann-wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       { loc: `${baseUrl}/wohnmobilpreise-2026`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       { loc: `${baseUrl}/wohnmobil-ankauf-ratgeber`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-          { loc: `${baseUrl}/finanziertes-wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-          { loc: `${baseUrl}/wohnwagen-verkaufspreis`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-          { loc: `${baseUrl}/wann-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-          { loc: `${baseUrl}/wohnwagenpreise-2026`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-          { loc: `${baseUrl}/finanzierten-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/finanziertes-wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wohnwagen-verkaufspreis`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wann-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/wohnwagenpreise-2026`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/finanzierten-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       // Auth & Registration pages (noindex in meta but useful for sitemap discovery)
       { loc: `${baseUrl}/register/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
     ]

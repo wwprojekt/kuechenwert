@@ -4531,6 +4531,56 @@ export type Database = {
         Returns: Json
       }
       admin_delete_bid: { Args: { p_bid_id: string }; Returns: Json }
+      admin_get_cron_jobs_health: {
+        Args: { p_hours?: number }
+        Returns: {
+          active: boolean
+          avg_duration_ms: number
+          command: string
+          jobid: number
+          jobname: string
+          last_run_duration_ms: number
+          last_run_end: string
+          last_run_message: string
+          last_run_start: string
+          last_run_status: string
+          runs_failed: number
+          runs_succeeded: number
+          runs_total: number
+          schedule: string
+        }[]
+      }
+      admin_get_cron_run_history: {
+        Args: { p_jobid: number; p_limit?: number }
+        Returns: {
+          duration_ms: number
+          end_time: string
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
+      admin_get_http_response_health: {
+        Args: { p_hours?: number }
+        Returns: {
+          example_content: string
+          last_seen: string
+          status_class: string
+          total: number
+        }[]
+      }
+      admin_get_recent_http_failures: {
+        Args: { p_hours?: number; p_limit?: number }
+        Returns: {
+          content: string
+          created: string
+          error_msg: string
+          id: number
+          status_code: number
+          timed_out: boolean
+        }[]
+      }
       admin_search_listings: {
         Args: { search_term?: string }
         Returns: {
@@ -4710,10 +4760,6 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      reactivate_wizard_session_by_resume_token: {
-        Args: { p_resume_token: string }
-        Returns: string
-      }
       generate_contract_number: { Args: never; Returns: string }
       generate_customer_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
@@ -4876,6 +4922,10 @@ export type Database = {
       process_search_alerts_for_motorhome: {
         Args: { motorhome_id_param: string }
         Returns: number
+      }
+      reactivate_wizard_session_by_resume_token: {
+        Args: { p_resume_token: string }
+        Returns: string
       }
       reapply_dealer_application: {
         Args: { application_id_param: string }

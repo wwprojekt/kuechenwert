@@ -30,6 +30,7 @@ import {
   DollarSign,
   Wrench,
   Database,
+  TimerReset,
 } from "lucide-react";
 import {
   Sidebar,
@@ -161,6 +162,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Blog", url: "/admin/blog", icon: FileText },
       { title: "Rechtliches", url: "/admin/legal", icon: Scale },
       { title: "Fehlerprotokoll", url: "/admin/error-logs", icon: AlertTriangle },
+      { title: "Cron-Health", url: "/admin/cron-health", icon: TimerReset },
       { title: "Audit-Log", url: "/admin/audit-log", icon: Shield },
       { title: "Einstellungen", url: "/admin/settings", icon: Settings },
     ],

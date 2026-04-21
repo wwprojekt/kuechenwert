@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Car, Gavel, Users, Building2, Mail, Settings,
   TrendingUp, FileText, Calculator, Calendar, Shield, Search,
   MessageCircle, Star, AlertTriangle, CreditCard, FileSignature,
-  Scale, UserPlus, Receipt,
+  Scale, UserPlus, Receipt, TimerReset,
 } from "lucide-react";
 
 const ADMIN_PAGES = [
@@ -43,6 +43,7 @@ const ADMIN_PAGES = [
   { title: "Blog", path: "/admin/blog", icon: FileText, keywords: "artikel beitrag" },
   { title: "Rechtliches", path: "/admin/legal", icon: Scale, keywords: "impressum datenschutz agb" },
   { title: "Fehlerprotokoll", path: "/admin/error-logs", icon: AlertTriangle, keywords: "fehler bugs errors" },
+  { title: "Cron-Health", path: "/admin/cron-health", icon: TimerReset, keywords: "cron jobs scheduler pg_cron pg_net edge functions" },
   { title: "Audit-Log", path: "/admin/audit-log", icon: Shield, keywords: "protokoll änderungen" },
   { title: "Einstellungen", path: "/admin/settings", icon: Settings, keywords: "konfiguration branding" },
 ];

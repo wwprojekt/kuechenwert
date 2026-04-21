@@ -126,6 +126,11 @@ export function RecordPaymentDialog({
         fullyPaid?: boolean;
         emailSent?: boolean;
         emailError?: string | null;
+        // Added with the auto-lift restriction logic in record-invoice-payment.
+        // True iff this payment cleared the dealer's account_restricted flag.
+        restrictionLifted?: boolean;
+        restrictionLiftSkippedReason?: string | null;
+        restrictionLiftError?: string | null;
       } | null;
 
       if (!result?.success) {
@@ -137,19 +142,30 @@ export function RecordPaymentDialog({
         paymentAmount,
         emailSent: !!result.emailSent,
         emailError: result.emailError ?? null,
+        // Surfaced from record-invoice-payment when the dealer's account
+        // restriction (set by process-dunning) is automatically cleared
+        // because this payment was the last overdue invoice.
+        restrictionLifted: !!result.restrictionLifted,
       };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
       queryClient.invalidateQueries({ queryKey: ["overdue-invoices"] });
+      // Mahnprozess tab in AdminFinancials reads this query; without
+      // invalidation, the "Konto gesperrt" badge would stay stuck after
+      // a payment that just lifted the restriction.
+      queryClient.invalidateQueries({ queryKey: ["dunning-invoices"] });
 
       const statusText = data.newStatus === "paid" ? "vollständig bezahlt" : "Teilzahlung erfasst";
       const emailHint = data.emailSent
         ? "Bestätigungs-E-Mail an Händler versendet."
         : "ACHTUNG: Bestätigungs-E-Mail konnte nicht versendet werden – bitte manuell informieren.";
+      const restrictionHint = data.restrictionLifted
+        ? " Konto-Sperre des Händlers wurde automatisch aufgehoben."
+        : "";
       toast.success(`Zahlung erfasst`, {
-        description: `€${data.paymentAmount.toLocaleString("de-DE")} – ${statusText}. ${emailHint}`,
+        description: `€${data.paymentAmount.toLocaleString("de-DE")} – ${statusText}. ${emailHint}${restrictionHint}`,
       });
 
       onOpenChange(false);

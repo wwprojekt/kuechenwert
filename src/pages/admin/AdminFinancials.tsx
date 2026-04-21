@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithAuth, ensureValidRLSSession } from '@/lib/sessionGuard';
@@ -19,6 +19,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -52,7 +54,10 @@ import {
   Scale,
   Truck,
   ExternalLink,
-  XCircle
+  XCircle,
+  Shield,
+  ShieldAlert,
+  Ban,
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -99,7 +104,12 @@ export default function AdminFinancials() {
   const dunningLevel1Fee = settings?.dunning_level1_fee ?? 5.00;
   const dunningLevel2Fee = settings?.dunning_level2_fee ?? 10.00;
   const dunningLevel3Fee = settings?.dunning_level3_fee ?? 15.00;
-  const _dunningRestrictAtLevel = settings?.dunning_restrict_at_level ?? 2;
+  // The reminder level at which `process-dunning` flips
+  // `profiles.account_restricted = true`. 0 disables auto-restriction.
+  // Mirrors `restrictAtLevel` in supabase/functions/process-dunning/index.ts.
+  // The complementary auto-LIFT lives in record-invoice-payment, which clears
+  // the flag when a dealer's last overdue invoice is fully paid.
+  const dunningRestrictAtLevel = settings?.dunning_restrict_at_level ?? 2;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -292,7 +302,7 @@ export default function AdminFinancials() {
         .from('invoices')
         .select(`
           *,
-          dealer:profiles(first_name, last_name, company_name, email, customer_number, phone),
+          dealer:profiles(first_name, last_name, company_name, email, customer_number, phone, account_restricted, restriction_reason, restricted_at),
           auction:auctions(id, motorhome:motorhomes(id, manufacturer, model)),
           reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
         `)
@@ -1167,6 +1177,55 @@ export default function AdminFinancials() {
               </div>
             </CardHeader>
             <CardContent>
+              {/*
+                Restriction-policy banner.
+
+                Surfaces the value of `site_settings.dunning_restrict_at_level`
+                (which `process-dunning` enforces server-side) so admins can
+                see the active policy without leaving the page. When the
+                policy is OFF (level = 0) we show a warning instead, because
+                "no auto-restriction" is a deliberate but risky choice and
+                should not be silent.
+
+                Lift behaviour is described too — that is `record-invoice-payment`
+                automatically clearing the flag when the dealer's last
+                overdue invoice is paid (Stage 1 of this fix).
+              */}
+              {dunningRestrictAtLevel > 0 ? (
+                <Alert className="mb-4 border-blue-200 bg-blue-50/60">
+                  <Shield className="h-4 w-4 text-blue-700" />
+                  <AlertDescription className="text-blue-900">
+                    Händlerkonten werden ab der{' '}
+                    <strong>
+                      {getReminderLevelLabel(dunningRestrictAtLevel)}
+                    </strong>{' '}
+                    automatisch gesperrt (Bieten und Sofortkauf blockiert).
+                    Bei vollständigem Zahlungseingang wird die Sperre
+                    automatisch wieder aufgehoben.{' '}
+                    <Link
+                      to="/admin/settings"
+                      className="underline font-medium hover:text-blue-700"
+                    >
+                      Schwelle ändern
+                    </Link>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className="mb-4 border-amber-200 bg-amber-50/60">
+                  <ShieldAlert className="h-4 w-4 text-amber-700" />
+                  <AlertDescription className="text-amber-900">
+                    Automatische Kontosperre ist <strong>deaktiviert</strong>.
+                    Überfällige Händler können weiterhin bieten und kaufen.{' '}
+                    <Link
+                      to="/admin/settings"
+                      className="underline font-medium hover:text-amber-700"
+                    >
+                      Aktivieren
+                    </Link>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {!dunningInvoices?.length ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Scale className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
@@ -1230,6 +1289,34 @@ export default function AdminFinancials() {
                       levelBg = 'bg-amber-50/50 border-amber-200';
                     }
 
+                    // Restriction-status helpers.
+                    //
+                    // `isDealerInvoice` mirrors the carve-out in
+                    // `process-dunning`: penalty invoices issued to private
+                    // sellers do NOT trigger the auto-restriction, so we
+                    // suppress the related warnings on those rows.
+                    //
+                    // `isCurrentlyRestricted` reflects the live state of the
+                    // dealer profile (loaded via the dunning query). It does
+                    // NOT necessarily mean THIS invoice caused the lock —
+                    // another overdue invoice from the same dealer may have.
+                    //
+                    // `nextReminderTriggersRestriction` is shown as a
+                    // warning icon next to rows where the next dunning step
+                    // (current effective level + 1) would cross the
+                    // configured `dunningRestrictAtLevel` threshold.
+                    const isDealerInvoice =
+                      invoice.invoice_type !== 'seller_penalty' &&
+                      invoice.invoice_type !== 'private_penalty';
+                    const isCurrentlyRestricted =
+                      isDealerInvoice &&
+                      Boolean(invoice.dealer?.account_restricted);
+                    const nextReminderTriggersRestriction =
+                      isDealerInvoice &&
+                      dunningRestrictAtLevel > 0 &&
+                      effectiveLevel < dunningRestrictAtLevel &&
+                      effectiveLevel + 1 >= dunningRestrictAtLevel;
+
                     return (
                       <div key={invoice.id} className={`p-5 border rounded-lg ${levelBg}`}>
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -1240,6 +1327,39 @@ export default function AdminFinancials() {
                               <div className="text-sm text-muted-foreground">
                                 {invoice.dealer?.company_name || `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`}
                               </div>
+                              {/*
+                                Restriction badge — visible iff the dealer's
+                                profile currently has account_restricted = true
+                                AND this row is a dealer invoice (skip on
+                                penalty rows where the badge would be
+                                misleading because penalties never restrict).
+                              */}
+                              {isCurrentlyRestricted && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="destructive"
+                                      className="mt-1 gap-1"
+                                    >
+                                      <Ban className="h-3 w-3" />
+                                      Konto gesperrt
+                                      {invoice.dealer?.restricted_at && (
+                                        <span className="font-normal opacity-90">
+                                          {' '}seit{' '}
+                                          {format(
+                                            new Date(invoice.dealer.restricted_at),
+                                            'dd.MM.yyyy',
+                                          )}
+                                        </span>
+                                      )}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {invoice.dealer?.restriction_reason ||
+                                      'Händler ist aktuell für Bieten und Sofortkauf gesperrt'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               {custNum && (
                                 <div className="text-xs text-blue-600 font-semibold mt-0.5">{custNum}</div>
                               )}
@@ -1259,7 +1379,30 @@ export default function AdminFinancials() {
                             
                             {/* Dunning Status */}
                             <div className="space-y-1.5">
-                              <Badge className={levelColor}>{levelLabel}</Badge>
+                              <div className="flex items-center gap-2">
+                                <Badge className={levelColor}>{levelLabel}</Badge>
+                                {/*
+                                  Warns admin BEFORE clicking "Mahnung senden"
+                                  on a row whose next step would auto-restrict
+                                  the dealer's account. Suppressed if the
+                                  dealer is already restricted (no new info).
+                                */}
+                                {nextReminderTriggersRestriction &&
+                                  !isCurrentlyRestricted && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="inline-flex items-center text-amber-700">
+                                          <ShieldAlert className="h-4 w-4" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        Achtung: Die nächste Mahnung sperrt
+                                        das Händlerkonto automatisch
+                                        (Schwelle: {getReminderLevelLabel(dunningRestrictAtLevel)}).
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                              </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                 <span className="font-medium text-red-600">{daysOverdue} Tage überfällig</span>
                                 <span>·</span>

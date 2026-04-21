@@ -246,6 +246,114 @@ Deno.serve(async (req) => {
     );
   }
 
+  // ─── Step 2.5: re-evaluate dealer restriction after payment ────────────
+  //
+  // Background: `process-dunning` flips `profiles.account_restricted = true`
+  // once a dealer's overdue invoice reaches `dunning_restrict_at_level`.
+  // Until this block existed, NOTHING ever flipped it back to `false` — not
+  // even full payment of the invoice that triggered the restriction. The
+  // dealer would stay locked out of `place-bid` and `instant-buy` forever
+  // unless an admin manually edited the profile in the database.
+  //
+  // We lift the restriction here iff ALL of these hold:
+  //   1. This invoice is now fully paid (`isFullyPaid`) — partial payments
+  //      keep the dealer technically overdue, so we don't touch the flag.
+  //   2. The invoice is a dealer invoice (NOT seller_penalty / private_penalty),
+  //      mirroring `isDealerInvoice` in `process-dunning`. Penalty invoices
+  //      never trigger restrictions in the first place, so receiving payment
+  //      on one says nothing about restriction state.
+  //   3. The dealer has NO other overdue dealer invoice still open (pending
+  //      or partial). Otherwise the restriction is still warranted by another
+  //      invoice and lifting it here would silently undo a valid lock.
+  //
+  // The actual UPDATE is guarded by `.eq('account_restricted', true)` so it
+  // is idempotent — a no-op if the dealer was never restricted, no row
+  // touched, no realtime event noise.
+  //
+  // Failure of this step does NOT roll back the payment. The money was
+  // received and recorded, the lift is best-effort. Admins can lift
+  // manually via the dealer profile screen.
+  const isPenaltyInvoice =
+    invoice.invoice_type === 'seller_penalty' ||
+    invoice.invoice_type === 'private_penalty';
+
+  let restrictionLifted = false;
+  let restrictionLiftError: string | null = null;
+  let restrictionLiftSkippedReason:
+    | 'partial_payment'
+    | 'penalty_invoice'
+    | 'still_overdue_other_invoice'
+    | null = null;
+
+  if (!isFullyPaid) {
+    restrictionLiftSkippedReason = 'partial_payment';
+  } else if (isPenaltyInvoice) {
+    restrictionLiftSkippedReason = 'penalty_invoice';
+  } else {
+    try {
+      const nowIso = new Date().toISOString();
+
+      // Look for ANY other overdue dealer invoice (limit 1 — we just need
+      // to know whether at least one exists). We exclude the invoice we
+      // just paid so the freshly-set payment_status='paid' on it doesn't
+      // matter for the query, but also so partial-payment rounding edge
+      // cases can't accidentally include it.
+      const { data: stillOverdue, error: stillOverdueErr } = await supabaseAdmin
+        .from('invoices')
+        .select('id')
+        .eq('dealer_id', invoice.dealer_id)
+        .in('payment_status', ['pending', 'partial'])
+        .lt('due_date', nowIso)
+        .neq('status', 'cancelled')
+        .neq('invoice_type', 'seller_penalty')
+        .neq('invoice_type', 'private_penalty')
+        .neq('id', invoice.id)
+        .limit(1);
+
+      if (stillOverdueErr) throw stillOverdueErr;
+
+      if (!stillOverdue || stillOverdue.length === 0) {
+        const { data: liftResult, error: liftErr } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            account_restricted: false,
+            restriction_reason: null,
+            restricted_at: null,
+          })
+          .eq('id', invoice.dealer_id)
+          .eq('account_restricted', true)
+          .select('id');
+
+        if (liftErr) throw liftErr;
+
+        // liftResult is the array of updated rows. Empty = dealer wasn't
+        // restricted in the first place (idempotent no-op, the common case).
+        if (liftResult && liftResult.length > 0) {
+          restrictionLifted = true;
+          edgeLogger.info(
+            `Account restriction lifted for dealer ${invoice.dealer_id} after full payment of invoice ${invoice.invoice_number}`,
+          );
+        }
+      } else {
+        restrictionLiftSkippedReason = 'still_overdue_other_invoice';
+      }
+    } catch (e) {
+      restrictionLiftError = e instanceof Error ? e.message : String(e);
+      edgeLogger.error('Restriction auto-lift failed', restrictionLiftError);
+      await logEdgeError(supabaseAdmin, {
+        component: 'record-invoice-payment',
+        message: 'Restriction auto-lift failed after payment',
+        severity: 'high',
+        category: 'invoice',
+        originalError: restrictionLiftError,
+        userId: user.id,
+        metadata: { invoiceId, dealerId: invoice.dealer_id },
+      });
+      // Do NOT fail the request — payment is recorded, restriction lift
+      // is best-effort. Admin can lift manually if needed.
+    }
+  }
+
   // ─── Step 3: confirmation email ────────────────────────────────────────
   const dealer = (invoice as unknown as {
     dealer: {
@@ -416,10 +524,35 @@ Deno.serve(async (req) => {
         send_email_requested: sendEmail,
         email_sent: emailSent,
         email_error: emailError,
+        restriction_lifted: restrictionLifted,
+        restriction_lift_skipped_reason: restrictionLiftSkippedReason,
+        restriction_lift_error: restrictionLiftError,
       },
     });
   } catch (e) {
     edgeLogger.error('audit_logs insert failed', e);
+  }
+
+  // Separate, dedicated audit entry for the restriction lift — makes it
+  // easy to grep / report on when restrictions came off and why. We only
+  // log this when something actually changed; the no-op idempotent path
+  // would otherwise spam audit_logs on every recorded payment.
+  if (restrictionLifted) {
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'lift_account_restriction',
+        entity_type: 'profile',
+        entity_id: invoice.dealer_id,
+        details: {
+          reason: 'payment_received',
+          triggered_by_invoice_id: invoice.id,
+          triggered_by_invoice_number: invoice.invoice_number,
+        },
+      });
+    } catch (e) {
+      edgeLogger.error('audit_logs insert (restriction lift) failed', e);
+    }
   }
 
   return new Response(
@@ -433,6 +566,9 @@ Deno.serve(async (req) => {
       recipientEmail,
       emailSent,
       emailError,
+      restrictionLifted,
+      restrictionLiftSkippedReason,
+      restrictionLiftError,
     }),
     { status: 200, headers },
   );

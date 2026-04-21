@@ -270,17 +270,10 @@ const step4Schema = z.object({});
 // Step 4: Equipment (all optional - no validation needed)
 const step5Schema = z.object({});
 
-// Step 5: Quick Contact (name + email - Lead-Sicherung)
-const step3Schema = z.object({
-  customerName: z.string().min(1, "Name ist erforderlich"),
-  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-});
-
-// Step 6: Photos (optional - no validation needed, user can skip)
-const step6Schema = z.object({});
-
 // A reasonable-but-permissive phone check: min 6 usable digits, allows +, spaces, -, /, ().
 // We deliberately stay permissive (international formats) but reject e.g. "12" or "abc".
+// Hoisted above step3Schema (=Step 5) because the optional phone field there
+// reuses the same regex/digit-count rules.
 const phoneRegex = /^[+()\d\s\-/.]{6,}$/;
 const phoneSchema = z
   .string()
@@ -290,6 +283,33 @@ const phoneSchema = z
     (v) => (v.match(/\d/g) || []).length >= 6,
     "Telefonnummer benötigt mindestens 6 Ziffern"
   );
+
+// Step 5: Quick Contact (name + email - Lead-Sicherung)
+//
+// Telefon ist hier OPTIONAL: wir wollen die Hürde auf Step 5 nicht erhöhen,
+// aber Trust-User die das Feld freiwillig ausfüllen geben dem Sales-Team
+// einen Lead-Recovery-Kanal für Step 6/7-Abbrecher (51 verlorene Phone-
+// Leads/Monat laut Funnel-Analyse 2026-04-20).
+//
+// Wenn der User etwas eingibt, wird es voll validiert (phoneSchema).
+// Leerstring oder undefined = OK. In Step 7 ist Phone weiterhin Pflicht
+// als Sicherheitsnetz für die User die Step 5 ohne Phone passiert haben.
+const step3Schema = z.object({
+  customerName: z.string().min(1, "Name ist erforderlich"),
+  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+  customerPhone: z.string().optional().refine(
+    (v) => {
+      if (!v || v.trim() === "") return true;
+      if (v.length < 5) return false;
+      if (!phoneRegex.test(v)) return false;
+      return (v.match(/\d/g) || []).length >= 6;
+    },
+    { message: "Bitte geben Sie eine gültige Telefonnummer ein oder lassen Sie das Feld leer" }
+  ),
+});
+
+// Step 6: Photos (optional - no validation needed, user can skip)
+const step6Schema = z.object({});
 
 // Step 7: Sale Channel + Phone (light)
 //
@@ -485,6 +505,7 @@ export const useWizardForm = () => {
           step3Schema.parse({
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
+            customerPhone: formData.customerPhone,
           });
           break;
         case 6:

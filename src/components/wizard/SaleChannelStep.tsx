@@ -14,7 +14,7 @@
  * in Step 8 hat das Sales-Team mindestens Telefon + Standort.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,13 @@ interface SaleChannelStepProps {
 }
 
 export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: SaleChannelStepProps) => {
+  // Track ob die Telefonnummer bereits aus Step 5 (QuickContact) übernommen
+  // wurde – dann blenden wir einen kleinen Confirmation-Hint ein, statt
+  // den User wundern zu lassen warum sein Phone schon drinsteht.
+  const phonePrefilledRef = useRef<boolean>(
+    !!formData.customerPhone && formData.customerPhone.trim() !== "",
+  );
+
   useEffect(() => {
     if (!formData.saleChannel) {
       updateFormData({ saleChannel: "auction" });
@@ -318,9 +325,16 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
           {fieldErrors.customerPhone && (
             <p className="text-sm text-red-600 animate-fade-in">{fieldErrors.customerPhone}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Nur für Rückfragen zu Ihrem Inserat – wird nicht öffentlich angezeigt.
-          </p>
+          {phonePrefilledRef.current && !fieldErrors.customerPhone ? (
+            <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+              Aus Schritt 5 übernommen – Sie können sie hier ändern.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Nur für Rückfragen zu Ihrem Inserat – wird nicht öffentlich angezeigt.
+            </p>
+          )}
         </div>
       </div>
 

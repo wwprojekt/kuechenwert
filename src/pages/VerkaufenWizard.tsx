@@ -771,7 +771,7 @@ const VerkaufenWizard = () => {
                         : currentStep <= 4
                         ? (currentUser ? "Ihre Profildaten wurden automatisch übernommen" : "Gleich können Sie Ihre Kontaktdaten eingeben")
                         : currentStep === 5
-                        ? (currentUser ? "Bitte bestätigen Sie Ihre Kontaktdaten" : "Fast geschafft – nur noch Name und E-Mail")
+                        ? (currentUser ? "Bitte bestätigen Sie Ihre Kontaktdaten" : "Name, E-Mail und optional Telefon für schnelle Rückfragen")
                         : currentStep === 6
                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7

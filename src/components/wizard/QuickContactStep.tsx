@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { User, Mail, CheckCircle2 } from "lucide-react";
+import { User, Mail, Phone, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuickContactStepProps {
@@ -71,6 +71,36 @@ export const QuickContactStep = ({
           {fieldErrors.customerEmail && (
             <p className="text-xs text-destructive">{fieldErrors.customerEmail}</p>
           )}
+        </div>
+
+        {/* Telefon optional – Lead-Recovery für Step 6/7-Abbrecher.
+            Pflicht-Validierung erst in Step 7 (SaleChannelStep). */}
+        <div className="space-y-2">
+          <Label htmlFor="customerPhoneEarly" className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Telefon
+            <span className="text-xs text-muted-foreground font-normal ml-1">
+              (optional)
+            </span>
+          </Label>
+          <Input
+            id="customerPhoneEarly"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+49 123 456789"
+            value={formData.customerPhone || ""}
+            onChange={(e) => updateFormData({ customerPhone: e.target.value })}
+            className={cn(fieldErrors.customerPhone && "border-destructive")}
+          />
+          {fieldErrors.customerPhone && (
+            <p className="text-xs text-destructive">{fieldErrors.customerPhone}</p>
+          )}
+          <p className="text-xs text-muted-foreground leading-snug">
+            Sichern Sie sich schnellere Rückfragen vom Sales-Team und ein
+            persönliches Angebot. Wird nicht öffentlich angezeigt.
+          </p>
         </div>
 
         {isAuthenticated && formData.customerName && formData.customerEmail && (

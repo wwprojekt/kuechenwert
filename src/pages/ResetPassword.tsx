@@ -216,7 +216,9 @@ const ResetPassword = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="password"
+                      name="new-password"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       placeholder="Mindestens 8 Zeichen"
                       className="pl-10 pr-10"
                       value={password}
@@ -262,7 +264,9 @@ const ResetPassword = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="confirmPassword"
+                      name="confirm-new-password"
                       type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       placeholder="Passwort wiederholen"
                       className="pl-10 pr-10"
                       value={confirmPassword}

@@ -147,7 +147,12 @@ const Login = () => {
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   placeholder="ihre@email.de"
                   value={formData.email}
                   onChange={(e) =>
@@ -164,7 +169,9 @@ const Login = () => {
                 </Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) =>

@@ -232,6 +232,10 @@ const Register = () => {
                       </Label>
                       <Input
                         id="firstName"
+                        name="given-name"
+                        type="text"
+                        autoComplete="given-name"
+                        autoCapitalize="words"
                         placeholder="Max"
                         value={formData.firstName}
                         onChange={(e) =>
@@ -247,6 +251,10 @@ const Register = () => {
                       </Label>
                       <Input
                         id="lastName"
+                        name="family-name"
+                        type="text"
+                        autoComplete="family-name"
+                        autoCapitalize="words"
                         placeholder="Mustermann"
                         value={formData.lastName}
                         onChange={(e) =>
@@ -264,7 +272,12 @@ const Register = () => {
                     </Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       placeholder="ihre@email.de"
                       value={formData.email}
                       onChange={(e) =>
@@ -281,7 +294,9 @@ const Register = () => {
                     </Label>
                     <Input
                       id="password"
+                      name="new-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Ihr sicheres Passwort"
                       value={formData.password}
                       onChange={(e) =>
@@ -322,7 +337,9 @@ const Register = () => {
                     </Label>
                     <Input
                       id="passwordConfirm"
+                      name="passwordConfirm"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Passwort wiederholen"
                       value={formData.passwordConfirm}
                       onChange={(e) =>
@@ -339,7 +356,10 @@ const Register = () => {
                     </Label>
                     <Input
                       id="phone"
+                      name="tel"
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       placeholder="+49 123 456789"
                       value={formData.phone}
                       onChange={(e) =>

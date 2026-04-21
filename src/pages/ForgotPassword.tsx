@@ -134,7 +134,12 @@ const ForgotPassword = () => {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="email"
+                      name="email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       placeholder="ihre@email.de"
                       className="pl-10"
                       value={email}

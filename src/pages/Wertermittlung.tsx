@@ -252,6 +252,10 @@ const Wertermittlung = () => {
                           <Label htmlFor="name">Name *</Label>
                           <Input
                             id="name"
+                            name="name"
+                            type="text"
+                            autoComplete="name"
+                            autoCapitalize="words"
                             placeholder="Max Mustermann"
                             value={formData.name}
                             onChange={(e) => updateField("name", e.target.value)}
@@ -261,7 +265,12 @@ const Wertermittlung = () => {
                           <Label htmlFor="email">E-Mail *</Label>
                           <Input
                             id="email"
+                            name="email"
                             type="email"
+                            inputMode="email"
+                            autoComplete="email"
+                            autoCapitalize="none"
+                            spellCheck={false}
                             placeholder="max@beispiel.de"
                             value={formData.email}
                             onChange={(e) => updateField("email", e.target.value)}
@@ -272,7 +281,10 @@ const Wertermittlung = () => {
                         <Label htmlFor="phone">Telefon (optional)</Label>
                         <Input
                           id="phone"
+                          name="tel"
                           type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
                           placeholder="+49 123 456789"
                           value={formData.phone}
                           onChange={(e) => updateField("phone", e.target.value)}
@@ -308,7 +320,9 @@ const Wertermittlung = () => {
                           <Label htmlFor="year">Baujahr</Label>
                           <Input
                             id="year"
+                            name="year"
                             type="number"
+                            inputMode="numeric"
                             placeholder="2020"
                             min={1980}
                             max={new Date().getFullYear()}
@@ -320,7 +334,9 @@ const Wertermittlung = () => {
                           <Label htmlFor="mileage">Kilometerstand</Label>
                           <Input
                             id="mileage"
+                            name="mileage"
                             type="number"
+                            inputMode="numeric"
                             placeholder="50000"
                             value={formData.mileage}
                             onChange={(e) => updateField("mileage", e.target.value)}

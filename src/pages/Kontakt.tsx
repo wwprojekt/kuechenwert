@@ -304,6 +304,10 @@ const Kontakt = () => {
                       </label>
                       <Input
                         id="name"
+                        name="name"
+                        type="text"
+                        autoComplete="name"
+                        autoCapitalize="words"
                         placeholder="Ihr vollständiger Name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -316,7 +320,12 @@ const Kontakt = () => {
                       </label>
                       <Input
                         id="email"
+                        name="email"
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         placeholder="ihre.email@beispiel.de"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -331,7 +340,10 @@ const Kontakt = () => {
                       </label>
                       <Input
                         id="phone"
+                        name="tel"
                         type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
                         placeholder="+49 123 456789"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -344,6 +356,9 @@ const Kontakt = () => {
                       </label>
                       <Input
                         id="subject"
+                        name="subject"
+                        type="text"
+                        autoCapitalize="sentences"
                         placeholder="Worum geht es?"
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}

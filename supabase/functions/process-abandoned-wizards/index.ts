@@ -27,15 +27,19 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *   - The respective email has not been sent yet
  */
 
+// Must mirror the real wizard flow in VerkaufenWizard.tsx:
+// 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
+// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation 9=MarketingPhase
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeugtyp",
   2: "Fahrzeugdaten",
-  3: "Kontakt",
-  4: "Details & Technik",
-  5: "Ausstattung",
+  3: "Details & Technik",
+  4: "Ausstattung",
+  5: "Kontakt",
   6: "Fotos",
-  7: "Verkaufsweg",
+  7: "Verkaufsweg & Telefon",
   8: "Standort & Konto",
+  9: "Vermarktung bestätigen",
 };
 
 interface SiteSettings {

@@ -230,8 +230,9 @@ const initialFormData: WizardFormData = {
 // Step 4: Equipment (optional)
 // Step 5: Quick Contact (name + email - Lead-Sicherung)
 // Step 6: Photos (optional)
-// Step 7: Final Contact & Sale Channel (saleChannel, phone, description, account)
-// Step 8: Location & Account (address, password)
+// Step 7: Sale Channel + Phone (light) – saleChannel, Preis, Telefon, optional Beschreibung
+// Step 8: Location & Account (address, password) – letzter Schritt für sale_channel='station'
+// Step 9: Marketingphase (Pflicht-Consent + Submit) – nur für auction / instant_price
 
 // Step 1: Vehicle Type (Aufbauart als Tile-Selection)
 const step1Schema = z.object({
@@ -289,19 +290,21 @@ const phoneSchema = z
     "Telefonnummer benötigt mindestens 6 Ziffern"
   );
 
-// Step 7: Sale Channel & Contact (saleChannel + phone required, name+email already captured)
+// Step 7: Sale Channel + Phone (light)
 //
-// Marketingphase-Consent (`marketingConsent`) ist PFLICHT für `auction` und
-// `instant_price` (juristische Absicherung der Marketingphase, AGB §6).
-// Für `station` ist kein Consent nötig – dort gilt das normale Ankauf-Modell.
+// Pflicht: saleChannel, customerPhone und der Channel-spezifische Preis
+// (instantPrice für instant_price, reservePrice für auction).
+//
+// Name + E-Mail sind hier NICHT mehr Pflicht – sie wurden bereits in Step 5
+// (QuickContactStep) erfasst und werden in Step 7 nur noch zur Bestätigung
+// angezeigt. Der Marketing-Consent ist auf Step 9 (MarketingPhaseStep)
+// verschoben, damit Step 7 deutlich entlastet ist und das Sales-Team bei
+// Abbruch in Step 8 / 9 mindestens schon die Telefonnummer hat.
 const step7Schema = z.object({
   saleChannel: z.string().min(1, "Bitte wählen Sie einen Verkaufsweg"),
   reservePrice: z.number().nullable().optional(),
-  customerName: z.string().min(1, "Name ist erforderlich"),
-  customerEmail: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   customerPhone: phoneSchema,
   instantPrice: z.number().nullable().optional(),
-  marketingConsent: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.saleChannel === 'instant_price' && !(data.instantPrice != null && data.instantPrice > 0)) {
     ctx.addIssue({
@@ -310,9 +313,6 @@ const step7Schema = z.object({
       message: "Bitte geben Sie Ihren Wunschpreis ein",
     });
   }
-  // Auktion: Mindestpreis ist Pflicht (juristische Absicherung der
-  // automatischen Preisanpassung gemäß AGB §6.4 – ohne Wunsch-Mindestpreis
-  // gibt es keinen Reduktionsboden, an dem die -6%-Begrenzung greifen kann).
   if (data.saleChannel === 'auction' && !(data.reservePrice != null && data.reservePrice > 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -320,39 +320,26 @@ const step7Schema = z.object({
       message: "Bitte geben Sie Ihren Wunsch-Mindestpreis ein",
     });
   }
-  if (
-    (data.saleChannel === 'auction' || data.saleChannel === 'instant_price') &&
-    data.marketingConsent !== true
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['marketingConsent'],
-      message: "Bitte bestätigen Sie die Marketingphase, um fortzufahren",
-    });
-  }
 });
 
-// Step 8: Location & Account (Standort + Passwort - letzter Schritt)
-// bodyType, manufacturer und saleChannel werden hier nochmals geprüft als letzte Sicherheitsebene vor dem Submit.
-// saleChannel MUSS hier geprüft werden, weil handleSubmit nur validateStep(8) aufruft, nicht validateStep(7).
-// Ohne diese Prüfung kann ein leerer saleChannel an die DB gesendet werden → PostgreSQL-Enum-Fehler.
+// Step 8: Location & Account (Standort + Passwort)
+//
+// bodyType, manufacturer, saleChannel und der Channel-spezifische Preis
+// werden hier mitgeprüft als zusätzliche Sicherheitsebene gegen URL-Hacks
+// (z.B. ?step=8). Der Marketing-Consent ist seit dem 3-Step-Split NICHT
+// mehr in step8Schema – er wandert nach step9Schema.
+//
+// Für sale_channel = 'station' ist Step 8 der LETZTE Schritt vor Submit
+// (kein Step 9 nötig). Für 'auction' / 'instant_price' folgt danach noch
+// Step 9 (MarketingPhaseStep).
 const step8Schema = z.object({
   bodyType: z.string().min(1, "Aufbauart fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 1"),
   manufacturer: z.string().min(1, "Hersteller fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 2"),
   saleChannel: z.enum(['instant_price', 'auction', 'station'], {
     errorMap: () => ({ message: "Bitte w\u00e4hlen Sie einen Verkaufsweg \u2013 gehen Sie zur\u00fcck zu Schritt 7" }),
   }),
-  // instantPrice is mirrored here so we can cross-validate "instant_price
-  // requires a positive price" as the very last gate before submit (the same
-  // rule lives in step7Schema, the DB CHECK and the auto-convert-wizard guard).
   instantPrice: z.number().nullable().optional(),
-  // reservePrice ist gespiegelt, damit ein Direkt-Sprung zu Step 8 per ?step=8
-  // die Pflicht-Eingabe für Auktionen nicht umgeht (gleiche Logik wie in
-  // step7Schema und auto-convert-wizard-Guard).
   reservePrice: z.number().nullable().optional(),
-  // marketingConsent ist hier ebenfalls gespiegelt, damit ein Direkt-Sprung
-  // zu Step 8 per ?step=8 die Pflicht-Bestätigung nicht umgeht.
-  marketingConsent: z.boolean().optional(),
   customerName: z.string().min(1, "Name fehlt \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerEmail: z.string().email("E-Mail-Adresse fehlt oder ung\u00fcltig \u2013 bitte gehen Sie zur\u00fcck zu Schritt 5"),
   customerPhone: phoneSchema,
@@ -376,14 +363,44 @@ const step8Schema = z.object({
       message: "Auktion ben\u00f6tigt einen Mindestpreis gr\u00f6\u00dfer 0 \u2013 gehen Sie zur\u00fcck zu Schritt 7",
     });
   }
-  if (
-    (data.saleChannel === 'auction' || data.saleChannel === 'instant_price') &&
-    data.marketingConsent !== true
-  ) {
+});
+
+// Step 9: Marketingphase (Pflicht-Consent vor dem finalen Submit)
+//
+// Wird NUR für sale_channel = 'auction' und 'instant_price' angezeigt.
+// Für 'station' wird Step 9 visuell übersprungen und Submit erfolgt direkt
+// aus Step 8 – step9Schema wird in dem Fall nicht aufgerufen.
+//
+// Der Consent ist juristisch zwingend notwendig (AGB v7 §6.4). Doppelte
+// Spiegel-Validierung von saleChannel/Preisen, damit ein Direkt-Sprung zu
+// Step 9 per URL-Hack die Pflichten aus Step 7 nicht umgeht.
+const step9Schema = z.object({
+  saleChannel: z.enum(['instant_price', 'auction'], {
+    errorMap: () => ({ message: "Bitte w\u00e4hlen Sie einen Verkaufsweg \u2013 gehen Sie zur\u00fcck zu Schritt 7" }),
+  }),
+  instantPrice: z.number().nullable().optional(),
+  reservePrice: z.number().nullable().optional(),
+  marketingConsent: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  if (data.saleChannel === 'instant_price' && !(data.instantPrice != null && data.instantPrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['instantPrice'],
+      message: "Sofortkauf ben\u00f6tigt einen Wunschpreis \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+    });
+  }
+  if (data.saleChannel === 'auction' && !(data.reservePrice != null && data.reservePrice > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['reservePrice'],
+      message: "Auktion ben\u00f6tigt einen Mindestpreis \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+    });
+  }
+  if (data.marketingConsent !== true) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['marketingConsent'],
-      message: "Bitte bestätigen Sie die Marketingphase \u2013 gehen Sie zur\u00fcck zu Schritt 7",
+      message: "Bitte bestätigen Sie die Vermarktung gem\u00e4\u00df AGB \u00a76, um Ihr Inserat zu ver\u00f6ffentlichen",
     });
   }
 });
@@ -502,11 +519,8 @@ export const useWizardForm = () => {
           step7Schema.parse({
             saleChannel: formData.saleChannel,
             reservePrice: formData.reservePrice,
-            customerName: formData.customerName,
-            customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
             instantPrice: formData.instantPrice,
-            marketingConsent: formData.marketingConsent,
           });
           break;
         case 8:
@@ -516,7 +530,6 @@ export const useWizardForm = () => {
             saleChannel: formData.saleChannel,
             instantPrice: formData.instantPrice,
             reservePrice: formData.reservePrice,
-            marketingConsent: formData.marketingConsent,
             customerName: formData.customerName,
             customerEmail: formData.customerEmail,
             customerPhone: formData.customerPhone,
@@ -525,6 +538,17 @@ export const useWizardForm = () => {
             zipCode: formData.zipCode,
             city: formData.city,
             country: formData.country || 'DE',
+          });
+          break;
+        case 9:
+          // Step 9 (Marketingphase) wird nur für auction/instant_price
+          // erreicht. Bei station überspringt VerkaufenWizard diesen Schritt
+          // und ruft handleSubmit direkt aus Step 8 auf.
+          step9Schema.parse({
+            saleChannel: formData.saleChannel,
+            instantPrice: formData.instantPrice,
+            reservePrice: formData.reservePrice,
+            marketingConsent: formData.marketingConsent,
           });
           break;
       }

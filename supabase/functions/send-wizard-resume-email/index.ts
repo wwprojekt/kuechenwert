@@ -21,7 +21,7 @@ interface ResumeEmailRequest {
 
 // Must mirror the real wizard flow in VerkaufenWizard.tsx:
 // 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
-// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation
+// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation 9=MarketingPhase
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeugtyp",
   2: "Fahrzeugdaten",
@@ -29,8 +29,9 @@ const STEP_NAMES: Record<number, string> = {
   4: "Ausstattung",
   5: "Kontakt",
   6: "Fotos",
-  7: "Verkaufsweg",
+  7: "Verkaufsweg & Telefon",
   8: "Standort & Konto",
+  9: "Vermarktung bestätigen",
 };
 
 const handler = async (req: Request): Promise<Response> => {

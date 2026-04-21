@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { User } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { useSearchParams } from "react-router-dom";
@@ -18,6 +18,7 @@ import { EquipmentStep } from "@/components/wizard/EquipmentStep";
 import { PhotosStep } from "@/components/wizard/PhotosStep";
 import { SaleChannelStep } from "@/components/wizard/SaleChannelStep";
 import { AccountLocationStep } from "@/components/wizard/AccountLocationStep";
+import { MarketingPhaseStep } from "@/components/wizard/MarketingPhaseStep";
 import { useWizardForm } from "@/hooks/useWizardForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useWizardSession } from "@/hooks/useWizardSession";
@@ -29,16 +30,29 @@ import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
-const steps = [
+// Wizard-Schritte
+//
+// Bei sale_channel = 'station' wird Step 9 (Marketingphase) übersprungen –
+// Submit erfolgt direkt aus Step 8. Die `getActiveSteps()`-Funktion liefert
+// das passende Step-Array je nach gewähltem Channel zurück, damit die
+// Progress-Bar und der Step-Counter korrekt sind.
+const ALL_STEPS = [
   { id: 1, name: "Fahrzeugtyp", description: "Was möchten Sie verkaufen?" },
   { id: 2, name: "Fahrzeugdaten", description: "Hersteller, Modell & mehr" },
   { id: 3, name: "Einschätzung", description: "Bessere Angebote erhalten" },
   { id: 4, name: "Details & Ausstattung", description: "Bessere Angebote erhalten" },
   { id: 5, name: "Kontakt", description: "Ihre Kontaktdaten" },
   { id: 6, name: "Fotos", description: "Verkaufschancen erhöhen" },
-  { id: 7, name: "Verkaufsweg", description: "Wie möchten Sie verkaufen?" },
-  { id: 8, name: "Abschluss", description: "Standort & Konto" },
+  { id: 7, name: "Verkaufsweg & Telefon", description: "Wie möchten Sie verkaufen?" },
+  { id: 8, name: "Standort & Konto", description: "Letzter Schritt vor der Vermarktung" },
+  { id: 9, name: "Vermarktung bestätigen", description: "Mindesterlös-Garantie + Veröffentlichung" },
 ];
+
+const getActiveSteps = (saleChannel: string) => {
+  // Station-Channel hat kein Marketingphasen-Modell → Step 9 entfällt.
+  if (saleChannel === "station") return ALL_STEPS.slice(0, 8);
+  return ALL_STEPS;
+};
 
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,6 +70,10 @@ const VerkaufenWizard = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { turnstileToken, turnstileCallbackRef } = useTurnstile();
   const [honeypotValue, setHoneypotValue] = useHoneypot();
+
+  // Dynamische Step-Liste: bei sale_channel='station' nur 8 Schritte
+  // (Step 9 / Marketingphase entfällt – Submit erfolgt aus Step 8).
+  const steps = useMemo(() => getActiveSteps(formData.saleChannel), [formData.saleChannel]);
 
   // H1: Restore form data + step the user was on when they left. Only runs
   // when the session finishes loading and the user did not already land on
@@ -295,6 +313,19 @@ const VerkaufenWizard = () => {
     }
     if (!formData.saleChannel && currentStep > 7) {
       setCurrentStep(7);
+      return;
+    }
+    // Step 9 (Marketingphase) ist nur für auction/instant_price erreichbar.
+    // Falls der User per URL-Hack mit station auf Step 9 landet → zurück auf 8
+    // (das ist dort der finale Submit-Step).
+    if (currentStep === 9 && formData.saleChannel === "station") {
+      setCurrentStep(8);
+      return;
+    }
+    // Telefon ist Pflicht ab Step 8 (wird in Step 7 erfasst). Schutz gegen
+    // ?step=8 / ?step=9 URL-Hacks bei leerem Telefon-Feld.
+    if (!formData.customerPhone && currentStep > 7) {
+      setCurrentStep(7);
     }
   }, [
     isHydrated,
@@ -306,6 +337,7 @@ const VerkaufenWizard = () => {
     formData.customerName,
     formData.customerEmail,
     formData.saleChannel,
+    formData.customerPhone,
   ]);
 
   // Google Ads: Wizard-Start tracken.
@@ -320,13 +352,15 @@ const VerkaufenWizard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save progress. steps.length is a module-level constant so it's not
-  // a valid effect dependency.
+  // Auto-save progress. steps.length wechselt dynamisch zwischen 8 und 9
+  // (abhängig von sale_channel) – muss daher als Dependency mitwandern,
+  // damit total_steps in wizard_sessions korrekt aktualisiert wird, wenn
+  // der User den Channel wechselt.
   useEffect(() => {
     if (isReady) {
       saveProgress(currentStep, formData, steps.length);
     }
-  }, [currentStep, formData, saveProgress, isReady]);
+  }, [currentStep, formData, saveProgress, isReady, steps.length]);
 
   // Save progress on page unload / tab hide. We pass { immediate: true } so
   // the save is flushed synchronously (the regular debounced save would be
@@ -365,10 +399,14 @@ const VerkaufenWizard = () => {
       window.removeEventListener('pagehide', flushAndTrack);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [currentStep, formData, saveProgress]);
+  }, [currentStep, formData, saveProgress, steps]);
 
-  // Higher starting percentage reduces abandonment psychology
-  const progressMap: Record<number, number> = { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
+  // Higher starting percentage reduces abandonment psychology.
+  // Map ist auf 9 Schritte ausgelegt (auction/instant_price). Bei station
+  // (8 Schritte) wird Step 8 = 100 % verwendet – greift Fallback unten.
+  const progressMap: Record<number, number> = steps.length === 9
+    ? { 1: 11, 2: 22, 3: 33, 4: 44, 5: 55, 6: 66, 7: 77, 8: 88, 9: 100 }
+    : { 1: 12, 2: 25, 3: 37, 4: 50, 5: 62, 6: 75, 7: 87, 8: 100 };
   const progress = progressMap[currentStep] || (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
@@ -405,7 +443,15 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
-    const isValid = await validateStep(8);
+    // Validate FINAL step (8 für station, 9 für auction/instant_price) sowie
+    // Step 8 als zusätzliche Sicherheit gegen URL-Hacks (?step=9), damit
+    // Standort/Konto immer mitgeprüft werden.
+    const finalStep = steps.length;
+    if (finalStep === 9) {
+      const step8Valid = await validateStep(8);
+      if (!step8Valid) return;
+    }
+    const isValid = await validateStep(finalStep);
     if (!isValid) return;
 
     // Additional password validation for guest submissions. If the user is
@@ -468,6 +514,8 @@ const VerkaufenWizard = () => {
           isAuthenticated={!!currentUser}
           fieldErrors={fieldErrors}
         />;
+      case 9:
+        return <MarketingPhaseStep formData={formData} updateFormData={updateFormData} fieldErrors={fieldErrors} />;
       default:
         return null;
     }
@@ -487,7 +535,8 @@ const VerkaufenWizard = () => {
       case 6: return formData.photos.length > 0
         ? `Weiter mit ${formData.photos.length} Foto${formData.photos.length !== 1 ? 's' : ''}`
         : "Weiter ohne Fotos";
-      case 7: return "Zum Abschluss";
+      case 7: return "Weiter zu Standort & Konto";
+      case 8: return formData.saleChannel === "station" ? "Inserat veröffentlichen" : "Weiter zur Vermarktung";
       default: return "Weiter";
     }
   };
@@ -716,8 +765,12 @@ const VerkaufenWizard = () => {
                         : currentStep === 6
                         ? "Fotos erhöhen Ihre Verkaufschancen enorm!"
                         : currentStep === 7
-                        ? "Fast geschafft – wählen Sie Ihren Verkaufsweg"
-                        : "Letzter Schritt – Standort & Konto!"}                 </span>
+                        ? "Fast geschafft – Verkaufsweg, Preis und Telefon"
+                        : currentStep === 8
+                        ? (formData.saleChannel === "station"
+                            ? "Letzter Schritt – Standort & Konto!"
+                            : "Vorletzter Schritt – Standort & Konto")
+                        : "Letzter Schritt – Vermarktung bestätigen!"}                 </span>
                   </div>
                 </Card>
               </div>

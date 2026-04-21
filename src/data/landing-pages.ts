@@ -6,6 +6,11 @@ import { wohnmobilWertermittlungKostenlos } from "./landing-page-wertermittlung-
 import { wirKaufenDeinWohnmobil } from "./landing-page-wir-kaufen";
 import { wievielWohnmobilWert } from "./landing-page-wieviel-wert";
 import { schwackeListeWohnmobil } from "./landing-page-schwacke-liste";
+import { wohnmobilVerkaufspreis } from "./landing-page-verkaufspreis";
+import { wannWohnmobilVerkaufen } from "./landing-page-wann-verkaufen";
+import { wohnmobilpreise2026 } from "./landing-page-preise-2026";
+import { wohnmobilAnkaufRatgeber } from "./landing-page-ankauf-ratgeber";
+import { finanziertesWohnmobilVerkaufen } from "./landing-page-finanziertes";
 
 export type { LandingPageConfig, ContentSection } from "./landing-page-types";
 export type { FAQItem } from "@/components/FAQSection";
@@ -18,6 +23,11 @@ export const landingPages: Record<string, LandingPageConfig> = {
   "wir-kaufen-dein-wohnmobil": wirKaufenDeinWohnmobil,
   "wieviel-ist-mein-wohnmobil-wert": wievielWohnmobilWert,
   "schwacke-liste-wohnmobil": schwackeListeWohnmobil,
+  "wohnmobil-verkaufspreis": wohnmobilVerkaufspreis,
+  "wann-wohnmobil-verkaufen": wannWohnmobilVerkaufen,
+  "wohnmobilpreise-2026": wohnmobilpreise2026,
+  "wohnmobil-ankauf-ratgeber": wohnmobilAnkaufRatgeber,
+  "finanziertes-wohnmobil-verkaufen": finanziertesWohnmobilVerkaufen,
 };
 
 export {
@@ -28,4 +38,9 @@ export {
   wirKaufenDeinWohnmobil,
   wievielWohnmobilWert,
   schwackeListeWohnmobil,
+  wohnmobilVerkaufspreis,
+  wannWohnmobilVerkaufen,
+  wohnmobilpreise2026,
+  wohnmobilAnkaufRatgeber,
+  finanziertesWohnmobilVerkaufen,
 };

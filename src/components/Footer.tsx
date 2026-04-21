@@ -240,6 +240,16 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/wohnmobil-verkaufspreis" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Verkaufspreis ermitteln
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wohnmobilpreise-2026" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Wohnmobilpreise 2026
+                  </Link>
+                </li>
+                <li>
                   <Link to="/wertrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Wertrechner
                   </Link>
@@ -294,6 +304,21 @@ const Footer = () => {
                 <li>
                   <Link to="/ratgeber/wohnmobil-trotz-finanzierung-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Trotz Finanzierung verkaufen
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wohnmobil-ankauf-ratgeber" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Ankauf-Leitfaden
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wann-wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Wann verkaufen?
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/finanziertes-wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Finanziertes Wohnmobil verkaufen
                   </Link>
                 </li>
               </ul>

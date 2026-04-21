@@ -57,11 +57,36 @@ import {
 import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { sendInvoiceWithPdf } from '@/lib/invoiceGenerator';
+import { getInvoiceStoragePath } from '@/lib/invoiceStorage';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
+
+/**
+ * Map a stored `payment_reminders.reminder_level` (1, 2, 3) to the
+ * customer-facing label used both in the e-mail subject sent by
+ * `process-dunning` and in this admin UI. Centralising this mapping
+ * prevents the off-by-one drift that previously made the badge claim
+ * "1. Mahnung" while the actual e-mail was titled "Zahlungserinnerung".
+ *
+ *   Level 1 → Zahlungserinnerung
+ *   Level 2 → 1. Mahnung
+ *   Level 3 → 2. Mahnung (Letzte Mahnung)
+ *
+ * Source of truth: `supabase/functions/process-dunning/index.ts`
+ */
+const REMINDER_LEVEL_LABEL: Record<number, string> = {
+  0: 'Überfällig',
+  1: 'Zahlungserinnerung',
+  2: '1. Mahnung',
+  3: '2. Mahnung (Letzte)',
+};
+
+function getReminderLevelLabel(level: number): string {
+  return REMINDER_LEVEL_LABEL[level] ?? `Mahnstufe ${level}`;
+}
 
 export default function AdminFinancials() {
   const navigate = useNavigate();
@@ -90,38 +115,62 @@ export default function AdminFinancials() {
   const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
 
-  // Open invoice PDF – use stored pdf_url or generate fresh signed URL
+  // Open invoice PDF.
+  //
+  // Strategy (kept intentionally simple and resilient against expired URLs
+  // and storage-key drift, both of which were observed in production):
+  //   1. Always mint a fresh signed URL from the canonical storage path.
+  //      Avoids serving a stored `pdf_url` that may have expired (signed
+  //      URLs are valid for one year, after which the stored value silently
+  //      breaks).
+  //   2. If the file does not exist, call `generate-invoice-pdf` which
+  //      creates the PDF, uploads it AND returns a fresh signed URL so we
+  //      can open it directly – no second click required.
+  //   3. As a last resort fall back to the stored `pdf_url` (which may be
+  //      stale but is better than nothing).
   const openInvoicePdf = async (invoice: any) => {
-    // 1) Try existing pdf_url
+    if (!invoice?.id || !invoice?.dealer_id || !invoice?.invoice_number) {
+      toast({
+        title: 'PDF nicht verfügbar',
+        description: 'Rechnungsdaten unvollständig.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const storagePath = getInvoiceStoragePath(invoice.dealer_id, invoice.invoice_number);
+
+    const { data: signed } = await supabase.storage
+      .from('invoices')
+      .createSignedUrl(storagePath, 3600);
+    if (signed?.signedUrl) {
+      window.open(signed.signedUrl, '_blank');
+      return;
+    }
+
+    // Storage object missing → regenerate. Edge Function returns a freshly
+    // signed URL we can open directly.
+    const { data: genData, error: genError } = await invokeWithAuth(
+      'generate-invoice-pdf',
+      { body: { invoiceId: invoice.id } }
+    );
+    const pdfUrl = (genData as { pdfUrl?: string } | null)?.pdfUrl;
+    if (!genError && pdfUrl) {
+      await queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      window.open(pdfUrl, '_blank');
+      return;
+    }
+
     if (invoice.pdf_url) {
       window.open(invoice.pdf_url, '_blank');
       return;
     }
-    // 2) Fallback: create a fresh signed URL from storage
-    const storagePath = `${invoice.dealer_id}/${invoice.invoice_number}.pdf`;
-    const { data } = await supabase.storage
-      .from('invoices')
-      .createSignedUrl(storagePath, 3600); // 1h validity
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
-      return;
-    }
-    // 3) Try to regenerate via edge function
-    const { error: genError } = await invokeWithAuth('generate-invoice-pdf', {
-      body: { invoiceId: invoice.id },
-    });
-    if (!genError) {
-      // Refetch invoices so pdf_url is updated, then retry
-      await queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      toast({
-        title: 'PDF wird generiert',
-        description: 'Die Rechnung wird neu erstellt. Bitte versuchen Sie es gleich erneut.',
-      });
-      return;
-    }
+
     toast({
       title: 'PDF nicht verfügbar',
-      description: 'Für diese Rechnung ist kein PDF vorhanden. Bitte generieren Sie die Rechnung neu.',
+      description:
+        genError?.message ||
+        'Für diese Rechnung ist kein PDF vorhanden. Bitte generieren Sie die Rechnung neu.',
       variant: 'destructive',
     });
   };
@@ -131,9 +180,10 @@ export default function AdminFinancials() {
   // the original PDF was created.
   const regenerateInvoicePdf = async (invoice: any) => {
     toast({ title: 'PDF wird neu erstellt …' });
-    const { error: genError } = await invokeWithAuth('generate-invoice-pdf', {
-      body: { invoiceId: invoice.id },
-    });
+    const { data: genData, error: genError } = await invokeWithAuth(
+      'generate-invoice-pdf',
+      { body: { invoiceId: invoice.id } }
+    );
     if (genError) {
       toast({
         title: 'Neugenerierung fehlgeschlagen',
@@ -143,9 +193,13 @@ export default function AdminFinancials() {
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+    const pdfUrl = (genData as { pdfUrl?: string } | null)?.pdfUrl;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
     toast({
       title: 'PDF neu erstellt',
-      description: `Rechnung ${invoice.invoice_number} wurde neu generiert.`,
+      description: `Rechnung ${invoice.invoice_number} wurde neu generiert${pdfUrl ? ' und geöffnet' : ''}.`,
     });
   };
 
@@ -276,88 +330,61 @@ export default function AdminFinancials() {
     ],
   });
 
-  // Delete invoice mutation
-  // Dependencies FIRST, then the main invoice record LAST to avoid FK violations.
-  const _deleteInvoiceMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) throw new Error("Session abgelaufen");
-
-      // 1) Delete invoice_items (FK dependency)
-      const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (itemsError) throw itemsError;
-
-      // 2) Delete payment_reminders (FK dependency)
-      const { error: remindersError } = await supabase
-        .from('payment_reminders')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (remindersError) throw remindersError;
-
-      // 3) Delete dealer_payment_history (FK dependency)
-      const { error: historyError } = await supabase
-        .from('dealer_payment_history')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (historyError) throw historyError;
-
-      // 4) PDF aus Storage löschen (nicht kritisch)
-      try {
-        const invoice = invoices?.find((i: any) => i.id === invoiceId);
-        if (invoice?.dealer_id && invoice?.invoice_number) {
-          await supabase.storage
-            .from('invoices')
-            .remove([`${invoice.dealer_id}/${invoice.invoice_number}.pdf`]);
-        }
-      } catch {
-        // Storage deletion is non-critical
-      }
-
-      // 5) Delete the invoice LAST (after all dependencies are removed)
-      const { error: invoiceError } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoiceId);
-      if (invoiceError) throw invoiceError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['payment-history'] });
-      toast({
-        title: 'Rechnung gelöscht',
-        description: 'Die Rechnung und alle zugehörigen Daten wurden gelöscht.',
-      });
-      setDeleteDialogOpen(false);
-      setInvoiceToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Fehler beim Löschen',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   // Send reminder mutation
+  //
+  // Triggers `process-dunning` in single-invoice mode. The Edge Function
+  // returns:
+  //   { success, singleMode, primary: { success, skipped, reason, reminderLevel, error } }
+  // We surface the precise outcome to the admin so they can tell whether
+  // an e-mail actually went out, the invoice was already at max level, or
+  // an error occurred. Previously this said "versendet" regardless.
   const sendReminderMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
       const { data, error } = await invokeWithAuth('process-dunning', {
         body: { invoiceId },
       });
       if (error) throw error;
-      return data;
+      return data as {
+        success?: boolean;
+        singleMode?: boolean;
+        message?: string;
+        primary?: {
+          success?: boolean;
+          skipped?: boolean;
+          reason?: string;
+          reminderLevel?: number;
+          error?: string;
+        } | null;
+      } | null;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      toast({
-        title: 'Erfolg',
-        description: 'Zahlungserinnerung versendet',
-      });
+      queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
+
+      const primary = result?.primary;
+      if (primary?.success) {
+        toast({
+          title: 'Mahnung versendet',
+          description: `${getReminderLevelLabel(primary.reminderLevel ?? 1)} per E-Mail an den Empfänger gesendet.`,
+        });
+      } else if (primary?.skipped) {
+        toast({
+          title: 'Keine Mahnung versendet',
+          description: primary.reason || 'Mahnung wurde übersprungen.',
+        });
+      } else if (primary?.error) {
+        toast({
+          title: 'Mahnung fehlgeschlagen',
+          description: primary.error,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Hinweis',
+          description: result?.message || 'Keine Mahnung versendet.',
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -449,21 +476,35 @@ export default function AdminFinancials() {
     if (invoice.status === 'cancelled') {
       return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
     }
-    
+
     const isOverdue = new Date(invoice.due_date) < new Date();
-    const safeRem = Array.isArray(invoice.reminders) ? invoice.reminders : invoice.reminders ? [invoice.reminders] : [];
-    const reminderCount = safeRem.length;
-    
+    const safeRem = Array.isArray(invoice.reminders)
+      ? invoice.reminders
+      : invoice.reminders
+        ? [invoice.reminders]
+        : [];
+
+    // Use the highest reminder_level actually stored (NOT the reminder row
+    // count). The label must match what `process-dunning` puts into the
+    // e-mail subject – see `REMINDER_LEVEL_LABEL`.
+    const maxLevel = safeRem.reduce(
+      (m: number, r: any) => Math.max(m, Number(r?.reminder_level ?? 0)),
+      0
+    );
+
     if (isOverdue) {
-      if (reminderCount >= 2) {
-        return <Badge variant="destructive">2. Mahnung</Badge>;
-      } else if (reminderCount >= 1) {
-        return <Badge className="bg-orange-100 text-orange-800">1. Mahnung</Badge>;
-      } else {
-        return <Badge className="bg-yellow-100 text-yellow-800">Überfällig</Badge>;
+      if (maxLevel >= 3) {
+        return <Badge variant="destructive">{getReminderLevelLabel(3)}</Badge>;
       }
+      if (maxLevel >= 2) {
+        return <Badge className="bg-orange-100 text-orange-800">{getReminderLevelLabel(2)}</Badge>;
+      }
+      if (maxLevel >= 1) {
+        return <Badge className="bg-amber-100 text-amber-800">{getReminderLevelLabel(1)}</Badge>;
+      }
+      return <Badge className="bg-yellow-100 text-yellow-800">Überfällig</Badge>;
     }
-    
+
     return <Badge variant="outline">Offen</Badge>;
   };
 
@@ -594,8 +635,8 @@ export default function AdminFinancials() {
             size="sm"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-              
               queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
+              queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
               queryClient.invalidateQueries({ queryKey: ['payment-history'] });
             }}
           >
@@ -724,7 +765,7 @@ export default function AdminFinancials() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Set(invoices?.map(inv => inv.dealer_id)).size || 0}
+              {new Set(activeInvoices.map((inv) => inv.dealer_id)).size || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Aktive Rechnungsempfänger
@@ -1144,21 +1185,48 @@ export default function AdminFinancials() {
                     const lastReminder = [...safeReminders].sort((a: any, b: any) => new Date(b.reminder_date).getTime() - new Date(a.reminder_date).getTime())[0];
                     const totalFees = safeReminders.reduce((sum: number, r: any) => sum + Number(r.reminder_fee || 0), 0);
                     
-                    // Dunning level classification
+                    // Dunning level classification.
+                    //
+                    // Aligned with process-dunning's reminder_level numbering:
+                    //   level 1 = Zahlungserinnerung (after `level1Days` days)
+                    //   level 2 = 1. Mahnung         (after `level2Days` days)
+                    //   level 3 = 2. Mahnung (Letzte Mahnung)
+                    //
+                    // We pick the higher of "what we have already sent" and
+                    // "what the day-thresholds would imply". The fee shown is
+                    // the fee for the NEXT step the cron would assess.
+                    const thresholdLevel =
+                      daysOverdue >= dunningLevel3Days
+                        ? 3
+                        : daysOverdue >= dunningLevel2Days
+                          ? 2
+                          : daysOverdue >= dunningLevel1Days
+                            ? 1
+                            : 0;
+                    const effectiveLevel = Math.max(maxLevel, thresholdLevel);
+                    const feeForLevel =
+                      effectiveLevel >= 3
+                        ? dunningLevel3Fee
+                        : effectiveLevel >= 2
+                          ? dunningLevel2Fee
+                          : effectiveLevel >= 1
+                            ? dunningLevel1Fee
+                            : 0;
+
                     let levelColor = 'bg-yellow-100 border-yellow-300 text-yellow-800';
-                    let levelLabel = 'Zahlungserinnerung';
+                    let levelLabel = 'Überfällig';
                     let levelBg = 'bg-yellow-50/50 border-yellow-200';
-                    if (maxLevel >= 3 || daysOverdue > dunningLevel3Days) {
+                    if (effectiveLevel >= 3) {
                       levelColor = 'bg-red-100 border-red-300 text-red-800';
-                      levelLabel = `3. Mahnung – Letzte Warnung (${dunningLevel3Fee.toFixed(2)} € Gebühr)`;
+                      levelLabel = `${getReminderLevelLabel(3)} (${feeForLevel.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-red-50/80 border-red-300';
-                    } else if (maxLevel >= 2 || daysOverdue > dunningLevel2Days) {
+                    } else if (effectiveLevel >= 2) {
                       levelColor = 'bg-orange-100 border-orange-300 text-orange-800';
-                      levelLabel = `2. Mahnung (${dunningLevel2Fee.toFixed(2)} € Gebühr)`;
+                      levelLabel = `${getReminderLevelLabel(2)} (${feeForLevel.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-orange-50/50 border-orange-200';
-                    } else if (maxLevel >= 1 || daysOverdue > dunningLevel1Days) {
+                    } else if (effectiveLevel >= 1) {
                       levelColor = 'bg-amber-100 border-amber-300 text-amber-800';
-                      levelLabel = `1. Mahnung (${dunningLevel1Fee.toFixed(2)} € Gebühr)`;
+                      levelLabel = `${getReminderLevelLabel(1)} (${feeForLevel.toFixed(2)} € Gebühr)`;
                       levelBg = 'bg-amber-50/50 border-amber-200';
                     }
 
@@ -1364,37 +1432,49 @@ export default function AdminFinancials() {
               <XCircle className="h-5 w-5" />
               Rechnung stornieren?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                Sie sind dabei, die Rechnung <strong>{invoiceToDelete?.invoice_number}</strong> zu stornieren.
-              </p>
-              {invoiceToDelete?.dealer && (
-                <p>
-                  Kunde: <strong>
-                    {invoiceToDelete.dealer.company_name || 
-                     `${invoiceToDelete.dealer.first_name || ''} ${invoiceToDelete.dealer.last_name || ''}`}
+            <AlertDialogDescription asChild>
+              {/*
+                Radix's AlertDialogDescription renders as `<p>` by default,
+                which makes nesting block elements like additional `<p>` or
+                `<div>` invalid HTML and triggers React DOM-nesting warnings.
+                We use `asChild` so Radix forwards the aria-describedby to
+                our own `<div>` instead, preserving accessibility while
+                allowing rich content.
+              */}
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <div>
+                  Sie sind dabei, die Rechnung <strong>{invoiceToDelete?.invoice_number}</strong> zu stornieren.
+                </div>
+                {invoiceToDelete?.dealer && (
+                  <div>
+                    Kunde:{' '}
+                    <strong>
+                      {invoiceToDelete.dealer.company_name ||
+                        `${invoiceToDelete.dealer.first_name || ''} ${invoiceToDelete.dealer.last_name || ''}`}
+                    </strong>
+                    {(invoiceToDelete.customer_number || invoiceToDelete.dealer?.customer_number) && (
+                      <> ({invoiceToDelete.customer_number || invoiceToDelete.dealer.customer_number})</>
+                    )}
+                  </div>
+                )}
+                {getVehicleLabel(invoiceToDelete) && (
+                  <div>
+                    Fahrzeug: <strong>{getVehicleLabel(invoiceToDelete)}</strong>
+                  </div>
+                )}
+                <div>
+                  Betrag:{' '}
+                  <strong>
+                    {Number(invoiceToDelete?.gross_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                   </strong>
-                  {(invoiceToDelete.customer_number || invoiceToDelete.dealer?.customer_number) && (
-                    <> ({invoiceToDelete.customer_number || invoiceToDelete.dealer.customer_number})</>
-                  )}
-                </p>
-              )}
-              {getVehicleLabel(invoiceToDelete) && (
-                <p>
-                  Fahrzeug: <strong>{getVehicleLabel(invoiceToDelete)}</strong>
-                </p>
-              )}
-              <p>
-                Betrag: <strong>
-                  {Number(invoiceToDelete?.gross_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                </strong>
-                {' '}(Netto: {Number(invoiceToDelete?.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                {' '}+ MwSt: {Number(invoiceToDelete?.tax_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })})
-              </p>
-              <p className="text-amber-700 font-medium mt-3">
-                Die Rechnung wird als storniert markiert und bleibt aus Aufbewahrungsgründen im System erhalten.
-                Offene Forderungen werden auf 0 gesetzt. Der Händler erhält automatisch eine Storno-E-Mail.
-              </p>
+                  {' '}(Netto: {Number(invoiceToDelete?.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                  {' '}+ MwSt: {Number(invoiceToDelete?.tax_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })})
+                </div>
+                <div className="text-amber-700 font-medium mt-3">
+                  Die Rechnung wird als storniert markiert und bleibt aus Aufbewahrungsgründen im System erhalten.
+                  Offene Forderungen werden auf 0 gesetzt. Der Händler erhält automatisch eine Storno-E-Mail.
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 py-2">

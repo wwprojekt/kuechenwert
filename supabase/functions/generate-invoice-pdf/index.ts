@@ -328,8 +328,18 @@ Deno.serve(async (req) => {
 
     // Upload
     const pdfBytes = new Uint8Array(doc.output('arraybuffer'));
+    // Storage key sanitisation rule MUST stay in sync with
+    // `src/lib/invoiceStorage.ts:getInvoiceStoragePath()` – the frontend
+    // uses the same regex to look up an existing PDF.
     const fileName = `${invoice.dealer_id}/${invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g,'_')}.pdf`;
-    const { error: upErr } = await supabase.storage.from('invoices').upload(fileName,pdfBytes,{contentType:'application/pdf',upsert:true});
+    const { error: upErr } = await supabase.storage.from('invoices').upload(fileName,pdfBytes,{
+      contentType:'application/pdf',
+      // Per AGENTS.md: SDK auto-prepends `max-age=` so we pass `<seconds>, immutable`.
+      // Invoice PDFs are immutable-by-content (regenerating creates a new
+      // upload that replaces the file) so the longest practical TTL is fine.
+      cacheControl:'31536000, immutable',
+      upsert:true,
+    });
     if(upErr) throw new Error(`Upload failed: ${upErr.message}`);
     const { data: signed, error: sErr } = await supabase.storage.from('invoices').createSignedUrl(fileName,365*24*60*60);
     if(sErr) throw new Error(`Signed URL failed: ${sErr.message}`);

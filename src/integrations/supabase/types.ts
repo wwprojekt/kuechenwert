@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -5251,6 +5251,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      webhook_add_email_suppression: {
+        Args: {
+          p_email: string
+          p_notes?: string
+          p_reason: string
+          p_source?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       air_conditioning_type: "Keine" | "Fahrerhaus" | "Wohnraum" | "Beides"
@@ -5286,7 +5295,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "Reparaturbedürftig"
+        | "ReparaturbedÃ¼rftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -5456,7 +5465,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "Reparaturbedürftig",
+        "ReparaturbedÃ¼rftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

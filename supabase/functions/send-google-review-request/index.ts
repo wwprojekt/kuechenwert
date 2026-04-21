@@ -172,10 +172,13 @@ const handler = async (req: Request): Promise<Response> => {
     const row = batch[i];
     try {
       // Race-condition guard: admin may have suppressed between claim+send.
+      // Use .eq on the lowercased email — suppressions are always stored in
+      // lowercase, and .ilike would mis-treat `_` / `%` in addresses as
+      // SQL LIKE wildcards (e.g. john_doe@x.com would match johnXdoe@x.com).
       const { data: suppressed } = await supabase
         .from("email_suppressions")
         .select("id")
-        .ilike("email", row.email)
+        .eq("email", row.email.toLowerCase())
         .maybeSingle();
       if (suppressed) {
         await supabase.rpc("mark_google_review_failed", {

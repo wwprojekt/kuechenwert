@@ -187,26 +187,20 @@ const handler = async (req: Request): Promise<Response> => {
               console.log(`Marked ${bouncedEmail} as bounced in profiles`);
             }
 
-            // Add to global suppression list so future outreach skips it
-            await supabase.from('email_suppressions').upsert(
-              {
-                email: bouncedEmail.toLowerCase(),
-                reason: 'bounced',
-                source: 'resend_webhook',
-                notes: `Resend email_id: ${resendId}`,
-              },
-              { onConflict: 'email', ignoreDuplicates: false },
-            );
-
-            // Mark any in-flight Google review request for this email as bounced
-            await supabase
-              .from('google_review_requests')
-              .update({
-                delivery_status: 'bounced',
-                delivery_error: 'resend_bounce',
-              })
-              .ilike('email', bouncedEmail)
-              .in('delivery_status', ['queued', 'sent']);
+            // Add to global suppression list + cancel in-flight outreach.
+            // Uses webhook_add_email_suppression() because email_suppressions
+            // only has a *functional* unique index on lower(email) (so the
+            // PostgREST `onConflict: 'email'` upsert path doesn't work) and
+            // admin_add_email_suppression checks for an admin auth.uid().
+            const { error: suppErr } = await supabase.rpc('webhook_add_email_suppression', {
+              p_email: bouncedEmail,
+              p_reason: 'bounced',
+              p_source: 'resend_webhook',
+              p_notes: `Resend email_id: ${resendId}`,
+            });
+            if (suppErr) {
+              console.error(`Failed to suppress bounced ${bouncedEmail}:`, suppErr);
+            }
           }
         }
 
@@ -219,24 +213,15 @@ const handler = async (req: Request): Promise<Response> => {
           for (const complainedEmail of complainedEmails) {
             console.log(`COMPLAINT detected for: ${complainedEmail}`);
 
-            await supabase.from('email_suppressions').upsert(
-              {
-                email: complainedEmail.toLowerCase(),
-                reason: 'complained',
-                source: 'resend_webhook',
-                notes: `Resend email_id: ${resendId}`,
-              },
-              { onConflict: 'email', ignoreDuplicates: false },
-            );
-
-            await supabase
-              .from('google_review_requests')
-              .update({
-                delivery_status: 'suppressed',
-                delivery_error: 'resend_complaint',
-              })
-              .ilike('email', complainedEmail)
-              .in('delivery_status', ['queued', 'sent']);
+            const { error: complaintErr } = await supabase.rpc('webhook_add_email_suppression', {
+              p_email: complainedEmail,
+              p_reason: 'complained',
+              p_source: 'resend_webhook',
+              p_notes: `Resend email_id: ${resendId}`,
+            });
+            if (complaintErr) {
+              console.error(`Failed to suppress complained ${complainedEmail}:`, complaintErr);
+            }
           }
         }
 

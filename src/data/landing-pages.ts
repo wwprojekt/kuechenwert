@@ -5,6 +5,7 @@ import { wohnmobilWert } from "./landing-page-wohnmobil-wert";
 import { wohnmobilWertermittlungKostenlos } from "./landing-page-wertermittlung-kostenlos";
 import { wirKaufenDeinWohnmobil } from "./landing-page-wir-kaufen";
 import { wievielWohnmobilWert } from "./landing-page-wieviel-wert";
+import { schwackeListeWohnmobil } from "./landing-page-schwacke-liste";
 
 export type { LandingPageConfig, ContentSection } from "./landing-page-types";
 export type { FAQItem } from "@/components/FAQSection";
@@ -16,6 +17,7 @@ export const landingPages: Record<string, LandingPageConfig> = {
   "wohnmobil-wertermittlung-kostenlos": wohnmobilWertermittlungKostenlos,
   "wir-kaufen-dein-wohnmobil": wirKaufenDeinWohnmobil,
   "wieviel-ist-mein-wohnmobil-wert": wievielWohnmobilWert,
+  "schwacke-liste-wohnmobil": schwackeListeWohnmobil,
 };
 
 export {
@@ -25,4 +27,5 @@ export {
   wohnmobilWertermittlungKostenlos,
   wirKaufenDeinWohnmobil,
   wievielWohnmobilWert,
+  schwackeListeWohnmobil,
 };

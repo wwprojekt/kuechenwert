@@ -235,6 +235,11 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/schwacke-liste-wohnmobil" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Schwacke Liste Alternative
+                  </Link>
+                </li>
+                <li>
                   <Link to="/wertrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Wertrechner
                   </Link>

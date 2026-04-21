@@ -99,6 +99,7 @@ const WohnmobilWertermittlungKostenlos = lazyRetry(() => import("./pages/landing
 const WirKaufenDeinWohnmobil = lazyRetry(() => import("./pages/landing/WirKaufenDeinWohnmobil"));
 const WievielWohnmobilWert = lazyRetry(() => import("./pages/landing/WievielWohnmobilWert"));
 const WohnmobilHaendlerWerden = lazyRetry(() => import("./pages/landing/WohnmobilHaendlerWerden"));
+const SchwackeListeWohnmobil = lazyRetry(() => import("./pages/landing/SchwackeListeWohnmobil"));
 
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
@@ -279,6 +280,7 @@ const App = () => (
               <Route path="/wir-kaufen-dein-wohnmobil" element={<WirKaufenDeinWohnmobil />} />
               <Route path="/wieviel-ist-mein-wohnmobil-wert" element={<WievielWohnmobilWert />} />
               <Route path="/wohnmobil-haendler-werden" element={<WohnmobilHaendlerWerden />} />
+              <Route path="/schwacke-liste-wohnmobil" element={<SchwackeListeWohnmobil />} />
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

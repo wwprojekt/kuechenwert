@@ -1381,7 +1381,7 @@ const AuctionDetail = () => {
                   <h1 className="text-2xl font-bold leading-tight">
                     {motorhome.manufacturer} {motorhome.model}
                   </h1>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                     <span>{motorhome.body_type} · {motorhome.year}</span>
                     {motorhome.account_type === 'dealer' ? (
                       <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
@@ -1391,6 +1391,12 @@ const AuctionDetail = () => {
                       <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
                         Privat
                       </Badge>
+                    )}
+                    {/* Runden-Indikator: nur Händler/Admin sehen das. Bei Runde 1
+                        zeigt die Komponente ein grünes „Neu"-Badge, ab Runde 2
+                        gelb/orange/rot eskalierend als Verkaufsdruck-Signal. */}
+                    {canSeePrices && (
+                      <AuctionRoundBadge round={(auction as { auction_round?: number | null }).auction_round} />
                     )}
                   </div>
                 </div>
@@ -1993,7 +1999,7 @@ const AuctionDetail = () => {
                   <h1 className="text-2xl font-bold mb-2">
                     {motorhome.manufacturer} {motorhome.model}
                   </h1>
-                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-2 flex-wrap">
                     <span>{motorhome.body_type} • {motorhome.year}</span>
                     {motorhome.account_type === 'dealer' ? (
                       <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
@@ -2003,6 +2009,12 @@ const AuctionDetail = () => {
                       <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
                         Privat
                       </Badge>
+                    )}
+                    {/* Runden-Indikator: nur Händler/Admin sehen das. Bei Runde 1
+                        zeigt die Komponente ein grünes „Neu"-Badge, ab Runde 2
+                        gelb/orange/rot eskalierend als Verkaufsdruck-Signal. */}
+                    {canSeePrices && (
+                      <AuctionRoundBadge round={(auction as { auction_round?: number | null }).auction_round} />
                     )}
                   </div>
                   {motorhome.account_type === "dealer" && (

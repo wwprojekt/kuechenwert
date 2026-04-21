@@ -189,7 +189,7 @@ function jobHealthTone(j: JobHealth): "ok" | "warn" | "err" | "info" {
   if (!j.active) return "info";
   if (j.runs_total === 0) return "warn";
   if (j.runs_failed > 0) return "err";
-  if (j.last_run_status && j.last_run_status !== "succeeded") return "err";
+  if (j.last_run_status === "failed") return "err";
   return "ok";
 }
 
@@ -275,20 +275,21 @@ const AdminCronHealth = () => {
     [jobs],
   );
   const httpStats = useMemo(() => {
-    const out = { ok: 0, fail: 0 };
+    const out = { ok: 0, fail: 0, other: 0 };
     for (const row of httpHealth) {
       const meta = STATUS_CLASS_META[row.status_class];
       if (meta?.tone === "ok") out.ok += row.total;
-      else if (meta?.tone === "err") out.fail += row.total;
+      else if (meta?.tone === "err" || meta?.tone === "warn") out.fail += row.total;
+      else out.other += row.total;
     }
     return out;
   }, [httpHealth]);
-  const httpTotal = httpStats.ok + httpStats.fail;
+  const httpTotal = httpStats.ok + httpStats.fail + httpStats.other;
   const httpFailRate = httpTotal > 0 ? (httpStats.fail / httpTotal) * 100 : 0;
 
   const inactiveJobs = useMemo(() => jobs.filter((j) => !j.active).length, [jobs]);
   const failingJobs = useMemo(
-    () => jobs.filter((j) => j.active && (j.runs_failed > 0 || (j.last_run_status && j.last_run_status !== "succeeded"))).length,
+    () => jobs.filter((j) => j.active && (j.runs_failed > 0 || j.last_run_status === "failed")).length,
     [jobs],
   );
   const idleActiveJobs = useMemo(

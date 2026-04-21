@@ -119,6 +119,7 @@ const menuGroups: MenuGroup[] = [
       { title: "E-Mail-Center", url: "/admin/email", icon: Mail, badgeKey: "unreadEmails" },
       { title: "Support-Nachrichten", url: "/admin/messages", icon: MessageSquare, badgeKey: "support" },
       { title: "Fahrzeugfragen", url: "/admin/questions", icon: MessageCircle, badgeKey: "questions" },
+      { title: "Google-Review-Outreach", url: "/admin/google-reviews", icon: Star },
     ],
   },
   {

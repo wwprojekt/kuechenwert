@@ -186,6 +186,57 @@ const handler = async (req: Request): Promise<Response> => {
             } else {
               console.log(`Marked ${bouncedEmail} as bounced in profiles`);
             }
+
+            // Add to global suppression list so future outreach skips it
+            await supabase.from('email_suppressions').upsert(
+              {
+                email: bouncedEmail.toLowerCase(),
+                reason: 'bounced',
+                source: 'resend_webhook',
+                notes: `Resend email_id: ${resendId}`,
+              },
+              { onConflict: 'email', ignoreDuplicates: false },
+            );
+
+            // Mark any in-flight Google review request for this email as bounced
+            await supabase
+              .from('google_review_requests')
+              .update({
+                delivery_status: 'bounced',
+                delivery_error: 'resend_bounce',
+              })
+              .ilike('email', bouncedEmail)
+              .in('delivery_status', ['queued', 'sent']);
+          }
+        }
+
+        // ── Complaint Management (spam-Beschwerde) ─────────────────
+        // Critical: spam complaints damage sender reputation; suppress
+        // immediately and never reach this address again from any feature.
+        if (newStatus === 'complained' && payload.data?.to) {
+          const complainedEmails = Array.isArray(payload.data.to) ? payload.data.to : [payload.data.to];
+
+          for (const complainedEmail of complainedEmails) {
+            console.log(`COMPLAINT detected for: ${complainedEmail}`);
+
+            await supabase.from('email_suppressions').upsert(
+              {
+                email: complainedEmail.toLowerCase(),
+                reason: 'complained',
+                source: 'resend_webhook',
+                notes: `Resend email_id: ${resendId}`,
+              },
+              { onConflict: 'email', ignoreDuplicates: false },
+            );
+
+            await supabase
+              .from('google_review_requests')
+              .update({
+                delivery_status: 'suppressed',
+                delivery_error: 'resend_complaint',
+              })
+              .ilike('email', complainedEmail)
+              .in('delivery_status', ['queued', 'sent']);
           }
         }
 

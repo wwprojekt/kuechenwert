@@ -1670,6 +1670,33 @@ export type Database = {
           },
         ]
       }
+      email_suppressions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notes: string | null
+          reason: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notes?: string | null
+          reason: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body_html: string
@@ -1850,6 +1877,69 @@ export type Database = {
           user_email?: string | null
           user_id?: string | null
           user_role?: string | null
+        }
+        Relationships: []
+      }
+      google_review_requests: {
+        Row: {
+          click_count: number
+          clicked_at: string | null
+          created_at: string
+          delivery_error: string | null
+          delivery_status: string
+          email: string
+          enqueued_at: string
+          id: string
+          recipient_name: string | null
+          resend_message_id: string | null
+          scheduled_for: string
+          sent_at: string | null
+          source: string
+          source_first_seen_at: string | null
+          source_user_id: string | null
+          unsubscribe_token: string
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          delivery_error?: string | null
+          delivery_status?: string
+          email: string
+          enqueued_at?: string
+          id?: string
+          recipient_name?: string | null
+          resend_message_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          source: string
+          source_first_seen_at?: string | null
+          source_user_id?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          delivery_error?: string | null
+          delivery_status?: string
+          email?: string
+          enqueued_at?: string
+          id?: string
+          recipient_name?: string | null
+          resend_message_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          source?: string
+          source_first_seen_at?: string | null
+          source_user_id?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -4640,6 +4730,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_add_email_suppression: {
+        Args: { p_email: string; p_notes?: string; p_reason?: string }
+        Returns: boolean
+      }
       admin_delete_bid: { Args: { p_bid_id: string }; Returns: Json }
       admin_get_cron_jobs_health: {
         Args: { p_hours?: number }
@@ -4727,6 +4821,15 @@ export type Database = {
         Args: { criteria: Json; motorhome_record: Record<string, unknown> }
         Returns: boolean
       }
+      claim_google_review_batch: {
+        Args: { p_limit?: number }
+        Returns: {
+          email: string
+          id: string
+          recipient_name: string
+          unsubscribe_token: string
+        }[]
+      }
       clean_old_analytics_data: {
         Args: { retention_days?: number }
         Returns: number
@@ -4772,6 +4875,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      enqueue_google_review_candidates: {
+        Args: { p_max_inserts?: number; p_min_age_days?: number }
+        Returns: Json
       }
       ensure_profile_exists: {
         Args: {
@@ -4922,6 +5029,7 @@ export type Database = {
           tax_rate: number
         }[]
       }
+      get_google_review_stats: { Args: never; Returns: Json }
       get_primary_role: {
         Args: { user_id_param: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -5033,6 +5141,14 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      mark_google_review_delivered: {
+        Args: { p_email: string; p_resend_id?: string }
+        Returns: boolean
+      }
+      mark_google_review_failed: {
+        Args: { p_error: string; p_id: string; p_status?: string }
+        Returns: boolean
+      }
       place_bid_atomic: {
         Args: {
           p_auction_id: string
@@ -5047,6 +5163,10 @@ export type Database = {
       process_approved_claim: {
         Args: { claim_id_param: string }
         Returns: undefined
+      }
+      process_google_review_unsubscribe: {
+        Args: { p_token: string }
+        Returns: Json
       }
       process_search_alerts_for_motorhome: {
         Args: { motorhome_id_param: string }
@@ -5097,6 +5217,7 @@ export type Database = {
         Args: { p_auction_id: string; p_value: boolean }
         Returns: boolean
       }
+      track_google_review_click: { Args: { p_token: string }; Returns: boolean }
       try_acquire_cron_lock: {
         Args: { p_key: string; p_ttl_minutes?: number }
         Returns: boolean
@@ -5165,7 +5286,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "ReparaturbedÃ¼rftig"
+        | "Reparaturbedürftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -5335,7 +5456,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "ReparaturbedÃ¼rftig",
+        "Reparaturbedürftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

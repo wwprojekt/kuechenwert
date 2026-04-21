@@ -734,36 +734,36 @@ export default function AdminLeads() {
   });
 
   // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Motorhomes ----
+  //
+  // Performance: Vorher 2 Round-Trips (motorhomes → JS-dedup → profiles.in()).
+  // Jetzt 1 Round-Trip via PostgREST-JOIN. Spart ~150-300ms je Refetch.
+  // staleTime hochgesetzt, weil Bestandskunden-Set sich nur langsam ändert
+  // (neue Verkäufer pro Tag) und die Liste vom Server gefetcht eh nur bei
+  // Sessions ohne Disposition relevant ist.
   const { data: existingSellerData = { ids: [], emails: [] } } = useQuery({
     queryKey: ["existingSellerUserIds"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return { ids: [], emails: [] };
 
-      // Hole alle Seller-IDs die bereits mindestens ein Motorhome haben
-      const { data: motorhomes, error: mError } = await supabase
+      const { data, error } = await supabase
         .from("motorhomes")
-        .select("seller_id")
+        .select("seller_id, seller:profiles!motorhomes_seller_id_fkey(email)")
         .not("seller_id", "is", null);
-      if (mError) throw mError;
+      if (error) throw error;
 
-      const sellerIds = [...new Set((motorhomes || []).map((m: { seller_id: string }) => m.seller_id).filter(Boolean))];
-
-      // Hole die E-Mails dieser Seller für E-Mail-basierte Erkennung
-      let sellerEmails: string[] = [];
-      if (sellerIds.length > 0) {
-        const { data: profiles, error: pError } = await supabase
-          .from("profiles")
-          .select("id, email")
-          .in("id", sellerIds);
-        if (!pError && profiles) {
-          sellerEmails = profiles.map((p: { email: string }) => p.email?.toLowerCase()).filter(Boolean);
-        }
+      const seenIds = new Set<string>();
+      const seenEmails = new Set<string>();
+      for (const row of (data || []) as Array<{ seller_id: string | null; seller: { email: string | null } | null }>) {
+        if (row.seller_id) seenIds.add(row.seller_id);
+        const email = row.seller?.email?.toLowerCase();
+        if (email) seenEmails.add(email);
       }
 
-      return { ids: sellerIds as string[], emails: sellerEmails };
+      return { ids: [...seenIds], emails: [...seenEmails] };
     },
-    refetchInterval: 60000,
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Konvertiere zu Sets für schnelle Lookups (nur im Render, nicht im Cache)
@@ -773,6 +773,11 @@ export default function AdminLeads() {
   // ---- Auto-Disposition: Bestandskunden automatisch markieren ----
   // Wenn eine Wizard Session eine user_id hat und dieser User bereits Motorhomes hat,
   // wird die Session automatisch als "already_customer" markiert (einmalig).
+  //
+  // Performance: Bis 2026-04-19 wurde hier in einer for-Schleife pro Session ein
+  // sequenzielles UPDATE abgesetzt (N+1). Bei 100+ neuen Sessions pro Render
+  // bedeutete das 100+ Round-Trips zu Supabase, was die Page für mehrere
+  // Sekunden blockierte. Jetzt ein einziges Bulk-UPDATE mit `.in("id", [...])`.
   useEffect(() => {
     if (!wizardSessions.length || existingSellerIds.size === 0) return;
 
@@ -789,21 +794,19 @@ export default function AdminLeads() {
 
     if (sessionsToMark.length === 0) return;
 
-    // Markiere alle gefundenen Sessions als "already_customer"
+    const idsToMark = sessionsToMark.map((s) => s.id);
+
     const markSessions = async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return;
-      for (const session of sessionsToMark) {
-        try {
-          await supabase
-            .from("wizard_sessions")
-            .update({ disposition: "already_customer" } as any)
-            .eq("id", session.id);
-        } catch (err) {
-          console.error("Failed to auto-mark session as already_customer:", err);
-        }
+      const { error } = await supabase
+        .from("wizard_sessions")
+        .update({ disposition: "already_customer" } as any)
+        .in("id", idsToMark);
+      if (error) {
+        console.error("Failed to bulk-mark sessions as already_customer:", error);
+        return;
       }
-      // Refetch nach dem Markieren
       queryClient.invalidateQueries({ queryKey: ["adminWizardSessions"] });
     };
 

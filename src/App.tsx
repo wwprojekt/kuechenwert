@@ -90,6 +90,7 @@ const AdminClaims = lazyRetry(() => import("./pages/admin/AdminClaims"));
 const AdminPostAuctionOffers = lazyRetry(() => import("./pages/admin/AdminPostAuctionOffers"));
 const AdminReviews = lazyRetry(() => import("./pages/admin/AdminReviews"));
 const AdminWertrechnerReviews = lazyRetry(() => import("./pages/admin/AdminWertrechnerReviews"));
+const AdminGoogleReviews = lazyRetry(() => import("./pages/admin/AdminGoogleReviews"));
 const AdminContracts = lazyRetry(() => import("./pages/admin/AdminContracts"));
 const AdminDealerStats = lazyRetry(() => import("./pages/admin/AdminDealerStats"));
 
@@ -274,6 +275,7 @@ const App = () => (
                 <Route path="offers" element={<AdminPostAuctionOffers />} />
                 <Route path="reviews" element={<AdminReviews />} />
                 <Route path="wertrechner-reviews" element={<AdminWertrechnerReviews />} />
+                <Route path="google-reviews" element={<AdminGoogleReviews />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="error-logs" element={<AdminErrorLogs />} />

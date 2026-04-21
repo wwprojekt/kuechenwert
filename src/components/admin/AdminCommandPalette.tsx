@@ -33,6 +33,7 @@ const ADMIN_PAGES = [
   { title: "Händler-Statistik", path: "/admin/dealer-stats", icon: TrendingUp, keywords: "statistik level ranking" },
   { title: "Bewertungen", path: "/admin/reviews", icon: Star, keywords: "rezensionen sterne händler dealer" },
   { title: "Wertrechner-Bewertungen", path: "/admin/wertrechner-reviews", icon: Star, keywords: "wertrechner calculator rezensionen sterne moderation" },
+  { title: "Google-Review-Outreach", path: "/admin/google-reviews", icon: Mail, keywords: "google bewertung outreach mail kampagne suppression unsubscribe" },
   { title: "Provisionen", path: "/admin/commissions", icon: Calculator, keywords: "provision staffel" },
   { title: "Kaufverträge", path: "/admin/contracts", icon: FileSignature, keywords: "vertrag dokument" },
   { title: "Finanzen", path: "/admin/financials", icon: CreditCard, keywords: "rechnungen umsatz zahlung" },

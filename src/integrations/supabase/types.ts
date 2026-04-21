@@ -4114,6 +4114,66 @@ export type Database = {
           },
         ]
       }
+      wertrechner_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          ip_hash: string | null
+          moderated_at: string | null
+          moderated_by: string | null
+          published_at: string | null
+          rating: number
+          rejection_reason: string | null
+          reviewer_email: string | null
+          reviewer_location: string | null
+          reviewer_name: string | null
+          session_id: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          vehicle_type: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          published_at?: string | null
+          rating: number
+          rejection_reason?: string | null
+          reviewer_email?: string | null
+          reviewer_location?: string | null
+          reviewer_name?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          vehicle_type?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          published_at?: string | null
+          rating?: number
+          rejection_reason?: string | null
+          reviewer_email?: string | null
+          reviewer_location?: string | null
+          reviewer_name?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
       wizard_sessions: {
         Row: {
           admin_called_at: string | null
@@ -4227,6 +4287,56 @@ export type Database = {
           wrong_number_email_last_sent?: string | null
         }
         Relationships: []
+      }
+      wizard_step_events: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          error_fields: string[] | null
+          event: string
+          field_name: string | null
+          id: number
+          metadata: Json | null
+          session_id: string
+          step: number
+          time_on_step_ms: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          error_fields?: string[] | null
+          event: string
+          field_name?: string | null
+          id?: number
+          metadata?: Json | null
+          session_id: string
+          step: number
+          time_on_step_ms?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          error_fields?: string[] | null
+          event?: string
+          field_name?: string | null
+          id?: number
+          metadata?: Json | null
+          session_id?: string
+          step?: number
+          time_on_step_ms?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wizard_step_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "wizard_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -4581,6 +4691,10 @@ export type Database = {
           timed_out: boolean
         }[]
       }
+      admin_moderate_wertrechner_review: {
+        Args: { p_action: string; p_reason?: string; p_review_id: string }
+        Returns: Json
+      }
       admin_search_listings: {
         Args: { search_term?: string }
         Returns: {
@@ -4621,6 +4735,7 @@ export type Database = {
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_error_logs: { Args: never; Returns: undefined }
       cleanup_old_notifications: { Args: never; Returns: undefined }
+      cleanup_wertrechner_review_pii: { Args: never; Returns: number }
       compute_random_starting_bid: {
         Args: { p_reserve_price: number }
         Returns: number
@@ -4814,6 +4929,19 @@ export type Database = {
       get_public_platform_stats: { Args: never; Returns: Json }
       get_request_anonymous_id: { Args: never; Returns: string }
       get_vapid_keys: { Args: never; Returns: Json }
+      get_wertrechner_review_stats: { Args: never; Returns: Json }
+      get_wertrechner_reviews_public: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          comment: string
+          created_at: string
+          id: string
+          rating: number
+          reviewer_location: string
+          reviewer_name: string
+          vehicle_type: string
+        }[]
+      }
       handle_autobid_atomic: {
         Args: {
           p_auction_id: string
@@ -4830,6 +4958,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_review_ip: { Args: { p_ip: string }; Returns: string }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean
@@ -4945,6 +5074,21 @@ export type Database = {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
       }
+      submit_wertrechner_review: {
+        Args: {
+          p_comment?: string
+          p_honeypot?: string
+          p_ip_hash?: string
+          p_rating: number
+          p_reviewer_email?: string
+          p_reviewer_location?: string
+          p_reviewer_name?: string
+          p_session_id?: string
+          p_user_agent?: string
+          p_vehicle_type?: string
+        }
+        Returns: Json
+      }
       toggle_auto_relist: {
         Args: { p_auction_id: string; p_value: boolean }
         Returns: boolean
@@ -5021,7 +5165,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "Reparaturbedürftig"
+        | "ReparaturbedÃ¼rftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -5191,7 +5335,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "Reparaturbedürftig",
+        "ReparaturbedÃ¼rftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -421,6 +421,13 @@ export const useWizardForm = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Telemetrie-Bruecke: die letzten fehlgeschlagenen Feldnamen werden in
+  // einem Ref gehalten, damit der Wizard sie nach `await validateStep(...)`
+  // synchron an die Telemetrie weiterreichen kann (der State-Wert
+  // `fieldErrors` ist in dem selben Render-Zyklus noch veraltet).
+  // Wichtig: NICHT Teil der API-Semantik von validateStep (bleibt boolean)
+  // damit alle bestehenden Tests und Callsites intakt bleiben.
+  const lastValidationErrorKeysRef = useRef<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -566,6 +573,7 @@ export const useWizardForm = () => {
           });
           break;
       }
+      lastValidationErrorKeysRef.current = [];
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -579,6 +587,7 @@ export const useWizardForm = () => {
           }
         });
         setFieldErrors(errors);
+        lastValidationErrorKeysRef.current = Object.keys(errors);
 
         // UX-Fix Step-2-Abbrueche (2026-04-21): Nach einem Validation-Fehler
         // muss der User SOFORT sehen, welches Feld er ausfuellen soll.
@@ -1376,6 +1385,14 @@ export const useWizardForm = () => {
     [toast]
   );
 
+  // Telemetrie-Adapter: stabiler Getter, der immer die zuletzt
+  // gespeicherten Fehler-Keys liefert. Wird ausschliesslich vom
+  // Wizard-Telemetrie-Hook gelesen — darf KEIN State-Update triggern.
+  const getLastValidationErrorKeys = useCallback(
+    () => lastValidationErrorKeysRef.current.slice(),
+    []
+  );
+
   return {
     formData,
     updateFormData,
@@ -1387,5 +1404,6 @@ export const useWizardForm = () => {
     clearDraft,
     fieldErrors,
     clearFieldErrors,
+    getLastValidationErrorKeys,
   };
 };

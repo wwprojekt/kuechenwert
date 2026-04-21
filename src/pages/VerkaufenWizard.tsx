@@ -28,6 +28,7 @@ import { resolveManufacturer } from "@/lib/vehicle-data";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { useWizardTelemetry } from "@/hooks/useWizardTelemetry";
 
 // Wizard-Schritte – einheitlich 8 Steps für alle Verkaufswege.
 //
@@ -49,7 +50,7 @@ const STEPS = [
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, hydrateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors } = useWizardForm();
+  const { formData, updateFormData, hydrateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors, getLastValidationErrorKeys } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep, restoredFormData } = useWizardSession();
   const hasRestoredRef = useRef(false);
   // Tracks whether session-hydration finished. The step-guard MUST NOT run
@@ -66,6 +67,18 @@ const VerkaufenWizard = () => {
   // Static 8-step list – Marketingphasen-Consent ist Inline-Checkbox in Step 8
   // statt eigener Step (siehe AccountLocationStep + step8Schema).
   const steps = STEPS;
+
+  // Wizard-root-Container fuer delegiertes focusin/focusout-Listening der
+  // neuen Telemetrie. Wir haengen den Ref an das <div role="region"> rund
+  // um {renderStep()}, damit alle Inputs aller Steps automatisch erfasst
+  // werden, ohne dass jede Step-Komponente angepasst werden muss.
+  const wizardRootRef = useRef<HTMLDivElement | null>(null);
+  const telemetry = useWizardTelemetry({
+    sessionId,
+    currentStep,
+    totalSteps: STEPS.length,
+    rootRef: wizardRootRef,
+  });
 
   // H1: Restore form data + step the user was on when they left. Only runs
   // when the session finishes loading and the user did not already land on
@@ -515,8 +528,10 @@ const VerkaufenWizard = () => {
   };
 
   const handleNext = async () => {
+    telemetry.logNextClicked();
     const isValid = await validateStep(currentStep);
     if (!isValid) {
+      telemetry.logValidationFailed(getLastValidationErrorKeys());
       scrollToFirstError();
       return;
     }
@@ -545,6 +560,7 @@ const VerkaufenWizard = () => {
 
   const handlePrevious = () => {
     if (currentStep > 1) {
+      telemetry.logBackClicked();
       clearFieldErrors();
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -552,10 +568,12 @@ const VerkaufenWizard = () => {
   };
 
   const handleSubmit = async () => {
+    telemetry.logSubmitClicked();
     // Validate the final step (8). step8Schema enthält den Marketing-Consent
     // bereits als conditional Pflichtfeld für auction + instant_price.
     const isValid = await validateStep(steps.length);
     if (!isValid) {
+      telemetry.logValidationFailed(getLastValidationErrorKeys());
       scrollToFirstError();
       return;
     }
@@ -567,6 +585,7 @@ const VerkaufenWizard = () => {
     if (!currentUser) {
       const passwordValid = validatePassword(registerPassword, confirmPassword);
       if (!passwordValid) {
+        telemetry.logValidationFailed(["registerPassword", "confirmPassword"]);
         scrollToFirstError();
         return;
       }
@@ -586,6 +605,7 @@ const VerkaufenWizard = () => {
       { existingSessionId: sessionId, anonymousId },
     );
     if (success) {
+      telemetry.logSubmitSucceeded();
       await markCompleted();
       // Google Ads trackWizardCompleted() wird bereits in useWizardForm.ts aufgerufen
       // (mit korrekter Transaction ID für Deduplizierung).
@@ -593,6 +613,8 @@ const VerkaufenWizard = () => {
       // Meta Pixel: Lead Event bei Wizard-Abschluss
       const vehicleInfo = `${formData.manufacturer || ''} ${formData.model || ''} (${formData.year || ''}) - ${formData.bodyType || ''}`;
       trackMetaLead({ content_name: vehicleInfo, content_category: 'Wohnmobil-Verkauf' });
+    } else {
+      telemetry.logSubmitFailed();
     }
   };
 
@@ -737,6 +759,7 @@ const VerkaufenWizard = () => {
               <div className="lg:col-span-2">
                 <Card className="p-2.5 sm:p-4 md:p-8 shadow-elegant mb-4 md:mb-6 transition-all">
                   <div
+                    ref={wizardRootRef}
                     role="region"
                     aria-live="polite"
                     aria-atomic="false"

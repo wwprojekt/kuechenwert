@@ -63,14 +63,18 @@ const CARD_QUALITY = 80;
 const MEDIUM_WIDTH = 1024;
 const MEDIUM_QUALITY = 82;
 
-// 2026-04-20: Versucht 20 → triggert WORKER_RESOURCE_LIMIT (HTTP 546). jsquash
-// WASM-Module akkumulieren Memory zwischen sequentiellen Decodes (Cache hält
-// Heap am Leben). 10 ist empirisch stabil. Stattdessen läuft der Cron öfter
-// (every minute → effective ~10 photos/min für active covers, plus separater
-// fifo cron). Reicht aus, da unprozessiert via Worker-on-the-fly-Transform-
-// URL gefallback wird (siehe worker/src/index.js).
-const MAX_BATCH_SIZE = 10;
-const DEFAULT_BATCH_SIZE = 5;
+// 2026-04-20: Versucht 20 → triggert WORKER_RESOURCE_LIMIT (HTTP 546).
+// 2026-04-20: Auf 10 reduziert — laut Edge Function Logs crasht es mit 10 weiterhin
+//             bei ~100% der Aufrufe (siehe Edge Logs: nur 546 Responses, 0 200).
+// 2026-04-21: Auf 3 reduziert. jsquash WASM-Module akkumulieren Memory zwischen
+//             sequentiellen Decodes (Cache hält Heap am Leben), und das 256 MB
+//             Function-Memory-Limit reicht nur für ~3 Photos in derselben Invocation.
+//             Cron läuft jede Minute für active_covers + alle 2 min für FIFO,
+//             d.h. 3+3=6 Photos pro 2 min = 180 Photos/h = 4320/Tag — reicht
+//             dicke für tägliches Upload-Volumen. Backlog wird via lokalem
+//             sharp-Backfill geleert (scripts/backfill-photo-variants.mjs).
+const MAX_BATCH_SIZE = 5;
+const DEFAULT_BATCH_SIZE = 3;
 
 // Skip-Threshold: Originale ≤ 2 MB sind sicher für jsquash-WASM in 256 MB
 // Function-Memory. Empirisch bestätigt 2026-04-20: 1.4 MB JPEG mit 2040×1530

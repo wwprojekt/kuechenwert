@@ -3,7 +3,7 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilVerkaufen: LandingPageConfig = {
   slug: "wohnmobil-verkaufen",
   path: "/wohnmobil-verkaufen",
-  title: "Wohnmobil Verkaufen — Schnell & Fair in 24 Stunden",
+  title: "Wohnmobil verkaufen — Bewertung in 24h",
   metaDescription:
     "Wohnmobil verkaufen leicht gemacht: Kostenlose Bewertung, faire Preise durch Händlerwettbewerb und schnelle Abwicklung. Jetzt starten!",
   keywords:

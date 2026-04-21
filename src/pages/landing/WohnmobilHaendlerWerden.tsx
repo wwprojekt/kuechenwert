@@ -130,8 +130,8 @@ const WohnmobilHaendlerWerden = () => {
 
   return (
     <PageLayout
-      title="Wohnmobil Händler werden – Per Auktion günstig einkaufen"
-      description="Registrieren Sie sich als Händler auf CaravanWert und ersteigern Sie geprüfte Wohnmobile & Wohnwagen direkt von Privatverkäufern. Provision ab 1,2 %, keine Mindestabnahme."
+      title="Wohnmobil-Händler werden: günstig einkaufen"
+      description="Als Händler bei CaravanWert geprüfte Wohnmobile & Wohnwagen direkt von Privatverkäufern ersteigern. Provision ab 1,2 %, keine Mindestabnahme."
       keywords="wohnmobil händler werden, wohnmobil auktion händler, wohnwagen einkauf händler, wohnmobil händler plattform, wohnmobil händler registrieren"
       canonicalPath="/wohnmobil-haendler-werden"
       structuredData={structuredData}

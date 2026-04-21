@@ -3,7 +3,7 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilAnkaufRatgeber: LandingPageConfig = {
   slug: "wohnmobil-ankauf-ratgeber",
   path: "/wohnmobil-ankauf-ratgeber",
-  title: "Wohnmobil verkaufen 2026: Der komplette Ratgeber",
+  title: "Wohnmobil verkaufen 2026: Komplett-Ratgeber",
   metaDescription:
     "Kompletter Ratgeber zum Wohnmobil-Verkauf 2026: Verkaufsportale im Vergleich, Schritt-für-Schritt-Anleitung, Preisermittlung und typische Fallen vermeiden.",
   keywords:

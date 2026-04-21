@@ -3,7 +3,7 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const finanziertenWohnwagenVerkaufen: LandingPageConfig = {
   slug: "finanzierten-wohnwagen-verkaufen",
   path: "/finanzierten-wohnwagen-verkaufen",
-  title: "Finanzierten Wohnwagen verkaufen: Ablösung erklärt",
+  title: "Finanzierten Wohnwagen verkaufen — Anleitung",
   metaDescription:
     "Wohnwagen mit laufender Finanzierung verkaufen: Anleitung, Vorfälligkeitsentschädigung, Käufer übernimmt Restschuld — sicher und ohne Risiko abwickeln.",
   keywords:

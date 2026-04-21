@@ -857,7 +857,7 @@ const Wertrechner = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Wohnmobil & Wohnwagen Wertrechner – Kostenlose Sofort-Schätzung"
+      title="Wertrechner Wohnmobil & Wohnwagen — gratis"
       description="Ermitteln Sie sofort den geschätzten Wert Ihres Wohnmobils oder Wohnwagens mit unserem kostenlosen Wertrechner. Einfach, schnell und unverbindlich."
       keywords="wohnmobil wertrechner, wohnwagen wertrechner, wohnmobil wert berechnen, wohnwagen wert berechnen, camper wert kalkulieren, caravan wert ermitteln"
       canonicalPath="/wertrechner"

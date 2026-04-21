@@ -177,7 +177,7 @@ const Haendler = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Für Händler – Wohnmobile günstig per Auktion einkaufen"
+      title="Für Händler: Wohnmobile per Auktion einkaufen"
       description="Ersteigern Sie Wohnmobile und Wohnwagen von Privatverkäufern. Kostenlose Registrierung, transparente Auktionen, sichere Abwicklung. Jetzt als Händler registrieren!"
       keywords="wohnmobil händler einkauf, wohnmobil auktion händler, wohnwagen ankauf händler, b2b wohnmobil"
       canonicalPath="/haendler"

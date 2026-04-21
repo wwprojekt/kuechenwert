@@ -75,7 +75,7 @@ const Verkaufen = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Wohnmobil verkaufen – Schnell & Fair in 48 Stunden"
+      title="Wohnmobil verkaufen — schnell & fair in 48 h"
       description="Verkaufen Sie Ihr Wohnmobil schnell und sicher. Kostenlose Bewertung in 24h und faire Preise durch Händlerwettbewerb."
       keywords="wohnmobil verkaufen, wohnwagen verkaufen, camper verkaufen, ankauf wohnmobil, wohnmobil ankauf"
       canonicalPath="/verkaufen"

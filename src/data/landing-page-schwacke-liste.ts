@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const schwackeListeWohnmobil: LandingPageConfig = {
   slug: "schwacke-liste-wohnmobil",
   path: "/schwacke-liste-wohnmobil",
-  title: "Schwacke Liste Wohnmobil — kostenlose Bewertung als Alternative",
+  title: "Schwacke Liste Wohnmobil: Gratis-Alternative",
   metaDescription:
-    "Wohnmobil-Wert ohne Schwacke Liste ermitteln: Privatpersonen haben keinen Zugang zu Schwacke. Nutzen Sie unseren kostenlosen Wertrechner — Ergebnis in 2 Minuten, professionelle Marktdaten.",
+    "Wohnmobil-Wert ohne Schwacke Liste ermitteln: Privatpersonen haben keinen Schwacke-Zugang. Kostenloser Wertrechner mit echten Marktdaten — Ergebnis in 2 Min.",
   keywords:
     "schwacke liste wohnmobil, schwacke wohnmobil, wohnmobil schwacke, schwacke liste reisemobil, schwackeliste wohnmobil kostenlos, wohnmobil verkaufen schwacke, schwacke alternative wohnmobil, wohnmobil bewerten ohne schwacke",
   h1: "Schwacke Liste Wohnmobil — kostenlose Alternative für Verbraucher",

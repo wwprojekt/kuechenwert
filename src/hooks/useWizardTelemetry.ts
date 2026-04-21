@@ -205,18 +205,52 @@ export function useWizardTelemetry(
       return null;
     };
 
+    // Walk up to find the closest combobox-trigger ancestor (Radix Select).
+    // Returns the trigger element if one is found within 4 hops, else null.
+    // We need this fallback because Radix opens the listbox in a Portal
+    // (outside our root), so focusin does not reliably fire on the trigger
+    // — empirically observed on Chrome mobile + iOS Safari (Apr 2026).
+    const findComboboxTrigger = (el: HTMLElement): HTMLElement | null => {
+      let node: HTMLElement | null = el;
+      let depth = 0;
+      while (node && depth < 4 && node !== root) {
+        if (node.getAttribute("role") === "combobox") return node;
+        node = node.parentElement;
+        depth += 1;
+      }
+      return null;
+    };
+
     const handleClickCapture = (e: MouseEvent) => {
       const initialTarget = e.target as HTMLElement | null;
       if (!initialTarget) return;
+
+      // Path 1: checkable (Checkbox / Radio incl. wrapper variants).
       const checkable = isCheckableTarget(initialTarget);
-      if (!checkable) return;
-      const field = pickField(checkable);
-      if (!field) return;
-      logWizardEvent({
-        step: currentStepRef.current,
-        event: "field_change",
-        field_name: field,
-      });
+      if (checkable) {
+        const field = pickField(checkable);
+        if (!field) return;
+        logWizardEvent({
+          step: currentStepRef.current,
+          event: "field_change",
+          field_name: field,
+        });
+        return;
+      }
+
+      // Path 2: Radix Select trigger fallback. Native inputs / textareas
+      // are never matched here — they have no role="combobox" — so this
+      // never doubles up with focusin.
+      const trigger = findComboboxTrigger(initialTarget);
+      if (trigger) {
+        const field = pickField(trigger);
+        if (!field) return;
+        logWizardEvent({
+          step: currentStepRef.current,
+          event: "field_focus",
+          field_name: field,
+        });
+      }
     };
 
     root.addEventListener("focusin", handleFocusIn);

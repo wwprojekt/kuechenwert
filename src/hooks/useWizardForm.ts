@@ -468,6 +468,48 @@ export const useWizardForm = () => {
     }
   }, []);
 
+  // Pro-Feld-Merge für die asynchrone Hydration aus wizard_sessions (Supabase).
+  //
+  // Hintergrund: Beim Mount läuft die Supabase-Session-Restore async (50–500 ms).
+  // Wenn der User schneller ist und in dieser Zeit z. B. eine Aufbauart
+  // anklickt, würde ein naiver `updateFormData(restored)` seine Eingabe mit
+  // dem (oft leeren) Wert aus der alten Session überschreiben — er sieht dann
+  // beim Klick auf „Weiter" den Fehler „Bitte wählen Sie eine Aufbauart",
+  // obwohl er bereits eine ausgewählt hatte (verifiziert durch User-Bug-Report
+  // 2026-04-21 + Screenshot von Step 1).
+  //
+  // Diese Methode mergt feldweise und respektiert dabei zwei Regeln:
+  //  1. Leere Werte aus der gespeicherten Session werden NIE über existierende
+  //     Werte geschrieben (null, undefined, "" und [] gelten als „leer").
+  //  2. Felder, die der User (oder LocalStorage-Restore) bereits vom
+  //     initialFormData-Default verändert hat, werden NICHT überschrieben —
+  //     User-Eingaben gewinnen immer gegen Server-Hydration.
+  //
+  // Felder, die der User noch nicht angefasst hat (Wert == initialFormData)
+  // werden hingegen normal aus dem Restore befüllt — so funktioniert das
+  // Resume-Erlebnis (alte Telefonnummer, alte Postleitzahl etc.) weiter.
+  const hydrateFormData = useCallback((restored: Partial<WizardFormData>) => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [key, value] of Object.entries(restored) as Array<[
+        keyof WizardFormData,
+        WizardFormData[keyof WizardFormData],
+      ]>) {
+        if (value === null || value === undefined || value === "") continue;
+        if (Array.isArray(value) && value.length === 0) continue;
+        // User-Edit-Schutz: Wenn das Feld nicht mehr dem Default entspricht,
+        // hat es entweder der User getippt oder LocalStorage es schon
+        // wiederhergestellt. In beiden Fällen darf die Server-Session nicht
+        // drüberschreiben.
+        if (prev[key] !== initialFormData[key]) continue;
+        (next as Record<string, unknown>)[key as string] = value;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   const validateStep = async (step: number): Promise<boolean> => {
     try {
       switch (step) {
@@ -1263,6 +1305,7 @@ export const useWizardForm = () => {
   return {
     formData,
     updateFormData,
+    hydrateFormData,
     validateStep,
     validatePassword,
     submitForm,

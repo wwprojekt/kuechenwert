@@ -49,7 +49,7 @@ const STEPS = [
 const VerkaufenWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors } = useWizardForm();
+  const { formData, updateFormData, hydrateFormData, validateStep, validatePassword, submitForm, isSubmitting, fieldErrors, clearFieldErrors } = useWizardForm();
   const { saveProgress, markCompleted, updateContactFromAuth, isReady, sessionId, anonymousId, initialStep, restoredFormData } = useWizardSession();
   const hasRestoredRef = useRef(false);
   // Tracks whether session-hydration finished. The step-guard MUST NOT run
@@ -79,9 +79,14 @@ const VerkaufenWizard = () => {
   useEffect(() => {
     if (!isReady) return;
 
-    // Merge restored form data once, even if no step restore is needed.
+    // Merge restored form data once. `hydrateFormData` macht einen pro-Feld-
+    // Merge mit User-Edit-Schutz: Felder, die der User in der Zwischenzeit
+    // bereits angefasst hat (z. B. weil er schneller war als der Supabase-
+    // Round-Trip), werden NICHT überschrieben. Vorher führte das zu einem
+    // „Bitte wählen Sie eine Aufbauart"-Fehler, obwohl der User längst eine
+    // ausgewählt hatte (Race zwischen Klick und async Hydration).
     if (restoredFormData && !hasMergedRestoredRef.current) {
-      updateFormData(restoredFormData);
+      hydrateFormData(restoredFormData);
       hasMergedRestoredRef.current = true;
     }
 
@@ -91,13 +96,24 @@ const VerkaufenWizard = () => {
       // current_step=9. Heute gibt es nur noch 8 Steps – wir landen den User
       // sicher auf Step 8, der seinen Marketing-Consent jetzt inline enthält.
       const safeStep = Math.min(initialStep, STEPS.length);
-      setCurrentStep(safeStep);
+      // Step-Restore-Race-Schutz: Wenn der User bereits manuell weitergeklickt
+      // hat (currentStep != 1), darf der späte Hydration-Restore ihn nicht
+      // zurückwerfen. Das passiert sonst bei Usern, die schnell genug klicken
+      // bevor der Supabase-Fetch zurückkommt – sie würden ungewollt zurück
+      // auf den alten Step springen und ihren Step-Fortschritt verlieren.
+      if (currentStep === 1 && safeStep !== 1) {
+        setCurrentStep(safeStep);
+      }
       hasRestoredRef.current = true;
     }
 
     // Mark hydration as done so the step-guard can run without false-positives.
     setIsHydrated(true);
-  }, [isReady, initialStep, restoredFormData, updateFormData]);
+    // currentStep absichtlich nicht in deps: Wir wollen NICHT, dass spätere
+    // Step-Wechsel diesen Effect re-triggern – die Refs (hasMergedRestoredRef,
+    // hasRestoredRef) gewährleisten Single-Run-Semantik.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, initialStep, restoredFormData, hydrateFormData]);
 
   // Check if user is already authenticated and prefill profile data.
   // Listens to auth state changes so a user who logs in DURING the wizard

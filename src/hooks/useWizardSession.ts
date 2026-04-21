@@ -208,13 +208,22 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             const formDataCopy = { ...(existingSession.form_data as Record<string, unknown>) };
             delete formDataCopy.photos;
             delete formDataCopy.photos_count;
-            // Only expose if there's at least one filled field that the wizard cares about.
-            // Avoid spamming React with empty {} updates on brand-new sessions.
-            const hasUsefulData = Object.values(formDataCopy).some(
-              (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
-            );
-            if (hasUsefulData) {
-              setRestoredFormData(formDataCopy as Partial<WizardFormData>);
+
+            // Defense-in-depth: nur Felder mit echtem Inhalt durchreichen.
+            // Andernfalls würde ein naiver Konsument (`updateFormData(restored)`)
+            // User-Eingaben mit "" überschreiben, sobald der Server-Restore
+            // nach dem ersten Klick eintrudelt — siehe Bug-Report 2026-04-21
+            // („Bitte wählen Sie eine Aufbauart" trotz Auswahl). `useWizardForm`
+            // hat zusätzlich `hydrateFormData` als zweite Verteidigungslinie.
+            const usefulFields: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(formDataCopy)) {
+              if (value === null || value === undefined || value === "") continue;
+              if (Array.isArray(value) && value.length === 0) continue;
+              usefulFields[key] = value;
+            }
+
+            if (Object.keys(usefulFields).length > 0) {
+              setRestoredFormData(usefulFields as Partial<WizardFormData>);
             }
           }
 

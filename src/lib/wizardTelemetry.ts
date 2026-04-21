@@ -120,7 +120,19 @@ export function logWizardEvent(ev: WizardEventPayload): void {
 }
 
 function scheduleFlush(delayMs: number): void {
-  if (flushTimer) return;
+  // If a flush is already pending, normally we keep it. BUT: when a
+  // buffer-full trigger asks for delay=0, we must preempt the existing
+  // (potentially 2s) timer so events go out immediately. Otherwise the
+  // MAX_BUFFER threshold would be effectively pointless when a slower
+  // interval timer is already running.
+  if (flushTimer) {
+    if (delayMs === 0) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    } else {
+      return;
+    }
+  }
   flushTimer = setTimeout(() => {
     flushTimer = null;
     void flushWizardTelemetry("interval");

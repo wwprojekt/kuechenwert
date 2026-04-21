@@ -770,35 +770,95 @@ export const useWizardForm = () => {
           title: "Fahrzeug erfolgreich eingereicht!",
           description: "Sie erhalten in Kürze eine E-Mail zur Kontoaktivierung. Prüfen Sie Ihr Postfach.",
         });
-        // Alle Daten über window-Objekt an die Danke-Seite übergeben.
-        // WARUM? navigate() bricht laufende fetch()-Requests ab (OPTIONS geht durch,
-        // aber der eigentliche POST wird abgebrochen). Deshalb müssen ALLE
-        // Edge-Function-Aufrufe auf der Danke-Seite starten, nicht hier.
+
+        // ───────────────────────────────────────────────────────────────
+        // KRITISCH: auto-convert-wizard + send-lead-notification VOR navigate()
+        // mit `keepalive: true` feuern.
+        //
+        // Warum nicht auf der Danke-Seite (alter Code): supabase.functions.invoke()
+        // im useEffect der Zielroute geht verloren wenn der User die Seite
+        // sofort schließt (Mobile-Habit), den Tab in den Hintergrund schickt
+        // oder ein Hot-Reload während des Routings passiert. Genau das hat
+        // schoenerth@gmx.de am 2026-04-21 erwischt -- Lead war für immer weg.
+        //
+        // `keepalive: true` weist den Browser an, den Request bis zum Abschluss
+        // weiterzusenden -- selbst wenn die Page entladen wird. Body-Limit
+        // 64 KB; unsere Bodies sind <2 KB. Fire-and-forget mit Garantie.
+        //
+        // Trotzdem läuft die DB-Trigger + 5-Min-Cron-Safety-Net als Backup,
+        // falls der Browser keepalive nicht respektiert (sehr alte Browser)
+        // oder das Netz komplett wegbricht.
+        // ───────────────────────────────────────────────────────────────
         if (savedSessionId) {
+          const supabaseUrl =
+            import.meta.env.VITE_SUPABASE_URL ||
+            "https://zcrwqxsyptjwkuxfacvq.supabase.co";
+          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
           const trackingData = getTrackingData();
-          (window as any).__pendingWizardConvert = {
-            sessionId: savedSessionId,
-            anonymousId: context?.anonymousId || null,
-            password: registerPassword,
-            leadNotification: {
-              name: formData.customerName || "Unbekannt",
-              email: formData.customerEmail || "",
-              phone: formData.customerPhone || undefined,
-              manufacturer: formData.manufacturer || undefined,
-              model: formData.model || undefined,
-              country: formData.country || "DE",
-              gclid: trackingData.gclid,
-              gbraid: trackingData.gbraid,
-              wbraid: trackingData.wbraid,
-              msclkid: trackingData.msclkid,
-              ga4ClientId: trackingData.ga4ClientId,
-              transactionId: txId1,
-              skipUserEmail: true,
-              turnstileToken: botProtection?.turnstileToken || undefined,
-              honeypot: botProtection?.honeypot || undefined,
-            },
-          };
+
+          // 1) auto-convert-wizard -- legt Account an + verschickt Activation-Mail
+          try {
+            void fetch(`${supabaseUrl}/functions/v1/auto-convert-wizard`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                apikey: supabaseAnonKey,
+              },
+              body: JSON.stringify({
+                sessionId: savedSessionId,
+                userId: null,
+                password: registerPassword,
+                hasPassword: true,
+                anonymousId: context?.anonymousId || null,
+              }),
+              keepalive: true,
+            }).catch((err) => {
+              logger.error("auto-convert-wizard kicked off but errored:", err);
+            });
+          } catch (err) {
+            logger.error("Failed to schedule auto-convert-wizard:", err);
+          }
+
+          // 2) send-lead-notification -- benachrichtigt Admin
+          try {
+            void fetch(`${supabaseUrl}/functions/v1/send-lead-notification`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                apikey: supabaseAnonKey,
+              },
+              body: JSON.stringify({
+                type: "wizard",
+                name: formData.customerName || "Unbekannt",
+                email: formData.customerEmail || "",
+                phone: formData.customerPhone || undefined,
+                manufacturer: formData.manufacturer || undefined,
+                model: formData.model || undefined,
+                country: formData.country || "DE",
+                gclid: trackingData.gclid,
+                gbraid: trackingData.gbraid,
+                wbraid: trackingData.wbraid,
+                msclkid: trackingData.msclkid,
+                ga4ClientId: trackingData.ga4ClientId,
+                transactionId: txId1,
+                skipUserEmail: true,
+                turnstileToken: botProtection?.turnstileToken || undefined,
+                honeypot: botProtection?.honeypot || undefined,
+              }),
+              keepalive: true,
+            }).catch((err) => {
+              logger.error("send-lead-notification kicked off but errored:", err);
+            });
+          } catch (err) {
+            logger.error("Failed to schedule send-lead-notification:", err);
+          }
         }
+
+        // Photo-Upload kann NICHT keepalive verwenden (>64 KB Body bei Fotos).
+        // Bleibt deshalb auf der Danke-Seite. User wird dort gewarnt die Seite
+        // nicht zu schließen während Upload läuft (beforeunload-Listener).
         if (formData.photos.length > 0 && savedSessionId) {
           (window as any).__pendingWizardPhotos = {
             photos: formData.photos,

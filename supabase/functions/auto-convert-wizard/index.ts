@@ -136,14 +136,20 @@ const handler = async (req: Request): Promise<Response> => {
     // --- Ownership verification ---
     // Before this check existed, anyone who guessed a session UUID could
     // trigger conversion and create a user + motorhome out of someone else's
-    // draft. We now require either:
-    //   - a valid bearer token whose user_id matches the session's user_id,
-    //   - or an anonymous_id that matches the session's anonymous_id.
+    // draft. We require either:
+    //   - the service-role bearer (trusted internal call: cron safety-net,
+    //     admin recovery, auto-convert chain). These callers ARE the system,
+    //     no further proof of session ownership needed.
+    //   - a valid user bearer token whose user_id matches session.user_id,
+    //   - or an anonymous_id that matches session.anonymous_id.
     let callerUserId: string | null = null;
+    let isServiceRoleCaller = false;
     const authHeader = req.headers.get("Authorization");
     if (authHeader?.toLowerCase().startsWith("bearer ")) {
       const token = authHeader.slice(7).trim();
-      if (token && token !== SUPABASE_SERVICE_ROLE_KEY) {
+      if (token && token === SUPABASE_SERVICE_ROLE_KEY) {
+        isServiceRoleCaller = true;
+      } else if (token) {
         try {
           const { data: { user } } = await adminClient.auth.getUser(token);
           if (user?.id) callerUserId = user.id;
@@ -156,41 +162,46 @@ const handler = async (req: Request): Promise<Response> => {
     // If the caller claims a specific userId in the body (e.g. for the
     // authenticated flow where the wizard already knows the user), it MUST
     // match the auth-resolved user. Otherwise a malicious client could
-    // impersonate another user.
-    if (body.userId && callerUserId && body.userId !== callerUserId) {
-      return new Response(
-        JSON.stringify({ error: "userId does not match authenticated caller" }),
-        { status: 403, headers }
-      );
-    }
-    if (body.userId && !callerUserId) {
-      return new Response(
-        JSON.stringify({ error: "userId provided without valid bearer token" }),
-        { status: 401, headers }
-      );
-    }
-
-    const { data: isOwner, error: verifyError } = await adminClient.rpc(
-      "verify_wizard_session_ownership",
-      {
-        p_session_id: body.sessionId,
-        p_anonymous_id: body.anonymousId ?? null,
-        p_user_id: callerUserId,
+    // impersonate another user. Service-role callers are exempt -- they
+    // explicitly act on behalf of the system.
+    if (!isServiceRoleCaller) {
+      if (body.userId && callerUserId && body.userId !== callerUserId) {
+        return new Response(
+          JSON.stringify({ error: "userId does not match authenticated caller" }),
+          { status: 403, headers }
+        );
       }
-    );
-
-    if (verifyError) {
-      edgeLogger.error("verify_wizard_session_ownership RPC failed", verifyError);
-      return new Response(
-        JSON.stringify({ error: "Ownership verification failed" }),
-        { status: 500, headers }
-      );
+      if (body.userId && !callerUserId) {
+        return new Response(
+          JSON.stringify({ error: "userId provided without valid bearer token" }),
+          { status: 401, headers }
+        );
+      }
     }
-    if (!isOwner) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: wizard session does not belong to caller" }),
-        { status: 403, headers }
+
+    if (!isServiceRoleCaller) {
+      const { data: isOwner, error: verifyError } = await adminClient.rpc(
+        "verify_wizard_session_ownership",
+        {
+          p_session_id: body.sessionId,
+          p_anonymous_id: body.anonymousId ?? null,
+          p_user_id: callerUserId,
+        }
       );
+
+      if (verifyError) {
+        edgeLogger.error("verify_wizard_session_ownership RPC failed", verifyError);
+        return new Response(
+          JSON.stringify({ error: "Ownership verification failed" }),
+          { status: 500, headers }
+        );
+      }
+      if (!isOwner) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: wizard session does not belong to caller" }),
+          { status: 403, headers }
+        );
+      }
     }
 
     // 1. Get Wizard Session

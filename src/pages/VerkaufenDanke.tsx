@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/integrations/supabase/client";
 
 type PhotoUploadState = "idle" | "uploading" | "success" | "error";
 
@@ -15,13 +14,6 @@ interface PendingWizardPhotos {
   photos: File[];
   sessionId: string;
   anonymousId?: string | null;
-}
-
-interface PendingWizardConvert {
-  sessionId: string;
-  anonymousId?: string | null;
-  password?: string;
-  leadNotification: Record<string, unknown>;
 }
 
 const VerkaufenDanke = () => {
@@ -33,44 +25,13 @@ const VerkaufenDanke = () => {
   const [totalPhotos, setTotalPhotos] = useState(0);
   const uploadStarted = useRef(false);
 
-  // auto-convert-wizard + send-lead-notification auf der Danke-Seite starten.
-  // navigate() im Wizard bricht laufende fetch()-Requests ab (OPTIONS geht durch,
-  // aber der POST wird gekillt). Deshalb werden alle Edge-Function-Aufrufe hier gestartet.
-  const convertStarted = useRef(false);
-  useEffect(() => {
-    if (convertStarted.current) return;
-
-    const pending = (window as any).__pendingWizardConvert as PendingWizardConvert | undefined;
-    if (!pending?.sessionId) return;
-
-    convertStarted.current = true;
-    const { sessionId, password, leadNotification, anonymousId } = pending;
-    delete (window as any).__pendingWizardConvert;
-
-    supabase.functions.invoke("auto-convert-wizard", {
-      body: {
-        sessionId,
-        userId: null,
-        password,
-        hasPassword: true,
-        anonymousId: anonymousId || null,
-      },
-    }).then((res) => {
-      if (res.error) {
-        logger.error("Auto-convert returned error:", res.error);
-      } else {
-        logger.info("Auto-convert successful");
-      }
-    }).catch((err) => {
-      logger.error("Auto-convert failed:", err);
-    });
-
-    supabase.functions.invoke("send-lead-notification", {
-      body: { type: "wizard", ...leadNotification },
-    }).catch((err) => {
-      logger.error("Failed to send wizard lead notification:", err);
-    });
-  }, []);
+  // Hinweis: auto-convert-wizard + send-lead-notification werden NICHT mehr
+  // hier auf der Danke-Seite ausgelöst. Sie laufen jetzt VOR navigate() in
+  // useWizardForm.submitForm() mit `keepalive: true`, sodass sie auch dann
+  // den Server erreichen wenn der User die Seite sofort schließt -- was
+  // zuvor (Bug schoenerth@gmx.de, 2026-04-21) den Lead permanent vernichtet
+  // hat. Photo-Upload bleibt hier, weil das Body-Limit von keepalive (64 KB)
+  // für Foto-Uploads nicht reicht.
 
   // Photo-Upload auf der Danke-Seite starten.
   // File-Objekte werden über window.__pendingWizardPhotos übergeben,

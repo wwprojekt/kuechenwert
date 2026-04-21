@@ -222,6 +222,10 @@ export default function UserProfile() {
                 <Label htmlFor="first_name">Vorname</Label>
                 <Input
                   id="first_name"
+                  name="given-name"
+                  type="text"
+                  autoComplete="given-name"
+                  autoCapitalize="words"
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   placeholder="Max"
@@ -231,6 +235,10 @@ export default function UserProfile() {
                 <Label htmlFor="last_name">Nachname</Label>
                 <Input
                   id="last_name"
+                  name="family-name"
+                  type="text"
+                  autoComplete="family-name"
+                  autoCapitalize="words"
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   placeholder="Mustermann"
@@ -246,7 +254,10 @@ export default function UserProfile() {
               </Label>
               <Input
                 id="phone"
+                name="tel"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+49 123 456789"
@@ -268,6 +279,10 @@ export default function UserProfile() {
                 <Label htmlFor="address_street">Straße und Hausnummer</Label>
                 <Input
                   id="address_street"
+                  name="street-address"
+                  type="text"
+                  autoComplete="street-address"
+                  autoCapitalize="words"
                   value={formData.address_street}
                   onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
                   placeholder="Musterstraße 123"
@@ -280,6 +295,10 @@ export default function UserProfile() {
                 <Label htmlFor="address_zip">PLZ</Label>
                 <Input
                   id="address_zip"
+                  name="postal-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
                   value={formData.address_zip}
                   onChange={(e) => setFormData({ ...formData, address_zip: e.target.value })}
                   placeholder="80331"
@@ -289,6 +308,10 @@ export default function UserProfile() {
                 <Label htmlFor="address_city">Stadt</Label>
                 <Input
                   id="address_city"
+                  name="address-level2"
+                  type="text"
+                  autoComplete="address-level2"
+                  autoCapitalize="words"
                   value={formData.address_city}
                   onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
                   placeholder="München"
@@ -352,6 +375,10 @@ export default function UserProfile() {
                 <Label htmlFor="company_name">Firmenname {formData.account_type === 'private' ? '(optional)' : ''}</Label>
                 <Input
                   id="company_name"
+                  name="organization"
+                  type="text"
+                  autoComplete="organization"
+                  autoCapitalize="words"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                   placeholder="z.B. Autohaus Müller GmbH"

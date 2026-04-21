@@ -494,7 +494,12 @@ const RegisterHaendler = () => {
                     <Label htmlFor="email">{tr.labelEmail}</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       placeholder={tr.placeholderEmail}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -507,7 +512,9 @@ const RegisterHaendler = () => {
                     </Label>
                     <Input
                       id="password"
+                      name="new-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder={tr.placeholderPassword}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -544,7 +551,9 @@ const RegisterHaendler = () => {
                     </Label>
                     <Input
                       id="passwordConfirm"
+                      name="passwordConfirm"
                       type="password"
+                      autoComplete="new-password"
                       placeholder={tr.placeholderPasswordConfirm}
                       value={formData.passwordConfirm}
                       onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
@@ -564,6 +573,10 @@ const RegisterHaendler = () => {
                     <Label htmlFor="companyName">{tr.labelCompanyName}</Label>
                     <Input
                       id="companyName"
+                      name="organization"
+                      type="text"
+                      autoComplete="organization"
+                      autoCapitalize="words"
                       placeholder={tr.placeholderCompanyName}
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
@@ -577,6 +590,10 @@ const RegisterHaendler = () => {
                     </Label>
                     <Input
                       id="companyAddress"
+                      name="street-address"
+                      type="text"
+                      autoComplete="street-address"
+                      autoCapitalize="words"
                       placeholder={tr.placeholderAddress}
                       value={formData.companyAddress}
                       onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
@@ -588,6 +605,10 @@ const RegisterHaendler = () => {
                       <Label htmlFor="companyPostalCode">{tr.labelPostalCode}</Label>
                       <Input
                         id="companyPostalCode"
+                        name="postal-code"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
                         placeholder={tr.placeholderPostalCode}
                         maxLength={10}
                         value={formData.companyPostalCode}
@@ -598,6 +619,10 @@ const RegisterHaendler = () => {
                       <Label htmlFor="companyCity">{tr.labelCity}</Label>
                       <Input
                         id="companyCity"
+                        name="address-level2"
+                        type="text"
+                        autoComplete="address-level2"
+                        autoCapitalize="words"
                         placeholder={tr.placeholderCity}
                         value={formData.companyCity}
                         onChange={(e) => setFormData({ ...formData, companyCity: e.target.value })}
@@ -689,7 +714,9 @@ const RegisterHaendler = () => {
                       </Label>
                       <Input
                         id="foundedYear"
+                        name="foundedYear"
                         type="number"
+                        inputMode="numeric"
                         placeholder={tr.placeholderFoundedYear}
                         min={1900}
                         max={new Date().getFullYear()}
@@ -709,6 +736,10 @@ const RegisterHaendler = () => {
                       </Label>
                       <Input
                         id="vatId"
+                        name="vatId"
+                        type="text"
+                        autoCapitalize="characters"
+                        spellCheck={false}
                         placeholder={`z.B. ${formData.country}123456789`}
                         value={formData.vatId}
                         onChange={(e) => setFormData({ ...formData, vatId: e.target.value.toUpperCase() })}
@@ -734,6 +765,10 @@ const RegisterHaendler = () => {
                       <Label htmlFor="contactPersonName">{tr.labelContactName}</Label>
                       <Input
                         id="contactPersonName"
+                        name="name"
+                        type="text"
+                        autoComplete="name"
+                        autoCapitalize="words"
                         placeholder={tr.placeholderContactName}
                         value={formData.contactPersonName}
                         onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
@@ -743,6 +778,10 @@ const RegisterHaendler = () => {
                       <Label htmlFor="contactPersonPosition">{tr.labelContactPosition}</Label>
                       <Input
                         id="contactPersonPosition"
+                        name="organization-title"
+                        type="text"
+                        autoComplete="organization-title"
+                        autoCapitalize="words"
                         placeholder={tr.placeholderContactPosition}
                         value={formData.contactPersonPosition}
                         onChange={(e) => setFormData({ ...formData, contactPersonPosition: e.target.value })}
@@ -758,7 +797,10 @@ const RegisterHaendler = () => {
                       </Label>
                       <Input
                         id="phone"
+                        name="tel"
                         type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
                         placeholder={getPhonePlaceholder(formData.country)}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -771,7 +813,12 @@ const RegisterHaendler = () => {
                       </Label>
                       <Input
                         id="website"
+                        name="url"
                         type="url"
+                        inputMode="url"
+                        autoComplete="url"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         placeholder={tr.placeholderWebsite}
                         value={formData.website}
                         onChange={(e) => setFormData({ ...formData, website: e.target.value })}

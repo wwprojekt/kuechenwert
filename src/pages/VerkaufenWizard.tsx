@@ -614,10 +614,23 @@ const VerkaufenWizard = () => {
       <div className="min-h-screen py-2 sm:py-4 md:py-8 bg-muted/65">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* Progress Indicator with step dots */}
+            {/* Progress Indicator with step dots.
+                Auf Mobile/Tablet zeigen wir zusätzlich den aktuellen Step-Namen
+                links — vorher gab es nur "%" + Dots, was Nutzer zwang, Dots zu
+                zählen, um zu wissen, wo sie stehen. Auf Desktop steht der
+                Step-Name ohnehin in der Sidebar, daher dort kein Duplikat. */}
             <div className="mb-2 sm:mb-4 md:mb-6 animate-slide-up">
-              <div className="flex justify-end items-center mb-1">
-                <span className="text-xs sm:text-sm font-semibold text-primary">
+              <div className="flex justify-between items-center mb-1 gap-3 lg:justify-end">
+                <span className="text-xs sm:text-sm font-medium text-foreground/80 truncate lg:hidden">
+                  Schritt {currentStep} von {steps.length}
+                  {steps[currentStep - 1]?.name && (
+                    <>
+                      <span className="text-muted-foreground"> · </span>
+                      <span className="text-foreground">{steps[currentStep - 1].name}</span>
+                    </>
+                  )}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-primary shrink-0">
                   {Math.round(progress)}%
                 </span>
               </div>

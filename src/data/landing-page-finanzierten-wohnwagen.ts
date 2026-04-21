@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const finanziertenWohnwagenVerkaufen: LandingPageConfig = {
   slug: "finanzierten-wohnwagen-verkaufen",
   path: "/finanzierten-wohnwagen-verkaufen",
-  title: "Finanzierten Wohnwagen verkaufen — Ablösung sicher abwickeln",
+  title: "Finanzierten Wohnwagen verkaufen: Ablösung erklärt",
   metaDescription:
-    "Wohnwagen mit laufender Finanzierung verkaufen: Schritt-für-Schritt-Anleitung, Vorfälligkeitsentschädigung, Käufer übernimmt Restschuld. Mit CaravanWert sicher und ohne Risiko abwickeln.",
+    "Wohnwagen mit laufender Finanzierung verkaufen: Anleitung, Vorfälligkeitsentschädigung, Käufer übernimmt Restschuld — sicher und ohne Risiko abwickeln.",
   keywords:
     "finanzierten wohnwagen verkaufen, wohnwagen mit finanzierung verkaufen, wohnwagen verkaufen kredit, wohnwagen ablösen verkaufen, wohnwagen verkaufen restschuld, wohnwagen kredit verkaufen, finanzierten caravan verkaufen, wohnwagen ablöse verkauf",
   h1: "Finanzierten Wohnwagen verkaufen — so geht's sicher",

@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilpreise2026: LandingPageConfig = {
   slug: "wohnmobilpreise-2026",
   path: "/wohnmobilpreise-2026",
-  title: "Wohnmobilpreise 2026: Marktanalyse, Prognose & was Verkäufer wissen müssen",
+  title: "Wohnmobilpreise 2026: Marktanalyse & Prognose",
   metaDescription:
-    "Wohnmobilpreise 2026 fallen weiter — aktuelle Marktanalyse, Prognose für 2026 und 2027, Wertverlust pro Quartal nach Segment. Was Verkäufer jetzt tun sollten, um nicht ins Loch zu rutschen.",
+    "Wohnmobilpreise 2026 fallen weiter — aktuelle Marktanalyse, Prognose 2026/27, Wertverlust pro Quartal nach Segment. Was Verkäufer jetzt tun sollten.",
   keywords:
     "wohnmobilpreise 2026, wohnmobilpreise fallen, wohnmobil preisentwicklung 2026, wohnmobil markt 2026, wohnmobilpreise sinken, gebrauchtwohnmobil preise 2026, wohnmobil wertverlust 2026, preisprognose wohnmobil 2026 2027",
   h1: "Wohnmobilpreise 2026: Wo der Markt wirklich steht",

@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilAnkaufRatgeber: LandingPageConfig = {
   slug: "wohnmobil-ankauf-ratgeber",
   path: "/wohnmobil-ankauf-ratgeber",
-  title: "Wohnmobil-Ankauf Ratgeber 2026 — Käufer finden, Preis erzielen, Risiken vermeiden",
+  title: "Wohnmobil verkaufen 2026: Der komplette Ratgeber",
   metaDescription:
-    "Der komplette Ratgeber zum Wohnmobil-Verkauf: Verkaufsportale im Vergleich, Schritt-für-Schritt-Anleitung, Preisermittlung, häufige Fallen und wann sich der Verkauf an einen Händler lohnt.",
+    "Kompletter Ratgeber zum Wohnmobil-Verkauf 2026: Verkaufsportale im Vergleich, Schritt-für-Schritt-Anleitung, Preisermittlung und typische Fallen vermeiden.",
   keywords:
     "wohnmobil ankauf ratgeber, wohnmobil verkaufen ratgeber, wohnmobil verkaufen anleitung, wohnmobil verkaufen tipps, wohnmobil verkaufen wo, wohnmobil verkaufsportale vergleich, wohnmobil verkaufen privat oder händler, wohnmobil ankauf seriös",
   h1: "Wohnmobil verkaufen: Der komplette Ratgeber für 2026",

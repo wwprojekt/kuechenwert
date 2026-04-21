@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wannWohnmobilVerkaufen: LandingPageConfig = {
   slug: "wann-wohnmobil-verkaufen",
   path: "/wann-wohnmobil-verkaufen",
-  title: "Wann Wohnmobil verkaufen? Bester Verkaufszeitpunkt 2026",
+  title: "Wann Wohnmobil verkaufen? Bester Zeitpunkt 2026",
   metaDescription:
-    "Wann ist der beste Zeitpunkt zum Verkauf eines Wohnmobils? Saisonale Preisunterschiede, Marktlage 2026, Wertverlust pro Monat — und warum „besser jetzt als später\" gerade besonders gilt.",
+    "Wann ist der beste Zeitpunkt für den Wohnmobil-Verkauf? Saisonale Preisunterschiede, Marktlage 2026, Wertverlust pro Monat — und warum jetzt verkaufen oft besser ist.",
   keywords:
     "wann wohnmobil verkaufen, wohnmobil verkaufen wann, bester verkaufszeitpunkt wohnmobil, wohnmobil verkaufen jahreszeit, wohnmobil saisonal verkaufen, wann reisemobil verkaufen, wohnmobil verkaufen frühling, wohnmobil verkaufen winter",
   h1: "Wann ist der beste Zeitpunkt, ein Wohnmobil zu verkaufen?",

@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnwagenpreise2026: LandingPageConfig = {
   slug: "wohnwagenpreise-2026",
   path: "/wohnwagenpreise-2026",
-  title: "Wohnwagenpreise 2026: Marktanalyse, Prognose & was Verkäufer wissen müssen",
+  title: "Wohnwagenpreise 2026: Marktanalyse & Prognose",
   metaDescription:
-    "Wohnwagenpreise 2026: Marktanalyse für Hobby, Knaus, Fendt & Co. Prognose 2026/27, Wertverlust pro Quartal nach Segment. Was Caravan-Verkäufer jetzt tun sollten.",
+    "Wohnwagenpreise 2026: Marktanalyse für Hobby, Knaus, Fendt & Co. Prognose 2026/27, Wertverlust pro Quartal nach Segment. Was Verkäufer jetzt tun sollten.",
   keywords:
     "wohnwagenpreise 2026, wohnwagenpreise fallen, wohnwagen preisentwicklung 2026, wohnwagen markt 2026, wohnwagenpreise sinken, gebrauchtwohnwagen preise 2026, wohnwagen wertverlust 2026, preisprognose wohnwagen 2026 2027, caravan preise 2026",
   h1: "Wohnwagenpreise 2026: Wo der Markt wirklich steht",

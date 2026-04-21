@@ -3,9 +3,9 @@ import type { LandingPageConfig } from "./landing-page-types";
 export const wohnmobilVerkaufspreis: LandingPageConfig = {
   slug: "wohnmobil-verkaufspreis",
   path: "/wohnmobil-verkaufspreis",
-  title: "Wohnmobil-Verkaufspreis richtig festlegen — Ratgeber 2026",
+  title: "Wohnmobil-Verkaufspreis richtig festlegen 2026",
   metaDescription:
-    "Den richtigen Verkaufspreis für Ihr Wohnmobil ermitteln: aktuelle Marktdaten, häufige Fehler vermeiden und mit dem CaravanWert-Wertrechner in 2 Minuten den realistischen Marktpreis bekommen.",
+    "Den richtigen Verkaufspreis für Ihr Wohnmobil ermitteln: aktuelle Marktdaten, typische Fehler vermeiden, in 2 Minuten den fairen Marktwert bekommen.",
   keywords:
     "wohnmobil verkaufspreis, wohnmobil preis ermitteln, wohnmobil verkaufen preis, wohnmobil wert verkaufen, marktpreis wohnmobil, wohnmobil richtig verkaufen, wohnmobil preisermittlung, gebrauchtes wohnmobil preis",
   h1: "Der richtige Verkaufspreis für Ihr Wohnmobil",

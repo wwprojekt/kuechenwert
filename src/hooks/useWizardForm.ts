@@ -859,7 +859,7 @@ export const useWizardForm = () => {
         engine_power_hp: isWohnwagen ? null : (formData.power_ps || null),
         transmission: isWohnwagen ? null : (formData.transmission || null),
         emission_class: isWohnwagen ? null : (formData.emission_class || null),
-        tuev_valid_until: formData.tuv_valid_until || null,
+        tuev_valid_until: formData.tuv_valid_until ? `${formData.tuv_valid_until.substring(0, 7)}-01` : null,
         first_registration: formData.first_registration ? `${formData.first_registration.substring(0, 7)}-01` : null,
         previous_owners: formData.previous_owners ?? null,
         accident_free: formData.accident_free,

@@ -251,8 +251,8 @@ function buildMotorhomeListingAppendix(m: Record<string, unknown>): string {
   add('Hubraum (ccm)', m.engine_displacement_ccm);
   add('Basisfahrzeug', m.base_vehicle);
   add('Erstzulassung', m.first_registration ? formatMonthYear(m.first_registration) : null);
-  add('Letzte HU', m.last_tuev_date);
-  add('HU gültig bis', m.tuev_valid_until);
+  add('Letzte HU', m.last_tuev_date ? formatMonthYear(m.last_tuev_date) : null);
+  add('HU gültig bis', m.tuev_valid_until ? formatMonthYear(m.tuev_valid_until) : null);
   add('Vorbesitzer', m.previous_owners);
   add('Unfallfrei', m.accident_free === true ? 'Ja' : m.accident_free === false ? 'Nein' : null);
   add('Nichtraucher', m.non_smoker === true ? 'Ja' : m.non_smoker === false ? 'Nein' : null);

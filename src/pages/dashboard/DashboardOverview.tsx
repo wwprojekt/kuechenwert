@@ -288,10 +288,11 @@ export default function DashboardOverview() {
       return enriched;
     },
     enabled: !!user && !isDealer,
-    // Polling Fallback (selten — Realtime macht den Hauptjob für Offers).
-    // 2 Min reicht um Status-Wechsel (z. B. Auktion wurde freigeschaltet,
-    // Inserat-Status hat sich geändert) noch ohne Reload mitzubekommen.
-    refetchInterval: 2 * 60 * 1000,
+    // 30 s Polling: Realtime deckt nur post_auction_offers ab.
+    // Auktions-Status (active → ended → kaufchance), current_bid und Bid-Counts
+    // müssen weiterhin durch Polling auf den Stand gebracht werden, sonst
+    // bleibt z. B. eine eben aufgesprungene Kaufchance bis zu 30 s+ unsichtbar.
+    refetchInterval: 30 * 1000,
     refetchIntervalInBackground: false,
     staleTime: 0,
   });
@@ -344,7 +345,7 @@ export default function DashboardOverview() {
             toast({
               title: "Neues Angebot eingegangen!",
               description: amount > 0
-                ? `Ein Händler bietet € ${amount.toLocaleString("de-DE")} für Ihr Fahrzeug.`
+                ? `Ein Händler bietet ${Math.round(amount).toLocaleString("de-DE")} € für Ihr Fahrzeug.`
                 : "Schauen Sie sich das neue Angebot an.",
             });
           }

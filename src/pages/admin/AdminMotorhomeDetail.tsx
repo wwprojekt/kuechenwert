@@ -518,7 +518,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Gassystem" value={motorhome.gas_system || "—"} />
                       <InfoItem label="Hauptreifen" value={motorhome.main_tires || "—"} />
                       <InfoItem label="Zweitreifen" value={motorhome.second_tires || "—"} />
-                      <InfoItem label="Letzter TÜV" value={formatDate(motorhome.last_tuev_date)} />
+                      <InfoItem label="Letzter TÜV" value={formatMonthYear(motorhome.last_tuev_date)} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">
                       {motorhome.accident_free && (

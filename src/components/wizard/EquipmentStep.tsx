@@ -74,14 +74,14 @@ const MonthYearPicker = ({ label, value, onChange, futureYears = 0 }: {
   );
 };
 
-// Die ~3 mit Abstand haeufigsten Wohnmobil-Chassis (vgl. Sevel-Plattform-Anteil
+// Die ~3 mit Abstand häufigsten Wohnmobil-Chassis (vgl. Sevel-Plattform-Anteil
 // am DE-Markt + interne wizard_sessions-Auswertung). Diese als Quick-Pick-Chips
-// ueber dem Dropdown zeigen, damit ~80% der Nutzer das 33-Optionen-Menue gar
-// nicht oeffnen muessen.
+// über dem Dropdown zeigen, damit ~80% der Nutzer das 33-Optionen-Menü gar
+// nicht öffnen müssen.
 const TOP_BASE_VEHICLES = ["Fiat Ducato", "Mercedes Sprinter", "Ford Transit"] as const;
 
 // Bei vielen PS-Optionen (z.B. Iveco Daily mit 12) fluten die Chips auf Mobile
-// 3-4 Zeilen und wirken ueberfordernd. Daher: standardmaessig max.
+// 3–4 Zeilen und wirken überfordernd. Daher: standardmäßig max.
 // PS_CHIPS_VISIBLE anzeigen, der Rest wird per "+N weitere" Toggle eingeblendet.
 const PS_CHIPS_VISIBLE = 5;
 
@@ -91,8 +91,8 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
   const [showAllPs, setShowAllPs] = useState(false);
 
   // Wenn der User das Basisfahrzeug wechselt, wieder auf die kompakte
-  // Chip-Ansicht zuruecksetzen, sonst startet die Liste bereits voll
-  // geoeffnet, obwohl es nun nur noch wenige PS-Werte gibt.
+  // Chip-Ansicht zurücksetzen, sonst startet die Liste bereits voll
+  // geöffnet, obwohl es nun nur noch wenige PS-Werte gibt.
   useEffect(() => {
     setShowAllPs(false);
   }, [formData.baseVehicle]);
@@ -178,18 +178,19 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
             </Label>
 
             {/* Top-3 Quick-Pick Chips: deckt empirisch ~80% der Wohnmobile ab
-                (Sevel-Plattform = Fiat Ducato / Citroen / Peugeot, Mercedes
-                Sprinter, Ford Transit). Wer einen davon hat, klickt 1x und
-                muss das lange Dropdown nie oeffnen - primaerer Hebel fuer die
+                (Sevel-Plattform = Fiat Ducato / Citroën / Peugeot, Mercedes
+                Sprinter, Ford Transit). Wer einen davon hat, klickt 1× und
+                muss das lange Dropdown nie öffnen – primärer Hebel für die
                 Mobile-Conversion in diesem Step. */}
             <div className="flex flex-wrap gap-2">
               {TOP_BASE_VEHICLES.map((label) => (
                 <button
                   key={label}
                   type="button"
-                  onClick={() =>
-                    updateFormData({ baseVehicle: label, power_ps: null, power_kw: null })
-                  }
+                  onClick={() => {
+                    if (formData.baseVehicle === label) return;
+                    updateFormData({ baseVehicle: label, power_ps: null, power_kw: null });
+                  }}
                   aria-pressed={formData.baseVehicle === label}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap min-h-[36px] active:scale-[0.97]",
@@ -209,7 +210,7 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                 onValueChange={(value) => updateFormData({ baseVehicle: value, power_ps: null, power_kw: null })}
               >
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Anderes Chassis waehlen..." />
+                  <SelectValue placeholder="Anderes Chassis wählen…" />
                 </SelectTrigger>
                 <SelectContent>
                   {baseVehicles.map(bv => (

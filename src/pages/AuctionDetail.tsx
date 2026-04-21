@@ -1880,10 +1880,16 @@ const AuctionDetail = () => {
                       <span className="font-semibold text-sm sm:text-base">TÜV/HU</span>
                     </div>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      {motorhome.tuev_valid_until
-                        ? `bis ${new Date(motorhome.tuev_valid_until).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })}`
-                        : 'Nicht angegeben'
-                      }
+                      {(() => {
+                        const v = motorhome.tuev_valid_until;
+                        if (!v) return 'Nicht angegeben';
+                        const m = /^(\d{4})-(\d{2})/.exec(v);
+                        if (m) return `bis ${m[2]}.${m[1]}`;
+                        const d = new Date(v);
+                        if (isNaN(d.getTime())) return 'Nicht angegeben';
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        return `bis ${mm}.${d.getFullYear()}`;
+                      })()}
                     </p>
                   </div>
                 </div>

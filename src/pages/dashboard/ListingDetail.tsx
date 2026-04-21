@@ -1033,7 +1033,11 @@ export default function ListingDetail() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Letzte TÜV/HU</span>
                         <span className="font-semibold">
-                          {format(new Date(motorhome.last_tuev_date), "MM/yyyy")}
+                          {(() => {
+                            const v = motorhome.last_tuev_date;
+                            const m = /^(\d{4})-(\d{2})/.exec(v);
+                            return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
+                          })()}
                         </span>
                       </div>
                       <Separator />
@@ -1044,7 +1048,11 @@ export default function ListingDetail() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Nächste TÜV/HU</span>
                         <span className="font-semibold">
-                          {format(new Date(motorhome.tuev_valid_until), "MM/yyyy")}
+                          {(() => {
+                            const v = motorhome.tuev_valid_until;
+                            const m = /^(\d{4})-(\d{2})/.exec(v);
+                            return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
+                          })()}
                         </span>
                       </div>
                       <Separator />

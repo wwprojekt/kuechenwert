@@ -35,6 +35,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
 import { useSessionExpired } from "@/components/SessionExpiredDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * NewOfferAlert
@@ -88,24 +89,57 @@ interface NewOfferAlertProps {
   motorhomes: MotorhomeWithOffers[];
 }
 
-const SEEN_KEY = "cw_seen_offer_ids";
+/**
+ * localStorage-Key für „bereits gesehene" Offer-IDs.
+ * Pro User scoped, damit zwei Verkäufer-Accounts am selben Browser
+ * (z. B. Familien-PC) nicht den State teilen — jeder sieht den Auto-Popup
+ * für seine neuen Angebote separat. Vor dem Fix war der Key global, was
+ * dazu geführt hätte, dass User B den Popup für sein neues Angebot nicht
+ * mehr sieht, sobald User A ihn einmal weggeklickt hat.
+ */
+function makeSeenKey(userId: string | undefined): string {
+  return userId ? `cw_seen_offer_ids:${userId}` : "cw_seen_offer_ids:anon";
+}
 
-function loadSeen(): Set<string> {
+/**
+ * Maximale Größe des seen-Sets im localStorage.
+ * Verhindert, dass der Set über Wochen/Monate hinweg unbegrenzt wächst
+ * (jeder Account bekommt typisch wenige Offers, aber wir cappen
+ * defensive). Bei Überschreitung werden die ältesten Einträge verworfen
+ * (FIFO durch Insertion-Order in JS Sets).
+ */
+const SEEN_MAX = 100;
+
+function loadSeen(userId: string | undefined): Set<string> {
   try {
-    const raw = localStorage.getItem(SEEN_KEY);
+    const raw = localStorage.getItem(makeSeenKey(userId));
     if (!raw) return new Set();
-    return new Set(JSON.parse(raw) as string[]);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
   } catch {
     return new Set();
   }
 }
 
-function persistSeen(ids: Set<string>) {
+function persistSeen(userId: string | undefined, ids: Set<string>) {
   try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(ids)));
+    let arr = Array.from(ids);
+    if (arr.length > SEEN_MAX) {
+      arr = arr.slice(arr.length - SEEN_MAX);
+    }
+    localStorage.setItem(makeSeenKey(userId), JSON.stringify(arr));
   } catch {
-    /* noop */
+    /* localStorage voll/disabled → ignorieren, Popup zeigt sich evtl. nochmal */
   }
+}
+
+/**
+ * Deutsches Währungsformat: „1.234 €" — konsistent mit dem Rest der Codebase
+ * (siehe DashboardOverview.tsx Preisinfos). Vorher war „€ 1.234" inkonsistent.
+ */
+function formatEUR(amount: number): string {
+  return `${Math.round(amount).toLocaleString("de-DE")} €`;
 }
 
 interface RankedOffer {
@@ -116,10 +150,18 @@ interface RankedOffer {
   uplift: number;
   upliftPct: number;
   bidderLabel: string;
+  /**
+   * Effektive Annahme-Frist: kaufchance_expires_at hat Vorrang
+   * (entspricht der Auktions-globalen Frist), sonst offer.expires_at als
+   * Fallback (für Festpreis-Inserate gibt es keine kaufchance_expires_at).
+   * `null` wenn weder noch existiert.
+   */
+  effectiveExpiresAt: string | null;
 }
 
 function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
   const ranked: RankedOffer[] = [];
+  const nowTs = Date.now();
   for (const mh of motorhomes) {
     const auction = mh.auction;
     if (!auction) continue;
@@ -128,8 +170,28 @@ function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
     const isFestpreisActive = isFestpreis && auction.status === "active";
     if (!isKaufchance && !isFestpreisActive) continue;
 
+    // Wenn die Kaufchance-Frist insgesamt schon vorbei ist, blende den
+    // Banner aus — die Edge Function würde Annahme mit 410 ablehnen,
+    // also sollten wir den Verkäufer nicht in die Sackgasse locken.
+    if (
+      isKaufchance &&
+      auction.kaufchance_expires_at &&
+      new Date(auction.kaufchance_expires_at).getTime() < nowTs
+    ) {
+      continue;
+    }
+
     const offers = (mh.topOffers || [])
-      .filter((o) => o.status === "pending")
+      .filter((o) => {
+        if (o.status !== "pending") return false;
+        // Pro-Offer Ablauf: status='pending' aber expires_at in der
+        // Vergangenheit ist effektiv abgelaufen. Edge Function würde es
+        // beim Annehmen mit 4xx ablehnen → nicht im Banner anzeigen.
+        if (o.expires_at && new Date(o.expires_at).getTime() < nowTs) {
+          return false;
+        }
+        return true;
+      })
       .sort((a, b) => Number(b.offer_amount) - Number(a.offer_amount));
 
     if (offers.length === 0) continue;
@@ -146,6 +208,8 @@ function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
       if (baseline > 0 && amount <= baseline) return;
       const uplift = baseline > 0 ? amount - baseline : 0;
       const upliftPct = baseline > 0 ? (uplift / baseline) * 100 : 0;
+      const effectiveExpiresAt =
+        auction.kaufchance_expires_at ?? offer.expires_at ?? null;
       ranked.push({
         offer,
         motorhome: mh,
@@ -154,6 +218,7 @@ function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
         uplift,
         upliftPct,
         bidderLabel: `Bieter ${idx + 1}`,
+        effectiveExpiresAt,
       });
     });
   }
@@ -166,12 +231,21 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { showSessionExpired } = useSessionExpired();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const ranked = useMemo(() => rankOffers(motorhomes), [motorhomes]);
 
   // ── Auto-Popup-Logik: Modal beim ersten Sehen eines neuen Angebots ──
-  const [seen, setSeen] = useState<Set<string>>(() => loadSeen());
+  const [seen, setSeen] = useState<Set<string>>(() => loadSeen(userId));
   const [popupOffer, setPopupOffer] = useState<RankedOffer | null>(null);
+
+  // Wenn der Auth-Kontext nachträglich den User liefert (z. B. lazy hydration
+  // nach dem ersten Mount), rebooten wir das seen-Set aus dem korrekten
+  // localStorage-Key. Sonst hätten wir kurz „anon"-State im Speicher.
+  useEffect(() => {
+    setSeen(loadSeen(userId));
+  }, [userId]);
 
   useEffect(() => {
     if (ranked.length === 0) return;
@@ -181,13 +255,18 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
     }
   }, [ranked, seen, popupOffer]);
 
-  const dismissPopup = (offerId?: string) => {
-    if (offerId) {
-      const next = new Set(seen);
+  const markSeen = (offerId: string) => {
+    setSeen((prev) => {
+      if (prev.has(offerId)) return prev;
+      const next = new Set(prev);
       next.add(offerId);
-      setSeen(next);
-      persistSeen(next);
-    }
+      persistSeen(userId, next);
+      return next;
+    });
+  };
+
+  const dismissPopup = (offerId?: string) => {
+    if (offerId) markSeen(offerId);
     setPopupOffer(null);
   };
 
@@ -213,11 +292,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
         description:
           "Der Kaufvertrag wird erstellt. Sie erhalten in Kürze eine E-Mail mit allen Details.",
       });
-      // Offer als gesehen markieren + Popup/Confirm schließen
-      const next = new Set(seen);
-      next.add(offerId);
-      setSeen(next);
-      persistSeen(next);
+      markSeen(offerId);
       setConfirmTarget(null);
       setPopupOffer(null);
       queryClient.invalidateQueries({ queryKey: ["sellerTimeline"] });
@@ -273,14 +348,14 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               </div>
             </div>
 
-            {topOffer.motorhome.auction?.kaufchance_expires_at && (
+            {topOffer.effectiveExpiresAt && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-background/60 border border-emerald-200 dark:border-emerald-700 text-xs font-medium text-emerald-800 dark:text-emerald-200 self-start">
                 <Clock className="h-3.5 w-3.5" />
                 Frist endet{" "}
-                {formatDistanceToNowStrict(
-                  new Date(topOffer.motorhome.auction.kaufchance_expires_at),
-                  { addSuffix: true, locale: de },
-                )}
+                {formatDistanceToNowStrict(new Date(topOffer.effectiveExpiresAt), {
+                  addSuffix: true,
+                  locale: de,
+                })}
               </div>
             )}
           </div>
@@ -292,9 +367,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                 {topOffer.baselineLabel}
               </p>
               <p className="text-lg sm:text-xl font-bold text-muted-foreground line-through decoration-2">
-                {topOffer.baseline > 0
-                  ? `€ ${topOffer.baseline.toLocaleString("de-DE")}`
-                  : "—"}
+                {topOffer.baseline > 0 ? formatEUR(topOffer.baseline) : "—"}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg sm:scale-105">
@@ -302,7 +375,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                 Händlerangebot
               </p>
               <p className="text-2xl sm:text-3xl font-extrabold leading-tight">
-                € {Number(topOffer.offer.offer_amount).toLocaleString("de-DE")}
+                {formatEUR(Number(topOffer.offer.offer_amount))}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-white/70 dark:bg-background/40 border border-amber-200 dark:border-amber-700 flex flex-col justify-center">
@@ -313,7 +386,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               {topOffer.uplift > 0 ? (
                 <>
                   <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                    + € {topOffer.uplift.toLocaleString("de-DE")}
+                    + {formatEUR(topOffer.uplift)}
                   </p>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
                     + {topOffer.upliftPct.toFixed(1)} % über{" "}
@@ -346,9 +419,8 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               disabled={acceptMutation.isPending}
             >
               <CheckCircle2 className="h-5 w-5" />
-              Angebot annehmen für € {Number(
-                topOffer.offer.offer_amount,
-              ).toLocaleString("de-DE")}
+              Angebot annehmen für{" "}
+              {formatEUR(Number(topOffer.offer.offer_amount))}
             </Button>
             <Link
               to={`/dashboard/listings/${topOffer.motorhome.id}`}
@@ -386,7 +458,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                        € {Number(r.offer.offer_amount).toLocaleString("de-DE")}
+                        {formatEUR(Number(r.offer.offer_amount))}
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                     </div>
@@ -428,24 +500,24 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                   {popupOffer.motorhome.year && ` · ${popupOffer.motorhome.year}`}
                 </p>
                 <p className="text-4xl font-extrabold text-emerald-600 mt-2">
-                  € {Number(popupOffer.offer.offer_amount).toLocaleString("de-DE")}
+                  {formatEUR(Number(popupOffer.offer.offer_amount))}
                 </p>
                 {popupOffer.uplift > 0 && (
                   <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-sm font-semibold">
                     <TrendingUp className="h-3.5 w-3.5" />+{" "}
-                    {popupOffer.uplift.toLocaleString("de-DE")} € (
+                    {formatEUR(popupOffer.uplift)} (
                     {popupOffer.upliftPct.toFixed(1)} %) über{" "}
                     {popupOffer.baselineLabel.toLowerCase()}
                   </div>
                 )}
               </div>
 
-              {popupOffer.motorhome.auction?.kaufchance_expires_at && (
+              {popupOffer.effectiveExpiresAt && (
                 <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <Clock className="h-3 w-3" />
                   Frist:{" "}
                   {format(
-                    new Date(popupOffer.motorhome.auction.kaufchance_expires_at),
+                    new Date(popupOffer.effectiveExpiresAt),
                     "dd.MM.yyyy 'um' HH:mm 'Uhr'",
                     { locale: de },
                   )}
@@ -465,7 +537,12 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
             <Button
               className="flex-1 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
               onClick={() => {
-                if (popupOffer) setConfirmTarget(popupOffer);
+                if (popupOffer) {
+                  setConfirmTarget(popupOffer);
+                  // Als gesehen markieren, sonst springt der Popup wieder auf
+                  // wenn der Verkäufer die Verbindlich-Bestätigung abbricht.
+                  markSeen(popupOffer.offer.id);
+                }
                 setPopupOffer(null);
               }}
             >
@@ -496,11 +573,8 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                   </strong>{" "}
                   für{" "}
                   <strong className="text-emerald-600 text-base">
-                    €{" "}
                     {confirmTarget &&
-                      Number(confirmTarget.offer.offer_amount).toLocaleString(
-                        "de-DE",
-                      )}
+                      formatEUR(Number(confirmTarget.offer.offer_amount))}
                   </strong>
                   .
                 </p>

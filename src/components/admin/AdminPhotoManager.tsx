@@ -124,11 +124,13 @@ function SortablePhotoItem({
           : "border-border hover:border-primary/30"
       }`}
     >
-      {/* Drag Handle */}
+      {/* Drag Handle.
+          Mobile (no hover): permanently visible so the handle can actually be grabbed on touch.
+          Desktop (sm+): hover-revealed to keep the gallery clean. */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 left-2 z-10 bg-black/60 text-white rounded-md p-1.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2 left-2 z-10 bg-black/60 text-white rounded-md p-2 sm:p-1.5 cursor-grab active:cursor-grabbing opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
         title="Ziehen zum Sortieren"
       >
         <GripVertical className="w-4 h-4" />
@@ -157,26 +159,30 @@ function SortablePhotoItem({
         {index + 1}
       </div>
 
-      {/* Action Buttons */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action Buttons.
+          Mobile (no hover): permanently visible so admins can manage photos on tablets/phones.
+          Desktop (sm+): hover-revealed for a cleaner look. */}
+      <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         {index !== 0 && (
           <button
             type="button"
             onClick={() => onSetPrimary(photo)}
-            className="bg-amber-500 hover:bg-amber-600 text-white rounded-md p-1.5 shadow-md transition-colors"
+            className="bg-amber-500 hover:bg-amber-600 text-white rounded-md p-2 sm:p-1.5 shadow-md transition-colors min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             title="Als Titelbild setzen"
+            aria-label="Als Titelbild setzen"
           >
-            <Star className="w-3.5 h-3.5" />
+            <Star className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
         )}
         <button
           type="button"
           onClick={() => onDelete(photo)}
           disabled={isDeleting}
-          className="bg-red-500 hover:bg-red-600 text-white rounded-md p-1.5 shadow-md transition-colors disabled:opacity-50"
+          className="bg-red-500 hover:bg-red-600 text-white rounded-md p-2 sm:p-1.5 shadow-md transition-colors disabled:opacity-50 min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
           title="Foto löschen"
+          aria-label="Foto löschen"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
       </div>
     </div>

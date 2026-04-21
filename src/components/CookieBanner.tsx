@@ -270,7 +270,11 @@ const CookieBanner = () => {
       )}
     >
       <div className="bg-card dark:bg-gray-900 border-t border-border shadow-2xl">
-        <div className="container mx-auto px-4 py-5 sm:py-6">
+        {/* pb-[env(safe-area-inset-bottom)] verhindert Überlappung mit iOS
+            Home-Indicator / Android Gesture-Bar. max-h + overflow-y-auto
+            sorgt dafür, dass der Banner mit ausgeklappten "Details" nicht
+            mehr den halben Viewport blockiert. */}
+        <div className="container mx-auto px-4 py-5 sm:py-6 pb-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] sm:pb-[max(1.5rem,calc(1.5rem+env(safe-area-inset-bottom)))] max-h-[85dvh] overflow-y-auto overscroll-contain">
           {/* Main Banner Content */}
           <div className="flex flex-col gap-4">
             {/* Header */}

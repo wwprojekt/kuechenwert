@@ -176,7 +176,7 @@ function DealerBadge({ count }: { count: number }) {
 // ============================================================================
 
 export function DealerSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -184,6 +184,13 @@ export function DealerSidebar() {
   const { isPendingDealer, isRejectedDealer } = useDealerPending();
   const isLocked = isPendingDealer || isRejectedDealer;
   const { data: badges } = useDealerBadges();
+
+  // Auf Mobile rendert die Sidebar als Sheet-Overlay. Ohne diesen Helper
+  // bleibt das Overlay nach einem Klick auf einen Menüpunkt offen und
+  // verdeckt den frisch geladenen Content – fühlt sich wie ein Bug an.
+  const closeMobileIfOpen = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const badgeCounts: Record<string, number> = {
     activeAuctions: badges?.activeAuctions || 0,
@@ -248,6 +255,7 @@ export function DealerSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/dashboard"}
+                        onClick={closeMobileIfOpen}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 font-medium min-h-[44px] ${
                             isActive
@@ -295,7 +303,7 @@ export function DealerSidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 min-h-[44px]"
-          onClick={() => navigate("/")}
+          onClick={() => { closeMobileIfOpen(); navigate("/"); }}
         >
           <Home className="w-5 h-5" />
           {!collapsed && <span>Zur Startseite</span>}
@@ -303,7 +311,7 @@ export function DealerSidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 min-h-[44px] text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
-          onClick={handleSignOut}
+          onClick={() => { closeMobileIfOpen(); handleSignOut(); }}
         >
           <LogOut className="w-5 h-5" />
           {!collapsed && <span>Abmelden</span>}

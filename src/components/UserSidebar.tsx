@@ -126,12 +126,19 @@ const ROLES_WITH_NEW_LISTING = ['seller'];
 // ============================================================================
 
 export function UserSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut } = useAuth();
   const { primaryRole } = useUserRole();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
   const { data: badges } = useUserBadges();
+
+  // Auf Mobile rendert die Sidebar als Sheet-Overlay. Nach Klick auf einen
+  // Menüpunkt muss das Overlay geschlossen werden, sonst bleibt es vor dem
+  // neu gerouteten Content stehen.
+  const closeMobileIfOpen = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   
   const badgeCounts: Record<string, number> = {
     messages: badges?.messages || 0,
@@ -182,7 +189,7 @@ export function UserSidebar() {
           <div className="px-3 mb-6 animate-fade-in">
             <Button
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-              onClick={() => navigate("/verkaufen/wizard")}
+              onClick={() => { closeMobileIfOpen(); navigate("/verkaufen/wizard"); }}
             >
               <Plus className="w-4 h-4 mr-2" />
               Neues Inserat
@@ -195,7 +202,7 @@ export function UserSidebar() {
             <Button
               size="icon"
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-              onClick={() => navigate("/verkaufen/wizard")}
+              onClick={() => { closeMobileIfOpen(); navigate("/verkaufen/wizard"); }}
             >
               <Plus className="w-4 h-4" />
             </Button>
@@ -220,6 +227,7 @@ export function UserSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/dashboard"}
+                        onClick={closeMobileIfOpen}
                         className={({ isActive }) =>
                           `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                             isActive
@@ -281,7 +289,7 @@ export function UserSidebar() {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
-                onClick={() => navigate("/")}
+                onClick={() => { closeMobileIfOpen(); navigate("/"); }}
               >
                 <Home className="w-4 h-4 mr-2" />
                 Zurück zur Website
@@ -298,7 +306,7 @@ export function UserSidebar() {
           className={`w-full ${
             collapsed ? "justify-center" : "justify-start"
           } text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors`}
-          onClick={handleSignOut}
+          onClick={() => { closeMobileIfOpen(); handleSignOut(); }}
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span className="ml-2">Abmelden</span>}

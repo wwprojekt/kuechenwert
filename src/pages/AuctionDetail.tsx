@@ -52,6 +52,7 @@ import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
+import { AuctionRoundBadge } from "@/components/AuctionRoundBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -1239,7 +1240,9 @@ const AuctionDetail = () => {
                               <Maximize className="w-5 h-5" />
                             </button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-7xl w-full h-[100vh] sm:h-[90vh] p-0 bg-black/95 border-0">
+                          {/* Mobile uses dvh (dynamic viewport height) so iOS Safari's
+                              collapsing address bar does not crop the image / close button. */}
+                          <DialogContent className="max-w-7xl w-full h-[100dvh] sm:h-[90vh] p-0 bg-black/95 border-0">
                             <div
                               className="relative w-full h-full flex items-center justify-center"
                               onClick={() => setIsLightboxOpen(false)}

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, LogOut, User, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, FileCheck, Zap, Calculator } from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -37,6 +37,30 @@ const Header = () => {
     await signOut();
     setMobileMenuOpen(false);
   };
+
+  // Auto-close the mobile menu whenever the route changes (e.g. user taps a
+  // link). Without this the menu stays open after navigation and overlays
+  // the new page content.
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // While the mobile menu is open: lock body scroll (so the page behind
+  // doesn't scroll under the finger) and listen for Escape to close.
+  // Restored on unmount / when menu closes.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <>
@@ -296,10 +320,14 @@ const Header = () => {
           </div>
         </nav>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation
+            max-h with dvh + scroll: with many menu items (especially when
+            logged in as dealer/admin) the menu would otherwise overflow
+            the viewport. overscroll-contain prevents the page underneath
+            from scrolling once the menu reaches its top/bottom. */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t bg-background/95">
-            <div className="container py-4 flex flex-col gap-1">
+          <div className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
+            <div className="container py-4 flex flex-col gap-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Link
                 to="/verkaufen/wizard"
                 className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-primary text-white shadow-sm hover:bg-primary/90 transition-all"

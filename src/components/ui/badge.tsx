@@ -22,8 +22,16 @@ const badgeVariants = cva(
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
-}
+// forwardRef so callers can use <Badge> inside Radix `asChild` slots
+// (e.g. <TooltipTrigger asChild><Badge>...). Without this, Radix' Slot
+// pattern fails to forward the ref and React logs:
+//   "Function components cannot be given refs"
+// See: src/components/ui/button.tsx for the same pattern.
+const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
+  ({ className, variant, ...props }, ref) => {
+    return <div ref={ref} className={cn(badgeVariants({ variant }), className)} {...props} />;
+  },
+);
+Badge.displayName = "Badge";
 
 export { Badge, badgeVariants };

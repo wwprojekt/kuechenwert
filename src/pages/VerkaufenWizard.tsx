@@ -217,17 +217,21 @@ const VerkaufenWizard = () => {
     const condition = searchParams.get('condition');
     const source = searchParams.get('source');
     
-    const resumeStep = searchParams.get('step');
-    if (resumeStep && !hasRestoredRef.current) {
-      const stepNum = parseInt(resumeStep, 10);
-      if (stepNum >= 1) {
-        // Clamp gegen Alt-Resume-Mails, die noch ?step=9 enthalten – wir
-        // landen sicher auf dem aktuellen finalen Step.
-        setCurrentStep(Math.min(stepNum, STEPS.length));
-        hasRestoredRef.current = true;
-      }
-    }
-    
+    // Der `?step=N` URL-Parameter wird BEWUSST nicht mehr hier gesetzt.
+    // Vorher fuehrte das zu „Geister-Sessions": Beim Klick auf einen
+    // Cross-Device-Resume-Link (?step=7&...) sprang die UI sofort auf
+    // Step 7 und der Auto-Save persistierte max_step_reached=7 mit
+    // leerer formData, BEVOR der Step-Guard die Daten validieren konnte.
+    // Im Admin-Lead-Funnel erschienen daraufhin Leads ohne Name, Email,
+    // Telefon, ohne Fahrzeugdaten — als waeren sie auf Step 7 abgebrochen.
+    //
+    // Ab jetzt wird `?step=N` erst nach `isReady` ausgewertet und nur
+    // dann angewendet, wenn KEINE Session aus der DB restored wurde
+    // (siehe separater useEffect weiter unten). Recovery-Mails verlinken
+    // ausserdem nicht mehr mit ?step=, sondern mit ?token=<resume_token>
+    // — der Token-Lookup im Hook setzt `initialStep` direkt aus
+    // `session.current_step`.
+
     const vehicleTypeParam = searchParams.get('vehicleType');
 
     const updates: Partial<typeof formData> = {};
@@ -300,6 +304,63 @@ const VerkaufenWizard = () => {
       hasRestoredRef.current = true;
     }
   }, [searchParams, updateFormData]);
+
+  // Fallback-Resume aus altem `?step=N` URL-Parameter — laeuft NACH der
+  // Session-Hydration. Wenn die Session-Restore (initialStep) bereits einen
+  // Step gesetzt hat oder der User schon manuell weitergeklickt ist, wird
+  // dieser Pfad uebersprungen. Verhindert Geister-Sessions (siehe Migration
+  // 20260421140000_wizard_resume_token.sql).
+  useEffect(() => {
+    if (!isReady) return;
+    if (hasRestoredRef.current) return;
+    if (initialStep && initialStep > 1) return;
+
+    const resumeStep = searchParams.get('step');
+    if (!resumeStep) return;
+
+    const stepNum = parseInt(resumeStep, 10);
+    if (!Number.isFinite(stepNum) || stepNum < 1) return;
+
+    // Clamp gegen Alt-Resume-Mails (z.B. ?step=9 aus dem 9-Step-Refactor 2026-04-20).
+    const safeStep = Math.min(stepNum, STEPS.length);
+
+    // Cap auf das, was die geladene formData wirklich stuetzt — so wird ein
+    // alter `?step=7`-Link in einer leeren Session nie auf Step 7 gesetzt
+    // (was die Geister-Sessions produziert hatte). Spiegelt die Logik des
+    // Step-Guards weiter unten und der `effectiveMaxStep`-Funktion im Hook.
+    const dataMax = !formData.bodyType
+      ? 1
+      : (!formData.manufacturer || !formData.model || !formData.year)
+        ? 2
+        : (!formData.customerName || !formData.customerEmail)
+          ? 5
+          : !formData.saleChannel
+            ? 7
+            : STEPS.length;
+    const finalStep = Math.min(safeStep, dataMax);
+
+    if (currentStep === 1 && finalStep > 1) {
+      setCurrentStep(finalStep);
+      hasRestoredRef.current = true;
+    }
+    // currentStep absichtlich nicht in deps — wir wollen diesen Restore nur
+    // einmal nach Hydration anstossen, nicht bei jedem Step-Wechsel. Die
+    // formData-Felder MUESSEN in den deps stehen, damit der Effect nach der
+    // asynchronen Hydratisierung ein zweites Mal mit dem aktuellen Stand
+    // laeuft und finalStep korrekt clampen kann.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isReady,
+    initialStep,
+    searchParams,
+    formData.bodyType,
+    formData.manufacturer,
+    formData.model,
+    formData.year,
+    formData.customerName,
+    formData.customerEmail,
+    formData.saleChannel,
+  ]);
 
   // Step-Guard: Verhindert, dass Nutzer per URL-Parameter (z.B. ?step=8) Steps überspringen
   // und dann beim Submit ungültige Daten an die Datenbank senden.

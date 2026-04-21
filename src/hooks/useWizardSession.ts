@@ -61,16 +61,29 @@ function serializeFormData(formData: WizardFormData): Record<string, unknown> {
 }
 
 /**
- * Extracts contact data from URL search params (set by QuickAuctionForm)
+ * Extracts contact data from URL search params (set by QuickAuctionForm) and
+ * any cross-device-resume parameters from recovery emails.
+ *
+ * `tokenParam` is the canonical, unguessable resume_token (256 bit) used by
+ * the recovery email flow. `sessionParam` is the older `?session=<uuid>`
+ * fallback for emails that were sent before the resume_token migration
+ * (2026-04-21). New emails ALWAYS use the token path.
  */
 function getContactFromUrl(): {
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
   sessionParam: string | null;
+  tokenParam: string | null;
 } {
   if (typeof window === "undefined") {
-    return { customerName: null, customerEmail: null, customerPhone: null, sessionParam: null };
+    return {
+      customerName: null,
+      customerEmail: null,
+      customerPhone: null,
+      sessionParam: null,
+      tokenParam: null,
+    };
   }
   const params = new URLSearchParams(window.location.search);
   return {
@@ -78,7 +91,32 @@ function getContactFromUrl(): {
     customerEmail: params.get("customerEmail") || null,
     customerPhone: params.get("customerPhone") || null,
     sessionParam: params.get("session") || null,
+    tokenParam: params.get("token") || null,
   };
+}
+
+/**
+ * Returns the highest wizard step that the current `formData` validly
+ * supports. Mirrors the step-guard in VerkaufenWizard.tsx.
+ *
+ * Used in `saveProgress` to prevent `max_step_reached` being inflated by
+ * URL-driven step jumps before the user actually has the corresponding
+ * data — the bug that produced the "Geister-Sessions" mit max_step=7,
+ * customer_*=NULL, vehicle_summary='Noch keine Fahrzeugdaten' im Admin-
+ * Lead-Funnel (siehe Migration 20260421140000_wizard_resume_token.sql).
+ */
+function effectiveMaxStep(currentStep: number, formData: WizardFormData): number {
+  if (!formData.bodyType) return 1;
+  if (!formData.manufacturer || !formData.model || !formData.year) {
+    return Math.min(currentStep, 2);
+  }
+  if (!formData.customerName || !formData.customerEmail) {
+    return Math.min(currentStep, 5);
+  }
+  if (!formData.saleChannel) {
+    return Math.min(currentStep, 7);
+  }
+  return currentStep;
 }
 
 interface UseWizardSessionReturn {
@@ -120,13 +158,14 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     const initSession = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        const anon = getAnonymousId();
+        let anon = getAnonymousId();
         setAnonymousId(anon);
         const urlContact = getContactFromUrl();
 
         // Check for existing in-progress session
         let existingSession: {
           id: string;
+          anonymous_id?: string | null;
           current_step?: number | null;
           max_step_reached?: number | null;
           customer_name?: string | null;
@@ -135,20 +174,57 @@ export const useWizardSession = (): UseWizardSessionReturn => {
           form_data?: Record<string, unknown> | null;
         } | null = null;
 
-        // 1. Highest priority: session ID from URL (cross-device resume link)
-        //    We fetch via the SECURITY DEFINER find RPC so it works for anon users too.
-        if (urlContact.sessionParam) {
+        // 1. HIGHEST priority: resume_token from URL (cross-device resume).
+        //    Recovery-Emails (send-wizard-resume-email + process-abandoned-
+        //    wizards) verlinken seit 2026-04-21 mit ?token=<resume_token>.
+        //    Der Token ist unguessable (256 bit Entropie) und identifiziert
+        //    die Session unabhaengig von Geraet/Browser/localStorage.
+        //
+        //    Wenn der Token matcht, ADOPTIEREN wir die anonymous_id der
+        //    geladenen Session in unseren localStorage. Damit funktionieren
+        //    alle nachfolgenden update_wizard_session_by_anonymous_id-Calls
+        //    ohne weitere Sonderbehandlung -- der User uebernimmt einfach
+        //    die Identitaet der Original-Session auf diesem Geraet.
+        if (urlContact.tokenParam) {
+          try {
+            const { data } = await supabase
+              .rpc("find_wizard_session_by_resume_token", { p_resume_token: urlContact.tokenParam });
+            const sessionRow = Array.isArray(data) && data.length > 0 ? data[0] : (data && !Array.isArray(data) ? data : null);
+            if (sessionRow) {
+              existingSession = sessionRow;
+              // anonymous_id der Original-Session adoptieren — alle weiteren
+              // Updates laufen ueber update_wizard_session_by_anonymous_id
+              // und brauchen denselben Wert wie in der DB-Row.
+              if (sessionRow.anonymous_id && sessionRow.anonymous_id !== anon) {
+                localStorage.setItem(ANONYMOUS_ID_KEY, sessionRow.anonymous_id);
+                anon = sessionRow.anonymous_id;
+                setAnonymousId(anon);
+              }
+              // Falls Status `abandoned` war (>2h Inaktivitaet, Recovery-Mail
+              // bereits raus), reaktivieren — der User ist offensichtlich
+              // wieder zurueck.
+              await supabase.rpc("reactivate_wizard_session_by_resume_token", {
+                p_resume_token: urlContact.tokenParam,
+              });
+            }
+          } catch (e) {
+            logger.warn("Resume-Token-Lookup fehlgeschlagen, Fallback auf Standard-Flow:", e);
+          }
+        }
+
+        // 2. Legacy fallback: ?session=<uuid> from old recovery emails sent
+        //    before the resume_token migration. Only honored when it matches
+        //    the device's anonymous_id (or the auth user) — sonst koennte
+        //    ein gestohlener Link Daten leaken.
+        if (!existingSession && urlContact.sessionParam) {
           try {
             const { data } = await supabase
               .rpc("find_wizard_session_by_anonymous_id", { p_anonymous_id: anon });
             const fromAnon = Array.isArray(data) && data.length > 0 ? data[0] : (data && !Array.isArray(data) ? data : null);
-            // Only accept the URL session if it matches our anon or our auth user;
-            // else fall through to normal flow. This prevents a stolen link from
-            // leaking another user's data onto this device.
             if (user) {
               const { data: byId } = await supabase
                 .from("wizard_sessions")
-                .select("id, current_step, max_step_reached, customer_name, customer_email, customer_phone, form_data, user_id")
+                .select("id, anonymous_id, current_step, max_step_reached, customer_name, customer_email, customer_phone, form_data, user_id")
                 .eq("id", urlContact.sessionParam)
                 .maybeSingle();
               if (byId && byId.user_id === user.id) {
@@ -313,8 +389,15 @@ export const useWizardSession = (): UseWizardSessionReturn => {
     ) => {
       if (!sessionId) return;
 
-      if (currentStep > maxStepRef.current) {
-        maxStepRef.current = currentStep;
+      // max_step_reached darf nur dann auf `currentStep` wachsen, wenn die
+      // Daten dort auch wirklich vorhanden sind. Sonst entstehen die alten
+      // Geister-Sessions mit max=7 + customer_*=NULL (siehe Migration
+      // 20260421140000). `effectiveMaxStep` spiegelt die Step-Guard-Logik
+      // aus VerkaufenWizard.tsx und schneidet currentStep auf das ab, was
+      // formData tatsaechlich stuetzt.
+      const effective = effectiveMaxStep(currentStep, formData);
+      if (effective > maxStepRef.current) {
+        maxStepRef.current = effective;
       }
 
       // Cancel any pending debounced save; we'll either reschedule or run now.
@@ -348,10 +431,18 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             step_name: STEP_NAMES[currentStep] || `Schritt ${currentStep}`,
             form_data: serializedData,
             vehicle_summary: buildVehicleSummary(formData),
-            customer_name: formData.customerName || null,
-            customer_email: formData.customerEmail || null,
-            customer_phone: formData.customerPhone || null,
           };
+
+          // WICHTIG: customer_* nur dann ins Payload, wenn ein nicht-leerer
+          // Wert vorliegt. Sonst wuerde der direkte Supabase-Update-Pfad
+          // (auth'd user) bestehende Werte mit NULL ueberschreiben — der
+          // Anon-RPC ist via COALESCE geschuetzt, der RLS-Pfad nicht. Genau
+          // diese Race produzierte die Geister-Sessions, in denen Resume-
+          // Mails fuer eine Adresse rausgingen, bei der die DB-Row schon
+          // wieder customer_email=NULL war.
+          if (formData.customerName)  updatePayload.customer_name  = formData.customerName;
+          if (formData.customerEmail) updatePayload.customer_email = formData.customerEmail;
+          if (formData.customerPhone) updatePayload.customer_phone = formData.customerPhone;
 
           const clickIds = getStoredClickIds();
           if (clickIds.gclid) updatePayload.gclid = clickIds.gclid;

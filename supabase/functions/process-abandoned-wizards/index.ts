@@ -77,7 +77,13 @@ function buildFirstReminderEmail(
   const totalSteps = session.total_steps || 8;
   const progressPercent = Math.round((currentStep / totalSteps) * 100);
   const stepName = STEP_NAMES[currentStep] || `Schritt ${currentStep}`;
-  const resumeUrl = `https://caravanwert.de/verkaufen/wizard?step=${currentStep}`;
+  // Cross-device resume: ?token=<resume_token> laedt die Original-Session
+  // ueber find_wizard_session_by_resume_token RPC unabhaengig vom
+  // localStorage des klickenden Geraets. Fallback auf step-only, wenn der
+  // Token (alte Sessions vor der Migration) noch fehlen sollte.
+  const resumeUrl = session.resume_token
+    ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(session.resume_token)}&source=recovery_first`
+    : `https://caravanwert.de/verkaufen/wizard?step=${currentStep}&source=recovery_first`;
 
   // Build progress bar HTML
   const progressBarHtml = `
@@ -178,7 +184,9 @@ function buildFollowupEmail(
   const customerName = session.customer_name || "Kunde";
   const currentStep = session.current_step || 1;
   const totalSteps = session.total_steps || 8;
-  const resumeUrl = `https://caravanwert.de/verkaufen/wizard?step=${currentStep}`;
+  const resumeUrl = session.resume_token
+    ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(session.resume_token)}&source=recovery_followup`
+    : `https://caravanwert.de/verkaufen/wizard?step=${currentStep}&source=recovery_followup`;
 
   let content = "";
 
@@ -323,22 +331,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     // ─────────────────────────────────────────────────────
     // 0) SAFETY NET: Completed sessions that were never converted.
-    //    If the client-side auto-convert call was aborted (browser closed,
-    //    network error, JS crash), the session stays at "completed" with
+    //    If the client-side auto-convert call was aborted (browser closed
+    //    before the Danke-page useEffect fired, mobile tab backgrounded,
+    //    network drop, JS crash), the session stays at "completed" with
     //    user_id=null forever. This picks them up after 10 minutes.
+    //
+    //    Defense-in-Depth: a DB-Trigger now guarantees completed_at is set
+    //    whenever status flips to 'completed' (Migration 20260421131500),
+    //    so the `completed_at IS NULL` branch is currently redundant. We
+    //    keep it as a belt-and-suspenders fallback in case a future
+    //    direct-update path bypasses the trigger somehow (e.g. COPY,
+    //    CREATE TABLE AS, restore from a pre-trigger backup).
     // ─────────────────────────────────────────────────────
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data: stuckSessions, error: stuckError } = await supabase
       .from("wizard_sessions")
-      .select("id, customer_email, customer_name")
+      // anonymous_id is REQUIRED so auto-convert-wizard can pass
+      // verify_wizard_session_ownership when called with the service-role
+      // bearer (which itself bypasses the user_id branch of that RPC).
+      .select("id, customer_email, customer_name, anonymous_id, completed_at, updated_at")
       .eq("status", "completed")
       .is("user_id", null)
       .not("customer_email", "is", null)
-      .lt("completed_at", tenMinutesAgo)
-      .gt("completed_at", twentyFourHoursAgo)
-      .order("completed_at", { ascending: true })
+      // Catch BOTH the normal case (completed_at set, > 10 min ago) AND the
+      // pathological case (completed_at NULL, but row clearly aged via
+      // updated_at). The OR-filter accepts either condition.
+      .or(
+        `and(completed_at.lt.${tenMinutesAgo},completed_at.gt.${twentyFourHoursAgo}),` +
+        `and(completed_at.is.null,updated_at.lt.${tenMinutesAgo},updated_at.gt.${twentyFourHoursAgo})`
+      )
+      .order("updated_at", { ascending: true })
       .limit(10);
 
     if (stuckError) {
@@ -360,6 +384,12 @@ const handler = async (req: Request): Promise<Response> => {
               sessionId: session.id,
               userId: null,
               hasPassword: false,
+              // anonymousId is required so verify_wizard_session_ownership
+              // returns TRUE inside auto-convert-wizard. Without this the
+              // RPC sees both p_user_id=null AND p_anonymous_id=null and
+              // rejects with 403 — which is exactly how this safety net
+              // silently failed before the 2026-04-21 hardening.
+              anonymousId: (session as any).anonymous_id ?? null,
             }),
           });
 

@@ -4141,6 +4141,7 @@ export type Database = {
           no_answer_email_count: number | null
           no_answer_email_last_sent: string | null
           resume_email_sent_at: string | null
+          resume_token: string
           status: string
           step_name: string | null
           total_steps: number
@@ -4177,6 +4178,7 @@ export type Database = {
           no_answer_email_count?: number | null
           no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
+          resume_token?: string
           status?: string
           step_name?: string | null
           total_steps?: number
@@ -4213,6 +4215,7 @@ export type Database = {
           no_answer_email_count?: number | null
           no_answer_email_last_sent?: string | null
           resume_email_sent_at?: string | null
+          resume_token?: string
           status?: string
           step_name?: string | null
           total_steps?: number
@@ -4643,6 +4646,7 @@ export type Database = {
           no_answer_email_count: number | null
           no_answer_email_last_sent: string | null
           resume_email_sent_at: string | null
+          resume_token: string
           status: string
           step_name: string | null
           total_steps: number
@@ -4659,6 +4663,56 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      find_wizard_session_by_resume_token: {
+        Args: { p_resume_token: string }
+        Returns: {
+          admin_called_at: string | null
+          admin_estimated_value: number | null
+          admin_notes: string | null
+          anonymous_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          current_step: number
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          disposition: string | null
+          done_email_count: number | null
+          done_email_last_sent: string | null
+          followup_email_sent_at: string | null
+          form_data: Json
+          gbraid: string | null
+          gclid: string | null
+          id: string
+          is_viewed: boolean
+          last_activity_at: string | null
+          max_step_reached: number
+          msclkid: string | null
+          no_answer_email_count: number | null
+          no_answer_email_last_sent: string | null
+          resume_email_sent_at: string | null
+          resume_token: string
+          status: string
+          step_name: string | null
+          total_steps: number
+          updated_at: string | null
+          user_id: string | null
+          vehicle_summary: string | null
+          wbraid: string | null
+          wrong_number_email_count: number | null
+          wrong_number_email_last_sent: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "wizard_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      reactivate_wizard_session_by_resume_token: {
+        Args: { p_resume_token: string }
+        Returns: string
       }
       generate_contract_number: { Args: never; Returns: string }
       generate_customer_number: { Args: never; Returns: string }

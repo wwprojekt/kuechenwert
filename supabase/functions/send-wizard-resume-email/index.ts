@@ -90,15 +90,26 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "0511 / 51532476",
     };
 
-    // Build resume URL. Including the session id enables cross-device resume:
-    // useWizardSession reads ?session=<id> and reloads form_data from the DB
-    // even when the user opens the link on a different browser where the
-    // anonymous_id cookie doesn't exist.
+    // Build resume URL. The unguessable resume_token (256 bit, sent only to
+    // the row's customer_email) lets useWizardSession load the original row
+    // via find_wizard_session_by_resume_token RPC — this works regardless of
+    // device, browser or localStorage state. The fallback to ?session=<uuid>
+    // (legacy alt-mails draussen) bleibt im Frontend lesbar, aber neu
+    // verschickte Links nutzen den robusteren Token-Pfad.
+    //
+    // Step-Param wird hier bewusst NICHT mehr mitgesendet: das Frontend
+    // kennt nach dem Token-Lookup das wirkliche current_step der Session
+    // und springt direkt dorthin. Das verhindert die Geister-Sessions, die
+    // entstanden, wenn ?step=N currentStep setzte BEVOR die Daten geladen
+    // waren (Auto-Save persistierte dann max_step_reached=N mit leeren
+    // Feldern, der Step-Guard warf den User danach auf Step 1 zurueck).
+    const resumeToken = session.resume_token;
+    const resumeUrl = resumeToken
+      ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(resumeToken)}` +
+        `&source=resume_email`
+      : `https://caravanwert.de/verkaufen/wizard?session=${encodeURIComponent(sessionId)}` +
+        `&source=resume_email`;
     const currentStep = session.current_step || 1;
-    const resumeUrl =
-      `https://caravanwert.de/verkaufen/wizard?step=${currentStep}` +
-      `&session=${encodeURIComponent(sessionId)}` +
-      `&source=resume_email`;
 
     // Extract vehicle info from form_data
     const formData = session.form_data || {};

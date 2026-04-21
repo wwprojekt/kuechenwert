@@ -92,6 +92,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
         >
           {/* Sofortpreis */}
           <Card
+            data-track-checkable
             className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "instant_price"
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
@@ -130,6 +131,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
           {/* Händler-Auktion - Empfohlen */}
           <Card
+            data-track-checkable
             className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "auction"
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"
@@ -169,6 +171,7 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
           {/* Ankaufstation */}
           <Card
+            data-track-checkable
             className={`relative p-4 md:p-5 cursor-pointer transition-all duration-300 rounded-xl group ${
               formData.saleChannel === "station"
                 ? "border-2 border-primary bg-primary/5 shadow-lg shadow-primary/10 md:scale-[1.01]"

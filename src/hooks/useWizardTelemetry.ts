@@ -162,17 +162,42 @@ export function useWizardTelemetry(
     // calls e.stopPropagation() in its bubble-phase onClick handler (the
     // FeatureCheckbox in EquipmentStep does exactly that on its inner
     // <Checkbox>).
+    //
+    // Two real-world wrapper patterns we explicitly support:
+    //   1. EquipmentStep FeatureCheckbox — a <div role="button"> wrapping
+    //      a Radix <Checkbox>. Tap on the wrapper toggles the inner
+    //      checkbox via React state, no click ever reaches the checkbox
+    //      element. We must detect "wrapper has a single checkable
+    //      descendant" and attribute the click to that descendant.
+    //   2. SaleChannelStep <Card role="button"> wrapping a RadioGroupItem.
+    //      Same idea.
+    // For wrapper detection we accept role="button", <button>, <label>
+    // and an explicit data-track-checkable opt-in escape hatch.
     const isCheckableTarget = (el: HTMLElement): HTMLElement | null => {
-      // Walk up at most a few levels so a click on the inner span/icon of
-      // a Radix CheckboxPrimitive still resolves to the role=checkbox button.
       let node: HTMLElement | null = el;
       let depth = 0;
-      while (node && depth < 4 && node !== root) {
+      while (node && depth < 5 && node !== root) {
+        // Direct match — input / Radix Checkbox / Radix RadioGroupItem.
         const role = node.getAttribute("role");
         if (role === "checkbox" || role === "radio") return node;
         if (node.tagName === "INPUT") {
           const type = (node as HTMLInputElement).type;
           if (type === "checkbox" || type === "radio") return node;
+        }
+        // Wrapper detection: an interactive container that holds a
+        // single checkable. We look only at descendants OF THE WRAPPER
+        // so a "Show more" button next to (but outside of) a checkbox
+        // can never be misattributed.
+        const isWrapperInteractive =
+          role === "button" ||
+          node.tagName === "BUTTON" ||
+          node.tagName === "LABEL" ||
+          node.hasAttribute("data-track-checkable");
+        if (isWrapperInteractive) {
+          const inner = node.querySelector<HTMLElement>(
+            '[role="checkbox"], [role="radio"], input[type="checkbox"], input[type="radio"]',
+          );
+          if (inner) return inner;
         }
         node = node.parentElement;
         depth += 1;

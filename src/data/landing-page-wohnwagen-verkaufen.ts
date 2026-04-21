@@ -86,5 +86,11 @@ export const wohnwagenVerkaufen: LandingPageConfig = {
     { question: "Was ist, wenn ich die Restfinanzierung noch laufen habe?", answer: "Auch finanzierte Wohnwagen können verkauft werden. Die Restschuld wird vom Verkaufserlös abgelöst. Wir unterstützen Sie bei der Koordination mit Ihrer Bank." },
     { question: "Wie viele Gebote erhalte ich in der Regel?", answer: "Abhängig von Marke und Zustand erhalten Sie zwischen 3 und 12 Gebote. Beliebte Modelle in gutem Zustand ziehen besonders viele Interessenten an." },
   ],
-  relatedSlugs: ["wohnmobil-verkaufen", "was-ist-mein-wohnmobil-wert", "wieviel-ist-mein-wohnmobil-wert"],
+  relatedSlugs: [
+    "wohnwagen-verkaufspreis",
+    "wann-wohnwagen-verkaufen",
+    "wohnwagenpreise-2026",
+    "finanzierten-wohnwagen-verkaufen",
+    "wohnmobil-verkaufen",
+  ],
 };

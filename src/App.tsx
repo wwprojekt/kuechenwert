@@ -106,6 +106,10 @@ const WannWohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/WannWohnm
 const Wohnmobilpreise2026 = lazyRetry(() => import("./pages/landing/Wohnmobilpreise2026"));
 const WohnmobilAnkaufRatgeber = lazyRetry(() => import("./pages/landing/WohnmobilAnkaufRatgeber"));
 const FinanziertesWohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/FinanziertesWohnmobilVerkaufen"));
+const WohnwagenVerkaufspreis = lazyRetry(() => import("./pages/landing/WohnwagenVerkaufspreis"));
+const WannWohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/WannWohnwagenVerkaufen"));
+const Wohnwagenpreise2026 = lazyRetry(() => import("./pages/landing/Wohnwagenpreise2026"));
+const FinanziertenWohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/FinanziertenWohnwagenVerkaufen"));
 
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
@@ -293,6 +297,10 @@ const App = () => (
               <Route path="/wohnmobilpreise-2026" element={<Wohnmobilpreise2026 />} />
               <Route path="/wohnmobil-ankauf-ratgeber" element={<WohnmobilAnkaufRatgeber />} />
               <Route path="/finanziertes-wohnmobil-verkaufen" element={<FinanziertesWohnmobilVerkaufen />} />
+              <Route path="/wohnwagen-verkaufspreis" element={<WohnwagenVerkaufspreis />} />
+              <Route path="/wann-wohnwagen-verkaufen" element={<WannWohnwagenVerkaufen />} />
+              <Route path="/wohnwagenpreise-2026" element={<Wohnwagenpreise2026 />} />
+              <Route path="/finanzierten-wohnwagen-verkaufen" element={<FinanziertenWohnwagenVerkaufen />} />
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

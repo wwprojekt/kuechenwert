@@ -100,5 +100,11 @@ export const wirKaufenDeinWohnmobil: LandingPageConfig = {
     { question: "Wie unterscheidet sich der Ankaufpreis vom Marktpreis?", answer: "Unser Ankaufpreis berücksichtigt die sofortige Abwicklung und das Risiko, das wir übernehmen. Durch unser Händlernetzwerk können wir dennoch marktnahe Preise bieten." },
     { question: "Kann ich auch nur eine Bewertung ohne Verkauf bekommen?", answer: "Ja, die Bewertung ist unverbindlich. Viele Kunden nutzen unsere kostenlose Wertermittlung zur Information, ohne direkt zu verkaufen." },
   ],
-  relatedSlugs: ["wohnmobil-verkaufen", "wohnwagen-verkaufen", "wohnmobil-wertermittlung-kostenlos"],
+  relatedSlugs: [
+    "wohnmobil-ankauf-ratgeber",
+    "finanziertes-wohnmobil-verkaufen",
+    "wohnmobil-verkaufspreis",
+    "wohnmobil-verkaufen",
+    "wohnwagen-verkaufen",
+  ],
 };

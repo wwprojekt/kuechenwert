@@ -229,9 +229,10 @@ export const schwackeListeWohnmobil: LandingPageConfig = {
     },
   ],
   relatedSlugs: [
+    "wohnmobil-verkaufspreis",
+    "wohnmobilpreise-2026",
     "wohnmobil-wertermittlung-kostenlos",
     "was-ist-mein-wohnmobil-wert",
-    "wieviel-ist-mein-wohnmobil-wert",
     "wohnmobil-verkaufen",
   ],
 };

@@ -88,5 +88,11 @@ export const wohnmobilWert: LandingPageConfig = {
     { question: "Kann der Wert meines Wohnmobils steigen?", answer: "In Ausnahmefällen ja — bei besonders begehrten Modellen, limitierten Auflagen oder in Zeiten von Neufahrzeug-Engpässen. Generell gilt: Je früher Sie verkaufen, desto höher der Preis." },
     { question: "Wie ermittelt CaravanWert den Wert?", answer: "Wir nutzen eine Kombination aus aktuellen Marktdaten, Vergleichsverkäufen und Experteneinschätzungen. Zusätzlich fließen Zustand, Ausstattung und regionale Nachfrage ein." },
   ],
-  relatedSlugs: ["wohnmobil-wertermittlung-kostenlos", "wieviel-ist-mein-wohnmobil-wert", "wohnmobil-verkaufen"],
+  relatedSlugs: [
+    "wohnmobil-verkaufspreis",
+    "wohnmobilpreise-2026",
+    "wohnmobil-wertermittlung-kostenlos",
+    "schwacke-liste-wohnmobil",
+    "wohnmobil-verkaufen",
+  ],
 };

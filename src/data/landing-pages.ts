@@ -11,6 +11,10 @@ import { wannWohnmobilVerkaufen } from "./landing-page-wann-verkaufen";
 import { wohnmobilpreise2026 } from "./landing-page-preise-2026";
 import { wohnmobilAnkaufRatgeber } from "./landing-page-ankauf-ratgeber";
 import { finanziertesWohnmobilVerkaufen } from "./landing-page-finanziertes";
+import { wohnwagenVerkaufspreis } from "./landing-page-wohnwagen-verkaufspreis";
+import { wannWohnwagenVerkaufen } from "./landing-page-wann-wohnwagen-verkaufen";
+import { wohnwagenpreise2026 } from "./landing-page-wohnwagenpreise-2026";
+import { finanziertenWohnwagenVerkaufen } from "./landing-page-finanzierten-wohnwagen";
 
 export type { LandingPageConfig, ContentSection } from "./landing-page-types";
 export type { FAQItem } from "@/components/FAQSection";
@@ -28,6 +32,10 @@ export const landingPages: Record<string, LandingPageConfig> = {
   "wohnmobilpreise-2026": wohnmobilpreise2026,
   "wohnmobil-ankauf-ratgeber": wohnmobilAnkaufRatgeber,
   "finanziertes-wohnmobil-verkaufen": finanziertesWohnmobilVerkaufen,
+  "wohnwagen-verkaufspreis": wohnwagenVerkaufspreis,
+  "wann-wohnwagen-verkaufen": wannWohnwagenVerkaufen,
+  "wohnwagenpreise-2026": wohnwagenpreise2026,
+  "finanzierten-wohnwagen-verkaufen": finanziertenWohnwagenVerkaufen,
 };
 
 export {
@@ -43,4 +51,8 @@ export {
   wohnmobilpreise2026,
   wohnmobilAnkaufRatgeber,
   finanziertesWohnmobilVerkaufen,
+  wohnwagenVerkaufspreis,
+  wannWohnwagenVerkaufen,
+  wohnwagenpreise2026,
+  finanziertenWohnwagenVerkaufen,
 };

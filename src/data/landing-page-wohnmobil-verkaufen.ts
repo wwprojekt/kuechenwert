@@ -98,5 +98,11 @@ export const wohnmobilVerkaufen: LandingPageConfig = {
     { question: "Wie unterscheidet sich CaravanWert von Privatverkauf?", answer: "Im Privatverkauf müssen Sie sich um Inserate, Anfragen und Besichtigungen selbst kümmern. Bei uns erhalten Sie innerhalb von 24h Gebote von Profis, ohne Standzeiten und mit rechtlicher Absicherung." },
     { question: "Kann ich den Verkauf abbrechen?", answer: "Eine laufende Auktion kann nicht abgebrochen werden. Wird das Mindestgebot während der Auktionslaufzeit nicht erreicht, besteht keine Verkaufspflicht und Sie können Ihr Fahrzeug erneut einstellen. Wird das Mindestgebot erreicht oder überschritten, ist der Verkauf für beide Seiten verbindlich. Für Verkäufer entstehen keine Kosten." },
   ],
-  relatedSlugs: ["wohnwagen-verkaufen", "was-ist-mein-wohnmobil-wert", "wir-kaufen-dein-wohnmobil"],
+  relatedSlugs: [
+    "wohnmobil-verkaufspreis",
+    "wann-wohnmobil-verkaufen",
+    "wir-kaufen-dein-wohnmobil",
+    "wohnmobil-ankauf-ratgeber",
+    "wohnwagen-verkaufen",
+  ],
 };

@@ -250,6 +250,16 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/wohnwagen-verkaufspreis" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Wohnwagen-Verkaufspreis
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wohnwagenpreise-2026" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Wohnwagenpreise 2026
+                  </Link>
+                </li>
+                <li>
                   <Link to="/wertrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Wertrechner
                   </Link>
@@ -319,6 +329,16 @@ const Footer = () => {
                 <li>
                   <Link to="/finanziertes-wohnmobil-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Finanziertes Wohnmobil verkaufen
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/wann-wohnwagen-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Wann Wohnwagen verkaufen?
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/finanzierten-wohnwagen-verkaufen" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Finanzierten Wohnwagen verkaufen
                   </Link>
                 </li>
               </ul>

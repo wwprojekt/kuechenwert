@@ -87,5 +87,11 @@ export const wohnmobilWertermittlungKostenlos: LandingPageConfig = {
     { question: "Was passiert, wenn sich der Markt ändert?", answer: "Marktpreise können sich ändern. Unsere Bewertung spiegelt den aktuellen Marktwert wider. Wenn Sie erst später verkaufen, empfehlen wir eine aktualisierte Bewertung." },
     { question: "Kann ich die Bewertung telefonisch besprechen?", answer: "Ja, unser Expertenteam steht Ihnen nach der Bewertung gerne für ein persönliches Gespräch zur Verfügung, um alle Fragen zu klären und Empfehlungen zu geben." },
   ],
-  relatedSlugs: ["was-ist-mein-wohnmobil-wert", "wieviel-ist-mein-wohnmobil-wert", "wohnmobil-verkaufen"],
+  relatedSlugs: [
+    "wohnmobil-verkaufspreis",
+    "wohnmobilpreise-2026",
+    "schwacke-liste-wohnmobil",
+    "was-ist-mein-wohnmobil-wert",
+    "wohnmobil-verkaufen",
+  ],
 };

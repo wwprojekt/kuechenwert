@@ -100,5 +100,11 @@ export const wievielWohnmobilWert: LandingPageConfig = {
     { question: "Was ist der Unterschied zwischen Wertrechner und Expertenbewertung?", answer: "Der Wertrechner gibt eine sofortige Schätzung (±15%) basierend auf Basisdaten. Die Expertenbewertung (±5-8%) berücksichtigt zusätzlich individuelle Faktoren wie Sonderausstattung, Zustand und regionale Nachfrage." },
     { question: "Kann ich nach dem Rechner direkt verkaufen?", answer: "Ja, nach der Wertberechnung können Sie Ihr Wohnmobil mit einem Klick in unsere Händler-Auktion einstellen. Die bereits eingegebenen Daten werden übernommen." },
   ],
-  relatedSlugs: ["was-ist-mein-wohnmobil-wert", "wohnmobil-wertermittlung-kostenlos", "wohnmobil-verkaufen"],
+  relatedSlugs: [
+    "wohnmobil-verkaufspreis",
+    "wann-wohnmobil-verkaufen",
+    "wohnmobilpreise-2026",
+    "wohnmobil-wertermittlung-kostenlos",
+    "wohnmobil-verkaufen",
+  ],
 };

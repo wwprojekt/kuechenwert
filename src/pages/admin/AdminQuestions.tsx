@@ -64,7 +64,7 @@ interface VehicleQuestion {
     year: number;
     body_type: string;
     listing_number: string | null;
-    motorhome_photos?: Array<{ url: string; display_order: number }>;
+    motorhome_photos?: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
     auctions?: Array<{ id: string; status: string }>;
   };
 }
@@ -98,7 +98,7 @@ export default function AdminQuestions() {
             year,
             body_type,
             listing_number,
-            motorhome_photos(url, display_order),
+            motorhome_photos(url, card_url, medium_url, display_order),
             auctions(id, status)
           )
         `)
@@ -133,7 +133,8 @@ export default function AdminQuestions() {
     const photos = question.motorhome?.motorhome_photos;
     if (!photos || !Array.isArray(photos) || photos.length === 0) return null;
     const sorted = [...photos].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-    return sorted[0]?.url || null;
+    const first = sorted[0];
+    return first?.card_url || first?.url || null;
   };
 
   const getAuctionId = (question: VehicleQuestion): string | null => {

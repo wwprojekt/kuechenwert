@@ -74,7 +74,7 @@ export default function MyFavorites() {
             status,
             country,
             listing_number,
-            photos:motorhome_photos (url, display_order),
+            photos:motorhome_photos (url, card_url, medium_url, display_order),
             auctions (id, status, current_bid, end_time)
           )
         `)
@@ -178,7 +178,8 @@ export default function MyFavorites() {
                     <div className="relative w-28 sm:w-32 flex-shrink-0">
                       {firstPhoto ? (
                         <img
-                          src={firstPhoto.url}
+                          src={firstPhoto.card_url || firstPhoto.url}
+                          loading="lazy"
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

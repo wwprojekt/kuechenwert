@@ -128,7 +128,7 @@ export default function DashboardOverview() {
             last_price_reduction_at, soft_close_extension_minutes,
             created_at, updated_at
           ),
-          photos:motorhome_photos(url, display_order)
+          photos:motorhome_photos(url, card_url, medium_url, display_order)
         `
         )
         .eq("seller_id", user.id)
@@ -459,7 +459,7 @@ export default function DashboardOverview() {
           reserve_price, kaufchance_expires_at, created_at,
           motorhome:motorhomes!inner (
             id, manufacturer, model, year, sale_channel, instant_price,
-            photos:motorhome_photos (url, display_order)
+            photos:motorhome_photos (url, card_url, medium_url, display_order)
           )
         `
         )
@@ -712,10 +712,11 @@ export default function DashboardOverview() {
         {motorhomes.map((mh: any) => {
           const timeline = getTimelineStep(mh);
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
-          const firstPhoto = mh.photos
+          const firstPhotoObj = mh.photos
             ?.sort(
               (a: any, b: any) => a.display_order - b.display_order
-            )[0]?.url;
+            )[0];
+          const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
           const isLive =
             auction?.status === "active" ||
             auction?.status === "kaufchance";
@@ -736,6 +737,7 @@ export default function DashboardOverview() {
                       <img
                         src={firstPhoto}
                         alt={`${mh.manufacturer} ${mh.model}`}
+                        loading="lazy"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -1332,10 +1334,11 @@ export default function DashboardOverview() {
           ) : (
             <div className="space-y-3">
               {dealerActivity.map((auction: any, index: number) => {
-                const firstPhoto = auction.motorhome?.photos
+                const firstPhotoObj = auction.motorhome?.photos
                   ?.sort(
                     (a: any, b: any) => a.display_order - b.display_order
-                  )[0]?.url;
+                  )[0];
+                const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
 
                 return (
                   <Link
@@ -1350,6 +1353,7 @@ export default function DashboardOverview() {
                           <img
                             src={firstPhoto}
                             alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            loading="lazy"
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                           />
                         ) : (

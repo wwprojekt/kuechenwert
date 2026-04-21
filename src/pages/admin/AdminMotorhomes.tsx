@@ -140,7 +140,7 @@ interface MotorhomeWithRelations {
     email: string;
     phone: string | null;
   } | null;
-  motorhome_photos?: Array<{ url: string; display_order: number }>;
+  motorhome_photos?: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
   auctions?: AuctionInfo | AuctionInfo[] | null;
 }
 
@@ -284,7 +284,7 @@ export default function AdminMotorhomes() {
             email,
             phone
           ),
-          motorhome_photos(url, display_order),
+          motorhome_photos(url, card_url, medium_url, display_order),
           auctions(
             id,
             status,
@@ -615,8 +615,9 @@ export default function AdminMotorhomes() {
             </TableRow>
           ) : (
             pageItems.map((motorhome) => {
-              const firstPhoto = motorhome.motorhome_photos
-                ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
+              const firstPhotoObj = motorhome.motorhome_photos
+                ?.sort((a, b) => a.display_order - b.display_order)[0];
+              const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
               const photoCount = motorhome.motorhome_photos?.length || 0;
               const auction = getActiveAuction(motorhome.auctions);
 
@@ -632,6 +633,7 @@ export default function AdminMotorhomes() {
                         <img
                           src={firstPhoto}
                           alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       ) : (

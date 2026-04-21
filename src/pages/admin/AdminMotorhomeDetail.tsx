@@ -102,7 +102,7 @@ export default function AdminMotorhomeDetail() {
         .from("motorhomes")
         .select(`
           *,
-          motorhome_photos(id, url, display_order),
+          motorhome_photos(id, url, card_url, medium_url, display_order),
           damage_photos(id, photo_url, damage_location, damage_severity, damage_description),
           seller:profiles!left (
             id,

@@ -146,7 +146,7 @@ export default function MyKaufchancen() {
               model,
               year,
               listing_number,
-              photos:motorhome_photos (url, display_order)
+              photos:motorhome_photos (url, card_url, medium_url, display_order)
             )
           `)
           .in("id", bidAuctionIds)
@@ -178,7 +178,7 @@ export default function MyKaufchancen() {
               model,
               year,
               listing_number,
-              photos:motorhome_photos (url, display_order)
+              photos:motorhome_photos (url, card_url, medium_url, display_order)
             )
           `)
           .in("id", auctionIds)
@@ -234,7 +234,7 @@ export default function MyKaufchancen() {
               model,
               sale_channel,
               instant_price,
-              photos:motorhome_photos (url, display_order)
+              photos:motorhome_photos (url, card_url, medium_url, display_order)
             )
           )
         `)
@@ -661,7 +661,7 @@ export default function MyKaufchancen() {
                     >
                       <div className="w-16 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
                         {first ? (
-                          <img src={first.url} alt="" className="w-full h-full object-cover" />
+                          <img src={first.card_url || first.url} alt="" loading="lazy" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Car className="w-5 h-5 text-muted-foreground" />
@@ -725,8 +725,9 @@ export default function MyKaufchancen() {
                         <div className="relative w-28 sm:w-32 flex-shrink-0">
                           {firstPhoto ? (
                             <img
-                              src={firstPhoto.url}
+                              src={firstPhoto.card_url || firstPhoto.url}
                               alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                              loading="lazy"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
@@ -835,8 +836,9 @@ export default function MyKaufchancen() {
                         <div className="relative w-28 sm:w-32 flex-shrink-0">
                           {firstPhoto ? (
                             <img
-                              src={firstPhoto.url}
+                              src={firstPhoto.card_url || firstPhoto.url}
                               alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                              loading="lazy"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (

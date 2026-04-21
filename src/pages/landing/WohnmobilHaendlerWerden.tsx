@@ -47,13 +47,13 @@ const WohnmobilHaendlerWerden = () => {
       const mhIds = data.map(a => a.motorhome_id).filter(Boolean);
       const [{ data: mhs }, { data: photos }] = await Promise.all([
         supabase.from("motorhomes").select("id, manufacturer, model, year, body_type, mileage").in("id", mhIds),
-        supabase.from("motorhome_photos").select("motorhome_id, url, display_order").in("motorhome_id", mhIds).order("display_order", { ascending: true }),
+        supabase.from("motorhome_photos").select("motorhome_id, url, card_url, medium_url, display_order").in("motorhome_id", mhIds).order("display_order", { ascending: true }),
       ]);
 
       return data.map(auction => {
         const mh = mhs?.find(m => m.id === auction.motorhome_id);
         const photo = photos?.find(p => p.motorhome_id === auction.motorhome_id);
-        const photoUrl = photo?.url || null;
+        const photoUrl = photo?.card_url || photo?.url || null;
         const timeLeft = new Date(auction.end_time).getTime() - Date.now();
         const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
         const daysLeft = Math.floor(hoursLeft / 24);

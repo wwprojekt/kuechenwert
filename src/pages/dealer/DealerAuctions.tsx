@@ -41,7 +41,7 @@ interface Auction {
     city: string | null;
     sale_channel: string | null;
     instant_price: number | null;
-    motorhome_photos: Array<{ url: string; display_order: number }>;
+    motorhome_photos: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
   };
   bids: Array<{
     bidder_id: string;
@@ -96,7 +96,7 @@ const DealerAuctions = () => {
             seller_id,
             sale_channel,
             instant_price,
-            motorhome_photos(url, display_order)
+            motorhome_photos(url, card_url, medium_url, display_order)
           ),
           bids(bidder_id, amount)
         `)
@@ -262,7 +262,8 @@ const DealerAuctions = () => {
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedAuctions.map((auction) => {
             const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
-            const firstPhoto = safePhotos.sort((a, b) => a.display_order - b.display_order)[0]?.url;
+            const firstPhotoObj = safePhotos.sort((a, b) => a.display_order - b.display_order)[0];
+            const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
             const isExpired = new Date(auction.end_time).getTime() < Date.now();
@@ -281,6 +282,7 @@ const DealerAuctions = () => {
                       <img
                         src={firstPhoto}
                         alt={`${auction.motorhome.manufacturer} ${auction.motorhome.model}`}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (

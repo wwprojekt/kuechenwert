@@ -26,7 +26,7 @@ const Haendler = () => {
           id, current_bid, starting_bid, end_time,
           motorhome:motorhomes!left(
             manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price,
-            photos:motorhome_photos(url, display_order)
+            photos:motorhome_photos(url, card_url, medium_url, display_order)
           )
         `)
         .eq("status", "active")
@@ -285,7 +285,8 @@ const Haendler = () => {
                 const m = auction.motorhome;
                 if (!m) return null;
                 const photos = m.photos?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
-                const photoUrl = photos?.[0]?.url;
+                const photoObj = photos?.[0];
+                const photoUrl = photoObj?.card_url || photoObj?.url;
                 const isFestpreis = m.sale_channel === 'instant_price';
                 const price = isFestpreis ? Number(m.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0);
                 const timeLeft = getTimeRemaining(auction.end_time);

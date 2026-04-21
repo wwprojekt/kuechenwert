@@ -289,7 +289,7 @@ export default function AdminAuctions() {
             city,
             sale_channel,
             instant_price,
-            motorhome_photos(url, display_order),
+            motorhome_photos(url, card_url, medium_url, display_order),
             seller:profiles!left (
               first_name,
               last_name,
@@ -668,8 +668,9 @@ export default function AdminAuctions() {
 
   // ---- Render a single auction row ----
   const renderAuctionRow = (auction: any) => {
-    const firstPhoto = [...(auction.motorhome?.motorhome_photos || [])]
-      .sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+    const firstPhotoObj = [...(auction.motorhome?.motorhome_photos || [])]
+      .sort((a: any, b: any) => a.display_order - b.display_order)[0];
+    const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
 
     return (
       <TableRow
@@ -683,6 +684,7 @@ export default function AdminAuctions() {
               <img
                 src={firstPhoto}
                 alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             ) : (

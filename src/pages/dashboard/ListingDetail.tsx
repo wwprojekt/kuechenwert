@@ -91,6 +91,8 @@ export default function ListingDetail() {
           *,
           photos:motorhome_photos (
             url,
+            card_url,
+            medium_url,
             display_order
           ),
           auction:auctions (
@@ -122,6 +124,8 @@ export default function ListingDetail() {
           *,
           photos:motorhome_photos (
             url,
+            card_url,
+            medium_url,
             display_order
           ),
           auction:auctions (
@@ -812,8 +816,9 @@ export default function ListingDetail() {
               {sortedPhotos.map((photo, index) => (
                 <div key={photo.url} className="relative aspect-video overflow-hidden rounded-lg">
                   <img
-                    src={photo.url}
+                    src={photo.medium_url || photo.url}
                     alt={`${motorhome.manufacturer} ${motorhome.model} - Foto ${index + 1}`}
+                    loading={index < 2 ? "eager" : "lazy"}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
                 </div>

@@ -287,7 +287,7 @@ const DealerDashboard = () => {
             listing_number,
             sale_channel,
             instant_price,
-            photos:motorhome_photos(url, display_order)
+            photos:motorhome_photos(url, card_url, medium_url, display_order)
           )
         `)
         .eq("status", "active")
@@ -768,8 +768,8 @@ const DealerDashboard = () => {
                 const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
                 const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
                 const auctionPhotos = Array.isArray(auction.motorhome?.photos) ? auction.motorhome.photos : auction.motorhome?.photos ? [auction.motorhome.photos] : [];
-                const mainPhoto = auctionPhotos.find((p: any) => p.display_order === 0)?.url || 
-                                  auctionPhotos[0]?.url;
+                const mainPhotoObj = auctionPhotos.find((p: any) => p.display_order === 0) || auctionPhotos[0];
+                const mainPhoto = mainPhotoObj?.card_url || mainPhotoObj?.url;
                 
                 return (
                   <div key={auction.id} className={`${isLocked ? 'pointer-events-none' : ''}`}>
@@ -780,9 +780,10 @@ const DealerDashboard = () => {
                       {/* Photo */}
                       <div className="relative h-40 bg-muted">
                         {mainPhoto ? (
-                          <img 
-                            src={mainPhoto} 
+                          <img
+                            src={mainPhoto}
                             alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            loading="lazy"
                             className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"

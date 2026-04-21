@@ -36,6 +36,8 @@ export default function MyListings() {
           *,
           photos:motorhome_photos (
             url,
+            card_url,
+            medium_url,
             display_order
           ),
           auction:auctions (
@@ -214,8 +216,9 @@ export default function MyListings() {
               default: return 0;
             }
           }).map((motorhome) => {
-            const firstPhoto = motorhome.photos
-              ?.sort((a, b) => a.display_order - b.display_order)[0]?.url;
+            const firstPhotoObj = motorhome.photos
+              ?.sort((a, b) => a.display_order - b.display_order)[0];
+            const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
             const auction = Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction;
 
             return (
@@ -227,6 +230,7 @@ export default function MyListings() {
                     <img
                       src={firstPhoto}
                       alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   ) : (

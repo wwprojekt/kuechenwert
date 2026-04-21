@@ -498,7 +498,7 @@ function useActiveAuctions() {
         .from("auctions")
         .select(`
           id, end_time, current_bid, starting_bid, status,
-          motorhome:motorhomes(id, manufacturer, model, year, sale_channel, instant_price, motorhome_photos(url, display_order)),
+          motorhome:motorhomes(id, manufacturer, model, year, sale_channel, instant_price, motorhome_photos(url, card_url, medium_url, display_order)),
           bids(count)
         `)
         .eq("status", "active")
@@ -590,7 +590,7 @@ function useRecentlyChangedMotorhomes() {
         .from("motorhomes")
         .select(`
           id, manufacturer, model, year, status, updated_at, created_at, seller_id,
-          motorhome_photos(url, display_order)
+          motorhome_photos(url, card_url, medium_url, display_order)
         `)
         .order("updated_at", { ascending: false })
         .limit(8);
@@ -1284,8 +1284,9 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-1">
                   {recentMotorhomes.map((m) => {
-                    const firstPhoto = [...(m.motorhome_photos || [])]
-                      .sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+                    const firstPhotoObj = [...(m.motorhome_photos || [])]
+                      .sort((a: any, b: any) => a.display_order - b.display_order)[0];
+                    const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
                     const sellerName = m.seller
                       ? `${m.seller.first_name || ""} ${m.seller.last_name || ""}`.trim() || m.seller.email
                       : "Unbekannt";
@@ -1298,6 +1299,7 @@ export default function AdminDashboard() {
                               <img
                                 src={firstPhoto}
                                 alt={`${m.manufacturer} ${m.model}`}
+                                loading="lazy"
                                 className="w-full h-full object-cover"
                               />
                             ) : (

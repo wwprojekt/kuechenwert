@@ -45,6 +45,8 @@ export default function MyBids() {
               year,
               photos:motorhome_photos (
                 url,
+                card_url,
+                medium_url,
                 display_order
               )
             )
@@ -216,7 +218,8 @@ export default function MyBids() {
           {sortedBids.map((group: any) => {
             const motorhome = group.auction?.motorhome;
             const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
-            const firstPhoto = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0]?.url;
+            const firstPhotoObj = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0];
+            const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
             const bidCount = group.bids.length;
             const isActive = group.auction.status === "active";
             const endMs = new Date(group.auction.end_time).getTime();
@@ -259,6 +262,7 @@ export default function MyBids() {
                         <img
                           src={firstPhoto}
                           alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (

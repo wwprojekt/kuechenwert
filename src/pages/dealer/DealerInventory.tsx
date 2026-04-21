@@ -186,9 +186,10 @@ const DealerInventory = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedInventory.map((item) => {
             const itemPhotos = Array.isArray(item.photos) ? item.photos : item.photos ? [item.photos] : [];
-            const firstPhoto = itemPhotos.sort((a: any, b: any) => 
+            const firstPhotoObj = itemPhotos.sort((a: any, b: any) =>
               a.display_order - b.display_order
-            )[0]?.url;
+            )[0];
+            const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
 
             return (
               <Link
@@ -204,6 +205,7 @@ const DealerInventory = () => {
                         <img
                           src={firstPhoto}
                           alt={`${item.manufacturer} ${item.model}`}
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (

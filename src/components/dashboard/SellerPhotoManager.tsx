@@ -152,8 +152,9 @@ function SortablePhotoItem({
       {/* Photo */}
       <div className="aspect-square">
         <img
-          src={photo.url}
+          src={photo.card_url || photo.url}
           alt={`Foto ${index + 1}`}
+          loading="lazy"
           className="w-full h-full object-cover"
           loading="lazy"
           onError={(e) => {
@@ -792,8 +793,9 @@ export function SellerPhotoManager({
           {photoToDelete && (
             <div className="my-4 rounded-lg overflow-hidden border max-h-48">
               <img
-                src={photoToDelete.url}
+                src={photoToDelete.card_url || photoToDelete.url}
                 alt="Zu löschendes Foto"
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             </div>

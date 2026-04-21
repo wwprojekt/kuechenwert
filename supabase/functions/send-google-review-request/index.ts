@@ -16,7 +16,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
  *     batch_size?: number,   // default 50, max 200
  *     top_up?: boolean,      // default true → run enqueue first
  *     min_age_days?: number, // default 14
- *     dry_run?: boolean      // default false
+ *     dry_run?: boolean,     // default false
+ *     only_email?: string    // OPTIONAL: send a single test mail to this
+ *                            //           address (bypasses cohort filter
+ *                            //           but still respects suppressions).
+ *                            //           Use this BEFORE the broad blast
+ *                            //           to verify Resend + template.
  *   }
  *
  * Self-contained: inlines email template + auth check so it can be
@@ -143,8 +148,53 @@ const handler = async (req: Request): Promise<Response> => {
   const minAgeDays =
     typeof body.min_age_days === "number" ? body.min_age_days : 14;
   const dryRun = body.dry_run === true;
+  const onlyEmail =
+    typeof body.only_email === "string" && body.only_email.trim() !== ""
+      ? body.only_email.trim().toLowerCase()
+      : null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // ─── 0) only_email mode: enqueue+claim a single specific row ────
+  // Used for safe single-target test sends from the admin UI.
+  if (onlyEmail) {
+    const { data: enqRes, error: enqErr } = await supabase.rpc(
+      "enqueue_google_review_for_email",
+      { p_email: onlyEmail },
+    );
+    if (enqErr) {
+      const msg = enqErr.message?.includes("suppressed")
+        ? `Adresse ${onlyEmail} steht auf der Suppression-Liste — Test-Versand abgebrochen.`
+        : enqErr.message?.includes("invalid_email_format")
+        ? `Ungültiges E-Mail-Format: ${onlyEmail}`
+        : `Test-Enqueue fehlgeschlagen: ${enqErr.message}`;
+      return jsonResponse(req, { error: msg }, 400);
+    }
+    const rowId = (enqRes as { id?: string } | null)?.id;
+    if (!rowId) {
+      return jsonResponse(
+        req,
+        { error: "enqueue_google_review_for_email returned no id" },
+        500,
+      );
+    }
+    if (dryRun) {
+      return jsonResponse(req, {
+        dry_run: true,
+        only_email: onlyEmail,
+        would_send: 1,
+        row_id: rowId,
+      });
+    }
+    const result = await sendOne(supabase, rowId);
+    return jsonResponse(req, {
+      only_email: onlyEmail,
+      sent: result.ok ? 1 : 0,
+      failed: result.ok ? 0 : 1,
+      batch: 1,
+      ...(result.ok ? {} : { error: result.error }),
+    });
+  }
 
   // ─── 1) Top up queue ─────────────────────────────────────────
   let enqueued = 0;
@@ -202,98 +252,14 @@ const handler = async (req: Request): Promise<Response> => {
 
   for (let i = 0; i < batch.length; i++) {
     const row = batch[i];
-    try {
-      // Race-condition guard: admin may have suppressed between claim+send.
-      // Use .eq on the lowercased email — suppressions are always stored in
-      // lowercase, and .ilike would mis-treat `_` / `%` in addresses as
-      // SQL LIKE wildcards (e.g. john_doe@x.com would match johnXdoe@x.com).
-      const { data: suppressed } = await supabase
-        .from("email_suppressions")
-        .select("id")
-        .eq("email", row.email.toLowerCase())
-        .maybeSingle();
-      if (suppressed) {
-        await supabase.rpc("mark_google_review_failed", {
-          p_id: row.id,
-          p_error: "suppressed_after_claim",
-          p_status: "suppressed",
-        });
-        failed++;
-        continue;
-      }
-
-      const html = buildHtml(row);
-      const text = htmlToText(html);
-      const subject = "Würden Sie uns auf Google bewerten?";
-
-      const unsubUrl = `${SUPABASE_URL}/functions/v1/unsubscribe-google-review?action=unsubscribe&token=${row.unsubscribe_token}`;
-
-      const resp = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: `${SITE_NAME} <${FROM_ADDRESS}>`,
-          to: [row.email],
-          subject,
-          html,
-          text,
-          reply_to: FROM_ADDRESS,
-          headers: {
-            "List-Unsubscribe":
-              `<${unsubUrl}>, <mailto:${FROM_ADDRESS}?subject=Unsubscribe>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            "X-Entity-Ref-ID": row.id,
-          },
-        }),
-      });
-
-      if (!resp.ok) {
-        const errText = await resp.text();
-        await supabase.rpc("mark_google_review_failed", {
-          p_id: row.id,
-          p_error: `resend_${resp.status}: ${errText.slice(0, 500)}`,
-          p_status: "failed",
-        });
-        failures.push({ email: row.email, error: `resend ${resp.status}` });
-        failed++;
-      } else {
-        const result = await resp.json();
-        await supabase
-          .from("google_review_requests")
-          .update({ resend_message_id: result.id })
-          .eq("id", row.id);
-
-        await supabase.from("admin_emails").insert({
-          sender_email: FROM_ADDRESS,
-          sender_name: SITE_NAME,
-          recipient_email: row.email,
-          recipient_name: row.recipient_name ?? null,
-          subject,
-          body_html: html,
-          body_text: text,
-          email_type: "google_review_request",
-          direction: "outbound",
-          status: "sent",
-          resend_id: result.id,
-          is_read: true,
-        });
-        sent++;
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      await supabase.rpc("mark_google_review_failed", {
-        p_id: row.id,
-        p_error: msg.slice(0, 500),
-        p_status: "failed",
-      });
-      failures.push({ email: row.email, error: msg });
+    const result = await sendRow(supabase, row);
+    if (result.ok) {
+      sent++;
+    } else {
       failed++;
+      failures.push({ email: row.email, error: result.error });
     }
-
-    // 10 req/s safe spacing between sends
+    // 10 req/s safe spacing between sends (≈7.5s for batch of 50)
     if (i < batch.length - 1) await sleep(150);
   }
 
@@ -305,6 +271,132 @@ const handler = async (req: Request): Promise<Response> => {
     failures,
   });
 };
+
+// ─── Send-one helpers ────────────────────────────────────────────
+// Two flavours so the only_email path doesn't need to fake a
+// claim_google_review_batch invocation:
+//   - sendOne(rowId): looks up + claims by id, then sends
+//   - sendRow(row): sends a row already returned by claim
+
+// deno-lint-ignore no-explicit-any
+type SupabaseLike = any;
+
+async function sendOne(
+  supabase: SupabaseLike,
+  rowId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Re-claim the row atomically: flip queued → sent so concurrent invocations
+  // never double-send. If the row isn't in 'queued' or 'sent' state, abort.
+  const { data: claimed, error: claimErr } = await supabase
+    .from("google_review_requests")
+    .update({ delivery_status: "sent", sent_at: new Date().toISOString() })
+    .eq("id", rowId)
+    .in("delivery_status", ["queued", "sent"])
+    .select("id, email, recipient_name, unsubscribe_token")
+    .maybeSingle();
+
+  if (claimErr || !claimed) {
+    return {
+      ok: false,
+      error: `claim failed: ${claimErr?.message ?? "row not found / not queued"}`,
+    };
+  }
+  return await sendRow(supabase, claimed as BatchRow);
+}
+
+async function sendRow(
+  supabase: SupabaseLike,
+  row: BatchRow,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    // Race-condition guard: admin may have suppressed between claim+send.
+    // Use .eq on the lowercased email — suppressions are always stored in
+    // lowercase, and .ilike would mis-treat `_` / `%` in addresses as
+    // SQL LIKE wildcards (e.g. john_doe@x.com would match johnXdoe@x.com).
+    const { data: suppressed } = await supabase
+      .from("email_suppressions")
+      .select("id")
+      .eq("email", row.email.toLowerCase())
+      .maybeSingle();
+    if (suppressed) {
+      await supabase.rpc("mark_google_review_failed", {
+        p_id: row.id,
+        p_error: "suppressed_after_claim",
+        p_status: "suppressed",
+      });
+      return { ok: false, error: "suppressed_after_claim" };
+    }
+
+    const html = buildHtml(row);
+    const text = htmlToText(html);
+    const subject = "Würden Sie uns auf Google bewerten?";
+
+    const unsubUrl =
+      `${SUPABASE_URL}/functions/v1/unsubscribe-google-review?action=unsubscribe&token=${row.unsubscribe_token}`;
+
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: `${SITE_NAME} <${FROM_ADDRESS}>`,
+        to: [row.email],
+        subject,
+        html,
+        text,
+        reply_to: FROM_ADDRESS,
+        headers: {
+          "List-Unsubscribe":
+            `<${unsubUrl}>, <mailto:${FROM_ADDRESS}?subject=Unsubscribe>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          "X-Entity-Ref-ID": row.id,
+        },
+      }),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      await supabase.rpc("mark_google_review_failed", {
+        p_id: row.id,
+        p_error: `resend_${resp.status}: ${errText.slice(0, 500)}`,
+        p_status: "failed",
+      });
+      return { ok: false, error: `resend ${resp.status}` };
+    }
+
+    const result = await resp.json();
+    await supabase
+      .from("google_review_requests")
+      .update({ resend_message_id: result.id })
+      .eq("id", row.id);
+
+    await supabase.from("admin_emails").insert({
+      sender_email: FROM_ADDRESS,
+      sender_name: SITE_NAME,
+      recipient_email: row.email,
+      recipient_name: row.recipient_name ?? null,
+      subject,
+      body_html: html,
+      body_text: text,
+      email_type: "google_review_request",
+      direction: "outbound",
+      status: "sent",
+      resend_id: result.id,
+      is_read: true,
+    });
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await supabase.rpc("mark_google_review_failed", {
+      p_id: row.id,
+      p_error: msg.slice(0, 500),
+      p_status: "failed",
+    });
+    return { ok: false, error: msg };
+  }
+}
 
 // ─── Inline branded email template ──────────────────────────────
 // Mini CaravanWert design (header, content, signature, footer with

@@ -161,6 +161,7 @@ export default function AdminGoogleReviews() {
   );
   const [suppressEmail, setSuppressEmail] = useState("");
   const [suppressNotes, setSuppressNotes] = useState("");
+  const [testEmail, setTestEmail] = useState("");
 
   // ── Stats ────────────────────────────────────────────────────────
   const { data: stats } = useQuery({
@@ -284,6 +285,50 @@ export default function AdminGoogleReviews() {
     },
   });
 
+  // ── Test send to single address ──────────────────────────────────
+  const testSendMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await invokeWithAuth(
+        "send-google-review-request",
+        {
+          body: {
+            top_up: false,
+            dry_run: false,
+            only_email: email.trim().toLowerCase(),
+          },
+        },
+      );
+      if (error) throw error;
+      return data as {
+        only_email?: string;
+        sent?: number;
+        failed?: number;
+        error?: string;
+      };
+    },
+    onSuccess: (data) => {
+      const ok = (data?.sent ?? 0) > 0;
+      toast({
+        title: ok ? "Test-Mail versendet" : "Test-Mail fehlgeschlagen",
+        description: ok
+          ? `Eine Mail an ${data.only_email} wurde via Resend abgeschickt. Bitte Posteingang + Spam prüfen.`
+          : data?.error ?? "Unbekannter Fehler beim Test-Versand.",
+        variant: ok ? "default" : "destructive",
+      });
+      if (ok) setTestEmail("");
+      queryClient.invalidateQueries({ queryKey: REVIEW_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: STATS_QUERY_KEY });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({
+        title: "Test-Versand fehlgeschlagen",
+        description: msg,
+        variant: "destructive",
+      });
+    },
+  });
+
   // ── Manual suppress ──────────────────────────────────────────────
   const suppressMutation = useMutation({
     mutationFn: async (input: { email: string; notes?: string }) => {
@@ -382,28 +427,76 @@ export default function AdminGoogleReviews() {
           <CardTitle className="text-base">Manuell auslösen</CardTitle>
           <p className="text-xs text-muted-foreground">
             Der tägliche Cron läuft automatisch um <strong>11:00 UTC</strong>{" "}
-            (Batch 50). Diese Buttons führen dieselbe Aktion sofort aus.
+            (Batch 50). Vor dem ersten Massen-Versand bitte unbedingt eine
+            Test-Mail an die eigene Adresse schicken.
           </p>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setConfirmTrigger("dry")}
-              disabled={triggerMutation.isPending}
+        <CardContent className="space-y-4">
+          {/* Single-target test send (always available, safest) */}
+          <div className="rounded-md border border-dashed bg-muted/30 p-3">
+            <Label
+              htmlFor="test-email"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
             >
-              <RefreshCw className="h-4 w-4 mr-1.5" />
-              Test-Lauf (kein Versand)
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setConfirmTrigger("real")}
-              disabled={triggerMutation.isPending}
-            >
-              <Send className="h-4 w-4 mr-1.5" />
-              50 Mails jetzt versenden
-            </Button>
+              1. Test-Mail an eine bestimmte Adresse
+            </Label>
+            <div className="mt-2 flex flex-col sm:flex-row gap-2">
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="ihre-test@caravanwert.de"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => testSendMutation.mutate(testEmail)}
+                disabled={
+                  !testEmail.trim() ||
+                  !/^\S+@\S+\.\S+$/.test(testEmail.trim()) ||
+                  testSendMutation.isPending
+                }
+              >
+                {testSendMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-1.5" />
+                )}
+                Test-Mail senden
+              </Button>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Sendet die echte Vorlage an genau eine Adresse. Ignoriert den
+              14-Tage-Filter, respektiert aber die Suppression-Liste.
+            </p>
+          </div>
+
+          {/* Mass trigger */}
+          <div>
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              2. Batch-Versand
+            </Label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmTrigger("dry")}
+                disabled={triggerMutation.isPending}
+              >
+                <RefreshCw className="h-4 w-4 mr-1.5" />
+                Test-Lauf (kein Versand)
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setConfirmTrigger("real")}
+                disabled={triggerMutation.isPending}
+              >
+                <Send className="h-4 w-4 mr-1.5" />
+                50 Mails jetzt versenden
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

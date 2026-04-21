@@ -54,6 +54,20 @@ function formatDate(dateStr?: string | null): string {
   return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function formatMonthYear(dateStr?: string | null): string {
+  if (!dateStr) return '–';
+  const m = /^(\d{4})-(\d{2})/.exec(dateStr);
+  if (m) return `${m[2]}.${m[1]}`;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    return `${mm}.${d.getUTCFullYear()}`;
+  } catch {
+    return String(dateStr);
+  }
+}
+
 function todayFormatted(): string {
   return new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
@@ -236,7 +250,7 @@ function buildMotorhomeListingAppendix(m: Record<string, unknown>): string {
   add('Leistung (PS)', m.engine_power_hp);
   add('Hubraum (ccm)', m.engine_displacement_ccm);
   add('Basisfahrzeug', m.base_vehicle);
-  add('Erstzulassung', m.first_registration);
+  add('Erstzulassung', m.first_registration ? formatMonthYear(m.first_registration) : null);
   add('Letzte HU', m.last_tuev_date);
   add('HU gültig bis', m.tuev_valid_until);
   add('Vorbesitzer', m.previous_owners);
@@ -440,7 +454,7 @@ Deno.serve(async (req) => {
     const vehicleName = `${motorhome.manufacturer} ${motorhome.model}`;
     const vin = motorhome.vehicle_identification_number || 'Nicht angegeben';
     const licensePlate = motorhome.license_plate || 'Nicht angegeben';
-    const firstReg = formatDate(motorhome.first_registration);
+    const firstReg = formatMonthYear(motorhome.first_registration);
     const mileage = motorhome.mileage ? `${motorhome.mileage.toLocaleString('de-DE')} km` : 'Nicht angegeben';
     const bodyType = motorhome.body_type || 'Nicht angegeben';
     const year = motorhome.year ? String(motorhome.year) : 'Nicht angegeben';

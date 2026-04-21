@@ -128,7 +128,12 @@ export function MotorhomeDetailDialog({
 
   const formatMonthYear = (date: string | null) => {
     if (!date) return "—";
-    return new Date(date).toLocaleDateString("de-DE", { month: "2-digit", year: "numeric" });
+    const m = /^(\d{4})-(\d{2})/.exec(date);
+    if (m) return `${m[2]}.${m[1]}`;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return date;
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${mm}.${d.getFullYear()}`;
   };
 
   const formatPrice = (price: number | null) => {
@@ -213,7 +218,7 @@ export function MotorhomeDetailDialog({
                 <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
                 <InfoItem label="Getriebe" value={motorhome.transmission || "—"} />
                 <InfoItem label="Abgasnorm" value={motorhome.emission_class || "—"} />
-                <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} />
+                <InfoItem label="Erstzulassung" value={formatMonthYear(motorhome.first_registration)} />
                 <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} />
                 <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString() || "—"} />
               </div>

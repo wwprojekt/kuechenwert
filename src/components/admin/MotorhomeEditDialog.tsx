@@ -225,6 +225,7 @@ export function MotorhomeEditDialog({
     if (motorhome) {
       setFormData({
         ...motorhome,
+        first_registration: motorhome.first_registration ? String(motorhome.first_registration).substring(0, 7) : null,
         tuev_valid_until: motorhome.tuev_valid_until ? String(motorhome.tuev_valid_until).substring(0, 7) : null,
         last_tuev_date: motorhome.last_tuev_date ? String(motorhome.last_tuev_date).substring(0, 7) : null,
       });
@@ -242,7 +243,7 @@ export function MotorhomeEditDialog({
           manufacturer: data.manufacturer,
           model: data.model,
           year: data.year,
-          first_registration: data.first_registration,
+          first_registration: data.first_registration ? `${data.first_registration}-01` : null,
           mileage: data.mileage,
           condition: data.condition,
           body_type: data.body_type,
@@ -572,7 +573,7 @@ export function MotorhomeEditDialog({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {renderNumberInput("year", "Baujahr")}
-                {renderDateInput("first_registration", "Erstzulassung")}
+                {renderMonthInput("first_registration", "Erstzulassung")}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

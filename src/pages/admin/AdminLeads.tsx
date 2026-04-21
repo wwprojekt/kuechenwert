@@ -353,10 +353,19 @@ function formatFieldValue(key: string, value: unknown): string {
   if ((key.endsWith("_liters") || key === "weight_kg" || key === "payload_kg") && typeof value === "number") {
     return value.toLocaleString("de-DE");
   }
-  if ((key === "tuev_valid_until" || key === "tuv_valid_until") && typeof value === "string") {
+  if (
+    (key === "tuev_valid_until" ||
+      key === "tuv_valid_until" ||
+      key === "first_registration") &&
+    typeof value === "string"
+  ) {
+    const m = /^(\d{4})-(\d{2})/.exec(value);
+    if (m) return `${m[2]}.${m[1]}`;
     try {
       const d = new Date(value);
-      return d.toLocaleDateString("de-DE", { month: "2-digit", year: "numeric" });
+      if (isNaN(d.getTime())) return String(value);
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      return `${mm}.${d.getFullYear()}`;
     } catch { return String(value); }
   }
   if (typeof value === "object") return JSON.stringify(value);

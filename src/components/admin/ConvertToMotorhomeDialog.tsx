@@ -142,7 +142,7 @@ function mapWizardToMotorhome(formData: Record<string, unknown>) {
     engine_power_hp: isWohnwagen ? null : (formData.power_ps ? Number(formData.power_ps) : (formData.enginePower ? Number(formData.enginePower) : null)),
     engine_displacement_ccm: isWohnwagen ? null : (formData.engine_displacement_ccm ? Number(formData.engine_displacement_ccm) : null),
     emission_class: isWohnwagen ? null : ((formData.emission_class || formData.emissionClass || null) as string | null),
-    first_registration: formData.first_registration ? String(formData.first_registration) : null,
+    first_registration: formData.first_registration ? `${String(formData.first_registration).substring(0, 7)}-01` : null,
     tuev_valid_until: (formData.tuv_valid_until || formData.tuev_valid_until) ? String(formData.tuv_valid_until || formData.tuev_valid_until).substring(0, 7) : null,
     previous_owners: formData.previous_owners != null ? Number(formData.previous_owners) : null,
     accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,
@@ -374,8 +374,8 @@ export function ConvertToMotorhomeDialog({
         has_satellite: formData.has_satellite || false,
         has_tv: formData.has_tv || false,
         accident_free: formData.accident_free || null,
-        first_registration: formData.first_registration || null,
-        tuev_valid_until: formData.tuev_valid_until ? `${formData.tuev_valid_until}-01` : null,
+        first_registration: formData.first_registration ? `${String(formData.first_registration).substring(0, 7)}-01` : null,
+        tuev_valid_until: formData.tuev_valid_until ? `${String(formData.tuev_valid_until).substring(0, 7)}-01` : null,
         previous_owners: formData.previous_owners || null,
         water_tank_liters: formData.water_tank_liters || null,
         grey_water_capacity_liters: formData.grey_water_capacity_liters || null,
@@ -925,19 +925,18 @@ export function ConvertToMotorhomeDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="conv-first-reg">Erstzulassung</Label>
-                    <Input
+                    <MonthYearPicker
                       id="conv-first-reg"
-                      type="date"
-                      value={String(formData.first_registration || "")}
-                      onChange={(e) => updateField("first_registration", e.target.value)}
+                      label="Erstzulassung"
+                      value={String(formData.first_registration || "").substring(0, 7)}
+                      onChange={(val) => updateField("first_registration", val)}
                     />
                   </div>
                   <div className="space-y-2">
                     <MonthYearPicker
                       id="conv-tuev"
                       label="TÜV gültig bis"
-                      value={String(formData.tuev_valid_until || "")}
+                      value={String(formData.tuev_valid_until || "").substring(0, 7)}
                       onChange={(val) => updateField("tuev_valid_until", val)}
                     />
                   </div>

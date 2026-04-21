@@ -1018,7 +1018,11 @@ export default function ListingDetail() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Erstzulassung</span>
                         <span className="font-semibold">
-                          {format(new Date(motorhome.first_registration), "MM/yyyy")}
+                          {(() => {
+                            const v = motorhome.first_registration;
+                            const m = /^(\d{4})-(\d{2})/.exec(v);
+                            return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
+                          })()}
                         </span>
                       </div>
                       <Separator />

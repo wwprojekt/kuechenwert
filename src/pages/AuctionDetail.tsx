@@ -1384,11 +1384,11 @@ const AuctionDetail = () => {
                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                     <span>{motorhome.body_type} · {motorhome.year}</span>
                     {motorhome.account_type === 'dealer' ? (
-                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge variant="outline" className="text-[11px] sm:text-xs bg-blue-50 text-blue-700 border-blue-200">
                         Händler
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
+                      <Badge variant="outline" className="text-[11px] sm:text-xs bg-gray-50 text-gray-600 border-gray-200">
                         Privat
                       </Badge>
                     )}
@@ -1432,12 +1432,12 @@ const AuctionDetail = () => {
                 <div className="grid grid-cols-4 gap-2">
                   <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
                     <Calendar className="w-4 h-4 text-primary mb-1" />
-                    <span className="text-[10px] text-muted-foreground leading-none">Baujahr</span>
+                    <span className="text-[11px] sm:text-xs text-muted-foreground leading-none">Baujahr</span>
                     <span className="text-sm font-semibold mt-0.5">{motorhome.year}</span>
                   </div>
                   <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
                     <Gauge className="w-4 h-4 text-primary mb-1" />
-                    <span className="text-[10px] text-muted-foreground leading-none">KM</span>
+                    <span className="text-[11px] sm:text-xs text-muted-foreground leading-none">KM</span>
                     <span className="text-sm font-semibold tabular-nums mt-0.5">
                       {motorhome.mileage < 10000
                         ? motorhome.mileage.toLocaleString('de-DE')
@@ -1446,12 +1446,12 @@ const AuctionDetail = () => {
                   </div>
                   <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
                     <Zap className="w-4 h-4 text-primary mb-1" />
-                    <span className="text-[10px] text-muted-foreground leading-none">PS</span>
+                    <span className="text-[11px] sm:text-xs text-muted-foreground leading-none">PS</span>
                     <span className="text-sm font-semibold mt-0.5">{motorhome.engine_power_hp || '—'}</span>
                   </div>
                   <div className="flex flex-col items-center text-center p-2 bg-muted/40 rounded-lg">
                     <Bed className="w-4 h-4 text-primary mb-1" />
-                    <span className="text-[10px] text-muted-foreground leading-none">Schläft</span>
+                    <span className="text-[11px] sm:text-xs text-muted-foreground leading-none">Schläft</span>
                     <span className="text-sm font-semibold mt-0.5">{motorhome.sleeping_places || '—'}</span>
                   </div>
                 </div>
@@ -1470,7 +1470,7 @@ const AuctionDetail = () => {
                       : 'bg-primary/5'
                   }`}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-muted-foreground leading-none mb-1">
+                      <p className="text-[11px] sm:text-xs text-muted-foreground leading-none mb-1">
                         {motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}
                       </p>
                       {canSeePrices ? (
@@ -1494,13 +1494,13 @@ const AuctionDetail = () => {
                         </p>
                       )}
                       {hasBid && canSeePrices && (
-                        <p className={`text-[11px] mt-1 font-medium ${isHighestBidder ? 'text-emerald-600' : 'text-red-600'}`}>
+                        <p className={`text-[11px] sm:text-xs mt-1 font-medium ${isHighestBidder ? 'text-emerald-600' : 'text-red-600'}`}>
                           {isHighestBidder ? '✓ Höchstbietender' : `✗ Überboten (Ihr: €${userHighestBid.toLocaleString('de-DE')})`}
                         </p>
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[11px] text-muted-foreground leading-none mb-1 flex items-center justify-end gap-1">
+                      <p className="text-[11px] sm:text-xs text-muted-foreground leading-none mb-1 flex items-center justify-end gap-1">
                         <Clock className="w-3 h-3" />
                         Endet in
                       </p>
@@ -1515,22 +1515,22 @@ const AuctionDetail = () => {
                 {(motorhome.accident_free || motorhome.non_smoker || motorhome.service_history_available || motorhome.tuv_new) && (
                   <div className="flex flex-wrap gap-1.5">
                     {motorhome.accident_free && (
-                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[11px] sm:text-xs">
                         <CheckCircle className="w-3 h-3" />Unfallfrei
                       </Badge>
                     )}
                     {motorhome.non_smoker && (
-                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[11px] sm:text-xs">
                         <Shield className="w-3 h-3" />Nichtraucher
                       </Badge>
                     )}
                     {motorhome.service_history_available && (
-                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[11px] sm:text-xs">
                         <Award className="w-3 h-3" />Serviceheft
                       </Badge>
                     )}
                     {motorhome.tuv_new && (
-                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                      <Badge variant="secondary" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-[11px] sm:text-xs">
                         <CheckCircle className="w-3 h-3" />TÜV neu
                       </Badge>
                     )}
@@ -1592,7 +1592,12 @@ const AuctionDetail = () => {
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <span className="text-muted-foreground">Erstzulassung</span>
                           <span className="font-semibold">
-                            {motorhome.first_registration ? new Date(motorhome.first_registration).toLocaleDateString('de-DE') : 'Nicht angegeben'}
+                            {(() => {
+                              const v = motorhome.first_registration;
+                              if (!v) return 'Nicht angegeben';
+                              const m = /^(\d{4})-(\d{2})/.exec(v);
+                              return m ? `${m[2]}.${m[1]}` : v;
+                            })()}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -1661,7 +1666,7 @@ const AuctionDetail = () => {
                           Beschreibung
                         </h3>
                         <p
-                          className={`text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed ${
+                          className={`text-sm text-muted-foreground whitespace-pre-wrap break-words leading-relaxed ${
                             !descExpanded && motorhome.description.length > 400 ? 'line-clamp-6 sm:line-clamp-none' : ''
                           }`}
                         >
@@ -1691,7 +1696,7 @@ const AuctionDetail = () => {
                             key={item.id}
                             className="p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20"
                           >
-                            <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                            <p className="text-sm whitespace-pre-wrap break-words">{item.content}</p>
                             <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               Nachträglich hinzugefügt am{" "}
@@ -1709,7 +1714,7 @@ const AuctionDetail = () => {
                           <AlertTriangle className="w-5 h-5" />
                           Bekannte Mängel
                         </h3>
-                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">{(motorhome as any).damage_summary}</p>
+                        <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap break-words">{(motorhome as any).damage_summary}</p>
                       </div>
                     ) : !(motorhome as any).has_damage && (
                       <div className="mt-6 p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950/20 rounded-lg">
@@ -2002,11 +2007,11 @@ const AuctionDetail = () => {
                   <div className="flex items-center gap-2 text-muted-foreground mb-2 flex-wrap">
                     <span>{motorhome.body_type} • {motorhome.year}</span>
                     {motorhome.account_type === 'dealer' ? (
-                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge variant="outline" className="text-[11px] sm:text-xs bg-blue-50 text-blue-700 border-blue-200">
                         Händler
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">
+                      <Badge variant="outline" className="text-[11px] sm:text-xs bg-gray-50 text-gray-600 border-gray-200">
                         Privat
                       </Badge>
                     )}
@@ -2417,7 +2422,7 @@ const AuctionDetail = () => {
                           );
                         })}
                       </div>
-                      <p className="text-[11px] text-muted-foreground text-center">
+                      <p className="text-[11px] sm:text-xs text-muted-foreground text-center">
                         Klicken Sie auf einen Betrag, um Ihr Gebot schnell zu setzen
                       </p>
                     </div>
@@ -2719,19 +2724,19 @@ const AuctionDetail = () => {
                               <p className="font-semibold text-sm flex items-center gap-1.5">
                                 {isMine ? 'Ihr Gebot' : 'Gebot'}
                                 {bid.is_autobid && (
-                                  <Badge variant="outline" className="text-[10px] gap-0.5 px-1 py-0">
+                                  <Badge variant="outline" className="text-[11px] sm:text-xs gap-0.5 px-1 py-0">
                                     <Zap className="w-2.5 h-2.5" /> Auto
                                   </Badge>
                                 )}
                                 {index === 0 && (
-                                  <Badge className={`text-[10px] px-1.5 py-0 ${
+                                  <Badge className={`text-[11px] sm:text-xs px-1.5 py-0 ${
                                     isMine ? 'bg-emerald-500' : 'bg-green-500'
                                   }`}>
                                     {isMine ? <><Crown className="w-2.5 h-2.5 mr-0.5" /> Führend</> : 'Führend'}
                                   </Badge>
                                 )}
                               </p>
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="text-[11px] sm:text-xs text-muted-foreground">
                                 {new Date(bid.created_at).toLocaleString("de-DE")}
                               </p>
                             </div>
@@ -2746,7 +2751,7 @@ const AuctionDetail = () => {
                               €{bid.amount.toLocaleString()}
                             </p>
                             {index > 0 && bids[index + 1] && (
-                              <p className="text-[11px] text-green-600">
+                              <p className="text-[11px] sm:text-xs text-green-600">
                                 +€{(bid.amount - bids[index + 1].amount).toLocaleString()}
                               </p>
                             )}
@@ -2769,19 +2774,19 @@ const AuctionDetail = () => {
                   <div className="mt-3 pt-3 border-t">
                     <div className="grid grid-cols-3 gap-3 text-center">
                       <div>
-                        <p className="text-[11px] text-muted-foreground">Durchschnitt</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground">Durchschnitt</p>
                         <p className="font-semibold text-sm">
                           €{Math.round(bids.reduce((sum, bid) => sum + bid.amount, 0) / bids.length).toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] text-muted-foreground">Höchstes</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground">Höchstes</p>
                         <p className="font-semibold text-sm text-primary">
                           €{Math.max(...bids.map(b => b.amount)).toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] text-muted-foreground">Bieter</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground">Bieter</p>
                         <p className="font-semibold text-sm">
                           {new Set(bids.map(b => b.bidder_id)).size}
                         </p>
@@ -2809,11 +2814,11 @@ const AuctionDetail = () => {
           <div className={`flex items-center gap-2.5 max-w-2xl mx-auto ${settings?.whatsapp_number || settings?.support_phone ? 'pl-14' : ''}`}>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-1.5 leading-none mb-0.5">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                <span className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">
                   {motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Gebot'}
                 </span>
-                <span className="text-[10px] text-muted-foreground">·</span>
-                <span className={`text-[10px] font-semibold tabular-nums ${isEndingSoon ? 'text-destructive' : 'text-muted-foreground'}`}>
+                <span className="text-[11px] sm:text-xs text-muted-foreground">·</span>
+                <span className={`text-[11px] sm:text-xs font-semibold tabular-nums ${isEndingSoon ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {timeRemaining}
                 </span>
               </div>

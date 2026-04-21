@@ -250,7 +250,9 @@ export default function AdminMotorhomeDetail() {
 
   const formatMonthYear = (date: string | null) => {
     if (!date) return "—";
-    return format(new Date(date), "MM/yyyy", { locale: de });
+    const m = /^(\d{4})-(\d{2})/.exec(date);
+    if (m) return `${m[2]}.${m[1]}`;
+    return format(new Date(date), "MM.yyyy", { locale: de });
   };
 
   const getStatusBadge = (status: string) => {
@@ -508,7 +510,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS${motorhome.power_kw ? ` (${motorhome.power_kw} kW)` : ''}` : "—"} />
                       <InfoItem label="Getriebe" value={motorhome.transmission} />
                       <InfoItem label="Abgasnorm" value={motorhome.emission_class} />
-                      <InfoItem label="Erstzulassung" value={formatDate(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
+                      <InfoItem label="Erstzulassung" value={formatMonthYear(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
                       <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString()} />
                       <InfoItem label="Hubraum" value={motorhome.engine_displacement_ccm ? `${motorhome.engine_displacement_ccm} ccm` : "—"} />

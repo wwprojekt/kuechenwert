@@ -860,7 +860,7 @@ export const useWizardForm = () => {
         transmission: isWohnwagen ? null : (formData.transmission || null),
         emission_class: isWohnwagen ? null : (formData.emission_class || null),
         tuev_valid_until: formData.tuv_valid_until || null,
-        first_registration: formData.first_registration || null,
+        first_registration: formData.first_registration ? `${formData.first_registration.substring(0, 7)}-01` : null,
         previous_owners: formData.previous_owners ?? null,
         accident_free: formData.accident_free,
         non_smoker: formData.non_smoker,

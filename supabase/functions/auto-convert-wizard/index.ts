@@ -45,7 +45,7 @@ function mapWizardToMotorhome(formData: Record<string, any>) {
     engine_power_hp: isWohnwagen ? null : (formData.power_ps ? Number(formData.power_ps) : (formData.enginePower ? Number(formData.enginePower) : null)),
     engine_displacement_ccm: isWohnwagen ? null : (formData.engine_displacement_ccm ? Number(formData.engine_displacement_ccm) : null),
     emission_class: isWohnwagen ? null : (formData.emission_class || formData.emissionClass || null),
-    first_registration: formData.first_registration ? String(formData.first_registration) : null,
+    first_registration: formData.first_registration ? `${String(formData.first_registration).substring(0, 7)}-01` : null,
     tuev_valid_until: formData.tuv_valid_until || formData.tuev_valid_until ? String(formData.tuv_valid_until || formData.tuev_valid_until) : null,
     previous_owners: formData.previous_owners != null ? Number(formData.previous_owners) : null,
     accident_free: formData.accident_free != null ? Boolean(formData.accident_free) : null,

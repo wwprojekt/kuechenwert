@@ -205,7 +205,7 @@ export default function ListingEdit() {
         engine_power_hp: motorhome.engine_power_hp?.toString() || "",
         transmission: motorhome.transmission || "",
         emission_class: motorhome.emission_class || "",
-        first_registration: motorhome.first_registration || "",
+        first_registration: motorhome.first_registration ? motorhome.first_registration.substring(0, 7) : "",
         last_tuev_date: motorhome.last_tuev_date ? motorhome.last_tuev_date.substring(0, 7) : "",
         tuev_valid_until: motorhome.tuev_valid_until ? motorhome.tuev_valid_until.substring(0, 7) : "",
         previous_owners: motorhome.previous_owners?.toString() || "",
@@ -301,7 +301,7 @@ export default function ListingEdit() {
         engine_power_hp: data.engine_power_hp ? Number(data.engine_power_hp) : null,
         transmission: data.transmission || null,
         emission_class: data.emission_class || null,
-        first_registration: data.first_registration || null,
+        first_registration: data.first_registration ? `${data.first_registration}-01` : null,
         last_tuev_date: data.last_tuev_date ? `${data.last_tuev_date}-01` : null,
         tuev_valid_until: data.tuev_valid_until ? `${data.tuev_valid_until}-01` : null,
         previous_owners: data.previous_owners ? Number(data.previous_owners) : null,
@@ -711,10 +711,12 @@ export default function ListingEdit() {
                     <Input id="fuel_tank_capacity_liters" type="number" value={formData.fuel_tank_capacity_liters} onChange={(e) => setFormData({ ...formData, fuel_tank_capacity_liters: e.target.value })} placeholder="z.B. 90" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="first_registration">Erstzulassung</Label>
-                    <Input id="first_registration" type="date" value={formData.first_registration} onChange={(e) => setFormData({ ...formData, first_registration: e.target.value })} />
-                  </div>
+                  <MonthYearPicker
+                    id="first_registration"
+                    label="Erstzulassung"
+                    value={formData.first_registration}
+                    onChange={(val) => setFormData({ ...formData, first_registration: val })}
+                  />
 
                   <MonthYearPicker
                     id="last_tuev_date"

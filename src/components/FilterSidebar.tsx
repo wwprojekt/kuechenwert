@@ -117,7 +117,12 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
               <Filter className="h-5 w-5 text-primary" />
               Filter
             </CardTitle>
-            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={resetFilters}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-sm min-h-[36px] px-3"
+              onClick={resetFilters}
+            >
               Zurücksetzen
             </Button>
           </div>

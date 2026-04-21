@@ -880,12 +880,15 @@ export default function ListingDetail() {
       <Card className="border-2">
         <CardContent className="p-6">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
-              <TabsTrigger value="basic">Basis</TabsTrigger>
-              <TabsTrigger value="technical">Technik</TabsTrigger>
-              <TabsTrigger value="dimensions">Maße</TabsTrigger>
-              <TabsTrigger value="interior">Innenraum</TabsTrigger>
-              <TabsTrigger value="equipment">Ausstattung</TabsTrigger>
+            {/* Mobile: horizontale Scroll-Leiste (Pattern aus MotorhomeEditDialog),
+                damit fünf Tabs nicht in zwei Zeilen umbrechen oder auf 33% Breite
+                zusammengequetscht werden. Tablet+ (sm:): klassisches Grid. */}
+            <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-5 h-auto flex-nowrap justify-start sm:justify-stretch">
+              <TabsTrigger value="basic" className="shrink-0 sm:shrink">Basis</TabsTrigger>
+              <TabsTrigger value="technical" className="shrink-0 sm:shrink">Technik</TabsTrigger>
+              <TabsTrigger value="dimensions" className="shrink-0 sm:shrink">Maße</TabsTrigger>
+              <TabsTrigger value="interior" className="shrink-0 sm:shrink">Innenraum</TabsTrigger>
+              <TabsTrigger value="equipment" className="shrink-0 sm:shrink">Ausstattung</TabsTrigger>
             </TabsList>
 
             {/* Basic Tab */}
@@ -946,7 +949,7 @@ export default function ListingDetail() {
                   <Separator className="my-6" />
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Beschreibung</h3>
-                    <p className="text-foreground whitespace-pre-wrap">{motorhome.description}</p>
+                    <p className="text-foreground whitespace-pre-wrap break-words">{motorhome.description}</p>
                   </div>
                 </>
               )}
@@ -1299,7 +1302,7 @@ export default function ListingDetail() {
               {motorhome.additional_equipment && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Zusätzliche Ausstattung</p>
-                  <p className="text-sm whitespace-pre-wrap">{motorhome.additional_equipment}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{motorhome.additional_equipment}</p>
                 </div>
               )}
             </TabsContent>
@@ -1685,7 +1688,7 @@ export default function ListingDetail() {
               <div className="space-y-3">
                 {addenda.map((item: any) => (
                   <div key={item.id} className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900">
-                    <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+                    <p className="text-sm whitespace-pre-wrap break-words">{item.content}</p>
                     <p className="text-xs text-muted-foreground mt-2">
                       Veröffentlicht am {format(new Date(item.created_at), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
                     </p>

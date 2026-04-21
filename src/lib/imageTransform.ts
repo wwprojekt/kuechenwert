@@ -29,6 +29,46 @@ const STORAGE_PUBLIC_MARKER = '/storage/v1/object/public/';
 const STORAGE_RENDER_MARKER = '/storage/v1/render/image/public/';
 
 /**
+ * Cloudflare Worker Image-Proxy Hostname.
+ *
+ * Warum: Supabase Storage's /object/public/ Endpoint sendet HARDCODED
+ * `Cache-Control: no-cache`, unabhängig von dem `cacheControl`-Param beim
+ * Upload. Folge: Cloudflare CDN bypassed den Edge-Cache (`REVALIDATED` auf
+ * jedem Request) → 700ms-2.4s Latenz pro Bild bei jedem Page-Load.
+ *
+ * Lösung: Worker `caravanwert.de/img/<bucket>/<path>` proxied das Bild und
+ * überschreibt Cache-Control mit `max-age=31536000, immutable`. Cloudflare
+ * cached dann 1 Jahr im Edge → <50ms HIT global.
+ *
+ * In DEV (Vite localhost) bleibt es bei Original-URLs, da der Worker nur auf
+ * caravanwert.de läuft.
+ */
+const IMAGE_PROXY_HOST = import.meta.env.DEV ? null : 'https://caravanwert.de';
+
+/**
+ * Wandelt eine Supabase Storage Public-URL in eine /img/-Proxy-URL um, die
+ * über den Cloudflare Worker geht und CDN-cached wird.
+ *
+ * - Public-Storage-URLs (`/storage/v1/object/public/...`) → `caravanwert.de/img/...`
+ * - Render-Image-URLs (`/storage/v1/render/image/public/...`) → unverändert
+ *   (haben eigene Cache-Header von Supabase Image Transformation)
+ * - Externe URLs, signed URLs, leere Strings → unverändert
+ * - DEV-Mode (Vite) → unverändert (Worker läuft nur auf caravanwert.de)
+ *
+ * Sicher zu callen mit beliebigem String — niemals Crash, niemals Bruch.
+ */
+export function proxiedImageUrl(
+  url: string | null | undefined,
+): string {
+  if (!url || typeof url !== 'string') return url ?? '';
+  if (!IMAGE_PROXY_HOST) return url;
+  const idx = url.indexOf(STORAGE_PUBLIC_MARKER);
+  if (idx === -1) return url;
+  const subPath = url.substring(idx + STORAGE_PUBLIC_MARKER.length);
+  return `${IMAGE_PROXY_HOST}/img/${subPath}`;
+}
+
+/**
  * Erzeugt eine transformierte Storage-URL. Nicht-Supabase-URLs (z. B. externe Fallback-Bilder
  * oder Branding-CDN) werden unverändert zurückgegeben.
  */

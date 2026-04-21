@@ -10,12 +10,19 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { StablePriceBadge } from "@/components/StablePriceBadge";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNow } from "@/hooks/useNow";
+import { proxiedImageUrl } from "@/lib/imageTransform";
 // Image transform removed 2026-04-20 — Supabase Image Transform quota was
 // being burned ($5/1000 origin images/mo, scaling with views). Replacement
 // solution = pre-resize at upload (see upload-wizard-photos), which generates
-// card_url + medium_url variants stored as static files. Until that lands,
-// we serve the original Storage URL directly. Slightly bigger payload (~150KB
-// vs ~50KB per card) but zero recurring cost and zero transformation latency.
+// card_url + medium_url variants stored as static files.
+//
+// 2026-04-21: Zusätzlich Cloudflare Worker /img/-Proxy aktiviert. Supabase
+// Storage's /object/public/ liefert hardcoded `Cache-Control: no-cache` →
+// CF Edge bypassed → 700ms-2.4s Origin-Roundtrip pro Bild. Mit Proxy:
+// 1. Visit Origin-Roundtrip, alle weiteren <50ms HIT weltweit.
+// proxiedImageUrl() ist idempotent — wenn der Caller schon eine /img/-URL
+// liefert (z.B. via Cloudflare Worker /api/auctions/active), bleibt sie wie
+// sie ist.
 
 /**
  * Sizes-Hinweis für die Karten-Hero-Images. Spiegelt das Grid in Kaufen.tsx
@@ -252,6 +259,14 @@ const MotorhomeCard = ({
   // Softer pulse for critical (5-15 min)
   const shouldPulse = urgency === 'critical';
 
+  // Bilder durch CF-Worker /img/-Proxy leiten (überschreibt Supabase no-cache).
+  // Pass-through für Nicht-Storage-URLs und in DEV-Mode.
+  const proxiedImage = useMemo(() => proxiedImageUrl(image), [image]);
+  const proxiedImageMedium = useMemo(
+    () => (imageMedium ? proxiedImageUrl(imageMedium) : null),
+    [imageMedium],
+  );
+
   return (
     <Card className={`group overflow-hidden border-2 bg-card hover:border-primary transition-all duration-300 hover-lift flex flex-col h-full ${isEnded && !isSold ? 'opacity-70' : ''} ${isHotbid && !isEnded ? 'border-destructive/50 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : ''}`}>
       <Link to={linkTo}>
@@ -328,9 +343,9 @@ const MotorhomeCard = ({
 
           {/* Image */}
           <div className="aspect-[4/3] overflow-hidden bg-muted">
-            {image ? (
+            {proxiedImage ? (
               <img
-                src={image}
+                src={proxiedImage}
                 // srcset mit zwei Auflösungen, damit der Browser das richtige
                 // Bild für die Pixel-Density wählt:
                 //  - 480w  → DPR 1 auf Karten ~280-360px breit
@@ -339,8 +354,8 @@ const MotorhomeCard = ({
                 // `image` als 480w + nochmal als 1024w zurück (kein Bruch,
                 // Browser nimmt schlicht die einzig vorhandene Auflösung).
                 srcSet={
-                  imageMedium && imageMedium !== image
-                    ? `${image} 480w, ${imageMedium} 1024w`
+                  proxiedImageMedium && proxiedImageMedium !== proxiedImage
+                    ? `${proxiedImage} 480w, ${proxiedImageMedium} 1024w`
                     : undefined
                 }
                 sizes="(min-width: 1280px) 360px, (min-width: 1024px) 320px, (min-width: 640px) 50vw, 100vw"

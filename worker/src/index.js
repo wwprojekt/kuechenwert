@@ -292,7 +292,10 @@ async function renderWithRestApi(url, env) {
 // können ohne KV-Purge.
 
 const AUCTIONS_API_PATH = "/api/auctions/active";
-const AUCTIONS_CACHE_KEY = "api:auctions:active:v2";
+// v3 (2026-04-21): photoMap URLs jetzt durch /img/-Proxy geleitet → alter
+// Cache mit raw Supabase-URLs muss rotiert werden, sonst landen User noch
+// 5 Min lang auf den langsamen no-cache-URLs.
+const AUCTIONS_CACHE_KEY = "api:auctions:active:v3";
 const AUCTIONS_FRESH_MS = 30 * 1000;   // 30 s frisch
 const AUCTIONS_STALE_MS = 90 * 1000;   // 90 s gesamt (60 s SWR-Fenster)
 const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
@@ -308,6 +311,30 @@ const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
 const STORAGE_OBJECT_PREFIX = "/storage/v1/object/public/";
 const STORAGE_RENDER_PREFIX = "/storage/v1/render/image/public/";
 
+// Image-Proxy: caravanwert.de/img/<bucket>/<path> → Supabase Storage Public-URL.
+//
+// Warum: Supabase Storage's /object/public/ Endpoint sendet HARDCODED
+// `Cache-Control: no-cache`, unabhängig von dem was wir beim Upload setzen.
+// Folge: Cloudflare CDN bypasst den Edge-Cache (`cf-cache-status: REVALIDATED`
+// auf jedem Request) → jeder User-Request triggert einen Origin-Roundtrip
+// zu Supabase (700ms-2.4s pro Bild gemessen 2026-04-21).
+//
+// Lösung: Worker fetched das Bild von Supabase EINMAL, liefert es mit
+// `Cache-Control: public, max-age=31536000, immutable` zurück, und Cloudflare
+// cached es 1 Jahr im Edge. Subsequent Requests: <50ms HIT weltweit.
+//
+// Sicherheit: Wir proxien NUR /storage/v1/object/public/ — keine signed URLs,
+// keine privaten Buckets. Path-Traversal (`..`, `\`) wird gefiltert.
+const IMAGE_PROXY_PREFIX = "/img/";
+
+function proxiedImageUrl(supabaseUrl) {
+  if (!supabaseUrl || typeof supabaseUrl !== "string") return supabaseUrl;
+  const idx = supabaseUrl.indexOf(STORAGE_OBJECT_PREFIX);
+  if (idx === -1) return supabaseUrl;
+  const subPath = supabaseUrl.substring(idx + STORAGE_OBJECT_PREFIX.length);
+  return `https://caravanwert.de${IMAGE_PROXY_PREFIX}${subPath}`;
+}
+
 function transformImageUrl(originalUrl, width, quality) {
   if (!originalUrl || typeof originalUrl !== "string") return originalUrl;
   // Funktioniert nur für Public-Bucket-URLs (motorhome-photos).
@@ -316,6 +343,78 @@ function transformImageUrl(originalUrl, width, quality) {
   const transformed = originalUrl.replace(STORAGE_OBJECT_PREFIX, STORAGE_RENDER_PREFIX);
   const sep = transformed.includes("?") ? "&" : "?";
   return `${transformed}${sep}width=${width}&quality=${quality}&resize=contain`;
+}
+
+async function handleImageProxy(request, env, ctx) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  const url = new URL(request.url);
+  // /img/<bucket>/<path> → bucket/path
+  const subPath = url.pathname.substring(IMAGE_PROXY_PREFIX.length);
+
+  // Path-Traversal verhindern, leere Pfade ablehnen.
+  if (!subPath || subPath.includes("..") || subPath.includes("\\")) {
+    return new Response("Bad Request", { status: 400 });
+  }
+
+  // Cache-API: hostet die transformierte Antwort 1 Jahr im CF Edge,
+  // unabhängig vom Upstream-Cache-Control-Header.
+  const cache = caches.default;
+  const cacheKey = new Request(`https://caravanwert.de${url.pathname}`, {
+    method: "GET",
+  });
+
+  let cached = await cache.match(cacheKey);
+  if (cached) {
+    // Edge HIT — Response liefert direkt aus dem CF-Edge-Cache (<50 ms global).
+    // Headers neu bauen damit wir x-image-proxy=HIT setzen können (Response
+    // headers sind in CF Workers immutable, deshalb kein direktes set).
+    const headers = new Headers(cached.headers);
+    headers.set("x-image-proxy", "HIT");
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers,
+    });
+  }
+
+  // Edge MISS — von Supabase Storage holen.
+  const upstreamUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${subPath}`;
+  const upstreamRes = await fetch(upstreamUrl, {
+    cf: {
+      // CF eigener Image-Cache zusätzlich aktivieren, ignoriert Origin-Header.
+      cacheTtl: 31536000,
+      cacheEverything: true,
+    },
+  });
+
+  if (!upstreamRes.ok) {
+    // Errors NICHT cachen — wenn das Bild später existiert, soll es geladen werden.
+    return new Response("Image not found", {
+      status: upstreamRes.status,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
+  // Neue Response mit überschriebenen Cache-Headers bauen.
+  // Body komplett lesen damit wir 2× verwenden können (Response + Cache.put).
+  const body = await upstreamRes.arrayBuffer();
+  const response = new Response(body, {
+    status: 200,
+    headers: {
+      "content-type":
+        upstreamRes.headers.get("content-type") || "application/octet-stream",
+      "cache-control": "public, max-age=31536000, immutable",
+      "x-image-proxy": "MISS",
+      "access-control-allow-origin": "*",
+    },
+  });
+
+  // Im Edge cachen — non-blocking, damit der User nicht warten muss.
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
 }
 
 function corsHeaders() {
@@ -408,16 +507,20 @@ async function fetchAuctionsFromSupabase(env) {
           // (löst die "5 MB JPG"-Loads für noch unprozessierte Photos).
           // Weiterer Fallback: Raw-Original (nur falls Original-URL fehlt
           // ODER nicht im public bucket liegt, sehr selten).
-          const small = p.card_url
+          const smallRaw = p.card_url
             ? p.card_url
             : (p.url ? transformImageUrl(p.url, 480, 70) : p.medium_url);
-          const medium = p.medium_url
+          const mediumRaw = p.medium_url
             ? p.medium_url
             : (p.url ? transformImageUrl(p.url, 1024, 75) : null);
 
+          // Durch unseren CF-Worker /img/-Proxy leiten — überschreibt
+          // Supabase Storage's no-cache mit max-age=1Jahr → 1 Jahr CF-Edge-HIT.
+          // On-the-fly /render/image/-URLs bleiben unverändert (proxiedImageUrl
+          // matched nur /object/public/), die haben eigene CF-Cache-Headers.
           photoMap[p.motorhome_id] = {
-            url: small,
-            medium_url: medium,
+            url: proxiedImageUrl(smallRaw),
+            medium_url: proxiedImageUrl(mediumRaw),
             display_order: 0
           };
         }
@@ -542,6 +645,12 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const userAgent = request.headers.get("user-agent") || "";
+
+    // ── Image-Proxy: /img/* (höchste Priorität, vor allem anderen) ──
+    // Überschreibt Supabase Storage's no-cache mit max-age=1Jahr.
+    if (url.pathname.startsWith(IMAGE_PROXY_PREFIX)) {
+      return handleImageProxy(request, env, ctx);
+    }
 
     // ── Edge-API-Cache: /api/auctions/active (vor allen anderen Checks) ──
     // Wir behandeln auch OPTIONS hier, daher steht es vor dem GET-Filter.

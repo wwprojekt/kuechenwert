@@ -14,10 +14,30 @@ import "./index.css";
 // Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen
 z.setErrorMap(germanZodErrorMap);
 
-// Globale Fehler-Handler installieren: Fängt ALLE ungefangenen Fehler
-// und sendet sie an die error_logs Tabelle für das Admin-Dashboard
 installGlobalErrorHandlers();
 initBreadcrumbTracking();
+
+// Auto-Reload bei lazy-chunk Ladefehlern.
+//
+// Wenn Dokploy ein neues Build deployt, ist die index.html ggf. schon mit den
+// neuen Asset-Hashes ausgeliefert, bevor die Chunks selbst hochgeladen sind
+// (atomisches Replacement gibt es bei Dokploy/Docker-Volume-Mounts nicht).
+// User die in dem 30-90s Fenster klicken bekommen einen 404 für ihren Chunk.
+// Cloudflare cached diesen 404 mit max-age=31536000 (Asset-Cache-Header) und
+// die Page bleibt fuer diesen Edge-PoP fuer Stunden kaputt.
+//
+// vite:preloadError feuert sobald ein dynamic import 404 oder Network-Error
+// liefert. Wir reloaden dann die Page → Browser holt frische index.html mit
+// den dann mittlerweile korrekten Hashes. User sieht max. 1-2s Flicker.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  if (sessionStorage.getItem("vite-preload-reload") === "1") {
+    return;
+  }
+  sessionStorage.setItem("vite-preload-reload", "1");
+  setTimeout(() => sessionStorage.removeItem("vite-preload-reload"), 10_000);
+  window.location.reload();
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

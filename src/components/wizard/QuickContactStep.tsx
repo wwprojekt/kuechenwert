@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { User, Mail, Phone, CheckCircle2 } from "lucide-react";
+import { User, Mail, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuickContactStepProps {
@@ -81,39 +81,13 @@ export const QuickContactStep = ({
           )}
         </div>
 
-        {/* Telefon optional – Lead-Recovery für Step 6/7-Abbrecher.
-            Pflicht-Validierung erst in Step 7 (SaleChannelStep). */}
-        <div className="space-y-2">
-          <Label htmlFor="customerPhoneEarly" className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            Telefon
-            <span className="text-xs text-muted-foreground font-normal ml-1">
-              (optional)
-            </span>
-          </Label>
-          <Input
-            id="customerPhoneEarly"
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="+49 123 456789"
-            value={formData.customerPhone || ""}
-            onChange={(e) => updateFormData({ customerPhone: e.target.value })}
-            className={cn(fieldErrors.customerPhone && "border-destructive")}
-            aria-invalid={!!fieldErrors.customerPhone}
-            aria-describedby={fieldErrors.customerPhone ? "customerPhone-early-error" : undefined}
-          />
-          {fieldErrors.customerPhone && (
-            <p id="customerPhone-early-error" className="text-xs text-destructive" role="alert">
-              {fieldErrors.customerPhone}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground leading-snug">
-            Sichern Sie sich schnellere Rückfragen vom Sales-Team und ein
-            persönliches Angebot. Wird nicht öffentlich angezeigt.
-          </p>
-        </div>
+        {/* Telefon wird bewusst NICHT mehr hier abgefragt – das zusätzliche
+            (auch optionale) Feld hat in Step 5 als Conversion-Killer gewirkt.
+            Pflicht-Erfassung passiert in Step 7 (SaleChannelStep) im Kontext
+            des Verkaufswegs, wo die Bereitschaft zur Telefon-Eingabe spürbar
+            höher ist. Step 8 hat phoneSchema als Defense-in-Depth gegen
+            URL-Hacks (?step=8) – der Lead-Funnel bleibt also nach wie vor
+            vollständig abgesichert, nur ohne früh zu schrecken. */}
 
         {isAuthenticated && formData.customerName && formData.customerEmail && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">

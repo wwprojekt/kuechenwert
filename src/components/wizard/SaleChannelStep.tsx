@@ -281,6 +281,29 @@ export const SaleChannelStep = ({ formData, updateFormData, fieldErrors = {} }: 
         </div>
       )}
 
+      {/* Info-Block für Ankaufstation: erklärt den Ablauf, baut Vertrauen auf
+          und stellt klar, dass die Anfahrt nicht selbst recherchiert werden
+          muss. Ohne diesen Block bleibt unklar, was nach der Auswahl passiert
+          (User-Feedback: „Welche Station? Wo? Was kostet es?"). */}
+      {formData.saleChannel === "station" && (
+        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-3 sm:p-4 space-y-2 animate-fade-in">
+          <p className="text-sm font-semibold text-green-800 dark:text-green-200 flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 flex-shrink-0" />
+            So funktioniert die Ankaufstation
+          </p>
+          <ol className="text-xs sm:text-sm text-green-900/90 dark:text-green-100/90 space-y-1 list-decimal pl-5 leading-relaxed">
+            <li>Wir prüfen Ihre Angaben und schlagen Ihnen die nächstgelegene Station vor.</li>
+            <li>Sie vereinbaren einen unverbindlichen Termin – kostenfrei und ohne Vorab-Gebühr.</li>
+            <li>Vor Ort: Begutachtung, verbindliches Angebot und bei Annahme Auszahlung am selben Tag.</li>
+          </ol>
+          <p className="text-xs text-green-800/80 dark:text-green-200/80 leading-snug pt-1">
+            <span className="font-medium">Hinweis:</span> Stationen sind aktuell in vielen Regionen Deutschlands
+            verfügbar. Sollte keine Station in Ihrer Nähe sein, melden wir uns mit einer Alternative
+            (z. B. Händler-Auktion oder Sofortpreis).
+          </p>
+        </div>
+      )}
+
       {/* Telefon + Bestätigung der bereits erfassten Kontaktdaten */}
       <div className="space-y-4">
         <h3 className="text-base font-semibold">Telefonnummer für Rückfragen</h3>

@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WizardFormData } from "@/hooks/useWizardForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Settings, Home, Sun, Tent, Tv, Camera, ParkingCircle, Battery, Lock, Shield, Snowflake, Users, Truck, ClipboardCheck, ChevronDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { baseVehicles, getPowerOptionsForBaseVehicle, formatPower, psToKw } from "@/lib/vehicle-data";
@@ -74,9 +74,28 @@ const MonthYearPicker = ({ label, value, onChange, futureYears = 0 }: {
   );
 };
 
+// Die ~3 mit Abstand haeufigsten Wohnmobil-Chassis (vgl. Sevel-Plattform-Anteil
+// am DE-Markt + interne wizard_sessions-Auswertung). Diese als Quick-Pick-Chips
+// ueber dem Dropdown zeigen, damit ~80% der Nutzer das 33-Optionen-Menue gar
+// nicht oeffnen muessen.
+const TOP_BASE_VEHICLES = ["Fiat Ducato", "Mercedes Sprinter", "Ford Transit"] as const;
+
+// Bei vielen PS-Optionen (z.B. Iveco Daily mit 12) fluten die Chips auf Mobile
+// 3-4 Zeilen und wirken ueberfordernd. Daher: standardmaessig max.
+// PS_CHIPS_VISIBLE anzeigen, der Rest wird per "+N weitere" Toggle eingeblendet.
+const PS_CHIPS_VISIBLE = 5;
+
 export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) => {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
   const [showEquipment, setShowEquipment] = useState(false);
+  const [showAllPs, setShowAllPs] = useState(false);
+
+  // Wenn der User das Basisfahrzeug wechselt, wieder auf die kompakte
+  // Chip-Ansicht zuruecksetzen, sonst startet die Liste bereits voll
+  // geoeffnet, obwohl es nun nur noch wenige PS-Werte gibt.
+  useEffect(() => {
+    setShowAllPs(false);
+  }, [formData.baseVehicle]);
 
   return (
     <div className="space-y-3 sm:space-y-5 animate-fade-in">
@@ -157,13 +176,40 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
               <Truck className="w-4 h-4 text-primary" />
               Basisfahrzeug / Chassis
             </Label>
+
+            {/* Top-3 Quick-Pick Chips: deckt empirisch ~80% der Wohnmobile ab
+                (Sevel-Plattform = Fiat Ducato / Citroen / Peugeot, Mercedes
+                Sprinter, Ford Transit). Wer einen davon hat, klickt 1x und
+                muss das lange Dropdown nie oeffnen - primaerer Hebel fuer die
+                Mobile-Conversion in diesem Step. */}
+            <div className="flex flex-wrap gap-2">
+              {TOP_BASE_VEHICLES.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() =>
+                    updateFormData({ baseVehicle: label, power_ps: null, power_kw: null })
+                  }
+                  aria-pressed={formData.baseVehicle === label}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap min-h-[36px] active:scale-[0.97]",
+                    formData.baseVehicle === label
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Select
                 value={formData.baseVehicle || ""}
                 onValueChange={(value) => updateFormData({ baseVehicle: value, power_ps: null, power_kw: null })}
               >
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="z.B. Fiat Ducato" />
+                  <SelectValue placeholder="Anderes Chassis waehlen..." />
                 </SelectTrigger>
                 <SelectContent>
                   {baseVehicles.map(bv => (
@@ -177,28 +223,46 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                   Sessions/90 Tage, weil exotische PS-Werte (Tuning-Chips, sehr alte
                   Generationen) keine Wahl hatten. */}
               <div className="space-y-2">
-                {formData.baseVehicle && getPowerOptionsForBaseVehicle(formData.baseVehicle).length > 0 && (
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {getPowerOptionsForBaseVehicle(formData.baseVehicle).map(ps => (
-                      <button
-                        key={ps}
-                        type="button"
-                        onClick={() => {
-                          const newPs = formData.power_ps === ps ? null : ps;
-                          updateFormData({ power_ps: newPs, power_kw: newPs ? psToKw(newPs) : null });
-                        }}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap",
-                          formData.power_ps === ps
-                            ? "bg-primary text-white border-primary shadow-sm"
-                            : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
-                        )}
-                      >
-                        {formatPower(ps)}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {formData.baseVehicle && (() => {
+                  const allPsOptions = getPowerOptionsForBaseVehicle(formData.baseVehicle);
+                  if (allPsOptions.length === 0) return null;
+                  const visiblePsOptions = showAllPs
+                    ? allPsOptions
+                    : allPsOptions.slice(0, PS_CHIPS_VISIBLE);
+                  const hiddenCount = allPsOptions.length - PS_CHIPS_VISIBLE;
+                  return (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {visiblePsOptions.map((ps) => (
+                        <button
+                          key={ps}
+                          type="button"
+                          onClick={() => {
+                            const newPs = formData.power_ps === ps ? null : ps;
+                            updateFormData({ power_ps: newPs, power_kw: newPs ? psToKw(newPs) : null });
+                          }}
+                          aria-pressed={formData.power_ps === ps}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 transition-all whitespace-nowrap min-h-[36px] active:scale-[0.97]",
+                            formData.power_ps === ps
+                              ? "bg-primary text-white border-primary shadow-sm"
+                              : "bg-card border-border hover:border-primary/50 hover:bg-primary/5"
+                          )}
+                        >
+                          {formatPower(ps)}
+                        </button>
+                      ))}
+                      {!showAllPs && hiddenCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllPs(true)}
+                          className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border-2 border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all whitespace-nowrap min-h-[36px]"
+                        >
+                          + {hiddenCount} weitere
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"

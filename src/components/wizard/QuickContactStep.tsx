@@ -44,9 +44,13 @@ export const QuickContactStep = ({
             value={formData.customerName || ""}
             onChange={(e) => updateFormData({ customerName: e.target.value })}
             className={cn(fieldErrors.customerName && "border-destructive")}
+            aria-invalid={!!fieldErrors.customerName}
+            aria-describedby={fieldErrors.customerName ? "customerName-error" : undefined}
           />
           {fieldErrors.customerName && (
-            <p className="text-xs text-destructive">{fieldErrors.customerName}</p>
+            <p id="customerName-error" className="text-xs text-destructive" role="alert">
+              {fieldErrors.customerName}
+            </p>
           )}
         </div>
 
@@ -67,9 +71,13 @@ export const QuickContactStep = ({
             value={formData.customerEmail || ""}
             onChange={(e) => updateFormData({ customerEmail: e.target.value })}
             className={cn(fieldErrors.customerEmail && "border-destructive")}
+            aria-invalid={!!fieldErrors.customerEmail}
+            aria-describedby={fieldErrors.customerEmail ? "customerEmail-error" : undefined}
           />
           {fieldErrors.customerEmail && (
-            <p className="text-xs text-destructive">{fieldErrors.customerEmail}</p>
+            <p id="customerEmail-error" className="text-xs text-destructive" role="alert">
+              {fieldErrors.customerEmail}
+            </p>
           )}
         </div>
 
@@ -93,9 +101,13 @@ export const QuickContactStep = ({
             value={formData.customerPhone || ""}
             onChange={(e) => updateFormData({ customerPhone: e.target.value })}
             className={cn(fieldErrors.customerPhone && "border-destructive")}
+            aria-invalid={!!fieldErrors.customerPhone}
+            aria-describedby={fieldErrors.customerPhone ? "customerPhone-early-error" : undefined}
           />
           {fieldErrors.customerPhone && (
-            <p className="text-xs text-destructive">{fieldErrors.customerPhone}</p>
+            <p id="customerPhone-early-error" className="text-xs text-destructive" role="alert">
+              {fieldErrors.customerPhone}
+            </p>
           )}
           <p className="text-xs text-muted-foreground leading-snug">
             Sichern Sie sich schnellere Rückfragen vom Sales-Team und ein

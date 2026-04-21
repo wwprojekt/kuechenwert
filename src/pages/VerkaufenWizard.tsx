@@ -314,9 +314,18 @@ const VerkaufenWizard = () => {
       setCurrentStep(7);
       return;
     }
-    // Telefon ist Pflicht ab Step 8 (wird in Step 7 erfasst). Schutz gegen
-    // ?step=8 URL-Hacks bei leerem Telefon-Feld.
-    if (!formData.customerPhone && currentStep > 7) {
+    // Telefon ist Pflicht ab Step 8. Wir prüfen hier sowohl auf "leer" als
+    // auch auf "syntaktisch unbrauchbar" (mind. 6 Ziffern, gültiges Format).
+    // Sonst landet der User auf Step 8, klickt Submit, bekommt einen Toast
+    // "Telefonnummer ungültig", sieht aber kein Phone-Feld weil das nur
+    // auf Step 7 sichtbar ist – und ist verwirrt. Lieber direkt zurück
+    // zu dem Step der das Phone-Feld zeigt.
+    const phone = formData.customerPhone?.trim() ?? "";
+    const phoneValid =
+      phone.length >= 5 &&
+      /^[+()\d\s\-/.]{6,}$/.test(phone) &&
+      (phone.match(/\d/g) || []).length >= 6;
+    if (!phoneValid && currentStep > 7) {
       setCurrentStep(7);
     }
   }, [
@@ -396,14 +405,26 @@ const VerkaufenWizard = () => {
 
   // Scroll to the first invalid field after a failed validation. We wait one
   // animation frame so the field-error CSS classes are rendered first, then
-  // pick whichever marker exists: aria-invalid, role=alert, or the red border.
+  // pick whichever marker exists: aria-invalid, role=alert, or any of the
+  // red-border conventions used across wizard steps.
   // Without this, the validation toast pops up but the actual error (e.g. the
   // marketing-consent checkbox 600px down on step 8) stays off-screen and
   // confuses the user.
+  //
+  // Selector covers:
+  //   - aria-invalid="true"        a11y-conform (set in step 8 + step 5)
+  //   - role="alert"               error message paragraphs (marketing consent)
+  //   - .border-red-500            steps 2, 7, 8 input fields on error
+  //   - .border-destructive        step 5 (QuickContactStep) input fields
+  // We scope to the wizard container to avoid catching stale UI from other
+  // areas of the page (e.g. status badges in the sidebar). The Card with
+  // role="region" wraps every step's content.
   const scrollToFirstError = () => {
     requestAnimationFrame(() => {
-      const target = document.querySelector(
-        '[aria-invalid="true"], [role="alert"], .border-red-500',
+      const wizardRoot =
+        (document.querySelector('[role="region"][aria-live="polite"]') as HTMLElement | null) ?? document;
+      const target = wizardRoot.querySelector(
+        '[aria-invalid="true"], [role="alert"], .border-red-500, .border-destructive',
       ) as HTMLElement | null;
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -664,6 +685,21 @@ const VerkaufenWizard = () => {
                   </span>
                 </div>
 
+                {/* Bot-Protection (Honeypot + Turnstile) – einmalig zentral
+                    gerendert, damit beide CTA-Blöcke (Desktop hidden sm:flex
+                    und Mobile sm:hidden Sticky-Bottom) auf denselben Token
+                    bzw. Honeypot-State zugreifen. Vorher wurde HoneypotField
+                    in beiden Blöcken gerendert -> duplicate id="hp_website"
+                    im DOM. Turnstile war zudem nur im Desktop-Block, sodass
+                    Mobile-User effektiv ohne Cloudflare-Bot-Schutz
+                    submitteten (Honeypot allein blieb wirksam). */}
+                {isLastStep && (
+                  <div className="mt-2">
+                    <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
+                    <div ref={turnstileCallbackRef} className="flex justify-center" />
+                  </div>
+                )}
+
                 {/* Navigation Buttons — desktop inline, mobile sticky bottom */}
                 <div className="hidden sm:flex gap-4 justify-between">
                   <Button
@@ -678,19 +714,15 @@ const VerkaufenWizard = () => {
                   </Button>
 
                   {isLastStep ? (
-                    <>
-                      <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-                      <div ref={turnstileCallbackRef} />
-                      <Button
-                        size="lg"
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="gradient-hero hover:gradient-hero-hover min-h-[52px] text-base"
-                      >
-                        {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
-                        <Check className="w-4 h-4 ml-2" />
-                      </Button>
-                    </>
+                    <Button
+                      size="lg"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="gradient-hero hover:gradient-hero-hover min-h-[52px] text-base"
+                    >
+                      {isSubmitting ? "Wird gesendet..." : "Kostenloses Angebot anfordern"}
+                      <Check className="w-4 h-4 ml-2" />
+                    </Button>
                   ) : (
                     <Button
                       size="lg"
@@ -814,18 +846,15 @@ const VerkaufenWizard = () => {
           </div>
         )}
         {isLastStep ? (
-          <>
-            <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
-            <Button
-              size="lg"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="gradient-hero hover:gradient-hero-hover w-full min-h-[48px] text-base"
-            >
-              {isSubmitting ? "Wird gesendet..." : "Angebot anfordern"}
-              <Check className="w-4 h-4 ml-2" />
-            </Button>
-          </>
+          <Button
+            size="lg"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="gradient-hero hover:gradient-hero-hover w-full min-h-[48px] text-base"
+          >
+            {isSubmitting ? "Wird gesendet..." : "Angebot anfordern"}
+            <Check className="w-4 h-4 ml-2" />
+          </Button>
         ) : (
           <Button
             size="lg"

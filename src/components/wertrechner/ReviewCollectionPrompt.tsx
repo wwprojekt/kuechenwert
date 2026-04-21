@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { Star, X, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -424,7 +425,13 @@ export function ReviewCollectionPrompt({
             </div>
             <p className="text-[10px] text-muted-foreground">
               Wir veröffentlichen Bewertungen nur nach kurzer Prüfung. Name + Ort erscheinen
-              (falls angegeben), weitere Daten bleiben intern.
+              (falls angegeben). Zusätzlich speichern wir technische Daten (Browser-Kennung,
+              eine zufällige Sitzungs-ID) zur Spam-Abwehr — diese werden nach 30 Tagen
+              automatisch gelöscht. Mehr in unserer{" "}
+              <Link to="/datenschutz" className="underline hover:text-foreground">
+                Datenschutzerklärung
+              </Link>
+              .
             </p>
           </form>
         )}

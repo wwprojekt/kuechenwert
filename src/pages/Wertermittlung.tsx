@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import PageLayout from "@/components/PageLayout";
 import { generateServiceSchema, generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
-import { WertrechnerSchemaHead } from "@/components/wertrechner/WertrechnerSchemaHead";
 import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
@@ -184,7 +183,6 @@ const Wertermittlung = () => {
       canonicalPath="/wertermittlung"
       structuredData={[generateServiceSchema("Kostenlose Wohnmobil-Wertermittlung", "Professionelle Bewertung Ihres Wohnmobils durch Experten. Kostenlos und unverbindlich."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertermittlung"))]}
     >
-      <WertrechnerSchemaHead />
       <PageHero>
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">

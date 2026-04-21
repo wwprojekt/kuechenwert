@@ -156,12 +156,52 @@ export function useWizardTelemetry(
       });
     };
 
+    // Click-tracking for Radix Checkbox/Radio (and native checkbox/radio).
+    // Mobile Safari often does not fire focus on these — only click. We use
+    // CAPTURE phase so we still receive the event even if a child element
+    // calls e.stopPropagation() in its bubble-phase onClick handler (the
+    // FeatureCheckbox in EquipmentStep does exactly that on its inner
+    // <Checkbox>).
+    const isCheckableTarget = (el: HTMLElement): HTMLElement | null => {
+      // Walk up at most a few levels so a click on the inner span/icon of
+      // a Radix CheckboxPrimitive still resolves to the role=checkbox button.
+      let node: HTMLElement | null = el;
+      let depth = 0;
+      while (node && depth < 4 && node !== root) {
+        const role = node.getAttribute("role");
+        if (role === "checkbox" || role === "radio") return node;
+        if (node.tagName === "INPUT") {
+          const type = (node as HTMLInputElement).type;
+          if (type === "checkbox" || type === "radio") return node;
+        }
+        node = node.parentElement;
+        depth += 1;
+      }
+      return null;
+    };
+
+    const handleClickCapture = (e: MouseEvent) => {
+      const initialTarget = e.target as HTMLElement | null;
+      if (!initialTarget) return;
+      const checkable = isCheckableTarget(initialTarget);
+      if (!checkable) return;
+      const field = pickField(checkable);
+      if (!field) return;
+      logWizardEvent({
+        step: currentStepRef.current,
+        event: "field_change",
+        field_name: field,
+      });
+    };
+
     root.addEventListener("focusin", handleFocusIn);
     root.addEventListener("focusout", handleFocusOut);
+    root.addEventListener("click", handleClickCapture, true);
 
     return () => {
       root.removeEventListener("focusin", handleFocusIn);
       root.removeEventListener("focusout", handleFocusOut);
+      root.removeEventListener("click", handleClickCapture, true);
     };
     // rootRef is a ref; eslint-exhaustive-deps would flag it, but the
     // effect deliberately uses its `.current` snapshot at mount time.

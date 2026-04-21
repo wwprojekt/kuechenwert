@@ -39,8 +39,17 @@ const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August",
 const MONTH_VALUES = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
 /** Reusable month+year picker for EZ and TÜV */
-const MonthYearPicker = ({ label, value, onChange, futureYears = 0 }: {
-  label: string; value: string | undefined; onChange: (val: string) => void; futureYears?: number;
+const MonthYearPicker = ({ label, value, onChange, futureYears = 0, idPrefix }: {
+  label: string;
+  value: string | undefined;
+  onChange: (val: string) => void;
+  futureYears?: number;
+  /**
+   * Optional prefix that becomes `${idPrefix}_month` / `${idPrefix}_year`
+   * on the underlying SelectTrigger buttons. Required for the wizard
+   * telemetry to attribute focus/blur events to the right field.
+   */
+  idPrefix?: string;
 }) => {
   const month = value ? value.substring(5, 7) : "";
   const year = value ? value.substring(0, 4) : "";
@@ -55,7 +64,7 @@ const MonthYearPicker = ({ label, value, onChange, futureYears = 0 }: {
           const y = year || currentYear.toString();
           onChange(`${y}-${m}-01`);
         }}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Monat" /></SelectTrigger>
+          <SelectTrigger id={idPrefix ? `${idPrefix}_month` : undefined} className="h-10"><SelectValue placeholder="Monat" /></SelectTrigger>
           <SelectContent>
             {MONTH_VALUES.map((m, i) => <SelectItem key={m} value={m}>{MONTHS[i]}</SelectItem>)}
           </SelectContent>
@@ -64,7 +73,7 @@ const MonthYearPicker = ({ label, value, onChange, futureYears = 0 }: {
           const m = month || "01";
           onChange(`${y}-${m}-01`);
         }}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Jahr" /></SelectTrigger>
+          <SelectTrigger id={idPrefix ? `${idPrefix}_year` : undefined} className="h-10"><SelectValue placeholder="Jahr" /></SelectTrigger>
           <SelectContent>
             {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
           </SelectContent>
@@ -147,12 +156,14 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
               label="📅 Erstzulassung"
               value={formData.first_registration}
               onChange={(val) => updateFormData({ first_registration: val })}
+              idPrefix="first_registration"
             />
             <MonthYearPicker
               label="🔧 TÜV/HU gültig bis"
               value={formData.tuv_valid_until}
               onChange={(val) => updateFormData({ tuv_valid_until: val })}
               futureYears={3}
+              idPrefix="tuv_valid_until"
             />
           </div>
         )}
@@ -165,6 +176,7 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
               value={formData.tuv_valid_until}
               onChange={(val) => updateFormData({ tuv_valid_until: val })}
               futureYears={3}
+              idPrefix="tuv_valid_until"
             />
           </div>
         )}

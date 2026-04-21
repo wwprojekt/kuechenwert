@@ -1,37 +1,31 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
 import {
-  buildEmailLayout,
-  infoBox,
-  detailRow,
-  paragraph,
-  button,
-} from "../_shared/email-builder.ts";
-import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+  buildWizardRecoveryFirstEmail,
+  type WizardSession,
+} from "../_shared/wizard-recovery-email.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/**
+ * Manueller Admin-Trigger fuer die Wizard-Resume-Mail.
+ *
+ * Nutzt seit 2026-04-21 dieselbe Builder-Logik wie der 5-Min-Cron
+ * (`process-abandoned-wizards`) ueber `_shared/wizard-recovery-email.ts`,
+ * damit beide Mail-Wege pixelgleich aussehen und kein Brand-Drift mehr
+ * entstehen kann (alter Hardcode-Akzent #195d3e ist hier komplett raus).
+ *
+ * Zusaetzlich kann der Admin im Body `customMessage` mitgeben — die wird
+ * dann als hervorgehobene Personal-Note ueber dem CTA gerendert.
+ */
 interface ResumeEmailRequest {
   sessionId: string;
   customMessage?: string;
 }
-
-// Must mirror the real wizard flow in VerkaufenWizard.tsx:
-// 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
-// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation (inkl. Marketing-Consent)
-const STEP_NAMES: Record<number, string> = {
-  1: "Fahrzeugtyp",
-  2: "Fahrzeugdaten",
-  3: "Details & Technik",
-  4: "Ausstattung",
-  5: "Kontakt",
-  6: "Fotos",
-  7: "Verkaufsweg & Telefon",
-  8: "Standort & Konto",
-};
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -48,13 +42,15 @@ const handler = async (req: Request): Promise<Response> => {
     if (!sessionId) {
       return new Response(
         JSON.stringify({ error: "sessionId ist erforderlich" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Load wizard session
     const { data: session, error: sessionError } = await supabase
       .from("wizard_sessions")
       .select("*")
@@ -64,20 +60,24 @@ const handler = async (req: Request): Promise<Response> => {
     if (sessionError || !session) {
       return new Response(
         JSON.stringify({ error: "Wizard-Session nicht gefunden" }),
-        { status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    // Determine recipient email
     const recipientEmail = session.customer_email;
     if (!recipientEmail) {
       return new Response(
         JSON.stringify({ error: "Keine E-Mail-Adresse für diese Session vorhanden" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    // Load site settings
     const { data: settings } = await supabase
       .from("site_settings")
       .select("*")
@@ -90,131 +90,12 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "0511 / 51532476",
     };
 
-    // Build resume URL. The unguessable resume_token (256 bit, sent only to
-    // the row's customer_email) lets useWizardSession load the original row
-    // via find_wizard_session_by_resume_token RPC — this works regardless of
-    // device, browser or localStorage state. The fallback to ?session=<uuid>
-    // (legacy alt-mails draussen) bleibt im Frontend lesbar, aber neu
-    // verschickte Links nutzen den robusteren Token-Pfad.
-    //
-    // Step-Param wird hier bewusst NICHT mehr mitgesendet: das Frontend
-    // kennt nach dem Token-Lookup das wirkliche current_step der Session
-    // und springt direkt dorthin. Das verhindert die Geister-Sessions, die
-    // entstanden, wenn ?step=N currentStep setzte BEVOR die Daten geladen
-    // waren (Auto-Save persistierte dann max_step_reached=N mit leeren
-    // Feldern, der Step-Guard warf den User danach auf Step 1 zurueck).
-    const resumeToken = session.resume_token;
-    const resumeUrl = resumeToken
-      ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(resumeToken)}` +
-        `&source=resume_email`
-      : `https://caravanwert.de/verkaufen/wizard?session=${encodeURIComponent(sessionId)}` +
-        `&source=resume_email`;
-    const currentStep = session.current_step || 1;
-
-    // Extract vehicle info from form_data
-    const formData = session.form_data || {};
-    const vehicleName = [
-      formData.manufacturer,
-      formData.model,
-      formData.year ? `(${formData.year})` : "",
-    ].filter(Boolean).join(" ") || "Ihr Wohnmobil";
-
-    const customerName = session.customer_name || "Kunde";
-    const stepName = STEP_NAMES[currentStep] || `Schritt ${currentStep}`;
-    const totalSteps = session.total_steps || 8;
-    const progressPercent = Math.round((currentStep / totalSteps) * 100);
-
-    // Build progress bar HTML
-    const progressBarHtml = `
-      <div style="background-color: #e9ecef; border-radius: 10px; height: 20px; margin: 15px 0; overflow: hidden;">
-        <div style="background-color: #195d3e; height: 100%; width: ${progressPercent}%; border-radius: 10px; transition: width 0.3s;"></div>
-      </div>
-      <p style="text-align: center; font-size: 14px; color: #666; margin: 5px 0;">
-        ${progressPercent}% abgeschlossen – Schritt ${currentStep} von ${totalSteps}
-      </p>
-    `;
-
-    // Build completed steps list
-    const completedSteps: string[] = [];
-    for (let i = 1; i < currentStep; i++) {
-      completedSteps.push(`<span style="color: #195d3e;">&#10003;</span> ${STEP_NAMES[i] || `Schritt ${i}`}`);
-    }
-
-    // Build email content
-    let content = "";
-
-    content += paragraph(`Hallo ${customerName},`);
-
-    content += paragraph(
-      `wir haben bemerkt, dass Sie die Inserierung Ihres Wohnmobils auf CaravanWert noch nicht abgeschlossen haben. ` +
-      `Keine Sorge – Ihre bisherigen Eingaben sind gespeichert und Sie können jederzeit genau dort weitermachen, wo Sie aufgehört haben.`
-    );
-
-    // Custom message from admin
-    if (customMessage) {
-      content += infoBox(
-        "Nachricht von unserem Team",
-        paragraph(customMessage),
-        "info",
-        settingsData
-      );
-    }
-
-    // Vehicle & Progress info
-    content += infoBox(
-      `Ihr Inserat: ${vehicleName}`,
-      `${detailRow("Aktueller Schritt", stepName)}
-       ${detailRow("Fortschritt", `${progressPercent}%`)}
-       ${progressBarHtml}
-       ${completedSteps.length > 0 ? `
-         <p style="margin: 15px 0 5px; font-size: 14px; font-weight: bold; color: #333;">Bereits ausgefüllt:</p>
-         <p style="margin: 0; font-size: 14px; line-height: 24px; color: #555;">
-           ${completedSteps.join("<br/>")}
-         </p>
-       ` : ""}`,
-      "default",
-      settingsData
-    );
-
-    content += button("Jetzt weitermachen", resumeUrl, settingsData);
-
-    content += paragraph(
-      `<strong>Warum jetzt abschließen?</strong>`
-    );
-
-    content += `
-      <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-        <tr>
-          <td style="padding: 12px; text-align: center; width: 33%;">
-            <div style="font-size: 28px; margin-bottom: 5px;">&#9201;</div>
-            <p style="margin: 0; font-size: 13px; color: #555;"><strong>Nur ${totalSteps - currentStep + 1} Schritte</strong><br/>bis zur Veröffentlichung</p>
-          </td>
-          <td style="padding: 12px; text-align: center; width: 33%;">
-            <div style="font-size: 28px; margin-bottom: 5px;">&#128176;</div>
-            <p style="margin: 0; font-size: 13px; color: #555;"><strong>Kostenlos</strong><br/>inserieren</p>
-          </td>
-          <td style="padding: 12px; text-align: center; width: 33%;">
-            <div style="font-size: 28px; margin-bottom: 5px;">&#128664;</div>
-            <p style="margin: 0; font-size: 13px; color: #555;"><strong>Hunderte Händler</strong><br/>warten auf Ihr Angebot</p>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    content += paragraph(
-      `Falls Sie Fragen haben oder Hilfe benötigen, antworten Sie einfach auf diese E-Mail oder rufen Sie uns an unter ` +
-      `<strong>${settingsData.support_phone}</strong>. Wir helfen Ihnen gerne!`
-    );
-
-    content += paragraph("Mit freundlichen Grüßen,<br/>Ihr CaravanWert Team");
-
-    const emailHtml = buildEmailLayout(
+    const { subject, html } = buildWizardRecoveryFirstEmail(
+      session as WizardSession,
       settingsData,
-      `Ihr Wohnmobil-Inserat wartet auf Sie – ${vehicleName}`,
-      content
+      customMessage,
     );
 
-    // Send email via Resend
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -224,8 +105,9 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: `CaravanWert <info@caravanwert.de>`,
         to: [recipientEmail],
-        subject: `Ihr Wohnmobil-Inserat wartet – machen Sie jetzt weiter!`,
-        html: emailHtml,
+        subject,
+        html,
+        reply_to: "info@caravanwert.de",
       }),
     });
 
@@ -233,33 +115,37 @@ const handler = async (req: Request): Promise<Response> => {
       const errorText = await resendRes.text();
       console.error("Resend error:", errorText);
       return new Response(
-        JSON.stringify({ error: "E-Mail konnte nicht gesendet werden", details: errorText }),
-        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "E-Mail konnte nicht gesendet werden",
+          details: errorText,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     const resumeResult = await resendRes.json();
 
-    // Log in admin_emails for System tab
     try {
-      await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
-        sender_name: 'CaravanWert',
+      await supabase.from("admin_emails").insert({
+        sender_email: "info@caravanwert.de",
+        sender_name: "CaravanWert",
         recipient_email: recipientEmail,
-        subject: 'Ihr Wohnmobil-Inserat wartet \u2013 machen Sie jetzt weiter!',
-        body_html: emailHtml,
-        body_text: '',
-        email_type: 'wizard_resume',
-        direction: 'outbound',
-        status: 'sent',
+        subject,
+        body_html: html,
+        body_text: "",
+        email_type: "wizard_resume",
+        direction: "outbound",
+        status: "sent",
         resend_id: resumeResult?.id || null,
         is_read: true,
       });
     } catch (logErr) {
-      console.error('Failed to log email in admin_emails:', logErr);
+      console.error("Failed to log email in admin_emails:", logErr);
     }
 
-    // Update session: mark email sent
     await supabase
       .from("wizard_sessions")
       .update({
@@ -272,14 +158,19 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         message: `Wiederaufnahme-E-Mail an ${recipientEmail} gesendet`,
       }),
-      { status: 200, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
-
   } catch (error) {
     console.error("Error in send-wizard-resume-email:", error);
     return new Response(
       JSON.stringify({ error: "Interner Serverfehler" }),
-      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      },
     );
   }
 };

@@ -500,8 +500,18 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 escapeLabel="Sonstiges Modell"
                 autoFocus={!isMobile}
               />
-              {fieldErrors.model && (
+              {fieldErrors.model ? (
                 <p className="text-sm text-red-600">{fieldErrors.model}</p>
+              ) : (
+                // Funnel-Analyse Step 2 (2026-04-21): 9 von 10 Step-2-Abbrechern
+                // haben kein Modell ausgew\u00e4hlt, obwohl Free-Text + "Sonstiges
+                // Modell"-Escape l\u00e4ngst implementiert sind. Dieser Hilfetext
+                // kommuniziert den Free-Text-Pfad explizit, damit der User nicht
+                // mehr glaubt er sei auf die Liste angewiesen.
+                <p className="text-xs text-muted-foreground">
+                  Modell nicht in der Liste? Einfach eintippen \u2013 wir nehmen
+                  jede Bezeichnung an. Oder w\u00e4hlen Sie &quot;Sonstiges Modell&quot;.
+                </p>
               )}
             </div>
 

@@ -424,11 +424,18 @@ export const useWizardSession = (): UseWizardSessionReturn => {
             return;
           }
 
+          // P3 Tracking-Fix (2026-04-21): step_name wird jetzt anhand von
+          // `max_step_reached` gesetzt — nicht mehr `current_step`. Vorher
+          // hat ein User, der zur\u00fcck zu Step 1 navigiert ist, im Admin-
+          // Funnel als "Fahrzeugtyp"-Drop-off gez\u00e4hlt, obwohl er real
+          // bereits bei Step 7 war. Funnel-Analyse braucht den weitest
+          // erreichten Step, nicht die gerade angezeigte Position.
+          const trackedStep = Math.max(maxStepRef.current, currentStep);
           const updatePayload: Record<string, unknown> = {
             current_step: currentStep,
             max_step_reached: maxStepRef.current,
             total_steps: totalSteps,
-            step_name: STEP_NAMES[currentStep] || `Schritt ${currentStep}`,
+            step_name: STEP_NAMES[trackedStep] || `Schritt ${trackedStep}`,
             form_data: serializedData,
             vehicle_summary: buildVehicleSummary(formData),
           };

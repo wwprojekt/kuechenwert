@@ -2,12 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import {
-  buildEmailLayout,
-  infoBox,
-  detailRow,
-  paragraph,
-  button,
-} from "../_shared/email-builder.ts";
+  buildWizardRecoveryFirstEmail,
+  buildWizardRecoveryFollowupEmail,
+  type WizardSession,
+} from "../_shared/wizard-recovery-email.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -25,21 +23,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *   - customer_email is present
  *   - Session is NOT completed
  *   - The respective email has not been sent yet
+ *
+ * Die HTML-Bodies kommen aus `_shared/wizard-recovery-email.ts`, damit der
+ * Cron-Pfad und der manuelle Admin-Trigger (`send-wizard-resume-email`)
+ * pixelgleich aussehen — das war frueher zwei Mal kopiert + aus dem Drift
+ * geraten (alter Akzentgr\u00fcn #195d3e statt Brand-Teal #1f8aa2).
  */
-
-// Must mirror the real wizard flow in VerkaufenWizard.tsx:
-// 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
-// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation (inkl. Marketing-Consent)
-const STEP_NAMES: Record<number, string> = {
-  1: "Fahrzeugtyp",
-  2: "Fahrzeugdaten",
-  3: "Details & Technik",
-  4: "Ausstattung",
-  5: "Kontakt",
-  6: "Fotos",
-  7: "Verkaufsweg & Telefon",
-  8: "Standort & Konto",
-};
 
 interface SiteSettings {
   site_name: string;
@@ -54,186 +43,6 @@ const DEFAULT_SETTINGS: SiteSettings = {
   contact_email: "info@caravanwert.de",
   support_phone: "+49 511 51532476",
 };
-
-/**
- * Build the first reminder email (sent after 2 hours of inactivity).
- * Tone: friendly, encouraging, focused on progress already made.
- */
-function buildFirstReminderEmail(
-  session: any,
-  settingsData: SiteSettings
-): { subject: string; html: string } {
-  const formData = session.form_data || {};
-  const vehicleName = [
-    formData.manufacturer,
-    formData.model,
-    formData.year ? `(${formData.year})` : "",
-  ]
-    .filter(Boolean)
-    .join(" ") || "Ihr Wohnmobil";
-
-  const customerName = session.customer_name || "Kunde";
-  const currentStep = session.current_step || 1;
-  const totalSteps = session.total_steps || 8;
-  const progressPercent = Math.round((currentStep / totalSteps) * 100);
-  const stepName = STEP_NAMES[currentStep] || `Schritt ${currentStep}`;
-  // Cross-device resume: ?token=<resume_token> laedt die Original-Session
-  // ueber find_wizard_session_by_resume_token RPC unabhaengig vom
-  // localStorage des klickenden Geraets. Fallback auf step-only, wenn der
-  // Token (alte Sessions vor der Migration) noch fehlen sollte.
-  const resumeUrl = session.resume_token
-    ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(session.resume_token)}&source=recovery_first`
-    : `https://caravanwert.de/verkaufen/wizard?step=${currentStep}&source=recovery_first`;
-
-  // Build progress bar HTML
-  const progressBarHtml = `
-    <div style="background-color: #e9ecef; border-radius: 10px; height: 20px; margin: 15px 0; overflow: hidden;">
-      <div style="background-color: #195d3e; height: 100%; width: ${progressPercent}%; border-radius: 10px;"></div>
-    </div>
-    <p style="text-align: center; font-size: 14px; color: #666; margin: 5px 0;">
-      ${progressPercent}% abgeschlossen – Schritt ${currentStep} von ${totalSteps}
-    </p>
-  `;
-
-  // Build completed steps list
-  const completedSteps: string[] = [];
-  for (let i = 1; i < currentStep; i++) {
-    completedSteps.push(
-      `<span style="color: #195d3e;">&#10003;</span> ${STEP_NAMES[i] || `Schritt ${i}`}`
-    );
-  }
-
-  let content = "";
-
-  content += paragraph(`Hallo ${customerName},`);
-
-  content += paragraph(
-    `wir haben bemerkt, dass Sie die Inserierung Ihres Wohnmobils auf ${settingsData.site_name} noch nicht abgeschlossen haben. ` +
-    `Keine Sorge – Ihre bisherigen Eingaben sind gespeichert und Sie können jederzeit genau dort weitermachen, wo Sie aufgehört haben.`
-  );
-
-  content += infoBox(
-    `Ihr Inserat: ${vehicleName}`,
-    `${detailRow("Aktueller Schritt", stepName)}
-     ${detailRow("Fortschritt", `${progressPercent}%`)}
-     ${progressBarHtml}
-     ${completedSteps.length > 0
-       ? `<p style="margin: 15px 0 5px; font-size: 14px; font-weight: bold; color: #333;">Bereits ausgefüllt:</p>
-          <p style="margin: 0; font-size: 14px; line-height: 24px; color: #555;">
-            ${completedSteps.join("<br/>")}
-          </p>`
-       : ""
-     }`,
-    "default",
-    settingsData
-  );
-
-  content += button("Jetzt weitermachen", resumeUrl, settingsData);
-
-  content += paragraph(`<strong>Warum jetzt abschließen?</strong>`);
-
-  content += `
-    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-      <tr>
-        <td style="padding: 12px; text-align: center; width: 33%;">
-          <div style="font-size: 28px; margin-bottom: 5px;">&#9201;</div>
-          <p style="margin: 0; font-size: 13px; color: #555;"><strong>Nur ${totalSteps - currentStep + 1} Schritte</strong><br/>bis zur Veröffentlichung</p>
-        </td>
-        <td style="padding: 12px; text-align: center; width: 33%;">
-          <div style="font-size: 28px; margin-bottom: 5px;">&#128176;</div>
-          <p style="margin: 0; font-size: 13px; color: #555;"><strong>Kostenlos</strong><br/>inserieren</p>
-        </td>
-        <td style="padding: 12px; text-align: center; width: 33%;">
-          <div style="font-size: 28px; margin-bottom: 5px;">&#128664;</div>
-          <p style="margin: 0; font-size: 13px; color: #555;"><strong>Hunderte Händler</strong><br/>warten auf Ihr Angebot</p>
-        </td>
-      </tr>
-    </table>
-  `;
-
-  content += paragraph(
-    `Falls Sie Fragen haben oder Hilfe benötigen, antworten Sie einfach auf diese E-Mail oder rufen Sie uns an unter ` +
-    `<strong>${settingsData.support_phone}</strong>. Wir helfen Ihnen gerne!`
-  );
-
-  content += paragraph("Mit freundlichen Grüßen,<br/>Ihr CaravanWert Team");
-
-  const subject = `Ihr Wohnmobil-Inserat wartet – machen Sie jetzt weiter!`;
-  const html = buildEmailLayout(settingsData, subject, content);
-
-  return { subject, html };
-}
-
-/**
- * Build the second re-engagement email (sent after 14 days of inactivity).
- * Tone: warm, personal, last-chance feeling, emphasizes value.
- */
-function buildFollowupEmail(
-  session: any,
-  settingsData: SiteSettings
-): { subject: string; html: string } {
-  const formData = session.form_data || {};
-  const vehicleName = [
-    formData.manufacturer,
-    formData.model,
-    formData.year ? `(${formData.year})` : "",
-  ]
-    .filter(Boolean)
-    .join(" ") || "Ihr Wohnmobil";
-
-  const customerName = session.customer_name || "Kunde";
-  const currentStep = session.current_step || 1;
-  const totalSteps = session.total_steps || 8;
-  const resumeUrl = session.resume_token
-    ? `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(session.resume_token)}&source=recovery_followup`
-    : `https://caravanwert.de/verkaufen/wizard?step=${currentStep}&source=recovery_followup`;
-
-  let content = "";
-
-  content += paragraph(`Hallo ${customerName},`);
-
-  content += paragraph(
-    `vor einiger Zeit haben Sie begonnen, <strong>${vehicleName}</strong> auf ${settingsData.site_name} zu inserieren. ` +
-    `Wir möchten Sie daran erinnern, dass Ihre Daten noch gespeichert sind und Sie jederzeit dort weitermachen können, wo Sie aufgehört haben.`
-  );
-
-  content += infoBox(
-    "Wussten Sie schon?",
-    `<p style="margin: 0; font-size: 14px; line-height: 22px; color: #555;">
-      Fahrzeuge, die über ${settingsData.site_name} angeboten werden, erhalten im Durchschnitt 
-      <strong>Anfragen von mehreren geprüften Händlern</strong> – und das völlig kostenlos für Sie als Verkäufer. 
-      Je früher Sie Ihr Inserat abschließen, desto schneller finden Sie den besten Käufer.
-    </p>`,
-    "info",
-    settingsData
-  );
-
-  content += button("Inserat jetzt abschließen", resumeUrl, settingsData);
-
-  content += paragraph(
-    `Sie haben bereits <strong>${currentStep - 1} von ${totalSteps} Schritten</strong> ausgefüllt. ` +
-    `Es fehlen nur noch wenige Angaben, bis Ihr Fahrzeug für Hunderte geprüfte Händler sichtbar wird.`
-  );
-
-  content += paragraph(
-    `Brauchen Sie Unterstützung? Unser Team hilft Ihnen gerne persönlich weiter – ` +
-    `antworten Sie einfach auf diese E-Mail oder rufen Sie uns an unter <strong>${settingsData.support_phone}</strong>.`
-  );
-
-  content += paragraph("Herzliche Grüße,<br/>Ihr CaravanWert Team");
-
-  content += paragraph(
-    `<span style="font-size: 12px; color: #6b7280;">` +
-    `Sie erhalten diese E-Mail, weil Sie eine Fahrzeugbewertung auf ${settingsData.site_name} begonnen haben. ` +
-    `Dies ist unsere letzte automatische Erinnerung.` +
-    `</span>`
-  );
-
-  const subject = `${vehicleName} – Ihr Inserat ist fast fertig!`;
-  const html = buildEmailLayout(settingsData, subject, content);
-
-  return { subject, html };
-}
 
 /**
  * Send an email via Resend API and log it in admin_emails.
@@ -466,7 +275,10 @@ const handler = async (req: Request): Promise<Response> => {
         );
         const newestSession = sessions[0];
 
-        const { subject, html } = buildFirstReminderEmail(newestSession, settingsData);
+        const { subject, html } = buildWizardRecoveryFirstEmail(
+          newestSession as WizardSession,
+          settingsData,
+        );
 
         const success = await sendEmailAndLog(
           supabase,
@@ -553,7 +365,10 @@ const handler = async (req: Request): Promise<Response> => {
         );
         const newestSession = sessions[0];
 
-        const { subject, html } = buildFollowupEmail(newestSession, settingsData);
+        const { subject, html } = buildWizardRecoveryFollowupEmail(
+          newestSession as WizardSession,
+          settingsData,
+        );
 
         const success = await sendEmailAndLog(
           supabase,

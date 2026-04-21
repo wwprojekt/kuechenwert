@@ -580,6 +580,29 @@ export const useWizardForm = () => {
         });
         setFieldErrors(errors);
 
+        // UX-Fix Step-2-Abbrueche (2026-04-21): Nach einem Validation-Fehler
+        // muss der User SOFORT sehen, welches Feld er ausfuellen soll.
+        // Vorher landete der Toast oben am Rand und das rote Feld blieb
+        // unter dem Fold (besonders auf Mobile bei Step 2 Modell-Dropdown).
+        // Wir suchen das erste Element mit passender ID UND scrollen es
+        // sanft in den sichtbaren Bereich. Voraussetzung: das Input-Element
+        // hat als id den fieldPath (Konvention im Wizard, siehe VehicleInfo
+        // Step.tsx etc.). Wenn nicht gefunden -> no-op.
+        if (typeof window !== 'undefined') {
+          const firstErrorKey = Object.keys(errors).find((k) => k !== '_refine');
+          if (firstErrorKey) {
+            window.requestAnimationFrame(() => {
+              const el = document.getElementById(firstErrorKey);
+              if (el && typeof el.scrollIntoView === 'function') {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (typeof (el as HTMLElement).focus === 'function') {
+                  try { (el as HTMLElement).focus({ preventScroll: true }); } catch { /* noop */ }
+                }
+              }
+            });
+          }
+        }
+
         const germanMessage = handleValidationError(error, 'VerkaufenWizard');
         toast({
           title: "Bitte überprüfen Sie Ihre Eingaben",

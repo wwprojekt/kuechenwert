@@ -221,7 +221,7 @@ export const EquipmentStep = ({ formData, updateFormData }: EquipmentStepProps) 
                 value={formData.baseVehicle || ""}
                 onValueChange={(value) => updateFormData({ baseVehicle: value, power_ps: null, power_kw: null })}
               >
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-10" id="base_vehicle_select">
                   <SelectValue placeholder="Anderes Chassis wählen…" />
                 </SelectTrigger>
                 <SelectContent>

@@ -33,6 +33,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://zcrwqxsyptjwkuxfacvq.supabase.co" crossorigin />
 
+    <!-- LCP-Hero-Image preload (Index-Page).
+         Lighthouse 2026-04-21 zeigte LCP=14.6 s mit Hero-Image als
+         LCP-Element, das erst NACH den JS-Bundles entdeckt wurde.
+         imagesrcset+imagesizes sorgen dafür, dass der Browser exakt die
+         passende Variante (sm/md/full) preloaded — kein doppelter Download.
+         Auf Nicht-Index-Pages lädt das Bild zwar parallel, ist aber nur
+         ~30 KB (md-Variante via responsive selection) und konkurriert nicht
+         mit Critical CSS/JS dank Browser-Priorisierung. -->
+    <link
+      rel="preload"
+      as="image"
+      href="/images/hero-motorhome.webp"
+      imagesrcset="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
+      imagesizes="100vw"
+      fetchpriority="high"
+    />
+
     <!-- Google Fonts — loaded NON-BLOCKING via media trick.
          Browser loads CSS with media="print" (non-render-blocking),
          then switches to media="all" once loaded. display=swap shows

@@ -110,6 +110,8 @@ const Benefits = () => {
                 src={dealerImage}
                 alt="Professioneller Händler"
                 loading="lazy"
+                width={1920}
+                height={1080}
                 className="w-full h-auto"
               />
             </div>
@@ -125,6 +127,8 @@ const Benefits = () => {
                   src={handshakeImage}
                   alt="Erfolgreicher Vertragsabschluss"
                   loading="lazy"
+                  width={1280}
+                  height={720}
                   className="w-full h-auto"
                 />
               </div>

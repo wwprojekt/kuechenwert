@@ -115,6 +115,8 @@ const Process = () => {
               src={interiorImage}
               alt="Wohnmobil Innenraum"
               loading="lazy"
+              width={1280}
+              height={720}
               className="w-full h-auto"
             />
           </div>
@@ -126,6 +128,8 @@ const Process = () => {
               src={familyImage}
               alt="Zufriedene Kunden"
               loading="lazy"
+              width={1280}
+              height={720}
               className="w-full h-auto"
             />
           </div>

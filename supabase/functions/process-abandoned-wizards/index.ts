@@ -45,6 +45,27 @@ const DEFAULT_SETTINGS: SiteSettings = {
 };
 
 /**
+ * Konservative E-Mail-Format-Validierung. Filtert Tippfehler (`gmailcom`),
+ * Test-Eingaben (`xxcc`, `asdf`) und sonstige offensichtlich kaputte Werte
+ * heraus, BEVOR wir Resend mit dem Send beauftragen.
+ *
+ * Hintergrund: Vor diesem Check liefen kaputte Adressen alle 5 Minuten erneut
+ * durch den Cron, weil `resume_email_sent_at` bei Send-Fehlschlag NULL bleibt
+ * und der Cron-Filter (`is null`) sie damit immer wieder erfasst hat.
+ * Resend rejected sie zwar (kostenlos), aber das verursacht permanente
+ * `errors > 0` und unnoetigen API-Traffic.
+ *
+ * Pattern bewusst NICHT RFC 5322-vollstaendig (das waere Overkill und wuerde
+ * tatsaechlich gueltige Edge-Cases ablehnen). Reicht fuer "gibt es ein @ mit
+ * Domain + TLD?".
+ */
+const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function isValidEmailFormat(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return EMAIL_FORMAT.test(email.trim());
+}
+
+/**
  * Send an email via Resend API and log it in admin_emails.
  */
 async function sendEmailAndLog(
@@ -251,6 +272,20 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       for (const [email, sessions] of sessionsByEmail) {
+        // PRE-FLIGHT: Tippfehler & Test-Eingaben rausfiltern, BEVOR wir
+        // Resend ueberhaupt anfragen. Sonst retried der Cron diese Sessions
+        // alle 5 Minuten endlos (resume_email_sent_at wuerde bei Send-
+        // Fehlschlag NULL bleiben → wieder erfasst → wieder fehlschlagen).
+        if (!isValidEmailFormat(email)) {
+          const sessionIds = sessions.map((s: any) => s.id);
+          await supabase
+            .from("wizard_sessions")
+            .update({ resume_email_sent_at: now.toISOString(), status: "abandoned" })
+            .in("id", sessionIds);
+          console.log(`Skipped recovery_first for invalid email format: "${email}" (${sessions.length} session(s))`);
+          continue;
+        }
+
         // ANTI-SPAM: Max 1 recovery_first pro Email pro 7 Tage
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { data: recentRecovery } = await supabase
@@ -346,6 +381,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       for (const [email, sessions] of followupByEmail) {
+        // PRE-FLIGHT: kaputte Mails rausfiltern (siehe gleicher Block oben).
+        if (!isValidEmailFormat(email)) {
+          const sessionIds = sessions.map((s: any) => s.id);
+          await supabase
+            .from("wizard_sessions")
+            .update({ followup_email_sent_at: now.toISOString() })
+            .in("id", sessionIds);
+          console.log(`Skipped followup for invalid email format: "${email}" (${sessions.length} session(s))`);
+          continue;
+        }
+
         // ANTI-SPAM: Max 1 followup pro Email pro 30 Tage
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const { data: recentFollowup } = await supabase

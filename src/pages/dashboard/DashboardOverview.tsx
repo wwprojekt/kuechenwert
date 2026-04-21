@@ -32,8 +32,10 @@ import {
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { NewOfferAlert, type MotorhomeWithOffers } from "@/components/dashboard/NewOfferAlert";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Dashboard Overview – role-aware.
@@ -48,16 +50,9 @@ export default function DashboardOverview() {
   const queryClient = useQueryClient();
 
   const isDealer = primaryRole === "dealer";
+  const { toast } = useToast();
 
-  // Früher: postgres_changes-Channel auf motorhomes / motorhome_photos /
-  // post_auction_offers. Zwei der drei Tabellen sind nicht in der
-  // `supabase_realtime` Publication — der Listener hat also nie gefeuert.
-  // post_auction_offers IS in der Pub, aber ohne Filter würde der Channel jede
-  // Offer-Änderung im ganzen System empfangen, nur damit ggf. ein Seller-
-  // Timeline-Refetch passiert. Das war ineffizient.
-  // Stattdessen: window-focus-basiertes Refetching durch React Query (siehe
-  // sellerTimeline-Query unten via refetchOnWindowFocus). Reaktiviert die Daten
-  // sobald der Tab wieder im Vordergrund ist — was 99 % der Fälle abdeckt.
+  // Window-Focus-Refetch (Tab-Switch / nach Pause)
   useEffect(() => {
     if (!user || isDealer) return;
     const onFocus = () => {
@@ -219,8 +214,9 @@ export default function DashboardOverview() {
         kaufchanceAuctionIds.length > 0
           ? supabase
               .from("post_auction_offers")
-              .select("auction_id, id, offer_amount, status")
+              .select("auction_id, id, offer_amount, status, created_at, message, expires_at, counter_offer_amount")
               .in("auction_id", kaufchanceAuctionIds)
+              .order("created_at", { ascending: false })
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -272,22 +268,108 @@ export default function DashboardOverview() {
           }
         }
 
-        return { ...mh, bidStats, addendaCount, kaufchanceInfo };
+        // topOffers: für NewOfferAlert (Banner + Auto-Popup). Rohe Offer-Liste,
+        // Filterung/Ranking passiert im Component (rankOffers).
+        const topOffers = auction
+          ? (offersByAuction[auction.id] || []).map((o: any) => ({
+              id: o.id,
+              offer_amount: Number(o.offer_amount),
+              status: o.status,
+              created_at: o.created_at,
+              message: o.message ?? null,
+              expires_at: o.expires_at ?? null,
+              counter_offer_amount: o.counter_offer_amount ?? null,
+            }))
+          : [];
+
+        return { ...mh, bidStats, addendaCount, kaufchanceInfo, topOffers };
       });
 
       return enriched;
     },
     enabled: !!user && !isDealer,
-    // Polling fallback: refetch every 30s in case Realtime subscription
-    // doesn't fire (e.g. table not enabled for Realtime in Supabase config,
-    // or RLS blocks the subscription). This ensures the seller sees new
-    // motorhomes within 30 seconds even without Realtime.
-    refetchInterval: 30 * 1000,
-    // Don't poll when the tab is in the background to save resources
+    // Polling Fallback (selten — Realtime macht den Hauptjob für Offers).
+    // 2 Min reicht um Status-Wechsel (z. B. Auktion wurde freigeschaltet,
+    // Inserat-Status hat sich geändert) noch ohne Reload mitzubekommen.
+    refetchInterval: 2 * 60 * 1000,
     refetchIntervalInBackground: false,
-    // Override global staleTime so invalidation from Realtime takes effect immediately
     staleTime: 0,
   });
+
+  // ── Realtime: Push bei neuen / geänderten Kaufchance-Angeboten ──
+  // Strikt server-seitig gefiltert auf die Auctions des Verkäufers, sonst
+  // bekäme jeder Tab jede Offer-Änderung im ganzen System (Listener-Hygiene).
+  // post_auction_offers ist in supabase_realtime publication
+  // (Migration 20260410104223_enable_realtime_kaufchance_tables.sql).
+  const realtimeAuctionIds = (sellerData || [])
+    .map((mh: any) => {
+      const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
+      const isKaufchance = a?.status === "kaufchance";
+      const isFestpreis = a?.status === "active" && mh.sale_channel === "instant_price";
+      return (isKaufchance || isFestpreis) ? (a?.id as string | undefined) : undefined;
+    })
+    .filter((x): x is string => !!x);
+  const realtimeFilterKey = realtimeAuctionIds.slice().sort().join(",");
+  const knownOfferIdsRef = useRef<Set<string>>(new Set());
+
+  // knownOfferIdsRef seeden, sobald wir die ersten Daten haben → so toasten
+  // wir nur bei wirklich NEUEN Inserts, nicht beim ersten Mount/Reload.
+  useEffect(() => {
+    if (!sellerData) return;
+    const seen = new Set<string>();
+    for (const mh of sellerData as any[]) {
+      for (const o of mh.topOffers || []) seen.add(o.id);
+    }
+    knownOfferIdsRef.current = seen;
+  }, [sellerData]);
+
+  useEffect(() => {
+    if (!user || isDealer || realtimeAuctionIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`seller-offers-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "post_auction_offers",
+          filter: `auction_id=in.(${realtimeAuctionIds.join(",")})`,
+        },
+        (payload) => {
+          const offerId = (payload.new as { id?: string })?.id;
+          const amount = Number((payload.new as { offer_amount?: number })?.offer_amount ?? 0);
+          if (offerId && !knownOfferIdsRef.current.has(offerId)) {
+            knownOfferIdsRef.current.add(offerId);
+            toast({
+              title: "Neues Angebot eingegangen!",
+              description: amount > 0
+                ? `Ein Händler bietet € ${amount.toLocaleString("de-DE")} für Ihr Fahrzeug.`
+                : "Schauen Sie sich das neue Angebot an.",
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "post_auction_offers",
+          filter: `auction_id=in.(${realtimeAuctionIds.join(",")})`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["sellerTimeline", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isDealer, realtimeFilterKey, queryClient]);
 
   // ── Dealer stats ──────────────────────────────────────────────
   const { data: dealerStats } = useQuery({
@@ -552,6 +634,14 @@ export default function DashboardOverview() {
             </div>
           </div>
         </div>
+
+        {/* Prominentes Highlight für eingehende Kaufchance-/Festpreis-Angebote.
+            Zeigt nur dann etwas an, wenn pending Offers über aktuellem
+            Höchstgebot/Festpreis existieren — sonst null. Enthält Auto-Popup
+            beim ersten Sehen + permanenten Banner + Annahme-Bestätigung. */}
+        {motorhomes.length > 0 && (
+          <NewOfferAlert motorhomes={motorhomes as MotorhomeWithOffers[]} />
+        )}
 
         {/* No motorhomes: Check for pending wizard session or show empty state */}
         {motorhomes.length === 0 && pendingWizardSession && (

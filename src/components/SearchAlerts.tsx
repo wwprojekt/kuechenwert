@@ -283,6 +283,9 @@ export const SearchAlerts = () => {
                 <Label htmlFor="alert_name">Name des Suchauftrags *</Label>
                 <Input
                   id="alert_name"
+                  name="alert_name"
+                  type="text"
+                  autoCapitalize="sentences"
                   value={alertForm.alert_name}
                   onChange={(e) => setAlertForm({ ...alertForm, alert_name: e.target.value })}
                   placeholder="z.B. Hymer B-Klasse unter 50k"
@@ -344,6 +347,7 @@ export const SearchAlerts = () => {
                     <Label>Baujahr von (optional)</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       value={alertForm.criteria.min_year || ''}
                       onChange={(e) => setAlertForm({
                         ...alertForm,
@@ -359,6 +363,7 @@ export const SearchAlerts = () => {
                     <Label>Baujahr bis (optional)</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       value={alertForm.criteria.max_year || ''}
                       onChange={(e) => setAlertForm({
                         ...alertForm,

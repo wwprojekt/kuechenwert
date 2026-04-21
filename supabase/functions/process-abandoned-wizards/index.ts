@@ -29,7 +29,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Must mirror the real wizard flow in VerkaufenWizard.tsx:
 // 1=VehicleType 2=VehicleInfo 3=Details 4=Equipment
-// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation 9=MarketingPhase
+// 5=QuickContact 6=Photos 7=SaleChannel 8=AccountLocation (inkl. Marketing-Consent)
 const STEP_NAMES: Record<number, string> = {
   1: "Fahrzeugtyp",
   2: "Fahrzeugdaten",
@@ -39,7 +39,6 @@ const STEP_NAMES: Record<number, string> = {
   6: "Fotos",
   7: "Verkaufsweg & Telefon",
   8: "Standort & Konto",
-  9: "Vermarktung bestätigen",
 };
 
 interface SiteSettings {

@@ -1,17 +1,17 @@
 /**
  * SaleChannelStep - Step 7 des Wizards (light)
  *
- * Enthält: Verkaufsweg-Auswahl, Mindestpreis bzw. Sofortpreis, Telefonnummer, optionale Beschreibung.
+ * Enthält: Verkaufsweg-Auswahl, Mindestpreis bzw. Sofortpreis, Telefonnummer,
+ * optionale Beschreibung.
  *
- * Name + E-Mail wurden bereits in Step 5 (QuickContactStep) erfasst und werden hier
- * nur noch zur Bestätigung angezeigt – nicht editierbar in diesem Step.
+ * Name + E-Mail wurden bereits in Step 5 (QuickContactStep) erfasst und
+ * werden hier nur noch zur Bestätigung angezeigt – nicht editierbar.
  *
- * Die Marketing-Phasen-Aufklärung + Pflicht-Consent sind in Step 9
- * (MarketingPhaseStep) eigenständig untergebracht. Dadurch:
- *   1) Step 7 ist drastisch entlastet (vorher 7-8 Pflichtfelder, jetzt 3-4)
- *   2) Telefon ist VOR der Marketing-Box gesichert → bei Abbruch in Step 9
- *      hat das Sales-Team trotzdem Telefonnummer + Standort + Konto-Daten
- *   3) Die Marketing-Box bekommt eine eigene, in Ruhe gestaltete Trust-First-Seite
+ * Der Marketing-Consent (AGB §6) ist als kompakte Pflicht-Checkbox am Ende
+ * von Step 8 (AccountLocationStep) integriert – nicht mehr als eigener Step,
+ * weil die zusätzliche Step-Hürde Conversion gekostet hat. Dadurch ist Step 7
+ * deutlich entlastet, Telefon wird VOR dem Consent erfasst und bei Abbruch
+ * in Step 8 hat das Sales-Team mindestens Telefon + Standort.
  */
 
 import { useEffect } from "react";

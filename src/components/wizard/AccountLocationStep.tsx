@@ -1,8 +1,23 @@
 /**
- * AccountLocationStep - Step 8 des Wizards (letzter Schritt)
- * 
- * Enthält: Standort des Wohnmobils (Land, Straße, Hausnummer, PLZ, Ort) + Konto erstellen (Passwort).
- * Beide Bereiche sind Pflicht.
+ * AccountLocationStep - Step 8 des Wizards (letzter Schritt vor Submit)
+ *
+ * Enthält: Standort des Wohnmobils (Land, Straße, Hausnummer, PLZ, Ort) +
+ * Konto erstellen (Passwort) + Pflicht-Consent für die Marketingphase
+ * gemäß AGB §6 (nur für sale_channel ∈ {auction, instant_price}).
+ *
+ * Warum die Marketing-Checkbox HIER und nicht in einem eigenen Step:
+ *   - Die Bindungsphase + automatische Preisanpassung sind „überraschende
+ *     Klauseln" iSv § 305c BGB → eine separate, hervorgehobene Bestätigung
+ *     ist juristisch erforderlich, ein bloßer AGB-Hinweis reicht NICHT.
+ *   - Eine eigene Step-9-Seite ("Marketingphase erklären") wirkte als
+ *     Conversion-Killer (Trust-First-Belehrung erzeugt Schock-Moment kurz
+ *     vor Submit).
+ *   - Die kompakte Inline-Checkbox erfüllt § 305c und reduziert die
+ *     Klick-Distanz auf 1 Klick (Checkbox + Submit) statt 2 (Weiter →
+ *     Consent → Submit).
+ *
+ * Für sale_channel = 'station' wird die Checkbox ausgeblendet – dort
+ * existiert keine Marketingphase und kein § 305c-Risiko.
  */
 
 import { useState } from "react";
@@ -15,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Lock, Eye, EyeOff, Shield, CheckCircle2 } from "lucide-react";
 import type { WizardFormData } from "@/hooks/useWizardForm";
 import { EU_COUNTRIES } from "@/lib/euCountries";
@@ -134,7 +150,7 @@ export const AccountLocationStep = ({
           Standort & Konto
         </h2>
         <p className="text-xs sm:text-base text-muted-foreground">
-          Letzter Schritt – geben Sie den Standort Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'} an{!isAuthenticated ? " und erstellen Sie Ihr Konto" : ""}
+          Letzter Schritt – geben Sie den Standort Ihres {formData.vehicleType === 'Wohnwagen' ? 'Wohnwagens' : 'Wohnmobils'} an{!isAuthenticated ? " und erstellen Sie Ihr Konto" : ""}.
         </p>
       </div>
 
@@ -375,6 +391,57 @@ export const AccountLocationStep = ({
                 Ihr Inserat wird automatisch mit Ihrem Konto verknüpft.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Marketingphasen-Consent (Pflicht für auction + instant_price)
+          --------------------------------------------------------------
+          Juristische Grundlage: § 305c BGB („überraschende Klauseln")
+          verlangt für die automatische Preisanpassung und die bis-zu-
+          16-tägige Bindungsphase eine besondere Bestätigung – ein
+          bloßer AGB-Hinweistext reicht NICHT aus, sonst werden die
+          Klauseln nicht Vertragsbestandteil.
+
+          Bewusst KOMPAKT gehalten (1 Zeile + Mikro-Erläuterung) statt
+          eigener Step, um Conversion zu maximieren. Die ausführliche
+          Erklärung der Marketingphase findet der User über den AGB §6-
+          Link bzw. später jederzeit im Dashboard. */}
+      {(formData.saleChannel === "auction" || formData.saleChannel === "instant_price") && (
+        <div
+          className={cn(
+            "flex items-start gap-3 rounded-lg border p-3 transition-colors",
+            fieldErrors.marketingConsent
+              ? "border-red-500 bg-red-50/50 dark:bg-red-950/10"
+              : formData.marketingConsent
+                ? "border-green-500/40 bg-green-50/40 dark:bg-green-950/10"
+                : "border-border bg-background",
+          )}
+        >
+          <Checkbox
+            id="marketingConsent"
+            checked={formData.marketingConsent}
+            onCheckedChange={(v) => updateFormData({ marketingConsent: v === true })}
+            className="mt-0.5 flex-shrink-0"
+            aria-describedby={fieldErrors.marketingConsent ? "marketingConsent-error" : undefined}
+          />
+          <div className="flex-1 space-y-0.5">
+            <Label htmlFor="marketingConsent" className="text-sm font-medium cursor-pointer leading-snug">
+              Ich akzeptiere die Marketingphase gemäß{" "}
+              <a href="/agb" target="_blank" rel="noopener" className="text-primary hover:underline">
+                AGB §6
+              </a>{" "}
+              <span className="text-red-500">*</span>
+            </Label>
+            <p className="text-xs text-muted-foreground leading-snug">
+              Bindung bis zu 16 Tagen mit automatischer Preisanpassung und Mindestpreis-Garantie.
+              Jederzeit im Dashboard anpassbar.
+            </p>
+            {fieldErrors.marketingConsent && (
+              <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in">
+                {fieldErrors.marketingConsent}
+              </p>
+            )}
           </div>
         </div>
       )}

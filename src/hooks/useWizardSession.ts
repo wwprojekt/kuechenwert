@@ -33,7 +33,6 @@ const STEP_NAMES: Record<number, string> = {
   6: "Fotos",
   7: "Verkaufsweg & Telefon",
   8: "Standort & Konto",
-  9: "Vermarktung bestätigen",
 };
 
 /**
@@ -262,11 +261,7 @@ export const useWizardSession = (): UseWizardSessionReturn => {
               p_customer_name: urlContact.customerName || null,
               p_customer_email: urlContact.customerEmail || null,
               p_customer_phone: urlContact.customerPhone || null,
-              // Default 9 = Auktion (Empfehlung). Wird beim ersten saveProgress
-              // automatisch auf 8 reduziert, falls der User später sale_channel='station'
-              // wählt – der Wizard ruft saveProgress mit dem dynamischen
-              // steps.length-Wert auf, der bei station auf 8 fällt.
-              p_total_steps: 9,
+              p_total_steps: 8,
             });
 
           if (error) {

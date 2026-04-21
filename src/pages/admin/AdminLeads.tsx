@@ -209,7 +209,6 @@ const STEP_NAMES: Record<number, string> = {
   6: "Fotos",
   7: "Verkaufsweg & Telefon",
   8: "Standort & Konto",
-  9: "Vermarktung bestätigen",
 };
 
 // ============================================================================

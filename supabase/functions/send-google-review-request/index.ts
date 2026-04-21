@@ -36,6 +36,31 @@ const PRIMARY_DARK = "#0f4f5c";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// ─── Inline CORS (admin UI calls this from the browser) ───────────────
+const ALLOWED_ORIGINS = [
+  "https://caravanwert.de",
+  "https://www.caravanwert.de",
+];
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(origin)) return true;
+  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  const allowed = isAllowedOrigin(origin) ? origin! : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
 interface BatchRow {
   id: string;
   email: string;
@@ -83,19 +108,25 @@ async function isAuthorized(req: Request): Promise<boolean> {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // CORS preflight (admin UI in the browser sends an OPTIONS request first)
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
+  }
+
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse(req, { error: "Method not allowed" }, 405);
   }
 
   if (!(await isAuthorized(req))) {
     return jsonResponse(
+      req,
       { error: "Nicht autorisiert: Ungültiger oder fehlender Token" },
       401,
     );
   }
 
   if (!RESEND_API_KEY) {
-    return jsonResponse({ error: "RESEND_API_KEY not configured" }, 500);
+    return jsonResponse(req, { error: "RESEND_API_KEY not configured" }, 500);
   }
 
   let body: Record<string, unknown> = {};
@@ -139,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("delivery_status", "queued")
       .order("scheduled_for", { ascending: true })
       .limit(batchSize);
-    return jsonResponse({
+    return jsonResponse(req, {
       dry_run: true,
       enqueued,
       would_send: peek?.length ?? 0,
@@ -154,13 +185,14 @@ const handler = async (req: Request): Promise<Response> => {
   );
   if (claimErr) {
     return jsonResponse(
+      req,
       { error: "claim_failed", details: claimErr.message },
       500,
     );
   }
   const batch = (batchData ?? []) as BatchRow[];
   if (batch.length === 0) {
-    return jsonResponse({ enqueued, sent: 0, failed: 0, batch: 0 });
+    return jsonResponse(req, { enqueued, sent: 0, failed: 0, batch: 0 });
   }
 
   // ─── 4) Send each, with minimum spacing for Resend rate limit
@@ -265,7 +297,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (i < batch.length - 1) await sleep(150);
   }
 
-  return jsonResponse({
+  return jsonResponse(req, {
     enqueued,
     sent,
     failed,
@@ -388,10 +420,13 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      ...corsHeaders(req),
+      "Content-Type": "application/json",
+    },
   });
 }
 

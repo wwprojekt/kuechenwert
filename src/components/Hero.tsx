@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Shield, Star, TrendingUp, Calculator } from "lucide-react";
 import { QuickAuctionForm } from "./QuickAuctionForm";
 import { Link } from "react-router-dom";
+import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
 
 const Hero = () => {
   const benefits = [
@@ -115,6 +116,14 @@ const Hero = () => {
                   Wert berechnen
                 </Button>
               </Link>
+            </div>
+
+            {/* Social proof for the Wertrechner CTA.
+                Renders nothing until >= WERTRECHNER_BADGE_MIN_REVIEWS
+                approved reviews exist, so the hero looks clean while we
+                collect real data. */}
+            <div className="animate-fade-in animate-delay-500">
+              <ReviewStarsBadge size="sm" variant="full" link linkTo="/wertrechner#reviews" />
             </div>
           </div>
 

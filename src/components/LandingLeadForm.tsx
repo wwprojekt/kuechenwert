@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { vehicleTypes, popularManufacturers, wohnwagenManufacturers, bodyTypes, wohnwagenBodyTypes } from "@/lib/vehicle-data";
 import { trackLandingPageLead } from "@/lib/gadsConversionService";
 import { cn } from "@/lib/utils";
+import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
 
 /** Mapping von vehicle-data.ts bodyTypes (Display-Labels) zu Wertrechner BODY_TYPES (interne values) */
 const BODY_TYPE_MAP: Record<string, string> = {
@@ -137,6 +138,11 @@ export function LandingLeadForm({ className = "", defaultManufacturer }: Landing
           Wert berechnen
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
+
+        {/* Social proof — hidden until we have >= 10 approved reviews */}
+        <div className="flex justify-center">
+          <ReviewStarsBadge size="sm" variant="full" link linkTo="/wertrechner#reviews" />
+        </div>
 
         {/* Trust indicators */}
         <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, CheckCircle, Calculator } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
 
 const CTA = () => {
 
@@ -22,6 +23,9 @@ const CTA = () => {
               <p className="text-muted-foreground">
                 Erhalten Sie in nur 4 Schritten eine kostenlose Sofort-Schätzung mit unserem Wertrechner.
               </p>
+              <div className="mt-2 flex justify-center md:justify-start">
+                <ReviewStarsBadge size="sm" variant="full" link linkTo="/wertrechner#reviews" />
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link to="/wertrechner" className="w-full sm:w-auto">

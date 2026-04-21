@@ -290,3 +290,94 @@ export function injectStructuredData(data: object | object[]): string {
   return JSON.stringify(dataArray.length === 1 ? dataArray[0] : dataArray);
 }
 
+/**
+ * WebApplication structured data for the Wertrechner (free online valuation tool).
+ *
+ * Rules for Google Rich Snippets with stars:
+ *  - Type `WebApplication` (subtype of SoftwareApplication) is an officially
+ *    supported reviewable entity, and `offers.price: "0"` is explicitly allowed
+ *    for free tools.
+ *  - `aggregateRating` is only included when `reviewCount >= minReviews`. For
+ *    fewer reviews Google won't show stars anyway, and a low count looks
+ *    fragile. Passing a count below the threshold returns a schema without
+ *    `aggregateRating`.
+ *  - The `@id` is a stable identifier across multiple landing pages that all
+ *    contain the calculator — this tells Google they describe the same entity
+ *    and avoids duplicate-rating problems.
+ *
+ * Pages that may emit this schema (calculator IS the primary content):
+ *   /wertrechner (canonical), /wohnmobil-wertermittlung-kostenlos,
+ *   /was-ist-mein-wohnmobil-wert, /wieviel-ist-mein-wohnmobil-wert,
+ *   /wertermittlung
+ *
+ * Pages that must NOT emit this schema (calculator is secondary):
+ *   Homepage, /verkaufen/*, /kaufen/*, /ratgeber/*, /haendler/*, auctions
+ */
+export interface WertrechnerSchemaInput {
+  /** Current page URL (absolute). Canonical @id uses `/wertrechner#webapp`. */
+  pageUrl?: string;
+  /** Current average rating (0-5). Pass 0 if unknown or below threshold. */
+  averageRating: number;
+  /** Total number of approved reviews. */
+  reviewCount: number;
+  /** Minimum count required to include `aggregateRating`. Default: 30. */
+  minReviews?: number;
+}
+
+export function generateWertrechnerSchema(input: WertrechnerSchemaInput) {
+  const {
+    pageUrl,
+    averageRating,
+    reviewCount,
+    minReviews = 30,
+  } = input;
+
+  const canonicalUrl = `${BASE_URL}/wertrechner`;
+  const includeRating = reviewCount >= minReviews && averageRating > 0;
+
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    '@id': `${canonicalUrl}#webapp`,
+    name: 'CaravanWert Wohnmobil-Wertrechner',
+    alternateName: [
+      'Wohnmobil Wert ermitteln',
+      'Wohnmobil Wertrechner',
+      'Wohnwagen Wertrechner',
+    ],
+    description:
+      'Kostenloser Online-Wertrechner für Wohnmobile und Wohnwagen. Liefert in wenigen Minuten eine realistische Wertschätzung auf Basis von Modell, Baujahr, Kilometerstand und Ausstattung.',
+    url: canonicalUrl,
+    ...(pageUrl ? { mainEntityOfPage: pageUrl } : {}),
+    applicationCategory: 'BusinessApplication',
+    applicationSubCategory: 'Vehicle Valuation Tool',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript. Requires HTML5.',
+    inLanguage: 'de',
+    isAccessibleForFree: true,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'EUR',
+    },
+    provider: {
+      '@type': 'Organization',
+      name: 'CaravanWert',
+      url: BASE_URL,
+    },
+    ...(includeRating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: averageRating.toFixed(2),
+            reviewCount: reviewCount.toString(),
+            bestRating: '5',
+            worstRating: '1',
+          },
+        }
+      : {}),
+  };
+
+  return schema;
+}
+

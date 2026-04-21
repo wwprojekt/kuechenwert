@@ -13,6 +13,22 @@ import {
 } from "@/lib/seo";
 import type { LandingPageConfig } from "@/data/landing-page-types";
 import { landingPages } from "@/data/landing-pages";
+import { WertrechnerSchemaHead } from "@/components/wertrechner/WertrechnerSchemaHead";
+import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
+
+/**
+ * Paths of landing pages whose PRIMARY CONTENT is the Wertrechner tool.
+ * These pages get the additional `WebApplication` JSON-LD schema with
+ * AggregateRating (shared `@id` across all emissions — see seo.ts).
+ *
+ * DO NOT add paths where the calculator is merely embedded as secondary
+ * content. That risks a Google structured-data spam penalty.
+ */
+const WERTRECHNER_LANDING_PATHS = new Set([
+  "/was-ist-mein-wohnmobil-wert",
+  "/wohnmobil-wertermittlung-kostenlos",
+  "/wieviel-ist-mein-wohnmobil-wert",
+]);
 
 interface LandingPageTemplateProps {
   config: LandingPageConfig;
@@ -23,6 +39,7 @@ const LandingPageTemplate = ({ config }: LandingPageTemplateProps) => {
   const breadcrumbSchema = generateBreadcrumbSchema(getBreadcrumbsFromPath(config.path));
 
   const structuredData = [serviceSchema, breadcrumbSchema];
+  const isWertrechnerLanding = WERTRECHNER_LANDING_PATHS.has(config.path);
 
   const relatedLinks = config.relatedSlugs
     .map((slug) => {
@@ -44,6 +61,9 @@ const LandingPageTemplate = ({ config }: LandingPageTemplateProps) => {
       canonicalPath={config.path}
       structuredData={structuredData}
     >
+      {/* Wertrechner WebApplication schema — only on calculator landings */}
+      {isWertrechnerLanding && <WertrechnerSchemaHead />}
+
       {/* Hero Section */}
       <PageHero size="lg">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -51,6 +71,11 @@ const LandingPageTemplate = ({ config }: LandingPageTemplateProps) => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
               {config.h1}
             </h1>
+            {isWertrechnerLanding && (
+              <div className="mb-4">
+                <ReviewStarsBadge size="md" variant="full" link linkTo="/wertrechner#reviews" />
+              </div>
+            )}
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
               {config.heroSubtitle}
             </p>

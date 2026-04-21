@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import PageLayout from "@/components/PageLayout";
 import { generateServiceSchema, generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
+import { WertrechnerSchemaHead } from "@/components/wertrechner/WertrechnerSchemaHead";
+import { ReviewStarsBadge } from "@/components/wertrechner/ReviewStarsBadge";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -182,11 +184,15 @@ const Wertermittlung = () => {
       canonicalPath="/wertermittlung"
       structuredData={[generateServiceSchema("Kostenlose Wohnmobil-Wertermittlung", "Professionelle Bewertung Ihres Wohnmobils durch Experten. Kostenlos und unverbindlich."), generateBreadcrumbSchema(getBreadcrumbsFromPath("/wertermittlung"))]}
     >
+      <WertrechnerSchemaHead />
       <PageHero>
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Kostenlose Wohnmobil-Wertermittlung
           </h1>
+          <div className="flex justify-center mb-4">
+            <ReviewStarsBadge size="md" variant="full" link linkTo="/wertrechner#reviews" />
+          </div>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8">
             Erfahren Sie den aktuellen Marktwert Ihres Wohnmobils - 
             kostenlos, unverbindlich und von Experten bewertet.

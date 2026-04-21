@@ -45,6 +45,9 @@ import { withNetworkRetry } from "@/lib/sessionGuard";
 import { trackEvent } from "@/lib/analyticsService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
+import { ReviewCollectionPrompt } from "@/components/wertrechner/ReviewCollectionPrompt";
+import { ReviewsSection } from "@/components/wertrechner/ReviewsSection";
+import { WertrechnerSchemaHead } from "@/components/wertrechner/WertrechnerSchemaHead";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -1486,6 +1489,20 @@ const Wertrechner = () => {
                       </p>
                     </div>
 
+                    {/* Non-blocking review prompt. Delayed 20s, dismissable,
+                        renders below the primary Verkaufen-CTA. Users who go
+                        straight to the wizard never see it (component unmounts
+                        on navigation). See ReviewCollectionPrompt.tsx. */}
+                    <ReviewCollectionPrompt
+                      vehicleType={
+                        formData.vehicleType === "Wohnmobil"
+                          ? "wohnmobil"
+                          : formData.vehicleType === "Wohnwagen"
+                            ? "wohnwagen"
+                            : undefined
+                      }
+                    />
+
                     <div className="border-t pt-4 sm:pt-6">
                       <h4 className="font-medium mb-3 text-sm text-muted-foreground">Ihre Angaben:</h4>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -1591,7 +1608,18 @@ const Wertrechner = () => {
             </div>
           )}
         </div>
+
+        {/* Reviews section — reads via public RPC, hidden until
+            WERTRECHNER_BADGE_MIN_REVIEWS approved reviews exist. Anchor id
+            "reviews" matches ReviewStarsBadge default linkTo. */}
+        <div className="mt-8 sm:mt-12">
+          <ReviewsSection anchorId="reviews" />
+        </div>
       </div>
+
+      {/* JSON-LD WebApplication schema with live AggregateRating.
+          Emits `aggregateRating` only above WERTRECHNER_SCHEMA_MIN_REVIEWS. */}
+      <WertrechnerSchemaHead />
     </PageLayout>
   );
 };

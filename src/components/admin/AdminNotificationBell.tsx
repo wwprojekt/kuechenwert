@@ -32,6 +32,7 @@ export function useAdminNotificationCounts() {
         wizardRes, valuationRes, supportRes, contactRes,
         dealerRes, questionsRes, unreadEmailsRes, reviewsRes,
         claimsRes, appointmentsRes, offersRes, festpreisNoPriceRes,
+        wertrechnerReviewsRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
@@ -55,6 +56,7 @@ export function useAdminNotificationCounts() {
           .eq("sale_channel", "instant_price")
           .eq("status", "available")
           .or("instant_price.is.null,instant_price.eq.0"),
+        supabase.from("wertrechner_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
       ]);
 
       return {
@@ -69,6 +71,7 @@ export function useAdminNotificationCounts() {
         appointments: appointmentsRes.count || 0,
         offers: offersRes.count || 0,
         festpreisNoPrice: festpreisNoPriceRes.count || 0,
+        wertrechnerReviews: wertrechnerReviewsRes.count || 0,
       };
     },
     // Badge counts are not time-critical; 90 s is plenty and cuts the total
@@ -91,7 +94,8 @@ export function AdminNotificationBell() {
     { label: "Kontakt-Anfragen", count: data?.contacts || 0, path: "/admin/messages", icon: MessageCircle, color: "text-pink-600" },
     { label: "Offene Fragen", count: data?.questions || 0, path: "/admin/questions", icon: MessageCircle, color: "text-indigo-600" },
     { label: "Händler-Bewerbungen", count: data?.dealers || 0, path: "/admin/dealers", icon: Building2, color: "text-amber-600" },
-    { label: "Neue Bewertungen", count: data?.reviews || 0, path: "/admin/reviews", icon: Star, color: "text-yellow-600" },
+    { label: "Neue Händler-Bewertungen", count: data?.reviews || 0, path: "/admin/reviews", icon: Star, color: "text-yellow-600" },
+    { label: "Neue Wertrechner-Bewertungen", count: data?.wertrechnerReviews || 0, path: "/admin/wertrechner-reviews", icon: Star, color: "text-amber-600" },
     { label: "Offene Reklamationen", count: data?.claims || 0, path: "/admin/claims", icon: FileWarning, color: "text-red-600" },
     { label: "Anstehende Termine", count: data?.appointments || 0, path: "/admin/appointments", icon: Calendar, color: "text-teal-600" },
     { label: "Offene Angebote", count: data?.offers || 0, path: "/admin/offers", icon: Building2, color: "text-green-600" },

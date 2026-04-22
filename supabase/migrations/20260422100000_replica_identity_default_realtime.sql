@@ -1,0 +1,34 @@
+-- Reduziert die WAL-Decoder-Last auf den hot Realtime-Tabellen.
+--
+-- Stand 2026-04-22 10:00 UTC: pg_stat_statements zeigte das wal2json-Polling
+-- mit 88.6 % der gesamten DB-Zeit als #1-Konsumenten:
+--   calls:    301,464  (~3.5 calls/Sekunde, 24 h)
+--   total_s:  2,156    (= 36 Min DB-Zeit auf Realtime allein)
+--   query:    SELECT wal->>type, wal->>schema, wal->>table, ... (Realtime poll)
+--
+-- Der Hauptverstärker ist REPLICA IDENTITY FULL auf den write-heavy Tabellen
+-- `auctions` (~2.6k UPDATEs/24h) und `bids` (~600 INSERTs + 330 DELETEs/24h):
+-- bei FULL schreibt Postgres bei jedem UPDATE/DELETE alle Spalten der alten
+-- Zeile in die WAL. Das bläht die WAL um den Faktor 5–10 auf gegenüber
+-- DEFAULT (das nur die PK in old_record schreibt).
+--
+-- Sicherheits-Audit (siehe `rg payload.old src/`):
+-- KEINE einzige Realtime-Subscription liest payload.old. Alle Subscriber:
+--   - AuctionDetail.tsx (bids INSERT, auctions UPDATE)  -> nur payload.new
+--   - DealerDashboard.tsx (bids INSERT)                  -> nur payload.new
+--   - AdminDashboard.tsx (bids/auctions, *)              -> nur invalidate
+--   - DashboardOverview.tsx (post_auction_offers)        -> nur payload.new
+--   - MyKaufchancen.tsx (post_auction_offers, kaufchance)-> nur payload.new
+--   - NotificationCenter.tsx (dealer_notifications)      -> nur invalidate
+-- Alle Filter (id=eq.X, auction_id=eq.X, buyer_id=eq.X) referenzieren
+-- PK/FK-Spalten, die auch bei DEFAULT immer im old_record enthalten sind.
+--
+-- Erwarteter Effekt: WAL-Polling-Last sinkt deutlich (Schätzung 50-70%),
+-- weil pro UPDATE/DELETE ~10x weniger Bytes durch den Decoder laufen müssen.
+-- Das entlastet auch den Read-Path: weniger Zeit im wal2json-Loop heißt
+-- mehr CPU für PostgREST-Queries der echten User.
+--
+-- Reversibel via ALTER TABLE ... REPLICA IDENTITY FULL falls je nötig.
+
+ALTER TABLE public.auctions REPLICA IDENTITY DEFAULT;
+ALTER TABLE public.bids     REPLICA IDENTITY DEFAULT;

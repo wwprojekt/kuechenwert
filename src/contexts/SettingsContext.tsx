@@ -70,7 +70,13 @@ interface SiteSettings {
 interface SettingsContextType {
   settings: SiteSettings | null;
   loading: boolean;
-  refreshSettings: () => Promise<void>;
+  /**
+   * Lädt Settings neu. Standard-Aufruf nutzt den Edge-Worker-Cache (5 min FRESH).
+   * Wenn der Admin gerade Settings im Backend gespeichert hat und das Ergebnis
+   * sofort sehen will, mit `{ forceFresh: true }` aufrufen — das umgeht den
+   * Worker und holt direkt aus Supabase, sodass die Änderung 0-Latenz sichtbar ist.
+   */
+  refreshSettings: (opts?: { forceFresh?: boolean }) => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -81,8 +87,46 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadSettings = useCallback(async () => {
+  const loadSettings = useCallback(async (opts?: { forceFresh?: boolean }) => {
+    const forceFresh = opts?.forceFresh === true;
     try {
+      // ─── Hauptpfad: Edge-Cached Worker-Bundle ───────────────────────
+      // /api/site-settings liefert die gleichen Spalten wie public_site_settings,
+      // aber aus dem CF-KV-Edge-Cache (5 min FRESH / 30 min STALE). Bei
+      // ~2.4k Page-Loads/24h spart das ~99% der Supabase-Calls auf diese View.
+      // Localhost umgeht den Worker (sonst CORS gegen prod-Worker).
+      // forceFresh überspringt den Worker komplett — gedacht für den Admin
+      // direkt nach einem Settings-Save, damit die Änderung sofort sichtbar ist.
+      let workerData: SiteSettings | null = null;
+      if (
+        !forceFresh &&
+        typeof window !== "undefined" &&
+        window.location.hostname !== "localhost"
+      ) {
+        try {
+          const res = await fetch("/api/site-settings", {
+            headers: { accept: "application/json" },
+            signal: AbortSignal.timeout(4000),
+          });
+          if (res.ok) {
+            workerData = (await res.json()) as SiteSettings;
+          }
+        } catch (e) {
+          // Worker timeout / network error → silently fall back to Supabase.
+          logger.debug?.("site-settings worker fetch failed, using fallback", e);
+        }
+      }
+
+      if (workerData) {
+        setSettings(workerData);
+        applyBranding(workerData);
+        setTrackingConfig(
+          (workerData as { tracking_config?: unknown }).tracking_config,
+        );
+        return;
+      }
+
+      // ─── Fallback / Force-Fresh: Direkter Supabase-Call ─────────────
       const { data, error } = await supabase
         .from('public_site_settings')
         .select('*')

@@ -142,7 +142,9 @@ export default function AdminSettings() {
 
       if (error) throw error;
 
-      await refreshSettings();
+      // forceFresh umgeht den Edge-Worker-Cache (5 min FRESH), sonst würde
+      // der Admin seine eigenen Änderungen erst nach 5 min sehen.
+      await refreshSettings({ forceFresh: true });
       logEvent({ action: "settings_changed", entityType: "settings", details: { fields: Object.keys(saveData) } });
 
       toast({

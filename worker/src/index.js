@@ -333,6 +333,30 @@ const AUCTION_DETAIL_KV_TTL = 300;
 // Negative-Cache (404 / not-found) kürzer halten damit eine soeben angelegte
 // Auktion schnell sichtbar wird (max 30s Verzögerung statt 5 min).
 const AUCTION_DETAIL_NOTFOUND_KV_TTL = 30;
+
+// ─── Edge-API-Cache (Phase 3: /api/site-settings) ───────────────────────────
+//
+// SettingsContext lädt `public_site_settings` bei JEDEM ersten Page-Mount.
+// Bei ~2.4k Page-Loads/24h sind das 2.4k PostgREST-Calls/Tag fuer Daten die
+// sich praktisch NIE aendern (nur wenn der Admin im Backend etwas updated).
+//
+// Strategie: aggressives FRESH-Window (5 min) + langer STALE-Window (30 min).
+// Worst-Case-Latenz fuer Admin-Aenderungen: 5 min bis User die neue Logo-URL /
+// Brand-Color sehen. Akzeptabel, weil Settings-Aenderungen extrem selten sind
+// und der Admin beim Speichern eh seine eigene Page neu laden kann (bypassed
+// den Cache durch Reload + Origin-Hit).
+//
+// Effekt: 2.400 Supabase-Calls/24h -> ~24 (Worker poll alle 5 min wenn Traffic
+// da ist). Spart ~99% der site-settings Last.
+//
+// Logo-URL wird hier auch durch /img/-Proxy geleitet, sodass das Logo gleich
+// aus dem CF-Edge-Cache geladen wird (frueher: Supabase Storage no-cache).
+const SITE_SETTINGS_API_PATH = "/api/site-settings";
+const SITE_SETTINGS_CACHE_KEY = "api:site_settings:v1";
+const SITE_SETTINGS_FRESH_MS = 5 * 60 * 1000;   // 5 min frisch
+const SITE_SETTINGS_STALE_MS = 30 * 60 * 1000;  // 30 min stale-while-revalidate
+const SITE_SETTINGS_KV_TTL = 60 * 60;           // 1h hard-expire
+const SITE_SETTINGS_ID = "00000000-0000-0000-0000-000000000000";
 // Whitelist 1:1 aus src/pages/AuctionDetail.tsx Z.339-360 übernommen.
 // Bei Änderungen dort BEIDE Stellen aktualisieren!
 const AUCTION_DETAIL_SELECT =
@@ -853,6 +877,124 @@ async function handleAuctionsApi(request, env, ctx) {
   }
 }
 
+// ── Site-Settings-Bundle: site_name, logo_url, brand colors, tracking ──
+
+async function fetchSiteSettingsFromSupabase(env) {
+  const url =
+    `${env.SUPABASE_URL}/rest/v1/public_site_settings` +
+    `?select=*&id=eq.${SITE_SETTINGS_ID}&limit=1`;
+  const headers = {
+    apikey: env.SUPABASE_ANON_KEY,
+    authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    accept: "application/json",
+  };
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`site_settings fetch ${res.status}: ${await res.text()}`);
+  }
+  const arr = await res.json();
+  const settings = Array.isArray(arr) && arr[0] ? arr[0] : null;
+  if (!settings) {
+    throw new Error("site_settings: no row found for default id");
+  }
+
+  // Logo + Favicon + TUEV-Badge durchs /img/-Proxy leiten, damit sie
+  // 1 Jahr im CF-Edge gecached werden. Frontend's SiteLogo nutzt zwar bereits
+  // proxiedImageUrl(), aber so funktioniert es auch fuer Komponenten die das
+  // logo_url direkt verwenden (Favicon-Tag, og:image-Fallback, Email-Templates).
+  if (settings.logo_url) settings.logo_url = proxiedImageUrl(settings.logo_url);
+  if (settings.favicon_url) settings.favicon_url = proxiedImageUrl(settings.favicon_url);
+  if (settings.tuv_badge_url) settings.tuv_badge_url = proxiedImageUrl(settings.tuv_badge_url);
+
+  return settings;
+}
+
+async function refreshSiteSettingsCache(env) {
+  const fresh = await fetchSiteSettingsFromSupabase(env);
+  const now = Date.now();
+  const envelope = {
+    data: fresh,
+    fetchedAt: now,
+    freshUntil: now + SITE_SETTINGS_FRESH_MS,
+    staleUntil: now + SITE_SETTINGS_STALE_MS,
+  };
+  await env.PRERENDER_CACHE.put(
+    SITE_SETTINGS_CACHE_KEY,
+    JSON.stringify(envelope),
+    { expirationTtl: SITE_SETTINGS_KV_TTL },
+  );
+  return envelope;
+}
+
+async function handleSiteSettingsApi(request, env, ctx) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "method not allowed" }, 405);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponse({ error: "supabase env not configured" }, 500);
+  }
+
+  const now = Date.now();
+
+  let cached = null;
+  try {
+    cached = await env.PRERENDER_CACHE.get(SITE_SETTINGS_CACHE_KEY, {
+      type: "json",
+    });
+  } catch (e) {
+    console.error("KV read error (site_settings):", e.message);
+  }
+
+  if (cached && now < cached.freshUntil) {
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "FRESH",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=300",
+    });
+  }
+
+  if (cached && now < cached.staleUntil) {
+    ctx.waitUntil(
+      refreshSiteSettingsCache(env).catch((e) =>
+        console.error("background refresh failed (site_settings):", e.message),
+      ),
+    );
+    return jsonResponse(cached.data, 200, {
+      "x-cache-status": "STALE",
+      "x-cache-age-ms": String(now - cached.fetchedAt),
+      "cache-control": "public, max-age=300",
+    });
+  }
+
+  try {
+    const fresh = await refreshSiteSettingsCache(env);
+    return jsonResponse(fresh.data, 200, {
+      "x-cache-status": "MISS",
+      "x-cache-age-ms": "0",
+      "cache-control": "public, max-age=300",
+    });
+  } catch (e) {
+    console.error("site_settings sync refresh failed:", e.message);
+    if (cached) {
+      // Notnagel: alte Daten ausliefern auch wenn KV abgelaufen — die
+      // Page rendert ohne Branding-Informationen sonst kaputt.
+      return jsonResponse(cached.data, 200, {
+        "x-cache-status": "EMERGENCY",
+        "x-cache-age-ms": String(now - cached.fetchedAt),
+        "cache-control": "public, max-age=10",
+      });
+    }
+    return jsonResponse(
+      { error: "upstream unavailable", message: e.message },
+      502,
+    );
+  }
+}
+
 // ─── Main Worker ────────────────────────────────────────────────────────────
 
 export default {
@@ -870,6 +1012,11 @@ export default {
     // Wir behandeln auch OPTIONS hier, daher steht es vor dem GET-Filter.
     if (url.pathname === AUCTIONS_API_PATH) {
       return handleAuctionsApi(request, env, ctx);
+    }
+
+    // ── Edge-API-Cache: /api/site-settings (Logo, Brand-Colors, Tracking) ──
+    if (url.pathname === SITE_SETTINGS_API_PATH) {
+      return handleSiteSettingsApi(request, env, ctx);
     }
 
     // ── Edge-API-Cache: /api/auctions/:uuid (Detail-Page) ──

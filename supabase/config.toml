@@ -54,6 +54,12 @@ verify_jwt = false
 [functions.generate-handover-pdf]
 verify_jwt = false
 
+[functions.generate-blank-handover-protocol]
+verify_jwt = false
+
+[functions.resend-blank-handover-protocol]
+verify_jwt = false
+
 # --- Dealer ---
 [functions.register-dealer]
 verify_jwt = false

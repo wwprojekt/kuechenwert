@@ -3,6 +3,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
+import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 
 /**
  * Edge Function: accept-kaufchance-offer
@@ -551,6 +552,45 @@ Deno.serve(async (req) => {
     } catch (contractError: any) {
       console.error('Error in purchase contract flow:', contractError);
       errors.push(`Kaufvertrag komplett fehlgeschlagen: ${contractError.message}`);
+    }
+
+    // ─── 8b. BLANK HANDOVER PROTOCOL FLOW (best-effort, isolated) ─
+    if (contractSuccess && RESEND_API_KEY) {
+      try {
+        const { data: sellerProfile2 } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', auction.motorhome.seller_id)
+          .maybeSingle();
+        const { data: buyerProfile2 } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', buyerId)
+          .maybeSingle();
+        const { data: settings2 } = await supabase
+          .from('site_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        const protoResult = await sendBlankHandoverProtocol({
+          supabase,
+          resendApiKey: RESEND_API_KEY,
+          settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+          motorhomeId: auction.motorhome.id,
+          buyerId,
+          sellerId: auction.motorhome.seller_id,
+          contractNumber,
+          salePrice,
+          vehicleName: motorhomeName,
+          sellerProfile: sellerProfile2,
+          buyerProfile: buyerProfile2,
+          source: 'accept-kaufchance-offer',
+        });
+        console.log('[accept-kaufchance-offer] blank handover protocol:', protoResult.info);
+      } catch (e) {
+        console.error('[accept-kaufchance-offer] blank handover protocol exception (non-fatal):', e);
+      }
     }
 
     // ─── 9. Send notifications ───

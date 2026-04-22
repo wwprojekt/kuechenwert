@@ -7,6 +7,7 @@ import {
   infoBox,
   detailRow,
 } from '../_shared/email-builder.ts';
+import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 
 /**
  * Edge Function: admin-correct-sale
@@ -441,6 +442,40 @@ Deno.serve(async (req) => {
       }
     } else if (!contractPdfBase64) {
       errors.push('Vertrags-PDF Base64 leer — Mails an Parteien übersprungen');
+    }
+
+    // ─── 9b. BLANK HANDOVER PROTOCOL (best-effort, isolated) ─────
+    if (contractNumber && RESEND_API_KEY) {
+      try {
+        const { data: sellerProfile2 } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', sellerId)
+          .maybeSingle();
+        const { data: buyerProfile2 } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', buyerId)
+          .maybeSingle();
+
+        const protoResult = await sendBlankHandoverProtocol({
+          supabase,
+          resendApiKey: RESEND_API_KEY,
+          settingsData: settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+          motorhomeId: motorhome.id,
+          buyerId,
+          sellerId,
+          contractNumber,
+          salePrice: Number(newSalePrice),
+          vehicleName: motorhomeName,
+          sellerProfile: sellerProfile2,
+          buyerProfile: buyerProfile2,
+          source: 'admin-correct-sale',
+        });
+        console.log('[admin-correct-sale] blank handover protocol:', protoResult.info);
+      } catch (e) {
+        console.error('[admin-correct-sale] blank handover protocol exception (non-fatal):', e);
+      }
     }
 
     return new Response(

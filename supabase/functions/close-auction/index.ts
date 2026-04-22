@@ -5,6 +5,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
+import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketing-config.ts';
 
 /**
@@ -1114,6 +1115,48 @@ Deno.serve(async (req) => {
       } catch (contractError: any) {
         console.error('Error in purchase contract flow:', contractError);
         errors.push(`Kaufvertrag komplett fehlgeschlagen: ${contractError.message}`);
+      }
+
+      // ─── BLANK HANDOVER PROTOCOL FLOW (best-effort, isolated) ───────
+      // Sent in a SEPARATE e-mail to seller + buyer so a failure here can
+      // never break the Kaufvertrag delivery above. Failures are only
+      // logged, not pushed to errors[] (would otherwise fail the cron).
+      if (contractSuccess && RESEND_API_KEY) {
+        try {
+          const { data: sellerProfile2 } = await supabase
+            .from('profiles')
+            .select('email, first_name, last_name, company_name')
+            .eq('id', auction.motorhome.seller_id)
+            .maybeSingle();
+          const { data: buyerProfile2 } = await supabase
+            .from('profiles')
+            .select('email, first_name, last_name, company_name')
+            .eq('id', soldTo)
+            .maybeSingle();
+          const { data: settings2 } = await supabase
+            .from('site_settings')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+
+          const protoResult = await sendBlankHandoverProtocol({
+            supabase,
+            resendApiKey: RESEND_API_KEY,
+            settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+            motorhomeId: auction.motorhome.id,
+            buyerId: soldTo!,
+            sellerId: auction.motorhome.seller_id,
+            contractNumber,
+            salePrice: Number(highestBid!.amount),
+            vehicleName: motorhomeName,
+            sellerProfile: sellerProfile2,
+            buyerProfile: buyerProfile2,
+            source: 'close-auction',
+          });
+          console.log('[close-auction] blank handover protocol:', protoResult.info);
+        } catch (e) {
+          console.error('[close-auction] blank handover protocol exception (non-fatal):', e);
+        }
       }
 
       // ─── GOOGLE ADS SALE CONVERSION (only after invoice confirmed) ──

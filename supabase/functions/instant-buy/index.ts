@@ -5,6 +5,7 @@ import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, R
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
+import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 
 /**
  * Edge Function: instant-buy
@@ -653,6 +654,45 @@ Deno.serve(async (req) => {
     } catch (contractError: any) {
       console.error('Error in purchase contract flow:', contractError);
       errors.push(`Kaufvertrag komplett fehlgeschlagen: ${contractError.message}`);
+    }
+
+    // ─── 10b. BLANK HANDOVER PROTOCOL FLOW (best-effort, isolated) ─
+    if (contractSuccess && RESEND_API_KEY) {
+      try {
+        const { data: sellerProfile2 } = await supabaseAdmin
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', motorhome.seller_id)
+          .maybeSingle();
+        const { data: buyerProfile2 } = await supabaseAdmin
+          .from('profiles')
+          .select('email, first_name, last_name, company_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        const { data: settings2 } = await supabaseAdmin
+          .from('site_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        const protoResult = await sendBlankHandoverProtocol({
+          supabase: supabaseAdmin,
+          resendApiKey: RESEND_API_KEY,
+          settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+          motorhomeId: motorhome.id,
+          buyerId: user.id,
+          sellerId: motorhome.seller_id,
+          contractNumber,
+          salePrice: instantPrice,
+          vehicleName: motorhomeName,
+          sellerProfile: sellerProfile2,
+          buyerProfile: buyerProfile2,
+          source: 'instant-buy',
+        });
+        console.log('[instant-buy] blank handover protocol:', protoResult.info);
+      } catch (e) {
+        console.error('[instant-buy] blank handover protocol exception (non-fatal):', e);
+      }
     }
 
     // ─── 11. NOTIFY SELLER ──────────────────────────────────────

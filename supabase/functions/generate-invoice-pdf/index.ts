@@ -279,24 +279,28 @@ Deno.serve(async (req) => {
       y+=18;
     }
 
-    // Payment box
-    const pbH=30;
+    // Payment box. Height is computed from the actual rows we render so the
+    // amber background never clips when one of IBAN/BIC/Bank is missing or
+    // when extra rows (Empfänger) push the content down.
+    const accountHolder = settings?.bank_account_holder || 'WohnWert GmbH';
+    const payRows: Array<[string,string]> = [['Empfänger:', accountHolder]];
+    if(bankIban) payRows.push(['IBAN:', bankIban]);
+    if(bankBic) payRows.push(['BIC:', bankBic]);
+    if(bankName) payRows.push(['Bank:', bankName]);
+    payRows.push(['Verwendungszweck:', invoice.invoice_number]);
+    const pbH = 12 + payRows.length * 4.5 + 2;
     doc.setFillColor(AMBER_BG.r,AMBER_BG.g,AMBER_BG.b);
     doc.setDrawColor(253,230,138); doc.roundedRect(ml+1.5,y,cw-1.5,pbH,0,2,'FD');
     doc.setFillColor(AMBER_BORDER.r,AMBER_BORDER.g,AMBER_BORDER.b); doc.rect(ml,y,1.5,pbH,'F');
     doc.setTextColor(AMBER_TEXT.r,AMBER_TEXT.g,AMBER_TEXT.b); doc.setFontSize(9); doc.setFont('helvetica','bold');
     doc.text('Zahlungsinformationen',ml+8,y+6);
     let py=y+12;
-    const payRow = (lbl:string,val:string) => {
+    for(const [lbl,val] of payRows){
       doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(120,113,108);
       doc.text(lbl,ml+8,py);
       doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFont('helvetica','bold');
       doc.text(val,ml+42,py); py+=4.5;
-    };
-    if(bankIban) payRow('IBAN:',bankIban);
-    if(bankBic) payRow('BIC:',bankBic);
-    if(bankName) payRow('Bank:',bankName);
-    payRow('Verwendungszweck:',invoice.invoice_number);
+    }
     y+=pbH+6;
 
     // Closing

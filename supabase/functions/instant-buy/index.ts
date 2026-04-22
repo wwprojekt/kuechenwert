@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, RATE_LIMITS } from '../_shared/rate-limiter.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
+import { uploadSaleConversionToBingAds } from '../_shared/bing-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
 import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 
@@ -391,7 +392,7 @@ Deno.serve(async (req) => {
       // The admin can manually create the invoice later
     }
 
-    // ─── 8b. GOOGLE ADS SALE CONVERSION (only after invoice confirmed) ──
+    // ─── 8b. GOOGLE + BING ADS SALE CONVERSION (only after invoice confirmed) ──
     if (invoiceSuccess) {
       const saleResult = await uploadSaleConversionToGoogleAds({
         supabase: supabaseAdmin,
@@ -405,19 +406,33 @@ Deno.serve(async (req) => {
           gclid: motorhome.gclid,
           gbraid: motorhome.gbraid,
           wbraid: motorhome.wbraid,
-          // Microsoft Click ID für Phase 2 Bing Conversions API. Heute ignoriert
-          // die track-conversion Edge Function das Feld (loggt es nur), verwirft
-          // es aber NICHT — sobald die CAPI-Implementierung steht, ist die
-          // Sofortkauf-Sale-Attribution für Bing-Klicks ohne weitere Code-
-          // Änderung aktiv. Additiv, kein Effekt auf den Google-Pfad.
           msclkid: motorhome.msclkid,
         },
       });
       if (saleResult.attempted && !saleResult.success) {
         errors.push(`Google Ads Sale-Conversion: ${saleResult.error || 'Unbekannter Fehler'}`);
       }
+
+      // Phase 2: Bing Ads server-side Offline Conversion (parallel zu Google).
+      // Skipt sauber wenn msclkid oder Secrets fehlen — wirft NIE in den Sale-Flow.
+      const bingResult = await uploadSaleConversionToBingAds({
+        supabase: supabaseAdmin,
+        source: 'instant-buy',
+        auctionId,
+        motorhomeId: motorhome.id,
+        motorhomeCreatedAt: motorhome.created_at,
+        sellerId: motorhome.seller_id,
+        dealerId: user.id,
+        saleAmount: instantPrice,
+        clickIds: {
+          msclkid: motorhome.msclkid,
+        },
+      });
+      if (bingResult.attempted && !bingResult.success) {
+        errors.push(`Bing Ads Sale-Conversion: ${bingResult.error || 'Unbekannter Fehler'}`);
+      }
     } else {
-      console.log('[instant-buy] Invoice not created successfully, skipping Google Ads sale conversion');
+      console.log('[instant-buy] Invoice not created successfully, skipping Google + Bing Ads sale conversions');
     }
 
     // ─── 9. WINNER NOTIFICATION ─────────────────────────────────

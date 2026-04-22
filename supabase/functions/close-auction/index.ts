@@ -4,6 +4,7 @@ import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warning
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
 import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion.ts';
+import { uploadSaleConversionToBingAds } from '../_shared/bing-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
 import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
 import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketing-config.ts';
@@ -1181,6 +1182,27 @@ Deno.serve(async (req) => {
         });
         if (saleResult.attempted && !saleResult.success) {
           errors.push(`Google Ads Sale-Conversion: ${saleResult.error || 'Unbekannter Fehler'}`);
+        }
+
+        // Phase 2: Bing Ads server-side Offline Conversion (parallel zu Google).
+        // Skipt sauber, wenn msclkid fehlt oder Secrets nicht gesetzt sind —
+        // wirft NIE in den Sale-Flow. Setzt eigenes Goal in MS Ads voraus
+        // (siehe docs/bing-offline-conversions-setup.md).
+        const bingResult = await uploadSaleConversionToBingAds({
+          supabase,
+          source: 'close-auction',
+          auctionId,
+          motorhomeId: auction.motorhome.id,
+          motorhomeCreatedAt: auction.motorhome?.created_at,
+          sellerId: auction.motorhome.seller_id,
+          dealerId: soldTo!,
+          saleAmount: Number(highestBid!.amount),
+          clickIds: {
+            msclkid: auction.motorhome?.msclkid,
+          },
+        });
+        if (bingResult.attempted && !bingResult.success) {
+          errors.push(`Bing Ads Sale-Conversion: ${bingResult.error || 'Unbekannter Fehler'}`);
         }
       } else {
         console.log('[close-auction] Invoice not created successfully, skipping sale conversion (no confirmed sale)');

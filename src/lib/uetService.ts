@@ -115,13 +115,24 @@ export function sendBingCustomEvent(
 }
 
 /**
- * Setzt User-Daten für Microsoft "Enhanced Conversions". Microsoft erwartet
- * (anders als Google) gehashte E-Mail/Telefon DIREKT im Event, nicht via
- * separatem `set`-Call. Diese Funktion bereitet die gehashten Werte vor und
- * pusht sie via `set` in die UET-Queue, damit nachfolgende Events sie
- * automatisch mitsenden.
+ * Setzt User-Daten für Microsoft "Enhanced Conversions" via UET-Pixel.
+ * Microsoft erwartet das Wrapper-Format `{ pid: { em, ph } }` — `em` für
+ * gehashte E-Mail, `ph` für gehashte Telefonnummer. NICHT verwechseln mit
+ * `pid` als Feldname (das ist NUR der Wrapper).
  *
- * Doku: https://help.ads.microsoft.com/apex/3/en/60118/2
+ * E-Mail-Normalisierung (per MS-Spec):
+ *  1. Whitespace trimmen
+ *  2. Punkte aus dem User-Part entfernen
+ *  3. +Alias aus dem User-Part entfernen
+ *  4. Komplett lowercase
+ *
+ * Telefon-Normalisierung: defensiv auf nur-Ziffern + führendes "+",
+ * E.164 ist die offizielle Empfehlung (DE = +49…).
+ *
+ * Diese `set`-Daten gelten für ALLE nachfolgenden uetq-Events (auch
+ * `pageLoad`), daher idealerweise vor dem ersten Conversion-Event aufrufen.
+ *
+ * Doku: https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
  */
 export async function setBingEnhancedConversionData(userData: {
   email?: string;
@@ -129,26 +140,58 @@ export async function setBingEnhancedConversionData(userData: {
 }): Promise<void> {
   if (!isMicrosoftAdsEnabled()) return;
   try {
-    const data: Record<string, string> = {};
+    const pid: Record<string, string> = {};
     if (userData.email) {
-      data.pid = await sha256Lower(userData.email);
+      const normEmail = normalizeEmailForBing(userData.email);
+      if (normEmail) pid.em = await sha256Hex(normEmail);
     }
     if (userData.phone) {
-      // Microsoft akzeptiert Telefon entweder gehashed oder normalisiert.
-      // Wir gehashed es defensiv.
-      const normalized = userData.phone.replace(/[\s\-()]/g, '');
-      data.ph = await sha256Lower(normalized);
+      const normPhone = normalizePhoneForBing(userData.phone);
+      if (normPhone) pid.ph = await sha256Hex(normPhone);
     }
-    if (Object.keys(data).length === 0) return;
-    safeUet('set', { pid: data });
+    if (Object.keys(pid).length === 0) return;
+    safeUet('set', { pid });
   } catch (err) {
     logger.warn('[UetService] setBingEnhancedConversionData failed:', err);
   }
 }
 
-async function sha256Lower(value: string): Promise<string> {
+/**
+ * Normalisiert eine E-Mail-Adresse nach MS-Bing-Spec für Enhanced
+ * Conversions. Gibt einen leeren String zurück wenn die Eingabe kein
+ * gültiges E-Mail-Format hat (verhindert Müll-Hashes).
+ */
+function normalizeEmailForBing(raw: string): string {
+  const trimmed = raw.trim().toLowerCase();
+  const at = trimmed.indexOf('@');
+  if (at <= 0 || at === trimmed.length - 1) return '';
+  let local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  // Remove +alias-Teil (alles ab dem ersten +)
+  const plus = local.indexOf('+');
+  if (plus !== -1) local = local.slice(0, plus);
+  // Remove Punkte aus User-Part (Gmail-konform; für andere Provider neutral)
+  local = local.replace(/\./g, '');
+  if (!local) return '';
+  return `${local}@${domain}`;
+}
+
+/**
+ * Normalisiert eine Telefonnummer auf reines E.164-Format (digits + leading '+').
+ * Wenn keine Landeskennung erkennbar ist, fallback auf "+49" (DE-Markt).
+ */
+function normalizePhoneForBing(raw: string): string {
+  const stripped = raw.replace(/[^\d+]/g, '');
+  if (!stripped) return '';
+  if (stripped.startsWith('+')) return stripped;
+  if (stripped.startsWith('00')) return `+${stripped.slice(2)}`;
+  if (stripped.startsWith('0')) return `+49${stripped.slice(1)}`;
+  return `+${stripped}`;
+}
+
+async function sha256Hex(value: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(value.trim().toLowerCase());
+  const data = encoder.encode(value);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');

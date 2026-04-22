@@ -82,10 +82,10 @@ export interface UploadBingSaleConversionResult {
   conversionName?: string;
 }
 
+import { getBingAccessToken } from './bing-oauth-token.ts';
+
 const BING_PRODUCTION_URL =
   'https://campaign.api.bingads.microsoft.com/CampaignManagement/v13/OfflineConversions/Apply';
-const OAUTH_TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
-const OAUTH_SCOPE = 'https://ads.microsoft.com/msads.manage offline_access';
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
 /**
@@ -296,33 +296,18 @@ export async function uploadSaleConversionToBingAds(
     }
   }
 
-  // --- OAuth Refresh ---
-  // Microsoft Entra (Azure AD) Common Endpoint mit dem msads.manage scope.
-  // Refresh-Token-Flow ist identisch zu Google.
+  // --- OAuth Refresh (with persistent rotated-token storage) ---
+  // Microsoft rotates the refresh token on every call. The helper takes care
+  // of: (1) cache hit, (2) calling /token, (3) writing the rotated refresh
+  // token back to bing_oauth_state — so we can call this 1000x/day safely.
   let accessToken: string;
   try {
-    const tokenResponse = await fetch(OAUTH_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: BING_OAUTH_CLIENT_ID,
-        client_secret: BING_OAUTH_CLIENT_SECRET,
-        refresh_token: BING_OAUTH_REFRESH_TOKEN,
-        scope: OAUTH_SCOPE,
-      }),
+    const tokenResult = await getBingAccessToken(supabase, {
+      clientId: BING_OAUTH_CLIENT_ID,
+      clientSecret: BING_OAUTH_CLIENT_SECRET,
+      initialRefreshToken: BING_OAUTH_REFRESH_TOKEN,
     });
-
-    if (!tokenResponse.ok) {
-      const txt = await tokenResponse.text();
-      throw new Error(`OAuth token error: ${tokenResponse.status} ${txt}`);
-    }
-
-    const tokenJson = await tokenResponse.json();
-    accessToken = tokenJson.access_token;
-    if (!accessToken) {
-      throw new Error('OAuth response missing access_token');
-    }
+    accessToken = tokenResult.accessToken;
   } catch (oauthErr: any) {
     errLog('OAuth refresh failed:', oauthErr);
     // Log-Eintrag fürs Monitoring schreiben, dann Skip.

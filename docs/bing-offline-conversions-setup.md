@@ -8,9 +8,25 @@ haben. Damit lernt Microsoft Smart Bidding nicht nur aus Lead-Pixel-Events
 ("Wizard abgeschlossen", siehe Phase 1), sondern aus dem echten Sale-Outcome
 mit echtem Commission-Wert in Euro.
 
-**Status nach Code-Deploy:** Der Code ist drin, läuft aber als **No-op**, bis
-die unten beschriebenen 6 Secrets in Supabase gesetzt sind. Das ist exakt das
-gleiche Pattern wie bei Google Ads — keine Risiken durch "halben Setup".
+**Status:** ✅ **LIVE seit 2026-04-22.** Alle 7 Secrets gesetzt, OAuth-Token-Rotation
+in DB persistent, End-to-End Smoke-Test bestanden (HTTP 200 von Bing API). Die
+Pipeline ist scharf — der erste Verkauf nach Ablauf der Microsoft-2-Stunden-
+Goal-Maturity (siehe Smoke-Test-Output) wird automatisch hochgeladen.
+
+## Refresh-Token-Rotation (KRITISCH)
+
+Microsoft rotiert den OAuth-Refresh-Token **bei jedem einzelnen Refresh**. Wenn
+wir den Token nur in Env-Vars hielten, würde die Edge Function exakt **einmal**
+funktionieren und danach 401 für alle Ewigkeit liefern.
+
+**Lösung:** Tabelle `public.bing_oauth_state` (1 Zeile, RLS auf `service_role`)
+als persistenter Token-Store. Helper `_shared/bing-oauth-token.ts`:
+1. Lädt aktuellen Refresh-Token aus DB (Fallback: env-var beim allerersten Call).
+2. Wenn der gecachte Access-Token noch >5 min gültig ist → Cache-Hit, kein API-Call.
+3. Sonst: ruft `/token` auf, persistiert den **neuen** Refresh-Token + Access-Token
+   atomar zurück in `bing_oauth_state` BEVOR die eigentliche Bing-API-Call läuft.
+
+So skaliert die Function auf 1000+ Aufrufe/Tag ohne menschlichen Eingriff.
 
 ## Architektur
 

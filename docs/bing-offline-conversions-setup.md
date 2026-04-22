@@ -28,6 +28,35 @@ als persistenter Token-Store. Helper `_shared/bing-oauth-token.ts`:
 
 So skaliert die Function auf 1000+ Aufrufe/Tag ohne menschlichen Eingriff.
 
+## Race-Safety bei parallelen Sales (KRITISCH)
+
+Bei `check-expired-auctions` (cron jede Minute) oder einem dichten Verkaufsmoment
+können zwei `close-auction`-Calls fast gleichzeitig laufen. Wenn beide den
+Cache-Miss treffen und parallel den `/token`-Endpoint hitten, würde der erste
+einen neuen Refresh-Token bekommen und den alten invalidieren — der zweite
+würde mit dem inzwischen invalidierten Token einen 400 bekommen UND (im
+ursprünglichen Code) den frisch rotierten Token in der DB überschreiben. Damit
+wäre die Pipeline nach EINEM verlorenen Race permanent tot.
+
+**Lösung — zwei Layer:**
+
+1. **Lease-Lock (`lock_holder_until` + RPC `bing_oauth_try_acquire_lock`):**
+   Atomarer CAS-Update. Wer den Lock holt, refresht. Wer ihn nicht bekommt,
+   pollt 12s lang die DB (250 ms Intervall), bis der Winner den frischen
+   Access-Token reingeschrieben hat — und gibt dann diesen Cache zurück.
+   Lock-TTL: 30s. Falls die Function crasht, bevor sie released, läuft der
+   Lock automatisch ab und der nächste Worker übernimmt.
+2. **Niemals den Refresh-Token im Error-Path überschreiben.** Falls ein
+   Race trotzdem entsteht (z. B. weil `bing_oauth_try_acquire_lock` aus
+   irgendeinem Grund failed), schreibt der Loser nur seine `last_error`-Felder
+   — der gerotierte Refresh-Token des Winners bleibt unangetastet.
+
+Verifizierte Lock-Semantik (siehe SQL-Smoketest):
+- `try_acquire(...)` 1× → `true`, lock_holder_until = now() + 30s
+- `try_acquire(...)` 2× direkt danach → `false` (Lock noch gehalten)
+- `release_lock(...)` → lock_holder_until = NULL
+- Nach 30s: lock_holder_until liegt in der Vergangenheit, nächster `try_acquire` → `true`
+
 ## Architektur
 
 ```

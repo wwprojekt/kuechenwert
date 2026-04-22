@@ -204,7 +204,11 @@ const SearchableSelect = ({
     inputRef.current?.blur();
   }, [onChange, onCommit]);
 
-  const dropdownMaxH = isMobile ? "max-h-[200px]" : "max-h-[300px]";
+  // Funnel-Analyse 2026-04-22: Auf Mobile waren bei max-h-[200px] nur ~5
+  // Hersteller sichtbar, der Rest verschwand "unter dem Fold". User scrollten
+  // nicht in einem absoluten Dropdown, klickten daneben und brachen ab.
+  // 60vh nutzt den ueblichen Tastaturen-freien Bereich auf modernen Smartphones.
+  const dropdownMaxH = isMobile ? "max-h-[60vh]" : "max-h-[300px]";
 
   // Show the typed query while focused, otherwise the committed value
   const displayValue = isFocused ? query : (value || "");
@@ -395,6 +399,16 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     return [...m, "Sonstiges Modell"];
   }, [formData.manufacturer, isWohnwagen]);
 
+  // Funnel-Analyse 2026-04-22: Wenn der Hersteller in unserer DB nicht
+  // existiert (z. B. seltene Marke oder Wertrechner-URL-Param), gibt
+  // useMemo nur ["Sonstiges Modell"] zurueck. Mehrere Sessions zeigten
+  // dass User in dem Fall mehrfach das Modell-Feld oeffnen, das einsame
+  // Listen-Item nicht verstehen, blur_empty machen und am Ende abbrechen
+  // (siehe Session d4ef6319: 5x next_clicked, 3x blur_empty(model)).
+  // Loesung: in dem Fall rendern wir ein normales Free-Text-Input mit
+  // klarem Hinweis, statt das verwirrende Dropdown.
+  const isModelFreeText = models.length === 1 && models[0] === "Sonstiges Modell";
+
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years: number[] = [];
@@ -489,19 +503,41 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
               <Label htmlFor="model" className={cn(fieldErrors.model && "text-red-600")}>
                 Modell / Baureihe <span className="text-red-500">*</span>
               </Label>
-              <SearchableSelect
-                id="model"
-                options={models}
-                value={formData.model}
-                onChange={(val) => updateFormData({ model: val.trim() })}
-                onCommit={(val) => updateFormData({ model: val.trim() })}
-                placeholder={`Modell von ${formData.manufacturer}...`}
-                hasError={!!fieldErrors.model}
-                escapeLabel="Sonstiges Modell"
-                autoFocus={!isMobile}
-              />
+              {isModelFreeText ? (
+                <Input
+                  id="model"
+                  type="text"
+                  value={formData.model}
+                  placeholder={`z. B. ${formData.manufacturer} 540 oder Sondermodell`}
+                  autoComplete="off"
+                  className={cn(
+                    "h-12 text-base",
+                    fieldErrors.model && "border-red-500 ring-red-500/20 ring-2"
+                  )}
+                  onChange={(e) => updateFormData({ model: e.target.value })}
+                  onBlur={(e) => updateFormData({ model: e.target.value.trim() })}
+                />
+              ) : (
+                <SearchableSelect
+                  id="model"
+                  options={models}
+                  value={formData.model}
+                  onChange={(val) => updateFormData({ model: val.trim() })}
+                  onCommit={(val) => updateFormData({ model: val.trim() })}
+                  placeholder={`Modell von ${formData.manufacturer}...`}
+                  hasError={!!fieldErrors.model}
+                  escapeLabel="Sonstiges Modell"
+                  autoFocus={!isMobile}
+                />
+              )}
               {fieldErrors.model ? (
                 <p className="text-sm text-red-600">{fieldErrors.model}</p>
+              ) : isModelFreeText ? (
+                // Funnel-Analyse 2026-04-22: Hersteller hat keine Modell-DB-Eintraege.
+                // Klarer Hint statt verwirrendes Dropdown mit nur "Sonstiges Modell".
+                <p className="text-xs text-muted-foreground">
+                  Tippen Sie die Modellbezeichnung Ihres {formData.manufacturer} ein \u2013 wir nehmen jede Eingabe.
+                </p>
               ) : (
                 // Funnel-Analyse Step 2 (2026-04-21): 9 von 10 Step-2-Abbrechern
                 // haben kein Modell ausgew\u00e4hlt, obwohl Free-Text + "Sonstiges
@@ -569,10 +605,16 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
 
           {/* Zustand – visual tiles */}
           <div className="space-y-1.5">
-            <Label className={cn(fieldErrors.condition && "text-red-600")}>
+            <Label htmlFor="condition" className={cn(fieldErrors.condition && "text-red-600")}>
               Zustand <span className="text-red-500">*</span>
             </Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {/* id="condition" damit der Auto-Scroll in useWizardForm.ts
+                 (window.requestAnimationFrame -> getElementById) das Feld
+                 findet und sanft in den sichtbaren Bereich scrollt. Ohne
+                 die id lief der Scroll-Fallback ins Leere und das letzte
+                 Pflichtfeld blieb unter dem Fold. tabIndex=-1 macht den
+                 Container fokussierbar fuer focus({preventScroll:true}). */}
+            <div id="condition" tabIndex={-1} className="grid grid-cols-3 sm:grid-cols-5 gap-2 outline-none scroll-mt-24">
               {[
                 { value: "Neuwertig", emoji: "✨", short: "Neuwertig" },
                 { value: "Sehr gepflegt", emoji: "👍", short: "Sehr gut" },

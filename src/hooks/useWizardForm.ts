@@ -612,10 +612,57 @@ export const useWizardForm = () => {
           }
         }
 
-        const germanMessage = handleValidationError(error, 'VerkaufenWizard');
+        // UX-Fix Funnel-Analyse 2026-04-22: Vorher zeigte der Toast nur die
+        // erste Fehlermeldung (z. B. "Hersteller ist erforderlich"). Bei
+        // 5 leeren Pflichtfeldern in Step 2 hat der User dann ein Feld
+        // ausgefuellt, "Weiter" geklickt, wieder eine Meldung bekommen,
+        // wieder ein Feld ausgefuellt etc. Nach 3-4 Iterationen brechen
+        // 70 % ab (siehe wizard_step_events: validation_failed mit
+        // [manufacturer, model, year, mileage, condition] gefolgt von leave).
+        // Jetzt: ein einziger Toast, der ALLE fehlenden Felder als Liste
+        // benennt - der User sieht den vollen Aufwand sofort und kann
+        // alles in einem Schritt ergaenzen.
+        const FIELD_LABELS_DE: Record<string, string> = {
+          bodyType: "Aufbauart",
+          manufacturer: "Hersteller",
+          model: "Modell",
+          year: "Baujahr",
+          mileage: "Kilometerstand",
+          condition: "Zustand",
+          customerName: "Name",
+          customerEmail: "E-Mail",
+          customerPhone: "Telefonnummer",
+          saleChannel: "Verkaufsweg",
+          instantPrice: "Wunschpreis",
+          reservePrice: "Mindestpreis",
+          street: "Stra\u00dfe",
+          houseNumber: "Hausnummer",
+          zipCode: "PLZ",
+          city: "Ort",
+          country: "Land",
+          marketingConsent: "Best\u00e4tigung der Marketingphase",
+          registerPassword: "Passwort",
+          confirmPassword: "Passwort-Best\u00e4tigung",
+        };
+        const errorKeys = Object.keys(errors).filter((k) => k !== '_refine');
+        let description: string;
+        if (errorKeys.length > 1) {
+          const labels = errorKeys.map((k) => FIELD_LABELS_DE[k] || k);
+          // Liste mit "und" am Ende: "A, B und C"
+          const formatted =
+            labels.length === 2
+              ? labels.join(' und ')
+              : labels.slice(0, -1).join(', ') + ' und ' + labels[labels.length - 1];
+          description = `Bitte erg\u00e4nzen Sie noch: ${formatted}.`;
+        } else {
+          description = handleValidationError(error, 'VerkaufenWizard');
+        }
         toast({
-          title: "Bitte überprüfen Sie Ihre Eingaben",
-          description: germanMessage,
+          title:
+            errorKeys.length > 1
+              ? `${errorKeys.length} Pflichtfelder fehlen`
+              : "Bitte \u00fcberpr\u00fcfen Sie Ihre Eingaben",
+          description,
           variant: "destructive",
         });
       }

@@ -102,6 +102,7 @@ Before every commit:
 - **Storage upload without `cacheControl`**: Any `.upload(path, file)` call missing the `cacheControl: "31536000, immutable"` option — defaults to 1h cache and breaks edge caching
 - **Edge Function without Cron when periodic**: Deploying a function intended to run on a schedule without also adding the `cron.schedule(...)` migration in the same commit
 - **MCP migration without file**: Calling `apply_migration` without writing `supabase/migrations/<timestamp>_<name>.sql` first
+- **Migration committed but never applied**: A `.sql` file in `supabase/migrations/` that is NOT listed in `supabase_migrations.schema_migrations` is dead code that silently does nothing. Real example: 2026-04-21 the cron-throttle file was committed (commit `210d723`) but never applied → photo crons ran 5× too fast for 16 h and overloaded the connection pool. **After every `apply_migration` call, verify with `select 1 from supabase_migrations.schema_migrations where version = '<ts>';`**. The Schedule-Drift card on `/admin/cron-health` will surface this class of bug for cron jobs going forward.
 - **Global Realtime listener**: `supabase.channel("foo").on("postgres_changes", { event: "*", table: "bids" }, ...)` without a `filter` — broadcasts every change in the table to every client
 
 ## Key Architecture Patterns

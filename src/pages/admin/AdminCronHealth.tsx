@@ -88,6 +88,16 @@ type RunHistoryRow = {
   duration_ms: number | null;
 };
 
+type DriftRow = {
+  jobid: number;
+  jobname: string;
+  schedule: string;
+  expected_runs_per_hour: number | null;
+  actual_runs_per_hour: number | null;
+  drift_ratio: number | null;
+  severity: "ok" | "too_fast" | "too_slow" | "unknown_schedule";
+};
+
 const TIME_WINDOWS: Array<{ value: string; label: string; hours: number }> = [
   { value: "1", label: "Letzte Stunde", hours: 1 },
   { value: "6", label: "Letzte 6 Stunden", hours: 6 },
@@ -205,6 +215,7 @@ const AdminCronHealth = () => {
   const [jobs, setJobs] = useState<JobHealth[]>([]);
   const [httpHealth, setHttpHealth] = useState<HttpHealthRow[]>([]);
   const [failures, setFailures] = useState<HttpFailureRow[]>([]);
+  const [drifts, setDrifts] = useState<DriftRow[]>([]);
 
   const [selectedJob, setSelectedJob] = useState<JobHealth | null>(null);
   const [history, setHistory] = useState<RunHistoryRow[]>([]);
@@ -215,19 +226,26 @@ const AdminCronHealth = () => {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [jobsRes, healthRes, failRes] = await Promise.all([
+      const [jobsRes, healthRes, failRes, driftRes] = await Promise.all([
         supabase.rpc("admin_get_cron_jobs_health", { p_hours: hours }),
         supabase.rpc("admin_get_http_response_health", { p_hours: hours }),
         supabase.rpc("admin_get_recent_http_failures", { p_hours: hours, p_limit: 100 }),
+        supabase.rpc("admin_get_cron_schedule_drift"),
       ]);
 
       if (jobsRes.error) throw jobsRes.error;
       if (healthRes.error) throw healthRes.error;
       if (failRes.error) throw failRes.error;
+      // Drift is best-effort: ignore errors so the dashboard still loads on a
+      // fresh DB that has not yet had the drift RPC migrated in.
+      if (driftRes.error) {
+        console.warn("CronHealth drift fetch failed", driftRes.error);
+      }
 
       setJobs((jobsRes.data || []) as JobHealth[]);
       setHttpHealth((healthRes.data || []) as HttpHealthRow[]);
       setFailures((failRes.data || []) as HttpFailureRow[]);
+      setDrifts(((driftRes.data || []) as DriftRow[]) ?? []);
     } catch (err) {
       console.error("CronHealth fetch error", err);
       toast({
@@ -286,6 +304,11 @@ const AdminCronHealth = () => {
   }, [httpHealth]);
   const httpTotal = httpStats.ok + httpStats.fail + httpStats.other;
   const httpFailRate = httpTotal > 0 ? (httpStats.fail / httpTotal) * 100 : 0;
+
+  const driftedJobs = useMemo(
+    () => drifts.filter((d) => d.severity === "too_fast" || d.severity === "too_slow"),
+    [drifts],
+  );
 
   const inactiveJobs = useMemo(() => jobs.filter((j) => !j.active).length, [jobs]);
   const failingJobs = useMemo(
@@ -400,17 +423,88 @@ const AdminCronHealth = () => {
             <p className="text-xs text-muted-foreground">Auffällig</p>
             <p
               className={`text-2xl font-bold ${
-                failingJobs + idleActiveJobs > 0 ? "text-orange-600" : "text-green-600"
+                failingJobs + idleActiveJobs + driftedJobs.length > 0
+                  ? "text-orange-600"
+                  : "text-green-600"
               }`}
             >
-              {failingJobs + idleActiveJobs}
+              {failingJobs + idleActiveJobs + driftedJobs.length}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {failingJobs} mit Fehlern · {idleActiveJobs} ohne Runs · {inactiveJobs} inaktiv
+              {driftedJobs.length > 0 && ` · ${driftedJobs.length} Schedule-Drift`}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Schedule-Drift Warning – only shown when actual frequency deviates >50% from schedule */}
+      {driftedJobs.length > 0 && (
+        <Card className="border-red-300 dark:border-red-800">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">
+                  Schedule-Drift erkannt
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Die tatsächliche Run-Frequenz weicht in den letzten 2 Stunden um mehr
+                  als 50 % vom konfigurierten Schedule ab. Häufigste Ursache: eine
+                  Schedule-Änderung wurde nur in git committed, aber nie in der DB
+                  persistiert. Prüfen mit{" "}
+                  <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
+                    select * from cron.job;
+                  </code>
+                  .
+                </p>
+                <div className="mt-3 border border-border rounded-lg overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+                      <tr>
+                        <th className="text-left px-3 py-2">Severity</th>
+                        <th className="text-left px-3 py-2">Job</th>
+                        <th className="text-left px-3 py-2">Schedule</th>
+                        <th className="text-right px-3 py-2">Erwartet/h</th>
+                        <th className="text-right px-3 py-2">Tatsächlich/h</th>
+                        <th className="text-right px-3 py-2">Faktor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {driftedJobs.map((d) => (
+                        <tr key={d.jobid}>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                d.severity === "too_fast"
+                                  ? statusToneClass("err")
+                                  : statusToneClass("warn")
+                              }`}
+                            >
+                              {d.severity === "too_fast" ? "ZU OFT" : "ZU SELTEN"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-medium">{d.jobname}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{d.schedule}</td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {d.expected_runs_per_hour ?? "–"}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {d.actual_runs_per_hour ?? "–"}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono font-semibold">
+                            {d.drift_ratio !== null ? `${d.drift_ratio}×` : "–"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* HTTP-Health Breakdown */}
       <Card>

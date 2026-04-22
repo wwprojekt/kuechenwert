@@ -82,38 +82,59 @@ CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]
 # ============================================================================
 # Production Stage (DEFAULT - used when no target specified)
 # ============================================================================
+#
+# OLD-CHUNK-PRESERVATION ARCHITECTURE (siehe docker/sync-assets.sh):
+# Statt dist/ direkt nach /usr/share/nginx/html zu kopieren (was bei jedem
+# Deploy alle alten Chunks zerstört) wird der Build-Output in /tmp/dist-stage
+# abgelegt und beim Container-Start via /docker-entrypoint.d/ Hook in das
+# nginx-html-Verzeichnis gesynced. Der Sync ist additiv für assets/, sodass
+# alte Chunk-Hashes erhalten bleiben wenn /usr/share/nginx/html/assets als
+# persistent volume gemountet ist. Ohne Volume = identisches Verhalten zu
+# vorher (kein Regress).
 FROM nginx:alpine AS production
 
-# Install security updates
 RUN apk upgrade --no-cache
 
-# Copy custom nginx configuration
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
 
-# Copy built application
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Build-Output in Staging-Pfad (NICHT direkt nach /usr/share/nginx/html).
+# Der Sync vom Staging-Pfad in das html-Verzeichnis übernimmt das
+# Entrypoint-Script bei jedem Container-Start.
+COPY --from=builder /app/dist /tmp/dist-stage
 
-# Create health check endpoint
-RUN echo '<!DOCTYPE html><html><body><h1>OK</h1></body></html>' > /usr/share/nginx/html/health
+# Health-Endpoint im Staging-Pfad — wird vom Sync-Script in das html-dir
+# kopiert.
+RUN echo '<!DOCTYPE html><html><body><h1>OK</h1></body></html>' > /tmp/dist-stage/health
 
-# Set proper permissions for nginx user
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html && \
+# Sync-Script registrieren. nginx:alpine führt alle .sh in
+# /docker-entrypoint.d/ vor dem nginx-Start aus. Prefix 40-* damit es
+# nach den nginx-eigenen Setup-Scripts (10-30) läuft.
+COPY docker/sync-assets.sh /docker-entrypoint.d/40-sync-assets.sh
+RUN chmod +x /docker-entrypoint.d/40-sync-assets.sh
+
+# Permissions vorbereiten. Das eigentliche chown auf /usr/share/nginx/html
+# macht das Sync-Script nach jedem Sync (nötig falls Volume-Mount andere
+# Ownership hat).
+RUN chown -R nginx:nginx /tmp/dist-stage && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     touch /tmp/nginx.pid && \
-    chown -R nginx:nginx /tmp/nginx.pid
+    chown -R nginx:nginx /tmp/nginx.pid && \
+    mkdir -p /usr/share/nginx/html/assets && \
+    chown -R nginx:nginx /usr/share/nginx/html
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:80/health || exit 1
 
-# Expose port
 EXPOSE 80
 
-# Use nginx user
-USER nginx
+# WICHTIG: kein USER nginx mehr — die /docker-entrypoint.d/ Scripts
+# brauchen root für chown auf gemountete Volumes. nginx:alpine wechselt
+# automatisch über die master-process-config in nginx.conf zum
+# unprivileged worker-user nach dem Bind auf Port 80.
+# (Setzen wir USER nginx, schlägt der sync-Hook auf gemountete Volumes
+# mit chown-EPERM fehl, was zwar non-fatal ist, aber unnötiges Rauschen
+# in den Logs erzeugt.)
 
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

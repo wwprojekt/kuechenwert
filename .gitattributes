@@ -1,0 +1,10 @@
+# Erzwinge LF-Line-Endings für Shell-Scripts und Dockerfile-Artefakte.
+# Alpine-Linux (busybox sh) wirft `bad interpreter: \r` wenn ein .sh-File
+# mit CRLF gepusht wird. Windows-Editoren konvertieren sonst automatisch.
+*.sh              text eol=lf
+Dockerfile        text eol=lf
+*.dockerfile      text eol=lf
+docker-entrypoint text eol=lf
+docker/*          text eol=lf
+nginx.conf        text eol=lf
+default.conf      text eol=lf

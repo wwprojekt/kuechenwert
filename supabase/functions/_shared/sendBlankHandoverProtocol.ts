@@ -18,6 +18,7 @@
  */
 
 import { buildEmailLayout, paragraph, infoBox, detailRow } from './email-builder.ts';
+import { logEdgeError } from './edgeLogger.ts';
 
 interface SettingsLike {
   site_name?: string;
@@ -68,6 +69,42 @@ export interface SendBlankHandoverProtocolResult {
  * Never throws.
  */
 export async function sendBlankHandoverProtocol(
+  args: SendBlankHandoverProtocolArgs,
+): Promise<SendBlankHandoverProtocolResult> {
+  const result = await sendBlankHandoverProtocolInner(args);
+
+  // ─── Persist visible failure into error_logs ──────────────────────────
+  // ANY non-ok result (or partial failure) is logged so admins can see it
+  // in the dashboard without combing edge function logs.
+  if (!result.ok || result.info?.startsWith('partial')) {
+    try {
+      await logEdgeError(args.supabase, {
+        component: 'sendBlankHandoverProtocol',
+        message: `Blank handover protocol delivery problem (${args.source}): ${result.info}`,
+        severity: result.ok ? 'medium' : 'high',
+        category: 'contract',
+        errorCode: 'BLANK_HANDOVER_PROTOCOL_FAILED',
+        metadata: {
+          source: args.source,
+          contractNumber: args.contractNumber,
+          motorhomeId: args.motorhomeId,
+          buyerId: args.buyerId,
+          sellerId: args.sellerId,
+          info: result.info,
+          error: result.error || null,
+          sellerEmail: args.sellerProfile?.email || null,
+          buyerEmail: args.buyerProfile?.email || null,
+        },
+      });
+    } catch (e) {
+      console.warn(`[${args.source}] failed to log blank-protocol failure to error_logs:`, e);
+    }
+  }
+
+  return result;
+}
+
+async function sendBlankHandoverProtocolInner(
   args: SendBlankHandoverProtocolArgs,
 ): Promise<SendBlankHandoverProtocolResult> {
   const {

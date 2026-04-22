@@ -40,7 +40,7 @@ Microsoft Advertising → **Ziele → Conversion-Ziele → + Erstellen**
 | # | Goal-Name | Zielkategorie | Goal-Typ | **Event Action** (case-sensitive!) | Wert € | Primary? | Zähl­methode |
 |---|---|---|---|---|---|---|---|
 | 1 | `Wizard Abgeschlossen` | Lead-Formular absenden | Ereignis | `wizard_completed` | 9.00 | YES | Individuell |
-| 2 | `Terminbuchung` | Termin buchen | Ereignis | `terminbuchung` | 9.00 | YES | Individuell |
+| 2 | `Terminbuchung` | Termin reservieren | Ereignis | `terminbuchung` | 9.00 | YES | Individuell |
 | 3 | `Kontaktformular gesendet` | Lead-Formular absenden | Ereignis | `kontakt_lead` | 1.00 | YES | Individuell |
 | 4 | `Wertermittlung Lead` | Lead-Formular absenden | Ereignis | `wertermittlung_lead` | 2.50 | YES | Individuell |
 | 5 | `Wertrechner Lead` | Lead-Formular absenden | Ereignis | `wertrechner_lead` | 2.50 | YES | Individuell |

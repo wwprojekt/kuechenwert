@@ -1014,6 +1014,17 @@ export const useWizardForm = () => {
       // Wohnwagen haben keinen Motor – Motor-Felder auf null setzen
       const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
+      // Click-IDs (Google + Bing) aus localStorage holen, damit wir sie auf
+      // die motorhomes-Zeile schreiben können. Das ist die Voraussetzung für
+      // Sale-Conversion-Attribution: close-auction / instant-buy / kaufchance /
+      // admin-sell lesen `motorhome.gclid` bzw. `motorhome.msclkid` zurück und
+      // schicken sie an Google Ads (heute) bzw. Bing CAPI (Phase 2).
+      // Ohne diesen Schritt gehen die Click-IDs für eingeloggte User zwischen
+      // wizard_sessions (richtig befüllt) und motorhomes (NULL) verloren.
+      // Der Guest-Pfad (auto-convert-wizard Edge Function) macht das Mapping
+      // bereits korrekt — diese Zeilen ziehen den Logged-in-Pfad nach.
+      const wizardClickIds = getStoredClickIds();
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const motorhomeInsert: Record<string, any> = {
         seller_id: user.id,
@@ -1092,6 +1103,13 @@ export const useWizardForm = () => {
         country: formData.country || 'DE',
         postal_code: formData.zipCode || null,
         city: formData.city || null,
+        // Click-IDs für Sale-Conversion-Attribution. NULL ist erlaubt (Spalten
+        // sind nullable) und wird von close-auction etc. korrekt behandelt
+        // (Conversion ohne Click-ID = Bing/Google match nur über Cookie).
+        gclid: wizardClickIds.gclid,
+        gbraid: wizardClickIds.gbraid,
+        wbraid: wizardClickIds.wbraid,
+        msclkid: wizardClickIds.msclkid,
       };
 
       const { data: motorhome, error: motorhomeError } = await withNetworkRetry(

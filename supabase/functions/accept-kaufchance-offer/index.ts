@@ -356,6 +356,12 @@ Deno.serve(async (req) => {
           gclid: auction.motorhome?.gclid,
           gbraid: auction.motorhome?.gbraid,
           wbraid: auction.motorhome?.wbraid,
+          // Microsoft Click ID für Phase 2 Bing Conversions API. Heute ignoriert
+          // die track-conversion Edge Function das Feld (loggt es nur), verwirft
+          // es aber NICHT — sobald die CAPI-Implementierung steht, ist die
+          // Kaufchance-Sale-Attribution für Bing-Klicks ohne weitere Code-
+          // Änderung aktiv. Additiv, kein Effekt auf den Google-Pfad.
+          msclkid: auction.motorhome?.msclkid,
         },
       });
       if (saleResult.attempted && !saleResult.success) {

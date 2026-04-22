@@ -24,6 +24,15 @@ interface MotorhomeClickIds {
   gclid?: string | null;
   gbraid?: string | null;
   wbraid?: string | null;
+  /**
+   * Microsoft Click ID (Bing Ads). Heute hier nur als akzeptiertes Feld
+   * deklariert, damit TS-Excess-Property-Checks in den Aufrufern nicht
+   * fehlschlagen. Die tatsächliche Bing-Sale-Conversion-Upload-Logik
+   * wird in Phase 2 ergänzt (Bing Conversions API mit `msclkid`).
+   * Das Feld wird heute aus den Aufrufer-Payloads transparent durchgereicht
+   * und in der Google-Ads-Logik unten ignoriert (kein Effekt).
+   */
+  msclkid?: string | null;
 }
 
 export interface UploadSaleConversionParams {

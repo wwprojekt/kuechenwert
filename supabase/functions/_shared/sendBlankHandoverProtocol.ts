@@ -54,6 +54,14 @@ export interface SendBlankHandoverProtocolArgs {
 
   /** Source label for logging (e.g. 'close-auction', 'instant-buy'). */
   source: string;
+
+  /**
+   * Optional recipient filter.
+   *  - 'both' (default): send to seller AND buyer
+   *  - 'buyer': send only to the buyer (used for retry after partial failure)
+   *  - 'seller': send only to the seller
+   */
+  recipients?: 'both' | 'buyer' | 'seller';
 }
 
 export interface SendBlankHandoverProtocolResult {
@@ -111,6 +119,7 @@ async function sendBlankHandoverProtocolInner(
     supabase, resendApiKey, settingsData,
     motorhomeId, buyerId, sellerId, contractNumber, salePrice,
     vehicleName, sellerProfile, buyerProfile, source,
+    recipients: recipientFilter = 'both',
   } = args;
 
   if (!resendApiKey) {
@@ -196,7 +205,7 @@ async function sendBlankHandoverProtocolInner(
   const filename = `${contractNumber}_uebergabeprotokoll.pdf`;
   const fromAddr = `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`;
 
-  const recipients: { profile: ProfileLike | null | undefined; party: 'seller' | 'buyer'; salutation: string; intro: string; instructions: string }[] = [
+  const allRecipients: { profile: ProfileLike | null | undefined; party: 'seller' | 'buyer'; salutation: string; intro: string; instructions: string }[] = [
     {
       profile: sellerProfile,
       party: 'seller',
@@ -213,10 +222,22 @@ async function sendBlankHandoverProtocolInner(
     },
   ];
 
+  // Apply optional recipient filter ('buyer' | 'seller' | 'both')
+  const recipients = allRecipients.filter((r) =>
+    recipientFilter === 'both' ? true : r.party === recipientFilter
+  );
+
   let sentCount = 0;
   const sendErrors: string[] = [];
 
-  for (const r of recipients) {
+  for (let i = 0; i < recipients.length; i++) {
+    const r = recipients[i];
+    // Resend free plan limit is 5 req/sec. Two mails ~simultaneously is fine,
+    // but if multiple sales close in parallel we can hit 429. Insert a 250ms
+    // delay between recipients of the SAME contract — cheap insurance.
+    if (i > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
     const email = r.profile?.email;
     if (!email) {
       console.warn(`[${source}] blank protocol mail to ${r.party} skipped: no email`);

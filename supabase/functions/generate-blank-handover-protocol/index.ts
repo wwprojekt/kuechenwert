@@ -183,7 +183,12 @@ Deno.serve(async (req) => {
       doc.setFontSize(10);
       doc.setTextColor(BRAND.r, BRAND.g, BRAND.b);
       doc.text(title, margin + 2, y + 4.8);
-      y += 9;
+      // Box ends at y+7. We advance by 12mm so that the next baseline (y+12)
+      // leaves ~1.8mm clearance for capital-letter ascenders (≈2.3mm at 9pt)
+      // and ~2mm clearance for checkbox rects (drawn at y-3) — without this
+      // the first row of content visibly bleeds into the section header
+      // border. Was 9 (caused 0.5–1mm overlap into the bottom border line).
+      y += 12;
       doc.setLineWidth(0.2);
     };
 
@@ -478,7 +483,11 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-    doc.text(sellerName, margin + 2, sigY + 9);
+    // Skip rendering when name is missing — DASH (`-`) under the signature
+    // label looks like a stray mark / overlapping artifact with the sig line.
+    if (sellerName && sellerName !== DASH) {
+      doc.text(sellerName, margin + 2, sigY + 9);
+    }
 
     const buyerSigX = margin + 6 + sigW;
     doc.line(buyerSigX, sigY, buyerSigX + sigW, sigY);
@@ -489,7 +498,9 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-    doc.text(buyerName, buyerSigX, sigY + 9);
+    if (buyerName && buyerName !== DASH) {
+      doc.text(buyerName, buyerSigX, sigY + 9);
+    }
 
     const footerY = pageH - 14;
     doc.setDrawColor(LINE_GREY.r, LINE_GREY.g, LINE_GREY.b);

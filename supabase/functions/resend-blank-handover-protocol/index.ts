@@ -8,7 +8,23 @@
  * example because `generate-blank-handover-protocol` was undeployed at the
  * time of the sale.
  *
- * Body: { "contractNumber": "KV-2026-00016" }
+ * Body:
+ *   { "contractNumber": "KV-2026-00016" }
+ *     → produces PDF + mails to seller + buyer + persists URL on contract.
+ *
+ *   { "contractNumber": "KV-2026-00016", "testRecipient": "info@example.com" }
+ *     → DRY-RUN: generates PDF and mails ONLY to testRecipient.
+ *       Does NOT update purchase_contracts and does NOT write admin_emails
+ *       (so it can be safely used for previews without polluting state).
+ *
+ *   { "contractNumber": "KV-2026-00016", "onlyBuyer": true }
+ *     → Production-mode but mails ONLY to the buyer (seller is skipped).
+ *       Used when a previous run already delivered to seller and we just
+ *       need to retry the buyer (e.g. after a Resend rate-limit). Updates
+ *       contract URL + writes admin_emails as usual.
+ *
+ *   { "contractNumber": "KV-2026-00016", "onlySeller": true }
+ *     → Same idea, mirrored.
  *
  * Auth: service_role token OR admin user JWT (checkServiceRoleOrAdmin).
  */
@@ -34,16 +50,36 @@ Deno.serve(async (req) => {
   const auth = await checkServiceRoleOrAdmin(req, corsHeaders);
   if (!auth.authorized) return auth.response;
 
-  let payload: { contractNumber?: string } = {};
+  let payload: {
+    contractNumber?: string;
+    testRecipient?: string;
+    onlyBuyer?: boolean;
+    onlySeller?: boolean;
+  } = {};
   try {
     payload = await req.json();
   } catch {
     /* ignore – validated below */
   }
   const contractNumber = payload?.contractNumber?.trim();
+  const testRecipient = payload?.testRecipient?.trim();
+  const onlyBuyer = payload?.onlyBuyer === true;
+  const onlySeller = payload?.onlySeller === true;
+  if (onlyBuyer && onlySeller) {
+    return new Response(
+      JSON.stringify({ error: 'onlyBuyer and onlySeller are mutually exclusive' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
   if (!contractNumber) {
     return new Response(
       JSON.stringify({ error: 'contractNumber is required' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+  if (testRecipient && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testRecipient)) {
+    return new Response(
+      JSON.stringify({ error: 'testRecipient must be a valid email address' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
@@ -109,8 +145,136 @@ Deno.serve(async (req) => {
 
   const settingsData = settings ?? { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
 
-  // ─── 5. Generate + send via shared helper ────────────────────────────
+  // ─── 5a. TEST MODE: PDF generieren + nur an testRecipient schicken ──
+  // Skips DB updates and admin_emails to keep state clean during previews.
+  if (testRecipient) {
+    try {
+      const genRes = await fetch(
+        `${SUPABASE_URL}/functions/v1/generate-blank-handover-protocol`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+            'apikey': SERVICE_ROLE_KEY,
+          },
+          body: JSON.stringify({
+            motorhomeId: contract.motorhome_id,
+            buyerId: contract.buyer_id,
+            sellerId: contract.seller_id,
+            contractNumber: contract.contract_number,
+            salePrice: Number(contract.sale_price),
+          }),
+        },
+      );
+      if (!genRes.ok) {
+        const txt = await genRes.text().catch(() => '');
+        return new Response(
+          JSON.stringify({
+            mode: 'test',
+            contractNumber: contract.contract_number,
+            ok: false,
+            info: 'generate failed',
+            error: `HTTP ${genRes.status}: ${txt.slice(0, 300)}`,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      const genData = await genRes.json().catch(() => null) as any;
+      if (!genData?.success || !genData?.pdfBase64) {
+        return new Response(
+          JSON.stringify({
+            mode: 'test',
+            contractNumber: contract.contract_number,
+            ok: false,
+            info: 'generate: unexpected response',
+            error: 'no pdfBase64 in response',
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const subject =
+        `[TEST] Übergabeprotokoll zum Kaufvertrag ${contract.contract_number} – ${vehicleName}`;
+      const filename = `${contract.contract_number}_uebergabeprotokoll.pdf`;
+      const fromAddr = `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`;
+      const html = `
+        <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#1f2937">
+          <p><strong>TEST-Vorschau</strong></p>
+          <p>Anbei das Blanko-Übergabeprotokoll, das in der Produktion an Käufer und Verkäufer geht.</p>
+          <ul>
+            <li><strong>Vertrag:</strong> ${contract.contract_number}</li>
+            <li><strong>Fahrzeug:</strong> ${vehicleName}</li>
+            <li><strong>Kaufpreis:</strong> €${Number(contract.sale_price).toLocaleString('de-DE')}</li>
+            <li><strong>Verkäufer (Original-Empfänger):</strong> ${sellerProfile?.email ?? '–'}</li>
+            <li><strong>Käufer (Original-Empfänger):</strong> ${buyerProfile?.email ?? '–'}</li>
+          </ul>
+          <p>Diese Test-Mail aktualisiert weder den Vertrag noch das Admin-Postfach.</p>
+        </div>
+      `;
+
+      const sendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: fromAddr,
+          to: [testRecipient],
+          subject,
+          html,
+          attachments: [{ filename, content: genData.pdfBase64 }],
+        }),
+      });
+      if (!sendRes.ok) {
+        const txt = await sendRes.text().catch(() => '');
+        return new Response(
+          JSON.stringify({
+            mode: 'test',
+            contractNumber: contract.contract_number,
+            ok: false,
+            info: 'resend send failed',
+            error: `HTTP ${sendRes.status}: ${txt.slice(0, 300)}`,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      const sendJson = await sendRes.json().catch(() => ({})) as any;
+
+      return new Response(
+        JSON.stringify({
+          mode: 'test',
+          contractNumber: contract.contract_number,
+          vehicleName,
+          testRecipient,
+          originalSellerEmail: sellerProfile?.email ?? null,
+          originalBuyerEmail: buyerProfile?.email ?? null,
+          ok: true,
+          info: 'test mail sent (DB unchanged, no admin_emails row)',
+          resendId: sendJson?.id ?? null,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({
+          mode: 'test',
+          contractNumber: contract.contract_number,
+          ok: false,
+          info: 'test mode threw',
+          error: e?.message || String(e),
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
+  // ─── 5b. PRODUCTION: Generate + send via shared helper ────────────────
+  const recipientsArg: 'both' | 'buyer' | 'seller' =
+    onlyBuyer ? 'buyer' : (onlySeller ? 'seller' : 'both');
   const result = await sendBlankHandoverProtocol({
+    recipients: recipientsArg,
     supabase,
     resendApiKey: RESEND_API_KEY,
     settingsData,

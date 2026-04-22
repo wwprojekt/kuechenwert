@@ -261,3 +261,7 @@ verify_jwt = false
 # --- Phase-4: One-shot opt-in mail to existing/Bestand listings ---
 [functions.send-existing-listings-opt-in]
 verify_jwt = false
+
+# --- Admin manual sale to dealer (atomic instant-buy clone with admin auth) ---
+[functions.admin-sell-to-dealer]
+verify_jwt = false

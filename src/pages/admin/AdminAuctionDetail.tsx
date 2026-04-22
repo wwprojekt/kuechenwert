@@ -37,6 +37,7 @@ import {
   Receipt,
   Clock,
   FileText,
+  Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,7 @@ import {
 } from "@/components/admin/AdminDetailLayout";
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { CreateSellerPenaltyDialog } from "@/components/admin/CreateSellerPenaltyDialog";
+import { AdminManualSellDialog } from "@/components/admin/AdminManualSellDialog";
 import { logger } from "@/lib/logger";
 import { activateAuctionForMotorhome } from "@/lib/activate-auction";
 
@@ -80,6 +82,7 @@ export default function AdminAuctionDetail() {
   const { logEvent } = useAuditLog();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
+  const [showManualSellDialog, setShowManualSellDialog] = useState(false);
 
   // Fetch auction with all related data
   const { data: auction, isLoading, error } = useQuery({
@@ -362,6 +365,17 @@ export default function AdminAuctionDetail() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            )}
+            {(auction.status === "active" || auction.status === "kaufchance") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800 dark:hover:bg-green-950"
+                onClick={() => setShowManualSellDialog(true)}
+              >
+                <Handshake className="w-4 h-4 mr-2" />
+                An Händler verkaufen
+              </Button>
             )}
             {(auction.status === "active" || auction.status === "draft" || auction.status === "kaufchance") && (
               <AlertDialog>
@@ -900,6 +914,39 @@ export default function AdminAuctionDetail() {
           preSelectedSellerId={auction.motorhome?.seller?.id}
           preSelectedAuctionId={auction.id}
           preSelectedMotorhomeId={auction.motorhome?.id}
+        />
+      )}
+
+      {/* Manual Sell-To-Dealer Dialog */}
+      {auction && (
+        <AdminManualSellDialog
+          open={showManualSellDialog}
+          onOpenChange={setShowManualSellDialog}
+          auctionId={auction.id}
+          motorhomeName={
+            auction.motorhome
+              ? `${auction.motorhome.manufacturer ?? ""} ${auction.motorhome.model ?? ""}`.trim()
+              : ""
+          }
+          currentBid={
+            typeof auction.current_bid === "number"
+              ? auction.current_bid
+              : null
+          }
+          sellerId={auction.motorhome?.seller?.id ?? null}
+          onSuccess={() => {
+            logEvent({
+              action: "auction_manually_sold",
+              entityType: "auction",
+              entityId: auction.id,
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["adminAuctionDetail", id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["adminAuctionOffers", id],
+            });
+          }}
         />
       )}
     </AdminDetailLayout>

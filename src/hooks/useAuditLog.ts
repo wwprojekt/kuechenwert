@@ -15,6 +15,7 @@ export type AuditAction =
   | "auction_created"
   | "auction_closed"
   | "auction_activated"
+  | "auction_manually_sold"
   | "user_suspended"
   | "user_unsuspended"
   | "dealer_approved"

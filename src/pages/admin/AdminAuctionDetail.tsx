@@ -366,7 +366,10 @@ export default function AdminAuctionDetail() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            {(auction.status === "active" || auction.status === "kaufchance") && (
+            {/* Admin-Verkauf: bei jeder Auktion erlaubt, deren Fahrzeug noch nicht verkauft ist.
+                Backend validiert nochmal gegen sold_to / motorhome.status — UI gibt nur die
+                bestmögliche Vorab-Filterung. */}
+            {auction.status !== "sold" && auction.motorhome?.status !== "sold" && (
               <Button
                 size="sm"
                 variant="outline"
@@ -934,6 +937,7 @@ export default function AdminAuctionDetail() {
               : null
           }
           sellerId={auction.motorhome?.seller?.id ?? null}
+          auctionStatus={auction.status as string}
           onSuccess={() => {
             logEvent({
               action: "auction_manually_sold",

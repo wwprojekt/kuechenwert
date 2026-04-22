@@ -23,7 +23,9 @@ import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.
  *   - Buyer: explicit `buyerId` from body (re-validated as approved dealer)
  *   - Sale price: explicit `salePrice` from body (admin override; can be
  *     below the current highest bid – we trust the admin)
- *   - Auction may be in 'active' OR 'kaufchance' status
+ *   - Auction may be in 'active', 'kaufchance', 'draft', 'ended' OR
+ *     'cancelled' status (admin needs to be able to finalise off-platform
+ *     deals regardless of where the auction lifecycle currently stands)
  *   - End-time is NOT enforced (admin may finalise even if auction "ended")
  *
  * Everything after the DB writes (invoice, PDF, emails, contract, losing
@@ -220,11 +222,19 @@ Deno.serve(async (req) => {
     }
 
     // 4. Server-side validations
-    // 4a. Auction must still be sellable
-    if (!['active', 'kaufchance'].includes(auction.status)) {
+    // 4a. Auction must still be sellable. Allowed status set covers every
+    //     state where the vehicle is NOT yet finalised as sold:
+    //       - active     → normale Live-Auktion
+    //       - kaufchance → Auktion in Nachverhandlungs-Phase
+    //       - draft      → Inserat noch nicht veröffentlicht
+    //       - ended      → Auktion lief aus (kein Zuschlag) — kann nachträglich verkauft werden
+    //       - cancelled  → Auktion wurde abgebrochen (z. B. Stornierung) — Reaktivierung als Verkauf möglich
+    //     Status 'sold' wird hier (und beim Motorhome-Check unten) explizit ausgeschlossen.
+    const SELLABLE_AUCTION_STATUSES = ['active', 'kaufchance', 'draft', 'ended', 'cancelled'] as const;
+    if (!SELLABLE_AUCTION_STATUSES.includes(auction.status as typeof SELLABLE_AUCTION_STATUSES[number])) {
       return new Response(
         JSON.stringify({
-          error: `Manueller Verkauf nur f\u00fcr aktive oder Kaufchance-Auktionen m\u00f6glich (aktueller Status: ${auction.status})`,
+          error: `Manueller Verkauf nicht m\u00f6glich \u2013 Auktion bereits abgeschlossen (Status: ${auction.status})`,
         }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
@@ -238,14 +248,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4c. Buyer must be an approved dealer
-    const { data: buyerRole } = await supabaseAdmin
+    // 4c. Buyer must be an approved dealer (use array query: a user can have
+    // multiple roles, e.g. admin + dealer — maybeSingle() would 406 here)
+    const { data: buyerRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', buyerId)
-      .maybeSingle();
+      .eq('user_id', buyerId);
 
-    if (!buyerRole || buyerRole.role !== 'dealer') {
+    const isDealer = Array.isArray(buyerRoles) && buyerRoles.some((r: { role: string }) => r.role === 'dealer');
+    if (!isDealer) {
       return new Response(
         JSON.stringify({ error: 'Der ausgew\u00e4hlte Nutzer ist kein H\u00e4ndler' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -287,7 +298,12 @@ Deno.serve(async (req) => {
 
     // 5. Atomic-ish DB writes (mirror instant-buy step 6/7)
 
-    // 5a. Update motorhome with optimistic lock
+    // 5a. Update motorhome with optimistic lock. Allowed pre-states map to
+    //     the auction statuses we now accept (sync_motorhome_status_from_auction
+    //     trigger maps active/kaufchance→active, ended/cancelled→not_sold,
+    //     draft→ no sync, motorhome stays 'available').
+    //     'sold' / 'reserved' / 'pending' are intentionally excluded so we
+    //     never re-sell something that already has a buyer attached.
     const { data: updatedMotorhome, error: motorhomeUpdateError } = await supabaseAdmin
       .from('motorhomes')
       .update({
@@ -297,7 +313,7 @@ Deno.serve(async (req) => {
         sale_type: 'instant', // ensures notify-auction-winner uses Sofortkauf wording + downstream filters treat it as instant buy
       })
       .eq('id', motorhome.id)
-      .in('status', ['available', 'active'])
+      .in('status', ['available', 'active', 'not_sold'])
       .select()
       .single();
 
@@ -311,12 +327,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 5b. Close auction + record sale price (constrained by current status)
+    // 5b. Close auction + record sale price. Optimistic lock guards against
+    //     a concurrent transition to 'sold' between our load and write.
+    //     We allow ALL sellable statuses here so admin-sales from draft /
+    //     ended / cancelled also close cleanly.
     const { error: auctionUpdateError } = await supabaseAdmin
       .from('auctions')
       .update({ status: 'sold', current_bid: salePrice })
       .eq('id', auctionId)
-      .in('status', ['active', 'kaufchance']);
+      .in('status', SELLABLE_AUCTION_STATUSES as unknown as string[]);
 
     if (auctionUpdateError) {
       console.error('Error closing auction after admin manual sale:', auctionUpdateError);
@@ -730,9 +749,19 @@ Deno.serve(async (req) => {
     }
 
     // ─── 10. NOTIFY LOSING BIDDERS ───────────────────────────────
-    if (auction.bids && auction.bids.length > 0) {
+    // Re-fetch bids AFTER closing the auction so we don't miss any bid that
+    // raced in between our initial auction load (line ~202) and the motorhome
+    // update (line ~291). place_bid_atomic guards on motorhome.status='sold'
+    // so no new bids will appear after this point.
+    const { data: finalBids } = await supabaseAdmin
+      .from('bids')
+      .select('bidder_id, amount')
+      .eq('auction_id', auctionId);
+    const allBids = finalBids ?? auction.bids ?? [];
+
+    if (allBids.length > 0) {
       const losingBidderIds = [...new Set(
-        auction.bids
+        allBids
           .map((b: any) => b.bidder_id)
           .filter((id: string) => id !== buyerId),
       )];
@@ -740,7 +769,7 @@ Deno.serve(async (req) => {
       for (const loserId of losingBidderIds) {
         try {
           const loserHighestBid = Math.max(
-            ...auction.bids
+            ...allBids
               .filter((b: any) => b.bidder_id === loserId)
               .map((b: any) => Number(b.amount)),
           );
@@ -819,7 +848,7 @@ Deno.serve(async (req) => {
         ${detailRow('Status', '\u2705 VERKAUFT (Manueller Admin-Verkauf)')}
         ${detailRow('Fahrzeug', motorhomeName)}
         ${detailRow('Verkaufspreis', `\u20ac${salePrice.toLocaleString()}`)}
-        ${detailRow('Anzahl Gebote vor Verkauf', String(auction.bids?.length || 0))}
+        ${detailRow('Anzahl Gebote vor Verkauf', String(allBids.length || 0))}
         ${detailRow('Auktions-Status vorher', String(auction.status))}
       `, 'success')}
       ${infoBox('K\u00e4ufer (H\u00e4ndler)', `

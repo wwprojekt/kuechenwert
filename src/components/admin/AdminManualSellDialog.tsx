@@ -1,8 +1,9 @@
 /**
  * Admin "An Händler verkaufen" Dialog
  *
- * Lets an admin manually finalise a running auction (status `active` or
- * `kaufchance`) as a sale to a chosen dealer at a freely chosen price.
+ * Lets an admin manually finalise an auction in ANY non-terminal state
+ * (`active`, `kaufchance`, `draft`, `ended`, `cancelled`) as a sale to a
+ * chosen dealer at a freely chosen price.
  *
  * Server side runs `admin-sell-to-dealer` which mirrors the full
  * `instant-buy` chain (motorhome.status='sold' → invoice → contract →
@@ -12,6 +13,7 @@
  * The dialog warns (but does not block) if:
  *   - The selected dealer's account is restricted (admin override)
  *   - The chosen sale price is below the current highest bid
+ *   - The auction is in an unusual state for a sale (draft / ended / cancelled)
  */
 
 import { useMemo, useState } from "react";
@@ -55,8 +57,34 @@ export interface AdminManualSellDialogProps {
   motorhomeName: string;
   currentBid: number | null;
   sellerId: string | null;
+  /**
+   * Current auction status. Used to show a context-specific warning when
+   * the status is unusual for a sale (`draft`, `ended`, `cancelled`).
+   * Optional for backwards compatibility — when omitted, no warning shown.
+   */
+  auctionStatus?: string | null;
   onSuccess?: () => void;
 }
+
+const UNUSUAL_SELL_STATUSES = new Set(["draft", "ended", "cancelled"]);
+
+const STATUS_HINTS: Record<string, { title: string; body: string }> = {
+  draft: {
+    title: "Auktion ist noch im Entwurf",
+    body:
+      "Das Inserat wurde nie veröffentlicht. Der Verkauf wird trotzdem durchgeführt — bitte sicherstellen, dass die Fahrzeugdaten korrekt sind, bevor Rechnung und Kaufvertrag erzeugt werden.",
+  },
+  ended: {
+    title: "Auktion ist bereits beendet",
+    body:
+      "Die Auktionsfrist ist abgelaufen, das Fahrzeug wurde aber noch nicht final verkauft. Manueller Verkauf nachträglich möglich (z. B. nach Verhandlung mit Bietern außerhalb der Plattform).",
+  },
+  cancelled: {
+    title: "Auktion wurde abgebrochen",
+    body:
+      "Die Auktion wurde zwischenzeitlich storniert. Mit diesem Verkauf wird der Status auf 'verkauft' gesetzt — der ursprüngliche Abbruch bleibt im Audit-Log erhalten.",
+  },
+};
 
 interface DealerOption {
   userId: string;
@@ -136,8 +164,13 @@ export function AdminManualSellDialog({
   motorhomeName,
   currentBid,
   sellerId,
+  auctionStatus,
   onSuccess,
 }: AdminManualSellDialogProps) {
+  const statusHint =
+    auctionStatus && UNUSUAL_SELL_STATUSES.has(auctionStatus)
+      ? STATUS_HINTS[auctionStatus] ?? null
+      : null;
   const [dealerPickerOpen, setDealerPickerOpen] = useState(false);
   const [selectedDealerId, setSelectedDealerId] = useState<string | null>(null);
   const [salePriceInput, setSalePriceInput] = useState<string>(
@@ -253,6 +286,21 @@ export function AdminManualSellDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Context hint for unusual auction states (draft / ended / cancelled) */}
+          {statusHint && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-400/60 bg-amber-50 p-3 text-sm dark:bg-amber-950/20">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  {statusHint.title}
+                </p>
+                <p className="text-amber-700 dark:text-amber-300">
+                  {statusHint.body}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Dealer selection */}
           <div className="space-y-2">
             <Label htmlFor="dealer-picker">Käufer (Händler)</Label>
@@ -373,10 +421,16 @@ export function AdminManualSellDialog({
               onChange={(e) => setSalePriceInput(e.target.value)}
               placeholder="z. B. 45000"
             />
-            <p className="text-xs text-muted-foreground">
-              Aktuelles Höchstgebot:{" "}
-              <span className="font-medium">{formatEur(currentBid)}</span>
-            </p>
+            {currentBid !== null && currentBid > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Aktuelles Höchstgebot:{" "}
+                <span className="font-medium">{formatEur(currentBid)}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Es wurden bisher keine Gebote abgegeben.
+              </p>
+            )}
           </div>
 
           {/* Warnings (do not block) */}

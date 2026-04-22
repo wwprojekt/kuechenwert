@@ -393,23 +393,30 @@ const STORAGE_RENDER_PREFIX = "/storage/v1/render/image/public/";
 // keine privaten Buckets. Path-Traversal (`..`, `\`) wird gefiltert.
 const IMAGE_PROXY_PREFIX = "/img/";
 
-function proxiedImageUrl(supabaseUrl) {
+function proxiedImageUrl(supabaseUrl, opts) {
   if (!supabaseUrl || typeof supabaseUrl !== "string") return supabaseUrl;
   const idx = supabaseUrl.indexOf(STORAGE_OBJECT_PREFIX);
   if (idx === -1) return supabaseUrl;
   const subPath = supabaseUrl.substring(idx + STORAGE_OBJECT_PREFIX.length);
-  return `https://caravanwert.de${IMAGE_PROXY_PREFIX}${subPath}`;
+  const base = `https://caravanwert.de${IMAGE_PROXY_PREFIX}${subPath}`;
+  if (opts && opts.width) {
+    const q = opts.quality ? `&q=${opts.quality}` : "";
+    return `${base}?w=${opts.width}${q}`;
+  }
+  return base;
 }
 
-function transformImageUrl(originalUrl, width, quality) {
-  if (!originalUrl || typeof originalUrl !== "string") return originalUrl;
-  // Funktioniert nur für Public-Bucket-URLs (motorhome-photos).
-  // Already-transformed oder externe URLs bleiben unverändert.
-  if (!originalUrl.includes(STORAGE_OBJECT_PREFIX)) return originalUrl;
-  const transformed = originalUrl.replace(STORAGE_OBJECT_PREFIX, STORAGE_RENDER_PREFIX);
-  const sep = transformed.includes("?") ? "&" : "?";
-  return `${transformed}${sep}width=${width}&quality=${quality}&resize=contain`;
-}
+// 2026-04-22: transformImageUrl() entfernt. Direkte Supabase /render/image/-URLs
+// werden nicht mehr ans Frontend ausgeliefert — stattdessen IMMER über
+// /img/?w= via proxiedImageUrl(url, { width, quality }), damit der CF-Edge-Cache
+// 1 Jahr immutable greifen kann (statt Supabase's eigene kürzere Cache-Header).
+
+// Erlaubte Resize-Breiten — Whitelist verhindert dass jemand
+// `?w=99999` spammed und den Edge-Cache mit unique URLs flutet
+// (jede unique URL = ein KV-Slot + ein Supabase-Image-Transform-Quota-Hit).
+// Deckt Card (480), Medium (1024), 2x-DPR (1920), Mobile (320, 640) ab.
+const ALLOWED_RESIZE_WIDTHS = new Set([320, 480, 640, 768, 960, 1024, 1280, 1536, 1920]);
+const DEFAULT_RESIZE_QUALITY = 75;
 
 async function handleImageProxy(request, env, ctx) {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -425,12 +432,35 @@ async function handleImageProxy(request, env, ctx) {
     return new Response("Bad Request", { status: 400 });
   }
 
+  // ── On-Demand Resize via Supabase Image Transformation ─────────────────
+  // 2026-04-22: ?w=<width>&q=<quality> wird unterstützt. Wenn vorhanden,
+  // routen wir nach /storage/v1/render/image/public/ statt /object/public/
+  // und Supabase resized das Original on-the-fly. Cloudflare cached die
+  // Response 1 Jahr im Edge — also wird Supabase pro unique URL nur EINMAL
+  // belastet. Quota: Supabase Pro = 100k Origin-Bilder/Monat (= unique
+  // (path, w, q) Kombinationen).
+  //
+  // Effekt: Wir brauchen process-photo Edge Function nicht mehr — alle
+  // Variants entstehen on-demand und werden dauerhaft gecached.
+  // process-photo bleibt als Backup-System (pre-bake card_url, medium_url),
+  // aber wenn es crasht, fängt der /img/?w=-Fallback alles auf.
+  const requestedW = parseInt(url.searchParams.get("w") || "", 10);
+  const requestedQ = parseInt(url.searchParams.get("q") || "", 10);
+  const useResize = Number.isFinite(requestedW) && ALLOWED_RESIZE_WIDTHS.has(requestedW);
+  const resizeWidth = useResize ? requestedW : null;
+  const resizeQuality = (useResize && Number.isFinite(requestedQ) && requestedQ >= 30 && requestedQ <= 95)
+    ? requestedQ
+    : DEFAULT_RESIZE_QUALITY;
+
   // Cache-API: hostet die transformierte Antwort 1 Jahr im CF Edge,
   // unabhängig vom Upstream-Cache-Control-Header.
+  // Cache-Key MUSS Width + Quality enthalten, sonst kollidieren resized
+  // Variants mit dem Original.
   const cache = caches.default;
-  const cacheKey = new Request(`https://caravanwert.de${url.pathname}`, {
-    method: "GET",
-  });
+  const cacheKeyUrl = useResize
+    ? `https://caravanwert.de${url.pathname}?w=${resizeWidth}&q=${resizeQuality}`
+    : `https://caravanwert.de${url.pathname}`;
+  const cacheKey = new Request(cacheKeyUrl, { method: "GET" });
 
   let cached = await cache.match(cacheKey);
   if (cached) {
@@ -447,7 +477,10 @@ async function handleImageProxy(request, env, ctx) {
   }
 
   // Edge MISS — von Supabase Storage holen.
-  const upstreamUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${subPath}`;
+  // Bei Resize: /render/image/public/ Endpoint, sonst /object/public/.
+  const upstreamUrl = useResize
+    ? `${env.SUPABASE_URL}/storage/v1/render/image/public/${subPath}?width=${resizeWidth}&quality=${resizeQuality}&resize=contain`
+    : `${env.SUPABASE_URL}/storage/v1/object/public/${subPath}`;
   const upstreamRes = await fetch(upstreamUrl, {
     cf: {
       // CF eigener Image-Cache zusätzlich aktivieren, ignoriert Origin-Header.
@@ -568,25 +601,27 @@ async function fetchAuctionsFromSupabase(env) {
           if (!p.motorhome_id) continue;
           if (!p.url && !p.card_url && !p.medium_url) continue;
 
-          // Bevorzugt: pre-resized Variant (process-photo Edge Function).
-          // Fallback: On-the-fly Image-Transformation auf das Original
-          // (löst die "5 MB JPG"-Loads für noch unprozessierte Photos).
-          // Weiterer Fallback: Raw-Original (nur falls Original-URL fehlt
-          // ODER nicht im public bucket liegt, sehr selten).
-          const smallRaw = p.card_url
-            ? p.card_url
-            : (p.url ? transformImageUrl(p.url, 480, 70) : p.medium_url);
-          const mediumRaw = p.medium_url
-            ? p.medium_url
-            : (p.url ? transformImageUrl(p.url, 1024, 75) : null);
-
-          // Durch unseren CF-Worker /img/-Proxy leiten — überschreibt
-          // Supabase Storage's no-cache mit max-age=1Jahr → 1 Jahr CF-Edge-HIT.
-          // On-the-fly /render/image/-URLs bleiben unverändert (proxiedImageUrl
-          // matched nur /object/public/), die haben eigene CF-Cache-Headers.
+          // 2026-04-22: Vereinfacht. Wir nutzen IMMER /img/?w= via Worker-Proxy
+          // mit on-demand Resize. Kein Unterschied mehr zwischen "pre-baked
+          // card_url existiert" und "muss neu generiert werden":
+          //
+          // - p.url ist die Original-URL (immer vorhanden bei legitimen Photos)
+          //   → /img/<path>?w=480&q=70 für Cards, ?w=1024&q=75 für Detail
+          // - p.card_url / p.medium_url werden ignoriert (waren nur Optimization
+          //   für den Fall dass Image-Transformation off war — jetzt obsolet)
+          //
+          // Vorteil: process-photo Edge Function wird irrelevant. Wenn sie crasht,
+          // crashed nichts mehr im Frontend. CF-Edge-Cache 1 Jahr immutable
+          // → erste Anfrage 200ms, alle weiteren <50ms.
+          //
+          // Quota-Discipline: Nur whitelisted Widths (480, 1024) werden hier
+          // generiert, also max 2 unique URLs pro Photo → weit unter dem
+          // Pro-Plan-Limit von 100k Origin-Bilder/Monat.
+          const sourceUrl = p.url || p.card_url || p.medium_url;
+          if (!sourceUrl) continue;
           photoMap[p.motorhome_id] = {
-            url: proxiedImageUrl(smallRaw),
-            medium_url: proxiedImageUrl(mediumRaw),
+            url: proxiedImageUrl(sourceUrl, { width: 480, quality: 70 }),
+            medium_url: proxiedImageUrl(sourceUrl, { width: 1024, quality: 75 }),
             display_order: 0
           };
         }
@@ -675,13 +710,26 @@ async function fetchAuctionDetailFromSupabase(id, env) {
 
   // Photo-URLs durch Image-Proxy leiten — gleicher Trick wie /active.
   // Schützt vor Supabase Storage's hardcoded Cache-Control: no-cache.
+  // 2026-04-22: card_url/medium_url werden zusätzlich on-demand-resized
+  // via /img/?w= URLs ersetzt, sodass das Frontend bei NULL card_url
+  // automatisch auf das Original mit Resize fällt — ohne process-photo
+  // Edge Function-Abhängigkeit.
   if (auction.motorhome && Array.isArray(auction.motorhome.photos)) {
-    auction.motorhome.photos = auction.motorhome.photos.map((p) => ({
-      ...p,
-      url: proxiedImageUrl(p.url),
-      card_url: proxiedImageUrl(p.card_url),
-      medium_url: proxiedImageUrl(p.medium_url),
-    }));
+    auction.motorhome.photos = auction.motorhome.photos.map((p) => {
+      const sourceUrl = p.url || p.card_url || p.medium_url;
+      return {
+        ...p,
+        url: proxiedImageUrl(p.url),
+        // Falls pre-baked Variant existiert, nutzen wir sie (kostenlos & schon im Cache).
+        // Falls nicht, resized der Worker on-demand vom Original.
+        card_url: p.card_url
+          ? proxiedImageUrl(p.card_url)
+          : (sourceUrl ? proxiedImageUrl(sourceUrl, { width: 480, quality: 70 }) : null),
+        medium_url: p.medium_url
+          ? proxiedImageUrl(p.medium_url)
+          : (sourceUrl ? proxiedImageUrl(sourceUrl, { width: 1024, quality: 75 }) : null),
+      };
+    });
   }
 
   const bids = bRes.ok ? await bRes.json() : [];

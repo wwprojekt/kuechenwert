@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
+import { proxiedImageUrl } from "@/lib/imageTransform";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { anonymizePostalCode } from "@/lib/plzCoordinates";
@@ -261,13 +262,27 @@ const Kaufen = () => {
                 motorhome_id: string;
               }>)
                 .filter((p) => (p.card_url || p.medium_url || p.url) && p.motorhome_id)
-                .map((p) => [
-                  p.motorhome_id,
-                  {
-                    small: p.card_url || p.medium_url || p.url,
-                    medium: p.medium_url,
-                  },
-                ])
+                .map((p) => {
+                  // 2026-04-22: Falls process-photo noch keine pre-baked
+                  // card_url/medium_url generiert hat (oder gecrasht ist),
+                  // generieren wir die Variants on-demand via /img/?w= Worker
+                  // Proxy. Der Worker resized via Supabase Image Transformation
+                  // und cached 1 Jahr im CF-Edge → kein 5-MB-JPG-Worst-Case mehr.
+                  const sourceUrl = p.url || p.card_url || p.medium_url || "";
+                  const small = p.card_url
+                    ? proxiedImageUrl(p.card_url)
+                    : proxiedImageUrl(sourceUrl, { width: 480, quality: 70 });
+                  const medium = p.medium_url
+                    ? proxiedImageUrl(p.medium_url)
+                    : proxiedImageUrl(sourceUrl, { width: 1024, quality: 75 });
+                  return [
+                    p.motorhome_id,
+                    {
+                      small,
+                      medium,
+                    },
+                  ];
+                })
             );
           }
         }

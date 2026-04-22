@@ -46,6 +46,23 @@ const STORAGE_RENDER_MARKER = '/storage/v1/render/image/public/';
 const IMAGE_PROXY_HOST = import.meta.env.DEV ? null : 'https://caravanwert.de';
 
 /**
+ * Erlaubte Resize-Breiten. MUSS deckungsgleich mit `ALLOWED_RESIZE_WIDTHS`
+ * im Worker (`worker/src/index.js`) sein, sonst wird der Worker den Resize
+ * ignorieren und das Original ausliefern.
+ *
+ * Whitelist verhindert dass jemand `?w=99999` spammed und den Edge-Cache
+ * mit unique URLs flutet.
+ */
+export type AllowedResizeWidth = 320 | 480 | 640 | 768 | 960 | 1024 | 1280 | 1536 | 1920;
+
+export interface ProxiedImageOptions {
+  /** Zielbreite in Pixel. Muss eine `AllowedResizeWidth` sein. */
+  width?: AllowedResizeWidth;
+  /** JPEG-Qualität 30–95. Default 75 (Worker-seitig). */
+  quality?: number;
+}
+
+/**
  * Wandelt eine Supabase Storage Public-URL in eine /img/-Proxy-URL um, die
  * über den Cloudflare Worker geht und CDN-cached wird.
  *
@@ -55,17 +72,32 @@ const IMAGE_PROXY_HOST = import.meta.env.DEV ? null : 'https://caravanwert.de';
  * - Externe URLs, signed URLs, leere Strings → unverändert
  * - DEV-Mode (Vite) → unverändert (Worker läuft nur auf caravanwert.de)
  *
+ * Mit `opts.width` aktiviert sich der **on-demand Resize**: Der Worker fetcht
+ * die transformierte Variant via Supabase Image Transformation und cached sie
+ * 1 Jahr im CF-Edge. So funktionieren Cards/Detail-Photos auch wenn die
+ * `process-photo` Edge Function noch keine pre-baked `card_url`/`medium_url`
+ * generiert hat — kein Fallback auf 5-MB-Originale mehr nötig.
+ *
  * Sicher zu callen mit beliebigem String — niemals Crash, niemals Bruch.
  */
 export function proxiedImageUrl(
   url: string | null | undefined,
+  opts: ProxiedImageOptions = {},
 ): string {
   if (!url || typeof url !== 'string') return url ?? '';
-  if (!IMAGE_PROXY_HOST) return url;
+  if (!IMAGE_PROXY_HOST) {
+    // DEV-Mode: kein Worker → Fallback auf Supabase Image Transformation direkt,
+    // damit DEV-Bilder ähnlich klein sind und das Layout nicht abweicht.
+    if (opts.width) return getStorageImageUrl(url, { width: opts.width, quality: opts.quality ?? 75, resize: 'contain' });
+    return url;
+  }
   const idx = url.indexOf(STORAGE_PUBLIC_MARKER);
   if (idx === -1) return url;
   const subPath = url.substring(idx + STORAGE_PUBLIC_MARKER.length);
-  return `${IMAGE_PROXY_HOST}/img/${subPath}`;
+  const base = `${IMAGE_PROXY_HOST}/img/${subPath}`;
+  if (!opts.width) return base;
+  const q = opts.quality ? `&q=${opts.quality}` : '';
+  return `${base}?w=${opts.width}${q}`;
 }
 
 /**
@@ -139,16 +171,36 @@ export function getResponsiveImageProps(
     return { src: '', srcSet: '', sizes: opts.sizes };
   }
 
-  // Nicht-Supabase-URLs: unverändert lassen
-  if (!url.includes(STORAGE_PUBLIC_MARKER)) {
+  // Nicht-Supabase-URLs: unverändert lassen (oder schon /img/-Proxy-URLs vom Worker)
+  if (!url.includes(STORAGE_PUBLIC_MARKER) && !url.includes('/img/')) {
     return { src: url, srcSet: '', sizes: opts.sizes };
   }
 
-  const srcSet = widths
-    .map((w) => `${getStorageImageUrl(url, { width: w, quality, resize })} ${w}w`)
+  // 2026-04-22: srcSet läuft jetzt über den CF-Worker /img/?w= Proxy statt
+  // direkt über die Supabase /render/image/-URLs. Vorteil: Der Worker cached
+  // die transformierten Variants 1 Jahr im CF-Edge (Supabase's eigene
+  // Cache-Header sind kürzer + bypass-anfällig). Ergebnis: erste Anfrage
+  // 200 ms (Supabase resize), alle weiteren <50 ms global vom CF-Edge.
+  // Whitelist-Widths (siehe ProxiedImageOptions) müssen mit dem Worker
+  // synchron sein — andernfalls fällt der Worker auf das Original zurück.
+  const safeWidths = widths.filter((w): w is AllowedResizeWidth =>
+    ([320, 480, 640, 768, 960, 1024, 1280, 1536, 1920] as number[]).includes(w),
+  );
+  const widthsToUse = safeWidths.length > 0 ? safeWidths : ([480, 1024] as AllowedResizeWidth[]);
+
+  const srcSet = widthsToUse
+    .map((w) => `${proxiedImageUrl(url, { width: w, quality })} ${w}w`)
     .join(', ');
 
-  const src = getStorageImageUrl(url, { width: defaultWidth, quality, resize });
+  const defaultSafeWidth = (widthsToUse.includes(defaultWidth as AllowedResizeWidth)
+    ? (defaultWidth as AllowedResizeWidth)
+    : widthsToUse[Math.floor(widthsToUse.length / 2)]);
+  const src = proxiedImageUrl(url, { width: defaultSafeWidth, quality });
+
+  // resize-Parameter ist im Worker hardcoded `contain`. `getResponsiveImageProps`
+  // exposed die Option nur für API-Konsistenz mit getStorageImageUrl.
+  // (Wir nutzen sie hier explizit nicht, damit der Worker-Cache greift.)
+  void resize;
 
   return { src, srcSet, sizes: opts.sizes };
 }

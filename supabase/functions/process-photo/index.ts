@@ -69,12 +69,17 @@ const MEDIUM_QUALITY = 82;
 // 2026-04-21: Auf 3 reduziert. jsquash WASM-Module akkumulieren Memory zwischen
 //             sequentiellen Decodes (Cache hält Heap am Leben), und das 256 MB
 //             Function-Memory-Limit reicht nur für ~3 Photos in derselben Invocation.
-//             Cron läuft jede Minute für active_covers + alle 2 min für FIFO,
-//             d.h. 3+3=6 Photos pro 2 min = 180 Photos/h = 4320/Tag — reicht
-//             dicke für tägliches Upload-Volumen. Backlog wird via lokalem
-//             sharp-Backfill geleert (scripts/backfill-photo-variants.mjs).
-const MAX_BATCH_SIZE = 5;
-const DEFAULT_BATCH_SIZE = 3;
+// 2026-04-22: Auf 1 reduziert. Bei v6/v7 crasht der Worker mit HTTP 546
+//             AUCH bei kleinen 1-MB-JPEGs, sobald 2-3 Photos sequenziell
+//             verarbeitet werden — die jsquash WASM-Heap überlebt jede
+//             Photo-Iteration und kumuliert über die 256-MB-Grenze. Mit
+//             batchSize=1 startet jede Invocation mit frischem Heap.
+//             Throughput: */5 active_covers + */10 fifo = 6+3 = 9 photos/h
+//             — reicht für tägliches Upload-Volumen (typisch <50/Tag).
+//             Backlog wird via lokalem sharp-Backfill geleert
+//             (scripts/backfill-photo-variants.mjs).
+const MAX_BATCH_SIZE = 3;
+const DEFAULT_BATCH_SIZE = 1;
 
 // Skip-Threshold: Originale ≤ 2 MB sind sicher für jsquash-WASM in 256 MB
 // Function-Memory. Empirisch bestätigt 2026-04-20: 1.4 MB JPEG mit 2040×1530
@@ -245,7 +250,29 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
     return { ok: false, photoId, reason: `photo not found: ${photoErr?.message ?? "no row"}` };
   }
 
-  // ── Original laden ───────────────────────────────────────────────────────
+  // ── Pre-flight: Größe per HEAD prüfen, BEVOR wir das Original in den
+  //                Speicher laden. Sonst killt ein einziges 14-MB-iPhone-Photo
+  //                den ganzen Worker mit HTTP 546 (WORKER_RESOURCE_LIMIT) und
+  //                processing_attempts wird NICHT inkrementiert → Endlosloop.
+  //                Siehe Incident 2026-04-22.
+  const headRes = await fetch(photo.url, { method: "HEAD" });
+  if (!headRes.ok) {
+    await markFailed(adminClient, photo, `head_failed_${headRes.status}`);
+    return { ok: false, photoId, reason: `head ${headRes.status}` };
+  }
+  const contentLengthRaw = headRes.headers.get("content-length");
+  const contentLength = contentLengthRaw ? Number.parseInt(contentLengthRaw, 10) : NaN;
+  if (Number.isFinite(contentLength) && contentLength > MAX_INPUT_BYTES) {
+    await markFailed(adminClient, photo, "original_too_large");
+    return {
+      ok: false,
+      photoId,
+      original_kb: Math.round(contentLength / 1024),
+      reason: `original ${Math.round(contentLength / 1024)} KB > ${Math.round(MAX_INPUT_BYTES / 1024)} KB — skipped pre-flight`,
+    };
+  }
+
+  // ── Original laden (jetzt sicher: ≤ MAX_INPUT_BYTES laut HEAD) ───────────
   const fetchRes = await fetch(photo.url);
   if (!fetchRes.ok) {
     await markFailed(adminClient, photo, `fetch_failed_${fetchRes.status}`);
@@ -254,7 +281,8 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
   const originalBytes = new Uint8Array(await fetchRes.arrayBuffer());
   const originalKb = Math.round(originalBytes.length / 1024);
 
-  // ── Skip if too large (handled by Browser-Compress / Backfill) ───────────
+  // Defense-in-depth: Falls HEAD gelogen hat (Content-Length fehlt o.ä.),
+  //                   fangen wir hier nochmal ab.
   if (originalBytes.length > MAX_INPUT_BYTES) {
     await markFailed(adminClient, photo, "original_too_large");
     return {

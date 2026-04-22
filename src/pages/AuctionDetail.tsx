@@ -50,6 +50,7 @@ import {
 } from "@/lib/trackingConfig";
 import { trackMetaViewContent } from "@/lib/metaPixelService";
 import { trackEvent } from "@/lib/analyticsService";
+import { proxiedImageUrl } from "@/lib/imageTransform";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { AuctionRoundBadge } from "@/components/AuctionRoundBadge";
@@ -455,6 +456,27 @@ const AuctionDetail = () => {
     if (!data) {
       setAuctionLoadState('not_found');
       return;
+    }
+
+    // 2026-04-22: Photo-URLs durch /img/?w= Worker-Proxy leiten — gleiche
+    // Behandlung wie im Worker-Bundle-Pfad. Wenn pre-baked card_url/medium_url
+    // existieren, nutzen wir sie; sonst on-demand resize via Supabase Image
+    // Transformation. Verhindert dass Detail-Page bei process-photo-Crash
+    // 5-MB-JPGs lädt.
+    if (data.motorhome && Array.isArray(data.motorhome.photos)) {
+      data.motorhome.photos = data.motorhome.photos.map((p: typeof data.motorhome.photos[number]) => {
+        const sourceUrl = p.url || p.card_url || p.medium_url || "";
+        return {
+          ...p,
+          url: proxiedImageUrl(p.url),
+          card_url: p.card_url
+            ? proxiedImageUrl(p.card_url)
+            : (sourceUrl ? proxiedImageUrl(sourceUrl, { width: 480, quality: 70 }) : null),
+          medium_url: p.medium_url
+            ? proxiedImageUrl(p.medium_url)
+            : (sourceUrl ? proxiedImageUrl(sourceUrl, { width: 1024, quality: 75 }) : null),
+        };
+      });
     }
 
     setAuction(data);

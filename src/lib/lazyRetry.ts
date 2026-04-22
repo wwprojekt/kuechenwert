@@ -53,14 +53,21 @@ export function lazyRetry<T extends ComponentType<unknown>>(
     try {
       return await importFn();
     } catch (error) {
-      // Check if this is a chunk loading error
+      // Check if this is a chunk loading error.
+      // Letzte zwei Patterns sind defense-in-depth: falls je wieder ein
+      // vorgeschalteter Layer (Vite, SW, Browser-Quirk) den echten Chunk-Error
+      // schluckt und React.lazy stattdessen `e._result === undefined` erhält,
+      // bekommen wir den TypeError aus dem Lazy-Initializer (uf-Funktion in
+      // React-DOM). Wir behandeln ihn dann genau wie einen Chunk-Fehler.
       const isChunkError =
         error instanceof Error &&
         (error.message.includes("Failed to fetch dynamically imported module") ||
           error.message.includes("Loading chunk") ||
           error.message.includes("Loading CSS chunk") ||
           error.message.includes("Importing a module script failed") ||
-          error.message.includes("error loading dynamically imported module"));
+          error.message.includes("error loading dynamically imported module") ||
+          error.message.includes("Cannot read properties of undefined (reading 'default')") ||
+          error.message.includes("_result is undefined"));
 
       if (isChunkError) {
         // Only attempt one reload to avoid infinite loops

@@ -19,18 +19,25 @@ initBreadcrumbTracking();
 
 // Auto-Reload bei lazy-chunk Ladefehlern.
 //
-// Wenn Dokploy ein neues Build deployt, ist die index.html ggf. schon mit den
-// neuen Asset-Hashes ausgeliefert, bevor die Chunks selbst hochgeladen sind
-// (atomisches Replacement gibt es bei Dokploy/Docker-Volume-Mounts nicht).
-// User die in dem 30-90s Fenster klicken bekommen einen 404 für ihren Chunk.
-// Cloudflare cached diesen 404 mit max-age=31536000 (Asset-Cache-Header) und
-// die Page bleibt fuer diesen Edge-PoP fuer Stunden kaputt.
+// vite:preloadError feuert wenn ein <link rel="modulepreload"> oder die
+// nachgelagerte dynamic import() einer Chunk-Datei fehlschlägt (404 oder
+// Network-Error). Typischer Auslöser: User hatte alte index.html im Tab
+// als ein neuer Build deployt wurde — die referenzierten Chunk-Hashes
+// existieren auf dem Server nicht mehr.
 //
-// vite:preloadError feuert sobald ein dynamic import 404 oder Network-Error
-// liefert. Wir reloaden dann die Page → Browser holt frische index.html mit
-// den dann mittlerweile korrekten Hashes. User sieht max. 1-2s Flicker.
-window.addEventListener("vite:preloadError", (event) => {
-  event.preventDefault();
+// WICHTIG: event.preventDefault() darf hier NICHT aufgerufen werden!
+// Vite's Preload-Helper:   return baseModule().catch(handlePreloadError)
+// und handlePreloadError throwt nur wenn !defaultPrevented. Mit
+// preventDefault() resolved die Promise mit `undefined`, React.lazy
+// schreibt undefined in seinen `_result` und crasht beim Render mit
+// "Cannot read properties of undefined (reading 'default')".
+//
+// Statt den Error zu schlucken planen wir nur den Reload als zweite
+// Linie hinter lazyRetry — falls dort eine race condition auftritt
+// (z.B. Mehrfach-Chunk-Failure in Folge). Vite throwt den Error normal
+// weiter, lazyRetry fängt ihn und reloaded ebenfalls. Doppelter Reload
+// ist idempotent; die sessionStorage-Flag verhindert Reload-Loops.
+window.addEventListener("vite:preloadError", () => {
   if (sessionStorage.getItem("vite-preload-reload") === "1") {
     return;
   }

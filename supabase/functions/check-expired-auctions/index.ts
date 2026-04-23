@@ -944,11 +944,12 @@ Deno.serve(async (req) => {
                 continue;
               }
 
-              if (auctionData?.motorhome_id) {
-                await supabase.from('motorhomes')
-                  .update({ status: 'active', updated_at: now })
-                  .eq('id', auctionData.motorhome_id);
-              }
+              // motorhomes.status sync wird vom DB-Trigger trg_sync_motorhome_status
+              // (Migration 20260420151441) übernommen: auctions.ended → motorhomes.not_sold.
+              // Ein expliziter UPDATE auf 'active' wäre semantisch FALSCH (Auktion ist beendet,
+              // nicht aktiv) und würde die korrekte 'not_sold'-Synchronisation überschreiben.
+              // Vor 2026-04-23 hat genau dieser Bug 5 Motorhomes verwaisen lassen
+              // (status='active' obwohl Auktion 'ended').
 
               await supabase.from('post_auction_offers')
                 .update({ status: 'expired', seller_response: 'Kaufchance-Frist abgelaufen', updated_at: now })

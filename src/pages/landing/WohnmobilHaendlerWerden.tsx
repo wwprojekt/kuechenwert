@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Shield, TrendingUp, Gavel, Euro, Users, Clock, Zap, BarChart3, Phone, Timer, Star, Camera } from "lucide-react";
+import { ArrowRight, CheckCircle2, Shield, TrendingUp, Gavel, Clock, Zap, BarChart3, Phone, Timer, Star, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageLayout from "@/components/PageLayout";
@@ -11,10 +11,45 @@ import { supabase } from "@/integrations/supabase/client";
 import { trackPhoneClick, trackCTAClick } from "@/lib/gadsConversionService";
 import { trackEvent } from "@/lib/analyticsService";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
+import {
+  useCommissionFromTiers,
+  useLowestCommissionRate,
+  type CommissionTier,
+} from "@/lib/commissionCalculator";
+import { CommissionTierTable } from "@/components/CommissionTierTable";
+
+const formatRatePercent = (value: number) =>
+  `${value.toLocaleString("de-DE", { maximumFractionDigits: 2 })} %`;
+
+const buildCommissionLadderText = (tiers: CommissionTier[]): string => {
+  const active = tiers
+    .filter((t) => t.is_active && t.rate_type === "percentage")
+    .sort((a, b) => Number(a.min_amount) - Number(b.min_amount));
+  if (active.length === 0) return "individuell gestaffelt";
+  return active
+    .map((t) => {
+      const rate = formatRatePercent(Number(t.rate_value));
+      const max = Number(t.max_amount);
+      if (max >= 99_999_999) {
+        return `${rate} ab ${(Number(t.min_amount) / 1000).toLocaleString("de-DE")}.000 €`;
+      }
+      return `${rate} bis ${(max / 1000).toLocaleString("de-DE")}.000 €`;
+    })
+    .join(", ");
+};
 
 const WohnmobilHaendlerWerden = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || "CaravanWert";
+
+  // Live commission data — single source of truth for all rates on this page.
+  const { lowestRate } = useLowestCommissionRate();
+  const { tiers, commission: exampleCommission, rate: exampleRate } =
+    useCommissionFromTiers(25000);
+
+  const lowestRateLabel = lowestRate !== null ? formatRatePercent(lowestRate) : "günstiger Provision";
+  const lowestRatePrefix = lowestRate !== null ? `ab ${formatRatePercent(lowestRate)}` : "ab günstiger Provision";
+  const ladderText = buildCommissionLadderText(tiers);
 
   const { data: stats } = useQuery({
     queryKey: ["dealer-landing-stats"],
@@ -91,7 +126,7 @@ const WohnmobilHaendlerWerden = () => {
     },
     {
       question: "Was kostet die Teilnahme?",
-      answer: "Die Registrierung und das Bieten sind komplett kostenlos. Sie zahlen nur eine Provision von 1,2–2 % bei gewonnener Auktion (z. B. 300 € bei einem Fahrzeug für 15.000 €). Keine monatlichen Gebühren, keine Mindestabnahme."
+      answer: `Die Registrierung und das Bieten sind komplett kostenlos. Sie zahlen nur eine gestaffelte Provision bei gewonnener Auktion (${lowestRatePrefix}). Keine monatlichen Gebühren, keine Mindestabnahme.`
     },
     {
       question: "Wie werden die Fahrzeuge geprüft?",
@@ -111,7 +146,7 @@ const WohnmobilHaendlerWerden = () => {
     },
     {
       question: "Wie hoch ist die Provision genau?",
-      answer: "Die Provision ist gestaffelt: 2 % bis 10.000 €, 1,8 % bis 15.000 €, 1,5 % bis 20.000 €, 1,3 % bis 30.000 €, 1,2 % ab 30.000 €. Es gilt eine Mindestprovision. Bei hohem Volumen gibt es zusätzliche Mengenrabatte."
+      answer: `Die Provision ist gestaffelt: ${ladderText}. Es gilt eine Mindestprovision pro Stufe. Bei hohem Volumen gibt es zusätzliche Mengenrabatte.`
     },
   ];
 
@@ -122,7 +157,7 @@ const WohnmobilHaendlerWerden = () => {
       "@context": "https://schema.org",
       "@type": "WebPage",
       name: "Wohnmobil Händler werden – Auktionsplattform für Händler-Einkauf",
-      description: "Registrieren Sie sich als Wohnmobil-Händler und ersteigern Sie Fahrzeuge direkt von Privatverkäufern. Provision ab 1,2 %, keine monatlichen Gebühren.",
+      description: `Registrieren Sie sich als Wohnmobil-Händler und ersteigern Sie Fahrzeuge direkt von Privatverkäufern. Faire gestaffelte Provision (${lowestRatePrefix}), keine monatlichen Gebühren.`,
       provider: { "@type": "Organization", name: siteName, url: "https://caravanwert.de" },
     },
     breadcrumbSchema,
@@ -131,7 +166,7 @@ const WohnmobilHaendlerWerden = () => {
   return (
     <PageLayout
       title="Wohnmobil-Händler werden: günstig einkaufen"
-      description="Als Händler bei CaravanWert geprüfte Wohnmobile & Wohnwagen direkt von Privatverkäufern ersteigern. Provision ab 1,2 %, keine Mindestabnahme."
+      description={`Als Händler bei CaravanWert geprüfte Wohnmobile & Wohnwagen direkt von Privatverkäufern ersteigern. Faire gestaffelte Provision (${lowestRatePrefix}), keine Mindestabnahme.`}
       keywords="wohnmobil händler werden, wohnmobil auktion händler, wohnwagen einkauf händler, wohnmobil händler plattform, wohnmobil händler registrieren"
       canonicalPath="/wohnmobil-haendler-werden"
       structuredData={structuredData}
@@ -157,7 +192,7 @@ const WohnmobilHaendlerWerden = () => {
             <div className="space-y-3 mb-8">
               {[
                 "Kostenlose Registrierung – keine monatlichen Gebühren",
-                "Provision ab 1,2 % – nur bei Zuschlag",
+                `Provision ${lowestRatePrefix} – nur bei Zuschlag`,
                 "Tägliche E-Mail mit neuen Fahrzeugen",
                 "Auto-Bid: Automatisch mitbieten bis zum Limit",
               ].map((item, i) => (
@@ -193,7 +228,9 @@ const WohnmobilHaendlerWerden = () => {
               </Card>
               <Card className="text-center border-2 border-primary/20">
                 <CardContent className="pt-6">
-                  <div className="text-3xl font-bold gradient-text mb-1">ab 1,2 %</div>
+                  <div className="text-3xl font-bold gradient-text mb-1">
+                    {lowestRate !== null ? `ab ${lowestRateLabel}` : "Faire %"}
+                  </div>
                   <div className="text-sm text-muted-foreground">Provision</div>
                 </CardContent>
               </Card>
@@ -306,23 +343,17 @@ const WohnmobilHaendlerWerden = () => {
         <div className="container max-w-3xl">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Transparente Kosten – nur bei Erfolg</h2>
           <p className="text-muted-foreground text-center mb-10">Keine monatlichen Gebühren. Sie zahlen nur eine geringe Provision, wenn Sie eine Auktion gewinnen.</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { range: "bis 10.000 €", rate: "2,0 %" },
-              { range: "bis 20.000 €", rate: "1,5 %" },
-              { range: "bis 30.000 €", rate: "1,3 %" },
-              { range: "ab 30.000 €", rate: "1,2 %" },
-            ].map((tier, i) => (
-              <div key={i} className="text-center p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <div className="text-2xl font-bold text-primary">{tier.rate}</div>
-                <div className="text-xs text-muted-foreground mt-1">{tier.range}</div>
-              </div>
-            ))}
-          </div>
+          <CommissionTierTable variant="compact-grid" className="mb-8" />
           <div className="text-center">
             <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-green-50 px-4 py-2 rounded-lg">
               <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>Beispiel: Zuschlag bei 25.000 € → nur 325 € Provision (1,3 %)</span>
+              {exampleCommission > 0 ? (
+                <span>
+                  Beispiel: Zuschlag bei 25.000 € → nur €{exampleCommission.toLocaleString("de-DE", { maximumFractionDigits: 0 })} Provision ({formatRatePercent(exampleRate)})
+                </span>
+              ) : (
+                <span>Beispielrechnung wird geladen…</span>
+              )}
             </div>
           </div>
         </div>
@@ -339,7 +370,7 @@ const WohnmobilHaendlerWerden = () => {
             {[
               { icon: TrendingUp, title: "Günstige Einkaufspreise", desc: "Keine Händlermargen. Fahrzeuge oft 15–30 % unter Marktwert ersteigern." },
               { icon: Zap, title: "Minimaler Aufwand", desc: "Kein Standort, keine Besichtigungen – bieten Sie bequem vom Büro aus." },
-              { icon: Shield, title: "Nur bei Erfolg zahlen", desc: "Kostenlose Registrierung. Provision ab 1,2 % – nur bei gewonnener Auktion." },
+              { icon: Shield, title: "Nur bei Erfolg zahlen", desc: `Kostenlose Registrierung. Provision ${lowestRatePrefix} – nur bei gewonnener Auktion.` },
               { icon: Clock, title: "Täglicher Digest", desc: "Jeden Morgen erhalten Sie eine E-Mail mit neuen und endenden Auktionen." },
               { icon: Gavel, title: "Kaufchance-System", desc: "Reserve nicht erreicht? Top-Bieter bekommen eine zweite Chance zum Zuschlag." },
               { icon: BarChart3, title: "Händler-Dashboard", desc: "Übersicht über Gebote, gewonnene Fahrzeuge, Rechnungen und mehr." },
@@ -398,7 +429,7 @@ const WohnmobilHaendlerWerden = () => {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-2xl md:text-4xl font-bold mb-4">Jetzt kostenlos registrieren und mitbieten</h2>
             <p className="text-lg mb-8 opacity-95">
-              In 2 Minuten registriert. Provision ab 1,2 %. Sofort nach Freischaltung auf {stats?.active || "30+"} Fahrzeuge bieten.
+              In 2 Minuten registriert. Provision {lowestRatePrefix}. Sofort nach Freischaltung auf {stats?.active || "30+"} Fahrzeuge bieten.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/register/haendler" onClick={() => handleCtaClick("footer_primary")}>

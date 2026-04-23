@@ -4,10 +4,24 @@
  */
 
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { logger } from './logger';
+
+/**
+ * Module-level Realtime guard: ensures only ONE Supabase channel is opened
+ * for commission_tiers changes per app session, even when multiple
+ * components mount useCommissionFromTiers simultaneously.
+ *
+ * The channel invalidates the shared React Query cache key when any tier
+ * row changes, so admin edits propagate to all open tabs in seconds
+ * (without lowering the 10-min staleTime that protects against polling).
+ */
+let commissionTiersChannel: ReturnType<typeof supabase.channel> | null = null;
+let commissionTiersChannelRefCount = 0;
+
+const COMMISSION_TIERS_QUERY_KEY = ['commission-tiers'] as const;
 
 export interface CommissionTier {
   id: string;
@@ -325,12 +339,51 @@ export function computeCommissionFromTiers(
 }
 
 /**
+ * Subscribes to Realtime updates on public.commission_tiers and invalidates
+ * the cached query when admins change a tier. Reference-counted across
+ * components – the channel is only opened once and torn down when the
+ * last consumer unmounts.
+ */
+function useCommissionTiersRealtime() {
+  const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    commissionTiersChannelRefCount += 1;
+
+    if (!commissionTiersChannel) {
+      commissionTiersChannel = supabase
+        .channel('commission-tiers-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'commission_tiers' },
+          () => {
+            queryClient.invalidateQueries({ queryKey: COMMISSION_TIERS_QUERY_KEY });
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      commissionTiersChannelRefCount -= 1;
+      if (commissionTiersChannelRefCount <= 0 && commissionTiersChannel) {
+        supabase.removeChannel(commissionTiersChannel);
+        commissionTiersChannel = null;
+        commissionTiersChannelRefCount = 0;
+      }
+    };
+  }, [queryClient]);
+}
+
+/**
  * React Query hook: loads tiers once, computes commission client-side.
- * No RPC per bid change – ideal for realtime auction displays.
+ * Subscribes to Realtime updates so admin tier edits propagate within
+ * seconds to all open tabs.
  */
 export function useCommissionFromTiers(saleAmount: number) {
+  useCommissionTiersRealtime();
+
   const tiersQuery = useQuery({
-    queryKey: ['commission-tiers'],
+    queryKey: [...COMMISSION_TIERS_QUERY_KEY],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_tiers')
@@ -340,7 +393,7 @@ export function useCommissionFromTiers(saleAmount: number) {
       if (error) throw error;
       return (data ?? []) as CommissionTier[];
     },
-    staleTime: 10 * 60 * 1000, // 10 min – tiers rarely change
+    staleTime: 10 * 60 * 1000, // 10 min – tiers rarely change; Realtime handles invalidation
     gcTime: 30 * 60 * 1000,
   });
 
@@ -357,5 +410,45 @@ export function useCommissionFromTiers(saleAmount: number) {
     totalCost: saleAmount + (result?.commission ?? 0),
     isLoading: tiersQuery.isLoading,
     isMinApplied: result ? result.commission > saleAmount * (result.rate / 100) : false,
+  };
+}
+
+/**
+ * Returns the lowest active commission rate (e.g. for "ab 1,2 %" marketing texts).
+ * Returns null while loading so consumers can render a skeleton/fallback.
+ */
+export function useLowestCommissionRate(): {
+  lowestRate: number | null;
+  isLoading: boolean;
+} {
+  useCommissionTiersRealtime();
+
+  const tiersQuery = useQuery({
+    queryKey: [...COMMISSION_TIERS_QUERY_KEY],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commission_tiers')
+        .select('*')
+        .eq('is_active', true)
+        .order('min_amount');
+      if (error) throw error;
+      return (data ?? []) as CommissionTier[];
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const lowestRate = React.useMemo(() => {
+    const tiers = tiersQuery.data ?? [];
+    const percentageTiers = tiers.filter(
+      t => t.is_active && t.rate_type === 'percentage'
+    );
+    if (percentageTiers.length === 0) return null;
+    return Math.min(...percentageTiers.map(t => Number(t.rate_value)));
+  }, [tiersQuery.data]);
+
+  return {
+    lowestRate,
+    isLoading: tiersQuery.isLoading,
   };
 }

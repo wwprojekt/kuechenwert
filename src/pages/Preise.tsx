@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { useCommissionFromTiers } from "@/lib/commissionCalculator";
+import { CommissionTierTable } from "@/components/CommissionTierTable";
 
 const Preise = () => {
   const [calcAmount, setCalcAmount] = useState(15000);
@@ -107,35 +108,7 @@ const Preise = () => {
                     <p className="text-sm text-muted-foreground mb-4">
                       Nur bei erfolgreichem Kauf – gestaffelt nach Kaufpreis:
                     </p>
-                    {calcResult.tiers.length > 0 ? (
-                      <div className="rounded-lg border overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-muted/50 text-left">
-                              <th className="px-4 py-2.5 font-medium">Kaufpreis</th>
-                              <th className="px-4 py-2.5 font-medium text-right">Satz</th>
-                              <th className="px-4 py-2.5 font-medium text-right">Mindestprovision</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {calcResult.tiers.map((tier, i) => (
-                              <tr key={tier.id} className={i % 2 === 0 ? '' : 'bg-muted/20'}>
-                                <td className="px-4 py-2">
-                                  {tier.max_amount >= 99999999
-                                    ? `ab €${tier.min_amount.toLocaleString('de-DE')}`
-                                    : `€${tier.min_amount.toLocaleString('de-DE')} – €${tier.max_amount.toLocaleString('de-DE')}`
-                                  }
-                                </td>
-                                <td className="px-4 py-2 text-right font-medium">{tier.rate_value.toLocaleString('de-DE')}%</td>
-                                <td className="px-4 py-2 text-right">€{tier.min_commission.toLocaleString('de-DE', { minimumFractionDigits: 0 })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Staffel wird geladen…</p>
-                    )}
+                    <CommissionTierTable variant="full-table" />
                     <p className="text-xs text-muted-foreground mt-3 flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                       Alle Beträge zzgl. MwSt. Volumenrabatte für Vielkäufer möglich.

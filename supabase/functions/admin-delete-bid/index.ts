@@ -13,21 +13,35 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 /**
  * Edge Function: admin-delete-bid
  *
- * Atomic admin action that deletes a bid AND informs the affected bidder.
- * Replaces the direct `supabase.rpc('admin_delete_bid', …)` call from
- * AdminAuctionDetail (which silently removed the bid).
+ * Atomic admin action that deletes a bid. The SQL RPC also removes the
+ * matching `bid_confirmed`/`outbid` rows from `dealer_notifications` so the
+ * deletion is invisible to all other parties — they will see the next
+ * place_bid (or auction end) without any trace of the removed bid.
  *
  * Order of operations:
  *   1. Auth: caller must be admin
  *   2. Snapshot bid + auction + bidder profile + vehicle title BEFORE deletion
- *   3. Call SQL RPC `admin_delete_bid` (atomic with advisory lock)
- *   4. Send notification email to the affected bidder
- *   5. Audit log + persistent error_logs on email failure
+ *   3. Call SQL RPC `admin_delete_bid` (atomic with advisory lock,
+ *      cleans up dealer_notifications, recomputes auction.current_bid +
+ *      dealer_levels, writes audit_logs)
+ *   4. Optionally send notification email to the affected bidder
+ *      (DEFAULT: OFF — the typical flow is "dealer phoned us to undo, no
+ *      email needed". Pass sendEmail: true to override.)
+ *   5. Application-level audit_logs enrichment (admin user_id + email outcome)
  *
  * Body:
  *   { bidId: string,
  *     reason?: string,
- *     sendEmail?: boolean }
+ *     sendEmail?: boolean   // default false }
+ *
+ * Response codes:
+ *   200 success
+ *   400 BAD_REQUEST (missing bidId or invalid JSON)
+ *   401 missing/invalid auth
+ *   403 caller is not admin
+ *   404 NOT_FOUND (bid deleted in the meantime)
+ *   409 WRONG_STATUS (auction raced to ended/sold/kaufchance/cancelled)
+ *   500 unexpected RPC error
  */
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -146,10 +160,17 @@ Deno.serve(async (req) => {
   }
   const bidId = body.bidId?.trim();
   const reason = body.reason?.trim() || null;
-  const sendEmail = body.sendEmail !== false;
+  // Default: NO email. Real-world flow is "dealer calls in, asks us to undo a
+  // bid he just placed" — sending him an automated 'your bid was removed by
+  // an admin' email afterwards is noisy and confusing. Admin can opt-in
+  // explicitly by passing sendEmail: true.
+  const sendEmail = body.sendEmail === true;
 
   if (!bidId) {
-    return new Response(JSON.stringify({ error: 'bidId ist erforderlich' }), { status: 400, headers });
+    return new Response(
+      JSON.stringify({ error: 'bidId ist erforderlich', code: 'BAD_REQUEST' }),
+      { status: 400, headers },
+    );
   }
 
   // ─── Step 1: snapshot bid + auction + vehicle BEFORE deletion ──────────
@@ -205,13 +226,26 @@ Deno.serve(async (req) => {
     );
   }
   if (rpcData && rpcData.success === false) {
+    // Map well-known RPC failure codes to specific HTTP statuses so the
+    // frontend can react (e.g. invalidate the auction query when status
+    // raced from 'active' to 'ended' between page load and click).
+    const rpcCode: string | undefined = rpcData.code;
+    const status =
+      rpcCode === 'NOT_FOUND' ? 404 :
+      rpcCode === 'WRONG_STATUS' ? 409 :
+      400;
     return new Response(
-      JSON.stringify({ error: rpcData.error || 'Gebot konnte nicht gelöscht werden' }),
-      { status: 400, headers },
+      JSON.stringify({
+        error: rpcData.error || 'Gebot konnte nicht gelöscht werden',
+        code: rpcCode ?? 'RPC_FAILED',
+        auctionStatus: rpcData.status ?? null,
+      }),
+      { status, headers },
     );
   }
   const wasHighest = !!rpcData?.was_highest;
   const newCurrentBid = rpcData?.new_current_bid ?? null;
+  const notificationsRemoved = Number(rpcData?.notifications_removed ?? 0);
 
   // ─── Step 3: send notification email to affected bidder ────────────────
   let mailSent = false;
@@ -295,6 +329,7 @@ Deno.serve(async (req) => {
         amount: bid.amount,
         was_highest: wasHighest,
         new_current_bid: newCurrentBid,
+        notifications_removed: notificationsRemoved,
         vehicle_title: vehicleTitle,
         reason,
         mail_sent: mailSent,
@@ -314,9 +349,12 @@ Deno.serve(async (req) => {
       deletedAmount: Number(bid.amount),
       wasHighest,
       newCurrentBid,
+      notificationsRemoved,
       mailSent,
       mailError,
-      message: 'Gebot wurde gelöscht',
+      message: notificationsRemoved > 0
+        ? `Gebot gelöscht – ${notificationsRemoved} Benachrichtigung(en) ebenfalls entfernt`
+        : 'Gebot wurde gelöscht',
     }),
     { status: 200, headers },
   );

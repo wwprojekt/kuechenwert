@@ -209,8 +209,11 @@ export default function AdminAuctionDetail() {
 
   const deleteBidMutation = useMutation({
     mutationFn: async (bidId: string) => {
+      // sendEmail explicitly false: real-world flow is "dealer phoned in,
+      // wants the bid undone silently". Notification cleanup happens server-
+      // side so the next page-load shows no trace of the bid.
       const { data, error } = await invokeWithAuth("admin-delete-bid", {
-        body: { bidId },
+        body: { bidId, sendEmail: false },
       });
       if (error) throw error;
       const result = data as {
@@ -218,25 +221,41 @@ export default function AdminAuctionDetail() {
         deletedAmount?: number;
         wasHighest?: boolean;
         newCurrentBid?: number | null;
+        notificationsRemoved?: number;
         mailSent?: boolean;
         mailError?: string | null;
         error?: string;
+        code?: string;
       };
-      if (result?.error) throw new Error(result.error);
+      if (result?.error) {
+        const err: Error & { code?: string } = new Error(result.error);
+        err.code = result.code;
+        throw err;
+      }
       return result;
     },
     onSuccess: (data) => {
       const baseMsg = `Gebot über ${formatPrice(data.deletedAmount ?? 0)} gelöscht`;
-      if (data.mailSent) {
-        toast.success(`${baseMsg}. Bieter wurde per E-Mail informiert.`);
-      } else if (data.mailError) {
-        toast.warning(`${baseMsg} – E-Mail-Versand fehlgeschlagen: ${data.mailError}`);
-      } else {
-        toast.success(`${baseMsg} (keine E-Mail-Adresse für Bieter hinterlegt)`);
-      }
+      const cleanupSuffix = (data.notificationsRemoved ?? 0) > 0
+        ? ` (${data.notificationsRemoved} Benachrichtigung${data.notificationsRemoved === 1 ? "" : "en"} entfernt)`
+        : "";
+      toast.success(`${baseMsg}${cleanupSuffix}`);
       queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
     },
-    onError: (error: any) => {
+    onError: (error: Error & { code?: string }) => {
+      // Race-condition handling: auction status may have flipped between
+      // page load and the click. In that case re-pull the auction so the
+      // delete button disappears and the admin sees the new status.
+      if (error.code === "WRONG_STATUS") {
+        toast.error("Auktion ist nicht mehr aktiv – Daten werden neu geladen.");
+        queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+        return;
+      }
+      if (error.code === "NOT_FOUND") {
+        toast.error("Gebot wurde inzwischen entfernt.");
+        queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+        return;
+      }
       toast.error(error.message || "Fehler beim Löschen des Gebots");
     },
   });
@@ -708,6 +727,11 @@ export default function AdminAuctionDetail() {
                                           ⚠️ Das ist das einzige Gebot. Die Auktion hat danach keine Gebote mehr.
                                         </span>
                                       )}
+                                      <span className="block text-xs text-muted-foreground pt-1">
+                                        Es wird <strong>keine</strong> E-Mail an den Bieter versendet und die zugehörigen Benachrichtigungen
+                                        (Gebotsbestätigung des Bieters + Überbietungs-Hinweise an andere Bieter) werden ebenfalls entfernt –
+                                        die Aktion ist für alle Beteiligten unsichtbar.
+                                      </span>
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>

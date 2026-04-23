@@ -679,7 +679,7 @@ Deno.serve(async (req) => {
         'Der Verkäufer handelt als Privatperson; es wird keine Umsatzsteuer ausgewiesen. Der Kaufpreis versteht sich als Bruttobetrag. Dem Käufer bleibt es vorbehalten, die gesetzlichen Regelungen zur Differenzbesteuerung anzuwenden.',
       );
     }
-    paragraphText('Die Zahlung des Kaufpreises ist innerhalb von 7 Werktagen nach ' + (isFestpreisOrProposal ? 'Vertragsabschluss' : 'Zuschlag') + ' auf das von ' + siteName + ' benannte Treuhandkonto zu leisten. Die genauen Zahlungsdaten werden dem Käufer separat per E-Mail mitgeteilt. Die Auszahlung an den Verkäufer erfolgt nach erfolgreicher Fahrzeugübergabe.');
+    paragraphText('Die Zahlung des Kaufpreises wird unmittelbar zwischen Käufer und Verkäufer abgewickelt. Die Parteien wählen einvernehmlich eine der folgenden Zahlungsarten: (a) Überweisung des vollständigen Kaufpreises auf ein vom Verkäufer benanntes Bankkonto innerhalb von 7 Werktagen nach ' + (isFestpreisOrProposal ? 'Vertragsabschluss' : 'Zuschlag') + ', oder (b) Barzahlung des vollständigen Kaufpreises bei der Fahrzeugübergabe gegen schriftliche Quittung. Die Übergabe des Fahrzeugs erfolgt in beiden Fällen erst nach vollständigem Zahlungseingang bzw. Erhalt des Kaufpreises (siehe §4). ' + siteName + ' tritt ausschließlich als Vermittler auf und ist an der Zahlungsabwicklung nicht beteiligt.');
     y += 1;
 
     // ── §4 Übergabe ───────────────────────────────────────────────

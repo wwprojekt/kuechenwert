@@ -93,6 +93,14 @@ interface DealerOption {
   email: string;
   accountRestricted: boolean;
   restrictionReason: string | null;
+  /**
+   * Other dealer accounts that share the same normalized company name.
+   * Indicates a likely duplicate registration (same dealer registered
+   * twice with different emails). Production bug 22.04.2026:
+   * KV-2026-00016 (Hymer B-Klasse MasterLine) was sold to the wrong
+   * sibling profile and disappeared from the dealer's dashboard.
+   */
+  duplicateSiblings: Array<{ userId: string; email: string }>;
 }
 
 interface DealerApplicationRow {
@@ -132,17 +140,47 @@ async function loadApprovedDealers(): Promise<DealerOption[]> {
 
   const profiles = (profilesRaw ?? []) as unknown as ProfileRow[];
 
-  return apps
-    .map((app) => {
-      const profile = profiles.find((p) => p.id === app.user_id);
-      return {
-        userId: app.user_id,
-        companyName: app.company_name || "(Kein Firmenname)",
-        contactName: app.contact_person_name || "",
-        email: profile?.email || "",
-        accountRestricted: Boolean(profile?.account_restricted),
-        restrictionReason: profile?.restriction_reason ?? null,
-      };
+  const baseList = apps.map((app) => {
+    const profile = profiles.find((p) => p.id === app.user_id);
+    return {
+      userId: app.user_id,
+      companyName: app.company_name || "(Kein Firmenname)",
+      contactName: app.contact_person_name || "",
+      email: profile?.email || "",
+      accountRestricted: Boolean(profile?.account_restricted),
+      restrictionReason: profile?.restriction_reason ?? null,
+    };
+  });
+
+  // Group by normalized company name so we can flag dealers who registered
+  // twice with different emails (e.g. info@ vs ankauf@). Without this hint
+  // the dropdown shows two visually identical rows and the admin picks the
+  // "wrong" one — the contract then disappears from the dealer's dashboard
+  // because /dashboard/contracts filters on `buyer_id = auth.uid()`.
+  const normalizeCompany = (name: string): string =>
+    name
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/\b(gmbh|kg|ohg|ag|e\.k\.|ug|ltd|inc|co\.?|& co\.?\s*kg|gbr)\b/g, "")
+      .replace(/[^a-z0-9 ]+/g, "")
+      .trim();
+
+  const byCompany = new Map<string, Array<{ userId: string; email: string }>>();
+  for (const d of baseList) {
+    const key = normalizeCompany(d.companyName);
+    if (!key) continue;
+    const list = byCompany.get(key) ?? [];
+    list.push({ userId: d.userId, email: d.email });
+    byCompany.set(key, list);
+  }
+
+  return baseList
+    .map<DealerOption>((d) => {
+      const key = normalizeCompany(d.companyName);
+      const siblings = (byCompany.get(key) ?? []).filter(
+        (s) => s.userId !== d.userId,
+      );
+      return { ...d, duplicateSiblings: siblings };
     })
     .sort((a, b) => a.companyName.localeCompare(b.companyName, "de"));
 }
@@ -378,10 +416,22 @@ export function AdminManualSellDialog({
                             <span className="truncate font-medium">
                               {d.companyName}
                             </span>
+                            {d.duplicateSiblings.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="ml-auto shrink-0 border-amber-500 text-amber-700 dark:text-amber-300"
+                                title="Dieser Händler hat mehrere Konten mit gleichem Firmennamen"
+                              >
+                                Mehrfach registriert
+                              </Badge>
+                            )}
                             {d.accountRestricted && (
                               <Badge
                                 variant="destructive"
-                                className="ml-auto shrink-0"
+                                className={cn(
+                                  "shrink-0",
+                                  d.duplicateSiblings.length > 0 ? "" : "ml-auto",
+                                )}
                               >
                                 gesperrt
                               </Badge>
@@ -434,6 +484,36 @@ export function AdminManualSellDialog({
           </div>
 
           {/* Warnings (do not block) */}
+          {selectedDealer && selectedDealer.duplicateSiblings.length > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/60 bg-amber-50 p-3 text-sm dark:bg-amber-950/20">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div className="space-y-1">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  Doppel-Registrierung erkannt – bitte richtiges Konto
+                  bestätigen
+                </p>
+                <p className="text-amber-700 dark:text-amber-300">
+                  „{selectedDealer.companyName}" existiert mit mehreren
+                  Händler-Accounts. Du verkaufst gerade an{" "}
+                  <strong>{selectedDealer.email || "(keine E-Mail)"}</strong>.
+                  Andere Konten desselben Händlers:
+                </p>
+                <ul className="ml-5 list-disc text-amber-700 dark:text-amber-300">
+                  {selectedDealer.duplicateSiblings.map((s) => (
+                    <li key={s.userId}>
+                      <span className="font-mono">{s.email}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Wähle das Konto, mit dem der Händler tatsächlich auf
+                  CaravanWert arbeitet (Bid-Historie / Login). Sonst
+                  erscheint der Kaufvertrag nicht in seinem Dashboard.
+                </p>
+              </div>
+            </div>
+          )}
+
           {selectedDealer?.accountRestricted && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />

@@ -60,18 +60,20 @@ export function AdminPagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 hidden sm:flex"
+          className="h-10 w-10 sm:h-8 sm:w-8 hidden sm:flex"
           onClick={() => onPageChange(1)}
           disabled={page <= 1}
+          aria-label="Erste Seite"
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
+          aria-label="Vorherige Seite"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -86,8 +88,10 @@ export function AdminPagination({
               key={p}
               variant={page === p ? "default" : "outline"}
               size="icon"
-              className="h-8 w-8 text-xs"
+              className="h-10 w-10 sm:h-8 sm:w-8 text-xs"
               onClick={() => onPageChange(p as number)}
+              aria-label={`Seite ${p}`}
+              aria-current={page === p ? "page" : undefined}
             >
               {p}
             </Button>
@@ -97,18 +101,20 @@ export function AdminPagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
+          aria-label="Nächste Seite"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 hidden sm:flex"
+          className="h-10 w-10 sm:h-8 sm:w-8 hidden sm:flex"
           onClick={() => onPageChange(totalPages)}
           disabled={page >= totalPages}
+          aria-label="Letzte Seite"
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>

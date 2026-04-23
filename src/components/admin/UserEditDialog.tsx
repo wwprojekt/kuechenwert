@@ -390,7 +390,7 @@ export function UserEditDialog({
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">Vorname</Label>
                   <Input
@@ -461,7 +461,7 @@ export function UserEditDialog({
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="address_zip">PLZ</Label>
                     <Input
@@ -521,7 +521,7 @@ export function UserEditDialog({
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company_zip">PLZ</Label>
                     <Input

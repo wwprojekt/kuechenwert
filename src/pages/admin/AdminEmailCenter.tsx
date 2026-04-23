@@ -3122,18 +3122,18 @@ function SystemEmailsTab() {
               Automatisch versendete E-Mails (Willkommen, Erinnerungen, Benachrichtigungen)
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-[200px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Suchen..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                className="pl-9 w-[200px]"
+                className="pl-9 w-full"
               />
             </div>
             <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Alle Typen" />
               </SelectTrigger>
               <SelectContent>

@@ -221,7 +221,7 @@ export default function AdminAuditLog() {
             />
           </div>
           <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px]">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Aktion filtern" />
             </SelectTrigger>
@@ -235,7 +235,7 @@ export default function AdminAuditLog() {
             </SelectContent>
           </Select>
           <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px]">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Entität filtern" />
             </SelectTrigger>

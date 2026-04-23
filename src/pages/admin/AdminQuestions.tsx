@@ -273,7 +273,7 @@ export default function AdminQuestions() {
             value={filter}
             onValueChange={(val) => setFilter(val as typeof filter)}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>

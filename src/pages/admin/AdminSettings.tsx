@@ -276,6 +276,7 @@ export default function AdminSettings() {
             <span className="hidden sm:inline">Tracking</span>
           </TabsTrigger>
           <TabsTrigger value="auction" className="gap-2">
+            <Gavel className="w-4 h-4" />
             <span className="hidden sm:inline">Auktionen</span>
           </TabsTrigger>
           <TabsTrigger value="ai" className="gap-2">

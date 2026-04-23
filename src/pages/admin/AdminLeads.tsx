@@ -1715,7 +1715,7 @@ export default function AdminLeads() {
         setActiveTab(val);
       }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <TabsList>
+          <TabsList className="flex h-auto gap-1 flex-nowrap overflow-x-auto no-scrollbar w-full sm:w-auto justify-start">
             <TabsTrigger value="wizard_sessions" className="gap-2">
               <Timer className="w-4 h-4" />
               Wizard-Sessions ({wizardSessions.filter(s => !s.disposition || s.disposition === "already_customer").length})

@@ -312,7 +312,7 @@ export default function AdminUsers() {
             />
           </div>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Rolle filtern" />
             </SelectTrigger>
             <SelectContent>
@@ -323,7 +323,7 @@ export default function AdminUsers() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Status filtern" />
             </SelectTrigger>
             <SelectContent>

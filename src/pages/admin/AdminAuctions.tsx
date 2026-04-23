@@ -1152,7 +1152,7 @@ export default function AdminAuctions() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
-        <TabsList className="flex flex-wrap h-auto gap-1">
+        <TabsList className="flex h-auto gap-1 flex-nowrap overflow-x-auto no-scrollbar w-full justify-start sm:flex-wrap sm:justify-center">
           {TABS.map((tab) => {
             const count = getCountForTab(tab);
             const Icon = tab.icon;
@@ -1160,10 +1160,10 @@ export default function AdminAuctions() {
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
-                className="flex items-center gap-1.5 py-2 px-3 data-[state=active]:shadow-sm text-sm"
+                className="flex items-center gap-1.5 py-2 px-3 data-[state=active]:shadow-sm text-sm flex-shrink-0 whitespace-nowrap"
               >
                 <Icon className={`w-4 h-4 ${activeTab === tab.key ? "" : tab.color}`} />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span>{tab.label}</span>
                 {count > 0 && (
                   <Badge
                     variant={activeTab === tab.key ? "secondary" : "outline"}

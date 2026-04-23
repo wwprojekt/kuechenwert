@@ -309,26 +309,30 @@ const AdminAppointments = () => {
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
+          size="sm"
           variant={filter === "all" ? "default" : "outline"}
           onClick={() => setFilter("all")}
         >
           Alle
         </Button>
         <Button
+          size="sm"
           variant={filter === "scheduled" ? "default" : "outline"}
           onClick={() => setFilter("scheduled")}
         >
           Geplant
         </Button>
         <Button
+          size="sm"
           variant={filter === "confirmed" ? "default" : "outline"}
           onClick={() => setFilter("confirmed")}
         >
           Bestätigt
         </Button>
         <Button
+          size="sm"
           variant={filter === "completed" ? "default" : "outline"}
           onClick={() => setFilter("completed")}
         >
@@ -361,17 +365,19 @@ const AdminAppointments = () => {
           paginatedAppointments.map((appointment) => (
             <Card key={appointment.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {appointment.motorhomes?.manufacturer} {appointment.motorhomes?.model}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+                      <span className="break-words">
+                        {appointment.motorhomes?.manufacturer} {appointment.motorhomes?.model}
+                      </span>
                       {getStatusBadge(appointment.status)}
                     </CardTitle>
                     <CardDescription>
                       Termin-ID: {appointment.id.slice(0, 8)}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       variant="outline"

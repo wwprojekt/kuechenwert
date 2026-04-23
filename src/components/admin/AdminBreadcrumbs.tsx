@@ -158,42 +158,55 @@ export function AdminBreadcrumbs() {
 
   if (crumbs.length === 0) return null;
 
+  const lastIndex = crumbs.length - 1;
+
   return (
-    <nav className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground min-w-0">
-      <Link to="/admin" className="hover:text-foreground transition-colors flex-shrink-0">
+    <nav className="flex items-center gap-1 text-sm text-muted-foreground min-w-0 flex-1">
+      <Link
+        to="/admin"
+        className="hover:text-foreground transition-colors flex-shrink-0"
+        aria-label="Admin Home"
+      >
         <Home className="h-3.5 w-3.5" />
       </Link>
-      {crumbs.map((crumb, index) => (
-        <div key={crumb.path} className="flex items-center gap-1 min-w-0">
-          <ChevronRight className="h-3 w-3 flex-shrink-0" />
-          {index === crumbs.length - 1 ? (
-            <span className="font-medium text-foreground truncate max-w-[200px]">
-              {crumb.uuidContext ? (
-                <UuidBreadcrumbLabel
-                  parentSegment={crumb.uuidContext.parentSegment}
-                  uuidSegment={crumb.uuidContext.uuidSegment}
-                />
-              ) : (
-                crumb.label
-              )}
-            </span>
-          ) : (
-            <Link
-              to={crumb.path}
-              className="hover:text-foreground transition-colors truncate max-w-[150px]"
-            >
-              {crumb.uuidContext ? (
-                <UuidBreadcrumbLabel
-                  parentSegment={crumb.uuidContext.parentSegment}
-                  uuidSegment={crumb.uuidContext.uuidSegment}
-                />
-              ) : (
-                crumb.label
-              )}
-            </Link>
-          )}
-        </div>
-      ))}
+      {crumbs.map((crumb, index) => {
+        const isLast = index === lastIndex;
+        // Auf Mobile alle Zwischen-Krümel ausblenden — nur Home + letzter Krümel sichtbar
+        const wrapperClass = isLast
+          ? "flex items-center gap-1 min-w-0"
+          : "hidden sm:flex items-center gap-1 min-w-0";
+        return (
+          <div key={crumb.path} className={wrapperClass}>
+            <ChevronRight className="h-3 w-3 flex-shrink-0" />
+            {isLast ? (
+              <span className="font-medium text-foreground truncate max-w-[160px] sm:max-w-[200px]">
+                {crumb.uuidContext ? (
+                  <UuidBreadcrumbLabel
+                    parentSegment={crumb.uuidContext.parentSegment}
+                    uuidSegment={crumb.uuidContext.uuidSegment}
+                  />
+                ) : (
+                  crumb.label
+                )}
+              </span>
+            ) : (
+              <Link
+                to={crumb.path}
+                className="hover:text-foreground transition-colors truncate max-w-[150px]"
+              >
+                {crumb.uuidContext ? (
+                  <UuidBreadcrumbLabel
+                    parentSegment={crumb.uuidContext.parentSegment}
+                    uuidSegment={crumb.uuidContext.uuidSegment}
+                  />
+                ) : (
+                  crumb.label
+                )}
+              </Link>
+            )}
+          </div>
+        );
+      })}
     </nav>
   );
 }

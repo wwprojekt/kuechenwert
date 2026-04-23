@@ -786,7 +786,7 @@ export default function AdminFinancials() {
 
       {/* Tabs: Rechnungen / Überfällig / Zahlungshistorie */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex h-auto gap-1 flex-nowrap overflow-x-auto no-scrollbar w-full justify-start sm:inline-flex sm:w-auto sm:h-10">
           <TabsTrigger value="invoices" className="gap-2">
             <FileText className="h-4 w-4" />
             Rechnungen
@@ -830,7 +830,7 @@ export default function AdminFinancials() {
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -843,7 +843,7 @@ export default function AdminFinancials() {
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-44">
+                  <SelectTrigger className="w-full sm:w-44">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -853,7 +853,7 @@ export default function AdminFinancials() {
                   </SelectContent>
                 </Select>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-44">
+                  <SelectTrigger className="w-full sm:w-44">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

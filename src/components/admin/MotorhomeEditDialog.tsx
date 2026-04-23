@@ -646,7 +646,7 @@ export function MotorhomeEditDialog({
                 {renderSelect("transmission", "Getriebe", TRANSMISSIONS, "Getriebe wählen")}
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {renderNumberInput("engine_power_hp", "Leistung (PS)")}
                 {renderNumberInput("power_kw", "Leistung (kW)")}
                 {renderNumberInput("engine_displacement_ccm", "Hubraum (ccm)")}
@@ -705,7 +705,7 @@ export function MotorhomeEditDialog({
 
             {/* ===== MASSE & GEWICHT TAB ===== */}
             <TabsContent value="dimensions" className="space-y-4 mt-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {renderNumberInput("length_m", "Länge (cm)")}
                 {renderNumberInput("width_m", "Breite (cm)")}
                 {renderNumberInput("height_m", "Höhe (cm)")}

@@ -29,7 +29,7 @@ export default function AdminLayout() {
             <header className="h-14 sm:h-16 border-b border-border flex items-center gap-2 sm:gap-4 px-3 sm:px-6 bg-background sticky top-0 z-10">
               <SidebarTrigger className="flex-shrink-0" />
 
-              {/* Breadcrumbs – nur ab sm */}
+              {/* Breadcrumbs – Mobile: nur Home + letzter Krümel; Desktop: voller Pfad */}
               <AdminBreadcrumbs />
 
               {/* Platz füllen */}

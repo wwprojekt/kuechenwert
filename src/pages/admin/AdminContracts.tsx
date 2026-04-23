@@ -489,7 +489,7 @@ export default function AdminContracts() {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -507,7 +507,7 @@ export default function AdminContracts() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Vertragsnr.</TableHead>

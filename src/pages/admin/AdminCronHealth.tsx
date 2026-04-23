@@ -339,9 +339,9 @@ const AdminCronHealth = () => {
             Edge Functions im gewählten Zeitfenster.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select value={windowKey} onValueChange={setWindowKey}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Zeitfenster" />
             </SelectTrigger>
             <SelectContent>
@@ -459,7 +459,7 @@ const AdminCronHealth = () => {
                   .
                 </p>
                 <div className="mt-3 border border-border rounded-lg overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[700px] text-sm">
                     <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
                       <tr>
                         <th className="text-left px-3 py-2">Severity</th>
@@ -579,7 +579,7 @@ const AdminCronHealth = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
                   <tr>
                     <th className="text-left px-4 py-2">Status</th>

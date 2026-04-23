@@ -359,7 +359,7 @@ export default function AdminMessages() {
             />
           </div>
           <Select value={filter} onValueChange={(val) => setFilter(val as typeof filter)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
@@ -395,7 +395,7 @@ export default function AdminMessages() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">

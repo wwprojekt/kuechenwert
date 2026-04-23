@@ -858,7 +858,7 @@ export default function AdminMotorhomes() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+        <TabsList className="flex h-auto gap-1 flex-nowrap overflow-x-auto no-scrollbar w-full justify-start sm:grid sm:grid-cols-6">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const count = tabCounts[tab.key];
@@ -866,10 +866,10 @@ export default function AdminMotorhomes() {
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
-                className="flex items-center gap-2 py-2.5 text-xs sm:text-sm"
+                className="flex items-center gap-2 py-2.5 px-3 text-xs sm:text-sm flex-shrink-0 whitespace-nowrap"
               >
                 <Icon className={`w-4 h-4 ${activeTab === tab.key ? "" : tab.color}`} />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span>{tab.label}</span>
                 <Badge
                   variant={activeTab === tab.key ? "secondary" : "outline"}
                   className="text-xs px-1.5 py-0"

@@ -429,12 +429,15 @@ export const NotificationPreferences = () => {
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Zeiteinstellungen
+            <Badge variant="outline" className="ml-2 text-[10px] uppercase tracking-wide">
+              Bald verfügbar
+            </Badge>
           </CardTitle>
           <CardDescription>
-            Wann und wie oft Sie benachrichtigt werden möchten
+            Ihre Auswahl wird gespeichert und sobald die Funktion aktiv ist automatisch übernommen.
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -446,7 +449,7 @@ export const NotificationPreferences = () => {
                 className="w-full h-[44px] px-3 py-2 border rounded-md text-base"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Ruhezeiten bis</Label>
               <input
@@ -457,7 +460,7 @@ export const NotificationPreferences = () => {
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Benachrichtigungsfrequenz</Label>
             <Select
@@ -475,7 +478,8 @@ export const NotificationPreferences = () => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Während der Ruhezeiten werden nur wichtige Benachrichtigungen sofort gesendet
+              Hinweis: Diese Einstellungen werden derzeit gespeichert, aber noch nicht serverseitig erzwungen.
+              Die zentrale Notification-Engine wird in einer der nächsten Versionen ausgerollt.
             </p>
           </div>
         </CardContent>

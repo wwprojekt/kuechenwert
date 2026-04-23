@@ -29,6 +29,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ─── Notification-Preferences: Opt-out für Outbid-Mails ───
+    // Strikte Opt-out-Semantik:
+    // - Kein Pref-Row vorhanden → senden (Bestand-User-Schutz)
+    // - prefs.email_outbid !== false → senden
+    // - prefs.email_outbid === false → skip
+    // Bei Query-Fehler defaulten wir auf SENDEN (Outage darf nicht still
+    // unterdrücken). Nur der Outbid-Pfad wird gefiltert; "Gebot bestätigt"
+    // bleibt unangetastet (transactional).
+    if (isOutbid) {
+      const { data: prefs, error: prefsError } = await supabase
+        .from('user_notification_preferences')
+        .select('email_outbid')
+        .eq('user_id', bidderId)
+        .maybeSingle();
+
+      if (prefsError) {
+        console.error('[send-bid-notification] prefs query failed, defaulting to SEND:', prefsError);
+      } else if (prefs && prefs.email_outbid === false) {
+        console.log(`[send-bid-notification] skipped outbid mail for ${bidderId} (opted out)`);
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, reason: 'opted_out_email_outbid' }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) } }
+        );
+      }
+    }
+
     // Fetch bidder profile
     const { data: profile } = await supabase
       .from('profiles')

@@ -65,22 +65,31 @@ Deno.serve(async (req) => {
       userIds.includes(u.id) && u.email
     ) || [];
 
-    // Check notification preferences - only send to users who opted in
-    const { data: prefs } = await supabase
+    // Check notification preferences – Opt-out semantics:
+    // Users without a row OR with email_price_alerts !== false get the mail (default behavior).
+    // Only users who EXPLICITLY set email_price_alerts = false are skipped.
+    // If the prefs query itself errors, we default to SEND to avoid accidental silent suppression.
+    const { data: prefs, error: prefsError } = await supabase
       .from("user_notification_preferences")
-      .select("user_id, bid_notifications")
+      .select("user_id, email_price_alerts")
       .in("user_id", userIds);
 
-    const prefsMap = new Map(prefs?.map(p => [p.user_id, p]) || []);
+    if (prefsError) {
+      console.error("[send-favorite-notification] prefs query failed, defaulting to SEND:", prefsError);
+    }
+
+    const prefsMap = new Map((prefs || []).map((p: { user_id: string; email_price_alerts: boolean | null }) => [p.user_id, p]));
 
     let sent = 0;
     let skipped = 0;
     const errors: string[] = [];
 
     for (const user of favoriteUsers) {
-      // Check if user wants notifications (default: yes)
       const userPref = prefsMap.get(user.id);
-      if (userPref && userPref.bid_notifications === false) continue;
+      if (userPref && userPref.email_price_alerts === false) {
+        skipped++;
+        continue;
+      }
 
       // ─── ANTI-SPAM: Max 1 Favoriten-Email pro User pro 24h ───
       if (event_type === "price_change" && user.email) {

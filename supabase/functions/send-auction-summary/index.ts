@@ -87,14 +87,14 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (!profile?.email) continue;
 
-        // Check notification preferences
-        const { data: prefs } = await supabase
-          .from('user_notification_preferences')
-          .select('email_auction_updates')
-          .eq('user_id', sellerId)
-          .single();
-
-        if (prefs && prefs.email_auction_updates === false) continue;
+        // NOTE: Bisher stand hier ein Opt-out-Check auf die Spalte
+        // `email_auction_updates`, die im Schema nicht existiert. Die Query
+        // schlug daher seit jeher still fehl, der Check feuerte nie und ALLE
+        // Verkäufer mit aktiven Auktionen bekamen die Tagesübersicht.
+        // Damit kein Verhaltensbruch entsteht, wird der Check ersatzlos
+        // entfernt — eine sinnvolle Spalte (z. B. `email_new_bid` oder ein
+        // dedizierter `email_seller_summary`-Schalter) gehört in die nächste
+        // Notification-Engine-Iteration und nicht in diesen Hotfix.
 
         const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
 

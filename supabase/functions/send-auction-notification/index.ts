@@ -33,7 +33,13 @@ interface AuctionEmailRequest {
     // Phase-4 Audit-Fix #8: Opt-in Mail an Bestand-Inserate. Erklärt das neue
     // Phase-4-System, kündigt 60-Tage Soft-Cap transparent an, gibt Toggles im
     // Dashboard frei (Verkäufer entscheidet selbst über dynamic_pricing).
-    | "seller_existing_listing_optin";
+    | "seller_existing_listing_optin"
+    // 2026-04-23: Eigener Mailtype für den Fall "Verkäufer hat in der
+    // Kaufchance-Phase die Auto-Wiedereinstellung deaktiviert". Vorher wurde
+    // hier die generische Bieter-Mail "kaufchance_expired" missbraucht, was
+    // weder den Status (eigene Entscheidung) noch die nächsten Schritte
+    // (manuell neu inserieren) kommuniziert hat.
+    | "seller_chose_to_end";
   motorhomeModel: string;
   auctionUrl: string;
   currentBid?: string;
@@ -470,6 +476,38 @@ const handler = async (req: Request): Promise<Response> => {
           ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
         `;
         break;
+
+      case "seller_chose_to_end": {
+        // 2026-04-23: Verkäufer-Bestätigungs-Mail nach Opt-out aus der
+        // Auto-Wiedereinstellung. Tritt ein wenn `auto_relist=false` und die
+        // Kaufchance-Phase regulär ausläuft. Erklärt explizit, dass die
+        // Beendigung die eigene Entscheidung war, listet was passiert ist,
+        // und führt mit einem direkten CTA ins Dashboard, wo das Inserat
+        // jederzeit als neue Auktion oder als Festpreis wieder eingestellt
+        // werden kann. Kein Hinweis auf "Re-Enable Auto-Relist", weil die
+        // RPC `toggle_auto_relist` nur in den Stati `kaufchance` oder
+        // `active` (instant_price) erlaubt ist – der Auktions-Datensatz
+        // selbst ist hier bereits `ended` und nicht mehr toggle-bar.
+        subject = `Auktion beendet wie gewünscht: ${motorhomeModel}`;
+        emailContent = `
+          ${paragraph(`Hallo ${name},`)}
+          ${customerBadge(custNum)}
+          ${paragraph('Sie haben in der Kaufchance-Phase die <strong>Auto-Wiedereinstellung deaktiviert</strong>. Die 24-stündige Verhandlungsphase ist nun abgelaufen und Ihre Auktion ist – wie von Ihnen gewünscht – endgültig beendet.')}
+          ${infoBox('Status Ihres Inserats', `
+            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${reservePrice ? detailRow('Letzter Mindestpreis', reservePrice) : ''}
+            ${roundNumber ? detailRow('Erreichte Runde', String(roundNumber)) : ''}
+            ${detailRow('Status', 'Beendet (auf Ihren Wunsch)')}
+          `, 'info', settingsData)}
+          ${paragraph('<strong>Was ist gerade passiert?</strong>')}
+          ${paragraph('\u2022 Alle offenen Kaufchance-Angebote wurden automatisch als abgelaufen markiert<br>\u2022 Eingeladene H\u00e4ndler wurden \u00fcber das Auktionsende informiert<br>\u2022 Ihr Fahrzeug ist auf der Plattform <strong>nicht mehr sichtbar</strong>')}
+          ${paragraph('<strong>So geht es weiter:</strong> Sie k\u00f6nnen Ihr Fahrzeug jederzeit als neues Inserat wieder einstellen \u2013 wahlweise als Auktion mit angepasstem Mindestpreis oder als Festpreis-Inserat. Ihre Fahrzeugdaten und Fotos sind im Dashboard gespeichert und k\u00f6nnen mit wenigen Klicks \u00fcbernommen werden.')}
+          ${button('Inserat im Dashboard verwalten', auctionUrl, settingsData)}
+          ${paragraph(`Sie haben Ihre Meinung ge\u00e4ndert oder ben\u00f6tigen Beratung zur n\u00e4chsten Vermarktung? Wir helfen Ihnen pers\u00f6nlich weiter \u2013 erreichbar unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a> oder telefonisch unter ${settingsData.support_phone || '0511 / 51532476'}.`)}
+          ${paragraph('Mit freundlichen Grüßen,<br>Ihr ' + settingsData.site_name + ' Team')}
+        `;
+        break;
+      }
 
       case "seller_auto_relisted":
         subject = `Neue Auktionsrunde gestartet: ${motorhomeModel}`;

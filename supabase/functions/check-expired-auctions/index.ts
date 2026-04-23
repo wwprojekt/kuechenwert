@@ -1006,14 +1006,25 @@ Deno.serve(async (req) => {
                         },
                       }).catch((e: any) => console.error('Soft-brake mail (kaufchance) failed:', e?.message));
                     } else {
-                      // Klassische "kaufchance_expired"-Mail (auto_relist=off oder Bestand)
+                      // 2026-04-23: eigener Mailtype f\u00fcr Verk\u00e4ufer-Opt-out.
+                      // Vorher wurde hier `kaufchance_expired` (Bieter-Mail!) an den
+                      // Verk\u00e4ufer geschickt \u2013 verwirrend, weil die Mail die eigene
+                      // Entscheidung des Verk\u00e4ufers gar nicht erw\u00e4hnt und nur
+                      // "entdecken Sie weitere Fahrzeuge" sagt. Der neue Type
+                      // `seller_chose_to_end` adressiert die Entscheidung explizit
+                      // und f\u00fchrt mit klarem CTA ins Dashboard zum Wieder-
+                      // einstellen.
                       await supabase.functions.invoke('send-auction-notification', {
                         body: {
                           email: sellerProfile.email,
                           name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
-                          type: 'kaufchance_expired',
+                          type: 'seller_chose_to_end',
                           motorhomeModel: motorhomeName,
                           auctionUrl: dashboardUrl,
+                          roundNumber: String(currentRound),
+                          reservePrice: kaufchance.reserve_price
+                            ? `\u20ac${Number(kaufchance.reserve_price).toLocaleString('de-DE')}`
+                            : undefined,
                         },
                       }).catch((e: any) => console.error(`Failed to notify seller:`, e));
                     }

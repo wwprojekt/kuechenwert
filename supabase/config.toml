@@ -140,6 +140,9 @@ verify_jwt = false
 [functions.get-recipient-count]
 verify_jwt = false
 
+[functions.check-email-delivery]
+verify_jwt = false
+
 # --- Automation ---
 [functions.auto-convert-wizard]
 verify_jwt = false

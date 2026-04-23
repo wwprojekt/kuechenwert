@@ -3,7 +3,6 @@
  * Shows commission rates to dealers on auction pages
  */
 
-import { useSettings } from "@/contexts/SettingsContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info, Percent, Euro } from "lucide-react";
@@ -143,29 +142,9 @@ export const CommissionDisplay = ({
   );
 };
 
-/**
- * Hook for commission calculations
- */
-export const useCommissionCalculation = (bidAmount: number = 0) => {
-  const { settings } = useSettings();
-  
-  const commissionRate = settings?.commission_rate_percent || 0;
-  const commissionAmount = bidAmount * (commissionRate / 100);
-  const totalCost = bidAmount + commissionAmount;
-
-  return {
-    commissionRate,
-    commissionAmount,
-    totalCost,
-    formattedCommissionAmount: commissionAmount.toLocaleString('de-DE', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }),
-    formattedTotalCost: totalCost.toLocaleString('de-DE', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }),
-  };
-};
+// NOTE: A duplicate flat-rate `useCommissionCalculation` hook used to live here
+// and pulled `site_settings.commission_rate_percent`. It was removed in favour
+// of the tier-based hook in `@/lib/commissionCalculator` to keep a single
+// source of truth (commission_tiers table). Import from there instead.
 
 export default CommissionDisplay;

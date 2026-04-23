@@ -114,7 +114,16 @@ export function AdminNotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={
+            totalCount > 0
+              ? `Benachrichtigungen öffnen (${totalCount} offen)`
+              : "Benachrichtigungen öffnen"
+          }
+          className="relative h-10 w-10 sm:h-9 sm:w-9 flex-shrink-0"
+        >
           <Bell className="h-5 w-5" />
           {totalCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full leading-none">

@@ -222,7 +222,7 @@ export function DealerEditDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="max-h-[65vh] pr-4">
           <Tabs defaultValue="company" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="company">Firma</TabsTrigger>

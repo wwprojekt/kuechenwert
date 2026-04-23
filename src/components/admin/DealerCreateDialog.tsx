@@ -263,7 +263,7 @@ export function DealerCreateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[55vh] pr-4">
+        <ScrollArea className="max-h-[65vh] pr-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="account">

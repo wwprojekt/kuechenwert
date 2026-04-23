@@ -657,17 +657,17 @@ export default function AdminFinancials() {
       </div>
 
       {/* Extended Financial Statistics - Row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gesamtumsatz (brutto)</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-lg sm:text-2xl font-bold text-green-600 break-words">
               {totalGross.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
-            <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1">
               <span>Netto: {totalNet.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
               <span>MwSt: {totalTax.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
             </div>
@@ -683,7 +683,7 @@ export default function AdminFinancials() {
             <ArrowUpRight className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-lg sm:text-2xl font-bold text-green-600 break-words">
               {totalPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -698,7 +698,7 @@ export default function AdminFinancials() {
             <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-lg sm:text-2xl font-bold text-orange-600 break-words">
               {totalOutstanding.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -713,7 +713,7 @@ export default function AdminFinancials() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-lg sm:text-2xl font-bold text-red-600 break-words">
               {overdueAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -724,14 +724,14 @@ export default function AdminFinancials() {
       </div>
 
       {/* Extended Statistics - Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Zahlungsquote</CardTitle>
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">
               {paymentRate.toFixed(1)}%
             </div>
             <Progress value={paymentRate} className="h-2 mt-2" />
@@ -744,7 +744,7 @@ export default function AdminFinancials() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-2xl font-bold break-words">
               {avgInvoiceAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -759,7 +759,7 @@ export default function AdminFinancials() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-lg sm:text-2xl font-bold text-primary break-words">
               {thisMonthRevenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -774,7 +774,7 @@ export default function AdminFinancials() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-2xl font-bold">
               {new Set(activeInvoices.map((inv) => inv.dealer_id)).size || 0}
             </div>
             <p className="text-xs text-muted-foreground">

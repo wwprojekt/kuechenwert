@@ -607,7 +607,7 @@ export function ConvertToMotorhomeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[62vh] pr-4">
+        <ScrollArea className="max-h-[65vh] pr-4">
           <div className="space-y-6">
             {/* Customer Info Card */}
             <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">

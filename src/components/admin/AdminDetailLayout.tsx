@@ -82,15 +82,17 @@ export function AdminDetailLayout({
           </Button>
 
           {/* Title Section */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0">
             {icon && (
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
                 {icon}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">
+                  {title}
+                </h1>
                 {status && (
                   <Badge variant={status.variant || "default"}>
                     {status.label}
@@ -98,7 +100,9 @@ export function AdminDetailLayout({
                 )}
               </div>
               {subtitle && (
-                <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-1 break-words">
+                  {subtitle}
+                </p>
               )}
             </div>
           </div>
@@ -136,14 +140,14 @@ export function DetailSection({
 }: DetailSectionProps) {
   return (
     <div className={`bg-card rounded-lg border shadow-sm ${className}`}>
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b">
+        <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">
           {icon}
           {title}
         </h2>
         {actions}
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </div>
   );
 }

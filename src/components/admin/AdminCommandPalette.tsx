@@ -131,8 +131,11 @@ export function AdminCommandPalette() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 h-9 sm:w-48 lg:w-64 rounded-lg border border-input bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted transition-colors"
+        aria-label="Globale Suche öffnen (Strg+K)"
+        title="Globale Suche (Strg+K)"
+        className="flex items-center justify-center sm:justify-start gap-2 h-10 w-10 sm:h-9 sm:w-48 lg:w-64 rounded-lg border border-input bg-muted/50 sm:px-3 text-sm text-muted-foreground hover:bg-muted transition-colors flex-shrink-0"
       >
         <Search className="h-4 w-4 flex-shrink-0" />
         <span className="flex-1 text-left truncate hidden sm:inline">Suchen…</span>

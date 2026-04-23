@@ -154,7 +154,7 @@ export function MotorhomeDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh] pr-4">
+        <ScrollArea className="h-[70vh] pr-4">
           <div className="space-y-6">
             {/* Basic Info */}
             <section>

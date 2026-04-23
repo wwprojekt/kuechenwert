@@ -717,7 +717,7 @@ function QuickStatCard({
   badge?: number;
 }) {
   return (
-    <Link to={link} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg">
+    <Link to={link} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl">
       <Card className="relative overflow-hidden hover:shadow-md border-2 hover:border-primary/30 transition-all duration-200 cursor-pointer group min-h-[88px] sm:min-h-0">
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center justify-between">

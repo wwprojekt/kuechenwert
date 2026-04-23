@@ -552,7 +552,7 @@ export function MotorhomeEditDialog({
           <DialogTitle>Wohnmobil bearbeiten</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[65vh] pr-4">
+        <ScrollArea className="h-[65vh] pr-4">
           <Tabs defaultValue="basic" className="w-full">
             <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 lg:grid-cols-7 h-auto flex-nowrap">
               <TabsTrigger value="basic" className="text-xs whitespace-nowrap">Basis</TabsTrigger>

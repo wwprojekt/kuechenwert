@@ -19,7 +19,9 @@ import {
   Edit, 
   Trash2, 
   Calculator,
-  Gift
+  Gift,
+  RotateCcw,
+  PowerOff
 } from 'lucide-react';
 import {
   Dialog,
@@ -29,6 +31,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { type CommissionTier } from '@/lib/commissionCalculator';
 
 export default function AdminCommissions() {
@@ -37,6 +49,9 @@ export default function AdminCommissions() {
   
   const [editingTier, setEditingTier] = useState<CommissionTier | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<CommissionTier | null>(null);
+  const [confirmHardDelete, setConfirmHardDelete] = useState<CommissionTier | null>(null);
   
   const [tierForm, setTierForm] = useState({
     min_amount: '',
@@ -130,8 +145,8 @@ export default function AdminCommissions() {
     },
   });
 
-  // Delete tier mutation
-  const deleteTierMutation = useMutation({
+  // Soft-Delete: deaktiviert eine aktive Stufe (bleibt für Historie/Invoices erhalten)
+  const deactivateTierMutation = useMutation({
     mutationFn: async (tierId: string) => {
       const { error } = await supabase
         .from('commission_tiers')
@@ -141,10 +156,80 @@ export default function AdminCommissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commission-tiers'] });
+      setConfirmDeactivate(null);
       toast({
-        title: 'Erfolg',
-        description: 'Provisionsstufe wurde deaktiviert',
+        title: 'Stufe deaktiviert',
+        description: 'Die Provisionsstufe ist nicht mehr aktiv, bleibt aber für bestehende Rechnungen referenziert.',
       });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Fehler',
+        description: error instanceof Error ? error.message : 'Deaktivierung fehlgeschlagen',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Reaktivieren: setzt is_active wieder auf true (z.B. nach versehentlicher Deaktivierung)
+  const reactivateTierMutation = useMutation({
+    mutationFn: async (tierId: string) => {
+      const { error } = await supabase
+        .from('commission_tiers')
+        .update({ is_active: true })
+        .eq('id', tierId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commission-tiers'] });
+      toast({
+        title: 'Stufe reaktiviert',
+        description: 'Die Provisionsstufe ist wieder aktiv.',
+      });
+    },
+    onError: (error) => {
+      // Häufigster Fehlerfall: Exclusion-Constraint (Range überlappt mit aktiver Stufe)
+      const msg = error instanceof Error ? error.message : 'Reaktivierung fehlgeschlagen';
+      const isOverlap = msg.includes('commission_tiers_no_overlap_active') || msg.includes('exclusion');
+      toast({
+        title: 'Reaktivierung blockiert',
+        description: isOverlap
+          ? 'Der Preisbereich überschneidet sich mit einer aktiven Stufe. Erst die kollidierende aktive Stufe deaktivieren oder anpassen.'
+          : msg,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Hard-Delete: nur für inaktive Stufen, scheitert wenn referenziert
+  const hardDeleteTierMutation = useMutation({
+    mutationFn: async (tierId: string) => {
+      const { error } = await supabase
+        .from('commission_tiers')
+        .delete()
+        .eq('id', tierId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commission-tiers'] });
+      setConfirmHardDelete(null);
+      toast({
+        title: 'Stufe endgültig gelöscht',
+        description: 'Die Stufe wurde aus der Datenbank entfernt.',
+      });
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Löschung fehlgeschlagen';
+      // Häufigster Fall: FK-Verletzung (commission_calculations.tier_used_id)
+      const isFk = msg.includes('foreign key') || msg.includes('violates') || msg.includes('23503');
+      toast({
+        title: 'Löschen blockiert',
+        description: isFk
+          ? 'Diese Stufe wurde bereits in einer Provisionsabrechnung verwendet und darf aus rechtlichen Gründen (Aufbewahrungspflicht) nicht entfernt werden. Sie bleibt deaktiviert.'
+          : msg,
+        variant: 'destructive',
+      });
+      setConfirmHardDelete(null);
     },
   });
 
@@ -303,54 +388,158 @@ export default function AdminCommissions() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {tiers?.map((tier) => (
-                <div
-                  key={tier.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <div className="font-medium">
-                          €{tier.min_amount.toLocaleString('de-DE')} - €{tier.max_amount.toLocaleString('de-DE')}
+            <div className="space-y-6">
+              {/* Aktive Stufen */}
+              <div className="space-y-3">
+                {tiers?.filter((t) => t.is_active).map((tier) => (
+                  <div
+                    key={tier.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-medium">
+                            €{tier.min_amount.toLocaleString('de-DE')} - €{tier.max_amount.toLocaleString('de-DE')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {tier.rate_type === 'percentage' 
+                              ? `${tier.rate_value}% (min. €${tier.min_commission})`
+                              : `€${tier.rate_value} Festbetrag`
+                            }
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {tier.rate_type === 'percentage' 
-                            ? `${tier.rate_value}% (min. €${tier.min_commission})`
-                            : `€${tier.rate_value} Festbetrag`
-                          }
-                        </div>
+                        <Badge variant="default">Aktiv</Badge>
                       </div>
-                      
-                      <Badge variant={tier.is_active ? 'default' : 'secondary'}>
-                        {tier.is_active ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTier(tier)}
+                        title="Bearbeiten"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConfirmDeactivate(tier)}
+                        title="Deaktivieren (Stufe bleibt für bestehende Rechnungen erhalten)"
+                      >
+                        <PowerOff className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditTier(tier)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteTierMutation.mutate(tier.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                ))}
+              </div>
+
+              {/* Toggle für inaktive Stufen */}
+              {tiers && tiers.some((t) => !t.is_active) && (
+                <div className="border-t pt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInactive(!showInactive)}
+                    className="text-muted-foreground"
+                  >
+                    {showInactive ? 'Archivierte Stufen ausblenden' : `Archivierte Stufen anzeigen (${tiers.filter((t) => !t.is_active).length})`}
+                  </Button>
+
+                  {showInactive && (
+                    <div className="space-y-3 mt-4">
+                      {tiers.filter((t) => !t.is_active).map((tier) => (
+                        <div
+                          key={tier.id}
+                          className="flex items-center justify-between p-4 border border-dashed rounded-lg bg-muted/30 opacity-75"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <div className="font-medium line-through decoration-muted-foreground/40">
+                                  €{tier.min_amount.toLocaleString('de-DE')} - €{tier.max_amount.toLocaleString('de-DE')}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {tier.rate_type === 'percentage'
+                                    ? `${tier.rate_value}% (min. €${tier.min_commission})`
+                                    : `€${tier.rate_value} Festbetrag`
+                                  }
+                                </div>
+                              </div>
+                              <Badge variant="secondary">Archiviert</Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => reactivateTierMutation.mutate(tier.id)}
+                              disabled={reactivateTierMutation.isPending}
+                              title="Wieder aktivieren"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setConfirmHardDelete(tier)}
+                              className="text-destructive hover:text-destructive"
+                              title="Endgültig löschen (nur möglich wenn nicht in Rechnungen referenziert)"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Confirm-Dialog: Deaktivieren */}
+      <AlertDialog open={!!confirmDeactivate} onOpenChange={(open) => !open && setConfirmDeactivate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stufe deaktivieren?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Stufe €{confirmDeactivate?.min_amount.toLocaleString('de-DE')} - €{confirmDeactivate?.max_amount.toLocaleString('de-DE')} wird auf inaktiv gesetzt und ab sofort nicht mehr für neue Provisionsberechnungen verwendet. Bestehende Rechnungen bleiben unverändert. Du kannst die Stufe jederzeit wieder reaktivieren.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDeactivate && deactivateTierMutation.mutate(confirmDeactivate.id)}
+            >
+              Deaktivieren
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm-Dialog: Endgültig löschen */}
+      <AlertDialog open={!!confirmHardDelete} onOpenChange={(open) => !open && setConfirmHardDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stufe endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Stufe €{confirmHardDelete?.min_amount.toLocaleString('de-DE')} - €{confirmHardDelete?.max_amount.toLocaleString('de-DE')} wird unwiderruflich aus der Datenbank entfernt. Falls die Stufe bereits in einer Rechnung referenziert wurde, wird die Löschung aus rechtlichen Gründen abgelehnt — die Stufe bleibt dann archiviert.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmHardDelete && hardDeleteTierMutation.mutate(confirmHardDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Volume Discounts */}
       <Card>

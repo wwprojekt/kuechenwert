@@ -450,7 +450,7 @@ export const AccountLocationStep = ({
             </div>
             <p id="marketingConsent-desc" className="text-xs text-muted-foreground leading-snug pl-6">
               Mindestpreis-Garantie: Ihr Fahrzeug wird nie unter Ihrem Wunschpreis verkauft.
-              Sie behalten jederzeit im Dashboard die volle Kontrolle. Details in AGB §6.
+              Laufzeit 3 Tage, jederzeit im Dashboard änderbar. Details in AGB §6.
             </p>
             {fieldErrors.marketingConsent && (
               <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in pl-6" role="alert">

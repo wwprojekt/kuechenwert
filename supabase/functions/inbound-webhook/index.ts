@@ -239,6 +239,21 @@ const handler = async (req: Request): Promise<Response> => {
               .eq('email', deliveredEmail)
               .eq('email_bounced', true);
           }
+
+          // Propagate delivery to the google_review_requests queue so the
+          // admin panel can distinguish "sent by Resend" from "actually
+          // handed off to the recipient mailbox". Without this, the queue
+          // row sits on `sent` forever even after Resend confirms delivery.
+          const { error: grrErr } = await supabase.rpc(
+            'webhook_mark_google_review_delivered',
+            { p_resend_message_id: resendId },
+          );
+          if (grrErr) {
+            console.error(
+              `Failed to mark google_review_requests delivered for ${resendId}:`,
+              grrErr,
+            );
+          }
         }
       }
 

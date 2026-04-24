@@ -85,13 +85,46 @@ log "Sub-Dirs überschrieben (außer assets/): $SUBDIR_COUNT"
 # 3) assets/ — NO-CLOBBER merge. Vorhandene Hashes bleiben erhalten,
 #    neue Hashes werden hinzugefügt. Das ist das Herzstück der
 #    Old-Chunk-Preservation.
+#
+# IMPLEMENTATION NOTE (2026-04-24 outage):
+# Früher: `cp -rn "$SRC/assets/." "$ASSETS_DIR/" 2>/dev/null || true`
+# Das hatte zwei Bugs:
+#   1. BusyBox-`cp -rn` (Alpine) verhält sich inkonsistent mit dem
+#      Trailing-Dot-Pattern — der Copy wurde silent zu einem No-Op.
+#      Ergebnis: 0 von 331 Chunks im served directory → 404 für alle
+#      JS/CSS-Assets → weiße Seite.
+#   2. `2>/dev/null || true` hat den Fehler verschluckt, und der log
+#      meldete nur "0 neue Files", was nicht als Fehler erkannt wurde.
+# Fix: File-für-File-Loop mit `-f -n` Fallback-Check via `[ -e ]`.
+#      Deterministisch, funktioniert auch in BusyBox, und jeder
+#      Copy-Fehler wird geloggt (nicht verschluckt).
 NEW_ASSET_COUNT=0
+COPY_ERROR_COUNT=0
 if [ -d "$SRC/assets" ]; then
     BEFORE=$(find "$ASSETS_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
-    cp -rn "$SRC/assets/." "$ASSETS_DIR/" 2>/dev/null || true
+    # Per-file no-clobber copy — garantiert portabel über alle cp-Varianten
+    find "$SRC/assets" -type f | while read -r src_file; do
+        rel_path="${src_file#$SRC/assets/}"
+        dst_file="$ASSETS_DIR/$rel_path"
+        if [ ! -e "$dst_file" ]; then
+            dst_dir=$(dirname "$dst_file")
+            mkdir -p "$dst_dir" 2>/dev/null || true
+            if ! cp "$src_file" "$dst_file" 2>&1; then
+                log "WARN: Copy fehlgeschlagen: $rel_path"
+                COPY_ERROR_COUNT=$((COPY_ERROR_COUNT + 1))
+            fi
+        fi
+    done
     AFTER=$(find "$ASSETS_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
     NEW_ASSET_COUNT=$((AFTER - BEFORE))
     log "Assets vorher: $BEFORE / nachher: $AFTER (neue Files: $NEW_ASSET_COUNT)"
+    # Sanity check: wenn Staging-Dir Files hat aber NICHTS neu ist und
+    # Ziel leer war, ist was fundamental kaputt (Mount-Problem o.ä.).
+    STAGING_COUNT=$(find "$SRC/assets" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$BEFORE" -eq 0 ] && [ "$AFTER" -eq 0 ] && [ "$STAGING_COUNT" -gt 0 ]; then
+        log "FATAL: Staging hat $STAGING_COUNT Files aber keiner wurde kopiert — Volume-Mount defekt?"
+        exit 1
+    fi
 fi
 
 # 4) Cleanup: Asset-Files älter als RETENTION_DAYS löschen.

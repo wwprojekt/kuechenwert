@@ -85,6 +85,7 @@ import {
 import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
 import { AdminPhotoManager } from "@/components/admin/AdminPhotoManager";
 import { SendOwnerEmailDialog } from "@/components/admin/SendOwnerEmailDialog";
+import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 import { logger } from "@/lib/logger";
 
 export default function AdminMotorhomeDetail() {
@@ -457,6 +458,8 @@ export default function AdminMotorhomeDetail() {
               icon={<Settings className="w-5 h-5" />}
             />
           </div>
+
+          <AdminPriceHistoryCard motorhomeId={motorhome.id} />
 
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}

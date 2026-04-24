@@ -72,6 +72,7 @@ import {
 import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { CreateSellerPenaltyDialog } from "@/components/admin/CreateSellerPenaltyDialog";
 import { AdminManualSellDialog } from "@/components/admin/AdminManualSellDialog";
+import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 import { logger } from "@/lib/logger";
 import { activateAuctionForMotorhome } from "@/lib/activate-auction";
 
@@ -507,6 +508,13 @@ export default function AdminAuctionDetail() {
                   </div>
                 )}
               </DetailSection>
+
+              {auction.motorhome?.id && (
+                <AdminPriceHistoryCard
+                  motorhomeId={auction.motorhome.id}
+                  auctionId={auction.id}
+                />
+              )}
 
               {/* Motorhome Info */}
               <DetailSection

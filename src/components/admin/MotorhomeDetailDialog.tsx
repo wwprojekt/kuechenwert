@@ -33,6 +33,7 @@ import {
   Snowflake,
   Tent
 } from "lucide-react";
+import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 
 interface MotorhomeWithSeller {
   id: string;
@@ -190,6 +191,10 @@ export function MotorhomeDetailDialog({
                 </div>
               )}
             </section>
+
+            <Separator />
+
+            <AdminPriceHistoryCard motorhomeId={motorhome.id} compact />
 
             <Separator />
 

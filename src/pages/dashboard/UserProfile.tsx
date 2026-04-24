@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, Building, Save, MapPin, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { User, Mail, Phone, Building, Save, MapPin, CheckCircle, AlertCircle, RefreshCw, Lock } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
@@ -138,8 +138,11 @@ export default function UserProfile() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDealer) return;
     updateProfileMutation.mutate(formData);
   };
+
+  const isLocked = isDealer;
 
   if (isLoading) {
     return (
@@ -154,9 +157,32 @@ export default function UserProfile() {
       <div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Mein Profil</h1>
         <p className="text-muted-foreground">
-          Verwalten Sie Ihre persönlichen Informationen
+          {isLocked
+            ? "Ihre Profildaten sind nach der Händler-Freigabe gesperrt."
+            : "Verwalten Sie Ihre persönlichen Informationen"}
         </p>
       </div>
+
+      {isLocked && (
+        <Card className="p-4 sm:p-5 border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                Profildaten gesperrt
+              </p>
+              <p className="text-amber-800 dark:text-amber-300">
+                Als genehmigter Händler können Sie Ihre Stammdaten nicht mehr selbst ändern.
+                Bitte wenden Sie sich für Anpassungen an{" "}
+                <a href="mailto:info@caravanwert.de" className="underline font-medium">
+                  info@caravanwert.de
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Email & Verification Status */}
       <Card className="p-4 sm:p-6 border-2">
@@ -207,6 +233,7 @@ export default function UserProfile() {
                 <Select
                   value={formData.salutation}
                   onValueChange={(val) => setFormData({ ...formData, salutation: val })}
+                  disabled={isLocked}
                 >
                   <SelectTrigger id="salutation">
                     <SelectValue placeholder="Bitte wählen" />
@@ -229,6 +256,7 @@ export default function UserProfile() {
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   placeholder="Max"
+                  disabled={isLocked}
                 />
               </div>
               <div className="space-y-2">
@@ -242,6 +270,7 @@ export default function UserProfile() {
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   placeholder="Mustermann"
+                  disabled={isLocked}
                 />
               </div>
             </div>
@@ -261,6 +290,7 @@ export default function UserProfile() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+49 123 456789"
+                disabled={isLocked}
               />
             </div>
           </div>
@@ -286,6 +316,7 @@ export default function UserProfile() {
                   value={formData.address_street}
                   onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
                   placeholder="Musterstraße 123"
+                  disabled={isLocked}
                 />
               </div>
             </div>
@@ -302,6 +333,7 @@ export default function UserProfile() {
                   value={formData.address_zip}
                   onChange={(e) => setFormData({ ...formData, address_zip: e.target.value })}
                   placeholder="80331"
+                  disabled={isLocked}
                 />
               </div>
               <div className="space-y-2">
@@ -315,6 +347,7 @@ export default function UserProfile() {
                   value={formData.address_city}
                   onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
                   placeholder="München"
+                  disabled={isLocked}
                 />
               </div>
               <div className="space-y-2">
@@ -322,6 +355,7 @@ export default function UserProfile() {
                 <Select
                   value={formData.address_country}
                   onValueChange={(val) => setFormData({ ...formData, address_country: val })}
+                  disabled={isLocked}
                 >
                   <SelectTrigger id="address_country">
                     <SelectValue placeholder="Land wählen" />
@@ -382,23 +416,28 @@ export default function UserProfile() {
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                   placeholder="z.B. Autohaus Müller GmbH"
+                  disabled={isLocked}
                 />
               </div>
             </div>
           </div>
 
-          <Separator />
+          {!isLocked && (
+            <>
+              <Separator />
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            size="lg"
-            className="gradient-hero hover:gradient-hero-hover w-full"
-            disabled={updateProfileMutation.isPending}
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {updateProfileMutation.isPending ? "Speichert..." : "Änderungen speichern"}
-          </Button>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                size="lg"
+                className="gradient-hero hover:gradient-hero-hover w-full"
+                disabled={updateProfileMutation.isPending}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {updateProfileMutation.isPending ? "Speichert..." : "Änderungen speichern"}
+              </Button>
+            </>
+          )}
         </form>
       </Card>
     </div>

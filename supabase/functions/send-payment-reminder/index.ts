@@ -46,6 +46,14 @@ const handler = async (req: Request): Promise<Response> => {
     //   may be NULL → we read invoice_type and only join the auction context
     //   when it's a regular commission invoice (otherwise we'd send a
     //   "Wohnmobil"-Fallback that confuses recipients of a Vertragsstrafe).
+    // Filter rules:
+    // - payment_status IN ('pending','partial'): teilweise bezahlte, aber 3+
+    //   Tage überfällige Rechnungen bekommen ebenfalls die weiche Erinnerung.
+    //   Vorher `eq('pending')` → Teilzahler fielen durch bis zum formellen
+    //   Mahnwesen an Tag 14.
+    // - status != 'cancelled': stornierte Rechnungen dürfen niemals eine
+    //   Zahlungserinnerung auslösen, selbst wenn payment_status aus Legacy-
+    //   Daten noch auf 'pending' steht (Daten-Inkonsistenz-Guard).
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
@@ -54,7 +62,8 @@ const handler = async (req: Request): Promise<Response> => {
           motorhomes:motorhome_id (manufacturer, model, year)
         )
       `)
-      .eq('payment_status', 'pending')
+      .in('payment_status', ['pending', 'partial'])
+      .neq('status', 'cancelled')
       .lte('due_date', threeDaysAgo.toISOString().split('T')[0])
       .neq('payment_reminder_sent', true);
 

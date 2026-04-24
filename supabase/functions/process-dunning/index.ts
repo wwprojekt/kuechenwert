@@ -112,6 +112,23 @@ Deno.serve(async (req) => {
 
     for (const invoice of overdueInvoices) {
       try {
+        // Guard: ohne gültige Empfänger-Adresse keine Mahnung versenden.
+        // Ursache kann ein gelöschtes Profil, eine leer gespeicherte Email
+        // oder ein FK-Mismatch sein. Früher crashte der spätere
+        // `invoice.dealer.email`-Zugriff und landete im generischen
+        // outer-try → Error-Message "Cannot read properties of null" ohne
+        // Bezug zur Rechnung. Hier melden wir es explizit zurück.
+        if (!invoice.dealer?.email) {
+          results.push({
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            skipped: true,
+            reason: 'Empfänger-Profil fehlt oder hat keine E-Mail-Adresse',
+            success: false,
+          });
+          continue;
+        }
+
         const daysPastDue = Math.floor(
           (Date.now() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)
         );

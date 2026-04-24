@@ -449,8 +449,8 @@ export const AccountLocationStep = ({
               </Label>
             </div>
             <p id="marketingConsent-desc" className="text-xs text-muted-foreground leading-snug pl-6">
-              Bindung bis zu 16 Tagen mit automatischer Preisanpassung und Mindestpreis-Garantie.
-              Jederzeit im Dashboard anpassbar.
+              Mindestpreis-Garantie: Ihr Fahrzeug wird nie unter Ihrem Wunschpreis verkauft.
+              Sie behalten jederzeit im Dashboard die volle Kontrolle. Details in AGB §6.
             </p>
             {fieldErrors.marketingConsent && (
               <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in pl-6" role="alert">

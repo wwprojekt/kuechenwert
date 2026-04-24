@@ -69,12 +69,16 @@ export function lazyRetry<T extends ComponentType<unknown>>(
           msg.includes("Loading CSS chunk") ||
           msg.includes("Importing a module script failed") ||
           msg.includes("error loading dynamically imported module") ||
-          // Chromium: "Cannot read properties of undefined (reading 'X')"
-          // Firefox/Safari (alt): "Cannot read property 'X' of undefined"
+          // Chromium:           "Cannot read properties of undefined (reading 'X')"
+          // Legacy Firefox/Safari: "Cannot read property 'X' of undefined"
           // Matcht sowohl den 'default'-Fall als auch named re-exports wie
           // `.then(m => ({ default: m.SmartDashboard }))` wenn m undefined ist.
-          /Cannot read propert(?:y|ies) of undefined/.test(msg) ||
-          // Firefox: "m is undefined" / "x is undefined"
+          // Der optionale `'...'`-Part deckt den Safari/alten-Firefox-Stil ab,
+          // bei dem der Property-Name zwischen 'property' und 'of undefined' steht.
+          /Cannot read propert(?:y|ies)(?: '[^']*')? of undefined/.test(msg) ||
+          // Safari: "undefined is not an object (evaluating 'X.Y')"
+          msg.includes("undefined is not an object") ||
+          // Firefox TypeError (kurz): "m is undefined" / "x is undefined"
           /^[A-Za-z_$][\w$]* is undefined$/.test(msg) ||
           msg.includes("_result is undefined"));
 

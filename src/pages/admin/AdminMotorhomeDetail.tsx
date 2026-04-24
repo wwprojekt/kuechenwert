@@ -459,7 +459,10 @@ export default function AdminMotorhomeDetail() {
             />
           </div>
 
-          <AdminPriceHistoryCard motorhomeId={motorhome.id} />
+          <AdminPriceHistoryCard
+            motorhomeId={motorhome.id}
+            auctionId={relevantAuction?.id}
+          />
 
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}

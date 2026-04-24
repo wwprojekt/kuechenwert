@@ -54,20 +54,29 @@ export function lazyRetry<T extends ComponentType<unknown>>(
       return await importFn();
     } catch (error) {
       // Check if this is a chunk loading error.
-      // Letzte zwei Patterns sind defense-in-depth: falls je wieder ein
+      // Letzte drei Patterns sind defense-in-depth: falls je wieder ein
       // vorgeschalteter Layer (Vite, SW, Browser-Quirk) den echten Chunk-Error
-      // schluckt und React.lazy stattdessen `e._result === undefined` erhält,
-      // bekommen wir den TypeError aus dem Lazy-Initializer (uf-Funktion in
-      // React-DOM). Wir behandeln ihn dann genau wie einen Chunk-Fehler.
+      // schluckt und React.lazy stattdessen `e._result === undefined` erhaelt
+      // (oder eine stale Modul-Exports-Liste lieferte, bei der der named
+      // import auf undefined landet — z.B. `.then(m => ({ default: m.XYZ }))`
+      // wenn `m` undefined ist), bekommen wir den TypeError aus dem
+      // Lazy-Initializer. Wir behandeln ihn dann genau wie einen Chunk-Fehler.
+      const msg = error instanceof Error ? error.message : "";
       const isChunkError =
         error instanceof Error &&
-        (error.message.includes("Failed to fetch dynamically imported module") ||
-          error.message.includes("Loading chunk") ||
-          error.message.includes("Loading CSS chunk") ||
-          error.message.includes("Importing a module script failed") ||
-          error.message.includes("error loading dynamically imported module") ||
-          error.message.includes("Cannot read properties of undefined (reading 'default')") ||
-          error.message.includes("_result is undefined"));
+        (msg.includes("Failed to fetch dynamically imported module") ||
+          msg.includes("Loading chunk") ||
+          msg.includes("Loading CSS chunk") ||
+          msg.includes("Importing a module script failed") ||
+          msg.includes("error loading dynamically imported module") ||
+          // Chromium: "Cannot read properties of undefined (reading 'X')"
+          // Firefox/Safari (alt): "Cannot read property 'X' of undefined"
+          // Matcht sowohl den 'default'-Fall als auch named re-exports wie
+          // `.then(m => ({ default: m.SmartDashboard }))` wenn m undefined ist.
+          /Cannot read propert(?:y|ies) of undefined/.test(msg) ||
+          // Firefox: "m is undefined" / "x is undefined"
+          /^[A-Za-z_$][\w$]* is undefined$/.test(msg) ||
+          msg.includes("_result is undefined"));
 
       if (isChunkError) {
         // Only attempt one reload to avoid infinite loops

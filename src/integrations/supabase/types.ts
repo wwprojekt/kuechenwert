@@ -689,6 +689,104 @@ export type Database = {
           },
         ]
       }
+      bing_oauth_state: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          last_error_at: string | null
+          last_refreshed_at: string
+          lock_holder_until: string | null
+          refresh_token: string
+          rotation_count: number
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          id: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_refreshed_at?: string
+          lock_holder_until?: string | null
+          refresh_token: string
+          rotation_count?: number
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_refreshed_at?: string
+          lock_holder_until?: string | null
+          refresh_token?: string
+          rotation_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bing_offline_conversions_log: {
+        Row: {
+          auction_id: string | null
+          conversion_currency: string
+          conversion_name: string
+          conversion_time: string
+          conversion_value: number
+          error_message: string | null
+          http_status: number | null
+          id: string
+          motorhome_id: string
+          msclkid: string | null
+          source: string
+          status: string
+          uploaded_at: string
+        }
+        Insert: {
+          auction_id?: string | null
+          conversion_currency?: string
+          conversion_name: string
+          conversion_time: string
+          conversion_value: number
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          motorhome_id: string
+          msclkid?: string | null
+          source: string
+          status: string
+          uploaded_at?: string
+        }
+        Update: {
+          auction_id?: string | null
+          conversion_currency?: string
+          conversion_name?: string
+          conversion_time?: string
+          conversion_value?: number
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          motorhome_id?: string
+          msclkid?: string | null
+          source?: string
+          status?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bing_offline_conversions_log_motorhome_id_fkey"
+            columns: ["motorhome_id"]
+            isOneToOne: false
+            referencedRelation: "motorhomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author_id: string
@@ -993,6 +1091,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      commission_tier_changes: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_row: Json | null
+          old_row: Json | null
+          operation: string
+          tier_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          operation: string
+          tier_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          operation?: string
+          tier_id?: string
+        }
+        Relationships: []
       }
       commission_tiers: {
         Row: {
@@ -2399,6 +2527,7 @@ export type Database = {
           height_m: number | null
           id: string
           instant_price: number | null
+          is_archived: boolean
           last_tuev_date: string | null
           length_m: number | null
           license_plate: string | null
@@ -2505,6 +2634,7 @@ export type Database = {
           height_m?: number | null
           id?: string
           instant_price?: number | null
+          is_archived?: boolean
           last_tuev_date?: string | null
           length_m?: number | null
           license_plate?: string | null
@@ -2611,6 +2741,7 @@ export type Database = {
           height_m?: number | null
           id?: string
           instant_price?: number | null
+          is_archived?: boolean
           last_tuev_date?: string | null
           length_m?: number | null
           license_plate?: string | null
@@ -3046,6 +3177,8 @@ export type Database = {
       purchase_contracts: {
         Row: {
           auction_id: string | null
+          blank_protocol_storage_path: string | null
+          blank_protocol_url: string | null
           buyer_contract_url: string | null
           buyer_customer_number: string | null
           buyer_id: string | null
@@ -3069,6 +3202,8 @@ export type Database = {
         }
         Insert: {
           auction_id?: string | null
+          blank_protocol_storage_path?: string | null
+          blank_protocol_url?: string | null
           buyer_contract_url?: string | null
           buyer_customer_number?: string | null
           buyer_id?: string | null
@@ -3092,6 +3227,8 @@ export type Database = {
         }
         Update: {
           auction_id?: string | null
+          blank_protocol_storage_path?: string | null
+          blank_protocol_url?: string | null
           buyer_contract_url?: string | null
           buyer_customer_number?: string | null
           buyer_id?: string | null
@@ -4043,9 +4180,12 @@ export type Database = {
           admin_notes: string | null
           admin_valued_at: string | null
           admin_valued_by: string | null
+          ai_comparable_count: number | null
           ai_confidence: number | null
           ai_estimated_at: string | null
           ai_estimated_value: number | null
+          ai_reasoning: string | null
+          ai_source: string | null
           algorithm_value_max: number | null
           algorithm_value_min: number | null
           body_type: string | null
@@ -4081,9 +4221,12 @@ export type Database = {
           admin_notes?: string | null
           admin_valued_at?: string | null
           admin_valued_by?: string | null
+          ai_comparable_count?: number | null
           ai_confidence?: number | null
           ai_estimated_at?: string | null
           ai_estimated_value?: number | null
+          ai_reasoning?: string | null
+          ai_source?: string | null
           algorithm_value_max?: number | null
           algorithm_value_min?: number | null
           body_type?: string | null
@@ -4119,9 +4262,12 @@ export type Database = {
           admin_notes?: string | null
           admin_valued_at?: string | null
           admin_valued_by?: string | null
+          ai_comparable_count?: number | null
           ai_confidence?: number | null
           ai_estimated_at?: string | null
           ai_estimated_value?: number | null
+          ai_reasoning?: string | null
+          ai_source?: string | null
           algorithm_value_max?: number | null
           algorithm_value_min?: number | null
           body_type?: string | null
@@ -4765,6 +4911,18 @@ export type Database = {
           status: string
         }[]
       }
+      admin_get_cron_schedule_drift: {
+        Args: never
+        Returns: {
+          actual_runs_per_hour: number
+          drift_ratio: number
+          expected_runs_per_hour: number
+          jobid: number
+          jobname: string
+          schedule: string
+          severity: string
+        }[]
+      }
       admin_get_http_response_health: {
         Args: { p_hours?: number }
         Returns: {
@@ -4807,6 +4965,8 @@ export type Database = {
         Args: { application_id_param: string }
         Returns: undefined
       }
+      bing_oauth_release_lock: { Args: { p_id: string }; Returns: undefined }
+      bing_oauth_try_acquire_lock: { Args: { p_id: string }; Returns: boolean }
       calculate_commission: {
         Args: { dealer_id_param?: string; sale_amount: number }
         Returns: {
@@ -4878,6 +5038,10 @@ export type Database = {
       }
       enqueue_google_review_candidates: {
         Args: { p_max_inserts?: number; p_min_age_days?: number }
+        Returns: Json
+      }
+      enqueue_google_review_for_email: {
+        Args: { p_email: string }
         Returns: Json
       }
       ensure_profile_exists: {
@@ -5067,6 +5231,28 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
+      insert_value_assessment_lead: {
+        Args: {
+          p_algorithm_value_max?: number
+          p_algorithm_value_min?: number
+          p_body_type?: string
+          p_brand_tier?: string
+          p_condition?: string
+          p_email: string
+          p_estimated_value_max?: number
+          p_estimated_value_min?: number
+          p_manufacturer?: string
+          p_message?: string
+          p_mileage?: number
+          p_model?: string
+          p_name: string
+          p_phone?: string
+          p_source: string
+          p_vehicle_type?: string
+          p_year?: number
+        }
+        Returns: string
+      }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean
@@ -5194,6 +5380,22 @@ export type Database = {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
       }
+      seller_archive_listing: {
+        Args: { p_motorhome_id: string }
+        Returns: Json
+      }
+      seller_restart_listing: {
+        Args: {
+          p_motorhome_id: string
+          p_new_instant?: number
+          p_new_reserve?: number
+        }
+        Returns: Json
+      }
+      seller_unarchive_listing: {
+        Args: { p_motorhome_id: string }
+        Returns: Json
+      }
       submit_wertrechner_review: {
         Args: {
           p_comment?: string
@@ -5220,6 +5422,17 @@ export type Database = {
       track_google_review_click: { Args: { p_token: string }; Returns: boolean }
       try_acquire_cron_lock: {
         Args: { p_key: string; p_ttl_minutes?: number }
+        Returns: boolean
+      }
+      update_ai_valuation: {
+        Args: {
+          p_ai_confidence: number
+          p_ai_reasoning: string
+          p_ai_source: string
+          p_ai_value: number
+          p_comparable_count: number
+          p_lead_id: string
+        }
         Returns: boolean
       }
       update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }

@@ -456,38 +456,38 @@ const Wertrechner = () => {
         }
       } catch {}
 
-      const result = await withNetworkRetry<{ data: { id?: string } | null; error: unknown }>(
+      // Insert via SECURITY DEFINER RPC statt direkt .insert().select(): direkter
+      // .select() nach INSERT triggert fuer anon-Rolle einen RLS-SELECT-Check auf der
+      // RETURNING-Zeile und scheitert, weil value_assessment_leads keine anon SELECT-
+      // Policy hat. Die RPC bypassed das sauber und gibt nur die neue UUID zurueck.
+      const result = await withNetworkRetry<{ data: string | null; error: unknown }>(
         async () => {
-          const res = await supabase
-            .from("value_assessment_leads")
-            .insert({
-              name: data.name,
-              email: data.email,
-              phone: data.phone || null,
-              manufacturer: data.manufacturer || null,
-              model: data.model || null,
-              year: data.year ? parseInt(data.year, 10) : null,
-              mileage: isWohnwagen ? null : (data.mileage ? parseInt(data.mileage, 10) : null),
-              condition: data.condition || null,
-              body_type: data.bodyType || null,
-              source: "wertrechner",
-              estimated_value_min: value.min,
-              estimated_value_max: value.max,
-              algorithm_value_min: value.min,
-              algorithm_value_max: value.max,
-              brand_tier: value.brandTier,
-              vehicle_type: data.vehicleType || "Wohnmobil",
-            } as never)
-            .select("id")
-            .single();
-          return res as { data: { id?: string } | null; error: unknown };
+          const res = await supabase.rpc("insert_value_assessment_lead", {
+            p_name: data.name,
+            p_email: data.email,
+            p_source: "wertrechner",
+            p_phone: data.phone || null,
+            p_manufacturer: data.manufacturer || null,
+            p_model: data.model || null,
+            p_year: data.year ? parseInt(data.year, 10) : null,
+            p_mileage: isWohnwagen ? null : (data.mileage ? parseInt(data.mileage, 10) : null),
+            p_condition: data.condition || null,
+            p_body_type: data.bodyType || null,
+            p_estimated_value_min: value.min,
+            p_estimated_value_max: value.max,
+            p_algorithm_value_min: value.min,
+            p_algorithm_value_max: value.max,
+            p_brand_tier: value.brandTier,
+            p_vehicle_type: data.vehicleType || "Wohnmobil",
+          });
+          return res as { data: string | null; error: unknown };
         },
         2,
         'Wertrechner INSERT'
       );
 
       if (result.error) throw result.error;
-      const leadId = result.data?.id ?? null;
+      const leadId = result.data ?? null;
 
       if (leadId) {
         try {

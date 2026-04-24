@@ -820,25 +820,33 @@ export default function ListingEdit() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="refrigerator_type">Kühlschrank</Label>
-                    <Select value={formData.refrigerator_type} onValueChange={(value) => setFormData({ ...formData, refrigerator_type: value })}>
+                    <Select
+                      value={formData.refrigerator_type || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, refrigerator_type: value === "__none__" ? "" : value })}
+                    >
                       <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Keine Angabe</SelectItem>
                         <SelectItem value="Kompressor">Kompressor</SelectItem>
                         <SelectItem value="Absorber">Absorber</SelectItem>
-                        <SelectItem value="Keine">Keine</SelectItem>
+                        <SelectItem value="Thermoelektrisch">Thermoelektrisch</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="heating_type">Heizung</Label>
-                    <Select value={formData.heating_type} onValueChange={(value) => setFormData({ ...formData, heating_type: value })}>
+                    <Select
+                      value={formData.heating_type || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, heating_type: value === "__none__" ? "" : value })}
+                    >
                       <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Keine Angabe</SelectItem>
                         <SelectItem value="Gas">Gas</SelectItem>
                         <SelectItem value="Diesel">Diesel</SelectItem>
-                        <SelectItem value="Elektro">Elektro</SelectItem>
-                        <SelectItem value="Keine">Keine</SelectItem>
+                        <SelectItem value="Elektrisch">Elektrisch</SelectItem>
+                        <SelectItem value="Kombiniert">Kombiniert</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

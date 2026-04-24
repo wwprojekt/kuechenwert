@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +48,13 @@ import {
   Info,
   ShieldCheck,
   Hourglass,
+  Archive,
+  ArchiveRestore,
+  Sparkles,
 } from "lucide-react";
+import { RestartListingDialog } from "@/components/dashboard/RestartListingDialog";
+import { AdjustPriceRestartDialog } from "@/components/dashboard/AdjustPriceRestartDialog";
+import { ArchiveListingDialog } from "@/components/dashboard/ArchiveListingDialog";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +84,17 @@ export default function ListingDetail() {
   const [counterOfferMessages, setCounterOfferMessages] = useState<Record<string, string>>({});
   const [lowerCounterAmounts, setLowerCounterAmounts] = useState<Record<string, string>>({});
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
+
+  // Soft-Brake / Reaktivierungs-Dialoge (Phase 6)
+  // Die Buttons in der `seller_soft_brake` und `seller_chose_to_end` Mail
+  // verlinken mit ?action=restart|adjust-price|archive auf diese Seite.
+  // Hier werden sie in echte UI-Aktionen übersetzt (RPC seller_restart_listing /
+  // seller_archive_listing / seller_unarchive_listing).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showAdjustPriceDialog, setShowAdjustPriceDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [unarchivingInProgress, setUnarchivingInProgress] = useState(false);
 
   const { data: motorhome, isLoading } = useQuery({
     queryKey: ["motorhomeDetail", id],
@@ -443,6 +460,110 @@ export default function ListingDetail() {
     return () => clearInterval(interval);
   }, [resolvedAuction?.status, isFestpreisListing, loadKaufchanceOffers]);
 
+  // ── Soft-Brake / Reaktivierungs-URL-Handler (Phase 6) ────────────────────
+  // Die 3 Buttons in der seller_soft_brake-Mail und der seller_chose_to_end-
+  // Mail hängen den jeweiligen Action-Param an:
+  //   ?action=restart       → frische Marketing-Phase ohne Preisänderung
+  //   ?action=adjust-price  → Dialog mit Preis-Eingabe, danach Neustart
+  //   ?action=archive       → Inserat vom Markt nehmen (is_archived=TRUE)
+  // Wenn das Inserat in einem Zustand ist, der die Aktion nicht zulässt
+  // (z.B. Restart bei bereits laufender Auktion), zeigen wir stattdessen
+  // einen Toast und entfernen den Param wieder aus der URL, damit ein
+  // Reload nicht den Dialog erneut öffnet.
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (!action) return;
+    if (!motorhome) return;  // erst handeln wenn Daten da sind
+    const isOwner = motorhome._isSeller === true;
+
+    const clearParam = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
+    };
+
+    if (!isOwner) {
+      toast({
+        title: "Keine Berechtigung",
+        description: "Diese Aktion ist nur für den Verkäufer verfügbar.",
+        variant: "destructive",
+      });
+      clearParam();
+      return;
+    }
+
+    // Archive: nur wenn keine aktive Auktion läuft
+    if (action === "archive") {
+      if (resolvedAuction && ["active", "kaufchance", "draft"].includes(resolvedAuction.status as string)) {
+        toast({
+          title: "Archivierung nicht möglich",
+          description: "Das Inserat hat eine laufende Auktion und kann nicht archiviert werden.",
+          variant: "destructive",
+        });
+      } else if (motorhome.is_archived) {
+        toast({
+          title: "Bereits archiviert",
+          description: "Dieses Inserat ist bereits archiviert.",
+        });
+      } else {
+        setShowArchiveDialog(true);
+      }
+      clearParam();
+      return;
+    }
+
+    // Restart / Adjust-Price: nur wenn keine aktive Auktion und nicht bereits verkauft
+    if (action === "restart" || action === "adjust-price") {
+      if (resolvedAuction && ["active", "kaufchance", "draft"].includes(resolvedAuction.status as string)) {
+        toast({
+          title: "Restart nicht möglich",
+          description: "Das Inserat hat eine laufende Auktion.",
+          variant: "destructive",
+        });
+      } else if (motorhome.status === "sold" || motorhome.status === "reserved") {
+        toast({
+          title: "Restart nicht möglich",
+          description: `Inserat-Status ist „${motorhome.status}". Bitte legen Sie ein neues Inserat an.`,
+          variant: "destructive",
+        });
+      } else {
+        if (action === "restart") setShowRestartDialog(true);
+        if (action === "adjust-price") setShowAdjustPriceDialog(true);
+      }
+      clearParam();
+      return;
+    }
+    // Unbekannter Action-Param: einfach stehen lassen, kein Spam
+  }, [searchParams, motorhome, resolvedAuction, setSearchParams, toast]);
+
+  // Unarchive-Mutation: einfacher Inline-Call, kein eigener Dialog
+  const unarchiveMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("seller_unarchive_listing", {
+        p_motorhome_id: id!,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onMutate: () => setUnarchivingInProgress(true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
+      toast({
+        title: "Inserat wiederhergestellt",
+        description: "Das Inserat ist nun wieder in Ihrer Liste sichtbar. Sie können es von dort neu einstellen.",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Fehler",
+        description: err?.message || "Wiederherstellung fehlgeschlagen.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setUnarchivingInProgress(false),
+  });
+
   const handleSellerAcceptOffer = async (offerId: string) => {
     setRespondingOfferId(offerId);
     try {
@@ -776,6 +897,102 @@ export default function ListingDetail() {
           Erstellt am {format(new Date(motorhome.created_at), "dd. MMMM yyyy", { locale: de })}
         </p>
       </div>
+
+      {/* ── Archiv-Banner (is_archived=TRUE) ─────────────────────────────── */}
+      {isSeller && motorhome.is_archived && (
+        <Card className="border-2 border-muted bg-muted/40">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <div className="flex-shrink-0 p-3 rounded-full bg-muted">
+                <Archive className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <h3 className="font-semibold text-foreground">Inserat archiviert</h3>
+                <p className="text-sm text-muted-foreground">
+                  Dieses Inserat ist vom Markt genommen. Es erscheint nicht mehr in Suchergebnissen oder auf /kaufen.
+                  Sie können es jederzeit wiederherstellen und erneut als Auktion oder Festpreis-Inserat einstellen.
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => unarchiveMutation.mutate()}
+                  disabled={unarchivingInProgress}
+                  className="gap-2"
+                >
+                  <ArchiveRestore className="w-4 h-4" />
+                  {unarchivingInProgress ? "Wird wiederhergestellt…" : "Wiederherstellen"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Reaktivierungs-Card (nach Soft-Brake / Opt-out) ──────────────── */}
+      {isSeller &&
+        !motorhome.is_archived &&
+        !isAuctionLive &&
+        auction?.status !== "draft" &&
+        motorhome.status !== "sold" &&
+        motorhome.status !== "reserved" &&
+        (auction?.status === "ended" ||
+          auction?.status === "cancelled" ||
+          motorhome.status === "not_sold") && (
+          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Wie möchten Sie weiter vorgehen?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Die Marketing-Phase ist abgelaufen, ohne dass ein Käufer zustande gekommen ist. Sie haben drei Möglichkeiten:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Button
+                  onClick={() => setShowRestartDialog(true)}
+                  className="justify-start gap-2 h-auto py-3 px-4 text-left flex-col items-start whitespace-normal"
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <RotateCw className="w-4 h-4" />
+                    Neu starten
+                  </div>
+                  <span className="text-xs opacity-90 font-normal">
+                    Frische {MARKETING_CONFIG.AUCTION_DURATION_DAYS}-Tage-Auktion, Preis bleibt wie zuletzt
+                  </span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAdjustPriceDialog(true)}
+                  className="justify-start gap-2 h-auto py-3 px-4 text-left flex-col items-start whitespace-normal"
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <TrendingDown className="w-4 h-4" />
+                    Preis anpassen
+                  </div>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    Neuer Mindestpreis + frischer Start (empfohlen)
+                  </span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowArchiveDialog(true)}
+                  className="justify-start gap-2 h-auto py-3 px-4 text-left flex-col items-start whitespace-normal border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Archive className="w-4 h-4" />
+                    Archivieren
+                  </div>
+                  <span className="text-xs font-normal opacity-80">
+                    Inserat vom Markt nehmen (reversibel)
+                  </span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Draft status info banner */}
       {auction?.status === "draft" && (
@@ -1793,6 +2010,37 @@ export default function ListingDetail() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Soft-Brake / Reaktivierungs-Dialoge (Phase 6) ─────────────────── */}
+      {isSeller && id && motorhome && (
+        <>
+          <RestartListingDialog
+            open={showRestartDialog}
+            onOpenChange={setShowRestartDialog}
+            motorhomeId={id}
+            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
+            saleChannel={motorhome.sale_channel}
+            currentReservePrice={motorhome.reserve_price != null ? Number(motorhome.reserve_price) : null}
+            currentInstantPrice={motorhome.instant_price != null ? Number(motorhome.instant_price) : null}
+          />
+          <AdjustPriceRestartDialog
+            open={showAdjustPriceDialog}
+            onOpenChange={setShowAdjustPriceDialog}
+            motorhomeId={id}
+            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
+            saleChannel={motorhome.sale_channel}
+            currentReservePrice={motorhome.reserve_price != null ? Number(motorhome.reserve_price) : null}
+            currentInstantPrice={motorhome.instant_price != null ? Number(motorhome.instant_price) : null}
+            previousAuctionRound={auction?.auction_round != null ? Number(auction.auction_round) : null}
+          />
+          <ArchiveListingDialog
+            open={showArchiveDialog}
+            onOpenChange={setShowArchiveDialog}
+            motorhomeId={id}
+            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
+          />
+        </>
       )}
     </div>
   );

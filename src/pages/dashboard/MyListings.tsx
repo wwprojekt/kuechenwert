@@ -6,7 +6,9 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown, Handshake, RefreshCw, Hourglass } from "lucide-react";
+import { Car, Eye, Edit, Plus, ImagePlus, AlertTriangle, ArrowUpDown, Handshake, RefreshCw, Hourglass, Archive } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { MARKETING_CONFIG } from "@/lib/marketing-config";
 import {
   Select,
@@ -24,6 +26,7 @@ export default function MyListings() {
   const { primaryRole } = useUserRole();
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'bid_desc' | 'bid_asc'>('newest');
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: motorhomes, isLoading } = useQuery({
     queryKey: ["myListings", user?.id],
@@ -176,25 +179,54 @@ export default function MyListings() {
         </Card>
       ) : (
         <>
-        <div className="flex justify-end">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Sortieren" />
+        {(() => {
+          const archivedCount = (motorhomes || []).filter((m: any) => m.is_archived).length;
+          const filtered = showArchived
+            ? motorhomes
+            : (motorhomes || []).filter((m: any) => !m.is_archived);
+          return (
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                {archivedCount > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="show-archived-toggle"
+                      checked={showArchived}
+                      onCheckedChange={setShowArchived}
+                    />
+                    <Label htmlFor="show-archived-toggle" className="text-sm cursor-pointer flex items-center gap-1.5">
+                      <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+                      Archivierte Inserate anzeigen
+                      <Badge variant="secondary" className="ml-1">{archivedCount}</Badge>
+                    </Label>
+                  </div>
+                ) : <div />}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <div className="flex items-center gap-2">
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      <SelectValue placeholder="Sortieren" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Neueste zuerst</SelectItem>
+                    <SelectItem value="oldest">Älteste zuerst</SelectItem>
+                    <SelectItem value="name">Name A-Z</SelectItem>
+                    <SelectItem value="bid_desc">Höchster Preis</SelectItem>
+                    <SelectItem value="bid_asc">Niedrigster Preis</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Neueste zuerst</SelectItem>
-              <SelectItem value="oldest">Älteste zuerst</SelectItem>
-              <SelectItem value="name">Name A-Z</SelectItem>
-              <SelectItem value="bid_desc">Höchster Preis</SelectItem>
-              <SelectItem value="bid_asc">Niedrigster Preis</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[...motorhomes].sort((a, b) => {
+              {filtered.length === 0 && !showArchived && archivedCount > 0 && (
+                <Card className="p-8">
+                  <div className="text-center text-muted-foreground space-y-3">
+                    <Archive className="w-12 h-12 mx-auto opacity-50" />
+                    <p>Alle Ihre Inserate sind archiviert. Schalten Sie den Toggle oben um sie zu sehen.</p>
+                  </div>
+                </Card>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...filtered].sort((a, b) => {
             switch (sortBy) {
               case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
               case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -223,7 +255,7 @@ export default function MyListings() {
 
             return (
               <Link key={motorhome.id} to={`/dashboard/listings/${motorhome.id}`} className="no-underline">
-              <Card className="overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer">
+              <Card className={`overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer ${motorhome.is_archived ? 'opacity-70 grayscale-[30%]' : ''}`}>
                 {/* Image */}
                 <div className="relative h-48 bg-muted">
                   {firstPhoto ? (
@@ -238,8 +270,14 @@ export default function MyListings() {
                       <Car className="w-12 h-12 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
                     {getSaleChannelBadge(motorhome)}
+                    {motorhome.is_archived && (
+                      <Badge className="bg-slate-600 text-white gap-1">
+                        <Archive className="w-3 h-3" />
+                        Archiviert
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -403,7 +441,10 @@ export default function MyListings() {
               </Link>
             );
           })}
-        </div>
+              </div>
+            </>
+          );
+        })()}
         </>
       )}
     </div>

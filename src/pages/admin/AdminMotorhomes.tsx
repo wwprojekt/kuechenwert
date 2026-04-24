@@ -133,6 +133,7 @@ interface MotorhomeWithRelations {
   updated_at: string | null;
   sold_at: string | null;
   sold_to: string | null;
+  is_archived?: boolean | null;
   seller_id?: string;
   seller?: {
     first_name: string | null;
@@ -678,6 +679,11 @@ export default function AdminMotorhomes() {
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       {getStatusBadge(motorhome._realStatus)}
+                      {motorhome.is_archived && (
+                        <Badge className="bg-slate-600 hover:bg-slate-700 text-white text-xs w-fit">
+                          Archiviert
+                        </Badge>
+                      )}
                       {auction && auction.status === "active" && motorhome.sale_channel === 'instant_price' && motorhome.instant_price ? (
                         <span className="text-xs text-yellow-600 font-medium">
                           Festpreis {Number(motorhome.instant_price).toLocaleString("de-DE")} €

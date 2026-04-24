@@ -2,6 +2,7 @@ import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
 import MotorhomeShowcase from "@/components/MotorhomeShowcase";
 import HowItWorks from "@/components/HowItWorks";
+import ExplainerVideo from "@/components/ExplainerVideo";
 import Listings from "@/components/Listings";
 import Benefits from "@/components/Benefits";
 import Process from "@/components/Process";
@@ -29,6 +30,7 @@ const Index = () => {
       <Hero />
       <MotorhomeShowcase />
       <HowItWorks />
+      <ExplainerVideo />
       <Listings />
       <Benefits />
       <Process />

@@ -26,8 +26,6 @@ import {
   Clock,
   Star,
   Truck,
-  CarFront,
-  Bus,
   Caravan,
   TrendingUp,
   Car,
@@ -48,12 +46,23 @@ import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
 import { ReviewCollectionPrompt } from "@/components/wertrechner/ReviewCollectionPrompt";
 import { ReviewsSection } from "@/components/wertrechner/ReviewsSection";
 import { WertrechnerSchemaHead } from "@/components/wertrechner/WertrechnerSchemaHead";
+import { SimilarSoldAuctions } from "@/components/wertrechner/SimilarSoldAuctions";
+import {
+  WOHNMOBIL_BODY_TYPES,
+  WOHNWAGEN_BODY_TYPES,
+  CONDITIONS,
+  WOHNMOBIL_MANUFACTURERS,
+  WOHNWAGEN_MANUFACTURERS,
+  POPULAR_WOHNMOBIL_WR,
+  POPULAR_WOHNWAGEN_WR,
+  calculateValue,
+  wertrechnerLeadSchema,
+  wertrechnerVehicleSchema,
+  checkYearRange,
+} from "@/lib/valuation";
+import { manufacturerModels as WOHNMOBIL_MODEL_CATALOG, wohnwagenManufacturerModels as WOHNWAGEN_MODEL_CATALOG } from "@/lib/vehicle-data";
 
-const leadSchema = z.object({
-  name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
-  email: z.string().trim().email("Ungültige E-Mail-Adresse"),
-  phone: z.string().trim().min(5, "Bitte geben Sie Ihre Telefonnummer ein"),
-});
+const leadSchema = wertrechnerLeadSchema;
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -65,168 +74,6 @@ const useIsMobile = () => {
     return () => mq.removeEventListener("change", handler);
   }, []);
   return isMobile;
-};
-
-// ─── Wohnmobil Body Types ───────────────────────────────────────────────────
-const WOHNMOBIL_BODY_TYPES = [
-  { value: "integriert", label: "Integriertes Wohnmobil", icon: Bus, description: "Vollintegriert mit Fahrerhaus", basePrice: 95000 },
-  { value: "teilintegriert", label: "Teilintegriertes Wohnmobil", icon: Caravan, description: "Aufbau auf Fahrzeugbasis", basePrice: 75000 },
-  { value: "alkoven", label: "Alkovenmobil", icon: Truck, description: "Mit Schlafbereich über dem Fahrerhaus", basePrice: 65000 },
-  { value: "kastenwagen", label: "Kastenwagen / Van", icon: CarFront, description: "Kompakt und wendig", basePrice: 60000 },
-  { value: "campingbus", label: "Campingbus", icon: CarFront, description: "Flexibel und alltagstauglich", basePrice: 55000 },
-];
-
-// ─── Wohnwagen Body Types ───────────────────────────────────────────────────
-const WOHNWAGEN_BODY_TYPES = [
-  { value: "wohnwagen", label: "Wohnwagen", icon: Caravan, description: "Klassischer Wohnwagen", basePrice: 25000 },
-  { value: "faltcaravan", label: "Faltcaravan", icon: Caravan, description: "Zusammenfaltbar und leicht", basePrice: 8000 },
-  { value: "mobilheim", label: "Mobilheim", icon: Truck, description: "Stationäres Wohnheim", basePrice: 35000 },
-];
-
-const CONDITIONS = [
-  { value: "new", label: "Neuwertig", description: "Keine Gebrauchsspuren, wie aus dem Werk", emoji: "✨", factor: 1.0 },
-  { value: "excellent", label: "Sehr gepflegt", description: "Minimale Gebrauchsspuren, regelmäßig gewartet", emoji: "🌟", factor: 0.92 },
-  { value: "good", label: "Gepflegt", description: "Normale Gebrauchsspuren, voll funktionsfähig", emoji: "👍", factor: 0.80 },
-  { value: "fair", label: "Gebrauchsspuren", description: "Deutliche Gebrauchsspuren, funktionsfähig", emoji: "👌", factor: 0.65 },
-  { value: "poor", label: "Reparaturbedürftig", description: "Mängel vorhanden, Reparaturen nötig", emoji: "🔧", factor: 0.45 },
-];
-
-// ─── Wohnmobil Hersteller (erweitert mit Basisfahrzeug-Marken für Van-Besitzer) ──
-const WOHNMOBIL_MANUFACTURERS = [
-  "Adria", "Ahorn Camp", "Bavaria", "Benimar", "Bürstner", "Carado", "Carthago",
-  "Challenger", "Chausson", "Citroën", "Concorde", "Dethleffs", "Elnagh", "Etrusco",
-  "Eura Mobil", "Fendt", "Fiat", "Ford", "Forster", "Frankia", "Globecar", "Hobby", "Hymer",
-  "Knaus", "Laika", "LMC", "Malibu", "McLouis", "Mercedes-Benz", "Morelo", "Niesmann+Bischoff",
-  "Pilote", "Pössl", "Rapido", "Roller Team", "Sunlight", "Sun Living",
-  "Volkswagen", "Weinsberg", "Westfalia", "Andere",
-];
-
-// ─── Wohnwagen Hersteller ───────────────────────────────────────────────────
-const WOHNWAGEN_MANUFACTURERS = [
-  "Abbey", "Adria", "Beachy", "Bürstner", "Cabby", "Carado", "Caravelair",
-  "Caretta", "Dethleffs", "Eifelland", "Elddis", "Eriba", "Fendt",
-  "Hobby", "Hymer", "Kabe", "Knaus", "La Mancelle", "LMC", "Niewiadow",
-  "Rapido", "Soma", "Sterckeman", "Sun Living", "Sunlight", "Swift",
-  "Tabbert", "TEC", "Trigano", "Weinsberg", "Wilk", "Wingamm", "Andere",
-];
-
-// Popular manufacturers for chip-based quick selection
-const POPULAR_WOHNMOBIL_WR = ["Hymer", "Hobby", "Bürstner", "Dethleffs", "Fendt", "Pössl", "Knaus", "Volkswagen", "Adria", "Weinsberg", "Carado", "Sunlight"];
-const POPULAR_WOHNWAGEN_WR = ["Hobby", "Fendt", "Dethleffs", "Bürstner", "Knaus", "Tabbert", "Adria", "Weinsberg", "Eriba", "LMC"];
-
-// ─── Wohnmobil Marken-Tiers ────────────────────────────────────────────────
-const WOHNMOBIL_BRAND_TIERS: Record<string, string> = {
-  "Concorde": "luxus", "Morelo": "luxus", "Volkner": "luxus",
-  "Carthago": "premium", "Hymer": "premium", "Niesmann+Bischoff": "premium",
-  "Frankia": "premium", "Eura Mobil": "premium", "Rapido": "premium",
-  "La Strada": "premium", "Phoenix": "premium",
-  "Knaus": "mittelklasse", "Bürstner": "mittelklasse", "Dethleffs": "mittelklasse",
-  "Hobby": "mittelklasse", "LMC": "mittelklasse", "Chausson": "mittelklasse",
-  "Challenger": "mittelklasse", "Pilote": "mittelklasse", "Adria": "mittelklasse",
-  "Benimar": "mittelklasse", "Laika": "mittelklasse", "Elnagh": "mittelklasse",
-  "Globecar": "mittelklasse", "Pössl": "mittelklasse", "Malibu": "mittelklasse",
-  "Westfalia": "mittelklasse", "Volkswagen": "mittelklasse", "Fendt": "mittelklasse",
-  "Bavaria": "mittelklasse", "Mercedes-Benz": "mittelklasse", "Ford": "mittelklasse",
-  "Fiat": "mittelklasse", "Citroën": "mittelklasse",
-  "Sunlight": "economy", "Sun Living": "economy", "Etrusco": "economy",
-  "Forster": "economy", "Roller Team": "economy", "McLouis": "economy",
-  "Carado": "economy", "Weinsberg": "economy", "Ahorn Camp": "economy",
-};
-
-// ─── Wohnwagen Marken-Tiers ────────────────────────────────────────────────
-const WOHNWAGEN_BRAND_TIERS: Record<string, string> = {
-  "Kabe": "luxus",
-  "Tabbert": "premium", "Fendt": "premium", "Hobby": "premium", "Hymer": "premium", "Eriba": "premium",
-  "Bürstner": "mittelklasse", "Dethleffs": "mittelklasse", "Knaus": "mittelklasse",
-  "Adria": "mittelklasse", "LMC": "mittelklasse", "Wilk": "mittelklasse",
-  "Caravelair": "mittelklasse", "Sterckeman": "mittelklasse", "Swift": "mittelklasse",
-  "Elddis": "mittelklasse", "La Mancelle": "mittelklasse",
-  "Weinsberg": "economy", "Sunlight": "economy", "Sun Living": "economy",
-  "Carado": "economy", "Cabby": "economy", "TEC": "economy",
-  "Trigano": "economy", "Niewiadow": "economy", "Caretta": "economy",
-  "Soma": "economy", "Wingamm": "economy", "Beachy": "economy",
-  "Abbey": "economy", "Eifelland": "economy", "Rapido": "mittelklasse",
-};
-
-const TIER_MULTIPLIERS: Record<string, number> = {
-  luxus: 2.0,
-  premium: 1.2,
-  mittelklasse: 1.0,
-  economy: 0.82,
-};
-
-// ─── Wohnmobil Abschreibungskurven ─────────────────────────────────────────
-// Kalibriert anhand 284 Experten-Bewertungen (April 2026):
-// Alte Kurven (3% ab Jahr 5) führten zu 74-183% Überschätzung bei >15 Jahren.
-// Neue Kurven: steilere Abschreibung ab Jahr 5, realistisch für Gebrauchtwagen-Markt.
-const WOHNMOBIL_DEPRECIATION_CURVES: Record<string, number[]> = {
-  campingbus:     [0.15, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06],
-  kastenwagen:    [0.15, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06],
-  alkoven:        [0.16, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
-  teilintegriert: [0.16, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
-  integriert:     [0.17, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
-};
-
-// ─── Wohnwagen Abschreibungskurven (kein Motor → langsamere Abschreibung) ──
-const WOHNWAGEN_DEPRECIATION_CURVES: Record<string, number[]> = {
-  wohnwagen:   [0.14, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06, 0.07],
-  faltcaravan: [0.16, 0.08, 0.06, 0.05, 0.04, 0.04, 0.04, 0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
-  mobilheim:   [0.10, 0.06, 0.05, 0.04, 0.03, 0.03, 0.03, 0.03, 0.04, 0.04, 0.05, 0.05, 0.06],
-};
-
-const getMileageAdjustment = (age: number, mileage: number): number => {
-  if (age <= 0) return 1.0;
-  const expectedKm = age * 10000;
-  const kmRatio = expectedKm > 0 ? mileage / expectedKm : 1.0;
-  if (kmRatio <= 0.5) return 1.10;
-  if (kmRatio <= 0.8) return 1.05;
-  if (kmRatio <= 1.2) return 1.0;
-  if (kmRatio <= 1.5) return 0.95;
-  if (kmRatio <= 2.0) return 0.90;
-  if (kmRatio <= 3.0) return 0.85;
-  return 0.80;
-};
-
-const calculateValue = (
-  bodyType: string,
-  year: number,
-  mileage: number,
-  condition: string,
-  manufacturer?: string,
-  vehicleType?: string
-): { min: number; max: number; brandTier: string } => {
-  const currentYear = new Date().getFullYear();
-  const age = currentYear - year;
-  const isWohnwagen = vehicleType === "Wohnwagen";
-
-  const bodyTypes = isWohnwagen ? WOHNWAGEN_BODY_TYPES : WOHNMOBIL_BODY_TYPES;
-  const basePrice = bodyTypes.find((b) => b.value === bodyType)?.basePrice || (isWohnwagen ? 25000 : 80000);
-
-  const brandTiers = isWohnwagen ? WOHNWAGEN_BRAND_TIERS : WOHNMOBIL_BRAND_TIERS;
-  const brandTier = manufacturer ? (brandTiers[manufacturer] || "mittelklasse") : "mittelklasse";
-  const tierMult = TIER_MULTIPLIERS[brandTier] || 1.0;
-  const adjustedBase = basePrice * tierMult;
-
-  const depreciationCurves = isWohnwagen ? WOHNWAGEN_DEPRECIATION_CURVES : WOHNMOBIL_DEPRECIATION_CURVES;
-  const curve = depreciationCurves[bodyType] || (isWohnwagen ? [0.14, 0.06, 0.05, 0.04, 0.03] : [0.16, 0.07, 0.06, 0.04, 0.03]);
-  let remaining = 1.0;
-  for (let y = 0; y < age; y++) {
-    const rate = y < curve.length - 1 ? curve[y] : curve[curve.length - 1];
-    remaining *= (1 - rate);
-  }
-  const ageAdjusted = adjustedBase * remaining;
-
-  const kmFactor = isWohnwagen ? 1.0 : getMileageAdjustment(age, mileage);
-  const kmAdjusted = ageAdjusted * kmFactor;
-
-  const conditionFactor = CONDITIONS.find((c) => c.value === condition)?.factor || 0.80;
-  const finalValue = kmAdjusted * conditionFactor;
-
-  const min = Math.round(finalValue * 0.88);
-  const max = Math.round(finalValue * 1.12);
-  const minFloor = isWohnwagen ? 500 : 2000;
-  const maxFloor = isWohnwagen ? 1000 : 3500;
-  return { min: Math.max(min, minFloor), max: Math.max(max, maxFloor), brandTier };
 };
 
 const formatCurrency = (value: number): string => {
@@ -446,6 +293,7 @@ const Wertrechner = () => {
         model: "",
         year: "",
         mileage: "",
+        lengthM: "",
         condition: "",
         name: "",
         email: "",
@@ -454,8 +302,8 @@ const Wertrechner = () => {
     }
     const session = loadSession();
     if (session) {
-      const { _step, ...rest } = session.formData as any;
-      return rest as typeof formData;
+      const { _step, ...rest } = session.formData as Record<string, string>;
+      return { lengthM: "", ...rest } as typeof formData;
     }
     return {
       vehicleType: "",
@@ -464,13 +312,14 @@ const Wertrechner = () => {
       model: "",
       year: "",
       mileage: "",
+      lengthM: "",
       condition: "",
       name: "",
       email: "",
       phone: "",
     };
   });
-  const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number } | null>(null);
+  const [estimatedValue, setEstimatedValue] = useState<{ min: number; max: number; brandTier?: string; spread?: number; uncertaintyReasons?: string[] } | null>(null);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [aiEstimate, setAiEstimate] = useState<{ value: number; confidence: number; reasoning?: string; trainingCount: number } | null>(null);
   const [aiFailed, setAiFailed] = useState(false);
@@ -550,44 +399,105 @@ const Wertrechner = () => {
     const mileage = isWohnwagen ? 0 : parseInt(formData.mileage, 10);
     if (!formData.bodyType || isNaN(year)) return null;
     if (!isWohnwagen && isNaN(mileage)) return null;
-    return calculateValue(formData.bodyType, year, mileage, formData.condition, formData.manufacturer, formData.vehicleType);
-  }, [formData.bodyType, formData.year, formData.mileage, formData.condition, formData.manufacturer, formData.vehicleType, isWohnwagen]);
+    const lengthM = formData.lengthM ? parseFloat(formData.lengthM) : undefined;
+    return calculateValue({
+      vehicleType: formData.vehicleType || "Wohnmobil",
+      bodyType: formData.bodyType,
+      year,
+      mileage,
+      condition: formData.condition,
+      manufacturer: formData.manufacturer || undefined,
+      model: formData.model || undefined,
+      lengthM: lengthM && !isNaN(lengthM) ? lengthM : undefined,
+    });
+  }, [formData.bodyType, formData.year, formData.mileage, formData.condition, formData.manufacturer, formData.model, formData.vehicleType, formData.lengthM, isWohnwagen]);
 
   const submitMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (isHoneypotBot) {
-        return { min: 10000, max: 20000, brandTier: 'standard' as const };
+        return { value: { min: 10000, max: 20000, brandTier: 'mittelklasse' as const, spread: 0.12, mid: 15000, uncertaintyReasons: [] }, leadId: null as string | null };
       }
 
       const year = parseInt(data.year, 10);
       const mileage = isWohnwagen ? 0 : parseInt(data.mileage, 10);
-      const value = calculateValue(data.bodyType, year, mileage, data.condition, data.manufacturer, data.vehicleType);
+      const lengthM = data.lengthM ? parseFloat(data.lengthM) : undefined;
+      const value = calculateValue({
+        vehicleType: data.vehicleType || "Wohnmobil",
+        bodyType: data.bodyType,
+        year,
+        mileage,
+        condition: data.condition,
+        manufacturer: data.manufacturer || undefined,
+        model: data.model || undefined,
+        lengthM: lengthM && !isNaN(lengthM) ? lengthM : undefined,
+      });
       setEstimatedValue(value);
 
-      const { error } = await withNetworkRetry(
-        () => supabase.from("value_assessment_leads").insert({
-          name: data.name,
-          email: data.email,
-          phone: data.phone || null,
-          manufacturer: data.manufacturer || null,
-          model: data.model || null,
-          year: data.year ? parseInt(data.year, 10) : null,
-          mileage: isWohnwagen ? null : (data.mileage ? parseInt(data.mileage, 10) : null),
-          condition: data.condition || null,
-          body_type: data.bodyType || null,
-          source: "wertrechner",
-          estimated_value_min: value.min,
-          estimated_value_max: value.max,
-          algorithm_value_min: value.min,
-          algorithm_value_max: value.max,
-          brand_tier: value.brandTier,
-          vehicle_type: data.vehicleType || "Wohnmobil",
-        } as any),
+      // Dedup (in-session): verhindert, dass derselbe User dasselbe Fahrzeug
+      // durch schnelles Klicken oder Page-Reload doppelt einreicht. Fingerprint
+      // aus den Kernfeldern; 60 Min. gueltig. Dies ist absichtlich nur ein
+      // Frontend-Check — Cross-Session-Dedup wuerde eine eigene Edge Function
+      // plus RLS-Lockerung erfordern und ist fuer den Public-Flow ueberdimensioniert.
+      const fingerprint = [
+        data.email.trim().toLowerCase(),
+        data.manufacturer || "",
+        data.model || "",
+        data.year,
+        data.bodyType,
+        data.condition,
+      ].join("|");
+      try {
+        const prev = sessionStorage.getItem("wertrechner_lastLead");
+        if (prev) {
+          const parsed = JSON.parse(prev) as { fingerprint: string; leadId: string; ts: number };
+          if (parsed.fingerprint === fingerprint && Date.now() - parsed.ts < 60 * 60 * 1000) {
+            return { value, leadId: parsed.leadId };
+          }
+        }
+      } catch {}
+
+      const result = await withNetworkRetry<{ data: { id?: string } | null; error: unknown }>(
+        async () => {
+          const res = await supabase
+            .from("value_assessment_leads")
+            .insert({
+              name: data.name,
+              email: data.email,
+              phone: data.phone || null,
+              manufacturer: data.manufacturer || null,
+              model: data.model || null,
+              year: data.year ? parseInt(data.year, 10) : null,
+              mileage: isWohnwagen ? null : (data.mileage ? parseInt(data.mileage, 10) : null),
+              condition: data.condition || null,
+              body_type: data.bodyType || null,
+              source: "wertrechner",
+              estimated_value_min: value.min,
+              estimated_value_max: value.max,
+              algorithm_value_min: value.min,
+              algorithm_value_max: value.max,
+              brand_tier: value.brandTier,
+              vehicle_type: data.vehicleType || "Wohnmobil",
+            } as never)
+            .select("id")
+            .single();
+          return res as { data: { id?: string } | null; error: unknown };
+        },
         2,
         'Wertrechner INSERT'
       );
 
-      if (error) throw error;
+      if (result.error) throw result.error;
+      const leadId = result.data?.id ?? null;
+
+      if (leadId) {
+        try {
+          sessionStorage.setItem("wertrechner_lastLead", JSON.stringify({
+            fingerprint,
+            leadId,
+            ts: Date.now(),
+          }));
+        } catch {}
+      }
 
       try {
         const trackingData = getTrackingData();
@@ -614,9 +524,9 @@ const Wertrechner = () => {
         });
       } catch {}
 
-      return value;
+      return { value, leadId };
     },
-    onSuccess: async (value) => {
+    onSuccess: async ({ value, leadId }) => {
       resetTurnstile();
       setLeadSubmitted(true);
       setEstimatedValue(value);
@@ -639,8 +549,15 @@ const Wertrechner = () => {
       setAiFailed(false);
       (async () => {
         try {
+          // Hinweis: turnstileToken wurde bereits von send-lead-notification verbraucht (one-shot).
+          // Die ai-valuation Edge Function akzeptiert NULL-Token und fällt dann auf
+          // Rate-Limit + Honeypot-Check zurück. Fuer echte Bot-Prevention laeuft
+          // der Turnstile-Check upstream in send-lead-notification — wenn dieser durchgeht,
+          // ist das Lead als menschlich validiert und ai-valuation bekommt den leadId
+          // als implizites Trust-Signal.
           const { data: aiData } = await supabase.functions.invoke("ai-valuation", {
             body: {
+              leadId,
               manufacturer: formData.manufacturer || null,
               model: formData.model || null,
               bodyType: formData.bodyType,
@@ -650,6 +567,7 @@ const Wertrechner = () => {
               algorithmMin: value.min,
               algorithmMax: value.max,
               vehicleType: formData.vehicleType || "Wohnmobil",
+              honeypot: honeypotValue,
             },
           });
           if (aiData?.success && aiData.hasAiEstimate && aiData.aiEstimatedValue) {
@@ -756,19 +674,25 @@ const Wertrechner = () => {
       case 2: return !!formData.bodyType;
       case 3: return true;
       case 4: {
-        const y = parseInt(formData.year, 10);
-        const cy = new Date().getFullYear();
-        if (isWohnwagen) {
-          return !isNaN(y) && y >= 1950 && y <= cy;
-        }
-        const m = parseInt(formData.mileage, 10);
-        return !isNaN(y) && y >= 1950 && y <= cy && !isNaN(m) && m >= 0 && m <= 999999;
+        // Zod-Validierung (Baujahr + km + optional Laenge). Laesst die Step-4-UI
+        // fruehzeitig fehlschlagen wenn etwas unsinnig ist (z.B. 999999km bei Wohnwagen).
+        const parsed = wertrechnerVehicleSchema.safeParse({
+          vehicleType: formData.vehicleType,
+          bodyType: formData.bodyType,
+          manufacturer: formData.manufacturer || undefined,
+          model: formData.model || undefined,
+          year: formData.year,
+          mileage: formData.mileage,
+          lengthM: formData.lengthM,
+          condition: formData.condition || "good",
+        });
+        return parsed.success;
       }
       case 5: return !!formData.condition;
       case 6: return formData.name.trim().length >= 2 && formData.email.trim().length > 0 && formData.phone.trim().length >= 5;
       default: return false;
     }
-  }, [step, formData, isWohnwagen]);
+  }, [step, formData]);
 
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1102,16 +1026,29 @@ const Wertrechner = () => {
                     </div>
                   </div>
 
-                  {/* Model input */}
+                  {/* Model input mit datalist-Vorschlaegen aus vehicle-data.ts.
+                      Datalist laesst Freitext zu — wichtig, weil der Katalog nicht jedes Sondermodell kennt,
+                      aber 95% der Hits werden autocompleted, was Tippfehler (und damit KI-Konfusion) reduziert. */}
                   <div className="space-y-2 animate-fade-in">
                     <Label htmlFor="model" className="text-sm font-semibold">Modell</Label>
                     <Input
                       id="model"
+                      list="model-suggestions"
                       placeholder={isWohnwagen ? "z.B. De Luxe, Bianco, Touring..." : "z.B. B-Klasse MC, Trend, Ixeo..."}
                       value={formData.model}
                       onChange={(e) => updateField("model", e.target.value)}
                       className="h-12 text-base bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                      autoComplete="off"
                     />
+                    <datalist id="model-suggestions">
+                      {(() => {
+                        const catalog = isWohnwagen ? WOHNWAGEN_MODEL_CATALOG : WOHNMOBIL_MODEL_CATALOG;
+                        const models = formData.manufacturer ? (catalog[formData.manufacturer] || []) : [];
+                        return models.slice(0, 200).map((m) => (
+                          <option key={m} value={m} />
+                        ));
+                      })()}
+                    </datalist>
                   </div>
 
                   <p className="text-xs text-muted-foreground text-center">
@@ -1154,6 +1091,24 @@ const Wertrechner = () => {
                         <option key={y} value={String(y)}>{y}</option>
                       ))}
                     </select>
+                    {/* Baujahr-Plausibilitaet: warnt wenn Modell zu diesem Baujahr nicht existierte. */}
+                    {(() => {
+                      const y = parseInt(formData.year, 10);
+                      if (!formData.manufacturer || !formData.model || isNaN(y)) return null;
+                      const check = checkYearRange(formData.manufacturer, formData.model, y);
+                      if (check.ok) return null;
+                      const reason = check.firstYear && y < check.firstYear
+                        ? `${formData.manufacturer} ${formData.model} gibt es erst ab Baujahr ${check.firstYear}.`
+                        : check.lastYear && y > check.lastYear
+                          ? `${formData.manufacturer} ${formData.model} wurde nach ${check.lastYear} nicht mehr gebaut.`
+                          : "Das gewählte Baujahr passt möglicherweise nicht zu diesem Modell.";
+                      return (
+                        <p className="text-xs text-amber-600 flex items-start gap-1.5 pt-1">
+                          <span aria-hidden>⚠️</span>
+                          <span>{reason}</span>
+                        </p>
+                      );
+                    })()}
                   </div>
                   {!isWohnwagen && (
                     <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
@@ -1174,6 +1129,35 @@ const Wertrechner = () => {
                       </div>
                     </div>
                   )}
+                  {/* Laenge (optional): bei Wohnwagen ist Laenge der zweit-wichtigste Preis-Faktor
+                      nach Baujahr. Bei Wohnmobil schiebt Laenge die Einteilung kompakt/Liner. */}
+                  <div className="space-y-2 animate-fade-in" style={{ animationDelay: "150ms" }}>
+                    <Label htmlFor="lengthM" className="text-sm font-semibold">
+                      {isWohnwagen ? "Länge (m)" : "Länge (m)"} <span className="text-muted-foreground text-xs font-normal">optional</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="lengthM"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={isWohnwagen ? "z.B. 5.50" : "z.B. 6.99"}
+                        value={formData.lengthM}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(",", ".").replace(/[^0-9.]/g, "");
+                          updateField("lengthM", v);
+                        }}
+                        className="h-12 text-base pr-12 bg-slate-50 border-2 border-slate-200 hover:border-primary/30 focus:border-primary focus:bg-white transition-all shadow-sm hover:shadow focus:shadow-md focus:ring-2 focus:ring-primary/20"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                        m
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isWohnwagen
+                        ? "Länge beeinflusst den Preis spürbar (Stauraum + Zugbarkeit)."
+                        : "Optional — gängig 5.99 m bis 7.99 m."}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1418,6 +1402,14 @@ const Wertrechner = () => {
                             <AnimatedValue value={estimatedValue.min} /> &ndash; <AnimatedValue value={estimatedValue.max} />
                           </div>
                           <p className="text-muted-foreground text-sm">Geschätzter Marktwert</p>
+                          {estimatedValue.spread !== undefined && (
+                            <p className="text-xs text-slate-500 mt-2">
+                              Spanne ±{Math.round(estimatedValue.spread * 100)}%
+                              {estimatedValue.uncertaintyReasons && estimatedValue.uncertaintyReasons.length > 0
+                                ? ` (${estimatedValue.uncertaintyReasons.join(", ")})`
+                                : ""}
+                            </p>
+                          )}
                           {aiFailed && (
                             <p className="text-xs text-slate-400 mt-2">Basierend auf Marktdaten-Algorithmus</p>
                           )}
@@ -1488,6 +1480,17 @@ const Wertrechner = () => {
                         Ihre Daten werden automatisch übernommen – kein erneutes Ausfüllen nötig
                       </p>
                     </div>
+
+                    {/* Aehnliche verkaufte Fahrzeuge auf CaravanWert. Gibt dem User
+                        echte Vergleichspunkte statt nur eines abstrakten Zahlen-Ranges. */}
+                    {formData.bodyType && formData.year && (
+                      <SimilarSoldAuctions
+                        vehicleType={formData.vehicleType || "Wohnmobil"}
+                        bodyType={formData.bodyType}
+                        year={parseInt(formData.year, 10)}
+                        maxItems={4}
+                      />
+                    )}
 
                     {/* Non-blocking review prompt. Delayed 20s, dismissable,
                         renders below the primary Verkaufen-CTA. Users who go
@@ -1579,7 +1582,7 @@ const Wertrechner = () => {
                     setAiEstimate(null);
                     setAiLoading(false);
                     setFormData({
-                      vehicleType: "", bodyType: "", manufacturer: "", model: "", year: "", mileage: "", condition: "", name: "", email: "", phone: "",
+                      vehicleType: "", bodyType: "", manufacturer: "", model: "", year: "", mileage: "", lengthM: "", condition: "", name: "", email: "", phone: "",
                     });
                     try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
                   }}

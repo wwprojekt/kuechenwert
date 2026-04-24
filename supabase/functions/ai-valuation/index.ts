@@ -9,9 +9,10 @@ import { verifyTurnstileToken, getClientIp } from '../_shared/turnstile.ts';
  * KI-gestuetzte Wohnmobil/Wohnwagen-Bewertung. Aenderungen ggue. v1:
  *
  * 1. Market-Comps: nutzt zusaetzlich zu Admin-Expertenwerten auch echte
- *    Verkaufspreise aus abgeschlossenen Auktionen (status in ['sold','ended']
- *    mit current_bid > 0). Das verankert die KI auf tatsaechliche Markt-
- *    Verhaeltnisse statt nur auf Experten-Schaetzungen.
+ *    Verkaufspreise aus verkauften Auktionen (status='sold', Reserve erreicht).
+ *    'ended' wird bewusst ausgeschlossen, weil das Auktionen ohne tatsaechlichen
+ *    Verkauf sind -> current_bid waere dann nur das hoechste Gebot, nicht
+ *    der Marktpreis. Das verankert die KI auf tatsaechliche Markt-Verhaeltnisse.
  *
  * 2. KI-Persistenz: wenn `leadId` im Body ist, schreibt die Function den
  *    KI-Wert via RPC `update_ai_valuation` zurueck in die DB. Voraussetzung:
@@ -39,6 +40,7 @@ interface ValuationRequest {
   lengthM?: number;
   leadId?: string;
   turnstileToken?: string;
+  honeypot?: string;
 }
 
 interface TrainingDataPoint {
@@ -109,6 +111,18 @@ Deno.serve(async (req) => {
   try {
     const requestData: ValuationRequest = await req.json();
 
+    // Honeypot: wenn gefüllt, ist der Request von einem Bot (das Feld ist im
+    // Frontend via CSS versteckt, menschliche User können es nicht sehen/ausfüllen).
+    // Wir senden einen neutralen "success:false" zurück damit der Bot keine
+    // Diagnose-Info bekommt. Rate-Limit zählt den Request trotzdem.
+    if (typeof requestData.honeypot === 'string' && requestData.honeypot.trim().length > 0) {
+      console.warn('ai-valuation: Honeypot triggered', { honeypotLength: requestData.honeypot.length });
+      return new Response(
+        JSON.stringify({ success: false, hasAiEstimate: false, error: 'validation_failed' }),
+        { status: 200, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
+      );
+    }
+
     const turnstileResult = await verifyTurnstileToken(requestData.turnstileToken, getClientIp(req));
     if (!turnstileResult.valid) {
       console.warn('ai-valuation: Turnstile validation failed', turnstileResult.error);
@@ -159,7 +173,7 @@ Deno.serve(async (req) => {
     const { data: compData } = await supabaseAdmin
       .from('auctions')
       .select('current_bid, end_time, status, motorhomes!inner(manufacturer, model, year, mileage, body_type, has_solar, has_air_conditioning, has_markise, length_m, weight_kg)')
-      .in('status', ['sold', 'ended'])
+      .eq('status', 'sold')
       .gt('current_bid', 1000)
       .eq('motorhomes.body_type', dbBodyType)
       .gte('motorhomes.year', requestData.year - 8)
@@ -283,8 +297,8 @@ ${trainingCount} Bewertungen unseres Fahrzeug-Experten (Struktur: Kategorie | He
 
 ${trainingText}
 
-DATENBASIS B: TATSÄCHLICHE VERKAUFSPREISE
-${auctionComps.length} ähnliche ${vehicleLabel} die auf CaravanWert zu einem Endpreis verkauft/abgeschlossen wurden (Struktur: Hersteller Modell | Aufbautyp | Baujahr | KM | Länge | Ausstattung | Endpreis):
+DATENBASIS B: TATSÄCHLICHE VERKAUFSPREISE (nur status=sold)
+${auctionComps.length} ähnliche ${vehicleLabel} die auf CaravanWert zu einem ECHTEN Käufer verkauft wurden, Reserve erreicht (Struktur: Hersteller Modell | Aufbautyp | Baujahr | KM | Länge | Ausstattung | Verkaufspreis):
 
 ${compText}
 

@@ -54,27 +54,19 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
 
         // Step 1: Motorhomes nach body_type + year-range filtern (eigenstaendig,
         // damit wir keinen nested-column-filter auf auctions brauchen).
-        const { data: mhData, error: mhErr } = await (supabase
-          .from("motorhomes") as unknown as {
-            select: (cols: string) => {
-              eq: (col: string, v: string) => {
-                gte: (col: string, v: number) => {
-                  lte: (col: string, v: number) => Promise<{ data: unknown; error: unknown }>;
-                };
-              };
-            };
-          })
+        const mhRes = await supabase
+          .from("motorhomes")
           .select("id, manufacturer, model, year, mileage, body_type")
           .eq("body_type", dbBodyType)
           .gte("year", yearFrom)
           .lte("year", yearTo);
 
-        if (mhErr || !mhData || cancelled) {
+        if (mhRes.error || !mhRes.data || cancelled) {
           if (!cancelled) setLoading(false);
           return;
         }
 
-        const mhArr = mhData as Array<{
+        const mhArr = mhRes.data as Array<{
           id: string;
           manufacturer: string | null;
           model: string | null;
@@ -89,12 +81,15 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
           return;
         }
 
-        // Step 2: abgeschlossene Auktionen mit current_bid > 1000 holen.
+        // Step 2: NUR echt verkaufte Auktionen (status='sold'). 'ended' wird
+        // bewusst AUSGESCHLOSSEN — das sind Auktionen bei denen die Reserve
+        // NICHT erreicht wurde, also kein echter Verkauf stattgefunden hat.
+        // Als "Verkauft auf CaravanWert" zu labeln waere irreführend.
         const { data: auctionData } = await supabase
           .from("auctions")
           .select(AUCTION_PUBLIC_COLUMNS)
           .in("motorhome_id", mhIds as never)
-          .in("status", ["sold", "ended"] as never)
+          .eq("status", "sold" as never)
           .gt("current_bid", 1000)
           .order("end_time", { ascending: false })
           .limit(maxItems * 3);

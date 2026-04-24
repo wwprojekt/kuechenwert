@@ -95,7 +95,9 @@ export const calculateValue = (input: ValuationInput): ValuationResult => {
     spread += SPREAD_UNKNOWN_BRAND;
     reasons.push("Hersteller nicht im Katalog");
   }
-  if (!isWohnwagen && age > 0) {
+  // Extreme-KM-Check erst ab 3 Jahren. Davor ist niedrige Laufleistung
+  // bei Jahreswagen die Regel, nicht eine Anomalie (false-positive-Schutz).
+  if (!isWohnwagen && age >= 3) {
     const expected = age * 10000;
     if (mileage > expected * 2 || (mileage > 0 && mileage < expected * 0.3)) {
       spread += SPREAD_EXTREME_MILEAGE;

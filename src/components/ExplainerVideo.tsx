@@ -4,17 +4,22 @@ import { Play } from "lucide-react";
 /**
  * Explainer video embed for the homepage.
  *
+ * Asset hosting:
+ *   The MP4 lives in the Supabase `public-assets` bucket, NOT in the git
+ *   repo. Shipping the 12 MB file inside the Docker image bloated the build
+ *   context and stalled Dokploy deploys. Supabase serves the file from
+ *   their Cloudflare CDN with 1 y immutable caching.
+ *
  * Performance choices:
- *   - preload="none": zero bytes are fetched from /videos/erklaervideo.mp4
- *     until the user actively clicks the play overlay. No metadata HEAD,
- *     no moov-atom fetch. This removes any LCP / TTFB impact for the 90%
- *     of visitors who never click play.
+ *   - preload="none": zero bytes are fetched until the user actively clicks
+ *     the play overlay. No metadata HEAD, no moov-atom fetch. Removes any
+ *     LCP / TTFB impact for the 90% of visitors who never click play.
  *   - Native controls after first play: we don't duplicate what the browser
  *     already renders beautifully (play/pause, scrubber, volume, fullscreen).
- *   - The <video> element is rendered from the start (no IntersectionObserver
- *     race) because with preload="none" it costs nothing. The browser only
- *     hits the network when play() is called.
  */
+
+const EXPLAINER_VIDEO_URL =
+  "https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/public-assets/erklaervideo.mp4";
 const ExplainerVideo = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
@@ -72,7 +77,7 @@ const ExplainerVideo = () => {
               onError={() => setHasError(true)}
               aria-label="Erklärvideo: So funktioniert CaravanWert"
             >
-              <source src="/videos/erklaervideo.mp4" type="video/mp4" />
+              <source src={EXPLAINER_VIDEO_URL} type="video/mp4" />
               Ihr Browser unterstützt leider keine eingebetteten Videos.
             </video>
 

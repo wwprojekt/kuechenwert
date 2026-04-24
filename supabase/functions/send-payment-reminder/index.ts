@@ -130,7 +130,12 @@ const handler = async (req: Request): Promise<Response> => {
           ? invoice.gross_amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
           : `${invoice.gross_amount} €`;
 
-        const subject = `Freundliche Zahlungserinnerung – Rechnung ${invoice.invoice_number}`;
+        // Absichtlich OHNE das Wort "Zahlungserinnerung": dieses ist
+        // gemäß §286 BGB dem Level-1-Mahnschritt in `process-dunning` (Tag 14)
+        // vorbehalten. Wäre es auch hier (Tag 3) drin, würden beide Mails im
+        // Postfach des Empfängers auf den ersten Blick identisch aussehen
+        // und Mail-Clients/Spam-Filter könnten sie de-duplizieren.
+        const subject = `Erinnerung: Rechnung ${invoice.invoice_number} – Zahlung noch offen`;
         const emailContent = `
           ${greeting(recipientName || undefined)}
           ${customerBadge(profile.customer_number)}

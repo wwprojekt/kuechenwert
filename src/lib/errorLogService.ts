@@ -67,6 +67,35 @@ function isTranslatorError(message: string, stack?: string): boolean {
 }
 
 /**
+ * Detects errors thrown by browser-injected native autofill/contact bridges
+ * (Samsung Internet `setContactAutofillValuesFromBridge`, Edge iOS Contact
+ * Fill, Android WebView Autofill). These scripts inject anonymous JS into
+ * the top of the page and iterate over form elements. When their internal
+ * mapping misses an element they throw `TypeError: Cannot read properties
+ * of undefined (reading 'value')` — the stack has ZERO `/assets/*.js`
+ * frames because no code of ours is on the stack.
+ *
+ * The function-name signature is the cheapest and most precise signal; the
+ * "no asset frame" fallback protects against future bridge renames. Either
+ * alone is enough — these errors are NOT our bug and land as Critical
+ * GLOBAL_UNCAUGHT_ERROR alerts otherwise (see report 2026-04-24 #1).
+ */
+function isInjectedBrowserBridgeError(_message: string, stack?: string): boolean {
+  if (!stack) return false;
+  // Named signatures are the cheapest + safest signal: they only appear in
+  // the WebView's own injected contact/autofill bridge. Matching on the
+  // function name (not on the generic "reading 'value'" message) prevents
+  // this filter from ever masking a real bug in our bundle.
+  const knownBridgeNames = [
+    'setContactAutofillValuesFromBridge', // Samsung Internet / Android WebView
+    'setAutofillValuesFromBridge', // Edge iOS Contact Fill
+    'contactAutofillBridge', // generic iOS/Android bridge
+    '__AutofillBridge', // Android WebView (older)
+  ];
+  return knownBridgeNames.some((n) => stack.includes(n));
+}
+
+/**
  * Detects Vite/Rollup chunk-preload failures that happen when a long-lived
  * tab tries to lazy-load a CSS/JS chunk whose hash no longer exists on the
  * server (after a deploy). Recovery is a single hard reload — the new
@@ -674,6 +703,11 @@ export function installGlobalErrorHandlers(): void {
     // our side beyond the `<html translate="no">` we already ship.
     const stack = event.error?.stack || `at ${event.filename}:${event.lineno}:${event.colno}`;
     if (isTranslatorError(event.message || '', stack)) return;
+    // Browser-injected autofill/contact bridges (Samsung Internet, Edge iOS
+    // Contact Fill, Android WebView) throw inside their own injected code
+    // when iterating over form inputs. Nothing to fix on our side — the
+    // error never touches our bundle (no `/assets/*.js` frame in the stack).
+    if (isInjectedBrowserBridgeError(event.message || '', stack)) return;
     // Vite chunk-preload failure after a deploy: try a one-shot reload so
     // the browser fetches the freshly-deployed `index.html`.
     if (isChunkPreloadError(event.message || '')) {
@@ -704,11 +738,37 @@ export function installGlobalErrorHandlers(): void {
   // Fange ungefangene Promise-Rejections
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
-    const message = reason instanceof Error 
-      ? reason.message 
-      : typeof reason === 'string' 
-        ? reason 
-        : 'Unhandled Promise Rejection';
+    // Object-shaped rejections (Supabase/PostgREST error payloads, fetch
+    // Response-like objects, custom `{ code, message, details }` throws)
+    // historically landed as the literal string "Unhandled Promise
+    // Rejection" with no metadata — impossible to debug (see report
+    // 2026-04-24 #7, error_hash err_985yqm). Extract the first plausible
+    // message field and, as last resort, a short JSON snapshot.
+    let message: string;
+    if (reason instanceof Error) {
+      message = reason.message;
+    } else if (typeof reason === 'string') {
+      message = reason;
+    } else if (reason && typeof reason === 'object') {
+      const r = reason as Record<string, unknown>;
+      message =
+        (typeof r.message === 'string' && r.message) ||
+        (typeof r.error === 'string' && r.error) ||
+        (typeof r.error_description === 'string' && r.error_description) ||
+        (typeof r.details === 'string' && r.details) ||
+        (typeof r.hint === 'string' && r.hint) ||
+        (typeof r.code === 'string' && `Error code: ${r.code}`) ||
+        (() => {
+          try {
+            const snapshot = JSON.stringify(r);
+            return snapshot && snapshot !== '{}' ? `Unhandled Promise Rejection: ${snapshot.slice(0, 280)}` : 'Unhandled Promise Rejection';
+          } catch {
+            return 'Unhandled Promise Rejection';
+          }
+        })();
+    } else {
+      message = 'Unhandled Promise Rejection';
+    }
 
     // Ignoriere bestimmte harmlose Rejections
     if (message.includes('AbortError') || message.includes('The user aborted')) return;
@@ -758,6 +818,24 @@ export function installGlobalErrorHandlers(): void {
       metadata: {
         reasonType: typeof reason,
         reasonName: reason instanceof Error ? reason.name : undefined,
+        // Short JSON snapshot of object-shaped reasons so future occurrences
+        // are debuggable without a reproduction. Cap at 500 chars to stay
+        // well within error_logs row-size budget.
+        reasonSnapshot: (() => {
+          if (reason instanceof Error || typeof reason === 'string' || reason == null) return undefined;
+          if (typeof reason !== 'object') return String(reason).slice(0, 500);
+          try {
+            const keys = Object.keys(reason as Record<string, unknown>);
+            const snap = JSON.stringify(reason, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+            return snap && snap !== '{}' ? snap.slice(0, 500) : `object with keys: ${keys.join(',').slice(0, 200)}`;
+          } catch {
+            try {
+              return `object with keys: ${Object.keys(reason as Record<string, unknown>).join(',').slice(0, 200)}`;
+            } catch {
+              return undefined;
+            }
+          }
+        })(),
       },
       errorSource: 'unhandled-rejection',
     });
@@ -815,6 +893,11 @@ export function installGlobalErrorHandlers(): void {
       // surface as a CONSOLE_ERROR duplicate (see error #2 from
       // 20.04.2026).
       if (isTranslatorError(errorArg.message, errorArg.stack)) return;
+
+      // Browser-injected autofill/contact bridge errors (see filter on the
+      // `error` listener above). Same error can surface here if React's
+      // console.error fallback re-emits it during render.
+      if (isInjectedBrowserBridgeError(errorArg.message, errorArg.stack)) return;
 
       // Vite chunk-preload failure: don't log, recovery is already handled
       // in the `error` / `unhandledrejection` listeners above.

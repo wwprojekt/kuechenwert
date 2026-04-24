@@ -398,15 +398,21 @@ export const AccountLocationStep = ({
       {/* Marketingphasen-Consent (Pflicht für auction + instant_price)
           --------------------------------------------------------------
           Juristische Grundlage: § 305c BGB („überraschende Klauseln")
-          verlangt für die automatische Preisanpassung und die bis-zu-
-          16-tägige Bindungsphase eine besondere Bestätigung – ein
-          bloßer AGB-Hinweistext reicht NICHT aus, sonst werden die
-          Klauseln nicht Vertragsbestandteil.
+          verlangt für die automatische Preisanpassung eine besondere
+          Bestätigung – ein bloßer AGB-Hinweistext reicht NICHT aus,
+          sonst wird die Klausel nicht Vertragsbestandteil.
 
-          Bewusst KOMPAKT gehalten (1 Zeile + Mikro-Erläuterung) statt
-          eigener Step, um Conversion zu maximieren. Die ausführliche
-          Erklärung der Marketingphase findet der User über den AGB §6-
-          Link bzw. später jederzeit im Dashboard. */}
+          Der Mikro-Text nennt daher (a) die Klausel namentlich
+          ("automatisch sinken") und (b) verweist auf die in AGB §6
+          konkret festgelegte Untergrenze (Mindestpreis-Floor =
+          seller_initial × (1 - MAX_TOTAL_REDUCTION), siehe
+          src/lib/marketing-config.ts). Keine Prozent-Zahl im Wizard,
+          da diese je nach Kanal (Auktion: -6 %, Festpreis: -10 %)
+          differiert und Conversion senkt.
+
+          KEINE falschen Garantien formulieren ("nie unter Wunschpreis"
+          o.ä.) – der Wunschpreis IST die Obergrenze, NICHT der
+          Mindestpreis. § 5 UWG. */}
       {(formData.saleChannel === "auction" || formData.saleChannel === "instant_price") && (
         <div
           data-marketing-consent
@@ -449,8 +455,8 @@ export const AccountLocationStep = ({
               </Label>
             </div>
             <p id="marketingConsent-desc" className="text-xs text-muted-foreground leading-snug pl-6">
-              Mindestpreis-Garantie: Ihr Fahrzeug wird nie unter Ihrem Wunschpreis verkauft.
-              Laufzeit 3 Tage, jederzeit im Dashboard änderbar. Details in AGB §6.
+              Ich verstehe, dass der Wunschpreis im Rahmen der Marketingphase
+              automatisch sinken kann — begrenzt auf den in AGB §6 festgelegten Mindestpreis.
             </p>
             {fieldErrors.marketingConsent && (
               <p id="marketingConsent-error" className="text-xs text-red-600 font-medium animate-fade-in pl-6" role="alert">

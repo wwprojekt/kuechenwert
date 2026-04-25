@@ -20,6 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useToast } from "@/hooks/use-toast";
 import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
+import { isInvoiceOverdue } from "@/lib/invoiceStatus";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -157,7 +158,8 @@ export default function MyInvoices() {
 
   const getStatusBadge = (invoice: Invoice) => {
     const status = invoice.payment_status || invoice.status;
-    const isOverdue = new Date(invoice.due_date) < new Date();
+    // Tagesvergleich: heute fällig ≠ überfällig (siehe src/lib/invoiceStatus.ts)
+    const isOverdue = isInvoiceOverdue(invoice.due_date);
     
     switch (status) {
       case "paid":

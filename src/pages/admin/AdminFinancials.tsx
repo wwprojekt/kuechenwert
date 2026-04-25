@@ -63,6 +63,7 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval 
 import { de } from 'date-fns/locale';
 import { sendInvoiceWithPdf } from '@/lib/invoiceGenerator';
 import { getInvoiceStoragePath } from '@/lib/invoiceStorage';
+import { isInvoiceOverdue } from '@/lib/invoiceStatus';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -487,7 +488,10 @@ export default function AdminFinancials() {
       return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
     }
 
-    const isOverdue = new Date(invoice.due_date) < new Date();
+    // Tagesvergleich: eine heute fällige Rechnung ist NICHT überfällig (erst ab morgen).
+    // Muss 1:1 mit dem Server-Filter `due_date < CURRENT_DATE` matchen,
+    // sonst zählen KPI-Kachel und Tab-Liste unterschiedlich (Bug 2026-04-25).
+    const isOverdue = isInvoiceOverdue(invoice.due_date);
     const safeRem = Array.isArray(invoice.reminders)
       ? invoice.reminders
       : invoice.reminders
@@ -580,7 +584,7 @@ export default function AdminFinancials() {
       (statusFilter === 'pending' && invoice.payment_status === 'pending') ||
       (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
       (statusFilter === 'cancelled' && invoice.status === 'cancelled') ||
-      (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && new Date(invoice.due_date) < new Date());
+      (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && isInvoiceOverdue(invoice.due_date));
     
     const matchesType = typeFilter === 'all' ||
       (typeFilter === 'commission' && (invoice.invoice_type === 'commission' || !invoice.invoice_type)) ||
@@ -598,14 +602,20 @@ export default function AdminFinancials() {
   const totalGross = activeInvoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
   const totalPaid = activeInvoices.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
   const totalOutstanding = totalGross - totalPaid;
-  const overdueCount = activeInvoices.filter(inv => 
-    (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
-    new Date(inv.due_date) < new Date()
-  ).length;
-  const overdueAmount = activeInvoices.filter(inv => 
-    (inv.payment_status === 'pending' || inv.payment_status === 'partial') && 
-    new Date(inv.due_date) < new Date()
-  ).reduce((sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0), 0);
+  // Client-seitige Überfällig-Berechnung MUSS mit dem Server-Filter
+  // `.lt('due_date', now)` (→ `date < CURRENT_DATE`) übereinstimmen, sonst
+  // zeigt die KPI-Kachel eine andere Zahl als die Tab-Liste (Bug 2026-04-25:
+  // Rechnung mit due_date = heute lief im Client als überfällig, im Server
+  // nicht → KPI "1 überfällig" bei leerer Tab-Liste).
+  const overdueInvoicesLocal = activeInvoices.filter(inv =>
+    (inv.payment_status === 'pending' || inv.payment_status === 'partial') &&
+    isInvoiceOverdue(inv.due_date)
+  );
+  const overdueCount = overdueInvoicesLocal.length;
+  const overdueAmount = overdueInvoicesLocal.reduce(
+    (sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0),
+    0
+  );
   const paidCount = activeInvoices.filter(inv => inv.payment_status === 'paid').length;
   const cancelledCount = invoices?.filter(inv => inv.status === 'cancelled').length || 0;
   const avgInvoiceAmount = activeInvoices.length ? totalGross / activeInvoices.length : 0;

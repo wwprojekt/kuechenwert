@@ -92,7 +92,6 @@ import {
   ArrowLeft,
   Gavel,
   Zap,
-  Eye,
   Heart,
   Shield,
   Award,
@@ -120,6 +119,14 @@ import {
   Lock,
   Building2,
   Send,
+  Thermometer,
+  Snowflake,
+  Tv,
+  Wind,
+  Camera,
+  ParkingCircle,
+  Bike,
+  Warehouse,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -2000,18 +2007,70 @@ const AuctionDetail = () => {
                 </button>
                 {featuresOpen && (
                   <div id="features-content" className="px-4 sm:px-6 pb-4 sm:pb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {/* 2026-04-25: Ausstattungs-Übersicht deutlich erweitert —
+                        vorher nur 9 has_*-Flags, jetzt vollständiger Abgleich
+                        mit Admin-Ansicht (AdminMotorhomeDetail.tsx).
+                        Spalten:
+                        1) Innenausstattung  (Heizung/Klima/Küche/Bad/...)
+                        2) Außenausstattung  (Solar/Batterie/Markise/...)
+                        3) Komfort & Sicherheit (Tempomat/ZV/Navi/SAT/...)
+                        Plus freier Zusatzausstattungs-Text am Ende
+                        (motorhome.additional_equipment) — vorher gar nicht
+                        sichtbar, oft der wertentscheidendste Block (Alde,
+                        Lithium, Heki, Moskitonetze, etc.). */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      {/* Innenausstattung */}
                       <div className="space-y-3 sm:space-y-4">
                         <h3 className="font-semibold flex items-center gap-2">
                           <Home className="w-5 h-5 text-primary" />
                           Innenausstattung
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
-                          {[
+                          {/* Typ-Felder (String, nicht Bool) zuerst */}
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Thermometer className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Heizung</span>
+                            </div>
+                            <Badge variant={motorhome.heating_type ? 'default' : 'secondary'}>
+                              {motorhome.heating_type || '—'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Wind className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Klimaanlage</span>
+                            </div>
+                            <Badge variant={motorhome.air_conditioning_type ? 'default' : 'secondary'}>
+                              {motorhome.air_conditioning_type || '—'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Snowflake className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Kühlschrank</span>
+                            </div>
+                            <Badge variant={motorhome.refrigerator_type ? 'default' : 'secondary'}>
+                              {motorhome.refrigerator_type || '—'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Bed className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Schlafplätze</span>
+                            </div>
+                            <Badge variant="default">{motorhome.sleeping_places ?? '—'}</Badge>
+                          </div>
+                          {/* Bool-Features: Ja/Nein-Badges */}
+                          {([
                             { key: 'has_kitchen', label: 'Küche', icon: Home },
+                            { key: 'has_bathroom', label: 'Bad', icon: Droplets },
                             { key: 'has_toilet', label: 'Toilette', icon: Droplets },
                             { key: 'has_shower', label: 'Dusche', icon: Droplets },
-                          ].map(({ key, label, icon: Icon }) => (
+                            { key: 'has_roof_ac', label: 'Dach-Klimaanlage', icon: Wind },
+                            { key: 'has_stand_ac', label: 'Stand-Klimaanlage', icon: Wind },
+                            { key: 'has_swivel_seats', label: 'Drehsitze', icon: Home },
+                          ] as const).map(({ key, label, icon: Icon }) => (
                             <div key={key} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
                                 <Icon className="w-4 h-4 text-muted-foreground" />
@@ -2022,37 +2081,86 @@ const AuctionDetail = () => {
                               </Badge>
                             </div>
                           ))}
-                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                            <div className="flex items-center gap-2">
-                              <Bed className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm">Schlafplätze</span>
-                            </div>
-                            <Badge variant="default">{motorhome.sleeping_places}</Badge>
-                          </div>
-                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                            <div className="flex items-center gap-2">
-                              <Home className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm">Klimaanlage</span>
-                            </div>
-                            <Badge variant="secondary">{motorhome.air_conditioning_type}</Badge>
-                          </div>
                         </div>
                       </div>
 
+                      {/* Außenausstattung */}
                       <div className="space-y-3 sm:space-y-4">
                         <h3 className="font-semibold flex items-center gap-2">
                           <Car className="w-5 h-5 text-primary" />
                           Außenausstattung
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
-                          {[
-                            { key: 'has_solar', label: 'Solaranlage', icon: Sun },
-                            { key: 'has_awning', label: 'Markise', icon: Umbrella },
-                            { key: 'has_bike_rack', label: 'Fahrradträger', icon: Car },
-                            { key: 'has_garage', label: 'Garage', icon: Home },
-                            { key: 'has_backup_camera', label: 'Rückfahrkamera', icon: Eye },
-                            { key: 'has_parking_sensors', label: 'Parksensoren', icon: Shield },
-                          ].map(({ key, label, icon: Icon }) => (
+                          {/* Solar mit Wattzahl, Markise mit Länge, Batterie als Ah */}
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Sun className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Solaranlage</span>
+                            </div>
+                            <Badge variant={motorhome.has_solar ? 'default' : 'secondary'}>
+                              {motorhome.has_solar
+                                ? (motorhome.solar_power_watts ? `${motorhome.solar_power_watts} W` : 'Ja')
+                                : 'Nein'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Batterie</span>
+                            </div>
+                            <Badge variant={motorhome.battery_capacity_ah ? 'default' : 'secondary'}>
+                              {motorhome.battery_capacity_ah ? `${motorhome.battery_capacity_ah} Ah` : '—'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <Umbrella className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm">Markise</span>
+                            </div>
+                            <Badge variant={motorhome.has_awning ? 'default' : 'secondary'}>
+                              {motorhome.has_awning
+                                ? (motorhome.awning_length_m ? `${motorhome.awning_length_m} cm` : 'Ja')
+                                : 'Nein'}
+                            </Badge>
+                          </div>
+                          {([
+                            { key: 'has_awning_tent', label: 'Vorzelt', icon: Umbrella },
+                            { key: 'has_inverter', label: 'Wechselrichter', icon: Zap },
+                            { key: 'has_bike_rack', label: 'Fahrradträger', icon: Bike },
+                            { key: 'has_garage', label: 'Heckgarage', icon: Warehouse },
+                            { key: 'has_backup_camera', label: 'Rückfahrkamera', icon: Camera },
+                            { key: 'has_parking_sensors', label: 'Parksensoren', icon: ParkingCircle },
+                          ] as const).map(({ key, label, icon: Icon }) => (
+                            <div key={key} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm">{label}</span>
+                              </div>
+                              <Badge variant={motorhome[key] ? 'default' : 'secondary'}>
+                                {motorhome[key] ? 'Ja' : 'Nein'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Komfort & Sicherheit */}
+                      <div className="space-y-3 sm:space-y-4">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-primary" />
+                          Komfort & Sicherheit
+                        </h3>
+                        <div className="grid grid-cols-1 gap-2">
+                          {([
+                            { key: 'has_cruise_control', label: 'Tempomat', icon: Gauge },
+                            { key: 'has_central_locking', label: 'Zentralverriegelung', icon: Lock },
+                            { key: 'has_navigation', label: 'Navigation', icon: Navigation },
+                            { key: 'has_tv', label: 'TV', icon: Tv },
+                            { key: 'has_satellite', label: 'Satellitenanlage', icon: Tv },
+                            { key: 'has_alarm', label: 'Alarmanlage', icon: Bell },
+                            { key: 'has_esp', label: 'ESP', icon: Shield },
+                            { key: 'has_airbag', label: 'Airbag', icon: Shield },
+                          ] as const).map(({ key, label, icon: Icon }) => (
                             <div key={key} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
                                 <Icon className="w-4 h-4 text-muted-foreground" />
@@ -2066,6 +2174,24 @@ const AuctionDetail = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Freier Zusatzausstattungs-Text vom Verkäufer.
+                        Das ist DER wertbestimmende Freitext-Block (Alde-Heizung,
+                        Lithium-Batterien, Heki, Moskitonetze, Sonderausstattung
+                        ab Werk, usw.). Wurde bis 2026-04-25 Händlern nicht
+                        angezeigt — fehlende 2-5k€ in der Bewertung waren
+                        typische Folge. */}
+                    {motorhome.additional_equipment && motorhome.additional_equipment.trim() && (
+                      <div className="mt-6 p-4 sm:p-5 rounded-lg border-2 border-primary/20 bg-primary/5">
+                        <h3 className="font-semibold mb-2 flex items-center gap-2">
+                          <Award className="w-5 h-5 text-primary" />
+                          Weitere Ausstattung (Verkäuferangaben)
+                        </h3>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
+                          {motorhome.additional_equipment}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>

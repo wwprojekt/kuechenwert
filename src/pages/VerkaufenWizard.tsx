@@ -304,13 +304,19 @@ const VerkaufenWizard = () => {
     }
 
     // Wenn Daten vom Wertrechner kommen (bodyType + manufacturer vorhanden),
-    // direkt zu Step 2 springen (Fahrzeugdaten vervollständigen)
+    // direkt zu Step 2 oder 3 springen (Fahrzeugdaten vervollständigen).
+    //
+    // Wohnwagen haben KEIN mileage-Feld (kein Motor/Tacho) — step2SchemaWohnwagen
+    // verlangt es explizit nicht (siehe useWizardForm.ts), und DetailsStep
+    // rendert das Mileage-Input nur für Wohnmobile. Daher wird mileage NUR
+    // für Wohnmobile als Pflicht für den Step-3-Jump gefordert. Ohne diese
+    // Differenzierung landeten Wohnwagen-Wertrechner-Leads immer nur auf
+    // Step 2, obwohl ihre Daten vollständig waren — ein unnötiger Extra-Klick.
     if (source === 'wertrechner' && bodyType && !hasRestoredRef.current) {
-      // Wenn auch manufacturer, model, year, mileage, condition vorhanden → Step 3 (Details & Technik)
-      if (manufacturer && model && year && mileage && condition) {
+      const isWohnwagenLead = (vehicleTypeParam || '').toLowerCase() === 'wohnwagen';
+      const hasCompleteBasics = manufacturer && model && year && condition && (isWohnwagenLead || mileage);
+      if (hasCompleteBasics) {
         setCurrentStep(3);
-      } else if (manufacturer) {
-        setCurrentStep(2);
       } else {
         setCurrentStep(2);
       }

@@ -484,10 +484,9 @@ export const NotificationPreferences = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="immediate">Sofort</SelectItem>
-                <SelectItem value="hourly">Stündlich</SelectItem>
-                <SelectItem value="daily">Täglich</SelectItem>
-                <SelectItem value="weekly">Wöchentlich</SelectItem>
+                <SelectItem value="immediate">Sofort (keine Zusammenfassung)</SelectItem>
+                <SelectItem value="daily">Täglich (Standard)</SelectItem>
+                <SelectItem value="weekly">Wöchentlich (Montags)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

@@ -136,13 +136,43 @@ const handler = async (req: Request): Promise<Response> => {
         // Check opt-out via user_notification_preferences (inkl. Quiet Hours)
         const { data: prefs } = await supabase
           .from('user_notification_preferences')
-          .select('broadcast_emails_enabled, quiet_hours_start, quiet_hours_end')
+          .select('broadcast_emails_enabled, quiet_hours_start, quiet_hours_end, digest_frequency, last_digest_sent_at')
           .eq('user_id', dealer.user_id)
           .maybeSingle();
 
         if (prefs?.broadcast_emails_enabled === false) {
           skipped++;
           continue;
+        }
+
+        // digest_frequency steuert den Versand-Rhythmus dieses Digest-Jobs:
+        // - 'immediate' → Haendler will stattdessen Einzel-Events + Sofortkauf-
+        //   Alert → Digest unterdruecken.
+        // - 'weekly'    → nur montags senden (Europe/Berlin-Wochentag) UND
+        //   erst wenn der letzte Digest > 6 Tage her ist (verhindert Drift
+        //   bei mehrfachen Montag-Runs).
+        // - 'daily' (default) | unbekannt → wie bisher.
+        const frequency = prefs?.digest_frequency ?? 'daily';
+        if (frequency === 'immediate') {
+          skipped++;
+          continue;
+        }
+        if (frequency === 'weekly') {
+          const weekdayBerlin = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Europe/Berlin',
+            weekday: 'short',
+          }).format(now);
+          if (weekdayBerlin !== 'Mon') {
+            skipped++;
+            continue;
+          }
+          if (prefs?.last_digest_sent_at) {
+            const ageMs = now.getTime() - new Date(prefs.last_digest_sent_at).getTime();
+            if (ageMs < 6 * 24 * 60 * 60 * 1000) {
+              skipped++;
+              continue;
+            }
+          }
         }
 
         // Check: already sent digest today?
@@ -331,6 +361,12 @@ const handler = async (req: Request): Promise<Response> => {
           if (queueErr) {
             console.error(`[send-dealer-auction-digest] quiet-hours queue insert failed for ${profile.email}:`, queueErr.message);
           } else {
+            await supabase
+              .from('user_notification_preferences')
+              .upsert(
+                { user_id: dealer.user_id, last_digest_sent_at: now.toISOString() },
+                { onConflict: 'user_id' }
+              );
             skipped++;
             continue;
           }
@@ -377,6 +413,18 @@ const handler = async (req: Request): Promise<Response> => {
           resend_id: resendResult.id,
           is_read: true,
         });
+
+        // Timestamp fuer weekly-Frequency-Dedup aktualisieren. upsert falls
+        // fuer den User noch keine Pref-Row existiert.
+        await supabase
+          .from('user_notification_preferences')
+          .upsert(
+            {
+              user_id: dealer.user_id,
+              last_digest_sent_at: now.toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
 
         sent++;
       } catch (err: any) {

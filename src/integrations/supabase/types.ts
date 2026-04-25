@@ -4065,6 +4065,7 @@ export type Database = {
           email_payment_reminder: boolean | null
           email_price_alerts: boolean | null
           id: string
+          last_digest_sent_at: string | null
           newsletter_enabled: boolean | null
           promotional_emails: boolean | null
           push_auction_ending: boolean | null
@@ -4094,6 +4095,7 @@ export type Database = {
           email_payment_reminder?: boolean | null
           email_price_alerts?: boolean | null
           id?: string
+          last_digest_sent_at?: string | null
           newsletter_enabled?: boolean | null
           promotional_emails?: boolean | null
           push_auction_ending?: boolean | null
@@ -4123,6 +4125,7 @@ export type Database = {
           email_payment_reminder?: boolean | null
           email_price_alerts?: boolean | null
           id?: string
+          last_digest_sent_at?: string | null
           newsletter_enabled?: boolean | null
           promotional_emails?: boolean | null
           push_auction_ending?: boolean | null

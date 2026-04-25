@@ -1313,6 +1313,72 @@ export type Database = {
           },
         ]
       }
+      dealer_instant_buy_alerts: {
+        Row: {
+          user_id: string
+          enabled: boolean
+          min_price: number | null
+          max_price: number | null
+          manufacturers: string[]
+          body_types: string[]
+          countries: string[]
+          min_year: number | null
+          max_year: number | null
+          max_mileage: number | null
+          last_alert_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          enabled?: boolean
+          min_price?: number | null
+          max_price?: number | null
+          manufacturers?: string[]
+          body_types?: string[]
+          countries?: string[]
+          min_year?: number | null
+          max_year?: number | null
+          max_mileage?: number | null
+          last_alert_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          enabled?: boolean
+          min_price?: number | null
+          max_price?: number | null
+          manufacturers?: string[]
+          body_types?: string[]
+          countries?: string[]
+          min_year?: number | null
+          max_year?: number | null
+          max_mileage?: number | null
+          last_alert_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      instant_buy_alerts_sent: {
+        Row: {
+          auction_id: string
+          user_id: string
+          sent_at: string
+        }
+        Insert: {
+          auction_id: string
+          user_id: string
+          sent_at?: string
+        }
+        Update: {
+          auction_id?: string
+          user_id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       dealer_applications: {
         Row: {
           account_holder: string | null

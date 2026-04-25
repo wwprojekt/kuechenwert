@@ -178,23 +178,62 @@ const handler = async (req: Request): Promise<Response> => {
     let userContent: string;
 
     if (type === "wertrechner") {
+      // HTML-Escape für alle user-supplied strings. buildEmailLayout und die
+      // Helfer fügen Strings direkt ins HTML ein, ohne zu escapen — ein
+      // Nachname wie `<script>` oder ein Modell-String mit `"` würde sonst
+      // das Template brechen bzw. XSS im eigenen Postfach erzeugen.
+      const escHtml = (s: string | null | undefined) =>
+        s ? String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;") : "";
+
       const isWohnwagenLead = (data.vehicleType || "").toLowerCase() === "wohnwagen";
       const vehicleLabel = isWohnwagenLead ? "Wohnwagen" : "Wohnmobil";
       const vehicleName = [manufacturer, model].filter(Boolean).join(" ") || `Ihr ${vehicleLabel}`;
-      const yearText = data.year ? ` (${data.year})` : "";
+      const yearText = data.year ? ` (${escHtml(String(data.year))})` : "";
+
+      // Wertrechner verwendet intern Lowercase-Slugs (`integriert`, `alkoven`,
+      // `excellent`, ...), der Wizard erwartet aber kapitalisierte deutsche
+      // Labels (`Vollintegriert`, `Alkoven`, `Sehr gepflegt`, ...). Identisch
+      // zum In-Page-CTA in Wertrechner.tsx Step 7 — ohne Mapping landen die
+      // Werte zwar in der URL, aber die Dropdowns im Wizard matchen nicht
+      // und das Feld wirkt leer. Das war der eigentliche Blocker.
+      const BODY_TYPE_MAP: Record<string, string> = {
+        integriert: "Vollintegriert",
+        teilintegriert: "Teilintegriert",
+        alkoven: "Alkoven",
+        kastenwagen: "Kastenwagen",
+        campingbus: "Campingbus",
+        wohnwagen: "Wohnwagen",
+        faltcaravan: "Faltcaravan",
+        mobilheim: "Mobilheim",
+      };
+      const CONDITION_MAP: Record<string, string> = {
+        new: "Neuwertig",
+        excellent: "Sehr gepflegt",
+        good: "Gepflegt",
+        fair: "Gebrauchsspuren",
+        poor: "Reparaturbedürftig",
+      };
+      const mappedBodyType = data.bodyType ? (BODY_TYPE_MAP[String(data.bodyType).toLowerCase()] || String(data.bodyType)) : "";
+      const mappedCondition = data.condition ? (CONDITION_MAP[String(data.condition).toLowerCase()] || String(data.condition)) : "";
+      const normalizedVehicleType = (data.vehicleType || "").toLowerCase() === "wohnwagen" ? "wohnwagen" : "wohnmobil";
 
       const wizardParams = new URLSearchParams();
       wizardParams.set("source", "wertrechner");
       if (data.leadId) wizardParams.set("leadId", String(data.leadId));
-      if (data.vehicleType) wizardParams.set("vehicleType", String(data.vehicleType));
+      wizardParams.set("vehicleType", normalizedVehicleType);
       if (manufacturer) wizardParams.set("manufacturer", manufacturer);
       if (model) wizardParams.set("model", model);
-      if (data.bodyType) wizardParams.set("bodyType", String(data.bodyType));
+      if (mappedBodyType) wizardParams.set("bodyType", mappedBodyType);
       if (data.year) wizardParams.set("year", String(data.year));
-      if (data.mileage !== undefined && data.mileage !== null && data.mileage !== "") {
+      if (!isWohnwagenLead && data.mileage !== undefined && data.mileage !== null && data.mileage !== "") {
         wizardParams.set("mileage", String(data.mileage));
       }
-      if (data.condition) wizardParams.set("condition", String(data.condition));
+      if (mappedCondition) wizardParams.set("condition", mappedCondition);
       if (name) wizardParams.set("customerName", name);
       if (email) wizardParams.set("customerEmail", email);
       if (phone) wizardParams.set("customerPhone", phone);
@@ -208,21 +247,26 @@ const handler = async (req: Request): Promise<Response> => {
           )
         : "";
 
+      // Detail-Rows zeigen die GEMAPPTEN Labels (so wie der User sie im
+      // Wertrechner-UI gesehen hat), nicht die internen Slugs.
       const vehicleDetailsRows = [
-        manufacturer ? detailRow("Hersteller", manufacturer) : "",
-        model ? detailRow("Modell", String(model)) : "",
-        data.year ? detailRow("Baujahr", String(data.year)) : "",
-        data.bodyType ? detailRow("Aufbauart", String(data.bodyType)) : "",
+        manufacturer ? detailRow("Hersteller", escHtml(manufacturer)) : "",
+        model ? detailRow("Modell", escHtml(String(model))) : "",
+        data.year ? detailRow("Baujahr", escHtml(String(data.year))) : "",
+        mappedBodyType ? detailRow("Aufbauart", escHtml(mappedBodyType)) : "",
         (!isWohnwagenLead && data.mileage)
           ? detailRow("Kilometerstand", `${Number(data.mileage).toLocaleString("de-DE")} km`)
           : "",
-        data.condition ? detailRow("Zustand", String(data.condition)) : "",
+        mappedCondition ? detailRow("Zustand", escHtml(mappedCondition)) : "",
       ].filter(Boolean).join("");
 
+      // Hinweis: Die Signatur ("Mit freundlichen Grüßen / Ihr CaravanWert Team")
+      // liefert buildEmailLayout bereits als eigenen Block — hier KEINE zweite
+      // Signatur hinzufügen, sonst doppelt.
       userContent = `
-        ${paragraph(`Hallo ${name},`)}
+        ${paragraph(`Hallo ${escHtml(name)},`)}
 
-        ${paragraph(`vielen Dank, dass Sie unseren Wertrechner für <strong>${vehicleName}${yearText}</strong> genutzt haben. Hier ist Ihre erste Schätzung auf Basis der eingegebenen Eckdaten:`)}
+        ${paragraph(`vielen Dank, dass Sie unseren Wertrechner für <strong>${escHtml(vehicleName)}${yearText}</strong> genutzt haben. Hier ist Ihre erste Schätzung auf Basis der eingegebenen Eckdaten:`)}
 
         ${estimateRow}
 
@@ -234,9 +278,9 @@ const handler = async (req: Request): Promise<Response> => {
 
         ${infoBox("Warum sich die 3 Minuten lohnen", `
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Präziser Wert</strong> – basierend auf Ausstattung, Zustand & echten Verkaufspreisen</td></tr>
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Präziser Wert</strong> – basierend auf Ausstattung, Zustand &amp; echten Verkaufspreisen</td></tr>
             <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Mehrere Händler bieten gleichzeitig</strong> – der Wettbewerb treibt den Preis</td></tr>
-            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Kostenlos & unverbindlich</strong> – Sie entscheiden, ob Sie verkaufen</td></tr>
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Kostenlos &amp; unverbindlich</strong> – Sie entscheiden, ob Sie verkaufen</td></tr>
             <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Ihre Angaben werden übernommen</strong> – keine Doppeleingabe nötig</td></tr>
           </table>
         `, "success", settingsData)}
@@ -245,9 +289,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         ${paragraph(`<span style="font-size: 13px; color: #6b7280;">Dauer: ca. 3 Minuten · Ihre bereits gemachten Angaben sind vorausgefüllt.</span>`)}
 
-        ${paragraph(`Lieber telefonisch? Rufen Sie uns gerne an unter <strong>${settingsData.support_phone}</strong> oder antworten Sie einfach auf diese E-Mail.`)}
-
-        ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
+        ${paragraph(`Lieber telefonisch? Rufen Sie uns gerne an unter <strong>${escHtml(settingsData.support_phone)}</strong> oder antworten Sie einfach auf diese E-Mail.`)}
       `;
     } else {
       userContent = `

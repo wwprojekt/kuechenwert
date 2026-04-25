@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { useAudioNotification } from '@/hooks/useAudioNotification';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useUserRole } from '@/hooks/useUserRole';
+import { DealerInstantBuyAlertCard } from '@/components/DealerInstantBuyAlertCard';
 
 interface NotificationPreferences {
   // Email preferences
@@ -71,6 +73,7 @@ export const NotificationPreferences = () => {
   const queryClient = useQueryClient();
   const audioNotifications = useAudioNotification();
   const push = usePushNotifications();
+  const { isDealer } = useUserRole();
   
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email_new_bid: true,
@@ -235,7 +238,12 @@ export const NotificationPreferences = () => {
                 description: 'Rechnungen und Mahnungen. Gesetzlich erforderlich (§286 BGB) und nicht abwählbar.',
                 locked: true,
               },
-              { key: 'email_new_auction', label: 'Neue Auktionen', description: 'Benachrichtigung über neue Fahrzeuge' },
+              {
+                key: 'email_new_auction',
+                label: 'Alle neuen Sofortkäufe',
+                description:
+                  'Basis-Benachrichtigung über neue Fahrzeuge. Für granulare Filter (Preis, Hersteller, Aufbauart, …) siehe Sofortkauf-Alert unten.',
+              },
               { key: 'email_price_alerts', label: 'Preisalarme', description: 'Fahrzeuge in Ihrer Preisklasse' },
             ].map((item) => {
               const locked = 'locked' in item && item.locked;
@@ -265,6 +273,9 @@ export const NotificationPreferences = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dealer: Instant-Buy Alert (Suchagent) */}
+      {isDealer && <DealerInstantBuyAlertCard />}
 
       {/* Push Notifications */}
       <Card>

@@ -11,6 +11,7 @@ import {
   Eye,
   Handshake,
   ArrowRight,
+  Car,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,17 @@ export interface MotorhomeWithOffers {
   sale_channel: string | null;
   instant_price: number | null;
   reserve_price: number | null;
+  /**
+   * Wohnmobil-Fotos (Supabase-Relation kann Array oder Objekt sein).
+   * Wird genutzt für Thumbnails im Alert-Banner / Popup / Bestätigungsdialog,
+   * damit der Verkäufer bei mehreren Fahrzeugen sofort erkennt um welches es geht.
+   */
+  photos?: Array<{
+    url: string;
+    card_url?: string | null;
+    medium_url?: string | null;
+    display_order?: number | null;
+  }> | null;
   auction?: {
     id?: string;
     status?: string | null;
@@ -83,6 +95,81 @@ export interface MotorhomeWithOffers {
     end_time?: string | null;
   } | null;
   topOffers?: OfferLite[];
+}
+
+/**
+ * Liefert das Titelbild (niedrigste display_order) zur Anzeige in den Alerts.
+ * Supabase-Relation kann als Array oder Objekt zurückkommen — beides
+ * wird robust behandelt.
+ */
+function pickThumb(
+  motorhome:
+    | Pick<MotorhomeWithOffers, "photos">
+    | null
+    | undefined,
+): string | null {
+  if (!motorhome) return null;
+  const raw = motorhome.photos;
+  const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (arr.length === 0) return null;
+  const first = [...arr].sort(
+    (a, b) => (a?.display_order ?? 0) - (b?.display_order ?? 0),
+  )[0];
+  return first?.card_url || first?.url || null;
+}
+
+/**
+ * Kleine Thumbnail-Komponente mit Fallback-Icon, optional als Link.
+ */
+function MotorhomeThumb({
+  motorhome,
+  href,
+  size = "md",
+  className = "",
+}: {
+  motorhome: Pick<MotorhomeWithOffers, "photos" | "manufacturer" | "model">;
+  href?: string;
+  size?: "xs" | "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const url = pickThumb(motorhome);
+  const alt =
+    `${motorhome.manufacturer ?? ""} ${motorhome.model ?? ""}`.trim() ||
+    "Fahrzeug";
+  const dim =
+    size === "xs"
+      ? "w-10 h-8"
+      : size === "sm"
+        ? "w-12 h-9"
+        : size === "lg"
+          ? "w-24 h-20"
+          : "w-16 h-12";
+  const content = url ? (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <div className="w-full h-full flex items-center justify-center">
+      <Car className="w-4 h-4 text-muted-foreground" />
+    </div>
+  );
+  const base = `flex-shrink-0 ${dim} rounded-md overflow-hidden bg-muted border`;
+  if (href) {
+    return (
+      <Link
+        to={href}
+        className={`${base} hover:border-primary/60 hover:shadow-sm transition-all ${className}`}
+        title="Zum Inserat öffnen"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </Link>
+    );
+  }
+  return <div className={`${base} ${className}`}>{content}</div>;
 }
 
 interface NewOfferAlertProps {
@@ -327,18 +414,28 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
         <div className="relative p-5 sm:p-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 min-w-0">
               <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg flex-shrink-0">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
-              <div>
+              <MotorhomeThumb
+                motorhome={topOffer.motorhome}
+                href={`/dashboard/listings/${topOffer.motorhome.id}`}
+                size="lg"
+              />
+              <div className="min-w-0">
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
                   {ranked.length === 1
                     ? "Neues Händler-Angebot"
                     : `${ranked.length} neue Händler-Angebote`}
                 </p>
                 <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight mt-0.5">
-                  {topOffer.motorhome.manufacturer} {topOffer.motorhome.model}
+                  <Link
+                    to={`/dashboard/listings/${topOffer.motorhome.id}`}
+                    className="hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"
+                  >
+                    {topOffer.motorhome.manufacturer} {topOffer.motorhome.model}
+                  </Link>
                   {topOffer.motorhome.year && (
                     <span className="text-muted-foreground font-medium ml-2">
                       ({topOffer.motorhome.year})
@@ -448,6 +545,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                     className="flex items-center justify-between p-2 rounded-md bg-white/60 dark:bg-background/40 hover:bg-white dark:hover:bg-background/70 transition-colors group"
                   >
                     <div className="flex items-center gap-2 min-w-0">
+                      <MotorhomeThumb motorhome={r.motorhome} size="xs" />
                       <Handshake className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <span className="text-sm font-medium text-foreground truncate">
                         {r.motorhome.manufacturer} {r.motorhome.model}
@@ -493,12 +591,20 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
 
           {popupOffer && (
             <div className="space-y-4 py-2">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <MotorhomeThumb
+                  motorhome={popupOffer.motorhome}
+                  href={`/dashboard/listings/${popupOffer.motorhome.id}`}
+                  size="lg"
+                />
+                <Link
+                  to={`/dashboard/listings/${popupOffer.motorhome.id}`}
+                  className="text-sm font-medium hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"
+                >
                   {popupOffer.motorhome.manufacturer}{" "}
                   {popupOffer.motorhome.model}
                   {popupOffer.motorhome.year && ` · ${popupOffer.motorhome.year}`}
-                </p>
+                </Link>
                 <p className="text-4xl font-extrabold text-emerald-600 mt-2">
                   {formatEUR(Number(popupOffer.offer.offer_amount))}
                 </p>
@@ -565,6 +671,29 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
             <AlertDialogTitle>Angebot verbindlich annehmen?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm">
+                {confirmTarget && (
+                  <div className="flex items-center gap-3 p-2 rounded-md bg-muted/40">
+                    <MotorhomeThumb
+                      motorhome={confirmTarget.motorhome}
+                      href={`/dashboard/listings/${confirmTarget.motorhome.id}`}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <Link
+                        to={`/dashboard/listings/${confirmTarget.motorhome.id}`}
+                        className="font-semibold text-foreground hover:underline block truncate"
+                      >
+                        {confirmTarget.motorhome.manufacturer}{" "}
+                        {confirmTarget.motorhome.model}
+                      </Link>
+                      {confirmTarget.motorhome.year && (
+                        <span className="text-xs text-muted-foreground">
+                          Baujahr {confirmTarget.motorhome.year}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <p>
                   Sie verkaufen Ihr Fahrzeug{" "}
                   <strong className="text-foreground">

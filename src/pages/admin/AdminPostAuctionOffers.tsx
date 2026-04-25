@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -77,6 +78,7 @@ import {
   ChevronUp,
   UserPlus,
   Phone,
+  Car,
 } from "lucide-react";
 
 // ============================================================================
@@ -118,6 +120,8 @@ interface AuctionInfo {
     year: number | null;
     sale_channel?: string | null;
     instant_price?: number | null;
+    listing_number?: string | null;
+    photos?: Array<{ url: string; card_url: string | null; display_order: number }> | null;
   } | null;
 }
 
@@ -152,6 +156,62 @@ interface KaufchanceInvitation {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/**
+ * Liefert das Titelbild (niedrigste display_order) einer Wohnmobil-Fotos-Liste.
+ * Supabase-Relation kann als Array, Objekt oder null zurückkommen.
+ */
+function firstPhotoUrl(motorhome: AuctionInfo["motorhome"] | null | undefined): string | null {
+  if (!motorhome) return null;
+  const raw = motorhome.photos;
+  const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (arr.length === 0) return null;
+  const first = [...arr].sort((a, b) => (a?.display_order ?? 0) - (b?.display_order ?? 0))[0];
+  return first?.card_url || first?.url || null;
+}
+
+/**
+ * Kleines klickbares Fahrzeug-Thumbnail das zu /admin/auctions/{id} führt.
+ * Fallback: Car-Icon wenn kein Foto vorhanden. Verwendet stopPropagation,
+ * damit übergeordnete onClick-Handler (Detail-Dialog, Zeilen-Klick) nicht auslösen.
+ */
+function MotorhomeThumb({
+  auctionId,
+  motorhome,
+  size = "md",
+  className = "",
+}: {
+  auctionId: string;
+  motorhome: AuctionInfo["motorhome"] | null | undefined;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const photo = firstPhotoUrl(motorhome);
+  const alt = motorhome ? `${motorhome.manufacturer ?? ""} ${motorhome.model ?? ""}`.trim() : "Fahrzeug";
+  const dims =
+    size === "sm" ? "w-12 h-9" : size === "lg" ? "w-20 h-16" : "w-16 h-12";
+  return (
+    <Link
+      to={`/admin/auctions/${auctionId}`}
+      onClick={(e) => e.stopPropagation()}
+      className={`block flex-shrink-0 ${dims} rounded overflow-hidden bg-muted border hover:border-primary/50 hover:shadow-sm transition-all ${className}`}
+      title="Zur Auktion öffnen"
+    >
+      {photo ? (
+        <img
+          src={photo}
+          alt={alt}
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Car className="w-4 h-4 text-muted-foreground" />
+        </div>
+      )}
+    </Link>
+  );
+}
 
 function OfferStatusBadge({ status, expiresAt }: { status: string; expiresAt: string | null }) {
   const isExpired = expiresAt && isPast(new Date(expiresAt)) && status === "pending";
@@ -283,7 +343,11 @@ export default function AdminPostAuctionOffers() {
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round,
-          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
+          motorhome:motorhomes (
+            id, manufacturer, model, seller_id, reserve_price, year,
+            sale_channel, instant_price, listing_number,
+            photos:motorhome_photos (url, card_url, display_order)
+          )
         `)
         .in("id", auctionIds);
       if (error) throw error;
@@ -317,7 +381,11 @@ export default function AdminPostAuctionOffers() {
           id, motorhome_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round,
-          motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
+          motorhome:motorhomes (
+            id, manufacturer, model, seller_id, reserve_price, year,
+            sale_channel, instant_price, listing_number,
+            photos:motorhome_photos (url, card_url, display_order)
+          )
         `)
         .eq("status", "kaufchance")
         .order("kaufchance_expires_at", { ascending: true });
@@ -338,7 +406,11 @@ export default function AdminPostAuctionOffers() {
             id, motorhome_id, status, current_bid, starting_bid, end_time,
             kaufchance_expires_at, kaufchance_min_price, reserve_price,
             auction_round,
-            motorhome:motorhomes (id, manufacturer, model, seller_id, reserve_price, year, sale_channel, instant_price)
+            motorhome:motorhomes (
+              id, manufacturer, model, seller_id, reserve_price, year,
+              sale_channel, instant_price, listing_number,
+              photos:motorhome_photos (url, card_url, display_order)
+            )
           `)
           .eq("status", "active")
           .in("id", fpAuctionIds);
@@ -1287,11 +1359,25 @@ export default function AdminPostAuctionOffers() {
                     className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md hover:border-primary/40 ${isExpired ? 'bg-muted/50 opacity-70' : 'bg-card'}`}
                     onClick={() => loadKaufchanceDetail(auction)}
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold">{vehicleName}</h3>
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                      <div className="flex-1 flex gap-3 min-w-0">
+                        <MotorhomeThumb auctionId={auction.id} motorhome={motorhome} size="lg" />
+                        <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Link
+                            to={`/admin/auctions/${auction.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold hover:text-primary hover:underline"
+                            title="Zur Auktion öffnen"
+                          >
+                            {vehicleName}
+                          </Link>
                           {motorhome?.year && <span className="text-sm text-muted-foreground">({motorhome.year})</span>}
+                          {motorhome?.listing_number && (
+                            <span className="font-mono text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                              #{motorhome.listing_number}
+                            </span>
+                          )}
                           {isExpired ? (
                             <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
                           ) : (
@@ -1338,10 +1424,23 @@ export default function AdminPostAuctionOffers() {
                             </span>
                           )}
                         </div>
+                        </div>
                       </div>
 
                       {/* Quick Actions (stop propagation to prevent detail dialog) */}
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          className="text-primary border-primary/30 hover:bg-primary/10"
+                          title="Auktionsseite im neuen Tab öffnen"
+                        >
+                          <Link to={`/admin/auctions/${auction.id}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                            Auktion
+                          </Link>
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -1587,14 +1686,34 @@ export default function AdminPostAuctionOffers() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">{auction?.motorhome ? `${auction.motorhome.manufacturer} ${auction.motorhome.model}` : "Unbekannte Auktion"}</p>
-                        {auction?.status && (
-                          <p className="text-xs text-muted-foreground">
-                            Status: {auction.status}
-                          </p>
-                        )}
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {auction ? (
+                          <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="sm" />
+                        ) : null}
+                        <div className="min-w-0">
+                          {auction?.motorhome ? (
+                            <Link
+                              to={`/admin/auctions/${auction.id}`}
+                              className="text-sm font-medium hover:text-primary hover:underline line-clamp-1"
+                              title="Zur Auktion öffnen"
+                            >
+                              {auction.motorhome.manufacturer} {auction.motorhome.model}
+                            </Link>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Unbekannte Auktion</p>
+                          )}
+                          {auction?.motorhome?.listing_number && (
+                            <p className="font-mono text-[10px] text-muted-foreground">
+                              #{auction.motorhome.listing_number}
+                            </p>
+                          )}
+                          {auction?.status && (
+                            <p className="text-xs text-muted-foreground">
+                              Status: {auction.status}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1644,6 +1763,24 @@ export default function AdminPostAuctionOffers() {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
+                        {auction && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:text-primary"
+                            asChild
+                            title="Zur Auktion"
+                          >
+                            <Link
+                              to={`/admin/auctions/${auction.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1686,27 +1823,50 @@ export default function AdminPostAuctionOffers() {
             return (
               <>
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-xl">
-                    <Gavel className={`w-5 h-5 ${motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-amber-600'}`} />
-                    {motorhome?.sale_channel === 'instant_price' ? 'Festpreis: ' : 'Kaufchance: '}{vehicleName}
-                    {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
-                  </DialogTitle>
-                  <DialogDescription className="flex items-center gap-3 flex-wrap">
-                    {isExpired ? (
-                      <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
-                    ) : motorhome?.sale_channel === 'instant_price' ? (
-                      <Badge className="bg-yellow-500 text-white">Festpreis aktiv</Badge>
-                    ) : (
-                      <Badge className="bg-amber-500 text-white">Aktiv</Badge>
-                    )}
-                    <span>Verkäufer: <strong>{sellerName}</strong></span>
-                    {seller?.email && <span className="text-xs">({seller.email})</span>}
-                    {seller?.phone && (
-                      <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {seller.phone}
-                      </a>
-                    )}
-                  </DialogDescription>
+                  <div className="flex items-start gap-3">
+                    <MotorhomeThumb auctionId={auction.id} motorhome={motorhome} size="lg" />
+                    <div className="flex-1 min-w-0">
+                      <DialogTitle className="flex items-center gap-2 text-xl flex-wrap">
+                        <Gavel className={`w-5 h-5 flex-shrink-0 ${motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-amber-600'}`} />
+                        {motorhome?.sale_channel === 'instant_price' ? 'Festpreis: ' : 'Kaufchance: '}
+                        <Link
+                          to={`/admin/auctions/${auction.id}`}
+                          className="hover:text-primary hover:underline"
+                          title="Zur Auktion öffnen"
+                        >
+                          {vehicleName}
+                        </Link>
+                        {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
+                        {motorhome?.listing_number && (
+                          <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            #{motorhome.listing_number}
+                          </span>
+                        )}
+                      </DialogTitle>
+                      <DialogDescription className="flex items-center gap-3 flex-wrap mt-2">
+                        {isExpired ? (
+                          <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
+                        ) : motorhome?.sale_channel === 'instant_price' ? (
+                          <Badge className="bg-yellow-500 text-white">Festpreis aktiv</Badge>
+                        ) : (
+                          <Badge className="bg-amber-500 text-white">Aktiv</Badge>
+                        )}
+                        <span>Verkäufer: <strong>{sellerName}</strong></span>
+                        {seller?.email && <span className="text-xs">({seller.email})</span>}
+                        {seller?.phone && (
+                          <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {seller.phone}
+                          </a>
+                        )}
+                        <Button size="sm" variant="outline" asChild className="h-7 ml-auto">
+                          <Link to={`/admin/auctions/${auction.id}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                            Auktion öffnen
+                          </Link>
+                        </Button>
+                      </DialogDescription>
+                    </div>
+                  </div>
                 </DialogHeader>
 
                 {kaufchanceDetailLoading ? (
@@ -2323,6 +2483,41 @@ export default function AdminPostAuctionOffers() {
                 </DialogHeader>
 
                 <div className="space-y-4 mt-4">
+                  {/* Fahrzeug-Karte (Thumbnail + Link zur Auktion) */}
+                  {auction && (
+                    <Card className="p-3 bg-muted/40">
+                      <div className="flex items-center gap-3">
+                        <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="lg" />
+                        <div className="flex-1 min-w-0">
+                          {auction.motorhome ? (
+                            <Link
+                              to={`/admin/auctions/${auction.id}`}
+                              className="font-semibold text-sm hover:text-primary hover:underline block truncate"
+                              title="Zur Auktion öffnen"
+                            >
+                              {auction.motorhome.manufacturer} {auction.motorhome.model}
+                            </Link>
+                          ) : (
+                            <p className="font-semibold text-sm text-muted-foreground">Unbekannte Auktion</p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            {auction.motorhome?.year && <span>Baujahr {auction.motorhome.year}</span>}
+                            {auction.motorhome?.listing_number && (
+                              <span className="font-mono">#{auction.motorhome.listing_number}</span>
+                            )}
+                            {auction.status && <span>· Status: {auction.status}</span>}
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/admin/auctions/${auction.id}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                            Öffnen
+                          </Link>
+                        </Button>
+                      </div>
+                    </Card>
+                  )}
+
                   {/* Offer Details */}
                   <Card className="p-4">
                     <div className="space-y-3 text-sm">

@@ -228,6 +228,13 @@ function toast({ ...props }: Toast) {
       'Gebot muss mindestens',
       'Gebot zu niedrig',
       'nach dem Login im Dashboard nachreichen',
+      // Seller-seitige Pflichtfeld-Validierung beim Inserat-Edit / Dealer-
+      // Listing-Create: juristische Mindestanforderungen (AGB §6.4 c), kein
+      // echter Bug. Quelle: ListingEdit.tsx, DealerListingCreate.tsx und
+      // RPC seller_update_listing_prices (ERRCODE 23514).
+      'Mindestpreis ist Pflicht für Auktions-Inserate',
+      'Sofortkauf-Preis ist Pflicht für Sofortkauf-Inserate',
+      'Bearbeitung gesperrt: Die Auktion ist aktiv',
     ];
     const isBusinessEvent = businessEventTitles.some(t => titleStr.includes(t))
       || businessEventDescriptions.some(d => errorMessage.includes(d));

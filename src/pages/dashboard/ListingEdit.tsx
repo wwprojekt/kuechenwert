@@ -415,7 +415,12 @@ export default function ListingEdit() {
       navigate(`/dashboard/listings/${id}`);
     },
     onError: (error: unknown) => {
-      console.error('ListingEdit update failed:', error);
+      // Kein `console.error(...)` hier: Der globale console.error-Interceptor
+      // in errorLogService.ts wuerde den Fehler als CONSOLE_ERROR loggen BEVOR
+      // der Toast unten die Dedup-Marker setzen kann → doppelter Eintrag in
+      // error_logs pro Save-Fehler (siehe Fehlerprotokoll 2026-04-25). Der
+      // Toast-Pfad uebernimmt das Logging (als TOAST_ERROR oder, bei Business-
+      // Events wie "Mindestpreis ist Pflicht", korrekt gefiltert).
       const err = error as { message?: string; code?: string } | null;
       const rawMsg = err?.message?.trim();
       // Preserve our own explicit thrown messages (e.g. "Bearbeitung gesperrt: …")

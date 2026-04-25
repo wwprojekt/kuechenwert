@@ -1121,8 +1121,9 @@ export default function AdminFinancials() {
               ) : (
                 <div className="space-y-3">
                   {overdueInvoices.map((invoice: any) => {
-                    const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
-                    const remaining = Number(invoice.gross_amount) - Number(invoice.amount_paid || 0);
+                    const derivedRow = deriveInvoice(invoice);
+                    const daysOverdue = derivedRow.daysOverdue;
+                    const remaining = derivedRow.remainingAmount;
                     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
                     
                     return (
@@ -1272,8 +1273,9 @@ export default function AdminFinancials() {
               ) : (
                 <div className="space-y-4">
                   {dunningInvoices.map((invoice: any) => {
-                    const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
-                    const remaining = Number(invoice.gross_amount) - Number(invoice.amount_paid || 0);
+                    const derivedRow = deriveInvoice(invoice);
+                    const daysOverdue = derivedRow.daysOverdue;
+                    const remaining = derivedRow.remainingAmount;
                     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
                     const safeReminders = Array.isArray(invoice.reminders) ? invoice.reminders : invoice.reminders ? [invoice.reminders] : [];
                     const reminderCount = safeReminders.length;

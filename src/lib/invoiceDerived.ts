@@ -154,7 +154,11 @@ export function deriveInvoice(
     paymentProgress,
     isOverdue,
     daysOverdue,
-    canRecordPayment: isActive && !isPaid && remaining > 0.01,
+    // remaining ist bereits centgenau gerundet; `> 0` schließt damit exakt
+    // vollbezahlte Rechnungen aus, erlaubt aber die Erfassung eines letzten
+    // Cents. `> 0.01` hätte den 1-ct-Restbetrag fälschlich gesperrt, obwohl
+    // record-invoice-payment diesen problemlos akzeptiert.
+    canRecordPayment: isActive && !isPaid && remaining > 0,
     canCancel: isActive && !isPaid,
     canSendReminder: isActive && !isPaid,
     canRegeneratePdf: isActive,

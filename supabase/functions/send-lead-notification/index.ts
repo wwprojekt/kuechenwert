@@ -6,6 +6,8 @@ import {
   detailRow,
   paragraph,
   button,
+  amountDisplay,
+  divider,
 } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkRateLimit, createRateLimitErrorResponse } from '../_shared/rate-limiter.ts';
@@ -30,6 +32,15 @@ interface LeadNotificationRequest {
   model?: string;
   estimatedMin?: number;
   estimatedMax?: number;
+  // Wertrechner-Prefill: werden in die Wizard-CTA-URL geschrieben, damit der
+  // User im Wizard nichts erneut eingeben muss.
+  leadId?: string;
+  vehicleType?: string;
+  bodyType?: string;
+  year?: number | string;
+  mileage?: number | string;
+  condition?: string;
+  lengthM?: number | string;
   // Extra fields for contact form
   subject?: string;
   messageText?: string;
@@ -152,47 +163,128 @@ const handler = async (req: Request): Promise<Response> => {
     if (!data.skipUserEmail) {
       const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",
-      wertrechner: "Ihre Anfrage über den Wertrechner",
+      wertrechner: `Ihre Wertschätzung${manufacturer ? ` für Ihren ${manufacturer}${model ? " " + model : ""}` : ""} – so holen Sie den besten Preis heraus`,
       wizard: "Ihre Verkaufsanfrage bei CaravanWert",
       kontakt: "Ihre Kontaktanfrage bei CaravanWert",
       dealer: "Ihre Händler-Bewerbung bei CaravanWert",
     };
     const userSubject = userSubjects[type] || "Ihre Anfrage bei CaravanWert";
 
-    const userContent = `
-      ${paragraph(`Hallo ${name},`)}
-      ${paragraph(
-        type === "dealer"
-          ? `Vielen Dank für Ihre Händler-Bewerbung bei ${settingsData.site_name}. Wir prüfen Ihre Unterlagen und melden uns in Kürze bei Ihnen.`
-          : type === "kontakt"
-          ? `Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.`
-          : type === "wizard"
-          ? `Vielen Dank für Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
-          : `Vielen Dank für Ihre Anfrage über unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in Kürze bei Ihnen melden.`
-      )}
-      ${infoBox(
-        "Ihre Anfrage",
-        `
+    // Wertrechner bekommt einen dedizierten, conversion-optimierten Inhalt mit
+    // CTA zum Verkaufs-Wizard. Die bisherigen Daten werden als Prefill-Query
+    // in die URL geschrieben, damit der User im Wizard nichts erneut eingeben
+    // muss (siehe VerkaufenWizard.tsx → searchParams-useEffect, source=wertrechner
+    // springt direkt auf Step 2 bzw. 3).
+    let userContent: string;
+
+    if (type === "wertrechner") {
+      const isWohnwagenLead = (data.vehicleType || "").toLowerCase() === "wohnwagen";
+      const vehicleLabel = isWohnwagenLead ? "Wohnwagen" : "Wohnmobil";
+      const vehicleName = [manufacturer, model].filter(Boolean).join(" ") || `Ihr ${vehicleLabel}`;
+      const yearText = data.year ? ` (${data.year})` : "";
+
+      const wizardParams = new URLSearchParams();
+      wizardParams.set("source", "wertrechner");
+      if (data.leadId) wizardParams.set("leadId", String(data.leadId));
+      if (data.vehicleType) wizardParams.set("vehicleType", String(data.vehicleType));
+      if (manufacturer) wizardParams.set("manufacturer", manufacturer);
+      if (model) wizardParams.set("model", model);
+      if (data.bodyType) wizardParams.set("bodyType", String(data.bodyType));
+      if (data.year) wizardParams.set("year", String(data.year));
+      if (data.mileage !== undefined && data.mileage !== null && data.mileage !== "") {
+        wizardParams.set("mileage", String(data.mileage));
+      }
+      if (data.condition) wizardParams.set("condition", String(data.condition));
+      if (name) wizardParams.set("customerName", name);
+      if (email) wizardParams.set("customerEmail", email);
+      if (phone) wizardParams.set("customerPhone", phone);
+
+      const wizardUrl = `https://caravanwert.de/verkaufen/wizard?${wizardParams.toString()}`;
+
+      const estimateRow = (estimatedMin && estimatedMax)
+        ? amountDisplay(
+            "Ihre vorläufige Wertschätzung",
+            `${estimatedMin.toLocaleString("de-DE")} – ${estimatedMax.toLocaleString("de-DE")} €`,
+          )
+        : "";
+
+      const vehicleDetailsRows = [
+        manufacturer ? detailRow("Hersteller", manufacturer) : "",
+        model ? detailRow("Modell", String(model)) : "",
+        data.year ? detailRow("Baujahr", String(data.year)) : "",
+        data.bodyType ? detailRow("Aufbauart", String(data.bodyType)) : "",
+        (!isWohnwagenLead && data.mileage)
+          ? detailRow("Kilometerstand", `${Number(data.mileage).toLocaleString("de-DE")} km`)
+          : "",
+        data.condition ? detailRow("Zustand", String(data.condition)) : "",
+      ].filter(Boolean).join("");
+
+      userContent = `
+        ${paragraph(`Hallo ${name},`)}
+
+        ${paragraph(`vielen Dank, dass Sie unseren Wertrechner für <strong>${vehicleName}${yearText}</strong> genutzt haben. Hier ist Ihre erste Schätzung auf Basis der eingegebenen Eckdaten:`)}
+
+        ${estimateRow}
+
+        ${paragraph(`Diese Spanne basiert auf einer <strong>algorithmischen Schnellbewertung</strong>. Für eine <strong>deutlich präzisere Wertermittlung</strong> – und vor allem <strong>echte Kaufangebote unserer bundesweit geprüften Händler</strong> – benötigen wir noch ein paar zusätzliche Angaben (Ausstattung, Zustandsdetails, Fotos).`)}
+
+        ${vehicleDetailsRows ? infoBox("Das haben Sie uns bereits mitgeteilt", vehicleDetailsRows, "info", settingsData) : ""}
+
+        ${divider()}
+
+        ${infoBox("Warum sich die 3 Minuten lohnen", `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Präziser Wert</strong> – basierend auf Ausstattung, Zustand & echten Verkaufspreisen</td></tr>
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Mehrere Händler bieten gleichzeitig</strong> – der Wettbewerb treibt den Preis</td></tr>
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Kostenlos & unverbindlich</strong> – Sie entscheiden, ob Sie verkaufen</td></tr>
+            <tr><td style="padding: 6px 0; font-size: 14px; color: #374151;"><strong style="color: #1f8aa2;">&#10003;</strong>&nbsp; <strong>Ihre Angaben werden übernommen</strong> – keine Doppeleingabe nötig</td></tr>
+          </table>
+        `, "success", settingsData)}
+
+        ${button("Jetzt Daten ergänzen für präzise Bewertung", wizardUrl, settingsData)}
+
+        ${paragraph(`<span style="font-size: 13px; color: #6b7280;">Dauer: ca. 3 Minuten · Ihre bereits gemachten Angaben sind vorausgefüllt.</span>`)}
+
+        ${paragraph(`Lieber telefonisch? Rufen Sie uns gerne an unter <strong>${settingsData.support_phone}</strong> oder antworten Sie einfach auf diese E-Mail.`)}
+
+        ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
+      `;
+    } else {
+      userContent = `
+        ${paragraph(`Hallo ${name},`)}
         ${paragraph(
-          `Sie haben uns über unseren ${sourceLabel} kontaktiert. Unser Team wird Ihre Anfrage prüfen und sich innerhalb von 24 Stunden bei Ihnen melden.`
+          type === "dealer"
+            ? `Vielen Dank für Ihre Händler-Bewerbung bei ${settingsData.site_name}. Wir prüfen Ihre Unterlagen und melden uns in Kürze bei Ihnen.`
+            : type === "kontakt"
+            ? `Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.`
+            : type === "wizard"
+            ? `Vielen Dank für Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
+            : `Vielen Dank für Ihre Anfrage über unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in Kürze bei Ihnen melden.`
         )}
-        ${
-          estimatedMin && estimatedMax
-            ? paragraph(
-                `<strong>Vorläufige Schätzung:</strong> ${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
-              )
-            : ""
-        }
-      `,
-        "success",
-        settingsData
-      )}
-      ${paragraph(
-        "Falls Sie Fragen haben, können Sie uns jederzeit kontaktieren."
-      )}
-      ${button("Zur Website", "https://caravanwert.de", settingsData)}
-      ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
-    `;
+        ${infoBox(
+          "Ihre Anfrage",
+          `
+          ${paragraph(
+            `Sie haben uns über unseren ${sourceLabel} kontaktiert. Unser Team wird Ihre Anfrage prüfen und sich innerhalb von 24 Stunden bei Ihnen melden.`
+          )}
+          ${
+            estimatedMin && estimatedMax
+              ? paragraph(
+                  `<strong>Vorläufige Schätzung:</strong> ${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
+                )
+              : ""
+          }
+        `,
+          "success",
+          settingsData
+        )}
+        ${paragraph(
+          "Falls Sie Fragen haben, können Sie uns jederzeit kontaktieren."
+        )}
+        ${button("Zur Website", "https://caravanwert.de", settingsData)}
+        ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
+      `;
+    }
 
     const userHtml = buildEmailLayout(settingsData, userSubject, userContent);
 

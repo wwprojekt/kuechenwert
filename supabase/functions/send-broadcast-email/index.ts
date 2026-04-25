@@ -17,15 +17,39 @@ interface BroadcastRequest {
   test_mode?: boolean;
   test_email?: string;
   include_unsubscribe?: boolean;
+  // Wenn true, werden zusaetzlich zum `broadcast_emails_enabled`-Opt-Out
+  // auch Nutzer mit `promotional_emails=false` ausgefiltert. Gedacht fuer
+  // Werbe-/Promo-Kampagnen (Rabatte, neue Features, Partnerangebote).
+  // Default: false (reine Informations-Broadcasts / System-Updates gehen
+  // an alle, die `broadcast_emails_enabled` nicht abgewaehlt haben).
+  is_promotional?: boolean;
 }
 
-async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?: string[]): Promise<{ email: string; name: string | null; id: string | null }[]> {
+async function getRecipients(
+  supabase: any,
+  group: BroadcastGroup,
+  customEmails?: string[],
+  isPromotional?: boolean,
+): Promise<{ email: string; name: string | null; id: string | null }[]> {
   // First, get users who have unsubscribed from broadcasts
   const { data: unsubscribed } = await supabase
     .from('user_notification_preferences')
     .select('user_id')
     .eq('broadcast_emails_enabled', false);
   const unsubscribedIds = new Set((unsubscribed || []).map((u: any) => u.user_id));
+
+  // Werbe-Kampagne: zusaetzlicher Opt-Out-Check auf promotional_emails.
+  // Gilt NICHT fuer transactional-aehnliche Broadcasts (System-Updates,
+  // Sicherheits-Hinweise), damit diese auch User erreichen, die Werbung
+  // deaktiviert haben.
+  let promoUnsubscribedIds = new Set<string>();
+  if (isPromotional) {
+    const { data: promoOptOut } = await supabase
+      .from('user_notification_preferences')
+      .select('user_id')
+      .eq('promotional_emails', false);
+    promoUnsubscribedIds = new Set((promoOptOut || []).map((u: any) => u.user_id));
+  }
 
   let recipients: { email: string; name: string | null; id: string | null }[] = [];
 
@@ -128,9 +152,14 @@ async function getRecipients(supabase: any, group: BroadcastGroup, customEmails?
       return [];
   }
 
-  // Filter out unsubscribed users (except for custom lists)
+  // Filter out unsubscribed users (except for custom lists).
+  // Custom-Lists bypassen jeden Opt-Out, weil der Admin explizit Emails
+  // eintraegt (z. B. fuer Wiederherstellungs-Mails nach Bounce).
   if (group !== 'custom') {
     recipients = recipients.filter(r => !r.id || !unsubscribedIds.has(r.id));
+    if (isPromotional) {
+      recipients = recipients.filter(r => !r.id || !promoUnsubscribedIds.has(r.id));
+    }
   }
 
   return recipients;
@@ -161,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: BroadcastRequest = await req.json();
-    const { subject, body_html, group, custom_emails, test_mode, test_email, include_unsubscribe = true } = body;
+    const { subject, body_html, group, custom_emails, test_mode, test_email, include_unsubscribe = true, is_promotional = false } = body;
 
     if (!subject || !body_html || !group) {
       return new Response(JSON.stringify({ error: 'Missing required fields: subject, body_html, group' }), { status: 400, headers });
@@ -215,8 +244,9 @@ const handler = async (req: Request): Promise<Response> => {
       }), { status: 200, headers });
     }
 
-    // Get recipients (already filtered for unsubscribed)
-    const recipients = await getRecipients(supabase, group, custom_emails);
+    // Get recipients (already filtered for unsubscribed + optional
+    // promotional-opt-out if is_promotional=true).
+    const recipients = await getRecipients(supabase, group, custom_emails, is_promotional);
 
     if (recipients.length === 0) {
       return new Response(JSON.stringify({ error: 'No recipients found for this group' }), { status: 400, headers });

@@ -1,10 +1,20 @@
 /**
  * Audio Notification Hook
  * Provides browser-based audio notifications for dealers
+ *
+ * Respects per-user preferences from `user_notification_preferences`:
+ *   - `audio_enabled` gates ALL tones (master switch)
+ *   - `audio_volume` sets the amplitude
+ *   - `audio_new_bid` / `audio_outbid` / `audio_auction_won` gate the
+ *     respective sub-types. A missing prefs row defaults to "play" so
+ *     users who never opened the settings still hear the default tones.
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface AudioNotificationOptions {
   enabled: boolean;
@@ -18,12 +28,68 @@ const DEFAULT_OPTIONS: AudioNotificationOptions = {
   sound: 'default',
 };
 
+type SoundType = 'bid' | 'outbid' | 'won' | 'general';
+
+interface TypedAudioPrefs {
+  audio_enabled: boolean | null;
+  audio_volume: number | null;
+  audio_new_bid: boolean | null;
+  audio_outbid: boolean | null;
+  audio_auction_won: boolean | null;
+}
+
 export const useAudioNotification = (options: Partial<AudioNotificationOptions> = {}) => {
   const _audioRef = useRef<HTMLAudioElement | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
-  
-  const config = { ...DEFAULT_OPTIONS, ...options };
+  const { user } = useAuth();
+
+  const { data: prefs } = useQuery<TypedAudioPrefs | null>({
+    queryKey: ['audio-prefs', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('user_notification_preferences')
+        .select('audio_enabled, audio_volume, audio_new_bid, audio_outbid, audio_auction_won')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) {
+        logger.warn('[useAudioNotification] prefs fetch failed, defaulting to PLAY:', error);
+        return null;
+      }
+      return (data as TypedAudioPrefs | null) ?? null;
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  // Explicit caller-overrides (options arg) take priority over DB prefs; the DB
+  // row is the per-user persistent default. A missing prefs row => play with
+  // the hardcoded DEFAULT_OPTIONS (never silently opts users out).
+  const config = {
+    ...DEFAULT_OPTIONS,
+    ...(prefs?.audio_enabled != null ? { enabled: prefs.audio_enabled } : {}),
+    ...(prefs?.audio_volume != null ? { volume: prefs.audio_volume } : {}),
+    ...options,
+  };
+
+  const isTypeAllowed = useCallback(
+    (type: SoundType): boolean => {
+      if (!prefs) return true; // no prefs loaded yet / anonymous user => play
+      switch (type) {
+        case 'bid':
+          return prefs.audio_new_bid !== false;
+        case 'outbid':
+          return prefs.audio_outbid !== false;
+        case 'won':
+          return prefs.audio_auction_won !== false;
+        case 'general':
+        default:
+          return true;
+      }
+    },
+    [prefs]
+  );
 
   useEffect(() => {
     // Check if audio is supported
@@ -38,8 +104,9 @@ export const useAudioNotification = (options: Partial<AudioNotificationOptions> 
   /**
    * Play notification sound
    */
-  const playNotification = useCallback(async (type: 'bid' | 'outbid' | 'won' | 'general' = 'general') => {
+  const playNotification = useCallback(async (type: SoundType = 'general') => {
     if (!config.enabled || !isSupported) return;
+    if (!isTypeAllowed(type)) return;
 
     try {
       // Create audio context for better browser support
@@ -77,7 +144,7 @@ export const useAudioNotification = (options: Partial<AudioNotificationOptions> 
     } catch (error) {
       logger.warn('Could not play audio notification:', error);
     }
-  }, [config.enabled, config.volume, isSupported]);
+  }, [config.enabled, config.volume, isSupported, isTypeAllowed]);
 
   /**
    * Request permission for notifications

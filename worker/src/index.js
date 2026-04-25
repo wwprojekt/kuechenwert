@@ -295,7 +295,11 @@ const AUCTIONS_API_PATH = "/api/auctions/active";
 // v3 (2026-04-21): photoMap URLs jetzt durch /img/-Proxy geleitet → alter
 // Cache mit raw Supabase-URLs muss rotiert werden, sonst landen User noch
 // 5 Min lang auf den langsamen no-cache-URLs.
-const AUCTIONS_CACHE_KEY = "api:auctions:active:v3";
+// v4 (2026-04-25): start_time + auction_round ergänzt für "Neu"-Badge
+// (siehe src/lib/freshBadge.ts). Key muss rotieren, sonst fehlen die
+// Felder im bestehenden KV-Eintrag → Badge erscheint erst nach
+// AUCTIONS_KV_TTL (5 min).
+const AUCTIONS_CACHE_KEY = "api:auctions:active:v4";
 const AUCTIONS_FRESH_MS = 30 * 1000;   // 30 s frisch
 const AUCTIONS_STALE_MS = 90 * 1000;   // 90 s gesamt (60 s SWR-Fenster)
 const AUCTIONS_KV_TTL = 300;           // 5 min hard-expire (Sicherheitsnetz)
@@ -554,6 +558,7 @@ async function fetchAuctionsFromSupabase(env) {
   const auctionsUrl = `${supabaseBase}/auctions?select=` +
     encodeURIComponent(
       "id,motorhome_id,current_bid,starting_bid,end_time,created_at," +
+      "start_time,auction_round," +
       "last_price_reduction_at,marketing_phase_started_at," +
       "motorhome:motorhomes(id,manufacturer,model,year,mileage,listing_number," +
       "body_type,country,postal_code,instant_price,sale_channel,status," +

@@ -54,6 +54,7 @@ import { proxiedImageUrl } from "@/lib/imageTransform";
 import { VehicleQuestionForm } from "@/components/VehicleQuestionForm";
 import { KaufchanceBadge } from "@/components/KaufchanceBadge";
 import { AuctionRoundBadge } from "@/components/AuctionRoundBadge";
+import { isFreshAuction } from "@/lib/freshBadge";
 import { PostAuctionOfferDialog } from "@/components/PostAuctionOfferDialog";
 import { useAudioNotification } from "@/hooks/useAudioNotification";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -1480,12 +1481,20 @@ const AuctionDetail = () => {
                         Privat
                       </Badge>
                     )}
-                    {/* Runden-Indikator: nur Händler/Admin sehen das. Bei Runde 1
-                        zeigt die Komponente ein grünes „Neu"-Badge, ab Runde 2
-                        gelb/orange/rot eskalierend als Verkaufsdruck-Signal. */}
-                    {canSeePrices && (
-                      <AuctionRoundBadge round={(auction as { auction_round?: number | null }).auction_round} />
-                    )}
+                    {/* Runden-Indikator:
+                        - Händler/Admin: IMMER alle Runden (1 = grün „Neu",
+                          ab 2 gelb/orange/rot als Verkaufsdruck-Signal).
+                        - Öffentliche Besucher: NUR Runde 1 UND nur innerhalb
+                          des 7-Tage-Fresh-Fensters ab auctions.start_time
+                          (siehe src/lib/freshBadge.ts). Ab Runde 2 bleibt das
+                          Badge privat — Käufer sollen nicht erfahren, dass
+                          das Inserat in Runde 1 niemand wollte. */}
+                    {(() => {
+                      const a = auction as { auction_round?: number | null; start_time?: string | null; created_at?: string | null };
+                      const fresh = isFreshAuction(a.start_time, a.created_at, a.auction_round);
+                      if (!canSeePrices && !fresh) return null;
+                      return <AuctionRoundBadge round={a.auction_round} />;
+                    })()}
                   </div>
                 </div>
 
@@ -2228,12 +2237,15 @@ const AuctionDetail = () => {
                         Privat
                       </Badge>
                     )}
-                    {/* Runden-Indikator: nur Händler/Admin sehen das. Bei Runde 1
-                        zeigt die Komponente ein grünes „Neu"-Badge, ab Runde 2
-                        gelb/orange/rot eskalierend als Verkaufsdruck-Signal. */}
-                    {canSeePrices && (
-                      <AuctionRoundBadge round={(auction as { auction_round?: number | null }).auction_round} />
-                    )}
+                    {/* Runden-Indikator: Sichtbarkeit analog zu oben —
+                        Händler/Admin sehen alle Runden, öffentliche Besucher
+                        nur Runde 1 im 7-Tage-Fresh-Fenster (siehe freshBadge.ts). */}
+                    {(() => {
+                      const a = auction as { auction_round?: number | null; start_time?: string | null; created_at?: string | null };
+                      const fresh = isFreshAuction(a.start_time, a.created_at, a.auction_round);
+                      if (!canSeePrices && !fresh) return null;
+                      return <AuctionRoundBadge round={a.auction_round} />;
+                    })()}
                   </div>
                   {motorhome.account_type === "dealer" && (
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">

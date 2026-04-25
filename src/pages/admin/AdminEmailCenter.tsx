@@ -1782,6 +1782,7 @@ function BroadcastTab() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loadingCount, setLoadingCount] = useState(false);
   const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
+  const [isPromotional, setIsPromotional] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
@@ -1823,6 +1824,7 @@ function BroadcastTab() {
           test_mode: true,
           test_email: testEmail,
           include_unsubscribe: includeUnsubscribe,
+          is_promotional: isPromotional,
         },
       });
       if (error) throw error;
@@ -1874,6 +1876,7 @@ function BroadcastTab() {
           body_html: bodyHtml,
           group,
           include_unsubscribe: includeUnsubscribe,
+          is_promotional: isPromotional,
         },
       });
       if (error) throw error;
@@ -1951,6 +1954,23 @@ function BroadcastTab() {
               <span className="font-medium">Abmelde-Link einfügen</span>
               <p className="text-xs text-muted-foreground">
                 Empfänger können sich von zukünftigen Rundmails abmelden (empfohlen für Marketing-E-Mails)
+              </p>
+            </Label>
+          </div>
+
+          {/* Promotional flag — respects user-level promotional_emails opt-out */}
+          <div className="flex items-center gap-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <Switch
+              checked={isPromotional}
+              onCheckedChange={setIsPromotional}
+              id="is-promotional"
+            />
+            <Label htmlFor="is-promotional" className="cursor-pointer">
+              <span className="font-medium">Werbe-/Promo-Kampagne</span>
+              <p className="text-xs text-muted-foreground">
+                Aktivieren für Rabatte, neue Features, Partnerangebote. Nutzer mit deaktiviertem
+                &bdquo;Werbe-E-Mails&ldquo;-Toggle werden zusätzlich ausgefiltert. System-Updates und
+                informationelle Rundmails lassen diesen Schalter aus.
               </p>
             </Label>
           </div>

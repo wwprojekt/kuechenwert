@@ -10,6 +10,7 @@ import { StablePriceBadge } from "@/components/StablePriceBadge";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNow } from "@/hooks/useNow";
 import { proxiedImageUrl } from "@/lib/imageTransform";
+import { isFreshAuction } from "@/lib/freshBadge";
 // Image transform removed 2026-04-20 — Supabase Image Transform quota was
 // being burned ($5/1000 origin images/mo, scaling with views). Replacement
 // solution = pre-resize at upload (see upload-wizard-photos), which generates
@@ -66,6 +67,13 @@ interface MotorhomeCardProps {
   lastPriceReductionAt?: string | null;
   marketingPhaseStartedAt?: string | null;
   auctionCreatedAt?: string | null;
+
+  // "Neu"-Badge (siehe src/lib/freshBadge.ts). Anker = auctions.start_time
+  // mit Fallback auctions.created_at. auctionRound muss 1 sein (keine
+  // Relists). Badge erscheint in den ersten 7 Tagen ab Auktionsstart und
+  // neutralisiert damit die Draft-Zeit vor Go-Live.
+  auctionStartTime?: string | null;
+  auctionRound?: number | null;
   
   // Static listing
   price?: number;
@@ -190,6 +198,8 @@ const MotorhomeCard = ({
   lastPriceReductionAt,
   marketingPhaseStartedAt,
   auctionCreatedAt,
+  auctionStartTime,
+  auctionRound,
   linkTo,
   priority = false,
 }: MotorhomeCardProps) => {
@@ -251,6 +261,16 @@ const MotorhomeCard = ({
   const isEnded = timeRemaining === 'Beendet';
   const hasInstantSale = instantPrice && Number(instantPrice) > 0;
 
+  // "Neu"-Badge: Auktion ist weniger als FRESH_BADGE_DAYS (7) Tage online
+  // UND es ist die erste Runde (kein Relist). Verwendet `now` aus useNow,
+  // damit das Badge beim Ablauf automatisch verschwindet ohne Page-Reload.
+  // Draft-Zeit des Fahrzeugs (motorhomes.created_at) wird bewusst NICHT
+  // berücksichtigt — Anker ist auctions.start_time, siehe freshBadge.ts.
+  const isFresh = useMemo(
+    () => isAuction && !isSold && isFreshAuction(auctionStartTime, auctionCreatedAt, auctionRound, now),
+    [isAuction, isSold, auctionStartTime, auctionCreatedAt, auctionRound, now],
+  );
+
   const timerStyles = useMemo(() => getTimerStyles(urgency), [urgency]);
 
   // Determine if we should show the blink animation (last 5 minutes)
@@ -275,6 +295,15 @@ const MotorhomeCard = ({
             {badge && !isAuction && (
               <Badge className="bg-primary text-primary-foreground font-bold shadow-lg">
                 {badge}
+              </Badge>
+            )}
+            {/* "Neu"-Badge: erste 7 Tage nach auctions.start_time, nur Runde 1.
+                Erscheint VOR "Verkauft"/"Festpreis"/"Endet bald!" in der Reihe,
+                damit Käufer das "Neu"-Signal zuerst wahrnehmen. isSold
+                unterdrückt das Badge automatisch (siehe isFresh-Memo). */}
+            {isFresh && (
+              <Badge className="bg-emerald-600 text-white font-bold shadow-lg border border-emerald-700">
+                Neu
               </Badge>
             )}
             {isSold && (

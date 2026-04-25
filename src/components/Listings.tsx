@@ -37,6 +37,8 @@ const Listings = () => {
             starting_bid: number | null;
             end_time: string;
             created_at: string;
+            start_time?: string | null;
+            auction_round?: number | null;
             last_price_reduction_at?: string | null;
             marketing_phase_started_at?: string | null;
             motorhome_id?: string | null;
@@ -73,6 +75,7 @@ const Listings = () => {
         .from('auctions')
         .select(`
           id, motorhome_id, current_bid, starting_bid, end_time, created_at,
+          start_time, auction_round,
           last_price_reduction_at, marketing_phase_started_at,
           motorhome:motorhomes(
             id, manufacturer, model, year, mileage, body_type, country,
@@ -211,6 +214,8 @@ const Listings = () => {
                   lastPriceReductionAt={(auction as any).last_price_reduction_at}
                   marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
                   auctionCreatedAt={auction.created_at}
+                  auctionStartTime={(auction as { start_time?: string | null }).start_time ?? null}
+                  auctionRound={(auction as { auction_round?: number | null }).auction_round ?? null}
                   linkTo={`/auktion/${auction.id}`}
                 />
               );

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { CommissionDisplay } from "@/components/CommissionDisplay";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CountryFlag } from "@/components/CountryFlag";
 import { StablePriceBadge } from "@/components/StablePriceBadge";
@@ -526,16 +525,6 @@ const MotorhomeCard = ({
                     </div>
                   )}
                 </div>
-                
-                {/* Commission Display for Auctions - only for dealers */}
-                {isAuction && !isSold && canSeePrices && saleChannel !== 'instant_price' && (
-                  <div className="mb-3">
-                    <CommissionDisplay 
-                      bidAmount={displayPrice} 
-                      variant="compact"
-                    />
-                  </div>
-                )}
                 
                 <Button 
                   className={`w-full group ${saleChannel === 'instant_price' && !isSold && !isEnded ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-primary hover:bg-primary/90'}`}

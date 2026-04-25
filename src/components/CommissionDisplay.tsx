@@ -47,7 +47,7 @@ export const CommissionDisplay = ({
       <div className={`inline-flex items-center gap-2 ${className}`}>
         <Badge variant="secondary" className="flex items-center gap-1">
           <Percent className="h-3 w-3" />
-          {commissionRate}% Provision
+          {commissionRate.toFixed(2)}% Provision
         </Badge>
         {bidAmount > 0 && (
           <span className="text-sm text-muted-foreground">
@@ -80,10 +80,10 @@ export const CommissionDisplay = ({
             </div>
             
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-orange-700">Provisionsrate</p>
-                <p className="text-lg font-bold text-orange-900">
-                  {commissionRate}%
+                <p className="text-lg font-bold text-orange-900 truncate">
+                  {commissionRate.toFixed(2)}%
                 </p>
               </div>
               

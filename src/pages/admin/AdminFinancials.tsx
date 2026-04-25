@@ -59,11 +59,11 @@ import {
   ShieldAlert,
   Ban,
 } from 'lucide-react';
-import { format, subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, subDays, subMonths, startOfDay, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { sendInvoiceWithPdf } from '@/lib/invoiceGenerator';
 import { getInvoiceStoragePath } from '@/lib/invoiceStorage';
-import { isInvoiceOverdue } from '@/lib/invoiceStatus';
+import { deriveInvoice } from '@/lib/invoiceDerived';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
 import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -476,37 +476,34 @@ export default function AdminFinancials() {
   });
 
   const getStatusBadge = (invoice: any) => {
-    if (invoice.payment_status === 'paid') {
-      return <Badge className="bg-green-100 text-green-800">Bezahlt</Badge>;
-    }
-    
-    if (invoice.payment_status === 'partial') {
-      return <Badge className="bg-blue-100 text-blue-800">Teilbezahlt</Badge>;
-    }
-    
-    if (invoice.status === 'cancelled') {
+    // Kanonische Ableitung (src/lib/invoiceDerived.ts). Bisher war die
+    // Reihenfolge paid→partial→cancelled→overdue/open; cancelled kam zu spät
+    // und wäre bei hypothetischem `payment_status='partial' + status='cancelled'`
+    // als "Teilbezahlt" durchgerutscht. Der Helper priorisiert jetzt korrekt
+    // cancelled zuerst und hält die Mahnstufen-Logik unten separat.
+    const derived = deriveInvoice(invoice);
+
+    if (derived.displayStatus === 'cancelled') {
       return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
     }
+    if (derived.displayStatus === 'paid') {
+      return <Badge className="bg-green-100 text-green-800">Bezahlt</Badge>;
+    }
+    if (derived.displayStatus === 'partial') {
+      return <Badge className="bg-blue-100 text-blue-800">Teilbezahlt</Badge>;
+    }
 
-    // Tagesvergleich: eine heute fällige Rechnung ist NICHT überfällig (erst ab morgen).
-    // Muss 1:1 mit dem Server-Filter `due_date < CURRENT_DATE` matchen,
-    // sonst zählen KPI-Kachel und Tab-Liste unterschiedlich (Bug 2026-04-25).
-    const isOverdue = isInvoiceOverdue(invoice.due_date);
     const safeRem = Array.isArray(invoice.reminders)
       ? invoice.reminders
       : invoice.reminders
         ? [invoice.reminders]
         : [];
-
-    // Use the highest reminder_level actually stored (NOT the reminder row
-    // count). The label must match what `process-dunning` puts into the
-    // e-mail subject – see `REMINDER_LEVEL_LABEL`.
     const maxLevel = safeRem.reduce(
       (m: number, r: any) => Math.max(m, Number(r?.reminder_level ?? 0)),
       0
     );
 
-    if (isOverdue) {
+    if (derived.isOverdue) {
       if (maxLevel >= 3) {
         return <Badge variant="destructive">{getReminderLevelLabel(3)}</Badge>;
       }
@@ -523,16 +520,24 @@ export default function AdminFinancials() {
   };
 
   // Date filter logic
+  //
+  // Normalisierung auf `startOfDay`: Bisher verglichen die "Letzte X Tage"-
+  // Filter mit `subDays(now, 7)`, was "jetzt minus 7×24h" bedeutet. Eine
+  // Rechnung, die vor 7 Tagen erstellt wurde (UTC-Midnight), fiel damit
+  // unterhalb der Schwelle und wurde ausgeblendet – der Filter zeigte faktisch
+  // ~6 statt 7 Tage. `startOfDay(subDays(now, N))` normalisiert auf die lokale
+  // Tagesgrenze und liefert den semantisch korrekten "N volle Tage zurück"-
+  // Anker (Bug 2026-04-25).
   const filterByDate = (invoice: any) => {
     if (dateFilter === 'all') return true;
     const invoiceDate = new Date(invoice.invoice_date || invoice.created_at);
     const now = new Date();
-    
+
     switch (dateFilter) {
       case '7days':
-        return invoiceDate >= subDays(now, 7);
+        return invoiceDate >= startOfDay(subDays(now, 7));
       case '30days':
-        return invoiceDate >= subDays(now, 30);
+        return invoiceDate >= startOfDay(subDays(now, 30));
       case 'thisMonth':
         return isWithinInterval(invoiceDate, { start: startOfMonth(now), end: endOfMonth(now) });
       case 'lastMonth': {
@@ -540,11 +545,11 @@ export default function AdminFinancials() {
         return isWithinInterval(invoiceDate, { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) });
       }
       case '3months':
-        return invoiceDate >= subMonths(now, 3);
+        return invoiceDate >= startOfDay(subMonths(now, 3));
       case '6months':
-        return invoiceDate >= subMonths(now, 6);
+        return invoiceDate >= startOfDay(subMonths(now, 6));
       case '12months':
-        return invoiceDate >= subMonths(now, 12);
+        return invoiceDate >= startOfDay(subMonths(now, 12));
       default:
         return true;
     }
@@ -579,12 +584,17 @@ export default function AdminFinancials() {
       (`${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.toLowerCase().includes(searchLower)) ||
       vehicleStr.includes(searchLower);
     
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'paid' && invoice.payment_status === 'paid') ||
-      (statusFilter === 'pending' && invoice.payment_status === 'pending') ||
-      (statusFilter === 'partial' && invoice.payment_status === 'partial') ||
-      (statusFilter === 'cancelled' && invoice.status === 'cancelled') ||
-      (statusFilter === 'overdue' && (invoice.payment_status === 'pending' || invoice.payment_status === 'partial') && isInvoiceOverdue(invoice.due_date));
+    // Status-Filter via deriveInvoice(): kanonische Ableitung, kein erneutes
+    // Interpretieren der Rohfelder. "Überfällig" = pending/partial + aktiv +
+    // noch nicht vollbezahlt + Tagesvergleich due_date < heute (exakt wie der
+    // Server-Filter .lt('due_date', now())).
+    const derived = deriveInvoice(invoice);
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'paid' && derived.displayStatus === 'paid') ||
+      (statusFilter === 'pending' && derived.displayStatus === 'open') ||
+      (statusFilter === 'partial' && derived.displayStatus === 'partial') ||
+      (statusFilter === 'cancelled' && derived.displayStatus === 'cancelled') ||
+      (statusFilter === 'overdue' && derived.isOverdue);
     
     const matchesType = typeFilter === 'all' ||
       (typeFilter === 'commission' && (invoice.invoice_type === 'commission' || !invoice.invoice_type)) ||
@@ -602,18 +612,16 @@ export default function AdminFinancials() {
   const totalGross = activeInvoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
   const totalPaid = activeInvoices.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
   const totalOutstanding = totalGross - totalPaid;
-  // Client-seitige Überfällig-Berechnung MUSS mit dem Server-Filter
-  // `.lt('due_date', now)` (→ `date < CURRENT_DATE`) übereinstimmen, sonst
-  // zeigt die KPI-Kachel eine andere Zahl als die Tab-Liste (Bug 2026-04-25:
-  // Rechnung mit due_date = heute lief im Client als überfällig, im Server
-  // nicht → KPI "1 überfällig" bei leerer Tab-Liste).
-  const overdueInvoicesLocal = activeInvoices.filter(inv =>
-    (inv.payment_status === 'pending' || inv.payment_status === 'partial') &&
-    isInvoiceOverdue(inv.due_date)
+  // KPI-Kachel "Überfällig" nutzt dieselbe `deriveInvoice`-Ableitung wie
+  // Badges, Filter und Server-Query. `isOverdue` schließt storniert/paid
+  // bereits aus (Bug 2026-04-25: heute fällige Rechnung zählte client-seitig
+  // überfällig, server-seitig nicht → KPI "1" bei leerer Liste).
+  const overdueInvoicesLocal = activeInvoices.filter(
+    (inv) => deriveInvoice(inv).isOverdue,
   );
   const overdueCount = overdueInvoicesLocal.length;
   const overdueAmount = overdueInvoicesLocal.reduce(
-    (sum, inv) => sum + Number(inv.gross_amount || 0) - Number(inv.amount_paid || 0),
+    (sum, inv) => sum + deriveInvoice(inv).remainingAmount,
     0
   );
   const paidCount = activeInvoices.filter(inv => inv.payment_status === 'paid').length;
@@ -908,8 +916,9 @@ export default function AdminFinancials() {
                   filteredInvoices?.map((invoice: any) => {
                     const amountPaid = Number(invoice.amount_paid || 0);
                     const grossAmount = Number(invoice.gross_amount);
-                    const paymentProgress = grossAmount > 0 ? (amountPaid / grossAmount) * 100 : 0;
-                    const dealerName = invoice.dealer?.company_name || 
+                    const rowDerived = deriveInvoice(invoice);
+                    const paymentProgress = rowDerived.paymentProgress;
+                    const dealerName = invoice.dealer?.company_name ||
                       `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim() || 'Unbekannt';
                     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
                     
@@ -1029,36 +1038,54 @@ export default function AdminFinancials() {
                           >
                             <Mail className="h-4 w-4" />
                           </Button>
-                          <Button 
+                          <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => {
                               setSelectedInvoice(invoice);
                               setPaymentDialogOpen(true);
                             }}
-                            disabled={invoice.payment_status === 'paid'}
-                            title="Zahlung erfassen"
+                            disabled={!rowDerived.canRecordPayment}
+                            title={
+                              rowDerived.displayStatus === 'cancelled'
+                                ? 'Stornierte Rechnung – keine Zahlung möglich'
+                                : rowDerived.displayStatus === 'paid'
+                                  ? 'Rechnung bereits vollständig bezahlt'
+                                  : 'Zahlung erfassen'
+                            }
                           >
                             <CreditCard className="h-4 w-4" />
                           </Button>
-                          <Button 
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => sendReminderMutation.mutate(invoice.id)}
-                            disabled={sendReminderMutation.isPending || invoice.payment_status === 'paid'}
-                            title="Mahnung senden"
+                            disabled={sendReminderMutation.isPending || !rowDerived.canSendReminder}
+                            title={
+                              rowDerived.displayStatus === 'cancelled'
+                                ? 'Stornierte Rechnung – keine Mahnung möglich'
+                                : rowDerived.displayStatus === 'paid'
+                                  ? 'Rechnung bereits bezahlt'
+                                  : 'Mahnung senden'
+                            }
                           >
                             <Send className="h-4 w-4" />
                           </Button>
-                          <Button 
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
                               setInvoiceToDelete(invoice);
                               setDeleteDialogOpen(true);
                             }}
-                            disabled={invoice.status === 'cancelled' || invoice.payment_status === 'paid'}
-                            title={invoice.status === 'cancelled' ? 'Bereits storniert' : invoice.payment_status === 'paid' ? 'Bezahlte Rechnungen können nicht storniert werden' : 'Rechnung stornieren'}
+                            disabled={!rowDerived.canCancel}
+                            title={
+                              rowDerived.displayStatus === 'cancelled'
+                                ? 'Bereits storniert'
+                                : rowDerived.displayStatus === 'paid'
+                                  ? 'Bezahlte Rechnungen können nicht storniert werden'
+                                  : 'Rechnung stornieren'
+                            }
                           >
                             <XCircle className="h-4 w-4" />
                           </Button>

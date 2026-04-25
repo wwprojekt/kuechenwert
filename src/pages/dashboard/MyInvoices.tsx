@@ -20,7 +20,7 @@ import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { useToast } from "@/hooks/use-toast";
 import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
-import { isInvoiceOverdue } from "@/lib/invoiceStatus";
+import { deriveInvoice } from "@/lib/invoiceDerived";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -156,12 +156,20 @@ export default function MyInvoices() {
     }
   };
 
+  // Kanonische Ableitung (src/lib/invoiceDerived.ts): bisheriger switch hatte
+  // keinen 'cancelled'-Case und fiel bei stornierten Rechnungen in default →
+  // Dealer sah Storno fälschlich als "Offen" oder "Überfällig" (Bug 2026-04-25).
   const getStatusBadge = (invoice: Invoice) => {
-    const status = invoice.payment_status || invoice.status;
-    // Tagesvergleich: heute fällig ≠ überfällig (siehe src/lib/invoiceStatus.ts)
-    const isOverdue = isInvoiceOverdue(invoice.due_date);
-    
-    switch (status) {
+    const derived = deriveInvoice(invoice);
+
+    switch (derived.displayStatus) {
+      case "cancelled":
+        return (
+          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/40 gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Storniert
+          </Badge>
+        );
       case "paid":
         return (
           <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
@@ -176,16 +184,15 @@ export default function MyInvoices() {
             Teilbezahlt
           </Badge>
         );
-      case "pending":
+      case "overdue":
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Überfällig
+          </Badge>
+        );
+      case "open":
       default:
-        if (isOverdue) {
-          return (
-            <Badge variant="destructive" className="gap-1">
-              <AlertCircle className="w-3 h-3" />
-              Überfällig
-            </Badge>
-          );
-        }
         return (
           <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
             <Clock className="w-3 h-3" />
@@ -195,17 +202,25 @@ export default function MyInvoices() {
     }
   };
 
-  // Calculate actual outstanding amount (gross_amount - amount_paid for non-paid invoices)
-  const totalOutstanding = invoices
-    .filter(inv => (inv.payment_status || inv.status) !== "paid")
-    .reduce((sum, inv) => sum + (inv.gross_amount - (inv.amount_paid || 0)), 0);
+  // Ausstehend: stornierte Rechnungen explizit ausschließen – sie haben zwar
+  // gross_amount > 0, aber der offene Betrag ist fachlich 0 (cancel-invoice
+  // setzt payment_status='cancelled'). Bisher zählten sie in "Offener Betrag"
+  // als offen mit (Bug 2026-04-25).
+  const totalOutstanding = invoices.reduce((sum, inv) => {
+    const d = deriveInvoice(inv);
+    return d.displayStatus === "paid" || d.displayStatus === "cancelled"
+      ? sum
+      : sum + d.remainingAmount;
+  }, 0);
 
-  // Calculate total amount paid (sum of all amount_paid)
-  const totalPaid = invoices
-    .reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
+  // "Bezahlt"-KPI: tatsächlich eingegangene Zahlungen. Bei stornierten
+  // Rechnungen werden einmal eingegangene Teilzahlungen hier weiterhin
+  // ausgewiesen – fachlich korrekt, da das Geld ja geflossen ist.
+  const totalPaid = invoices.reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
 
-  // Count partial payments
-  const partialCount = invoices.filter(inv => inv.payment_status === "partial").length;
+  const partialCount = invoices.filter(
+    (inv) => deriveInvoice(inv).displayStatus === "partial",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -316,10 +331,11 @@ export default function MyInvoices() {
             <div className="space-y-3">
               {sortedInvoices.map((invoice) => {
                 const amountPaid = invoice.amount_paid || 0;
-                const remaining = invoice.gross_amount - amountPaid;
-                const paymentProgress = (amountPaid / invoice.gross_amount) * 100;
-                const isPaid = (invoice.payment_status || invoice.status) === "paid";
-                
+                const derived = deriveInvoice(invoice);
+                const remaining = derived.remainingAmount;
+                const paymentProgress = derived.paymentProgress;
+                const isPaid = derived.displayStatus === "paid";
+
                 return (
                   <div key={invoice.id} className="border rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -388,10 +404,11 @@ export default function MyInvoices() {
               <TableBody>
                 {sortedInvoices.map((invoice) => {
                   const amountPaid = invoice.amount_paid || 0;
-                  const remaining = invoice.gross_amount - amountPaid;
-                  const paymentProgress = (amountPaid / invoice.gross_amount) * 100;
-                  const isPaid = (invoice.payment_status || invoice.status) === "paid";
-                  
+                  const derived = deriveInvoice(invoice);
+                  const remaining = derived.remainingAmount;
+                  const paymentProgress = derived.paymentProgress;
+                  const isPaid = derived.displayStatus === "paid";
+
                   return (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-mono font-medium">

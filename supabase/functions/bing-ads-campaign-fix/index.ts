@@ -1197,14 +1197,392 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // ACTION: super-audit
+  // ─────────────────────────────────────────────────────────────
+  // Komplett-Inspektion: Settings, Languages, BiddingScheme, Editorial-Status,
+  // pro-Keyword Bid+URL+Status, pro-Ad EditorialStatus+FinalUrls, AccountGoals,
+  // AdGroup-Default-Bids. Ein Read-Only-Mega-Snapshot fuer den 14-Tage-Review.
+  if (action === 'super-audit') {
+    try {
+      const campaignsResp = await getCampaigns(headers, customerAccountId);
+      const campaigns = campaignsResp?.Campaigns ?? [];
+      if (campaigns.length === 0) return json(404, { error: 'no_campaigns' });
+      const campaign = campaigns[0];
+      const campaignId = String(campaign.Id);
+
+      // AdGroupAdditionalField enum (MS Learn): AdGroupType, AdRotation,
+      // AdScheduleUseSearcherTimeZone, AudienceAdsBidAdjustment,
+      // BidStrategyId, FinalUrlSuffix, FrequencyCapSettings,
+      // MultimediaAdsBidAdjustment, TrackingUrlTemplate, UrlCustomParameters.
+      // CpcBid + Language + Status sind Default-Felder und MÜSSEN
+      // weggelassen werden — sonst HTTP 400 NullRequest.
+      const ag = await bingFetch(
+        `${BING_API_BASE}/AdGroups/QueryByCampaignId`,
+        {
+          method: 'POST',
+          headers: buildHeaders(headers),
+          body: JSON.stringify({
+            CampaignId: campaignId,
+            ReturnAdditionalFields:
+              'AdGroupType AdRotation MultimediaAdsBidAdjustment AudienceAdsBidAdjustment TrackingUrlTemplate FinalUrlSuffix UrlCustomParameters BidStrategyId',
+          }),
+        },
+        'GetAdGroups[super]',
+      );
+      const adGroups = ag?.AdGroups ?? [];
+
+      const adGroupDeep = await Promise.all(adGroups.map(async (a: any) => {
+        const adGroupId = String(a.Id);
+        let kws: any[] = [];
+        let ads: any[] = [];
+        try {
+          const k = await bingFetch(
+            `${BING_API_BASE}/Keywords/QueryByAdGroupId`,
+            {
+              method: 'POST',
+              headers: buildHeaders(headers),
+              body: JSON.stringify({ AdGroupId: adGroupId }),
+            },
+            'GetKeywords[super]',
+          );
+          kws = k?.Keywords ?? [];
+        } catch {}
+        try {
+          // AdAdditionalField enum erlaubt nur: ImpressionTrackingUrls, Videos.
+          // FinalUrls/TrackingUrlTemplate/UrlCustomParameters sind Default-Felder.
+          const adResp = await bingFetch(
+            `${BING_API_BASE}/Ads/QueryByAdGroupId`,
+            {
+              method: 'POST',
+              headers: buildHeaders(headers),
+              body: JSON.stringify({
+                AdGroupId: adGroupId,
+                AdTypes: ['ResponsiveSearch', 'ExpandedText', 'DynamicSearch'],
+                ReturnAdditionalFields: 'ImpressionTrackingUrls',
+              }),
+            },
+            'GetAds[super]',
+          );
+          ads = adResp?.Ads ?? [];
+        } catch {}
+
+        // Keyword stats
+        const bids = kws.map((k: any) => Number(k.Bid?.Amount)).filter((n) => !isNaN(n) && n > 0);
+        const editorialKw = kws.reduce((acc: any, k: any) => {
+          const s = k.EditorialStatus ?? 'Unknown';
+          acc[s] = (acc[s] ?? 0) + 1;
+          return acc;
+        }, {});
+        const statusKw = kws.reduce((acc: any, k: any) => {
+          const s = k.Status ?? 'Unknown';
+          acc[s] = (acc[s] ?? 0) + 1;
+          return acc;
+        }, {});
+        const finalUrlHostsKw = new Set<string>();
+        for (const k of kws) {
+          const urls: string[] = k.FinalUrls ?? [];
+          for (const u of urls) {
+            try { finalUrlHostsKw.add(new URL(u).host); } catch {}
+          }
+        }
+
+        // Ad stats
+        const editorialAd = ads.reduce((acc: any, ad: any) => {
+          const s = ad.EditorialStatus ?? 'Unknown';
+          acc[s] = (acc[s] ?? 0) + 1;
+          return acc;
+        }, {});
+        const statusAd = ads.reduce((acc: any, ad: any) => {
+          const s = ad.Status ?? 'Unknown';
+          acc[s] = (acc[s] ?? 0) + 1;
+          return acc;
+        }, {});
+        const finalUrlHostsAd = new Set<string>();
+        const headlineCounts: number[] = [];
+        const descriptionCounts: number[] = [];
+        for (const ad of ads) {
+          const urls: string[] = ad.FinalUrls ?? [];
+          for (const u of urls) {
+            try { finalUrlHostsAd.add(new URL(u).host); } catch {}
+          }
+          if (ad.Type === 'ResponsiveSearch') {
+            headlineCounts.push(Array.isArray(ad.Headlines) ? ad.Headlines.length : 0);
+            descriptionCounts.push(Array.isArray(ad.Descriptions) ? ad.Descriptions.length : 0);
+          }
+        }
+
+        // Disapproved Items mit Reason
+        const disapprovedKw = kws
+          .filter((k: any) => k.EditorialStatus === 'Disapproved')
+          .map((k: any) => ({ id: k.Id, text: k.Text, match_type: k.MatchType, reasons: k.EditorialAppealStatus ?? null }));
+        const disapprovedAd = ads
+          .filter((ad: any) => ad.EditorialStatus === 'Disapproved')
+          .map((ad: any) => ({ id: ad.Id, type: ad.Type, headlines_count: ad.Headlines?.length, reasons: ad.EditorialAppealStatus ?? null }));
+
+        return {
+          id: a.Id,
+          name: a.Name,
+          status: a.Status,
+          ad_group_type: a.AdGroupType,
+          ad_rotation: a.AdRotation?.Type,
+          language: a.Language,
+          default_cpc_bid: a.CpcBid?.Amount,
+          tracking_url_template: a.TrackingUrlTemplate ?? null,
+          keyword_count: kws.length,
+          keyword_editorial_status: editorialKw,
+          keyword_status: statusKw,
+          keyword_bid_min: bids.length ? Math.min(...bids) : null,
+          keyword_bid_max: bids.length ? Math.max(...bids) : null,
+          keyword_bid_avg: bids.length ? Number((bids.reduce((s, b) => s + b, 0) / bids.length).toFixed(2)) : null,
+          keyword_final_url_hosts: Array.from(finalUrlHostsKw),
+          ad_count: ads.length,
+          ad_editorial_status: editorialAd,
+          ad_status: statusAd,
+          ad_final_url_hosts: Array.from(finalUrlHostsAd),
+          rsa_headline_counts: headlineCounts,
+          rsa_description_counts: descriptionCounts,
+          disapproved_keywords: disapprovedKw,
+          disapproved_ads: disapprovedAd,
+        };
+      }));
+
+      // Account-level Conversion Goals (alle, die im Account existieren)
+      let accountGoals: any[] = [];
+      let accountGoalsErr: string | undefined;
+      try {
+        const goalsResp = await bingFetch(
+          `${BING_API_BASE}/ConversionGoals/QueryByAccountId`,
+          {
+            method: 'POST',
+            headers: buildHeaders(headers),
+            body: JSON.stringify({
+              ConversionGoalTypes: 'AppInstall Duration Event InStoreTransaction OfflineConversion PageLoad ProductPurchase Url MultiStage',
+            }),
+          },
+          'GetConversionGoalsByAccountId',
+        );
+        accountGoals = goalsResp?.ConversionGoals ?? [];
+      } catch (e: any) { accountGoalsErr = e?.message ?? String(e); }
+
+      // Ad Extensions am Campaign-Level
+      let extensionAssociations: any = null;
+      let extErr: string | undefined;
+      try {
+        const extResp = await bingFetch(
+          `${BING_API_BASE}/AdExtensionsAssociations/QueryByIds`,
+          {
+            method: 'POST',
+            headers: buildHeaders(headers),
+            body: JSON.stringify({
+              EntityIds: [campaignId],
+              AssociationType: 'Campaign',
+              AdExtensionTypes: [
+                'CallAdExtension',
+                'CalloutAdExtension',
+                'ImageAdExtension',
+                'LocationAdExtension',
+                'PriceAdExtension',
+                'PromotionAdExtension',
+                'ReviewAdExtension',
+                'SitelinkAdExtension',
+                'StructuredSnippetAdExtension',
+                'AppAdExtension',
+                'ActionAdExtension',
+                'FilterLinkAdExtension',
+                'FlyerAdExtension',
+                'VideoAdExtension',
+              ],
+            }),
+          },
+          'GetAdExtensionsAssociationsByIds',
+        );
+        const all = extResp?.AdExtensionAssociationCollection ?? [];
+        const flat: any[] = [];
+        for (const bucket of all) {
+          if (Array.isArray(bucket?.AdExtensionAssociations)) {
+            flat.push(...bucket.AdExtensionAssociations);
+          }
+        }
+        const byType: Record<string, number> = {};
+        for (const f of flat) {
+          const t = f?.AdExtension?.Type ?? 'Unknown';
+          byType[t] = (byType[t] ?? 0) + 1;
+        }
+        extensionAssociations = { count: flat.length, by_type: byType };
+      } catch (e: any) { extErr = e?.message ?? String(e); }
+
+      // Aggregat
+      const totalKeywords = adGroupDeep.reduce((s, ag) => s + ag.keyword_count, 0);
+      const totalAds = adGroupDeep.reduce((s, ag) => s + ag.ad_count, 0);
+      const allDisapprovedAds = adGroupDeep.reduce((s, ag) => s + ag.disapproved_ads.length, 0);
+      const allDisapprovedKws = adGroupDeep.reduce((s, ag) => s + ag.disapproved_keywords.length, 0);
+      const allKwHosts = new Set<string>();
+      const allAdHosts = new Set<string>();
+      adGroupDeep.forEach((ag) => {
+        ag.keyword_final_url_hosts.forEach((h: string) => allKwHosts.add(h));
+        ag.ad_final_url_hosts.forEach((h: string) => allAdHosts.add(h));
+      });
+      const allBids = adGroupDeep
+        .filter((ag) => ag.default_cpc_bid != null)
+        .map((ag) => Number(ag.default_cpc_bid));
+
+      return json(200, {
+        ok: true,
+        campaign: {
+          id: campaign.Id,
+          name: campaign.Name,
+          status: campaign.Status,
+          daily_budget: campaign.DailyBudget,
+          budget_type: campaign.BudgetType,
+          time_zone: campaign.TimeZone,
+          languages: campaign.Languages,
+          campaign_type: campaign.CampaignType,
+          sub_type: campaign.SubType,
+          tracking_url_template: campaign.TrackingUrlTemplate ?? null,
+          final_url_suffix: campaign.FinalUrlSuffix ?? null,
+          url_custom_parameters: campaign.UrlCustomParameters ?? null,
+          bidding_scheme: campaign.BiddingScheme ?? null,
+          settings: campaign.Settings ?? null,
+          goal_ids: campaign.GoalIds ?? null,
+        },
+        critical_findings: {
+          campaign_status_not_active: campaign.Status !== 'Active',
+          languages_missing_or_all: !campaign.Languages || (Array.isArray(campaign.Languages) && (campaign.Languages.length === 0 || campaign.Languages.includes('All'))),
+          no_conversion_goals_linked: !campaign.GoalIds || (Array.isArray(campaign.GoalIds) && campaign.GoalIds.length === 0),
+          tracking_template_missing: !campaign.TrackingUrlTemplate,
+          disapproved_ads_total: allDisapprovedAds,
+          disapproved_keywords_total: allDisapprovedKws,
+          unexpected_keyword_url_hosts: Array.from(allKwHosts).filter((h) => !h.includes('caravanwert.de')),
+          unexpected_ad_url_hosts: Array.from(allAdHosts).filter((h) => !h.includes('caravanwert.de')),
+          adgroup_default_bid_min: allBids.length ? Math.min(...allBids) : null,
+          adgroup_default_bid_max: allBids.length ? Math.max(...allBids) : null,
+        },
+        ad_groups_summary: adGroupDeep,
+        account_conversion_goals: {
+          count: accountGoals.length,
+          goals: accountGoals.map((g: any) => ({
+            id: g.Id,
+            name: g.Name,
+            type: g.Type,
+            status: g.Status,
+            revenue_type: g.Revenue?.Type,
+            revenue_value: g.Revenue?.Value,
+            count_type: g.Scope ?? null,
+          })),
+          error: accountGoalsErr,
+        },
+        ad_extensions_summary: extensionAssociations,
+        ad_extensions_error: extErr,
+        totals: { ad_groups: adGroups.length, keywords: totalKeywords, ads: totalAds },
+      });
+    } catch (err: any) {
+      return json(500, { error: 'super_audit_failed', message: err?.message ?? String(err) });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ACTION: attach-conversion-goals
+  // ─────────────────────────────────────────────────────────────
+  // Setzt die GoalIds auf der Kampagne. Wenn keine angegeben werden, werden
+  // alle aktiven Account-Conversion-Goals automatisch verlinkt.
+  if (action === 'attach-conversion-goals') {
+    const dryRun = !!body.dry_run;
+    let campaignId: string | null = body.campaign_id ?? null;
+    let campaign: any = null;
+    try {
+      const campaignsResp = await getCampaigns(headers, customerAccountId);
+      const campaigns = campaignsResp?.Campaigns ?? [];
+      if (!campaignId) {
+        if (campaigns.length === 1) campaignId = String(campaigns[0].Id);
+        else return json(400, { error: 'campaign_id_required' });
+      }
+      campaign = campaigns.find((c: any) => String(c.Id) === String(campaignId));
+    } catch (err: any) {
+      return json(500, { error: 'campaign_lookup_failed', message: err?.message ?? String(err) });
+    }
+
+    let goalIds: number[] = Array.isArray(body.goal_ids)
+      ? body.goal_ids.map((g: any) => Number(g)).filter((n: number) => !isNaN(n))
+      : [];
+
+    if (goalIds.length === 0) {
+      // Auto: alle aktiven Goals aus Account holen
+      try {
+        const goalsResp = await bingFetch(
+          `${BING_API_BASE}/ConversionGoals/QueryByAccountId`,
+          {
+            method: 'POST',
+            headers: buildHeaders(headers),
+            body: JSON.stringify({
+              ConversionGoalTypes: 'AppInstall Duration Event InStoreTransaction OfflineConversion PageLoad ProductPurchase Url MultiStage',
+            }),
+          },
+          'GetConversionGoalsByAccountId',
+        );
+        const goals = goalsResp?.ConversionGoals ?? [];
+        goalIds = goals
+          .filter((g: any) => g.Status === 'Active')
+          .map((g: any) => Number(g.Id))
+          .filter((n: number) => !isNaN(n));
+      } catch (err: any) {
+        return json(500, { error: 'goals_lookup_failed', message: err?.message ?? String(err) });
+      }
+    }
+
+    if (goalIds.length === 0) {
+      return json(400, {
+        error: 'no_active_goals_found',
+        hint: 'Pass body.goal_ids = [123,456] explicitly, or check that account-level conversion goals exist and are Active.',
+      });
+    }
+
+    if (dryRun) {
+      return json(200, {
+        ok: true,
+        dry_run: true,
+        campaign_id: campaignId,
+        previous_goal_ids: campaign?.GoalIds ?? null,
+        new_goal_ids: goalIds,
+      });
+    }
+
+    try {
+      const resp = await bingFetch(
+        `${BING_API_BASE}/Campaigns`,
+        {
+          method: 'PUT',
+          headers: buildHeaders(headers),
+          body: JSON.stringify({
+            AccountId: customerAccountId,
+            Campaigns: [{ Id: campaign.Id, GoalIds: goalIds }],
+          }),
+        },
+        'UpdateCampaigns[GoalIds]',
+      );
+      const partialErr = summarizePartialErrors(resp);
+      return json(200, {
+        ok: !partialErr,
+        campaign_id: campaignId,
+        previous_goal_ids: campaign?.GoalIds ?? null,
+        new_goal_ids: goalIds,
+        partial_errors: partialErr,
+      });
+    } catch (err: any) {
+      return json(500, { error: 'attach_goals_failed', message: err?.message ?? String(err) });
+    }
+  }
+
   return json(400, {
     error: 'unknown_action',
     valid_actions: [
       'audit',
       'apply-fixes',
       'deep-audit',
+      'super-audit',
       'add-negative-keywords',
       'remove-ad-schedule',
+      'attach-conversion-goals',
     ],
     received: action,
   });

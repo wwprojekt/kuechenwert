@@ -229,23 +229,39 @@ export const NotificationPreferences = () => {
               { key: 'email_outbid', label: 'Überboten', description: 'Wenn Sie bei einer Auktion überboten werden' },
               { key: 'email_auction_ending', label: 'Auktion endet bald', description: 'Erinnerung 1 Stunde vor Auktionsende' },
               { key: 'email_auction_won', label: 'Auktion gewonnen', description: 'Bestätigung bei gewonnenen Auktionen' },
-              { key: 'email_payment_reminder', label: 'Zahlungserinnerungen', description: 'Rechnungen und Mahnungen' },
+              {
+                key: 'email_payment_reminder',
+                label: 'Zahlungserinnerungen',
+                description: 'Rechnungen und Mahnungen. Gesetzlich erforderlich (§286 BGB) und nicht abwählbar.',
+                locked: true,
+              },
               { key: 'email_new_auction', label: 'Neue Auktionen', description: 'Benachrichtigung über neue Fahrzeuge' },
               { key: 'email_price_alerts', label: 'Preisalarme', description: 'Fahrzeuge in Ihrer Preisklasse' },
-            ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <div className="font-medium">{item.label}</div>
-                  <div className="text-sm text-muted-foreground">{item.description}</div>
+            ].map((item) => {
+              const locked = 'locked' in item && item.locked;
+              return (
+                <div key={item.key} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium flex items-center gap-2">
+                      {item.label}
+                      {locked && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                          Pflicht
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{item.description}</div>
+                  </div>
+                  <Switch
+                    checked={locked ? true : (preferences[item.key as keyof NotificationPreferences] as boolean)}
+                    disabled={locked}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, [item.key]: checked })
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={preferences[item.key as keyof NotificationPreferences] as boolean}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, [item.key]: checked })
-                  }
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

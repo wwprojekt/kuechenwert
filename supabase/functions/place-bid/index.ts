@@ -290,6 +290,8 @@ Deno.serve(async (req) => {
     }
 
     // 3. Notify the seller about the new bid
+    // Strict opt-out: Pref-Row fehlt oder Query-Fehler → senden;
+    // nur explizites `email_new_bid = false` blockt die Mail.
     if (outcome.motorhome_seller_id) {
       const { data: sellerProfile } = await supabaseAdmin
         .from('profiles')
@@ -298,16 +300,30 @@ Deno.serve(async (req) => {
         .single();
 
       if (sellerProfile?.email) {
-        supabaseAdmin.functions.invoke('send-auction-notification', {
-          body: {
-            email: sellerProfile.email,
-            name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
-            type: 'new_bid',
-            motorhomeModel: motorhomeName,
-            auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
-            currentBid: `€${amount.toLocaleString('de-DE')}`,
-          },
-        }).catch((e) => console.error('Error sending seller notification:', e));
+        const { data: sellerPrefs, error: sellerPrefsError } = await supabaseAdmin
+          .from('user_notification_preferences')
+          .select('email_new_bid')
+          .eq('user_id', outcome.motorhome_seller_id)
+          .maybeSingle();
+
+        if (sellerPrefsError) {
+          console.error('[place-bid] seller prefs query failed, defaulting to SEND:', sellerPrefsError);
+        }
+
+        if (!sellerPrefs || sellerPrefs.email_new_bid !== false) {
+          supabaseAdmin.functions.invoke('send-auction-notification', {
+            body: {
+              email: sellerProfile.email,
+              name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
+              type: 'new_bid',
+              motorhomeModel: motorhomeName,
+              auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
+              currentBid: `€${amount.toLocaleString('de-DE')}`,
+            },
+          }).catch((e) => console.error('Error sending seller notification:', e));
+        } else {
+          console.log(`[place-bid] skipped new_bid mail for seller ${outcome.motorhome_seller_id} (opted out)`);
+        }
       }
     }
 

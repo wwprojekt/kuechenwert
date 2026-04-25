@@ -158,8 +158,51 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── Notification-Preference-Check ────────────────────────────────
+    // Strict opt-out:
+    // - Fehlende Pref-Row oder Query-Fehler → senden (Default).
+    // - `push_enabled === false` → gesamter User überspringt alle Push-Tags.
+    // - Tag-spezifische Flags (push_new_bid / push_outbid / push_auction_ending):
+    //   sobald sie explizit `false` sind, skippt dieser eine Tag-Event für den User.
+    // Andere Tags (z. B. "default", "winner", custom) sind nicht tag-gated → senden.
+    const { data: prefs, error: prefsError } = await supabase
+      .from("user_notification_preferences")
+      .select("user_id, push_enabled, push_new_bid, push_outbid, push_auction_ending")
+      .in("user_id", targetUserIds);
+
+    if (prefsError) {
+      console.error("[send-push-notification] prefs query failed, defaulting to SEND:", prefsError);
+    }
+
+    const prefsByUser = new Map(
+      (prefs || []).map((p: { user_id: string; push_enabled: boolean | null; push_new_bid: boolean | null; push_outbid: boolean | null; push_auction_ending: boolean | null }) => [p.user_id, p])
+    );
+
+    const tagKey: Record<string, "push_new_bid" | "push_outbid" | "push_auction_ending" | null> = {
+      new_bid: "push_new_bid",
+      outbid: "push_outbid",
+      ending_soon: "push_auction_ending",
+      auction_ending: "push_auction_ending",
+    };
+    const specificKey = tag ? tagKey[tag] ?? null : null;
+
+    const allowedUserIds = targetUserIds.filter((uid) => {
+      const p = prefsByUser.get(uid);
+      if (!p) return true;
+      if (p.push_enabled === false) return false;
+      if (specificKey && p[specificKey] === false) return false;
+      return true;
+    });
+
+    if (allowedUserIds.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, skipped: targetUserIds.length, message: "All target users opted out of push" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { data: subscriptions, error: subError } = await supabase
-      .from("push_subscriptions").select("*").in("user_id", targetUserIds);
+      .from("push_subscriptions").select("*").in("user_id", allowedUserIds);
     if (subError) throw subError;
 
     if (!subscriptions?.length) {

@@ -48,6 +48,25 @@ Deno.serve(async (req) => {
       throw new Error('Winner profile not found');
     }
 
+    // Opt-out check: email_auction_won. Strict opt-out — nur explizites `false` skippt;
+    // fehlende Pref-Row oder Query-Fehler → senden (Bestand-User-Schutz).
+    // Die in-App-Status-Updates + Invoice-Mail laufen separat und sind nicht betroffen.
+    const { data: winnerPrefs, error: winnerPrefsError } = await supabase
+      .from('user_notification_preferences')
+      .select('email_auction_won')
+      .eq('user_id', winnerId)
+      .maybeSingle();
+
+    if (winnerPrefsError) {
+      console.error('[notify-auction-winner] prefs query failed, defaulting to SEND:', winnerPrefsError);
+    } else if (winnerPrefs && winnerPrefs.email_auction_won === false) {
+      console.log(`[notify-auction-winner] skipped winner mail for ${winnerId} (opted out)`);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'opted_out_email_auction_won' }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get site settings for email
     const { data: settings } = await supabase
       .from('site_settings')

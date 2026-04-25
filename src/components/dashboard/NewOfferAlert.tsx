@@ -415,7 +415,10 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              {/* Sparkles-Icon: nur ab sm sichtbar, um auf Mobile mehr Platz
+                  fuer den Wohnmobil-Titel zu lassen (360px-Phones). Die Info
+                  "neues Angebot" steckt ausserdem im Uppercase-Text darunter. */}
+              <div className="hidden sm:flex h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 items-center justify-center shadow-lg flex-shrink-0">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <MotorhomeThumb
@@ -429,7 +432,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                     ? "Neues Händler-Angebot"
                     : `${ranked.length} neue Händler-Angebote`}
                 </p>
-                <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight mt-0.5">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight mt-0.5 break-words">
                   <Link
                     to={`/dashboard/listings/${topOffer.motorhome.id}`}
                     className="hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"

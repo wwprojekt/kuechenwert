@@ -2487,7 +2487,7 @@ export default function AdminPostAuctionOffers() {
                   {auction && (
                     <Card className="p-3 bg-muted/40">
                       <div className="flex items-center gap-3">
-                        <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="lg" />
+                        <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="md" />
                         <div className="flex-1 min-w-0">
                           {auction.motorhome ? (
                             <Link
@@ -2500,18 +2500,26 @@ export default function AdminPostAuctionOffers() {
                           ) : (
                             <p className="font-semibold text-sm text-muted-foreground">Unbekannte Auktion</p>
                           )}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                             {auction.motorhome?.year && <span>Baujahr {auction.motorhome.year}</span>}
                             {auction.motorhome?.listing_number && (
                               <span className="font-mono">#{auction.motorhome.listing_number}</span>
                             )}
-                            {auction.status && <span>· Status: {auction.status}</span>}
+                            {auction.status && <span>Status: {auction.status}</span>}
                           </div>
                         </div>
-                        <Button size="sm" variant="outline" asChild>
+                        {/* Button: auf Mobile nur Icon (Thumbnail + Name sind bereits klickbare Links),
+                            ab sm: Icon + Text, spart ca. 70px bei 320-360px-Displays */}
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          asChild
+                          className="h-9 w-9 sm:h-9 sm:w-auto sm:px-3 flex-shrink-0"
+                          title="Auktion in neuem Tab öffnen"
+                        >
                           <Link to={`/admin/auctions/${auction.id}`} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                            Öffnen
+                            <ExternalLink className="w-3.5 h-3.5 sm:mr-1" />
+                            <span className="hidden sm:inline">Öffnen</span>
                           </Link>
                         </Button>
                       </div>

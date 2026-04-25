@@ -59,6 +59,7 @@ interface NotificationPreferences {
   // Marketing preferences
   newsletter_enabled: boolean;
   promotional_emails: boolean;
+  broadcast_emails_enabled: boolean;
   
   // Frequency settings
   digest_frequency: string;
@@ -94,6 +95,7 @@ export const NotificationPreferences = () => {
     audio_auction_won: true,
     newsletter_enabled: true,
     promotional_emails: false,
+    broadcast_emails_enabled: true,
     digest_frequency: 'daily',
     quiet_hours_start: '22:00',
     quiet_hours_end: '08:00',
@@ -548,6 +550,24 @@ export const NotificationPreferences = () => {
               checked={preferences.promotional_emails}
               onCheckedChange={(checked) =>
                 setPreferences({ ...preferences, promotional_emails: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="font-medium">Händler-Digest & Massen-Emails</div>
+              <div className="text-sm text-muted-foreground">
+                Steuert zentrale Broadcast-Kanäle: Tages-/Wochen-Digest für
+                Händler, neue Funktionen, Sofortkauf-Alerts, Preisalarme.
+                Transaktionale Emails (Rechnungen, Gebote, Auktionsergebnis)
+                werden hiervon nicht beeinflusst.
+              </div>
+            </div>
+            <Switch
+              checked={preferences.broadcast_emails_enabled}
+              onCheckedChange={(checked) =>
+                setPreferences({ ...preferences, broadcast_emails_enabled: checked })
               }
             />
           </div>

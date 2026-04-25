@@ -96,6 +96,30 @@ export function PriceChangeRequestDialog({
         throw new Error("Der gewünschte Preis entspricht dem aktuellen Preis – bitte einen abweichenden Wert eingeben.");
       }
 
+      // Preise duerfen nur gesenkt, nicht erhoeht werden. Der Server setzt
+      // die Regel nochmals durch (request-price-change Edge Function), aber
+      // so bekommt der Verkaeufer sofort eine klare Fehlermeldung.
+      if (
+        showReserveField &&
+        reserveNum != null &&
+        currentReserve != null &&
+        Number(reserveNum) > Number(currentReserve)
+      ) {
+        throw new Error(
+          `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentReserve)}). Für eine Erhöhung kontaktieren Sie bitte info@caravanwert.de.`,
+        );
+      }
+      if (
+        showInstantField &&
+        instantNum != null &&
+        currentInstant != null &&
+        Number(instantNum) > Number(currentInstant)
+      ) {
+        throw new Error(
+          `Der Sofortpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentInstant)}). Für eine Erhöhung kontaktieren Sie bitte info@caravanwert.de.`,
+        );
+      }
+
       const { data, error } = await invokeWithAuth("request-price-change", {
         body: {
           motorhomeId,
@@ -154,6 +178,12 @@ export function PriceChangeRequestDialog({
             Während die Auktion läuft, übernimmt das CaravanWert-Team die Preisanpassung. Bitte geben Sie Ihren Wunsch und einen kurzen Grund an – Sie erhalten eine Antwort per E-Mail.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          Hinweis: Der Preis kann nur <strong>gesenkt</strong> werden (AGB §6.4 c –
+          Reduktionsboden-Logik). Eine Erhöhung des Mindest- oder Sofortpreises
+          ist nicht möglich.
+        </div>
 
         <div className="space-y-4">
           {showReserveField && (

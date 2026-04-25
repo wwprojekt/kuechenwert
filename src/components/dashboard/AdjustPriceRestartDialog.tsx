@@ -93,6 +93,20 @@ export function AdjustPriceRestartDialog({
         );
       }
 
+      // Preise duerfen nur gesenkt oder gleich bleiben. Der Server (RPC
+      // seller_restart_listing) erzwingt die Regel ebenfalls; dieser Guard
+      // liefert dem Verkaeufer aber sofort eine klare Meldung.
+      if (
+        currentPrice != null &&
+        Number(newPriceNum) > Number(currentPrice)
+      ) {
+        throw new Error(
+          isInstantOnly
+            ? `Der Sofortkauf-Preis kann nur gesenkt, nicht erhöht werden (aktuell €${Number(currentPrice).toLocaleString("de-DE")}).`
+            : `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell €${Number(currentPrice).toLocaleString("de-DE")}).`,
+        );
+      }
+
       const { data, error } = await withSessionRetry(
         () =>
           supabase.rpc("seller_restart_listing", {
@@ -144,7 +158,7 @@ export function AdjustPriceRestartDialog({
             Preis anpassen und neu starten
           </DialogTitle>
           <DialogDescription>
-            {motorhomeName} — passen Sie den Preis an und starten Sie eine frische Marketing-Phase.
+            {motorhomeName} — senken Sie den Preis und starten Sie eine frische Marketing-Phase. (Eine Erhöhung ist nicht möglich.)
           </DialogDescription>
         </DialogHeader>
 
@@ -178,14 +192,14 @@ export function AdjustPriceRestartDialog({
             {newPriceNum && priceDelta !== 0 && (
               <div
                 className={`text-xs flex items-center gap-1 ${
-                  isReduction ? "text-emerald-600" : "text-amber-600"
+                  isReduction ? "text-emerald-600" : "text-red-600"
                 }`}
               >
                 {isReduction ? <TrendingDown className="w-3 h-3" /> : <Info className="w-3 h-3" />}
                 {isReduction
                   ? `Reduktion um €${Math.abs(priceDelta).toLocaleString("de-DE")} (${priceDeltaPct.toFixed(1)}%)`
                   : isIncrease
-                    ? `Erhöhung um €${priceDelta.toLocaleString("de-DE")} (${priceDeltaPct.toFixed(1)}%)`
+                    ? `Preiserhöhung nicht möglich – bitte einen Wert ≤ bisherigem Preis eingeben.`
                     : null}
               </div>
             )}
@@ -236,7 +250,10 @@ export function AdjustPriceRestartDialog({
               restartMutation.mutate();
             }}
             disabled={
-              submitting || !newPriceNum || newPriceNum <= 0
+              submitting ||
+              !newPriceNum ||
+              newPriceNum <= 0 ||
+              (currentPrice != null && Number(newPriceNum) > Number(currentPrice))
             }
           >
             {submitting ? "Wird gestartet…" : "Mit neuem Preis starten"}

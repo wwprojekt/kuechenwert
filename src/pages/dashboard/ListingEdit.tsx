@@ -292,6 +292,27 @@ export default function ListingEdit() {
         throw new Error("Sofortkauf-Preis ist Pflicht für Sofortkauf-Inserate.");
       }
 
+      // Preise duerfen nur gesenkt, nicht erhoeht werden. Der Server (RPC
+      // update_listing_prices_in_draft) erzwingt das ebenfalls – hier fuer
+      // sofortiges UI-Feedback. Vergleich jeweils gegen motorhomes.*_price
+      // (also den zuletzt bestaetigten Wert).
+      if (canEditPricesSelf) {
+        const newReserveCandidate = data.reserve_price ? Number(data.reserve_price) : null;
+        const newInstantCandidate = data.instant_price ? Number(data.instant_price) : null;
+        const oldReserve = motorhome?.reserve_price != null ? Number(motorhome.reserve_price) : null;
+        const oldInstant = motorhome?.instant_price != null ? Number(motorhome.instant_price) : null;
+        if (newReserveCandidate != null && oldReserve != null && newReserveCandidate > oldReserve) {
+          throw new Error(
+            `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell ${oldReserve.toLocaleString("de-DE")} €).`,
+          );
+        }
+        if (newInstantCandidate != null && oldInstant != null && newInstantCandidate > oldInstant) {
+          throw new Error(
+            `Der Sofortkauf-Preis kann nur gesenkt, nicht erhöht werden (aktuell ${oldInstant.toLocaleString("de-DE")} €).`,
+          );
+        }
+      }
+
       const updateData: any = {
         description: data.description,
         
@@ -622,6 +643,11 @@ export default function ListingEdit() {
                     {isDraftAuction && (
                       <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                         Inserat ist noch im Entwurf – Preis kann selbst geändert werden. Sobald der Admin freigibt, läuft die Anpassung über das CaravanWert-Team.
+                      </p>
+                    )}
+                    {canEditPricesSelf && (
+                      <p className="text-xs text-muted-foreground">
+                        Hinweis: Preise können nur gesenkt, nicht erhöht werden (AGB §6.4 c).
                       </p>
                     )}
                     {hasAuction && !isDraftAuction && (

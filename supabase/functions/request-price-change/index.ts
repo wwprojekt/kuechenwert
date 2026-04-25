@@ -121,6 +121,47 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .limit(1)
       .maybeSingle();
 
+    // Regel: Verkaeufer duerfen den Mindestpreis/Sofortpreis nur SENKEN,
+    // niemals erhoehen. Bei laufender Auktion ist der Vergleichswert fuer
+    // den Mindestpreis das potenziell bereits durch Dynamic Pricing
+    // reduzierte auctions.reserve_price; fuer den Sofortpreis das unver-
+    // aenderte motorhomes.instant_price (wird vom Cron nicht reduziert).
+    const currentReserveForCompare =
+      (auction?.reserve_price as number | null | undefined) ??
+      (motorhome.reserve_price as number | null | undefined) ??
+      null;
+    const currentInstantForCompare =
+      (motorhome.instant_price as number | null | undefined) ?? null;
+
+    if (
+      requestedReserve != null &&
+      currentReserveForCompare != null &&
+      Number(requestedReserve) > Number(currentReserveForCompare)
+    ) {
+      return jsonResponse(
+        {
+          error: `Der Mindestpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentReserveForCompare)}, gewuenscht: ${fmtPrice(requestedReserve)}). Fuer Erhoehungen wenden Sie sich an info@caravanwert.de.`,
+          code: 'PRICE_RAISE_NOT_ALLOWED',
+        },
+        400,
+        corsHeaders,
+      );
+    }
+    if (
+      requestedInstant != null &&
+      currentInstantForCompare != null &&
+      Number(requestedInstant) > Number(currentInstantForCompare)
+    ) {
+      return jsonResponse(
+        {
+          error: `Der Sofortpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentInstantForCompare)}, gewuenscht: ${fmtPrice(requestedInstant)}). Fuer Erhoehungen wenden Sie sich an info@caravanwert.de.`,
+          code: 'PRICE_RAISE_NOT_ALLOWED',
+        },
+        400,
+        corsHeaders,
+      );
+    }
+
     const { data: existing } = await adminClient
       .from('price_change_requests')
       .select('id, created_at')

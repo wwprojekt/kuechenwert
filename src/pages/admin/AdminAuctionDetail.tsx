@@ -38,6 +38,7 @@ import {
   Clock,
   FileText,
   Handshake,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -205,6 +206,69 @@ export default function AdminAuctionDetail() {
     onError: (error) => {
       logger.error("Cancel auction error:", error);
       toast.error(isFestpreis ? "Fehler beim Abbrechen des Inserats" : "Fehler beim Abbrechen der Auktion");
+    },
+  });
+
+  /**
+   * Repair sale artefacts mutation.
+   *
+   * Invokes admin-repair-sale-artefacts for SOLD auctions where the initial
+   * sell flow (close-auction / instant-buy / admin-sell-to-dealer) committed
+   * the DB writes but downstream Edge Functions (invoice PDF, contract PDF,
+   * emails) failed with transient gateway errors. The repair function is
+   * idempotent and only fills in what's missing — it never rewrites already-
+   * delivered artefacts.
+   *
+   * Flow:
+   *   1. "dryRun" first → show the operator what is missing.
+   *   2. Confirmation from the operator → second call without dryRun.
+   */
+  const repairSaleMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error("No auction id");
+      const { data, error } = await invokeWithAuth("admin-repair-sale-artefacts", {
+        body: { auctionId: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (result) => {
+      const repaired = result?.repairedCount ?? 0;
+      const skipped = result?.skippedCount ?? 0;
+      const failed = result?.failedCount ?? 0;
+      if (failed > 0) {
+        toast.warning(
+          `Reparatur abgeschlossen: ${repaired} repariert, ${skipped} bereits ok, ${failed} fehlgeschlagen — bitte Admin-Mail prüfen`,
+          { duration: 8000 },
+        );
+      } else if (repaired > 0) {
+        toast.success(
+          `Verkauf repariert: ${repaired} Artefakt(e) neu erstellt, ${skipped} bereits ok`,
+          { duration: 6000 },
+        );
+      } else {
+        toast.info(
+          `Kein Eingriff nötig — alle ${skipped} Artefakte sind bereits vorhanden`,
+        );
+      }
+      logEvent({
+        action: "sale_artefacts_repaired",
+        entityType: "auction",
+        entityId: id,
+        details: {
+          repaired,
+          skipped,
+          failed,
+          steps: result?.steps,
+          errors: result?.errors,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ["adminAuctionDetail", id] });
+    },
+    onError: (error: Error) => {
+      logger.error("Repair sale artefacts error:", error);
+      toast.error(`Reparatur fehlgeschlagen: ${error.message}`);
     },
   });
 
@@ -399,6 +463,48 @@ export default function AdminAuctionDetail() {
                 <Handshake className="w-4 h-4 mr-2" />
                 An Händler verkaufen
               </Button>
+            )}
+            {/* Verkauf reparieren: nur für bereits abgeschlossene Verkäufe sichtbar.
+                Fängt die Lücke, wenn close-auction / instant-buy / admin-sell-to-dealer
+                die DB-Writes committet haben, aber Folge-Edge-Functions (Rechnungs-PDF,
+                Vertrag, E-Mails) an transienten Gateway-Fehlern gescheitert sind. Die
+                Backend-Funktion ist idempotent — wiederholte Klicks sind gefahrlos. */}
+            {(auction.status === "sold" || auction.motorhome?.status === "sold") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-600 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:hover:bg-amber-950"
+                    disabled={repairSaleMutation.isPending}
+                  >
+                    <Wrench className="w-4 h-4 mr-2" />
+                    {repairSaleMutation.isPending ? "Repariere…" : "Verkauf reparieren"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Verkauf reparieren?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Diese Funktion prüft, ob Rechnung, Kaufvertrag und alle
+                      Benachrichtigungs-E-Mails für diesen Verkauf erfolgreich
+                      erstellt/versendet wurden, und füllt fehlende Artefakte nach.
+                      Bereits versendete E-Mails und bestehende Dokumente werden
+                      NICHT doppelt erzeugt. Eine Zusammenfassung wird ans Admin-
+                      Postfach geschickt.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => repairSaleMutation.mutate()}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Jetzt reparieren
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {(auction.status === "active" || auction.status === "draft" || auction.status === "kaufchance") && (
               <AlertDialog>

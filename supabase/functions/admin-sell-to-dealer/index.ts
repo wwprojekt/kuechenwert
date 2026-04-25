@@ -7,6 +7,7 @@ import { uploadSaleConversionToGoogleAds } from '../_shared/gads-sale-conversion
 import { uploadSaleConversionToBingAds } from '../_shared/bing-sale-conversion.ts';
 import { sendContractSentNotification } from '../_shared/contract-notification.ts';
 import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.ts';
+import { invokeWithRetry } from '../_shared/invoke-with-retry.ts';
 
 /**
  * Edge Function: admin-sell-to-dealer
@@ -241,10 +242,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4b. Motorhome must not already be sold
+    // 4b. Motorhome must not already be sold.
+    //
+    // Idempotency note: If the motorhome is already sold to the SAME buyer at
+    // the SAME price, the caller is almost certainly retrying after a
+    // half-failed sell (e.g. Edge Function gateway returned non-2xx during
+    // downstream invoicing/contract/email steps but the DB writes in step 5
+    // succeeded). Instead of hard-erroring with 409 — which left operators
+    // without any recovery path — we return a structured 409 hint telling the
+    // caller to use the dedicated repair flow (`admin-repair-sale-artefacts`).
+    // We intentionally do NOT re-run the parent flow here because it consumes
+    // optimistic locks (place_bid_atomic / motorhome.updated_at) that are
+    // already resolved for a sold vehicle.
     if (motorhome.status === 'sold') {
+      const alreadySameBuyer = motorhome.sold_to === buyerId;
       return new Response(
-        JSON.stringify({ error: 'Dieses Wohnmobil wurde bereits verkauft' }),
+        JSON.stringify({
+          error: 'Dieses Wohnmobil wurde bereits verkauft',
+          code: 'ALREADY_SOLD',
+          alreadySoldTo: motorhome.sold_to,
+          sameBuyer: alreadySameBuyer,
+          hint: alreadySameBuyer
+            ? 'Nutzen Sie den "Verkauf reparieren"-Button, um fehlende Artefakte (Vertrag, Rechnung, E-Mails) nachzureichen.'
+            : 'Das Wohnmobil wurde an einen anderen Käufer verkauft. Eine erneute Verkaufsabwicklung ist nicht möglich.',
+        }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -393,12 +414,15 @@ Deno.serve(async (req) => {
 
       let pdfBase64: string | undefined;
       try {
-        const { data: pdfResult, error: pdfError } = await supabaseAdmin.functions.invoke('generate-invoice-pdf', {
-          body: { invoiceId },
-        });
+        const { data: pdfResult, error: pdfError, attempts } = await invokeWithRetry<{ pdfBase64?: string; invoiceNumber?: string }>(
+          supabaseAdmin,
+          'generate-invoice-pdf',
+          { invoiceId },
+          { label: 'generate-invoice-pdf' },
+        );
         if (pdfError) {
-          console.error('PDF generation error:', pdfError);
-          errors.push(`Rechnungs-PDF-Generierung fehlgeschlagen: ${pdfError.message || 'Unbekannter Fehler'}`);
+          console.error(`PDF generation error after ${attempts} attempt(s):`, pdfError);
+          errors.push(`Rechnungs-PDF-Generierung fehlgeschlagen nach ${attempts} Versuch(en): ${pdfError.message || 'Unbekannter Fehler'}`);
         } else {
           pdfBase64 = pdfResult?.pdfBase64;
           invoiceNumber = pdfResult?.invoiceNumber || '';
@@ -409,12 +433,15 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-invoice-email', {
-          body: { invoiceId, pdfBase64 },
-        });
+        const { data: emailResult, error: emailError, attempts } = await invokeWithRetry<{ invoiceNumber?: string; sentTo?: string }>(
+          supabaseAdmin,
+          'send-invoice-email',
+          { invoiceId, pdfBase64 },
+          { label: 'send-invoice-email' },
+        );
         if (emailError) {
-          console.error('Invoice email error:', emailError);
-          errors.push(`Rechnungs-E-Mail fehlgeschlagen: ${emailError.message || 'Unbekannter Fehler'}`);
+          console.error(`Invoice email error after ${attempts} attempt(s):`, emailError);
+          errors.push(`Rechnungs-E-Mail fehlgeschlagen nach ${attempts} Versuch(en): ${emailError.message || 'Unbekannter Fehler'}`);
         } else {
           console.log('Invoice email sent:', emailResult?.invoiceNumber, '\u2192', emailResult?.sentTo);
           invoiceSuccess = true;
@@ -473,14 +500,13 @@ Deno.serve(async (req) => {
 
     // ─── 7. WINNER NOTIFICATION ──────────────────────────────────
     try {
-      const { error: winnerInvokeErr } = await supabaseAdmin.functions.invoke('notify-auction-winner', {
-        body: {
-          auctionId,
-          winnerId: buyerId,
-          amount: salePrice,
-        },
-      });
-      if (winnerInvokeErr) throw winnerInvokeErr;
+      const { error: winnerInvokeErr, attempts: winnerAttempts } = await invokeWithRetry(
+        supabaseAdmin,
+        'notify-auction-winner',
+        { auctionId, winnerId: buyerId, amount: salePrice },
+        { label: 'notify-auction-winner' },
+      );
+      if (winnerInvokeErr) throw new Error(`${winnerInvokeErr.message} (after ${winnerAttempts} attempts)`);
       console.log('Winner notification sent to buyer:', buyerId);
     } catch (notifyError: any) {
       console.error('Error sending winner notification:', notifyError);
@@ -492,19 +518,28 @@ Deno.serve(async (req) => {
     let contractNumber = '';
     let contractPdfBase64 = '';
     try {
-      const { data: contractResult, error: contractError } = await supabaseAdmin.functions.invoke('generate-purchase-contract', {
-        body: {
+      const { data: contractResult, error: contractError, attempts: contractAttempts } = await invokeWithRetry<{
+        success?: boolean;
+        contractNumber?: string;
+        contractUrl?: string;
+        buyerContractUrl?: string;
+        pdfBase64?: string;
+      }>(
+        supabaseAdmin,
+        'generate-purchase-contract',
+        {
           auctionId,
           motorhomeId: motorhome.id,
           buyerId,
           sellerId: motorhome.seller_id,
           salePrice,
         },
-      });
+        { label: 'generate-purchase-contract' },
+      );
 
       if (contractError) {
-        console.error('Purchase contract error:', contractError);
-        errors.push(`Kaufvertrag-Generierung fehlgeschlagen: ${contractError.message || 'Unbekannter Fehler'}`);
+        console.error(`Purchase contract error after ${contractAttempts} attempt(s):`, contractError);
+        errors.push(`Kaufvertrag-Generierung fehlgeschlagen nach ${contractAttempts} Versuch(en): ${contractError.message || 'Unbekannter Fehler'}`);
       } else if (contractResult?.success) {
         contractSuccess = true;
         contractNumber = contractResult.contractNumber;
@@ -751,8 +786,10 @@ Deno.serve(async (req) => {
           .single();
 
         if (sellerProfile?.email) {
-          const { error: sellerNotifyErr } = await supabaseAdmin.functions.invoke('send-auction-notification', {
-            body: {
+          const { error: sellerNotifyErr, attempts: sellerAttempts } = await invokeWithRetry(
+            supabaseAdmin,
+            'send-auction-notification',
+            {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'seller_sold',
@@ -760,8 +797,9 @@ Deno.serve(async (req) => {
               auctionUrl: `https://caravanwert.de/dashboard/listings/${motorhome.id}`,
               currentBid: `\u20ac${salePrice.toLocaleString()}`,
             },
-          });
-          if (sellerNotifyErr) throw sellerNotifyErr;
+            { label: 'send-auction-notification (seller_sold)' },
+          );
+          if (sellerNotifyErr) throw new Error(`${sellerNotifyErr.message} (after ${sellerAttempts} attempts)`);
         }
       } catch (e: any) {
         console.error('Error sending seller notification:', e);

@@ -277,3 +277,7 @@ verify_jwt = false
 # --- Admin manual sale to dealer (atomic instant-buy clone with admin auth) ---
 [functions.admin-sell-to-dealer]
 verify_jwt = false
+
+# --- Admin repair sale artefacts (idempotent post-hoc fixer for half-failed sells) ---
+[functions.admin-repair-sale-artefacts]
+verify_jwt = false

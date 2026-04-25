@@ -33,15 +33,10 @@ export const AuctionCommissionOverview = ({ currentBid }: AuctionCommissionOverv
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Provision ({commissionInfo.rate.toLocaleString('de-DE')}%{commissionInfo.isMinApplied ? ', mind.' : ''})
+              Provision{commissionInfo.isMinApplied ? ' (mind.)' : ''}
             </span>
             <span className="font-medium">€{commissionInfo.commission.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
           </div>
-          {commissionInfo.isMinApplied && (
-            <p className="text-xs text-muted-foreground">
-              Mindestprovision €{commissionInfo.minCommission.toLocaleString('de-DE', { minimumFractionDigits: 2 })} angewendet
-            </p>
-          )}
         </div>
         <Separator />
         <div className="flex items-center justify-between">

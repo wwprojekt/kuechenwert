@@ -422,10 +422,27 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
     const trimmed = value.trim();
     const resolved = resolveManufacturer(trimmed);
     const final = resolved !== trimmed ? resolved : trimmed;
-    if (final !== formData.manufacturer) {
+    const isNewManufacturer = final !== formData.manufacturer;
+    if (isNewManufacturer) {
       updateFormData({ manufacturer: final, model: "" });
     }
-  }, [formData.manufacturer, updateFormData]);
+    // Funnel-Analyse 2026-04-25: 53% Drop Step2 -> Step3. Top-Pathologie in
+    // den Event-Sequenzen: User committed den Hersteller und denkt "nichts
+    // ist passiert", weil die naechsten Pflichtfelder (Modell, Baujahr, Km,
+    // Zustand) auf Mobile unter dem Fold / unter der iOS-Tastatur liegen.
+    // 73% der 32 Step-2-Stucker mit gesetztem Hersteller haben nie ein Modell
+    // eingegeben. Loesung: nach jedem Hersteller-Commit sanft zum Modell-Feld
+    // scrollen. Delay laesst die iOS-Tastatur erst komplett einfahren, sonst
+    // scrollen wir gegen den Viewport-Resize an.
+    if (isNewManufacturer || !formData.model) {
+      window.setTimeout(() => {
+        const modelInput = document.getElementById("model");
+        if (modelInput) {
+          modelInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 350);
+    }
+  }, [formData.manufacturer, formData.model, updateFormData]);
 
   const totalRequired = isWohnwagen ? 4 : 5;
   const filledCount = [
@@ -494,16 +511,36 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
         )}
       </div>
 
-      {/* === REMAINING FIELDS (only after manufacturer is committed) === */}
-      {formData.manufacturer && (
-        <div className="space-y-4 animate-fade-in">
+      {/* === REMAINING FIELDS ===
+          Funnel-Analyse 2026-04-25 (72h-Daten): Step 2 -> Step 3 Drop
+          war 53% (direct-traffic: 78 -> 32). Haupt-Ursache in den
+          wizard_step_events Sequenzen: Felder waren hinter einer
+          `{formData.manufacturer && ...}`-Bedingung versteckt und wurden
+          erst nach dem Commit eingeblendet. Auf Mobile (86 % aller
+          Step-2-Sessions) landet das Reveal unter dem Fold / der iOS-
+          Tastatur -> User denkt "nichts passiert", klickt wiederholt
+          "Weiter" (avg 2.3x mit 1.9 validation_failed vor Give-up) und
+          findet die fehlenden Pflichtfelder nie. Felder sind jetzt von
+          Anfang an sichtbar, Modell ist disabled bis Hersteller gewaehlt
+          wurde (klare Reihenfolge-Kommunikation). */}
+      <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Modell */}
             <div className="space-y-1.5">
               <Label htmlFor="model" className={cn(fieldErrors.model && "text-red-600")}>
                 Modell / Baureihe <span className="text-red-500">*</span>
               </Label>
-              {isModelFreeText ? (
+              {!formData.manufacturer ? (
+                <Input
+                  id="model"
+                  type="text"
+                  value=""
+                  disabled
+                  placeholder="Erst Hersteller oben auswählen..."
+                  className="h-12 text-base bg-muted/40 text-muted-foreground"
+                  readOnly
+                />
+              ) : isModelFreeText ? (
                 <Input
                   id="model"
                   type="text"
@@ -532,21 +569,17 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
               )}
               {fieldErrors.model ? (
                 <p className="text-sm text-red-600">{fieldErrors.model}</p>
-              ) : isModelFreeText ? (
-                // Funnel-Analyse 2026-04-22: Hersteller hat keine Modell-DB-Eintraege.
-                // Klarer Hint statt verwirrendes Dropdown mit nur "Sonstiges Modell".
+              ) : !formData.manufacturer ? (
                 <p className="text-xs text-muted-foreground">
-                  Tippen Sie die Modellbezeichnung Ihres {formData.manufacturer} ein \u2013 wir nehmen jede Eingabe.
+                  Wir zeigen Ihnen passende Modelle, sobald der Hersteller gewählt ist.
+                </p>
+              ) : isModelFreeText ? (
+                <p className="text-xs text-muted-foreground">
+                  Tippen Sie die Modellbezeichnung Ihres {formData.manufacturer} ein – wir nehmen jede Eingabe.
                 </p>
               ) : (
-                // Funnel-Analyse Step 2 (2026-04-21): 9 von 10 Step-2-Abbrechern
-                // haben kein Modell ausgew\u00e4hlt, obwohl Free-Text + "Sonstiges
-                // Modell"-Escape l\u00e4ngst implementiert sind. Dieser Hilfetext
-                // kommuniziert den Free-Text-Pfad explizit, damit der User nicht
-                // mehr glaubt er sei auf die Liste angewiesen.
                 <p className="text-xs text-muted-foreground">
-                  Modell nicht in der Liste? Einfach eintippen \u2013 wir nehmen
-                  jede Bezeichnung an. Oder w\u00e4hlen Sie &quot;Sonstiges Modell&quot;.
+                  Modell nicht in der Liste? Einfach eintippen – wir nehmen jede Bezeichnung an. Oder wählen Sie &quot;Sonstiges Modell&quot;.
                 </p>
               )}
             </div>
@@ -645,7 +678,6 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
             )}
           </div>
         </div>
-      )}
 
       {/* Positive reinforcement when all fields filled */}
       {filledCount === totalRequired && (

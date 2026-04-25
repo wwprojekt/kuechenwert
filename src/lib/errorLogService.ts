@@ -363,12 +363,85 @@ function isThrottled(): boolean {
   return _errorCount > MAX_ERRORS_PER_MINUTE;
 }
 
+// ============================================================================
+// Zentrale Duplikat-Erkennung (symmetrisch, reihenfolge-unabhängig)
+// ============================================================================
+//
+// Motivation (Fehlerprotokoll 25.04.2026):
+//   Vier voneinander unabhängige Pfade münden alle in logErrorToSupabase:
+//     1. handleAndLogError(...)            → errorCode = <translated code>
+//     2. console.error-Interceptor         → errorCode = 'CONSOLE_ERROR'
+//     3. toast-auto-capture                → errorCode = 'TOAST_ERROR'
+//     4. componentDidCatch (ErrorBoundary) → errorCode = 'ERROR_BOUNDARY_*'
+//
+//   Die bisherigen window-Marker (__lastLoggedErrorMessage / __lastLogged
+//   OriginalError) filtern nur *wenn Pfad A oder Pfad B zuerst lief und der
+//   Marker rechtzeitig gesetzt war*. Läuft der console.error- oder ErrorBoundary-
+//   Pfad ZUERST (= Debug-console.error in einem onError-Handler vor dem Toast;
+//   siehe ListingEdit.tsx Fix in Commit fe9873e), existiert der Marker beim
+//   ersten Log-Call noch nicht → der zweite Pfad legt einen Duplikat-Eintrag an.
+//
+// Lösung:
+//   Ring-Puffer (Schlüssel: pagePath | originalError | componentName) mit
+//   2s-Fenster im einzigen Funnel durch den alle Pfade laufen. Symmetrisch,
+//   reihenfolge-unabhängig, keine Whitelist, kein User-facing Effekt (greift
+//   nur im DB-Log-Pfad; Toasts/Dialoge/SessionExpired bleiben unberührt).
+//
+// Trade-off:
+//   Wenn derselbe Nutzer dieselbe Aktion <2s nach einem echten transienten
+//   Fehler wiederholt, wird der zweite Eintrag nicht mehr als eigener Row
+//   gezählt. Das ist konsistent mit dem gröberen MAX_ERRORS_PER_MINUTE=10
+//   Throttle und dem bereits vorhandenen error_hash / occurrence_count-Design.
+const DEDUP_WINDOW_MS = 2000;
+const DEDUP_BUFFER_MAX = 32; // Sicherheitsdeckel gegen Memory-Leak
+const _recentLogKeys: { key: string; ts: number }[] = [];
+
+function buildDedupKey(entry: ErrorLogEntry): string {
+  // originalError bevorzugen (rohe Entwickler-Message, stabil über alle Pfade),
+  // errorMessage als Fallback (deutsch-übersetzt). pagePath + componentName
+  // verhindern, dass derselbe Fehlertext auf verschiedenen Seiten / aus
+  // verschiedenen Komponenten ungewollt zu einem Duplikat verschmilzt.
+  return [
+    entry.pagePath || '',
+    (entry.originalError || entry.errorMessage || '').slice(0, 200),
+    entry.componentName || '',
+  ].join('|');
+}
+
+function isDuplicateEntry(entry: ErrorLogEntry): boolean {
+  const now = Date.now();
+  // Expire alte Einträge (ring buffer semantics)
+  while (_recentLogKeys.length > 0 && now - _recentLogKeys[0].ts > DEDUP_WINDOW_MS) {
+    _recentLogKeys.shift();
+  }
+  const key = buildDedupKey(entry);
+  if (_recentLogKeys.some((r) => r.key === key)) {
+    return true;
+  }
+  _recentLogKeys.push({ key, ts: now });
+  // Sicherheitsdeckel: falls Expiry mal nicht greift (Clock-Drift etc.)
+  if (_recentLogKeys.length > DEDUP_BUFFER_MAX) {
+    _recentLogKeys.shift();
+  }
+  return false;
+}
+
 /**
  * Loggt einen Fehler in die Supabase error_logs Tabelle.
  * Wird asynchron ausgeführt und blockiert nicht die UI.
  */
 export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
   try {
+    // Zentrale Duplikat-Erkennung: Fängt alle Kombinationen aus den vier
+    // Log-Pfaden (handleAndLogError / console.error / toast-auto-capture /
+    // ErrorBoundary) reihenfolge-unabhängig ab. Siehe Doku bei buildDedupKey.
+    // Bewusst VOR isThrottled(): Zwei identische Events sollen nicht doppelt
+    // gegen das MAX_ERRORS_PER_MINUTE-Budget zählen.
+    if (isDuplicateEntry(entry)) {
+      logger.debug('Error log dedup skipped (identical entry <2s):', entry.errorCode, entry.originalError?.slice(0, 80));
+      return;
+    }
+
     // Throttle check
     if (isThrottled()) {
       logger.warn('Error logging throttled - too many errors per minute');

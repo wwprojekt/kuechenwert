@@ -531,10 +531,14 @@ export const VehicleInfoStep = ({ formData, updateFormData, fieldErrors = {} }: 
                 Modell / Baureihe <span className="text-red-500">*</span>
               </Label>
               {!formData.manufacturer ? (
+                // Defensive: wenn ein Deep-Link (?model=X ohne ?manufacturer=Y)
+                // das Modell ohne Hersteller vorbelegt hat, den Wert hier sichtbar
+                // behalten. Sobald der User den Hersteller waehlt, wechselt das
+                // Feld auf das normale Input und die Eingabe wird editierbar.
                 <Input
                   id="model"
                   type="text"
-                  value=""
+                  value={formData.model || ""}
                   disabled
                   placeholder="Erst Hersteller oben auswählen..."
                   className="h-12 text-base bg-muted/40 text-muted-foreground"

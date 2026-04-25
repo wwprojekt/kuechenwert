@@ -29,11 +29,18 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date().toISOString();
 
-    // Find scheduled emails that are due
+    // Find due emails:
+    // - `status='scheduled'` → klassisches Admin-Email-Scheduling via
+    //   `send-admin-email`
+    // - `status='queued'` MIT `scheduled_at` → Quiet-Hours-Deferral aus den
+    //   Notification-Sendepfaden (Digest, Outbid, Instant-Buy-Alert, ...).
+    //   Rows ohne `scheduled_at` bleiben unberuehrt (Resend-Pipeline nutzt
+    //   `queued` auch als Zwischenstatus fuer Retries).
     const { data: emails, error: fetchError } = await supabase
       .from('admin_emails')
       .select('*')
-      .eq('status', 'scheduled')
+      .in('status', ['scheduled', 'queued'])
+      .not('scheduled_at', 'is', null)
       .lte('scheduled_at', now)
       .order('scheduled_at', { ascending: true })
       .limit(50);
@@ -59,8 +66,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const email of emails) {
       try {
-        // Build HTML with branding
-        const html = buildEmailLayout(settingsData, email.subject, email.body_html || paragraph(email.body_text || ''));
+        // Build HTML with branding — aber nicht doppelt wrappen. Quiet-Hours-
+        // Deferral speichert bereits die vollstaendig gerenderte Mail (mit
+        // Layout) in `body_html`; das Admin-Email-Scheduling uebergibt hingegen
+        // nur den Inner-Content. Heuristik: wenn `body_html` bereits ein
+        // <html> oder <!DOCTYPE>-Wrapper enthaelt, direkt versenden.
+        const rawBody = email.body_html || paragraph(email.body_text || '');
+        const alreadyWrapped = /<!doctype html|<html[\s>]/i.test(rawBody);
+        const html = alreadyWrapped
+          ? rawBody
+          : buildEmailLayout(settingsData, email.subject, rawBody);
 
         const emailPayload: any = {
           from: `${email.sender_name || settingsData.site_name} <${email.sender_email || 'info@caravanwert.de'}>`,

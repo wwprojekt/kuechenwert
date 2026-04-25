@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, auctionEmailCard, pickPrimaryPhotoUrl } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { deferIfQuiet } from '../_shared/quiet-hours.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -132,10 +133,10 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (!profile?.email) continue;
 
-        // Check opt-out via user_notification_preferences
+        // Check opt-out via user_notification_preferences (inkl. Quiet Hours)
         const { data: prefs } = await supabase
           .from('user_notification_preferences')
-          .select('broadcast_emails_enabled')
+          .select('broadcast_emails_enabled, quiet_hours_start, quiet_hours_end')
           .eq('user_id', dealer.user_id)
           .maybeSingle();
 
@@ -298,6 +299,42 @@ const handler = async (req: Request): Promise<Response> => {
           : `${settingsData.site_name}: ${allActiveAuctions.length} aktive Auktionen`;
 
         const html = buildEmailLayout(settingsData, subject, emailContent);
+
+        // Quiet-Hours-Deferral: der Digest ist explizit nicht-transaktional.
+        // Wenn der Haendler noch in seiner Ruhezeit ist, queuen wir die Mail
+        // und process-scheduled-emails schickt sie aus, sobald die Ruhezeit
+        // endet. Der Dedup-Check oben ("already sent today") bleibt wirksam,
+        // weil die gequeute Row mit created_at=NOW() gespeichert wird.
+        const deferUntil = prefs
+          ? deferIfQuiet(
+              { quiet_hours_start: prefs.quiet_hours_start, quiet_hours_end: prefs.quiet_hours_end },
+              'dealer_auction_digest'
+            )
+          : null;
+
+        if (deferUntil) {
+          const { error: queueErr } = await supabase.from('admin_emails').insert({
+            sender_email: 'info@caravanwert.de',
+            sender_name: settingsData.site_name,
+            recipient_email: profile.email,
+            recipient_name: name || null,
+            recipient_id: dealer.user_id,
+            subject,
+            body_html: html,
+            body_text: '',
+            email_type: 'dealer_auction_digest',
+            direction: 'outbound',
+            status: 'queued',
+            scheduled_at: deferUntil.toISOString(),
+            is_read: true,
+          });
+          if (queueErr) {
+            console.error(`[send-dealer-auction-digest] quiet-hours queue insert failed for ${profile.email}:`, queueErr.message);
+          } else {
+            skipped++;
+            continue;
+          }
+        }
 
         // ── Send email ──────────────────────────────────────────────────
         const emailResponse = await fetch("https://api.resend.com/emails", {

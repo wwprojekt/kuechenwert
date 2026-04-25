@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, detailRow, paragraph, customerBadge, auctionEmailCard, pickPrimaryPhotoUrl, button } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { deferIfQuiet } from '../_shared/quiet-hours.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -37,10 +38,12 @@ const handler = async (req: Request): Promise<Response> => {
     // Bei Query-Fehler defaulten wir auf SENDEN (Outage darf nicht still
     // unterdrücken). Nur der Outbid-Pfad wird gefiltert; "Gebot bestätigt"
     // bleibt unangetastet (transactional).
+    let outbidDeferUntil: Date | null = null;
+
     if (isOutbid) {
       const { data: prefs, error: prefsError } = await supabase
         .from('user_notification_preferences')
-        .select('email_outbid')
+        .select('email_outbid, quiet_hours_start, quiet_hours_end')
         .eq('user_id', bidderId)
         .maybeSingle();
 
@@ -51,6 +54,12 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response(
           JSON.stringify({ success: true, skipped: true, reason: 'opted_out_email_outbid' }),
           { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) } }
+        );
+      } else if (prefs) {
+        // bid_outbid ist NICHT in der Transactional-Whitelist → Quiet Hours gelten.
+        outbidDeferUntil = deferIfQuiet(
+          { quiet_hours_start: prefs.quiet_hours_start, quiet_hours_end: prefs.quiet_hours_end },
+          'bid_outbid'
         );
       }
     }
@@ -157,6 +166,36 @@ const handler = async (req: Request): Promise<Response> => {
       isOutbid ? 'Sie wurden überboten!' : 'Ihr Gebot wurde akzeptiert',
       content
     );
+    const subject = isOutbid
+      ? `Sie wurden überboten - ${motorhomeName}`
+      : `Gebot bestätigt - ${motorhomeName}`;
+
+    // Quiet-Hours-Deferral: nur Outbid-Mails werden verschoben. Bid-Confirmed
+    // ist transactional (unmittelbare Bestaetigung der Aktion) und geht sofort.
+    if (outbidDeferUntil) {
+      const { error: queueErr } = await supabase.from('admin_emails').insert({
+        sender_email: 'info@caravanwert.de',
+        sender_name: settingsData.site_name,
+        recipient_email: profile.email,
+        recipient_name: userName || null,
+        subject,
+        body_html: html,
+        body_text: '',
+        email_type: 'bid_outbid',
+        direction: 'outbound',
+        status: 'queued',
+        scheduled_at: outbidDeferUntil.toISOString(),
+        is_read: true,
+      });
+      if (queueErr) {
+        console.error('[send-bid-notification] quiet-hours queue insert failed, falling back to immediate send:', queueErr);
+      } else {
+        return new Response(
+          JSON.stringify({ success: true, queued: true, scheduled_at: outbidDeferUntil.toISOString() }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) } }
+        );
+      }
+    }
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -167,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: `${settingsData.site_name} <info@caravanwert.de>`,
         to: [profile.email],
-        subject: isOutbid ? `Sie wurden überboten - ${motorhomeName}` : `Gebot bestätigt - ${motorhomeName}`,
+        subject,
         html,
       }),
     });
@@ -187,7 +226,7 @@ const handler = async (req: Request): Promise<Response> => {
         sender_name: settingsData.site_name,
         recipient_email: profile.email,
         recipient_name: userName || null,
-        subject: isOutbid ? `Sie wurden überboten - ${motorhomeName}` : `Gebot bestätigt - ${motorhomeName}`,
+        subject,
         body_html: html,
         body_text: '',
         email_type: isOutbid ? 'bid_outbid' : 'bid_confirmed',

@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { buildEmailLayout, paragraph, button, detailRow, infoBox, greeting } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { deferIfQuiet, isTransactional } from '../_shared/quiet-hours.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -71,14 +72,16 @@ Deno.serve(async (req) => {
     // If the prefs query itself errors, we default to SEND to avoid accidental silent suppression.
     const { data: prefs, error: prefsError } = await supabase
       .from("user_notification_preferences")
-      .select("user_id, email_price_alerts")
+      .select("user_id, email_price_alerts, quiet_hours_start, quiet_hours_end")
       .in("user_id", userIds);
 
     if (prefsError) {
       console.error("[send-favorite-notification] prefs query failed, defaulting to SEND:", prefsError);
     }
 
-    const prefsMap = new Map((prefs || []).map((p: { user_id: string; email_price_alerts: boolean | null }) => [p.user_id, p]));
+    const prefsMap = new Map(
+      (prefs || []).map((p: { user_id: string; email_price_alerts: boolean | null; quiet_hours_start: string | null; quiet_hours_end: string | null }) => [p.user_id, p])
+    );
 
     let sent = 0;
     let skipped = 0;
@@ -173,6 +176,40 @@ Deno.serve(async (req) => {
       }
 
       const html = buildEmailLayout(settings, subject, emailContent);
+
+      // Quiet-Hours-Deferral: auction_ended ist "nachrichtlich" und waere evtl.
+      // transactional-kandidat, aber fuer Konsistenz mit der Notification-UI
+      // (Preisalarme-Opt-out) gelten Ruhezeiten hier fuer alle drei Events.
+      // `isTransactional` macht die Entscheidung fuer uns ueber den email_type.
+      const favEmailType = event_type === "price_change" ? "favorite_price_change" : "favorite_notification";
+      if (userPref && !isTransactional(favEmailType)) {
+        const deferUntil = deferIfQuiet(
+          { quiet_hours_start: userPref.quiet_hours_start, quiet_hours_end: userPref.quiet_hours_end },
+          favEmailType
+        );
+        if (deferUntil) {
+          const { error: queueErr } = await supabase.from("admin_emails").insert({
+            sender_email: "info@caravanwert.de",
+            sender_name: "CaravanWert",
+            recipient_email: user.email,
+            recipient_id: user.id,
+            subject,
+            body_html: html,
+            body_text: html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+            email_type: favEmailType,
+            direction: "outbound",
+            status: "queued",
+            scheduled_at: deferUntil.toISOString(),
+            is_read: true,
+          });
+          if (queueErr) {
+            console.error(`[send-favorite-notification] quiet-hours queue insert failed for ${user.email}, falling back to immediate send:`, queueErr);
+          } else {
+            skipped++;
+            continue;
+          }
+        }
+      }
 
       try {
         const res = await fetch("https://api.resend.com/emails", {

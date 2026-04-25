@@ -445,12 +445,9 @@ export const NotificationPreferences = () => {
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Zeiteinstellungen
-            <Badge variant="outline" className="ml-2 text-[10px] uppercase tracking-wide">
-              Bald verfügbar
-            </Badge>
           </CardTitle>
           <CardDescription>
-            Ihre Auswahl wird gespeichert und sobald die Funktion aktiv ist automatisch übernommen.
+            Ruhezeiten in <strong>Europe/Berlin</strong>. Nicht-dringende Emails (Digest, Preisalarme, Überboten, Sofortkauf-Alerts) werden bis zum Ende der Ruhezeit zurückgehalten und anschließend zugestellt.
           </CardDescription>
         </CardHeader>
 
@@ -494,8 +491,9 @@ export const NotificationPreferences = () => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Hinweis: Diese Einstellungen werden derzeit gespeichert, aber noch nicht serverseitig erzwungen.
-              Die zentrale Notification-Engine wird in einer der nächsten Versionen ausgerollt.
+              Wird für alle nicht-transaktionalen Emails respektiert. Dringende Emails
+              (Rechnungen, Mahnungen, Auktionsergebnis, Auktion-endet-bald-Erinnerung)
+              werden trotz Ruhezeit sofort zugestellt.
             </p>
           </div>
         </CardContent>

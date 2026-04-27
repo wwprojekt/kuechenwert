@@ -1245,18 +1245,23 @@ export default function AdminSettings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="default-duration">Standard Auktionsdauer (Tage)</Label>
-                  <Input
-                    id="default-duration"
-                    type="number"
-                    value={formData.default_auction_duration_days || ''}
-                    onChange={(e) => updateField('default_auction_duration_days', parseInt(e.target.value))}
-                    min="1"
-                    max="30"
-                  />
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
+                <div className="flex items-start gap-3">
+                  <Gavel className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800 dark:text-amber-300">
+                    <p className="font-medium mb-1">Auktionsdauer: 3 Tage (zentral konfiguriert)</p>
+                    <p className="text-amber-700 dark:text-amber-400">
+                      Neue Auktionen laufen <strong>3 Tage</strong>, gefolgt von <strong>24 h Kaufchance</strong>,
+                      mit bis zu <strong>4 Runden</strong> Marketing-Phase (Soft-Cap: 16 Tage Auktion / 30 Tage Festpreis).
+                      Diese Werte sind in <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">src/lib/marketing-config.ts</code>{" "}
+                      (<code className="text-xs">MARKETING_CONFIG</code>) fest verdrahtet, weil sie an Soft-Brake, dynamische
+                      Preisreduktion, Kaufchance-Logik und die AGB §6 gekoppelt sind. Änderungen erfolgen ausschließlich
+                      per Code-Deploy, nicht über dieses Formular.
+                    </p>
+                  </div>
                 </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="soft-close-minutes">Soft-Close Verlängerung (Minuten)</Label>
                   <Input
@@ -1268,8 +1273,6 @@ export default function AdminSettings() {
                     max="60"
                   />
                 </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="min-bid-increment">Min. Geboterhöhung (%)</Label>
                   <Input

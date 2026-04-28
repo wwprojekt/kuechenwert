@@ -4,8 +4,10 @@
  * structured data generation, and breadcrumb creation
  */
 
-// Base URL for canonical URLs
-const BASE_URL = 'https://caravanwert.de';
+import { BRAND } from "@/lib/brand/config";
+
+// Base URL for canonical URLs (aus zentraler Brand-Config).
+const BASE_URL = BRAND.baseUrl;
 
 /**
  * Generate canonical URL for a given path
@@ -38,8 +40,8 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
   return {
     '@context': 'https://schema.org',
     '@type': ['Organization', 'LocalBusiness'],
-    name: settings?.site_name || 'CaravanWert',
-    description: settings?.site_description || 'Ihre Plattform für den Wohnmobil-Verkauf',
+    name: settings?.site_name || BRAND.name,
+    description: settings?.site_description || 'Ihre Plattform für den Verkauf und Kauf gebrauchter Küchen',
     url: BASE_URL,
     logo: `${BASE_URL}/favicon.png`,
     image: `${BASE_URL}/favicon.png`,
@@ -68,8 +70,8 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
       },
     }),
     sameAs: [
-      'https://www.facebook.com/caravanwert',
-      'https://www.instagram.com/caravanwert',
+      BRAND.social.facebook,
+      BRAND.social.instagram,
     ],
   };
 }
@@ -85,14 +87,14 @@ export function generateServiceSchema(serviceName: string, description: string) 
     description: description,
     provider: {
       '@type': 'Organization',
-      name: 'CaravanWert',
+      name: BRAND.name,
       url: BASE_URL,
     },
     areaServed: {
       '@type': 'Country',
       name: 'Germany',
     },
-    serviceType: 'Vehicle Trading',
+    serviceType: 'Kitchen Trading',
   };
 }
 
@@ -119,18 +121,18 @@ export function generateArticleSchema(data: ArticleSchemaData) {
     dateModified: data.dateModified || data.datePublished,
     author: {
       '@type': 'Organization',
-      name: data.authorName || 'CaravanWert',
+      name: data.authorName || BRAND.name,
     },
     publisher: {
       '@type': 'Organization',
-      name: 'CaravanWert',
+      name: BRAND.name,
       logo: {
         '@type': 'ImageObject',
         url: `${BASE_URL}/favicon.png`,
       },
     },
     image: data.imageUrl || `${BASE_URL}/favicon.png`,
-    articleSection: data.articleSection || 'Wohnmobil',
+    articleSection: data.articleSection || 'Küchen',
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': window.location.href,
@@ -175,7 +177,7 @@ export function generateProductSchema(data: ProductSchemaData) {
       itemCondition: data.condition || 'https://schema.org/UsedCondition',
       seller: {
         '@type': 'Organization',
-        name: 'CaravanWert',
+        name: BRAND.name,
       },
     },
   };
@@ -247,16 +249,12 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
     '/impressum': 'Impressum',
     '/datenschutz': 'Datenschutz',
     '/agb': 'AGB',
-    '/wohnmobil-verkaufen': 'Wohnmobil Verkaufen',
-    '/wohnwagen-verkaufen': 'Wohnwagen Verkaufen',
-    '/was-ist-mein-wohnmobil-wert': 'Wohnmobil Wert',
-    '/wohnmobil-wertermittlung-kostenlos': 'Wertermittlung Kostenlos',
-    '/wir-kaufen-dein-wohnmobil': 'Wohnmobil Ankauf',
-    '/wieviel-ist-mein-wohnmobil-wert': 'Wohnmobil Wertrechner',
+    '/funnel/a': 'Küche verkaufen',
+    '/funnel/b': 'Angebote vergleichen',
     '/preise': 'Preise & Leistungen',
-    '/wertermittlung': 'Wertermittlung',
-    '/wertrechner': 'Wertrechner',
-    '/verkaufen/wizard': 'Inserat erstellen',
+    '/wertermittlung': 'Küchen-Wertermittlung',
+    '/wertrechner': 'Küchen-Wertrechner',
+    '/verkaufen/wizard': 'Küche einstellen',
     '/verkaufen/danke': 'Vielen Dank',
   };
 
@@ -339,18 +337,18 @@ export function generateWertrechnerSchema(input: WertrechnerSchemaInput) {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     '@id': `${canonicalUrl}#webapp`,
-    name: 'CaravanWert Wohnmobil-Wertrechner',
+    name: `${BRAND.name} Küchen-Wertrechner`,
     alternateName: [
-      'Wohnmobil Wert ermitteln',
-      'Wohnmobil Wertrechner',
-      'Wohnwagen Wertrechner',
+      'Küchen Wert ermitteln',
+      'Küchen Wertrechner',
+      'Wert meiner Küche',
     ],
     description:
-      'Kostenloser Online-Wertrechner für Wohnmobile und Wohnwagen. Liefert in wenigen Minuten eine realistische Wertschätzung auf Basis von Modell, Baujahr, Kilometerstand und Ausstattung.',
+      'Kostenloser Online-Wertrechner für gebrauchte Küchen. Liefert in wenigen Minuten eine realistische Wertschätzung auf Basis von Marke, Alter, Ausstattung und Zustand.',
     url: canonicalUrl,
     ...(pageUrl ? { mainEntityOfPage: pageUrl } : {}),
     applicationCategory: 'BusinessApplication',
-    applicationSubCategory: 'Vehicle Valuation Tool',
+    applicationSubCategory: 'Kitchen Valuation Tool',
     operatingSystem: 'Any',
     browserRequirements: 'Requires JavaScript. Requires HTML5.',
     inLanguage: 'de',
@@ -362,7 +360,7 @@ export function generateWertrechnerSchema(input: WertrechnerSchemaInput) {
     },
     provider: {
       '@type': 'Organization',
-      name: 'CaravanWert',
+      name: BRAND.name,
       url: BASE_URL,
     },
     ...(includeRating

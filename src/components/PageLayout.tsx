@@ -8,6 +8,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useLocation } from "react-router-dom";
 import { getCanonicalUrl, injectStructuredData } from "@/lib/seo";
 import type { BreadcrumbItem } from "@/lib/seo";
+import { BRAND } from "@/lib/brand/config";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -40,11 +41,11 @@ const PageLayout = ({
 }: PageLayoutProps) => {
   const { settings } = useSettings();
   const location = useLocation();
-  const siteName = settings?.site_name || 'CaravanWert';
-  
+  const siteName = settings?.site_name || BRAND.name;
+
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  const defaultOgImage = 'https://caravanwert.de/og-image.png';
+  const defaultOgImage = `${BRAND.baseUrl}/og-image.png`;
   const ogImageUrl = ogImage || defaultOgImage;
 
   // Determine if breadcrumbs should be shown

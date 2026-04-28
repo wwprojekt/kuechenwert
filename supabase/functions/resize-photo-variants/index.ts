@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
   } else if (token.startsWith("eyJ")) {
     // Legacy JWT-Format: payload decoden und role + project-ref prüfen.
     const payload = decodeJwtPayload(token);
-    if (payload?.role === "service_role" && payload?.ref === "zcrwqxsyptjwkuxfacvq") {
+    if (payload?.role === "service_role" && payload?.ref === "gzqayoalwtmypndrmqes") {
       authorized = true;
     }
   }

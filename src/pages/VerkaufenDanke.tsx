@@ -65,10 +65,11 @@ const VerkaufenDanke = () => {
           photoFormData.append("photos", photo);
         }
 
-        const supabaseUrl =
-          import.meta.env.VITE_SUPABASE_URL ||
-          "https://zcrwqxsyptjwkuxfacvq.supabase.co";
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+        if (!supabaseUrl) {
+          throw new Error("VITE_SUPABASE_URL is not set");
+        }
 
         const response = await fetch(
           `${supabaseUrl}/functions/v1/upload-wizard-photos`,

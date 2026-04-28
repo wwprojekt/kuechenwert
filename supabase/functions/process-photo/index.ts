@@ -150,7 +150,7 @@ function isAuthorized(req: Request): boolean {
   if (token === SUPABASE_SERVICE_ROLE_KEY) return true;
   if (token.startsWith("eyJ")) {
     const payload = decodeJwtPayload(token);
-    if (payload?.role === "service_role" && payload?.ref === "zcrwqxsyptjwkuxfacvq") {
+    if (payload?.role === "service_role" && payload?.ref === "gzqayoalwtmypndrmqes") {
       return true;
     }
   }

@@ -57,10 +57,9 @@ const MAX_BUFFER = 20;
 const MAX_BATCH = 50;
 const FLUSH_INTERVAL_MS = 2000;
 
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || "https://zcrwqxsyptjwkuxfacvq.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-const ENDPOINT = `${SUPABASE_URL}/functions/v1/wizard-telemetry`;
+const ENDPOINT = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/wizard-telemetry` : "";
 
 let buffer: WizardEventPayload[] = [];
 let currentSessionId: string | null = null;
@@ -140,6 +139,7 @@ function scheduleFlush(delayMs: number): void {
 }
 
 async function sendBatch(batch: BatchPayload, viaBeacon: boolean): Promise<void> {
+  if (!ENDPOINT) return;
   const bodyString = JSON.stringify(batch);
 
   if (viaBeacon && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {

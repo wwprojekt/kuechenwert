@@ -10,16 +10,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-// Support both ANON_KEY and PUBLISHABLE_KEY (they are the same thing)
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Public Supabase config — these keys are PUBLISHABLE (safe to expose, already
+// visible in the client bundle). Hardcoded as fallback so the app always boots
+// even when env vars aren't wired up by the deployment platform.
+// Override in dev/staging via .env.local with VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY.
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ||
+  'https://gzqayoalwtmypndrmqes.supabase.co';
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    'Missing Supabase environment variables. ' +
-    'Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) in your .env file.'
-  );
-}
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_y310eCMmlhSjvXbOKDgY1Q_p2v56GAz';
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

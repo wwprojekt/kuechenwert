@@ -2,9 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ============================================================================
+   DESIGN SYSTEM - KuechenWert
+   ============================================================================
+
+   Alle Farben, Gradienten und Font-Familien werden HIER definiert und via
+   CSS-Variablen durch Tailwind konsumiert (siehe tailwind.config.ts).
+
+   STRUKTUR:
+   1. Brand-Tokens (:root {}) - die aktiven Werte des aktiven Brand-Looks.
+      Fuer einen Rebrand werden NUR die Werte in diesem Block ausgetauscht
+      (Farben, Gradienten, ggf. Font-Stack in @layer base body).
+   2. Dark-Mode-Tokens (.dark {}) - Spiegel der Brand-Tokens fuer Dark Mode.
+
+   KONVENTIONEN:
+   - Alle Farben MUESSEN HSL-Tripel ohne `hsl()`-Wrap sein
+     (z.B. "191 68% 38%", nicht "hsl(191, 68%, 38%)").
+     Grund: Tailwind kann so ueber `hsl(var(--primary) / <alpha>)` Alpha-Werte
+     dynamisch injecten.
+   - Gradienten duerfen `hsl()` nutzen, da sie nicht durch Tailwind laufen.
+
+   AKTUELLER STAND (Caravanwert-Fork):
+   - Primary: Cyan/Tuerkis (191deg, 68% Saettigung, 38% Helligkeit)
+   - Secondary: dunkles Blau-Grau
+   - Font: Fira Sans
+   - Brand-Meta (Name, Logo, Domain): siehe src/lib/brand/config.ts
+
+   PHASE 3 (Rebrand): Dieser Block + src/lib/brand/config.ts + logo-Assets in
+   public/ werden ausgetauscht. Das komplette UI uebernimmt die neuen Werte.
+   ============================================================================ */
 
 /* Disable scroll anchoring so the browser does not fight programmatic scrollTo
    after SPA route changes. Without this, clicking a footer link causes the

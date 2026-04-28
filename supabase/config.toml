@@ -130,9 +130,6 @@ verify_jwt = false
 verify_jwt = false
 
 # --- AI & Generation ---
-[functions.ai-valuation]
-verify_jwt = false
-
 [functions.generate-ai-description]
 verify_jwt = false
 
@@ -161,20 +158,11 @@ verify_jwt = false
 verify_jwt = false
 
 # --- Valuation & Wrong Number ---
-[functions.send-expert-valuation]
-verify_jwt = false
-
-[functions.send-wrong-number-email]
-verify_jwt = false
-
 # --- Error Logging ---
 [functions.log-error]
 verify_jwt = false
 
 # --- Purchase Inquiry ---
-[functions.send-purchase-inquiry-notification]
-verify_jwt = false
-
 [functions.request-price-change]
 verify_jwt = true
 
@@ -215,9 +203,6 @@ verify_jwt = false
 verify_jwt = false
 
 # --- Disposition Follow-up Emails ---
-[functions.send-disposition-email]
-verify_jwt = false
-
 # --- Seller Penalty (atomic create + send) ---
 [functions.create-and-send-seller-penalty]
 verify_jwt = false

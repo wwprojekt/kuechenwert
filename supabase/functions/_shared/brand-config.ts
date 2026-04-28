@@ -16,16 +16,17 @@
  */
 
 export const BRAND = {
-  name: "CaravanWert",
+  name: "KüchenWert",
+  // Marke der CaravanWert GmbH (gleiche Firma).
   legalName: "CaravanWert GmbH",
-  tagline: "Wohnmobile professionell verkaufen",
-  domain: "caravanwert.de",
-  baseUrl: "https://caravanwert.de",
-  supportEmail: "hallo@caravanwert.de",
-  noReplyEmail: "noreply@caravanwert.de",
+  tagline: "Küchen einfach verkaufen & kaufen",
+  domain: "kuechenwert24.de",
+  baseUrl: "https://kuechenwert24.de",
+  supportEmail: "info@kuechenwert.de",
+  noReplyEmail: "noreply@kuechenwert.de",
   social: {
-    instagram: "https://instagram.com/caravanwert",
-    facebook: "https://facebook.com/caravanwert",
+    instagram: "https://instagram.com/kuechenwert",
+    facebook: "https://facebook.com/kuechenwert",
   },
 } as const;
 

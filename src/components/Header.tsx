@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SiteLogo } from "@/components/SiteLogo";
 import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
@@ -84,7 +85,7 @@ const Header = () => {
                 <span>{phone}</span>
               </a>
             ); })()}
-            {(() => { const email = settings?.contact_email || 'info@caravanwert.de'; return (
+            {(() => { const email = settings?.contact_email || BRAND.supportEmail; return (
               <a href={`mailto:${email}`} onClick={() => trackEmailClick(location.pathname)} className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail className="h-3.5 w-3.5" />
                 <span>{email}</span>

@@ -15,30 +15,34 @@
 
 export const BRAND = {
   // Anzeigename. Wird in <title>, Footer, Emails, Headern verwendet.
-  name: "CaravanWert",
+  name: "KüchenWert",
 
   // Rechtlicher Firmenname (fuer Impressum / AGB-Verweise).
+  // Hinweis: KüchenWert ist eine Marke der CaravanWert GmbH — gleiche Firma,
+  // gleiche Adresse / HRB / USt-IdNr. Siehe Impressum.
   legalName: "CaravanWert GmbH",
 
   // Produkt-Claim / Subline.
-  tagline: "Wohnmobile professionell verkaufen",
+  tagline: "Küchen einfach verkaufen & kaufen",
 
   // Primaere Landing-Domain (ohne Protokoll).
-  domain: "caravanwert.de",
+  // ASCII-safe (ohne Umlaut) weil Email / externe APIs Probleme mit Punycode
+  // machen. kuechenwert.de leitet per 301-Redirect hierher um.
+  domain: "kuechenwert24.de",
 
   // URL-Base fuer absolute Links in E-Mails, Sitemap, OG-Tags.
-  baseUrl: "https://caravanwert.de",
+  baseUrl: "https://kuechenwert24.de",
 
   // Support-Email (fuer sichtbare Kontaktmails, Footer, Impressum).
-  supportEmail: "hallo@caravanwert.de",
+  supportEmail: "info@kuechenwert.de",
 
   // Admin-/No-Reply-Absender fuer Transaktionsmails.
-  noReplyEmail: "noreply@caravanwert.de",
+  noReplyEmail: "noreply@kuechenwert.de",
 
-  // Social-Media-Handles.
+  // Social-Media-Handles. Platzhalter — Accounts ggf. noch anlegen.
   social: {
-    instagram: "https://instagram.com/caravanwert",
-    facebook: "https://facebook.com/caravanwert",
+    instagram: "https://instagram.com/kuechenwert",
+    facebook: "https://facebook.com/kuechenwert",
   },
 } as const;
 

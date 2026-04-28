@@ -18,10 +18,10 @@ const CTA = () => {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                Was ist Ihr Wohnmobil wert?
+                Was ist Ihre Küche wert?
               </h3>
               <p className="text-muted-foreground">
-                Erhalten Sie in nur 4 Schritten eine kostenlose Sofort-Schätzung mit unserem Wertrechner.
+                Erhalten Sie in nur 4 Schritten eine kostenlose Sofort-Schätzung mit unserem Küchen-Wertrechner.
               </p>
               <div className="mt-2 flex justify-center md:justify-start">
                 <ReviewStarsBadge size="sm" variant="full" link linkTo="/wertrechner#reviews" />
@@ -75,7 +75,7 @@ const CTA = () => {
               </div>
 
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white leading-tight tracking-tight animate-fade-in animate-delay-100">
-                Verkaufen Sie Ihr Wohnmobil <br className="hidden md:block" />
+                Verkaufen Sie Ihre Küche <br className="hidden md:block" />
                 <span className="relative">
                   <span className="relative z-10">heute noch</span>
                   <div className="absolute inset-0 bg-white/20 blur-xl"></div>
@@ -83,11 +83,11 @@ const CTA = () => {
               </h2>
 
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed animate-fade-in animate-delay-200 px-4">
-                Starten Sie jetzt mit der kostenlosen Bewertung und erhalten Sie innerhalb von 24 Stunden attraktive Angebote von geprüften Händlern.
+                Starten Sie jetzt mit der kostenlosen Bewertung und erhalten Sie innerhalb von 48 Stunden konkrete Angebote von geprüften Küchen-Händlern.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center pt-4 sm:pt-6 animate-fade-in animate-delay-300">
-                <a href="/verkaufen/wizard" className="w-full sm:w-auto">
+                <a href="/funnel/a" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     className="bg-white text-primary hover:bg-white/90 shadow-glow h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift font-bold group w-full"
@@ -96,13 +96,13 @@ const CTA = () => {
                     <ArrowRight className="ml-2 sm:ml-3 h-5 sm:h-6 w-5 sm:w-6 group-hover:translate-x-2 transition-smooth" />
                   </Button>
                 </a>
-                <a href="/verkaufen" className="w-full sm:w-auto">
+                <a href="/funnel/b" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
                     className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift-sm border-2 border-white bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white font-semibold backdrop-blur-sm w-full"
                   >
-                    Mehr erfahren
+                    Angebote vergleichen
                   </Button>
                 </a>
               </div>

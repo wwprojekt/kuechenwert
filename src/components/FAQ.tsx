@@ -9,39 +9,43 @@ import { Link } from "react-router-dom";
 const faqs = [
   {
     question: "Wie lange dauert der Verkaufsprozess?",
-    answer: "Der gesamte Prozess kann in nur 24-48 Stunden abgeschlossen sein. Nach dem Hochladen Ihrer Fahrzeugdaten und Fotos erhalten Sie innerhalb von 24 Stunden erste Angebote. Nach Annahme eines Angebots erfolgt die Abwicklung und Auszahlung meist innerhalb von 1-2 Werktagen.",
+    answer: "Der gesamte Prozess läuft meist in 3–5 Tagen ab. Nach der 2-Minuten-Bewertung erhalten Sie innerhalb von 24–48 Stunden konkrete Angebote von geprüften Küchen-Händlern. Nach Annahme erfolgt die Abholung und Bezahlung in der Regel binnen einer Woche.",
   },
   {
     question: "Was kostet der Service?",
-    answer: "Für Verkäufer ist der gesamte Service komplett kostenlos — von der Bewertung über das Einstellen bis zum Verkaufsabschluss. Es fallen keine Gebühren, Provisionen oder versteckte Kosten an. Die Vermittlungsprovision wird ausschließlich vom Händler/Käufer getragen und ist für diesen transparent auf der Auktionsseite einsehbar.",
+    answer: "Für Verkäufer ist der gesamte Service komplett kostenlos — von der Bewertung über die Angebots-Vermittlung bis zum Verkaufsabschluss. Es fallen keine Gebühren, Provisionen oder versteckte Kosten an. Unsere Vermittlungsprovision wird ausschließlich vom Küchen-Händler getragen.",
   },
   {
-    question: "Wie werden die Händler geprüft?",
-    answer: "Alle Händler auf unserer Plattform durchlaufen einen strengen KYC/KYB-Prozess. Wir prüfen Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz. Zusätzlich überwachen wir regelmäßig die Zahlungsmoral und Kundenzufriedenheit.",
+    question: "Wie werden die Küchen-Händler geprüft?",
+    answer: "Alle Händler durchlaufen einen strengen KYC/KYB-Prozess. Wir prüfen Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz. Zusätzlich überwachen wir Zahlungsmoral und Kundenzufriedenheit laufend — Händler mit schlechten Bewertungen werden entfernt.",
   },
   {
-    question: "Was passiert, wenn das Mindestgebot erreicht wird?",
-    answer: "Wird Ihr festgelegtes Mindestgebot während der Auktion erreicht oder überschritten, kommt ein verbindlicher Kaufvertrag mit dem Höchstbietenden zustande. Der Verkauf ist dann für beide Seiten verpflichtend. Wird das Mindestgebot nicht erreicht, besteht keine Verkaufspflicht. Die Bewertung und das Einstellen Ihres Fahrzeugs bleiben selbstverständlich kostenlos.",
+    question: "Welche Küchen kann ich verkaufen?",
+    answer: "Grundsätzlich alle Küchen — ob Einbauküche, modulare Küche oder Kochinsel. Marken wie Nobilia, Häcker, Nolte, SieMatic, Leicht, Bulthaup, Poggenpohl, Schüller oder auch Baumarkt-Küchen. Alter, Stil und Zustand beeinflussen nur den Preis, nicht die Verkaufbarkeit.",
   },
   {
-    question: "Sind Gebote und Sofortkäufe verbindlich?",
-    answer: "Ja, jedes Gebot eines Händlers ist rechtlich verbindlich und kann nicht zurückgezogen werden. Ebenso ist die Nutzung der Sofortkauf-Option ein verbindlicher Kaufabschluss. Der Händler ist verpflichtet, das Fahrzeug zum gebotenen Preis bzw. Sofortkaufpreis zu erwerben. Diese Verbindlichkeit schützt Verkäufer und sorgt für einen seriösen Auktionsprozess.",
+    question: "Sind Angebote der Händler verbindlich?",
+    answer: "Ja, jedes Angebot ist nach Annahme durch Sie rechtlich verbindlich. Der Händler verpflichtet sich, Ihre Küche zum angebotenen Preis zu erwerben, abzubauen (falls gewünscht) und abzuholen. Sie haben 48 Stunden Entscheidungszeit, ohne Druck.",
+  },
+  {
+    question: "Wer baut die Küche aus?",
+    answer: "Das hängt vom Angebot ab. Viele Händler bieten kostenlosen Abbau und Abtransport an — das ist einer der Vorteile, die Sie beim Angebots-Vergleich sehen. Alternativ können Sie die Küche selbst abbauen und übergeben, was meist einen höheren Verkaufspreis bedeutet.",
   },
   {
     question: "Welche Zahlungsmethoden gibt es?",
-    answer: "Bei Übergabe an einer Ankaufstation können Sie zwischen Barzahlung oder SEPA Instant Transfer wählen. Bei Online-Verkäufen erfolgt die Zahlung per Banküberweisung. Alle Zahlungen sind versichert und werden erst nach erfolgreicher Fahrzeugübergabe freigegeben.",
+    answer: "Bei Abholung erfolgt die Zahlung per SEPA Instant Transfer oder Barzahlung — erst NACH erfolgreicher Begutachtung und Übernahme. Bei Online-Verkäufen gibt's eine treuhänderische Abwicklung über unsere Plattform. Alle Zahlungen sind abgesichert.",
   },
   {
     question: "Was passiert mit meinen Daten?",
-    answer: "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Händler sehen Ihre Kontaktdaten erst, wenn ein Kaufvertrag zustande kommt. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
+    answer: "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Händler sehen Ihre vollen Kontaktdaten erst, wenn Sie deren Angebot annehmen. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
   },
   {
-    question: "Welche Dokumente benötige ich?",
-    answer: "Für die Bewertung benötigen Sie zunächst nur grundlegende Fahrzeugdaten. Für den tatsächlichen Verkauf werden Fahrzeugbrief, Fahrzeugschein, HU-Bericht und ggf. Serviceheft benötigt. Eine detaillierte Checkliste erhalten Sie nach Angebotsannahme.",
+    question: "Welche Unterlagen/Fotos brauche ich?",
+    answer: "Für die Bewertung benötigen Sie nur Grundangaben: Marke, Alter, Ausstattung, Zustand — plus 4–8 Fotos (Front, Arbeitsfläche, Geräte, Sonderteile). Keine Rechnungen, keine Beleglisten. Eine detaillierte Foto-Checkliste finden Sie im Bewertungs-Funnel.",
   },
   {
     question: "Gibt es eine Mindest- oder Höchstsumme?",
-    answer: "Nein, wir vermitteln Wohnmobile aller Preisklassen. Von älteren Campern ab 5.000€ bis zu Luxus-Wohnmobilen im sechsstelligen Bereich – unsere Händler sind an allen Fahrzeugen interessiert.",
+    answer: "Nein, wir vermitteln Küchen aller Preisklassen. Von günstigen Einsteiger-Küchen ab ca. 500 € bis zu Luxus-Küchen im fünf- oder sechsstelligen Bereich. Unsere Händler sind an allen Arten interessiert.",
   },
 ];
 
@@ -59,7 +63,7 @@ const FAQ = ({ hideHeader = false }: FAQProps) => {
               Häufig gestellte Fragen
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground">
-              Hier finden Sie Antworten auf die wichtigsten Fragen rund um den Verkauf Ihres Wohnmobils.
+              Hier finden Sie Antworten auf die wichtigsten Fragen rund um den Verkauf Ihrer Küche.
             </p>
           </div>
         )}

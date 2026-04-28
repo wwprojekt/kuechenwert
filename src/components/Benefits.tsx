@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import dealerImage from "@/assets/dealer-professional.webp";
 import handshakeImage from "@/assets/handshake-deal.webp";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 
 const benefits = [
   {
@@ -40,7 +41,7 @@ const benefits = [
 
 const Benefits = () => {
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   
   return (
     <section id="vorteile" className="py-12 sm:py-16 md:py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30">
@@ -55,7 +56,7 @@ const Benefits = () => {
             Warum <span className="text-primary">{siteName}</span>?
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200 px-4">
-            Wir kombinieren modernste Technologie mit persönlichem Service, um Ihnen einen fairen Verkaufspreis für Ihr Wohnmobil zu ermöglichen.
+            Wir kombinieren modernste Technologie mit persönlichem Service, um Ihnen einen fairen Verkaufspreis für Ihre Küche zu ermöglichen.
           </p>
         </div>
 
@@ -138,7 +139,7 @@ const Benefits = () => {
                 Transparenz ist unser <span className="text-primary">Versprechen</span>
               </h3>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Bei {siteName} gibt es keine versteckten Kosten oder überraschenden Gebühren. Sie sehen von Anfang an, was Sie für Ihr Wohnmobil erhalten.
+                Bei {siteName} gibt es keine versteckten Kosten oder überraschenden Gebühren. Sie sehen von Anfang an, was Sie für Ihre Küche erhalten.
               </p>
               <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2">
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 sm:p-6 text-center">
@@ -156,9 +157,9 @@ const Benefits = () => {
 
         {/* Section CTA */}
         <div className="text-center mt-12 sm:mt-16">
-          <Link to="/verkaufen">
+          <Link to="/funnel/a">
             <Button size="lg" className="gradient-hero hover:gradient-hero-hover">
-              Wohnmobil jetzt verkaufen
+              Küche jetzt kostenlos bewerten
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

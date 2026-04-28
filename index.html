@@ -33,20 +33,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://gzqayoalwtmypndrmqes.supabase.co" crossorigin />
 
-    <!-- LCP-Hero-Image preload (Index-Page).
-         Lighthouse 2026-04-21 zeigte LCP=14.6 s mit Hero-Image als
-         LCP-Element, das erst NACH den JS-Bundles entdeckt wurde.
-         imagesrcset+imagesizes sorgen dafür, dass der Browser exakt die
-         passende Variante (sm/md/full) preloaded — kein doppelter Download.
-         Auf Nicht-Index-Pages lädt das Bild zwar parallel, ist aber nur
-         ~30 KB (md-Variante via responsive selection) und konkurriert nicht
-         mit Critical CSS/JS dank Browser-Priorisierung. -->
+    <!-- LCP-Hero-Image preload: wird aktuell via Unsplash-CDN geladen.
+         Sobald eigene Kuechen-Assets in /public/images/ liegen, hier
+         wieder ein preload mit imagesrcset aktivieren. -->
     <link
       rel="preload"
       as="image"
-      href="/images/hero-motorhome.webp"
-      imagesrcset="/images/hero-motorhome-sm.webp 400w, /images/hero-motorhome-md.webp 800w, /images/hero-motorhome.webp 1920w"
-      imagesizes="100vw"
+      href="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1920&q=80"
       fetchpriority="high"
     />
 
@@ -74,37 +67,37 @@
          DSGVO-konform laden wir es erst nach explizitem Consent. -->
 
     <!-- Primary Meta Tags -->
-    <title>CaravanWert - Deutschlands führende Wohnmobil-Handelsplattform</title>
-    <meta name="description" content="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!" />
-    <meta name="keywords" content="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation" />
-    <meta name="author" content="CaravanWert" />
+    <title>KüchenWert — Küche verkaufen & kaufen | Kostenlose Bewertung in 2 Min</title>
+    <meta name="description" content="Verkaufen Sie Ihre gebrauchte Küche schnell zum fairen Preis oder finden Sie Ihre Traumküche. Kostenlose Bewertung, geprüfte Küchen-Händler, unverbindlich." />
+    <meta name="keywords" content="Küche verkaufen, Küche kaufen, gebrauchte Küche, Küchen Bewertung, Nobilia verkaufen, Häcker verkaufen, Küchenwert, Küchen Wertrechner" />
+    <meta name="author" content="KüchenWert" />
     <meta name="robots" content="index, follow" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="CaravanWert" />
+    <meta property="og:site_name" content="KüchenWert" />
     <meta property="og:locale" content="de_DE" />
-    
+    <meta property="og:title" content="KüchenWert — Küche verkaufen & kaufen" />
+    <meta property="og:description" content="Kostenlose Bewertung Ihrer Küche in 2 Minuten. Geprüfte Küchen-Händler bieten — Sie entscheiden." />
+    <meta property="og:url" content="https://kuechenwert24.de" />
+
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    
+
     <!-- Structured Data - Organization Schema -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": ["Organization", "LocalBusiness"],
-      "name": "CaravanWert",
-      "description": "Deutschlands führende Wohnmobil-Handelsplattform",
-      "url": "https://caravanwert.de",
-      "logo": "https://caravanwert.de/og-image.png",
-      "image": "https://caravanwert.de/og-image.png",
+      "name": "KüchenWert",
+      "description": "Deutschlands Marktplatz für gebrauchte Küchen — kostenlose Bewertung, geprüfte Küchen-Händler.",
+      "url": "https://kuechenwert24.de",
+      "logo": "https://kuechenwert24.de/og-image.png",
+      "image": "https://kuechenwert24.de/og-image.png",
       "telephone": "+49-511-51532476",
-      "email": "kontakt@caravanwert.de",
+      "email": "info@kuechenwert.de",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Hannoversche Straße 106",
-        "addressLocality": "Hannover",
-        "postalCode": "30627",
         "addressCountry": "DE"
       },
       "areaServed": {
@@ -117,10 +110,7 @@
         "contactType": "Customer Service",
         "areaServed": "DE",
         "availableLanguage": "German"
-      },
-      "sameAs": [
-        "https://www.instagram.com/caravanwert.de"
-      ]
+      }
     }
     </script>
   </head>

@@ -6,27 +6,27 @@ import familyImage from "@/assets/happy-family.webp";
 const steps = [
   {
     icon: FileText,
-    title: "Details eingeben",
-    description: "Füllen Sie unser einfaches Formular mit den wichtigsten Informationen zu Ihrem Wohnmobil aus.",
-    duration: "2-3 Min",
+    title: "Details zur Küche",
+    description: "Beantworten Sie 17 einfache Fragen zu Marke, Alter, Ausstattung und Zustand Ihrer Küche.",
+    duration: "2 Min",
   },
   {
     icon: Camera,
     title: "Fotos hochladen",
-    description: "Laden Sie mindestens 4 Bilder Ihres Wohnmobils hoch für eine präzise Bewertung.",
-    duration: "5 Min",
+    description: "Laden Sie 4–8 Fotos Ihrer Küche hoch (Front, Arbeitsfläche, Geräte) für eine präzise Bewertung.",
+    duration: "3 Min",
   },
   {
     icon: CheckCircle2,
-    title: "Gebote erhalten",
-    description: "Erhalten Sie Gebote von interessierten Käufern in unserer Auktion.",
-    duration: "24h",
+    title: "Angebote erhalten",
+    description: "Geprüfte Küchen-Händler senden Ihnen konkrete Angebote zu — transparent und vergleichbar.",
+    duration: "24–48h",
   },
   {
     icon: Banknote,
-    title: "Verkaufen & Geld erhalten",
-    description: "Akzeptieren Sie das beste Angebot und erhalten Sie Ihr Geld sicher und schnell.",
-    duration: "1-2 Tage",
+    title: "Verkaufen & bezahlt werden",
+    description: "Sie wählen das beste Angebot, Übergabe und Bezahlung werden sicher über uns abgewickelt.",
+    duration: "3–5 Tage",
   },
 ];
 
@@ -44,7 +44,7 @@ const Process = () => {
             In 4 einfachen Schritten zum Verkauf
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
-            Unser optimierter Prozess macht den Verkauf Ihres Wohnmobils so einfach und stressfrei wie möglich.
+            Unser optimierter Prozess macht den Verkauf Ihrer Küche so einfach und stressfrei wie möglich.
           </p>
         </div>
 
@@ -90,15 +90,15 @@ const Process = () => {
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 mb-10 sm:mb-12">
           <div className="space-y-4 sm:space-y-6 flex flex-col justify-center">
             <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground">
-              Professionelle Gebote von <span className="text-primary">geprüften Händlern</span>
+              Professionelle Angebote von <span className="text-primary">geprüften Händlern</span>
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Käufer bieten fair und transparent auf Ihr Wohnmobil. Durch hochwertige Fotos und detaillierte Angaben erhalten Sie die besten Gebote.
+              Küchen-Händler prüfen Ihre Angaben und senden Ihnen faire Angebote. Durch hochwertige Fotos und detaillierte Angaben erhalten Sie die besten Preise.
             </p>
             <ul className="space-y-3">
               {[
-                "Kostenlose Auktion",
-                "Mehrere Gebote vergleichen",
+                "Kostenlose Bewertung",
+                "Mehrere Angebote vergleichen",
                 "Keine Verpflichtung zum Verkauf"
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3">
@@ -113,7 +113,7 @@ const Process = () => {
           <div className="rounded-lg overflow-hidden shadow-xl hover-lift">
             <img
               src={interiorImage}
-              alt="Wohnmobil Innenraum"
+              alt="Küche Innenansicht"
               loading="lazy"
               width={1280}
               height={720}
@@ -158,7 +158,7 @@ const Process = () => {
         </div>
 
         <div className="text-center">
-          <a href="/verkaufen/wizard">
+          <a href="/funnel/a">
             <Button size="lg" className="gradient-hero hover:shadow-glow text-base sm:text-lg h-12 sm:h-14 px-8 sm:px-10 font-semibold">
               Jetzt kostenlos starten
             </Button>

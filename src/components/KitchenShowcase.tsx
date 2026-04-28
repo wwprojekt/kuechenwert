@@ -1,6 +1,6 @@
 /**
  * Kitchen Showcase Component
- * Displays high-quality kitchen images with trust indicators
+ * Zeigt Stil-Kategorien gebrauchter Küchen als Einstieg in den Funnel.
  */
 
 import { Link } from "react-router-dom";
@@ -9,49 +9,57 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, CheckCircle, Award, Users, ArrowRight } from "lucide-react";
 
+// Unsplash-Stock-Photos für Küchen-Stile bis eigene Assets in
+// Supabase Storage liegen. Feste Photo-IDs → stabil & cachebar.
+const KITCHEN_PHOTOS = {
+  modern: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80",
+  landhaus: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+  island: "https://images.unsplash.com/photo-1565538810643-b5bdb714032a?auto=format&fit=crop&w=800&q=80",
+  minimal: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80",
+};
+
 const KitchenShowcase = () => {
   const showcaseItems = [
     {
       id: 1,
-      image: "/images/kitchen-integrated.webp",
-      title: "Integrierte Wohnmobile",
-      subtitle: "Faire Preise",
-      badge: "Beliebt",
-    },
-    {
-      id: 2,
-      image: "/images/kitchen-alcove.webp",
-      title: "Alkoven-Wohnmobile",
-      subtitle: "Schneller Verkauf",
-      badge: "Top",
-    },
-    {
-      id: 3,
-      image: "/images/kitchen-van.webp",
-      title: "Campervans & Kastenwagen",
-      subtitle: "Hohe Nachfrage",
+      image: KITCHEN_PHOTOS.modern,
+      title: "Moderne Küchen",
+      subtitle: "Grifflos, Hochglanz, Matt",
       badge: "Gefragt",
     },
     {
+      id: 2,
+      image: KITCHEN_PHOTOS.landhaus,
+      title: "Landhaus & Klassisch",
+      subtitle: "Zeitlos & elegant",
+      badge: "Beliebt",
+    },
+    {
+      id: 3,
+      image: KITCHEN_PHOTOS.island,
+      title: "Kochinsel-Küchen",
+      subtitle: "Offener Wohn-Ess-Bereich",
+      badge: "Top",
+    },
+    {
       id: 4,
-      image: "/images/caravan-touring.webp",
-      title: "Wohnwagen & Caravans",
-      subtitle: "Sofort verkaufen",
-      badge: "Neu",
+      image: KITCHEN_PHOTOS.minimal,
+      title: "Design- & Luxus-Küchen",
+      subtitle: "Bulthaup, SieMatic & Co.",
+      badge: "Premium",
     },
   ];
 
   const stats = [
-    { icon: Users, value: "Bundesweit", label: "Verifizierte Händler" },
-    { icon: CheckCircle, value: "48h", label: "Durchschnittl. Verkaufszeit" },
+    { icon: Users, value: "Bundesweit", label: "Geprüfte Küchen-Händler" },
+    { icon: CheckCircle, value: "48h", label: "Ø Zeit bis zum Angebot" },
     { icon: Award, value: "100%", label: "Kostenlos & unverbindlich" },
-    { icon: Star, value: "Sicher", label: "Geprüfter Service" },
+    { icon: Star, value: "Sicher", label: "DSGVO-konform" },
   ];
 
   return (
     <section className="py-12 lg:py-16 bg-gradient-to-b from-slate-50/30 via-slate-50/50 to-slate-50/30 overflow-hidden cv-auto">
       <div className="container px-4 sm:px-6 lg:px-8">
-        {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-8 mb-12">
           {stats.map((stat, index) => (
             <div
@@ -67,25 +75,23 @@ const KitchenShowcase = () => {
           ))}
         </div>
 
-        {/* Section Header */}
         <div className="text-center mb-10">
           <Badge variant="outline" className="mb-4 px-4 py-1.5">
             <Star className="w-3.5 h-3.5 mr-1.5 fill-amber-400 text-amber-400" />
-            Erfolgreich verkauft
+            Alle Stile & Marken
           </Badge>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3">
-            Wohnmobile aller Marken & Typen
+            Küchen aller Marken & Stile
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Ob Teilintegriert, Alkoven, Kastenwagen oder Luxusliner – wir finden den passenden Käufer für Ihr Fahrzeug.
+            Ob Nobilia, Häcker, Nolte, SieMatic, Bulthaup oder kleiner Küchenbauer — wir finden den passenden Käufer für Ihre Küche.
           </p>
         </div>
 
-        {/* Image Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {showcaseItems.map((item, index) => (
             <Link
-              to="/verkaufen/wizard"
+              to="/funnel/a"
               key={item.id}
               className="block"
             >
@@ -93,32 +99,26 @@ const KitchenShowcase = () => {
                 className="group relative overflow-hidden rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 aspect-[4/3] cursor-pointer"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                {/* Real Image */}
                 <div className="absolute inset-0">
-                  <img 
-                    src={item.image} 
-                    srcSet={`${item.image.replace('.webp', '-sm.webp')} 400w, ${item.image} 800w`}
+                  <img
+                    src={item.image}
                     alt={item.title}
                     width={800}
                     height={600}
-                    sizes="(max-width: 1023px) 50vw, 25vw"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     decoding="async"
                   />
                 </div>
 
-                {/* Badge */}
                 <div className="absolute top-3 left-3 z-10">
                   <Badge className="bg-primary/90 hover:bg-primary text-white text-xs font-semibold shadow-lg">
                     {item.badge}
                   </Badge>
                 </div>
 
-                {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-                {/* Content */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <h3 className="font-bold text-base sm:text-lg group-hover:text-primary transition-colors">
                     {item.title}
@@ -130,12 +130,11 @@ const KitchenShowcase = () => {
           ))}
         </div>
 
-        {/* Bottom CTA */}
         <div className="text-center mt-10 space-y-3">
           <p className="text-muted-foreground">
-            <span className="font-semibold text-foreground">Verkaufen auch Sie Ihr Wohnmobil</span> – unkompliziert und fair!
+            <span className="font-semibold text-foreground">Verkaufen auch Sie Ihre Küche</span> — unkompliziert und fair!
           </p>
-          <Link to="/verkaufen">
+          <Link to="/funnel/a">
             <Button size="lg" className="gradient-hero hover:gradient-hero-hover mt-2">
               Jetzt kostenlos bewerten lassen
               <ArrowRight className="ml-2 h-4 w-4" />

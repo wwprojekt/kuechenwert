@@ -2,8 +2,6 @@ import PageLayout from "@/components/PageLayout";
 import Hero from "@/components/Hero";
 import KitchenShowcase from "@/components/KitchenShowcase";
 import HowItWorks from "@/components/HowItWorks";
-import ExplainerVideo from "@/components/ExplainerVideo";
-import Listings from "@/components/Listings";
 import Benefits from "@/components/Benefits";
 import Process from "@/components/Process";
 import FAQ from "@/components/FAQ";
@@ -15,23 +13,21 @@ const Index = () => {
   const { settings } = useSettings();
   const organizationSchema = generateOrganizationSchema(settings);
   const serviceSchema = generateServiceSchema(
-    "Wohnmobil-Ankauf & Vermittlung",
-    "Ihre Plattform für den Verkauf von Wohnmobilen. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation."
+    "Küchen-Ankauf & Vermittlung",
+    "Ihre Plattform für den Verkauf gebrauchter Küchen. Kostenlose Bewertung, geprüfte Küchen-Händler, Reverse-Auktion für den besten Preis."
   );
 
   return (
     <PageLayout
-      title="Wohnmobil verkaufen – Ankauf in 48h"
-      description="Verkaufen Sie Ihr Wohnmobil schnell, sicher und zum besten Preis. Sofortpreis-Ankauf, Online-Auktion oder Übergabe an einer Ankaufstation - Sie haben die Wahl!"
-      keywords="Wohnmobil verkaufen, Wohnmobil Ankauf, Camper verkaufen, Reisemobil verkaufen, Wohnmobil Ankaufstation"
+      title="Küche verkaufen — Kostenlose Bewertung in 2 Minuten"
+      description="Verkaufen Sie Ihre gebrauchte Küche schnell und zum besten Preis. Kostenlose Bewertung, geprüfte Küchen-Händler, transparenter Prozess. Nobilia, Häcker, Nolte & alle Marken."
+      keywords="Küche verkaufen, Küche kaufen, gebrauchte Küche, Küchenbewertung, Nobilia verkaufen, Häcker verkaufen, Nolte verkaufen, Küchenwert"
       canonicalPath="/"
       structuredData={[organizationSchema, serviceSchema]}
     >
       <Hero />
       <KitchenShowcase />
       <HowItWorks />
-      <ExplainerVideo />
-      <Listings />
       <Benefits />
       <Process />
       <FAQ />

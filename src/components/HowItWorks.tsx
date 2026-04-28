@@ -1,37 +1,43 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, Gavel, MapPin, ArrowRight } from "lucide-react";
+import { FileCheck, Gavel, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const channels = [
   {
-    iconComponent: Zap,
-    title: "Sofortpreis-Ankauf",
-    description: "Erhalten Sie innerhalb von 24 Stunden ein verbindliches Kaufangebot von professionellen Händlern.",
+    iconComponent: FileCheck,
+    title: "Küche verkaufen",
+    description:
+      "Kostenlose Bewertung in 2 Minuten. Wir finden den passenden Käufer unter unseren geprüften Küchen-Händlern — Sie entscheiden.",
     benefits: [
-      "Schnelle Bewertung",
-      "Verbindliches Angebot",
-      "Keine Auktion nötig",
+      "Bewertung in 2 Minuten",
+      "Geprüfte Händler bieten",
+      "Komplett kostenlos",
     ],
+    cta: "/funnel/a",
   },
   {
     iconComponent: Gavel,
-    title: "Online-Auktion",
-    description: "Lassen Sie geprüfte Händler um Ihr Wohnmobil bieten und erzielen Sie einen fairen Preis.",
+    title: "Angebote vergleichen",
+    description:
+      "Mehrere Händler geben Ihnen ein Angebot für Ihre Küche. Sie vergleichen in Ruhe und nehmen das beste an — wie eine umgekehrte Auktion.",
     benefits: [
-      "Maximaler Verkaufspreis",
-      "Transparente Gebote",
-      "72h Auktionsdauer",
+      "Mehrere Angebote",
+      "Transparenter Preis",
+      "48 Stunden Entscheidungszeit",
     ],
+    cta: "/funnel/b",
   },
   {
-    iconComponent: MapPin,
-    title: "Ankaufstation",
-    description: "Übergeben Sie Ihr Wohnmobil persönlich an einer unserer Partnerstationen und erhalten Sie Barzahlung.",
+    iconComponent: Sparkles,
+    title: "Traumküche planen",
+    description:
+      "Sie planen eine neue Küche? Unser KI-Konfigurator entwirft Ihnen 3 individuelle Varianten — und vermittelt den passenden Fachhändler.",
     benefits: [
-      "Persönliche Übergabe",
-      "Sofort Barzahlung",
-      "Deutschlandweit verfügbar",
+      "KI-gestützte Planung",
+      "3 Entwürfe kostenlos",
+      "Passenden Händler finden",
     ],
+    cta: "/funnel/a",
   },
 ];
 
@@ -42,14 +48,14 @@ const HowItWorks = () => {
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4">
           <div className="inline-block animate-fade-in">
             <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-semibold text-primary">
-              Flexibel & Transparent
+              Einfach & Transparent
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-foreground tracking-tight animate-fade-in animate-delay-100">
-            Drei Wege, Ihr Wohnmobil zu verkaufen
+            Drei Wege rund um Ihre Küche
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200">
-            Wählen Sie den Verkaufsweg, der am besten zu Ihnen passt. Alle drei Optionen sind sicher, transparent und führen zu fairen Preisen.
+            Ob Sie Ihre alte Küche verkaufen, Angebote vergleichen oder eine neue Traumküche planen möchten — bei KüchenWert läuft alles einfach, fair und unverbindlich.
           </p>
         </div>
 
@@ -90,9 +96,9 @@ const HowItWorks = () => {
                     ))}
                   </div>
 
-                  <a href={index === 0 ? "/verkaufen" : index === 1 ? "/verkaufen" : "/ankaufstationen"} className="w-full">
-                    <Button 
-                      variant="outline" 
+                  <a href={channel.cta} className="w-full">
+                    <Button
+                      variant="outline"
                       className="w-full mt-4 group/btn hover:border-primary hover:text-primary"
                     >
                       Mehr erfahren
@@ -107,7 +113,7 @@ const HowItWorks = () => {
 
         <div className="mt-8 sm:mt-10 lg:mt-12 text-center bg-muted/50 rounded-lg p-6 sm:p-8 max-w-2xl mx-auto">
           <p className="text-muted-foreground text-base sm:text-lg mb-4 sm:mb-6">
-            Nicht sicher, welcher Weg der richtige ist?
+            Nicht sicher, welcher Weg der richtige für Sie ist?
           </p>
           <a href="/kontakt">
             <Button size="lg" className="h-11 sm:h-12 px-6 sm:px-8 text-sm sm:text-base font-semibold w-full sm:w-auto">

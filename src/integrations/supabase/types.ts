@@ -844,6 +844,254 @@ export type Database = {
         }
         Relationships: []
       }
+      catalog_appliance_brands: {
+        Row: {
+          id: string
+          is_active: boolean
+          name: string
+          segment: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          name: string
+          segment?: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          name?: string
+          segment?: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_appliance_categories: {
+        Row: {
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_front_materials: {
+        Row: {
+          category: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_handle_types: {
+        Row: {
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_kitchen_brands: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          segment: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          segment?: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          segment?: Database["public"]["Enums"]["style_segment_enum"] | null
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_sink_brands: {
+        Row: {
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_sink_materials: {
+        Row: {
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_worktop_designs: {
+        Row: {
+          id: string
+          is_active: boolean
+          manufacturer: string | null
+          material_id: string | null
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          material_id?: string | null
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          material_id?: string | null
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_worktop_designs_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_worktop_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_worktop_materials: {
+        Row: {
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       claim_photos: {
         Row: {
           claim_id: string
@@ -2493,6 +2741,45 @@ export type Database = {
           },
         ]
       }
+      kitchen_price_brackets: {
+        Row: {
+          active: boolean
+          appliance_segment: Database["public"]["Enums"]["style_segment_enum"]
+          created_at: string
+          id: string
+          kitchen_form: Database["public"]["Enums"]["kitchen_form_enum"]
+          price_max_cents: number
+          price_min_cents: number
+          style_segment: Database["public"]["Enums"]["style_segment_enum"]
+          updated_at: string
+          worktop_tier: Database["public"]["Enums"]["worktop_tier_enum"]
+        }
+        Insert: {
+          active?: boolean
+          appliance_segment: Database["public"]["Enums"]["style_segment_enum"]
+          created_at?: string
+          id?: string
+          kitchen_form: Database["public"]["Enums"]["kitchen_form_enum"]
+          price_max_cents: number
+          price_min_cents: number
+          style_segment: Database["public"]["Enums"]["style_segment_enum"]
+          updated_at?: string
+          worktop_tier: Database["public"]["Enums"]["worktop_tier_enum"]
+        }
+        Update: {
+          active?: boolean
+          appliance_segment?: Database["public"]["Enums"]["style_segment_enum"]
+          created_at?: string
+          id?: string
+          kitchen_form?: Database["public"]["Enums"]["kitchen_form_enum"]
+          price_max_cents?: number
+          price_min_cents?: number
+          style_segment?: Database["public"]["Enums"]["style_segment_enum"]
+          updated_at?: string
+          worktop_tier?: Database["public"]["Enums"]["worktop_tier_enum"]
+        }
+        Relationships: []
+      }
       kitchen_questions: {
         Row: {
           answer: string | null
@@ -2881,6 +3168,771 @@ export type Database = {
           },
         ]
       }
+      lead_auction_spec_items: {
+        Row: {
+          auction_id: string
+          brand: string | null
+          category: string
+          created_at: string
+          designation: string | null
+          id: string
+          image_url: string | null
+          label: string
+          material: string | null
+          model: string | null
+          notes: string | null
+          quantity: number | null
+          sort_order: number
+        }
+        Insert: {
+          auction_id: string
+          brand?: string | null
+          category: string
+          created_at?: string
+          designation?: string | null
+          id?: string
+          image_url?: string | null
+          label: string
+          material?: string | null
+          model?: string | null
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+        }
+        Update: {
+          auction_id?: string
+          brand?: string | null
+          category?: string
+          created_at?: string
+          designation?: string | null
+          id?: string
+          image_url?: string | null
+          label?: string
+          material?: string | null
+          model?: string | null
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_auction_spec_items_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_auctions: {
+        Row: {
+          created_at: string
+          duration_hours: number
+          ends_at: string | null
+          id: string
+          is_published: boolean
+          lead_id: string
+          min_bid_eur: number | null
+          offer_price_eur: number | null
+          penalty_state: string
+          published_at: string | null
+          spec_sheet: Json | null
+          starts_at: string | null
+          status: string
+          updated_at: string
+          won_bid_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_hours?: number
+          ends_at?: string | null
+          id?: string
+          is_published?: boolean
+          lead_id: string
+          min_bid_eur?: number | null
+          offer_price_eur?: number | null
+          penalty_state?: string
+          published_at?: string | null
+          spec_sheet?: Json | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          won_bid_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_hours?: number
+          ends_at?: string | null
+          id?: string
+          is_published?: boolean
+          lead_id?: string
+          min_bid_eur?: number | null
+          offer_price_eur?: number | null
+          penalty_state?: string
+          published_at?: string | null
+          spec_sheet?: Json | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          won_bid_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_auctions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_auctions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_auctions_won_bid_fkey"
+            columns: ["won_bid_id"]
+            isOneToOne: false
+            referencedRelation: "lead_bids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_bids: {
+        Row: {
+          auction_id: string
+          created_at: string
+          dealer_id: string
+          delivery_weeks: number | null
+          id: string
+          is_winning: boolean
+          montage_included: boolean | null
+          notes: string | null
+          payment_terms: Json | null
+          price_eur: number
+          warranty_months: number | null
+        }
+        Insert: {
+          auction_id: string
+          created_at?: string
+          dealer_id: string
+          delivery_weeks?: number | null
+          id?: string
+          is_winning?: boolean
+          montage_included?: boolean | null
+          notes?: string | null
+          payment_terms?: Json | null
+          price_eur: number
+          warranty_months?: number | null
+        }
+        Update: {
+          auction_id?: string
+          created_at?: string
+          dealer_id?: string
+          delivery_weeks?: number | null
+          id?: string
+          is_winning?: boolean
+          montage_included?: boolean | null
+          notes?: string | null
+          payment_terms?: Json | null
+          price_eur?: number
+          warranty_months?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_bids_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_commission_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_cents: number | null
+          min_cents: number
+          notes: string | null
+          order_value_max_cents: number | null
+          order_value_min_cents: number
+          percent: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_cents?: number | null
+          min_cents: number
+          notes?: string | null
+          order_value_max_cents?: number | null
+          order_value_min_cents: number
+          percent: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_cents?: number | null
+          min_cents?: number
+          notes?: string | null
+          order_value_max_cents?: number | null
+          order_value_min_cents?: number
+          percent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lead_consents: {
+        Row: {
+          created_at: string
+          granted: boolean
+          id: string
+          ip_address: unknown
+          lead_id: string | null
+          purpose: string
+          text_version: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          granted: boolean
+          id?: string
+          ip_address?: unknown
+          lead_id?: string | null
+          purpose: string
+          text_version: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          granted?: boolean
+          id?: string
+          ip_address?: unknown
+          lead_id?: string | null
+          purpose?: string
+          text_version?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_consents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_consents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_consents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_files: {
+        Row: {
+          category: string
+          created_at: string
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          lead_id: string
+          virus_scan_status: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          lead_id: string
+          virus_scan_status?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          lead_id?: string
+          virus_scan_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_files_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_files_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_match_candidates: {
+        Row: {
+          created_at: string
+          dealer_id: string
+          id: string
+          is_purchased: boolean
+          lead_id: string
+          price_cents: number | null
+          purchased_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          dealer_id: string
+          id?: string
+          is_purchased?: boolean
+          lead_id: string
+          price_cents?: number | null
+          purchased_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          dealer_id?: string
+          id?: string
+          is_purchased?: boolean
+          lead_id?: string
+          price_cents?: number | null
+          purchased_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_match_candidates_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_match_candidates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_match_candidates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_penalty_charges: {
+        Row: {
+          amount_cents: number
+          auction_id: string
+          created_at: string
+          dealer_id: string | null
+          id: string
+          lead_id: string
+          party: string
+          reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          amount_cents?: number
+          auction_id: string
+          created_at?: string
+          dealer_id?: string | null
+          id?: string
+          lead_id: string
+          party: string
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          auction_id?: string
+          created_at?: string
+          dealer_id?: string | null
+          id?: string
+          lead_id?: string
+          party?: string
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_penalty_charges_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_penalty_charges_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_penalty_charges_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_penalty_charges_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_penalty_charges_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_pricing_rules: {
+        Row: {
+          budget_max_cents: number | null
+          budget_min_cents: number
+          created_at: string
+          id: string
+          is_active: boolean
+          max_price_cents: number | null
+          min_price_cents: number
+          notes: string | null
+          percent_of_budget: number
+          tier: Database["public"]["Enums"]["lead_tier"]
+          updated_at: string
+        }
+        Insert: {
+          budget_max_cents?: number | null
+          budget_min_cents: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_price_cents?: number | null
+          min_price_cents: number
+          notes?: string | null
+          percent_of_budget: number
+          tier: Database["public"]["Enums"]["lead_tier"]
+          updated_at?: string
+        }
+        Update: {
+          budget_max_cents?: number | null
+          budget_min_cents?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_price_cents?: number | null
+          min_price_cents?: number
+          notes?: string | null
+          percent_of_budget?: number
+          tier?: Database["public"]["Enums"]["lead_tier"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lead_qualification_calls: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          lead_id: string
+          missing_data: string[] | null
+          notes: string | null
+          outcome: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          lead_id: string
+          missing_data?: string[] | null
+          notes?: string | null
+          outcome: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          lead_id?: string
+          missing_data?: string[] | null
+          notes?: string | null
+          outcome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_qualification_calls_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_qualification_calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_qualification_calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_views: {
+        Row: {
+          dealer_id: string
+          id: string
+          lead_id: string
+          viewed_at: string
+        }
+        Insert: {
+          dealer_id: string
+          id?: string
+          lead_id: string
+          viewed_at?: string
+        }
+        Update: {
+          dealer_id?: string
+          id?: string
+          lead_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_views_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_views_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_views_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          address_line: string | null
+          budget_midpoint: number | null
+          city: string | null
+          consent_call: boolean
+          consent_marketing: boolean
+          created_at: string
+          delivery_mode: string | null
+          desired_delivery_at: string | null
+          email: string | null
+          existing_offer_price_cents: number | null
+          existing_offer_studio: string | null
+          first_name: string | null
+          funnel_answers: Json | null
+          funnel_type: Database["public"]["Enums"]["lead_funnel_type"]
+          funnel_variant: string | null
+          has_existing_offer: boolean
+          housing_type: string | null
+          id: string
+          ip_address: unknown
+          kitchen_form: string | null
+          kitchen_style: string | null
+          landing_page: string | null
+          last_name: string | null
+          payment_down_payment_percent: number | null
+          payment_financing: string | null
+          payment_financing_apr: number | null
+          payment_financing_months: number | null
+          phone: string | null
+          postal_code: string
+          purchase_reason: string | null
+          region: string | null
+          score: number
+          special_wishes: string[] | null
+          status: Database["public"]["Enums"]["lead_status"]
+          tier: Database["public"]["Enums"]["lead_tier"]
+          timeframe_months: number | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          waste_separation_system: boolean | null
+        }
+        Insert: {
+          address_line?: string | null
+          budget_midpoint?: number | null
+          city?: string | null
+          consent_call?: boolean
+          consent_marketing?: boolean
+          created_at?: string
+          delivery_mode?: string | null
+          desired_delivery_at?: string | null
+          email?: string | null
+          existing_offer_price_cents?: number | null
+          existing_offer_studio?: string | null
+          first_name?: string | null
+          funnel_answers?: Json | null
+          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"]
+          funnel_variant?: string | null
+          has_existing_offer?: boolean
+          housing_type?: string | null
+          id?: string
+          ip_address?: unknown
+          kitchen_form?: string | null
+          kitchen_style?: string | null
+          landing_page?: string | null
+          last_name?: string | null
+          payment_down_payment_percent?: number | null
+          payment_financing?: string | null
+          payment_financing_apr?: number | null
+          payment_financing_months?: number | null
+          phone?: string | null
+          postal_code: string
+          purchase_reason?: string | null
+          region?: string | null
+          score?: number
+          special_wishes?: string[] | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          tier?: Database["public"]["Enums"]["lead_tier"]
+          timeframe_months?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          waste_separation_system?: boolean | null
+        }
+        Update: {
+          address_line?: string | null
+          budget_midpoint?: number | null
+          city?: string | null
+          consent_call?: boolean
+          consent_marketing?: boolean
+          created_at?: string
+          delivery_mode?: string | null
+          desired_delivery_at?: string | null
+          email?: string | null
+          existing_offer_price_cents?: number | null
+          existing_offer_studio?: string | null
+          first_name?: string | null
+          funnel_answers?: Json | null
+          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"]
+          funnel_variant?: string | null
+          has_existing_offer?: boolean
+          housing_type?: string | null
+          id?: string
+          ip_address?: unknown
+          kitchen_form?: string | null
+          kitchen_style?: string | null
+          landing_page?: string | null
+          last_name?: string | null
+          payment_down_payment_percent?: number | null
+          payment_financing?: string | null
+          payment_financing_apr?: number | null
+          payment_financing_months?: number | null
+          phone?: string | null
+          postal_code?: string
+          purchase_reason?: string | null
+          region?: string | null
+          score?: number
+          special_wishes?: string[] | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          tier?: Database["public"]["Enums"]["lead_tier"]
+          timeframe_months?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          waste_separation_system?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_documents: {
         Row: {
           dealer_application_id: string
@@ -2997,6 +4049,62 @@ export type Database = {
         }
         Relationships: []
       }
+      musterkuechen: {
+        Row: {
+          brand: string | null
+          condition: string
+          created_at: string
+          dealer_id: string
+          description: string | null
+          id: string
+          images: string[] | null
+          is_available: boolean
+          is_highlighted: boolean
+          original_price_eur: number
+          sale_price_eur: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          condition?: string
+          created_at?: string
+          dealer_id: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean
+          is_highlighted?: boolean
+          original_price_eur: number
+          sale_price_eur: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          condition?: string
+          created_at?: string
+          dealer_id?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean
+          is_highlighted?: boolean
+          original_price_eur?: number
+          sale_price_eur?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "musterkuechen_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_reminders: {
         Row: {
           amount_due: number
@@ -3090,6 +4198,186 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_rate_limits: {
+        Row: {
+          bucket_key: string
+          count: number
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          bucket_key: string
+          count?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          bucket_key?: string
+          count?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      planner_renders: {
+        Row: {
+          completed_at: string | null
+          cost_cents: number | null
+          created_at: string
+          error_message: string | null
+          fal_request_id: string | null
+          generation_ms: number | null
+          id: string
+          image_height: number | null
+          image_path: string | null
+          image_width: number | null
+          model_slug: string | null
+          negative_prompt: string | null
+          prompt: string
+          session_id: string
+          spec_snapshot: Json
+          status: string
+          user_message: string | null
+          version: number
+        }
+        Insert: {
+          completed_at?: string | null
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          fal_request_id?: string | null
+          generation_ms?: number | null
+          id?: string
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
+          model_slug?: string | null
+          negative_prompt?: string | null
+          prompt: string
+          session_id: string
+          spec_snapshot: Json
+          status?: string
+          user_message?: string | null
+          version?: number
+        }
+        Update: {
+          completed_at?: string | null
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          fal_request_id?: string | null
+          generation_ms?: number | null
+          id?: string
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
+          model_slug?: string | null
+          negative_prompt?: string | null
+          prompt?: string
+          session_id?: string
+          spec_snapshot?: Json
+          status?: string
+          user_message?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_renders_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "planner_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_sessions: {
+        Row: {
+          contact_captured_at: string | null
+          created_at: string
+          current_render_id: string | null
+          expert_note: string | null
+          id: string
+          ip_address: unknown
+          lead_id: string | null
+          price_range_max_cents: number | null
+          price_range_min_cents: number | null
+          session_token: string
+          spec: Json
+          status: string
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          contact_captured_at?: string | null
+          created_at?: string
+          current_render_id?: string | null
+          expert_note?: string | null
+          id?: string
+          ip_address?: unknown
+          lead_id?: string | null
+          price_range_max_cents?: number | null
+          price_range_min_cents?: number | null
+          session_token: string
+          spec?: Json
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          contact_captured_at?: string | null
+          created_at?: string
+          current_render_id?: string | null
+          expert_note?: string | null
+          id?: string
+          ip_address?: unknown
+          lead_id?: string | null
+          price_range_max_cents?: number | null
+          price_range_min_cents?: number | null
+          session_token?: string
+          spec?: Json
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_sessions_current_render_fkey"
+            columns: ["current_render_id"]
+            isOneToOne: false
+            referencedRelation: "planner_renders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_sessions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_sessions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -4892,6 +6180,84 @@ export type Database = {
         }
         Relationships: []
       }
+      leads_masked: {
+        Row: {
+          budget_midpoint: number | null
+          created_at: string | null
+          delivery_mode: string | null
+          desired_delivery_at: string | null
+          existing_offer_price_cents: number | null
+          funnel_answers: Json | null
+          funnel_type: Database["public"]["Enums"]["lead_funnel_type"] | null
+          has_existing_offer: boolean | null
+          housing_type: string | null
+          id: string | null
+          kitchen_form: string | null
+          kitchen_style: string | null
+          payment_financing: string | null
+          postal_code: string | null
+          purchase_reason: string | null
+          region: string | null
+          score: number | null
+          special_wishes: string[] | null
+          status: Database["public"]["Enums"]["lead_status"] | null
+          tier: Database["public"]["Enums"]["lead_tier"] | null
+          timeframe_months: number | null
+          updated_at: string | null
+          waste_separation_system: boolean | null
+        }
+        Insert: {
+          budget_midpoint?: number | null
+          created_at?: string | null
+          delivery_mode?: string | null
+          desired_delivery_at?: string | null
+          existing_offer_price_cents?: number | null
+          funnel_answers?: Json | null
+          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"] | null
+          has_existing_offer?: boolean | null
+          housing_type?: string | null
+          id?: string | null
+          kitchen_form?: string | null
+          kitchen_style?: string | null
+          payment_financing?: string | null
+          postal_code?: string | null
+          purchase_reason?: string | null
+          region?: string | null
+          score?: number | null
+          special_wishes?: string[] | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          tier?: Database["public"]["Enums"]["lead_tier"] | null
+          timeframe_months?: number | null
+          updated_at?: string | null
+          waste_separation_system?: boolean | null
+        }
+        Update: {
+          budget_midpoint?: number | null
+          created_at?: string | null
+          delivery_mode?: string | null
+          desired_delivery_at?: string | null
+          existing_offer_price_cents?: number | null
+          funnel_answers?: Json | null
+          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"] | null
+          has_existing_offer?: boolean | null
+          housing_type?: string | null
+          id?: string | null
+          kitchen_form?: string | null
+          kitchen_style?: string | null
+          payment_financing?: string | null
+          postal_code?: string | null
+          purchase_reason?: string | null
+          region?: string | null
+          score?: number | null
+          special_wishes?: string[] | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          tier?: Database["public"]["Enums"]["lead_tier"] | null
+          timeframe_months?: number | null
+          updated_at?: string | null
+          waste_separation_system?: boolean | null
+        }
+        Relationships: []
+      }
       public_site_settings: {
         Row: {
           autobid_enabled: boolean | null
@@ -5132,8 +6498,19 @@ export type Database = {
           volume_discount: number
         }[]
       }
+      calculate_lead_commission_cents: {
+        Args: { p_order_value_cents: number }
+        Returns: number
+      }
+      calculate_lead_price_cents: {
+        Args: {
+          p_budget_cents: number
+          p_tier: Database["public"]["Enums"]["lead_tier"]
+        }
+        Returns: number
+      }
       check_search_criteria_match: {
-        Args: { criteria: Json; kitchen_record: Record<string, unknown> }
+        Args: { criteria: Json; motorhome_record: Record<string, unknown> }
         Returns: boolean
       }
       claim_google_review_batch: {
@@ -5173,7 +6550,7 @@ export type Database = {
       create_seller_penalty_invoice: {
         Args: {
           auction_id_param?: string
-          kitchen_id_param?: string
+          motorhome_id_param?: string
           notes_param?: string
           penalty_reason_param?: string
           seller_id_param: string
@@ -5308,7 +6685,7 @@ export type Database = {
       generate_release_pin: { Args: never; Returns: string }
       generate_sepa_reference: { Args: never; Returns: string }
       get_auction_marketing_anchors: {
-        Args: { p_kitchen_id: string }
+        Args: { p_motorhome_id: string }
         Returns: {
           auction_id: string
           seller_initial_instant_price: number
@@ -5501,6 +6878,18 @@ export type Database = {
         }
         Returns: Json
       }
+      planner_rate_limit_increment: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: {
+          allowed: boolean
+          current_count: number
+          reset_at: string
+        }[]
+      }
+      planner_rate_limits_cleanup: {
+        Args: { p_older_than_hours?: number }
+        Returns: number
+      }
       process_approved_claim: {
         Args: { claim_id_param: string }
         Returns: undefined
@@ -5510,7 +6899,7 @@ export type Database = {
         Returns: Json
       }
       process_search_alerts_for_kitchen: {
-        Args: { kitchen_id_param: string }
+        Args: { motorhome_id_param: string }
         Returns: number
       }
       reactivate_wizard_session_by_resume_token: {
@@ -5536,19 +6925,19 @@ export type Database = {
         Returns: boolean
       }
       seller_archive_listing: {
-        Args: { p_kitchen_id: string }
+        Args: { p_motorhome_id: string }
         Returns: Json
       }
       seller_restart_listing: {
         Args: {
-          p_kitchen_id: string
+          p_motorhome_id: string
           p_new_instant?: number
           p_new_reserve?: number
         }
         Returns: Json
       }
       seller_unarchive_listing: {
-        Args: { p_kitchen_id: string }
+        Args: { p_motorhome_id: string }
         Returns: Json
       }
       submit_wertrechner_review: {
@@ -5596,12 +6985,12 @@ export type Database = {
         Returns: undefined
       }
       update_kitchen_damage_status: {
-        Args: { kitchen_id_param: string }
+        Args: { motorhome_id_param: string }
         Returns: undefined
       }
       update_listing_prices_in_draft: {
         Args: {
-          p_kitchen_id: string
+          p_motorhome_id: string
           p_new_instant: number
           p_new_reserve: number
         }
@@ -5635,7 +7024,7 @@ export type Database = {
     }
     Enums: {
       air_conditioning_type: "Keine" | "Fahrerhaus" | "Wohnraum" | "Beides"
-      app_role: "admin" | "dealer" | "seller"
+      app_role: "admin" | "dealer" | "seller" | "consumer"
       auction_status:
         | "draft"
         | "active"
@@ -5667,13 +7056,31 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "ReparaturbedÃƒÂ¼rftig"
+        | "ReparaturbedÃ¼rftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
+      kitchen_form_enum: "zeile" | "l" | "u" | "insel" | "parallel" | "g"
+      lead_funnel_type: "a" | "b" | "traumkueche"
+      lead_status:
+        | "new"
+        | "qualified"
+        | "disqualified"
+        | "matched"
+        | "in_auction"
+        | "sold"
+        | "contacted"
+        | "appointment_set"
+        | "offer_sent"
+        | "closed_won"
+        | "closed_lost"
+        | "disputed"
+      lead_tier: "standard" | "qualified" | "premium" | "hot"
       refrigerator_type: "Kompressor" | "Absorber" | "Thermoelektrisch"
       sale_channel: "instant_price" | "auction" | "station"
+      style_segment_enum: "budget" | "mittel" | "premium" | "luxus"
       transmission_type: "Schaltgetriebe" | "Automatik"
+      worktop_tier_enum: "basic" | "mid" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5802,7 +7209,7 @@ export const Constants = {
   public: {
     Enums: {
       air_conditioning_type: ["Keine", "Fahrerhaus", "Wohnraum", "Beides"],
-      app_role: ["admin", "dealer", "seller"],
+      app_role: ["admin", "dealer", "seller", "consumer"],
       auction_status: [
         "draft",
         "active",
@@ -5837,14 +7244,33 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "ReparaturbedÃƒÂ¼rftig",
+        "ReparaturbedÃ¼rftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",
       ],
+      kitchen_form_enum: ["zeile", "l", "u", "insel", "parallel", "g"],
+      lead_funnel_type: ["a", "b", "traumkueche"],
+      lead_status: [
+        "new",
+        "qualified",
+        "disqualified",
+        "matched",
+        "in_auction",
+        "sold",
+        "contacted",
+        "appointment_set",
+        "offer_sent",
+        "closed_won",
+        "closed_lost",
+        "disputed",
+      ],
+      lead_tier: ["standard", "qualified", "premium", "hot"],
       refrigerator_type: ["Kompressor", "Absorber", "Thermoelektrisch"],
       sale_channel: ["instant_price", "auction", "station"],
+      style_segment_enum: ["budget", "mittel", "premium", "luxus"],
       transmission_type: ["Schaltgetriebe", "Automatik"],
+      worktop_tier_enum: ["basic", "mid", "premium"],
     },
   },
 } as const

@@ -66,14 +66,14 @@ const AdminStationHandover = () => {
         // Fetch appointment details
         const { data: appointment, error: fetchError } = await supabase
           .from('appointments')
-          .select('*, motorhomes(*), purchase_stations(*)')
+          .select('*, kitchens(*), purchase_stations(*)')
           .eq('id', appointmentId)
           .single();
 
         if (fetchError) throw fetchError;
 
         setVerifiedAppointment(appointment);
-        setPaymentAmount(appointment.motorhomes.instant_price?.toString() || "");
+        setPaymentAmount(appointment.kitchens.instant_price?.toString() || "");
         toast.success("PIN erfolgreich verifiziert");
       } else {
         toast.error(data.message || "Ungültige PIN");
@@ -221,7 +221,7 @@ const AdminStationHandover = () => {
                   <span className="font-semibold">Verifiziert</span>
                 </div>
                 <div className="text-sm space-y-1">
-                  <p><strong>Fahrzeug:</strong> {verifiedAppointment.motorhomes.manufacturer} {verifiedAppointment.motorhomes.model}</p>
+                  <p><strong>Fahrzeug:</strong> {verifiedAppointment.kitchens.manufacturer} {verifiedAppointment.kitchens.model}</p>
                   <p><strong>Station:</strong> {verifiedAppointment.purchase_stations.name}</p>
                 </div>
               </div>

@@ -227,13 +227,13 @@ const DealerDashboard = () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
-      const [bidsRes, soldMotorhomesRes, commissionsRes] = await Promise.all([
+      const [bidsRes, soldKitchensRes, commissionsRes] = await Promise.all([
         supabase
           .from("bids")
-          .select("*, auctions(status, current_bid, end_time, motorhome:motorhomes(manufacturer, model, listing_number, body_type, year))")
+          .select("*, auctions(status, current_bid, end_time, kitchen:kitchens(manufacturer, model, listing_number, body_type, year))")
           .eq("bidder_id", user.id),
         supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("id, manufacturer, model, sold_at, auctions(id, status, current_bid, starting_bid, end_time)")
           .eq("sold_to", user.id),
         supabase
@@ -243,9 +243,9 @@ const DealerDashboard = () => {
       ]);
 
       const activeBids = bidsRes.data?.filter(bid => bid.auctions?.status === "active") || [];
-      const wonMothorhomes = soldMotorhomesRes.data || [];
+      const wonMothorhomes = soldKitchensRes.data || [];
       const totalSpent = wonMothorhomes.reduce((sum, mh: any) => {
-        // auctions is a single object (not array) because motorhome_id has UNIQUE constraint
+        // auctions is a single object (not array) because kitchen_id has UNIQUE constraint
         const auction = Array.isArray(mh.auctions) ? mh.auctions[0] : mh.auctions;
         return sum + Number(auction?.current_bid || 0);
       }, 0);
@@ -278,7 +278,7 @@ const DealerDashboard = () => {
         .from("auctions")
         .select(`
           ${AUCTION_PUBLIC_COLUMNS},
-          motorhome:motorhomes!left(
+          kitchen:kitchens!left(
             id,
             manufacturer,
             model,
@@ -287,7 +287,7 @@ const DealerDashboard = () => {
             listing_number,
             sale_channel,
             instant_price,
-            photos:motorhome_photos(url, card_url, medium_url, display_order)
+            photos:kitchen_photos(url, card_url, medium_url, display_order)
           )
         `)
         .eq("status", "active")
@@ -339,12 +339,12 @@ const DealerDashboard = () => {
     const bidAmounts: number[] = [];
 
     for (const bid of stats.allBids) {
-      const motorhome = (bid as any).auctions?.motorhome;
-      if (motorhome?.manufacturer) {
-        manufacturerCount[motorhome.manufacturer] = (manufacturerCount[motorhome.manufacturer] || 0) + 1;
+      const kitchen = (bid as any).auctions?.kitchen;
+      if (kitchen?.manufacturer) {
+        manufacturerCount[kitchen.manufacturer] = (manufacturerCount[kitchen.manufacturer] || 0) + 1;
       }
-      if (motorhome?.body_type) {
-        bodyTypeCount[motorhome.body_type] = (bodyTypeCount[motorhome.body_type] || 0) + 1;
+      if (kitchen?.body_type) {
+        bodyTypeCount[kitchen.body_type] = (bodyTypeCount[kitchen.body_type] || 0) + 1;
       }
       bidAmounts.push(bid.amount);
     }
@@ -372,11 +372,11 @@ const DealerDashboard = () => {
   // Check if an auction matches dealer preferences
   const isRecommended = (auction: any): boolean => {
     if (!dealerPreferences) return false;
-    const motorhome = auction.motorhome;
-    if (!motorhome) return false;
+    const kitchen = auction.kitchen;
+    if (!kitchen) return false;
 
-    const matchesManufacturer = dealerPreferences.topManufacturers.includes(motorhome.manufacturer);
-    const matchesBodyType = motorhome.body_type && dealerPreferences.topBodyTypes.includes(motorhome.body_type);
+    const matchesManufacturer = dealerPreferences.topManufacturers.includes(kitchen.manufacturer);
+    const matchesBodyType = kitchen.body_type && dealerPreferences.topBodyTypes.includes(kitchen.body_type);
     const currentBid = auction.current_bid || auction.starting_bid || 0;
     const matchesPrice = currentBid >= dealerPreferences.minPrice && currentBid <= dealerPreferences.maxPrice;
 
@@ -392,9 +392,9 @@ const DealerDashboard = () => {
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const manufacturer = (auction.motorhome?.manufacturer || "").toLowerCase();
-        const model = (auction.motorhome?.model || "").toLowerCase();
-        const listingNumber = (auction.motorhome?.listing_number || "").toLowerCase();
+        const manufacturer = (auction.kitchen?.manufacturer || "").toLowerCase();
+        const model = (auction.kitchen?.model || "").toLowerCase();
+        const listingNumber = (auction.kitchen?.listing_number || "").toLowerCase();
         if (!manufacturer.includes(q) && !model.includes(q) && !listingNumber.includes(q)) {
           return false;
         }
@@ -689,7 +689,7 @@ const DealerDashboard = () => {
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
-                          {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+                          {auction.kitchen?.manufacturer} {auction.kitchen?.model}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>Ihr Gebot: <strong>€{userBid?.amount?.toLocaleString('de-DE')}</strong></span>
@@ -767,7 +767,7 @@ const DealerDashboard = () => {
                 const isExpired = timeLeft <= 0;
                 const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
                 const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
-                const auctionPhotos = Array.isArray(auction.motorhome?.photos) ? auction.motorhome.photos : auction.motorhome?.photos ? [auction.motorhome.photos] : [];
+                const auctionPhotos = Array.isArray(auction.kitchen?.photos) ? auction.kitchen.photos : auction.kitchen?.photos ? [auction.kitchen.photos] : [];
                 const mainPhotoObj = auctionPhotos.find((p: any) => p.display_order === 0) || auctionPhotos[0];
                 const mainPhoto = mainPhotoObj?.card_url || mainPhotoObj?.url;
                 
@@ -782,7 +782,7 @@ const DealerDashboard = () => {
                         {mainPhoto ? (
                           <img
                             src={mainPhoto}
-                            alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            alt={`${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`}
                             loading="lazy"
                             className="w-full h-full object-cover"
                             loading="lazy"
@@ -818,13 +818,13 @@ const DealerDashboard = () => {
                               Empfohlen
                             </Badge>
                           )}
-                          {auction.motorhome?.sale_channel === 'instant_price' && !isExpired && (
+                          {auction.kitchen?.sale_channel === 'instant_price' && !isExpired && (
                             <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg text-xs">
                               <Zap className="h-3 w-3 mr-1" />
                               Festpreis
                             </Badge>
                           )}
-                          {auction.motorhome?.sale_channel !== 'instant_price' && ((auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0)) && !isExpired && (
+                          {auction.kitchen?.sale_channel !== 'instant_price' && ((auction.kitchen?.instant_price && Number(auction.kitchen.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0)) && !isExpired && (
                             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg text-xs">
                               <Zap className="h-3 w-3 mr-1" />
                               Sofortkauf
@@ -834,8 +834,8 @@ const DealerDashboard = () => {
 
                         {/* Favorite Heart – rechts oben */}
                         <div className="absolute top-2 right-2">
-                          {auction.motorhome?.id && (
-                            <FavoriteButton motorhomeId={auction.motorhome.id} />
+                          {auction.kitchen?.id && (
+                            <FavoriteButton kitchenId={auction.kitchen.id} />
                           )}
                         </div>
                         
@@ -852,18 +852,18 @@ const DealerDashboard = () => {
                       <CardContent className="p-4">
                         <div className="mb-2">
                           <h3 className="font-semibold text-sm line-clamp-1">
-                            {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+                            {auction.kitchen?.manufacturer} {auction.kitchen?.model}
                           </h3>
                           <p className="text-xs text-muted-foreground">
-                            {auction.motorhome?.year} • #{auction.motorhome?.listing_number}
+                            {auction.kitchen?.year} • #{auction.kitchen?.listing_number}
                           </p>
                         </div>
                         
                         <div className="flex items-end justify-between">
                           <div>
-                            <p className="text-xs text-muted-foreground">{auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
-                            <p className={`text-lg font-bold ${auction.motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-primary'}`}>
-                              €{(auction.motorhome?.sale_channel === 'instant_price' ? (auction.motorhome?.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0)).toLocaleString('de-DE')}
+                            <p className="text-xs text-muted-foreground">{auction.kitchen?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                            <p className={`text-lg font-bold ${auction.kitchen?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-primary'}`}>
+                              €{(auction.kitchen?.sale_channel === 'instant_price' ? (auction.kitchen?.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0)).toLocaleString('de-DE')}
                             </p>
                           </div>
                           {hasBid && (
@@ -890,7 +890,7 @@ const DealerDashboard = () => {
                               Details
                             </>
                           ) : (
-                            auction.motorhome?.sale_channel === 'instant_price' ? (
+                            auction.kitchen?.sale_channel === 'instant_price' ? (
                               <>
                                 <Zap className="h-4 w-4 mr-2" />
                                 Jetzt kaufen
@@ -1218,7 +1218,7 @@ const DealerDashboard = () => {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <div className="font-medium text-sm sm:text-base truncate">
-                                {bid.auctions?.motorhome?.manufacturer} {bid.auctions?.motorhome?.model}
+                                {bid.auctions?.kitchen?.manufacturer} {bid.auctions?.kitchen?.model}
                               </div>
                               <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>Ihr Gebot: €{bid.amount.toLocaleString('de-DE')}</span>

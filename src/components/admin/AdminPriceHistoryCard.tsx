@@ -11,7 +11,7 @@
  *   - Kompakte Historie aller `price_change_requests` (Seller-Wünsche).
  *
  * Einsatz: überall wo ein Admin auf ein Wohnmobil / eine Auktion klickt
- * (AdminMotorhomeDetail, AdminAuctionDetail, MotorhomeDetailDialog).
+ * (AdminKitchenDetail, AdminAuctionDetail, KitchenDetailDialog).
  *
  * Die `seller_initial_*` Spalten sind column-level REVOKED auf `auctions`.
  * Wir lesen sie über den SECURITY-DEFINER-RPC `get_auction_owner_meta`,
@@ -41,11 +41,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface AdminPriceHistoryCardProps {
-  /** Die `motorhomes.id`. Pflicht — daran hängt alles. */
-  motorhomeId: string;
+  /** Die `kitchens.id`. Pflicht — daran hängt alles. */
+  kitchenId: string;
   /**
    * Optional die spezifische `auctions.id` für die Preis-Anker gelesen
-   * werden. Ohne Angabe wird die neueste Auktion des Motorhomes
+   * werden. Ohne Angabe wird die neueste Auktion des Kitchens
    * verwendet — das ist in 99% der Admin-Views das Gewünschte.
    */
   auctionId?: string | null;
@@ -57,7 +57,7 @@ interface AdminPriceHistoryCardProps {
   compact?: boolean;
 }
 
-type MotorhomePriceRow = {
+type KitchenPriceRow = {
   reserve_price: number | null;
   instant_price: number | null;
   sale_channel: string | null;
@@ -114,26 +114,26 @@ function computeDelta(
 }
 
 export function AdminPriceHistoryCard({
-  motorhomeId,
+  kitchenId,
   auctionId = null,
   className,
   compact = false,
 }: AdminPriceHistoryCardProps) {
   // ---------------------------------------------------------------------
-  // 1) aktuelle Motorhome-Preise
+  // 1) aktuelle Kitchen-Preise
   // ---------------------------------------------------------------------
-  const motorhomeQuery = useQuery({
-    queryKey: ["admin-price-history-mh", motorhomeId],
-    queryFn: async (): Promise<MotorhomePriceRow | null> => {
+  const kitchenQuery = useQuery({
+    queryKey: ["admin-price-history-mh", kitchenId],
+    queryFn: async (): Promise<KitchenPriceRow | null> => {
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select("reserve_price, instant_price, sale_channel")
-        .eq("id", motorhomeId)
+        .eq("id", kitchenId)
         .maybeSingle();
       if (error) throw error;
-      return data as MotorhomePriceRow | null;
+      return data as KitchenPriceRow | null;
     },
-    enabled: !!motorhomeId,
+    enabled: !!kitchenId,
     staleTime: 30_000,
   });
 
@@ -142,7 +142,7 @@ export function AdminPriceHistoryCard({
   //    Wir fragen nur granted columns ab (Startgebot/Reserve sind public)
   // ---------------------------------------------------------------------
   const auctionQuery = useQuery({
-    queryKey: ["admin-price-history-auction", motorhomeId, auctionId],
+    queryKey: ["admin-price-history-auction", kitchenId, auctionId],
     queryFn: async (): Promise<AuctionPriceRow | null> => {
       if (auctionId) {
         const { data, error } = await supabase
@@ -156,14 +156,14 @@ export function AdminPriceHistoryCard({
       const { data, error } = await supabase
         .from("auctions")
         .select("id, reserve_price, starting_bid, created_at, status, auction_round")
-        .eq("motorhome_id", motorhomeId)
+        .eq("kitchen_id", kitchenId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
       return data as AuctionPriceRow | null;
     },
-    enabled: !!motorhomeId,
+    enabled: !!kitchenId,
     staleTime: 30_000,
   });
 
@@ -207,27 +207,27 @@ export function AdminPriceHistoryCard({
   // 4) Seller-Preisänderungs-Anfragen (compact skipped)
   // ---------------------------------------------------------------------
   const priceRequestsQuery = useQuery({
-    queryKey: ["admin-price-history-requests", motorhomeId],
+    queryKey: ["admin-price-history-requests", kitchenId],
     queryFn: async (): Promise<PriceChangeRequestRow[]> => {
       const { data, error } = await supabase
         .from("price_change_requests")
         .select(
           "id, auction_id, current_reserve, current_instant, requested_reserve, requested_instant, reason, status, admin_note, processed_at, created_at",
         )
-        .eq("motorhome_id", motorhomeId)
+        .eq("kitchen_id", kitchenId)
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       return (data ?? []) as PriceChangeRequestRow[];
     },
-    enabled: !!motorhomeId && !compact,
+    enabled: !!kitchenId && !compact,
     staleTime: 30_000,
   });
 
   // ---------------------------------------------------------------------
   // Abgeleitete Werte
   // ---------------------------------------------------------------------
-  const saleChannel = motorhomeQuery.data?.sale_channel ?? null;
+  const saleChannel = kitchenQuery.data?.sale_channel ?? null;
   const isFestpreis = saleChannel === "instant_price";
 
   // Für den Delta-Vergleich:
@@ -237,8 +237,8 @@ export function AdminPriceHistoryCard({
   const initialReserve = ownerMetaQuery.data?.seller_initial_reserve ?? null;
   const initialInstant = ownerMetaQuery.data?.seller_initial_instant_price ?? null;
   const currentReserve =
-    auctionQuery.data?.reserve_price ?? motorhomeQuery.data?.reserve_price ?? null;
-  const currentInstant = motorhomeQuery.data?.instant_price ?? null;
+    auctionQuery.data?.reserve_price ?? kitchenQuery.data?.reserve_price ?? null;
+  const currentInstant = kitchenQuery.data?.instant_price ?? null;
 
   const reserveDelta = useMemo(
     () => computeDelta(initialReserve, currentReserve),
@@ -262,9 +262,9 @@ export function AdminPriceHistoryCard({
   }, [initialReserve, initialInstant, isFestpreis, instantDelta, reserveDelta]);
 
   const anyLoading =
-    motorhomeQuery.isLoading || auctionQuery.isLoading || ownerMetaQuery.isLoading;
+    kitchenQuery.isLoading || auctionQuery.isLoading || ownerMetaQuery.isLoading;
   const anyError =
-    motorhomeQuery.isError || auctionQuery.isError || ownerMetaQuery.isError;
+    kitchenQuery.isError || auctionQuery.isError || ownerMetaQuery.isError;
 
   // ---------------------------------------------------------------------
   // Rendering
@@ -287,7 +287,7 @@ export function AdminPriceHistoryCard({
     );
   }
 
-  if (anyError || !motorhomeQuery.data) {
+  if (anyError || !kitchenQuery.data) {
     return (
       <Card className={className}>
         <CardHeader className="pb-3">

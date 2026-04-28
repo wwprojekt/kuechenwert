@@ -936,7 +936,7 @@ export const useWizardForm = () => {
         return true;
       }
 
-      // Ensure profile exists before motorhome insert (handles race condition
+      // Ensure profile exists before kitchen insert (handles race condition
       // where handle_new_user trigger may have failed silently)
       try {
         const nameParts = (formData.customerName || "").split(" ");
@@ -968,7 +968,7 @@ export const useWizardForm = () => {
           const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
-            .from('motorhome-photos')
+            .from('kitchen-photos')
             .upload(fileName, uploadFile, {
               contentType: uploadFile.type || `image/${fileExt}`,
               cacheControl: "31536000, immutable",
@@ -977,7 +977,7 @@ export const useWizardForm = () => {
           if (uploadError) throw uploadError;
 
           const { data: { publicUrl } } = supabase.storage
-            .from('motorhome-photos')
+            .from('kitchen-photos')
             .getPublicUrl(fileName);
 
           return publicUrl;
@@ -988,7 +988,7 @@ export const useWizardForm = () => {
       }
 
       // Defensive Validierung: Pflichtfelder prüfen bevor DB-Insert versucht wird
-      // Verhindert kryptische DB-Enum-Fehler (z.B. "invalid input value for enum motorhome_body_type: ''")
+      // Verhindert kryptische DB-Enum-Fehler (z.B. "invalid input value for enum kitchen_body_type: ''")
       const VALID_BODY_TYPES = ['Teilintegriert', 'Alkoven', 'Vollintegriert', 'Kastenwagen', 'Campingbus', 'Wohnwagen', 'Faltcaravan', 'Mobilheim'];
       if (!formData.bodyType || !VALID_BODY_TYPES.includes(formData.bodyType)) {
         throw new Error('Bitte wählen Sie eine gültige Aufbauart aus. Gehen Sie zurück zu Schritt 1.');
@@ -1015,18 +1015,18 @@ export const useWizardForm = () => {
       const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
       // Click-IDs (Google + Bing) aus localStorage holen, damit wir sie auf
-      // die motorhomes-Zeile schreiben können. Das ist die Voraussetzung für
+      // die kitchens-Zeile schreiben können. Das ist die Voraussetzung für
       // Sale-Conversion-Attribution: close-auction / instant-buy / kaufchance /
-      // admin-sell lesen `motorhome.gclid` bzw. `motorhome.msclkid` zurück und
+      // admin-sell lesen `kitchen.gclid` bzw. `kitchen.msclkid` zurück und
       // schicken sie an Google Ads (heute) bzw. Bing CAPI (Phase 2).
       // Ohne diesen Schritt gehen die Click-IDs für eingeloggte User zwischen
-      // wizard_sessions (richtig befüllt) und motorhomes (NULL) verloren.
+      // wizard_sessions (richtig befüllt) und kitchens (NULL) verloren.
       // Der Guest-Pfad (auto-convert-wizard Edge Function) macht das Mapping
       // bereits korrekt — diese Zeilen ziehen den Logged-in-Pfad nach.
       const wizardClickIds = getStoredClickIds();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const motorhomeInsert: Record<string, any> = {
+      const kitchenInsert: Record<string, any> = {
         seller_id: user.id,
         manufacturer: formData.manufacturer,
         model: formData.model,
@@ -1112,22 +1112,22 @@ export const useWizardForm = () => {
         msclkid: wizardClickIds.msclkid,
       };
 
-      const { data: motorhome, error: motorhomeError } = await withNetworkRetry(
+      const { data: kitchen, error: kitchenError } = await withNetworkRetry(
         () => supabase
-          .from('motorhomes')
-          .insert([motorhomeInsert])
+          .from('kitchens')
+          .insert([kitchenInsert])
           .select()
           .single(),
         2,
-        'motorhomes-insert'
+        'kitchens-insert'
       );
 
-      if (motorhomeError) {
+      if (kitchenError) {
         // If RLS error, the session might have expired between validation and insert.
         // Fall back to lead-only submission so the user's data is not lost.
-        if (isSessionOrRLSError(motorhomeError)) {
-          logger.warn('Wizard submit: RLS error on motorhomes insert, falling back to lead-only submission', {
-            error: motorhomeError.message,
+        if (isSessionOrRLSError(kitchenError)) {
+          logger.warn('Wizard submit: RLS error on kitchens insert, falling back to lead-only submission', {
+            error: kitchenError.message,
             userId: user.id,
           });
 
@@ -1167,17 +1167,17 @@ export const useWizardForm = () => {
           navigate("/verkaufen/danke");
           return true;
         }
-        throw motorhomeError;
+        throw kitchenError;
       }
 
       // Insert photos + create auction. If either fails we roll back the
-      // motorhome row so we don't leave half-created listings behind.
-      const rollbackMotorhome = async (reason: string) => {
-        logger.error(`Wizard submit: rolling back motorhome ${motorhome.id} (${reason})`);
+      // kitchen row so we don't leave half-created listings behind.
+      const rollbackKitchen = async (reason: string) => {
+        logger.error(`Wizard submit: rolling back kitchen ${kitchen.id} (${reason})`);
         try {
-          await supabase.from('motorhome_photos').delete().eq('motorhome_id', motorhome.id);
-          await supabase.from('auctions').delete().eq('motorhome_id', motorhome.id);
-          await supabase.from('motorhomes').delete().eq('id', motorhome.id);
+          await supabase.from('kitchen_photos').delete().eq('kitchen_id', kitchen.id);
+          await supabase.from('auctions').delete().eq('kitchen_id', kitchen.id);
+          await supabase.from('kitchens').delete().eq('id', kitchen.id);
         } catch (rollbackErr) {
           logger.error('Rollback after failed wizard submit failed:', rollbackErr);
         }
@@ -1185,17 +1185,17 @@ export const useWizardForm = () => {
 
       if (photoUrls.length > 0) {
         const photoRecords = photoUrls.map((url, index) => ({
-          motorhome_id: motorhome.id,
+          kitchen_id: kitchen.id,
           url: url,
           display_order: index,
         }));
 
         const { error: photosError } = await supabase
-          .from('motorhome_photos')
+          .from('kitchen_photos')
           .insert(photoRecords);
 
         if (photosError) {
-          await rollbackMotorhome('photos insert failed');
+          await rollbackKitchen('photos insert failed');
           throw photosError;
         }
       }
@@ -1273,7 +1273,7 @@ export const useWizardForm = () => {
         // sind (Migration 20260420210000 ist deployt, aber types.ts wird noch nicht
         // gepflegt um die ~1900 Strict-Generic-Errors über die ganze Codebase zu vermeiden).
         const auctionInsertPayload: Record<string, unknown> = {
-          motorhome_id: motorhome.id,
+          kitchen_id: kitchen.id,
           starting_bid: startingBid,
           reserve_price: reserveForAuction,
           status: 'draft',
@@ -1288,7 +1288,7 @@ export const useWizardForm = () => {
           .insert(auctionInsertPayload as any);
 
         if (auctionError) {
-          await rollbackMotorhome('auction insert failed');
+          await rollbackKitchen('auction insert failed');
           throw auctionError;
         }
       }

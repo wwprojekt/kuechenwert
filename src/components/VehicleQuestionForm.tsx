@@ -17,7 +17,7 @@ const questionSchema = z.object({
 });
 
 interface VehicleQuestionFormProps {
-  motorhomeId: string;
+  kitchenId: string;
   vehicleTitle: string;
 }
 
@@ -55,7 +55,7 @@ function incrementRateLimit(): void {
   }
 }
 
-export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuestionFormProps) {
+export function VehicleQuestionForm({ kitchenId, vehicleTitle }: VehicleQuestionFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,8 +103,8 @@ export function VehicleQuestionForm({ motorhomeId, vehicleTitle }: VehicleQuesti
       }
 
       const { error } = await withNetworkRetry(
-        () => supabase.from("vehicle_questions").insert({
-          motorhome_id: motorhomeId,
+        () => supabase.from("kitchen_questions").insert({
+          kitchen_id: kitchenId,
           questioner_id: user?.id || null,
           questioner_name: formData.name || (user?.email?.split("@")[0] || null),
           questioner_email: formData.email || user?.email || "",

@@ -35,10 +35,10 @@ interface Appointment {
   payment_amount: number | null;
   release_pin: string | null;
   notes: string | null;
-  motorhome_id: string;
+  kitchen_id: string;
   station_id: string;
   seller_id: string;
-  motorhomes: {
+  kitchens: {
     manufacturer: string;
     model: string;
     year: number;
@@ -78,10 +78,10 @@ const AdminAppointments = () => {
       { key: "status", label: "Status" },
       { key: "duration_minutes", label: "Dauer (Min.)" },
       {
-        key: "motorhomes",
+        key: "kitchens",
         label: "Fahrzeug",
-        format: (_: Appointment["motorhomes"], row: Appointment) =>
-          [row.motorhomes?.manufacturer, row.motorhomes?.model, row.motorhomes?.year]
+        format: (_: Appointment["kitchens"], row: Appointment) =>
+          [row.kitchens?.manufacturer, row.kitchens?.model, row.kitchens?.year]
             .filter(Boolean)
             .join(" "),
       },
@@ -132,7 +132,7 @@ const AdminAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          motorhomes (manufacturer, model, year),
+          kitchens (manufacturer, model, year),
           purchase_stations (name, city)
         `)
         .order('appointment_date', { ascending: false });
@@ -276,7 +276,7 @@ const AdminAppointments = () => {
     if (!q) return list;
 
     return list.filter((apt) => {
-      const vehicle = `${apt.motorhomes?.manufacturer ?? ""} ${apt.motorhomes?.model ?? ""} ${apt.motorhomes?.year ?? ""}`.toLowerCase();
+      const vehicle = `${apt.kitchens?.manufacturer ?? ""} ${apt.kitchens?.model ?? ""} ${apt.kitchens?.year ?? ""}`.toLowerCase();
       const seller = `${apt.profiles?.first_name ?? ""} ${apt.profiles?.last_name ?? ""} ${apt.profiles?.email ?? ""}`.toLowerCase();
       const station = `${apt.purchase_stations?.name ?? ""} ${apt.purchase_stations?.city ?? ""}`.toLowerCase();
       return vehicle.includes(q) || seller.includes(q) || station.includes(q);
@@ -369,7 +369,7 @@ const AdminAppointments = () => {
                   <div className="min-w-0">
                     <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
                       <span className="break-words">
-                        {appointment.motorhomes?.manufacturer} {appointment.motorhomes?.model}
+                        {appointment.kitchens?.manufacturer} {appointment.kitchens?.model}
                       </span>
                       {getStatusBadge(appointment.status)}
                     </CardTitle>

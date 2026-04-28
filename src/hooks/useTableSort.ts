@@ -6,7 +6,7 @@
  * - Zahlen
  * - Datumswerte (ISO-Strings)
  * - Null/undefined Werte (immer am Ende)
- * - Verschachtelte Pfade (z.B. "motorhome.manufacturer")
+ * - Verschachtelte Pfade (z.B. "kitchen.manufacturer")
  * - Benutzerdefinierte Accessor-Funktionen
  *
  * Verwendung:
@@ -26,7 +26,7 @@ interface UseTableSortReturn<T> {
 }
 
 /**
- * Löst einen verschachtelten Pfad auf (z.B. "motorhome.seller.email")
+ * Löst einen verschachtelten Pfad auf (z.B. "kitchen.seller.email")
  */
 function getNestedValue(obj: any, path: string): unknown {
   return path.split(".").reduce((acc, part) => acc?.[part], obj);

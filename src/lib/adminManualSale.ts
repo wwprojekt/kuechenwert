@@ -2,7 +2,7 @@
  * Helper for the admin "An Händler verkaufen" action.
  *
  * Calls the `admin-sell-to-dealer` Edge Function which mirrors the full
- * `instant-buy` flow (motorhome+auction state change, invoice, purchase
+ * `instant-buy` flow (kitchen+auction state change, invoice, purchase
  * contract, winner/seller/loser notifications, Google Ads conversion,
  * admin summary email) but with admin-supplied buyer + price.
  *
@@ -21,7 +21,7 @@ export interface AdminManualSaleInput {
 }
 
 export interface AdminManualSaleResult {
-  motorhomeId: string;
+  kitchenId: string;
   auctionId: string;
   buyerId: string;
   price: number;

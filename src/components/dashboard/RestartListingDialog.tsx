@@ -36,8 +36,8 @@ import { de } from "date-fns/locale";
 export function RestartListingDialog({
   open,
   onOpenChange,
-  motorhomeId,
-  motorhomeName,
+  kitchenId,
+  kitchenName,
   saleChannel,
   currentReservePrice,
   currentInstantPrice,
@@ -45,8 +45,8 @@ export function RestartListingDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  motorhomeId: string;
-  motorhomeName: string;
+  kitchenId: string;
+  kitchenName: string;
   saleChannel: "auction" | "instant_price" | "station" | string | null;
   currentReservePrice: number | null;
   currentInstantPrice: number | null;
@@ -66,7 +66,7 @@ export function RestartListingDialog({
       const { data, error } = await withSessionRetry(
         () =>
           supabase.rpc("seller_restart_listing", {
-            p_motorhome_id: motorhomeId,
+            p_kitchen_id: kitchenId,
             p_new_reserve: null,
             p_new_instant: null,
           }),
@@ -82,9 +82,9 @@ export function RestartListingDialog({
       };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail", kitchenId] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
-      queryClient.invalidateQueries({ queryKey: ["motorhomeEdit", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenEdit", kitchenId] });
       toast({
         title: "Inserat neu gestartet",
         description: `Die Auktion läuft nun ${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage, endet am ${format(new Date(data.end_time), "dd.MM.yyyy HH:mm", { locale: de })}.`,
@@ -115,7 +115,7 @@ export function RestartListingDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-3 pt-2">
               <p className="text-sm">
-                <strong>{motorhomeName}</strong> wird mit einer frischen Marketing-Phase neu eingestellt.
+                <strong>{kitchenName}</strong> wird mit einer frischen Marketing-Phase neu eingestellt.
               </p>
               <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-2">
                 <div className="flex items-center gap-2 font-medium">

@@ -62,7 +62,7 @@ const BlogPost = lazyRetry(() => import("./pages/BlogPost"));
 const AdminLayout = lazyRetry(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazyRetry(() => import("./pages/admin/AdminDashboard"));
 const AdminAuctions = lazyRetry(() => import("./pages/admin/AdminAuctions"));
-const AdminMotorhomes = lazyRetry(() => import("./pages/admin/AdminMotorhomes"));
+const AdminKitchens = lazyRetry(() => import("./pages/admin/AdminKitchens"));
 const AdminUsers = lazyRetry(() => import("./pages/admin/AdminUsers"));
 const AdminSettings = lazyRetry(() => import("./pages/admin/AdminSettings"));
 const AdminDealers = lazyRetry(() => import("./pages/admin/AdminDealers"));
@@ -82,7 +82,7 @@ const AdminCronHealth = lazyRetry(() => import("./pages/admin/AdminCronHealth"))
 const AdminAuditLog = lazyRetry(() => import("./pages/admin/AdminAuditLog"));
 const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
 const AdminAuctionDetail = lazyRetry(() => import("./pages/admin/AdminAuctionDetail"));
-const AdminMotorhomeDetail = lazyRetry(() => import("./pages/admin/AdminMotorhomeDetail"));
+const AdminKitchenDetail = lazyRetry(() => import("./pages/admin/AdminKitchenDetail"));
 const AdminUserDetail = lazyRetry(() => import("./pages/admin/AdminUserDetail"));
 const AdminDealerDetail = lazyRetry(() => import("./pages/admin/AdminDealerDetail"));
 const AdminAppointmentDetail = lazyRetry(() => import("./pages/admin/AdminAppointmentDetail"));
@@ -254,8 +254,8 @@ const App = () => (
                 <Route path="leads" element={<AdminLeads />} />
                 <Route path="auctions" element={<AdminAuctions />} />
                 <Route path="auctions/:id" element={<AdminAuctionDetail />} />
-                <Route path="motorhomes" element={<AdminMotorhomes />} />
-                <Route path="motorhomes/:id" element={<AdminMotorhomeDetail />} />
+                <Route path="kitchens" element={<AdminKitchens />} />
+                <Route path="kitchens/:id" element={<AdminKitchenDetail />} />
                 <Route path="questions" element={<AdminQuestions />} />
                 <Route path="email" element={<AdminEmailCenter />} />
                 <Route path="messages" element={<AdminMessages />} />

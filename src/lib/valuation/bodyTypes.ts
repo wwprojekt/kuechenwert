@@ -39,7 +39,7 @@ export const getBasePrice = (vehicleType: string, bodyType: string): number => {
 };
 
 /**
- * Mapping von internen Wertrechner-Werten zu den DB-Enums in `motorhomes.body_type`.
+ * Mapping von internen Wertrechner-Werten zu den DB-Enums in `kitchens.body_type`.
  * Wird fuer Market-Comp-Queries gebraucht (KI + "aehnlich verkauft"-Widget).
  */
 export const BODY_TYPE_TO_DB_ENUM: Record<string, string> = {

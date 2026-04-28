@@ -2,7 +2,7 @@
  * useNow — globaler 1-Hz "now"-Hook
  *
  * Hintergrund:
- * MotorhomeCard hatte pro Karte ein eigenes `setInterval(updateTimer, 1000)` mit
+ * KitchenCard hatte pro Karte ein eigenes `setInterval(updateTimer, 1000)` mit
  * 5 setState-Calls pro Tick. Bei 12 sichtbaren Karten = 12 Timer × 5 setState = 60
  * setState pro Sekunde. React 18 batcht zwar, das ist aber unnötige CPU-Last und
  * verursacht spürbares Jank beim Scrollen auf älteren Devices.

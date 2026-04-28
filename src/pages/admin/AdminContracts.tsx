@@ -75,7 +75,7 @@ interface PurchaseContract {
   id: string;
   contract_number: string;
   auction_id: string | null;
-  motorhome_id: string | null;
+  kitchen_id: string | null;
   buyer_id: string | null;
   seller_id: string | null;
   sale_price: number;
@@ -238,7 +238,7 @@ export default function AdminContracts() {
       id: string;
       reason: string;
     }) => {
-      // Atomic server-side flow: cancel + reset motorhome + email both
+      // Atomic server-side flow: cancel + reset kitchen + email both
       // parties + audit log in one Edge Function call.
       const { data, error } = await invokeWithAuth("cancel-purchase-contract", {
         body: {
@@ -251,7 +251,7 @@ export default function AdminContracts() {
       const result = data as {
         success?: boolean;
         contractNumber?: string;
-        motorhomeReset?: "pending" | "active" | null;
+        kitchenReset?: "pending" | "active" | null;
         buyerMailSent?: boolean;
         sellerMailSent?: boolean;
         buyerMailError?: string | null;
@@ -260,7 +260,7 @@ export default function AdminContracts() {
       if (!result?.success) throw new Error("Stornierung fehlgeschlagen");
       return {
         contractNumber: result.contractNumber ?? "",
-        motorhomeReset: result.motorhomeReset ?? null,
+        kitchenReset: result.kitchenReset ?? null,
         buyerMailSent: !!result.buyerMailSent,
         sellerMailSent: !!result.sellerMailSent,
         buyerMailError: result.buyerMailError ?? null,
@@ -274,15 +274,15 @@ export default function AdminContracts() {
       const mailHint = mailParts.length
         ? mailParts.join(" · ")
         : "ACHTUNG: Es konnte keine Storno-E-Mail versendet werden – bitte Parteien manuell informieren.";
-      const motorhomeHint = result.motorhomeReset
-        ? ` · Fahrzeugstatus auf "${result.motorhomeReset}" zurückgesetzt`
+      const kitchenHint = result.kitchenReset
+        ? ` · Fahrzeugstatus auf "${result.kitchenReset}" zurückgesetzt`
         : "";
       toast({
         title: "Vertrag storniert",
-        description: `${mailHint}${motorhomeHint}`,
+        description: `${mailHint}${kitchenHint}`,
       });
       queryClient.invalidateQueries({ queryKey: ["adminContracts"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
       setCancelDialogOpen(false);
       setCancelReason("");
       setCancelContractId(null);

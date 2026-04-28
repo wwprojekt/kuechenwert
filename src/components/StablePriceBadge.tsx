@@ -20,7 +20,7 @@ interface StablePriceBadgeProps {
 /**
  * P4.2/P4.3: "Stabil seit X Tagen" Badge.
  *
- * Erscheint im Käufer-View (AuctionDetail, MotorhomeCard), sobald der Mindest-/
+ * Erscheint im Käufer-View (AuctionDetail, KitchenCard), sobald der Mindest-/
  * Festpreis seit mindestens MARKETING_CONFIG.STABLE_PRICE_BADGE_AFTER_DAYS
  * (7 Tage) NICHT mehr automatisch gesenkt wurde. Soll Vertrauen signalisieren
  * ("seriöses Angebot, kein Verramsch-Inserat") OHNE den Käufer zum Warten zu

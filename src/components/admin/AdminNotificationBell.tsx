@@ -39,19 +39,19 @@ export function useAdminNotificationCounts() {
         supabase.from("support_messages").select("*", { count: "exact", head: true }).is("admin_response", null),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).or("status.eq.new,status.is.null"),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
+        supabase.from("kitchen_questions").select("*", { count: "exact", head: true }).is("answer", null),
         supabase.from("admin_emails").select("*", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
         supabase.from("dealer_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
         supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split("T")[0]),
         supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).in("status", ["pending", "countered"]),
         // Bug-fix #4: surface festpreis listings that are missing a price.
-        // The DB CHECK constraint (motorhomes_instant_price_positive, NOT VALID)
+        // The DB CHECK constraint (kitchens_instant_price_positive, NOT VALID)
         // blocks new violators, but legacy rows + the cron auto-extend window
         // mean admins still need a one-click view. This count powers both the
-        // bell badge and the /admin/motorhomes?filter=festpreis_no_price view.
+        // bell badge and the /admin/kitchens?filter=festpreis_no_price view.
         supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("*", { count: "exact", head: true })
           .eq("sale_channel", "instant_price")
           .eq("status", "available")
@@ -102,7 +102,7 @@ export function AdminNotificationBell() {
     {
       label: "Festpreis ohne Preis",
       count: data?.festpreisNoPrice || 0,
-      path: "/admin/motorhomes?filter=festpreis_no_price",
+      path: "/admin/kitchens?filter=festpreis_no_price",
       icon: AlertTriangle,
       color: "text-rose-600",
     },

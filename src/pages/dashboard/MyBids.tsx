@@ -39,11 +39,11 @@ export default function MyBids() {
             status,
             current_bid,
             end_time,
-            motorhome:motorhomes (
+            kitchen:kitchens (
               manufacturer,
               model,
               year,
-              photos:motorhome_photos (
+              photos:kitchen_photos (
                 url,
                 card_url,
                 medium_url,
@@ -216,8 +216,8 @@ export default function MyBids() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedBids.map((group: any) => {
-            const motorhome = group.auction?.motorhome;
-            const safePhotos = Array.isArray(motorhome?.photos) ? motorhome.photos : motorhome?.photos ? [motorhome.photos] : [];
+            const kitchen = group.auction?.kitchen;
+            const safePhotos = Array.isArray(kitchen?.photos) ? kitchen.photos : kitchen?.photos ? [kitchen.photos] : [];
             const firstPhotoObj = [...safePhotos].sort((a: any, b: any) => a.display_order - b.display_order)[0];
             const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
             const bidCount = group.bids.length;
@@ -261,7 +261,7 @@ export default function MyBids() {
                       {firstPhoto ? (
                         <img
                           src={firstPhoto}
-                          alt={`${motorhome?.manufacturer} ${motorhome?.model}`}
+                          alt={`${kitchen?.manufacturer} ${kitchen?.model}`}
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -285,10 +285,10 @@ export default function MyBids() {
                     <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
                       <div>
                         <h3 className="font-semibold text-sm leading-tight line-clamp-1 text-foreground group-hover:text-primary transition-colors">
-                          {motorhome?.manufacturer} {motorhome?.model}
+                          {kitchen?.manufacturer} {kitchen?.model}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Baujahr {motorhome?.year}
+                          Baujahr {kitchen?.year}
                         </p>
                       </div>
 

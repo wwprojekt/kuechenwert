@@ -28,16 +28,16 @@ export default function MyListings() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'bid_desc' | 'bid_asc'>('newest');
   const [showArchived, setShowArchived] = useState(false);
 
-  const { data: motorhomes, isLoading } = useQuery({
+  const { data: kitchens, isLoading } = useQuery({
     queryKey: ["myListings", user?.id],
     queryFn: async () => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           *,
-          photos:motorhome_photos (
+          photos:kitchen_photos (
             url,
             card_url,
             medium_url,
@@ -123,9 +123,9 @@ export default function MyListings() {
     enabled: !!user,
   });
 
-  const getSaleChannelBadge = (motorhome: any) => {
-    const channel = motorhome.sale_channel;
-    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
+  const getSaleChannelBadge = (kitchen: any) => {
+    const channel = kitchen.sale_channel;
+    const hasInstantBuy = kitchen.instant_price && Number(kitchen.instant_price) > 0;
     switch (channel) {
       case "auction":
         return hasInstantBuy
@@ -161,7 +161,7 @@ export default function MyListings() {
         <Card className="p-8">
           <div className="text-center text-muted-foreground">Lädt...</div>
         </Card>
-      ) : !motorhomes || motorhomes.length === 0 ? (
+      ) : !kitchens || kitchens.length === 0 ? (
         <Card className="p-12">
           <div className="text-center">
             <Car className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -180,10 +180,10 @@ export default function MyListings() {
       ) : (
         <>
         {(() => {
-          const archivedCount = (motorhomes || []).filter((m: any) => m.is_archived).length;
+          const archivedCount = (kitchens || []).filter((m: any) => m.is_archived).length;
           const filtered = showArchived
-            ? motorhomes
-            : (motorhomes || []).filter((m: any) => !m.is_archived);
+            ? kitchens
+            : (kitchens || []).filter((m: any) => !m.is_archived);
           return (
             <>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -247,21 +247,21 @@ export default function MyListings() {
               }
               default: return 0;
             }
-          }).map((motorhome) => {
-            const firstPhotoObj = motorhome.photos
+          }).map((kitchen) => {
+            const firstPhotoObj = kitchen.photos
               ?.sort((a, b) => a.display_order - b.display_order)[0];
             const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
-            const auction = Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction;
+            const auction = Array.isArray(kitchen.auction) ? kitchen.auction[0] : kitchen.auction;
 
             return (
-              <Link key={motorhome.id} to={`/dashboard/listings/${motorhome.id}`} className="no-underline">
-              <Card className={`overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer ${motorhome.is_archived ? 'opacity-70 grayscale-[30%]' : ''}`}>
+              <Link key={kitchen.id} to={`/dashboard/listings/${kitchen.id}`} className="no-underline">
+              <Card className={`overflow-hidden hover-lift border-2 hover:border-primary/30 transition-smooth group bg-card cursor-pointer ${kitchen.is_archived ? 'opacity-70 grayscale-[30%]' : ''}`}>
                 {/* Image */}
                 <div className="relative h-48 bg-muted">
                   {firstPhoto ? (
                     <img
                       src={firstPhoto}
-                      alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                      alt={`${kitchen.manufacturer} ${kitchen.model}`}
                       loading="lazy"
                       className="w-full h-full object-cover"
                     />
@@ -271,8 +271,8 @@ export default function MyListings() {
                     </div>
                   )}
                   <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                    {getSaleChannelBadge(motorhome)}
-                    {motorhome.is_archived && (
+                    {getSaleChannelBadge(kitchen)}
+                    {kitchen.is_archived && (
                       <Badge className="bg-slate-600 text-white gap-1">
                         <Archive className="w-3 h-3" />
                         Archiviert
@@ -285,10 +285,10 @@ export default function MyListings() {
                 <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                   <div>
                     <h3 className="font-bold text-lg line-clamp-1">
-                      {motorhome.manufacturer} {motorhome.model}
+                      {kitchen.manufacturer} {kitchen.model}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {motorhome.year} • {motorhome.mileage.toLocaleString()} km • {motorhome.body_type}
+                      {kitchen.year} • {kitchen.mileage.toLocaleString()} km • {kitchen.body_type}
                     </p>
                   </div>
 
@@ -320,7 +320,7 @@ export default function MyListings() {
                           {auction.auction_round && Number(auction.auction_round) > 1 && (
                             <Badge variant="outline" className="whitespace-nowrap text-xs gap-1">
                               <RefreshCw className="w-3 h-3" />
-                              {motorhome.sale_channel === 'instant_price'
+                              {kitchen.sale_channel === 'instant_price'
                                 ? `Verlängerung ${Number(auction.auction_round) - 1}`
                                 : `Runde ${auction.auction_round} / ${MARKETING_CONFIG.AUCTION_MAX_ROUNDS}`}
                             </Badge>
@@ -339,7 +339,7 @@ export default function MyListings() {
                           })()}
                         </div>
                       </div>
-                      {motorhome.sale_channel !== 'instant_price' && (
+                      {kitchen.sale_channel !== 'instant_price' && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Aktuelles Gebot:</span>
                         <span className="font-semibold">
@@ -361,40 +361,40 @@ export default function MyListings() {
                   )}
 
                   {/* Pending offers badge (Kaufchance or active Festpreis) */}
-                  {motorhome.offerCounts && motorhome.offerCounts.total > 0 && (
+                  {kitchen.offerCounts && kitchen.offerCounts.total > 0 && (
                     <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center gap-2">
                         <Handshake className="w-4 h-4 text-purple-600" />
                         <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
-                          {motorhome.offerCounts.total} {motorhome.sale_channel === 'instant_price' ? 'Preisvorschlag' : 'Angebot'}{motorhome.offerCounts.total !== 1 ? (motorhome.sale_channel === 'instant_price' ? 'e' : 'e') : ''}
+                          {kitchen.offerCounts.total} {kitchen.sale_channel === 'instant_price' ? 'Preisvorschlag' : 'Angebot'}{kitchen.offerCounts.total !== 1 ? (kitchen.sale_channel === 'instant_price' ? 'e' : 'e') : ''}
                         </span>
                       </div>
-                      {motorhome.offerCounts.pending > 0 && (
-                        <Badge className="bg-amber-500 text-white">{motorhome.offerCounts.pending} offen</Badge>
+                      {kitchen.offerCounts.pending > 0 && (
+                        <Badge className="bg-amber-500 text-white">{kitchen.offerCounts.pending} offen</Badge>
                       )}
                     </div>
                   )}
 
                   {/* Price Info */}
-                  {motorhome.reserve_price && Number(motorhome.reserve_price) > 0 && (
+                  {kitchen.reserve_price && Number(kitchen.reserve_price) > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Mindestpreis:</span>
                       <span className="font-semibold">
-                        €{Number(motorhome.reserve_price).toLocaleString()}
+                        €{Number(kitchen.reserve_price).toLocaleString()}
                       </span>
                     </div>
                   )}
-                  {motorhome.instant_price && Number(motorhome.instant_price) > 0 && (
+                  {kitchen.instant_price && Number(kitchen.instant_price) > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis:' : 'Sofortpreis:'}</span>
-                      <span className={`font-semibold ${motorhome.sale_channel === 'instant_price' ? 'text-yellow-600' : ''}`}>
-                        €{Number(motorhome.instant_price).toLocaleString()}
+                      <span className="text-sm text-muted-foreground">{kitchen.sale_channel === 'instant_price' ? 'Festpreis:' : 'Sofortpreis:'}</span>
+                      <span className={`font-semibold ${kitchen.sale_channel === 'instant_price' ? 'text-yellow-600' : ''}`}>
+                        €{Number(kitchen.instant_price).toLocaleString()}
                       </span>
                     </div>
                   )}
 
                   {/* Photo missing warning */}
-                  {(!motorhome.photos || motorhome.photos.length === 0) && (
+                  {(!kitchen.photos || kitchen.photos.length === 0) && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                       <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                       <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -407,12 +407,12 @@ export default function MyListings() {
                   <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
-                      className={`flex-1 gap-1.5 ${(!motorhome.photos || motorhome.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
-                      variant={(!motorhome.photos || motorhome.photos.length === 0) ? 'default' : 'outline'}
+                      className={`flex-1 gap-1.5 ${(!kitchen.photos || kitchen.photos.length === 0) ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                      variant={(!kitchen.photos || kitchen.photos.length === 0) ? 'default' : 'outline'}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigate(`/dashboard/listings/${motorhome.id}/edit?tab=photos`);
+                        navigate(`/dashboard/listings/${kitchen.id}/edit?tab=photos`);
                       }}
                     >
                       <ImagePlus className="w-4 h-4" />
@@ -425,7 +425,7 @@ export default function MyListings() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        navigate(`/dashboard/listings/${motorhome.id}/edit`);
+                        navigate(`/dashboard/listings/${kitchen.id}/edit`);
                       }}
                     >
                       <Edit className="w-4 h-4 mr-1" />

@@ -20,8 +20,8 @@ export const emailSchema = z
   .email("Ungültige E-Mail-Adresse")
   .max(255, "E-Mail-Adresse zu lang");
 
-// Motorhome basic details validation
-export const motorhomeBasicSchema = z.object({
+// Kitchen basic details validation
+export const kitchenBasicSchema = z.object({
   manufacturer: z.string().trim().min(1, "Hersteller ist erforderlich").max(100),
   model: z.string().trim().min(1, "Modell ist erforderlich").max(100),
   year: z.coerce
@@ -34,7 +34,7 @@ export const motorhomeBasicSchema = z.object({
 });
 
 // Technical specifications validation
-export const motorhomeTechnicalSchema = z.object({
+export const kitchenTechnicalSchema = z.object({
   fuel_type: z.enum(["Diesel", "Benzin", "Elektro", "Hybrid"]).optional(),
   power_kw: z.coerce.number().min(0).max(1000).optional().or(z.literal("")),
   engine_power_hp: z.coerce.number().min(0).max(1500).optional().or(z.literal("")),
@@ -50,7 +50,7 @@ export const motorhomeTechnicalSchema = z.object({
 });
 
 // Dimensions and capacity validation
-export const motorhomeDimensionsSchema = z.object({
+export const kitchenDimensionsSchema = z.object({
   length_cm: z.coerce.number().min(200).max(2000).optional().or(z.literal("")),
   width_cm: z.coerce.number().min(150).max(300).optional().or(z.literal("")),
   height_cm: z.coerce.number().min(150).max(500).optional().or(z.literal("")),
@@ -63,7 +63,7 @@ export const motorhomeDimensionsSchema = z.object({
 });
 
 // Interior features validation
-export const motorhomeInteriorSchema = z.object({
+export const kitchenInteriorSchema = z.object({
   has_kitchen: z.boolean().default(true),
   refrigerator_type: z.enum(["Kompressor", "Absorber", "Thermoelektrisch"]).optional(),
   heating_type: z.enum(["Gas", "Diesel", "Elektrisch", "Kombiniert"]).optional(),
@@ -77,7 +77,7 @@ export const motorhomeInteriorSchema = z.object({
 });
 
 // Equipment and features validation
-export const motorhomeEquipmentSchema = z.object({
+export const kitchenEquipmentSchema = z.object({
   has_solar: z.boolean().default(false),
   solar_power_watts: z.coerce.number().min(0).max(5000).optional().or(z.literal("")),
   battery_capacity_ah: z.coerce.number().min(0).max(1000).optional().or(z.literal("")),
@@ -94,7 +94,7 @@ export const motorhomeEquipmentSchema = z.object({
 });
 
 // Additional information validation
-export const motorhomeAdditionalSchema = z.object({
+export const kitchenAdditionalSchema = z.object({
   description: z.string().max(5000).optional(),
   additional_equipment: z.string().max(2000).optional(),
   vehicle_identification_number: z.string().max(17).optional(),
@@ -103,12 +103,12 @@ export const motorhomeAdditionalSchema = z.object({
   reserve_price: z.coerce.number().min(0).max(10000000).optional().or(z.literal("")),
 });
 
-// Combined schema for complete motorhome
-export const motorhomeCompleteSchema = motorhomeBasicSchema
-  .merge(motorhomeTechnicalSchema)
-  .merge(motorhomeDimensionsSchema)
-  .merge(motorhomeInteriorSchema)
-  .merge(motorhomeEquipmentSchema)
-  .merge(motorhomeAdditionalSchema);
+// Combined schema for complete kitchen
+export const kitchenCompleteSchema = kitchenBasicSchema
+  .merge(kitchenTechnicalSchema)
+  .merge(kitchenDimensionsSchema)
+  .merge(kitchenInteriorSchema)
+  .merge(kitchenEquipmentSchema)
+  .merge(kitchenAdditionalSchema);
 
-export type MotorhomeFormData = z.infer<typeof motorhomeCompleteSchema>;
+export type KitchenFormData = z.infer<typeof kitchenCompleteSchema>;

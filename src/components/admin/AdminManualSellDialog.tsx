@@ -6,7 +6,7 @@
  * chosen dealer at a freely chosen price.
  *
  * Server side runs `admin-sell-to-dealer` which mirrors the full
- * `instant-buy` chain (motorhome.status='sold' → invoice → contract →
+ * `instant-buy` chain (kitchen.status='sold' → invoice → contract →
  * notifications → Google Ads conversion) so the resulting state is
  * indistinguishable from a normal Sofortkauf for every downstream system.
  *
@@ -54,7 +54,7 @@ export interface AdminManualSellDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   auctionId: string;
-  motorhomeName: string;
+  kitchenName: string;
   currentBid: number | null;
   sellerId: string | null;
   /**
@@ -199,7 +199,7 @@ export function AdminManualSellDialog({
   open,
   onOpenChange,
   auctionId,
-  motorhomeName,
+  kitchenName,
   currentBid,
   sellerId,
   auctionStatus,
@@ -316,7 +316,7 @@ export function AdminManualSellDialog({
         <DialogHeader>
           <DialogTitle>An Händler verkaufen (Admin-Verkauf)</DialogTitle>
           <DialogDescription>
-            Schließt die Auktion <strong>{motorhomeName || "Inserat"}</strong>{" "}
+            Schließt die Auktion <strong>{kitchenName || "Inserat"}</strong>{" "}
             sofort als Verkauf ab. Käufer + Preis frei wählbar. Es werden
             automatisch Rechnung, Kaufvertrag, Bieter-Mails und die
             Admin-Summary erzeugt – wie bei einem normalen Sofortkauf.

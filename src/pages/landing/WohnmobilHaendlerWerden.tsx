@@ -72,22 +72,22 @@ const WohnmobilHaendlerWerden = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("auctions")
-        .select("id, current_bid, starting_bid, end_time, motorhome_id, bids(count)")
+        .select("id, current_bid, starting_bid, end_time, kitchen_id, bids(count)")
         .eq("status", "active")
         .gt("end_time", new Date().toISOString())
         .order("end_time", { ascending: true })
         .limit(3);
       if (!data?.length) return [];
 
-      const mhIds = data.map(a => a.motorhome_id).filter(Boolean);
+      const mhIds = data.map(a => a.kitchen_id).filter(Boolean);
       const [{ data: mhs }, { data: photos }] = await Promise.all([
-        supabase.from("motorhomes").select("id, manufacturer, model, year, body_type, mileage").in("id", mhIds),
-        supabase.from("motorhome_photos").select("motorhome_id, url, card_url, medium_url, display_order").in("motorhome_id", mhIds).order("display_order", { ascending: true }),
+        supabase.from("kitchens").select("id, manufacturer, model, year, body_type, mileage").in("id", mhIds),
+        supabase.from("kitchen_photos").select("kitchen_id, url, card_url, medium_url, display_order").in("kitchen_id", mhIds).order("display_order", { ascending: true }),
       ]);
 
       return data.map(auction => {
-        const mh = mhs?.find(m => m.id === auction.motorhome_id);
-        const photo = photos?.find(p => p.motorhome_id === auction.motorhome_id);
+        const mh = mhs?.find(m => m.id === auction.kitchen_id);
+        const photo = photos?.find(p => p.kitchen_id === auction.kitchen_id);
         const photoUrl = photo?.card_url || photo?.url || null;
         const timeLeft = new Date(auction.end_time).getTime() - Date.now();
         const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));

@@ -34,13 +34,13 @@ export default function ListingEdit() {
   const tabParam = searchParams.get("tab");
   const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "basic";
 
-  const { data: motorhome, isLoading } = useQuery({
-    queryKey: ["motorhomeEdit", id],
+  const { data: kitchen, isLoading } = useQuery({
+    queryKey: ["kitchenEdit", id],
     queryFn: async () => {
       if (!id) return null;
 
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select("*")
         .eq("id", id)
         .eq("seller_id", user?.id)
@@ -56,16 +56,16 @@ export default function ListingEdit() {
   // Wir holen explizit auch reserve_price + seller_initial_reserve, damit der
   // PriceChangeRequestDialog den AKTUELLEN (potenziell durch dynamic_pricing
   // reduzierten) Reserve und den ORIGINAL-Wunsch des Verkaeufers anzeigen
-  // kann. motorhomes.reserve_price wird vom Cron NICHT mit-reduziert, daher
+  // kann. kitchens.reserve_price wird vom Cron NICHT mit-reduziert, daher
   // ist dieser Wert NICHT die korrekte "Aktuell"-Anzeige fuer Live-Auktionen.
   const { data: auctionData } = useQuery({
-    queryKey: ["motorhomeAuction", id],
+    queryKey: ["kitchenAuction", id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
         .from("auctions")
         .select("id, status, reserve_price, seller_initial_reserve, seller_initial_instant_price")
-        .eq("motorhome_id", id)
+        .eq("kitchen_id", id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -79,13 +79,13 @@ export default function ListingEdit() {
   const hasAuction = !!auctionData;
   // Im 'draft'-Status (vor Admin-Approval) darf der Verkäufer Preise selbst
   // ändern. Die RPC update_listing_prices_in_draft synchronisiert atomar
-  // motorhomes + auctions (siehe Migration 20260420600000). Sobald die Auktion
+  // kitchens + auctions (siehe Migration 20260420600000). Sobald die Auktion
   // einen anderen Status hat (active/kaufchance/ended/sold/cancelled), ist
   // Self-Service-Editing gesperrt; Verkäufer nutzt dann den
   // PriceChangeRequestDialog (Option C).
   const isDraftAuction = auctionData?.status === 'draft';
   const canEditPricesSelf = !hasAuction || isDraftAuction;
-  const isAuctionListing = motorhome?.sale_channel === 'auction';
+  const isAuctionListing = kitchen?.sale_channel === 'auction';
 
   const { data: pendingPriceRequest } = useQuery({
     queryKey: ['pendingPriceRequest', id],
@@ -94,7 +94,7 @@ export default function ListingEdit() {
       const { data, error } = await supabase
         .from('price_change_requests')
         .select('id, requested_reserve, requested_instant, reason, created_at, status')
-        .eq('motorhome_id', id)
+        .eq('kitchen_id', id)
         .eq('seller_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -109,14 +109,14 @@ export default function ListingEdit() {
   const [priceRequestDialogOpen, setPriceRequestDialogOpen] = useState(false);
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
-    queryKey: ["motorhomePhotos", id],
+    queryKey: ["kitchenPhotos", id],
     queryFn: async () => {
       if (!id) return [];
 
       const { data, error } = await supabase
-        .from("motorhome_photos")
+        .from("kitchen_photos")
         .select("*")
-        .eq("motorhome_id", id)
+        .eq("kitchen_id", id)
         .order("display_order", { ascending: true });
 
       if (error) throw error;
@@ -193,78 +193,78 @@ export default function ListingEdit() {
   });
 
   useEffect(() => {
-    if (motorhome) {
+    if (kitchen) {
       setFormData({
-        description: motorhome.description || "",
-        instant_price: motorhome.instant_price?.toString() || "",
-        reserve_price: motorhome.reserve_price?.toString() || "",
+        description: kitchen.description || "",
+        instant_price: kitchen.instant_price?.toString() || "",
+        reserve_price: kitchen.reserve_price?.toString() || "",
         
         // Technical
-        fuel_type: motorhome.fuel_type || "",
-        power_kw: motorhome.power_kw?.toString() || "",
-        engine_power_hp: motorhome.engine_power_hp?.toString() || "",
-        transmission: motorhome.transmission || "",
-        emission_class: motorhome.emission_class || "",
-        first_registration: motorhome.first_registration ? motorhome.first_registration.substring(0, 7) : "",
-        last_tuev_date: motorhome.last_tuev_date ? motorhome.last_tuev_date.substring(0, 7) : "",
-        tuev_valid_until: motorhome.tuev_valid_until ? motorhome.tuev_valid_until.substring(0, 7) : "",
-        previous_owners: motorhome.previous_owners?.toString() || "",
-        accident_free: motorhome.accident_free ?? true,
-        non_smoker: motorhome.non_smoker ?? true,
-        service_history_available: motorhome.service_history_available ?? false,
-        fuel_tank_capacity_liters: motorhome.fuel_tank_capacity_liters?.toString() || "",
+        fuel_type: kitchen.fuel_type || "",
+        power_kw: kitchen.power_kw?.toString() || "",
+        engine_power_hp: kitchen.engine_power_hp?.toString() || "",
+        transmission: kitchen.transmission || "",
+        emission_class: kitchen.emission_class || "",
+        first_registration: kitchen.first_registration ? kitchen.first_registration.substring(0, 7) : "",
+        last_tuev_date: kitchen.last_tuev_date ? kitchen.last_tuev_date.substring(0, 7) : "",
+        tuev_valid_until: kitchen.tuev_valid_until ? kitchen.tuev_valid_until.substring(0, 7) : "",
+        previous_owners: kitchen.previous_owners?.toString() || "",
+        accident_free: kitchen.accident_free ?? true,
+        non_smoker: kitchen.non_smoker ?? true,
+        service_history_available: kitchen.service_history_available ?? false,
+        fuel_tank_capacity_liters: kitchen.fuel_tank_capacity_liters?.toString() || "",
         
         // Dimensions
-        length_m: motorhome.length_m?.toString() || "",
-        width_m: motorhome.width_m?.toString() || "",
-        height_m: motorhome.height_m?.toString() || "",
-        weight_kg: motorhome.weight_kg?.toString() || "",
-        payload_kg: motorhome.payload_kg?.toString() || "",
-        number_of_axles: motorhome.number_of_axles ?? 2,
-        seats: motorhome.seats?.toString() || "",
-        sleeping_places: motorhome.sleeping_places?.toString() || "",
-        beds_description: motorhome.beds_description || "",
+        length_m: kitchen.length_m?.toString() || "",
+        width_m: kitchen.width_m?.toString() || "",
+        height_m: kitchen.height_m?.toString() || "",
+        weight_kg: kitchen.weight_kg?.toString() || "",
+        payload_kg: kitchen.payload_kg?.toString() || "",
+        number_of_axles: kitchen.number_of_axles ?? 2,
+        seats: kitchen.seats?.toString() || "",
+        sleeping_places: kitchen.sleeping_places?.toString() || "",
+        beds_description: kitchen.beds_description || "",
         
         // Interior
-        has_kitchen: motorhome.has_kitchen ?? true,
-        refrigerator_type: motorhome.refrigerator_type || "",
-        heating_type: motorhome.heating_type || "",
-        air_conditioning_type: motorhome.air_conditioning_type || "Keine",
-        has_bathroom: motorhome.has_bathroom ?? false,
-        has_toilet: motorhome.has_toilet ?? false,
-        has_shower: motorhome.has_shower ?? false,
-        water_tank_liters: motorhome.water_tank_liters?.toString() || "",
-        grey_water_capacity_liters: motorhome.grey_water_capacity_liters?.toString() || "",
+        has_kitchen: kitchen.has_kitchen ?? true,
+        refrigerator_type: kitchen.refrigerator_type || "",
+        heating_type: kitchen.heating_type || "",
+        air_conditioning_type: kitchen.air_conditioning_type || "Keine",
+        has_bathroom: kitchen.has_bathroom ?? false,
+        has_toilet: kitchen.has_toilet ?? false,
+        has_shower: kitchen.has_shower ?? false,
+        water_tank_liters: kitchen.water_tank_liters?.toString() || "",
+        grey_water_capacity_liters: kitchen.grey_water_capacity_liters?.toString() || "",
         
         // Equipment
-        has_solar: motorhome.has_solar ?? false,
-        solar_power_watts: motorhome.solar_power_watts?.toString() || "",
-        battery_capacity_ah: motorhome.battery_capacity_ah?.toString() || "",
-        has_inverter: motorhome.has_inverter ?? false,
-        has_awning: motorhome.has_awning ?? false,
-        awning_length_m: motorhome.awning_length_m?.toString() || "",
-        has_awning_tent: (motorhome as any).has_awning_tent ?? false,
-        has_roof_ac: (motorhome as any).has_roof_ac ?? false,
-        has_stand_ac: (motorhome as any).has_stand_ac ?? false,
-        has_bike_rack: motorhome.has_bike_rack ?? false,
-        has_garage: motorhome.has_garage ?? false,
-        has_tv: motorhome.has_tv ?? false,
-        has_backup_camera: motorhome.has_backup_camera ?? false,
-        has_parking_sensors: motorhome.has_parking_sensors ?? false,
-        has_cruise_control: motorhome.has_cruise_control ?? false,
-        has_central_locking: motorhome.has_central_locking ?? false,
+        has_solar: kitchen.has_solar ?? false,
+        solar_power_watts: kitchen.solar_power_watts?.toString() || "",
+        battery_capacity_ah: kitchen.battery_capacity_ah?.toString() || "",
+        has_inverter: kitchen.has_inverter ?? false,
+        has_awning: kitchen.has_awning ?? false,
+        awning_length_m: kitchen.awning_length_m?.toString() || "",
+        has_awning_tent: (kitchen as any).has_awning_tent ?? false,
+        has_roof_ac: (kitchen as any).has_roof_ac ?? false,
+        has_stand_ac: (kitchen as any).has_stand_ac ?? false,
+        has_bike_rack: kitchen.has_bike_rack ?? false,
+        has_garage: kitchen.has_garage ?? false,
+        has_tv: kitchen.has_tv ?? false,
+        has_backup_camera: kitchen.has_backup_camera ?? false,
+        has_parking_sensors: kitchen.has_parking_sensors ?? false,
+        has_cruise_control: kitchen.has_cruise_control ?? false,
+        has_central_locking: kitchen.has_central_locking ?? false,
         
         // Additional
-        additional_equipment: motorhome.additional_equipment || "",
-        vehicle_identification_number: motorhome.vehicle_identification_number || "",
-        license_plate: motorhome.license_plate || "",
+        additional_equipment: kitchen.additional_equipment || "",
+        vehicle_identification_number: kitchen.vehicle_identification_number || "",
+        license_plate: kitchen.license_plate || "",
         mwst_ausweisbar:
-          motorhome.account_type === "dealer"
-            ? (motorhome.mwst_ausweisbar ?? true)
+          kitchen.account_type === "dealer"
+            ? (kitchen.mwst_ausweisbar ?? true)
             : false,
       });
     }
-  }, [motorhome]);
+  }, [kitchen]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -287,20 +287,20 @@ export default function ListingEdit() {
       // sein Listing waere preislos. Server-seitig wuerde die RPC mit ERRCODE
       // 23514 fehlschlagen; dieser Guard liefert dem Nutzer aber sofort eine
       // verstaendliche Meldung im UI.
-      const isInstantPriceListing = motorhome?.sale_channel === 'instant_price';
+      const isInstantPriceListing = kitchen?.sale_channel === 'instant_price';
       if (canEditPricesSelf && isInstantPriceListing && !data.instant_price) {
         throw new Error("Sofortkauf-Preis ist Pflicht für Sofortkauf-Inserate.");
       }
 
       // Preise duerfen nur gesenkt, nicht erhoeht werden. Der Server (RPC
       // update_listing_prices_in_draft) erzwingt das ebenfalls – hier fuer
-      // sofortiges UI-Feedback. Vergleich jeweils gegen motorhomes.*_price
+      // sofortiges UI-Feedback. Vergleich jeweils gegen kitchens.*_price
       // (also den zuletzt bestaetigten Wert).
       if (canEditPricesSelf) {
         const newReserveCandidate = data.reserve_price ? Number(data.reserve_price) : null;
         const newInstantCandidate = data.instant_price ? Number(data.instant_price) : null;
-        const oldReserve = motorhome?.reserve_price != null ? Number(motorhome.reserve_price) : null;
-        const oldInstant = motorhome?.instant_price != null ? Number(motorhome.instant_price) : null;
+        const oldReserve = kitchen?.reserve_price != null ? Number(kitchen.reserve_price) : null;
+        const oldInstant = kitchen?.instant_price != null ? Number(kitchen.instant_price) : null;
         if (newReserveCandidate != null && oldReserve != null && newReserveCandidate > oldReserve) {
           throw new Error(
             `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell ${oldReserve.toLocaleString("de-DE")} €).`,
@@ -377,14 +377,14 @@ export default function ListingEdit() {
         license_plate: data.license_plate || null,
       };
 
-      const canEditMwst = isDealer || motorhome.account_type === "dealer";
+      const canEditMwst = isDealer || kitchen.account_type === "dealer";
       if (canEditMwst) {
         updateData.mwst_ausweisbar = data.mwst_ausweisbar;
       }
 
       // Preis-Sync:
-      // - Ohne Auktion: direkter motorhomes-Update (nur motorhomes-Felder).
-      // - Auktion = draft: RPC update_listing_prices_in_draft, die motorhomes
+      // - Ohne Auktion: direkter kitchens-Update (nur kitchens-Felder).
+      // - Auktion = draft: RPC update_listing_prices_in_draft, die kitchens
       //   UND auctions atomar synchronisiert (reserve_price,
       //   seller_initial_reserve, seller_initial_instant_price).
       // - Auktion live (active/kaufchance): kein Preis-Sync hier; Verkäufer
@@ -404,7 +404,7 @@ export default function ListingEdit() {
 
       await withSessionRetry(async () => {
         const { error } = await supabase
-          .from("motorhomes")
+          .from("kitchens")
           .update(updateData)
           .eq("id", id)
           .eq("seller_id", user.id);
@@ -416,7 +416,7 @@ export default function ListingEdit() {
           const { error: rpcErr } = await supabase.rpc(
             'update_listing_prices_in_draft',
             {
-              p_motorhome_id: id,
+              p_kitchen_id: id,
               p_new_reserve: newReserveRaw,
               p_new_instant: newInstant,
             },
@@ -426,8 +426,8 @@ export default function ListingEdit() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["motorhomeEdit", id] });
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenEdit", id] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail", id] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
         title: "Erfolgreich gespeichert",
@@ -481,7 +481,7 @@ export default function ListingEdit() {
     );
   }
 
-  if (!motorhome) {
+  if (!kitchen) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">Inserat nicht gefunden</p>
@@ -508,7 +508,7 @@ export default function ListingEdit() {
           </Button>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Inserat bearbeiten</h1>
           <p className="text-muted-foreground mt-1">
-            {motorhome.manufacturer} {motorhome.model}
+            {kitchen.manufacturer} {kitchen.model}
           </p>
         </div>
       </div>
@@ -663,7 +663,7 @@ export default function ListingEdit() {
                   </div>
                 </div>
 
-                {(isDealer || motorhome.account_type === "dealer") && (
+                {(isDealer || kitchen.account_type === "dealer") && (
                   <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/30 p-4">
                     <Checkbox
                       id="mwst_ausweisbar"
@@ -979,9 +979,9 @@ export default function ListingEdit() {
               {/* Photos Tab */}
               <TabsContent value="photos" className="space-y-6 mt-6">
                 <SellerPhotoManager
-                  motorhomeId={id!}
+                  kitchenId={id!}
                   photos={photos}
-                  queryKey={["motorhomePhotos", id!]}
+                  queryKey={["kitchenPhotos", id!]}
                   disabled={isAuctionLive}
                 />
               </TabsContent>
@@ -1023,17 +1023,17 @@ export default function ListingEdit() {
         </Card>
       </form>
 
-      {motorhome && id && (
+      {kitchen && id && (
         <PriceChangeRequestDialog
           open={priceRequestDialogOpen}
           onOpenChange={setPriceRequestDialogOpen}
-          motorhomeId={id}
-          saleChannel={motorhome.sale_channel}
+          kitchenId={id}
+          saleChannel={kitchen.sale_channel}
           // Aktueller (live) Reserve = auctions.reserve_price (vom Cron
-          // potenziell reduziert). Fallback auf motorhomes.reserve_price wenn
+          // potenziell reduziert). Fallback auf kitchens.reserve_price wenn
           // (noch) keine Auktions-Row existiert.
-          currentReserve={auctionData?.reserve_price ?? motorhome.reserve_price ?? null}
-          currentInstant={motorhome.instant_price ?? null}
+          currentReserve={auctionData?.reserve_price ?? kitchen.reserve_price ?? null}
+          currentInstant={kitchen.instant_price ?? null}
           // seller_initial_reserve = der vom Verkaeufer urspruenglich
           // eingetragene Wunsch-Mindestpreis (vor Dynamic Pricing).
           // Nur anzeigen wenn er sich vom aktuellen Reserve unterscheidet,

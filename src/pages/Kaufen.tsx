@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
-import MotorhomeCard from "@/components/MotorhomeCard";
+import KitchenCard from "@/components/KitchenCard";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,11 +26,11 @@ import { handleAndLogError } from "@/lib/errorLogService";
 import type { Database } from "@/integrations/supabase/types";
 
 type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
-type MotorhomeRow = Database["public"]["Tables"]["motorhomes"]["Row"];
-type PhotoRow = Database["public"]["Tables"]["motorhome_photos"]["Row"];
+type KitchenRow = Database["public"]["Tables"]["kitchens"]["Row"];
+type PhotoRow = Database["public"]["Tables"]["kitchen_photos"]["Row"];
 
-interface AuctionWithMotorhome extends AuctionRow {
-  motorhome: MotorhomeRow & {
+interface AuctionWithKitchen extends AuctionRow {
+  kitchen: KitchenRow & {
     photos: PhotoRow[];
   };
 }
@@ -58,7 +58,7 @@ const Kaufen = () => {
   const [saveSearchName, setSaveSearchName] = useState('');
   const [saveSearchFrequency, setSaveSearchFrequency] = useState('immediate');
   const [isSavingSearch, setIsSavingSearch] = useState(false);
-  const [auctions, setAuctions] = useState<AuctionWithMotorhome[]>([]);
+  const [auctions, setAuctions] = useState<AuctionWithKitchen[]>([]);
   const [bidCounts, setBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('ending_soon');
@@ -129,7 +129,7 @@ const Kaufen = () => {
 
           if (res.ok) {
             const payload = (await res.json()) as {
-              auctions?: AuctionWithMotorhome[];
+              auctions?: AuctionWithKitchen[];
               bidCounts?: Record<string, number>;
             };
             const list = Array.isArray(payload.auctions) ? payload.auctions : [];
@@ -164,15 +164,15 @@ const Kaufen = () => {
         // FALLBACK PATH: Direkte Supabase-Queries (3 Roundtrips)
         // Performance-Strategie für /kaufen (re-architected 2026-04-20)
         // ─────────────────────────────────────────────────────────────────
-        // Der vorherige nested Embed `motorhome.photos(...)` mit den Optionen
-        //   .order("display_order", { referencedTable: "motorhome.photos" })
-        //   .limit(1,                { referencedTable: "motorhome.photos" })
+        // Der vorherige nested Embed `kitchen.photos(...)` mit den Optionen
+        //   .order("display_order", { referencedTable: "kitchen.photos" })
+        //   .limit(1,                { referencedTable: "kitchen.photos" })
         // hat sich als BUG herausgestellt:
         //   • PostgREST gibt 400 zurück: "failed to parse order
-        //     (motorhome.photos.display_order.asc)" — der nested Pfad mit
-        //     zwei Aliases (`motorhome` → `photos`) ist nicht parsable.
+        //     (kitchen.photos.display_order.asc)" — der nested Pfad mit
+        //     zwei Aliases (`kitchen` → `photos`) ist nicht parsable.
         //   • supabase-js retried den Request silent ohne den Order-Param,
-        //     sendet dann nur noch `motorhome.photos.limit=1`. Der Limit-
+        //     sendet dann nur noch `kitchen.photos.limit=1`. Der Limit-
         //     Param wird von PostgREST aber NUR auf das Top-Level wirkt;
         //     auf den verschachtelten Embed greift er gar nicht.
         //   • Resultat: pro Auction werden ALLE Photos geladen (bis zu 23
@@ -182,15 +182,15 @@ const Kaufen = () => {
         //     der "extrem langsamen /kaufen-Seite".
         //
         // Lösung: Photos in eine SEPARATE dritte Query auslagern. Wir laden
-        // genau `display_order = 0` für alle relevanten motorhome_ids in
+        // genau `display_order = 0` für alle relevanten kitchen_ids in
         // einem Roundtrip. Verifiziert via DB-Query (2026-04-20):
-        // ALLE 155 Motorhomes mit Photos haben min(display_order) = 0,
+        // ALLE 155 Kitchens mit Photos haben min(display_order) = 0,
         // also liefert der Filter exakt das jeweils erste/Cover-Foto.
         //
         // Trade-off: 1 zusätzlicher Roundtrip, aber:
         //   • Die Photo-Query ist winzig (~85 Zeilen × 200 Bytes = 17 KB)
         //   • Läuft parallel via Promise.all — Wall-Clock = max(...)
-        //   • JSON-Payload sinkt von ~250 KB → ~70 KB (auctions+motorhomes)
+        //   • JSON-Payload sinkt von ~250 KB → ~70 KB (auctions+kitchens)
         //     plus ~17 KB (photos) = ~87 KB total
         //   • Browser muss nur noch 85 Bilder laden statt 1500+
         // ─────────────────────────────────────────────────────────────────
@@ -199,10 +199,10 @@ const Kaufen = () => {
         const auctionsPromise = supabase
           .from("auctions")
           .select(`
-            id, motorhome_id, current_bid, starting_bid, end_time, created_at,
+            id, kitchen_id, current_bid, starting_bid, end_time, created_at,
             start_time, auction_round,
             last_price_reduction_at, marketing_phase_started_at,
-            motorhome:motorhomes(
+            kitchen:kitchens(
               id, manufacturer, model, year, mileage, listing_number, body_type,
               country, postal_code, instant_price, sale_channel, status,
               account_type, sleeping_places, transmission, accident_free
@@ -230,8 +230,8 @@ const Kaufen = () => {
         // ── Photos in separater dritter Query holen ─────────────────────
         // display_order = 0 ist garantiert das Cover-Foto (DB-verifiziert).
         // .in() ist O(N log N) im Index, läuft in <100ms für ≤500 IDs.
-        const motorhomeIds = (auctionData ?? [])
-          .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
+        const kitchenIds = (auctionData ?? [])
+          .map((a) => (a as unknown as { kitchen_id?: string }).kitchen_id)
           .filter((id): id is string => Boolean(id));
 
         // Cover-Foto + pre-resized card-Variante (480px, ~25-40 KB JPEG).
@@ -244,25 +244,25 @@ const Kaufen = () => {
         // Fallback: card_url || medium_url || url, damit auch Photos ohne
         // Variants (alte oder noch nicht prozessierte) funktionieren.
         type CoverEntry = { small: string; medium: string | null };
-        let firstPhotoByMotorhomeId = new Map<string, CoverEntry>();
-        if (motorhomeIds.length > 0) {
+        let firstPhotoByKitchenId = new Map<string, CoverEntry>();
+        if (kitchenIds.length > 0) {
           const { data: photoRows, error: photoErr } = await supabase
-            .from("motorhome_photos")
-            .select("url, card_url, medium_url, motorhome_id")
-            .in("motorhome_id", motorhomeIds)
+            .from("kitchen_photos")
+            .select("url, card_url, medium_url, kitchen_id")
+            .in("kitchen_id", kitchenIds)
             .eq("display_order", 0);
 
           if (photoErr) {
             logger.warn("Kaufen: cover-photo query failed (non-blocking)", photoErr);
           } else if (photoRows) {
-            firstPhotoByMotorhomeId = new Map(
+            firstPhotoByKitchenId = new Map(
               (photoRows as Array<{
                 url: string;
                 card_url: string | null;
                 medium_url: string | null;
-                motorhome_id: string;
+                kitchen_id: string;
               }>)
-                .filter((p) => (p.card_url || p.medium_url || p.url) && p.motorhome_id)
+                .filter((p) => (p.card_url || p.medium_url || p.url) && p.kitchen_id)
                 .map((p) => {
                   // 2026-04-22: Falls process-photo noch keine pre-baked
                   // card_url/medium_url generiert hat (oder gecrasht ist),
@@ -277,7 +277,7 @@ const Kaufen = () => {
                     ? proxiedImageUrl(p.medium_url)
                     : proxiedImageUrl(sourceUrl, { width: 1024, quality: 75 });
                   return [
-                    p.motorhome_id,
+                    p.kitchen_id,
                     {
                       small,
                       medium,
@@ -289,23 +289,23 @@ const Kaufen = () => {
         }
 
         // Stitch: Photo-Array mit genau 0 oder 1 Eintrag injizieren, damit
-        // der bestehende Render-Code (`auction.motorhome?.photos?.[0]?.url`)
+        // der bestehende Render-Code (`auction.kitchen?.photos?.[0]?.url`)
         // ohne Änderung weiter funktioniert.
         const stitched = (auctionData ?? []).map((a) => {
           const typed = a as unknown as {
-            motorhome_id?: string;
-            motorhome?: { id?: string } | null;
+            kitchen_id?: string;
+            kitchen?: { id?: string } | null;
           };
-          const cover = typed.motorhome_id
-            ? firstPhotoByMotorhomeId.get(typed.motorhome_id)
+          const cover = typed.kitchen_id
+            ? firstPhotoByKitchenId.get(typed.kitchen_id)
             : undefined;
           return {
             ...(a as object),
-            motorhome: typed.motorhome
+            kitchen: typed.kitchen
               ? {
-                  ...typed.motorhome,
+                  ...typed.kitchen,
                   // Wir hängen sowohl url (= small/card) als auch
-                  // medium_url an, damit MotorhomeCard srcset bauen kann.
+                  // medium_url an, damit KitchenCard srcset bauen kann.
                   photos: cover
                     ? [{ url: cover.small, medium_url: cover.medium, display_order: 0 }]
                     : [],
@@ -314,7 +314,7 @@ const Kaufen = () => {
           };
         });
 
-        setAuctions(stitched as unknown as AuctionWithMotorhome[]);
+        setAuctions(stitched as unknown as AuctionWithKitchen[]);
         hasInitialDataRef.current = true;
 
         // Bid-Counts aus der parallelen Query aggregieren. Bei Fehler nur loggen
@@ -402,8 +402,8 @@ const Kaufen = () => {
   const availableBrands = useMemo(() => {
     const brandSet = new Set<string>();
     auctions.forEach((auction) => {
-      if (auction.motorhome?.manufacturer) {
-        brandSet.add(auction.motorhome.manufacturer);
+      if (auction.kitchen?.manufacturer) {
+        brandSet.add(auction.kitchen.manufacturer);
       }
     });
     return Array.from(brandSet).sort();
@@ -412,48 +412,48 @@ const Kaufen = () => {
   // Apply filters to auctions
   const filteredAuctions = useMemo(() => {
     return auctions.filter((auction) => {
-      const motorhome = auction.motorhome;
-      if (!motorhome) return false;
+      const kitchen = auction.kitchen;
+      if (!kitchen) return false;
 
       // Price filter — use instant_price for Festpreis listings
-      const currentPrice = motorhome.sale_channel === 'instant_price'
-        ? Number(motorhome.instant_price || 0)
+      const currentPrice = kitchen.sale_channel === 'instant_price'
+        ? Number(kitchen.instant_price || 0)
         : (auction.current_bid || auction.starting_bid || 0);
       if (currentPrice < filters.priceRange[0] || currentPrice > filters.priceRange[1]) {
         return false;
       }
 
       // Year filter
-      if (motorhome.year < filters.yearRange[0] || motorhome.year > filters.yearRange[1]) {
+      if (kitchen.year < filters.yearRange[0] || kitchen.year > filters.yearRange[1]) {
         return false;
       }
 
       // Vehicle type filter
-      if (filters.vehicleTypes.length > 0 && !filters.vehicleTypes.includes(motorhome.body_type)) {
+      if (filters.vehicleTypes.length > 0 && !filters.vehicleTypes.includes(kitchen.body_type)) {
         return false;
       }
 
       // Brand filter
-      if (filters.brand && motorhome.manufacturer !== filters.brand) {
+      if (filters.brand && kitchen.manufacturer !== filters.brand) {
         return false;
       }
 
       // Beds filter
       if (filters.beds) {
         const bedsNum = parseInt(filters.beds);
-        const motorhomeBeds = (motorhome as any).sleeping_places || 0;
+        const kitchenBeds = (kitchen as any).sleeping_places || 0;
         if (filters.beds === "6") {
-          if (motorhomeBeds < 6) return false;
+          if (kitchenBeds < 6) return false;
         } else {
-          if (motorhomeBeds !== bedsNum) return false;
+          if (kitchenBeds !== bedsNum) return false;
         }
       }
 
       // Search filter
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
-        const manufacturer = (motorhome.manufacturer || "").toLowerCase();
-        const model = (motorhome.model || "").toLowerCase();
+        const manufacturer = (kitchen.manufacturer || "").toLowerCase();
+        const model = (kitchen.model || "").toLowerCase();
         if (!manufacturer.includes(query) && !model.includes(query)) {
           return false;
         }
@@ -461,34 +461,34 @@ const Kaufen = () => {
 
       // Country filter (Phase 3)
       if (filters.countries.length > 0) {
-        const motorhomeCountry = (motorhome as any).country || 'DE';
-        if (!filters.countries.includes(motorhomeCountry)) {
+        const kitchenCountry = (kitchen as any).country || 'DE';
+        if (!filters.countries.includes(kitchenCountry)) {
           return false;
         }
       }
 
       // Mileage filter (Phase 3)
-      if (filters.mileageMin !== null && motorhome.mileage < filters.mileageMin) {
+      if (filters.mileageMin !== null && kitchen.mileage < filters.mileageMin) {
         return false;
       }
-      if (filters.mileageMax !== null && motorhome.mileage > filters.mileageMax) {
+      if (filters.mileageMax !== null && kitchen.mileage > filters.mileageMax) {
         return false;
       }
 
       // Transmission filter (Phase 3)
-      if (filters.transmission && motorhome.transmission !== filters.transmission) {
+      if (filters.transmission && kitchen.transmission !== filters.transmission) {
         return false;
       }
 
       // Accident free filter (Phase 3)
-      if (filters.accidentFree === true && motorhome.accident_free !== true) {
+      if (filters.accidentFree === true && kitchen.accident_free !== true) {
         return false;
       }
 
       // Buy Now filter (Phase 3)
       if (filters.buyNowOnly) {
-        const hasInstantPrice = motorhome.instant_price && 
-          Number(motorhome.instant_price) > 0;
+        const hasInstantPrice = kitchen.instant_price && 
+          Number(kitchen.instant_price) > 0;
         if (!hasInstantPrice) {
           return false;
         }
@@ -509,30 +509,30 @@ const Kaufen = () => {
         sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
       case 'price_asc': {
-        const getPrice = (a: any) => a.motorhome?.sale_channel === 'instant_price'
-          ? Number(a.motorhome?.instant_price || 0)
+        const getPrice = (a: any) => a.kitchen?.sale_channel === 'instant_price'
+          ? Number(a.kitchen?.instant_price || 0)
           : (a.current_bid || a.starting_bid || 0);
         sorted.sort((a, b) => getPrice(a) - getPrice(b));
         break;
       }
       case 'price_desc': {
-        const getPriceDesc = (a: any) => a.motorhome?.sale_channel === 'instant_price'
-          ? Number(a.motorhome?.instant_price || 0)
+        const getPriceDesc = (a: any) => a.kitchen?.sale_channel === 'instant_price'
+          ? Number(a.kitchen?.instant_price || 0)
           : (a.current_bid || a.starting_bid || 0);
         sorted.sort((a, b) => getPriceDesc(b) - getPriceDesc(a));
         break;
       }
       case 'year_desc':
-        sorted.sort((a, b) => (b.motorhome?.year || 0) - (a.motorhome?.year || 0));
+        sorted.sort((a, b) => (b.kitchen?.year || 0) - (a.kitchen?.year || 0));
         break;
       case 'year_asc':
-        sorted.sort((a, b) => (a.motorhome?.year || 0) - (b.motorhome?.year || 0));
+        sorted.sort((a, b) => (a.kitchen?.year || 0) - (b.kitchen?.year || 0));
         break;
       case 'mileage_asc':
-        sorted.sort((a, b) => (a.motorhome?.mileage || 0) - (b.motorhome?.mileage || 0));
+        sorted.sort((a, b) => (a.kitchen?.mileage || 0) - (b.kitchen?.mileage || 0));
         break;
       case 'mileage_desc':
-        sorted.sort((a, b) => (b.motorhome?.mileage || 0) - (a.motorhome?.mileage || 0));
+        sorted.sort((a, b) => (b.kitchen?.mileage || 0) - (a.kitchen?.mileage || 0));
         break;
     }
     return sorted;
@@ -877,8 +877,8 @@ const Kaufen = () => {
                       // Server liefert pro Listing nur die erste Foto-Zeile
                       // (geordnet nach display_order). Kein Client-Side Sort
                       // mehr nötig.
-                      const firstPhoto = auction.motorhome?.photos?.[0]?.url;
-                      const firstPhotoMedium = (auction.motorhome?.photos?.[0] as
+                      const firstPhoto = auction.kitchen?.photos?.[0]?.url;
+                      const firstPhotoMedium = (auction.kitchen?.photos?.[0] as
                         | { medium_url?: string | null }
                         | undefined)?.medium_url;
                       // Erste 3 Cards (Above-the-fold auf Desktop xl:grid-cols-3)
@@ -888,30 +888,30 @@ const Kaufen = () => {
                       const isAboveFold = idx < 3;
 
                       return (
-                        <MotorhomeCard
+                        <KitchenCard
                           key={auction.id}
                           priority={isAboveFold}
-                          id={auction.motorhome?.id || auction.motorhome_id}
-                          title={`${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`}
-                          manufacturer={auction.motorhome?.manufacturer || 'Unbekannt'}
-                          model={auction.motorhome?.model || ''}
-                          year={auction.motorhome?.year || 0}
-                          mileage={auction.motorhome?.mileage || 0}
+                          id={auction.kitchen?.id || auction.kitchen_id}
+                          title={`${auction.kitchen?.manufacturer || ''} ${auction.kitchen?.model || ''}`}
+                          manufacturer={auction.kitchen?.manufacturer || 'Unbekannt'}
+                          model={auction.kitchen?.model || ''}
+                          year={auction.kitchen?.year || 0}
+                          mileage={auction.kitchen?.mileage || 0}
                           image={firstPhoto || ''}
                           imageMedium={firstPhotoMedium ?? null}
-                          listingNumber={auction.motorhome?.listing_number}
-                          bodyType={auction.motorhome?.body_type}
-                          country={auction.motorhome?.country}
-                          location={auction.motorhome?.postal_code ? anonymizePostalCode(auction.motorhome.postal_code) : undefined}
+                          listingNumber={auction.kitchen?.listing_number}
+                          bodyType={auction.kitchen?.body_type}
+                          country={auction.kitchen?.country}
+                          location={auction.kitchen?.postal_code ? anonymizePostalCode(auction.kitchen.postal_code) : undefined}
                           isAuction={true}
                           currentBid={auction.current_bid}
                           startingBid={auction.starting_bid}
-                          instantPrice={auction.motorhome?.instant_price}
-                          saleChannel={auction.motorhome?.sale_channel}
+                          instantPrice={auction.kitchen?.instant_price}
+                          saleChannel={auction.kitchen?.sale_channel}
                           endTime={auction.end_time}
                           bidCount={bidCounts[auction.id] || 0}
-                          status={auction.motorhome?.status}
-                          accountType={auction.motorhome?.account_type}
+                          status={auction.kitchen?.status}
+                          accountType={auction.kitchen?.account_type}
                           lastPriceReductionAt={(auction as any).last_price_reduction_at}
                           marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
                           auctionCreatedAt={auction.created_at}

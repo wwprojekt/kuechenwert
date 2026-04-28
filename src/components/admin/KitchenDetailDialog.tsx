@@ -1,5 +1,5 @@
 /**
- * Dialog to view motorhome details in the admin panel
+ * Dialog to view kitchen details in the admin panel
  */
 
 import {
@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 
-interface MotorhomeWithSeller {
+interface KitchenWithSeller {
   id: string;
   manufacturer: string;
   model: string;
@@ -109,18 +109,18 @@ interface MotorhomeWithSeller {
   photos?: Array<{ count: number }>;
 }
 
-interface MotorhomeDetailDialogProps {
-  motorhome: MotorhomeWithSeller | null;
+interface KitchenDetailDialogProps {
+  kitchen: KitchenWithSeller | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function MotorhomeDetailDialog({ 
-  motorhome, 
+export function KitchenDetailDialog({ 
+  kitchen, 
   open, 
   onOpenChange 
-}: MotorhomeDetailDialogProps) {
-  if (!motorhome) return null;
+}: KitchenDetailDialogProps) {
+  if (!kitchen) return null;
 
   const formatDate = (date: string | null) => {
     if (!date) return "—";
@@ -151,7 +151,7 @@ export function MotorhomeDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Car className="w-5 h-5" />
-            {motorhome.manufacturer} {motorhome.model}
+            {kitchen.manufacturer} {kitchen.model}
           </DialogTitle>
         </DialogHeader>
 
@@ -161,40 +161,40 @@ export function MotorhomeDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Grundinformationen</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem icon={Car} label="Aufbauart" value={motorhome.body_type} />
-                <InfoItem icon={Calendar} label="Baujahr" value={String(motorhome.year)} />
-                <InfoItem icon={Gauge} label="Kilometerstand" value={`${motorhome.mileage.toLocaleString()} km`} />
-                <InfoItem label="Zustand" value={motorhome.condition} />
+                <InfoItem icon={Car} label="Aufbauart" value={kitchen.body_type} />
+                <InfoItem icon={Calendar} label="Baujahr" value={String(kitchen.year)} />
+                <InfoItem icon={Gauge} label="Kilometerstand" value={`${kitchen.mileage.toLocaleString()} km`} />
+                <InfoItem label="Zustand" value={kitchen.condition} />
                 <InfoItem label="Verkaufsweg" value={
-                  motorhome.sale_channel === "instant_price"
+                  kitchen.sale_channel === "instant_price"
                     ? "Nur Festpreis"
-                    : motorhome.sale_channel === "auction" && motorhome.instant_price
+                    : kitchen.sale_channel === "auction" && kitchen.instant_price
                     ? "Händler-Auktion + Sofortkauf"
-                    : motorhome.sale_channel === "auction"
+                    : kitchen.sale_channel === "auction"
                     ? "Händler-Auktion"
-                    : motorhome.sale_channel === "station"
+                    : kitchen.sale_channel === "station"
                     ? "Ankaufstation"
-                    : motorhome.sale_channel
+                    : kitchen.sale_channel
                 } />
-                {motorhome.sale_channel === "instant_price" && motorhome.instant_price ? (
-                  <InfoItem label="Festpreis" value={formatPrice(motorhome.instant_price)} />
-                ) : motorhome.instant_price ? (
-                  <InfoItem label="Sofortkauf-Preis" value={formatPrice(motorhome.instant_price)} />
+                {kitchen.sale_channel === "instant_price" && kitchen.instant_price ? (
+                  <InfoItem label="Festpreis" value={formatPrice(kitchen.instant_price)} />
+                ) : kitchen.instant_price ? (
+                  <InfoItem label="Sofortkauf-Preis" value={formatPrice(kitchen.instant_price)} />
                 ) : (
-                  <InfoItem label="Mindestpreis" value={formatPrice(motorhome.reserve_price)} />
+                  <InfoItem label="Mindestpreis" value={formatPrice(kitchen.reserve_price)} />
                 )}
               </div>
-              {motorhome.description && (
+              {kitchen.description && (
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground font-medium">Beschreibung:</p>
-                  <p className="text-sm mt-1">{motorhome.description}</p>
+                  <p className="text-sm mt-1">{kitchen.description}</p>
                 </div>
               )}
             </section>
 
             <Separator />
 
-            <AdminPriceHistoryCard motorhomeId={motorhome.id} compact />
+            <AdminPriceHistoryCard kitchenId={kitchen.id} compact />
 
             <Separator />
 
@@ -207,9 +207,9 @@ export function MotorhomeDetailDialog({
               <div className="grid grid-cols-2 gap-4">
                 <InfoItem 
                   label="Name" 
-                  value={motorhome.seller ? `${motorhome.seller.first_name || ''} ${motorhome.seller.last_name || ''}`.trim() || "—" : "—"} 
+                  value={kitchen.seller ? `${kitchen.seller.first_name || ''} ${kitchen.seller.last_name || ''}`.trim() || "—" : "—"} 
                 />
-                <InfoItem label="E-Mail" value={motorhome.seller?.email || "—"} />
+                <InfoItem label="E-Mail" value={kitchen.seller?.email || "—"} />
               </div>
             </section>
 
@@ -219,18 +219,18 @@ export function MotorhomeDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Technische Daten</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem icon={Fuel} label="Kraftstoff" value={motorhome.fuel_type || "—"} />
-                <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS` : "—"} />
-                <InfoItem label="Getriebe" value={motorhome.transmission || "—"} />
-                <InfoItem label="Abgasnorm" value={motorhome.emission_class || "—"} />
-                <InfoItem label="Erstzulassung" value={formatMonthYear(motorhome.first_registration)} />
-                <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} />
-                <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString() || "—"} />
+                <InfoItem icon={Fuel} label="Kraftstoff" value={kitchen.fuel_type || "—"} />
+                <InfoItem label="Leistung" value={kitchen.engine_power_hp ? `${kitchen.engine_power_hp} PS` : "—"} />
+                <InfoItem label="Getriebe" value={kitchen.transmission || "—"} />
+                <InfoItem label="Abgasnorm" value={kitchen.emission_class || "—"} />
+                <InfoItem label="Erstzulassung" value={formatMonthYear(kitchen.first_registration)} />
+                <InfoItem label="TÜV bis" value={formatMonthYear(kitchen.tuev_valid_until)} />
+                <InfoItem label="Vorbesitzer" value={kitchen.previous_owners?.toString() || "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {motorhome.accident_free && <Badge variant="outline">Unfallfrei</Badge>}
-                {motorhome.non_smoker && <Badge variant="outline">Nichtraucher</Badge>}
-                {motorhome.service_history_available && <Badge variant="outline">Scheckheft</Badge>}
+                {kitchen.accident_free && <Badge variant="outline">Unfallfrei</Badge>}
+                {kitchen.non_smoker && <Badge variant="outline">Nichtraucher</Badge>}
+                {kitchen.service_history_available && <Badge variant="outline">Scheckheft</Badge>}
               </div>
             </section>
 
@@ -243,17 +243,17 @@ export function MotorhomeDetailDialog({
                 Abmessungen & Kapazität
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem label="Länge" value={motorhome.length_m ? `${motorhome.length_m} cm` : "—"} />
-                <InfoItem label="Breite" value={motorhome.width_m ? `${motorhome.width_m} cm` : "—"} />
-                <InfoItem label="Höhe" value={motorhome.height_m ? `${motorhome.height_m} cm` : "—"} />
-                <InfoItem icon={Weight} label="Gesamtgewicht" value={motorhome.weight_kg ? `${motorhome.weight_kg} kg` : "—"} />
-                <InfoItem label="Zuladung" value={motorhome.payload_kg ? `${motorhome.payload_kg} kg` : "—"} />
-                <InfoItem label="Achsen" value={motorhome.number_of_axles?.toString() || "—"} />
-                <InfoItem icon={Users} label="Sitzplätze" value={motorhome.seats?.toString() || "—"} />
-                <InfoItem icon={Bed} label="Schlafplätze" value={motorhome.sleeping_places?.toString() || "—"} />
+                <InfoItem label="Länge" value={kitchen.length_m ? `${kitchen.length_m} cm` : "—"} />
+                <InfoItem label="Breite" value={kitchen.width_m ? `${kitchen.width_m} cm` : "—"} />
+                <InfoItem label="Höhe" value={kitchen.height_m ? `${kitchen.height_m} cm` : "—"} />
+                <InfoItem icon={Weight} label="Gesamtgewicht" value={kitchen.weight_kg ? `${kitchen.weight_kg} kg` : "—"} />
+                <InfoItem label="Zuladung" value={kitchen.payload_kg ? `${kitchen.payload_kg} kg` : "—"} />
+                <InfoItem label="Achsen" value={kitchen.number_of_axles?.toString() || "—"} />
+                <InfoItem icon={Users} label="Sitzplätze" value={kitchen.seats?.toString() || "—"} />
+                <InfoItem icon={Bed} label="Schlafplätze" value={kitchen.sleeping_places?.toString() || "—"} />
               </div>
-              {motorhome.beds_description && (
-                <p className="text-sm text-muted-foreground mt-2">Betten: {motorhome.beds_description}</p>
+              {kitchen.beds_description && (
+                <p className="text-sm text-muted-foreground mt-2">Betten: {kitchen.beds_description}</p>
               )}
             </section>
 
@@ -263,16 +263,16 @@ export function MotorhomeDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Innenausstattung</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoItem label="Heizung" value={motorhome.heating_type || "—"} />
-                <InfoItem icon={Wind} label="Klimaanlage" value={motorhome.air_conditioning_type || "—"} />
-                <InfoItem icon={Droplets} label="Frischwasser" value={motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : "—"} />
-                <InfoItem label="Grauwasser" value={motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : "—"} />
+                <InfoItem label="Heizung" value={kitchen.heating_type || "—"} />
+                <InfoItem icon={Wind} label="Klimaanlage" value={kitchen.air_conditioning_type || "—"} />
+                <InfoItem icon={Droplets} label="Frischwasser" value={kitchen.water_tank_liters ? `${kitchen.water_tank_liters} L` : "—"} />
+                <InfoItem label="Grauwasser" value={kitchen.grey_water_capacity_liters ? `${kitchen.grey_water_capacity_liters} L` : "—"} />
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {motorhome.has_kitchen && <Badge variant="outline">Küche</Badge>}
-                {motorhome.has_bathroom && <Badge variant="outline">Bad</Badge>}
-                {motorhome.has_toilet && <Badge variant="outline">Toilette</Badge>}
-                {motorhome.has_shower && <Badge variant="outline">Dusche</Badge>}
+                {kitchen.has_kitchen && <Badge variant="outline">Küche</Badge>}
+                {kitchen.has_bathroom && <Badge variant="outline">Bad</Badge>}
+                {kitchen.has_toilet && <Badge variant="outline">Toilette</Badge>}
+                {kitchen.has_shower && <Badge variant="outline">Dusche</Badge>}
               </div>
             </section>
 
@@ -282,67 +282,67 @@ export function MotorhomeDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Ausstattung</h3>
               <div className="flex flex-wrap gap-2">
-                {motorhome.has_solar && (
+                {kitchen.has_solar && (
                   <Badge variant="outline" className="gap-1">
                     <Sun className="w-3 h-3" />
-                    Solar {motorhome.solar_power_watts ? `(${motorhome.solar_power_watts}W)` : ''}
+                    Solar {kitchen.solar_power_watts ? `(${kitchen.solar_power_watts}W)` : ''}
                   </Badge>
                 )}
-                {motorhome.has_awning && (
+                {kitchen.has_awning && (
                   <Badge variant="outline">
-                    Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
+                    Markise {kitchen.awning_length_m ? `(${kitchen.awning_length_m}cm)` : ''}
                   </Badge>
                 )}
-                {motorhome.has_awning_tent && (
+                {kitchen.has_awning_tent && (
                   <Badge variant="outline" className="gap-1">
                     <Tent className="w-3 h-3" /> Vorzelt
                   </Badge>
                 )}
-                {(motorhome.has_roof_ac || motorhome.has_stand_ac) && (
+                {(kitchen.has_roof_ac || kitchen.has_stand_ac) && (
                   <Badge variant="outline" className="gap-1">
                     <Snowflake className="w-3 h-3" /> Dachklima/Standklima
                   </Badge>
                 )}
-                {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
-                {motorhome.has_tv && (
+                {kitchen.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
+                {kitchen.has_tv && (
                   <Badge variant="outline" className="gap-1">
                     <Tv className="w-3 h-3" /> TV/SAT
                   </Badge>
                 )}
-                {motorhome.has_backup_camera && (
+                {kitchen.has_backup_camera && (
                   <Badge variant="outline" className="gap-1">
                     <Camera className="w-3 h-3" /> Rückfahrkamera
                   </Badge>
                 )}
-                {motorhome.has_parking_sensors && (
+                {kitchen.has_parking_sensors && (
                   <Badge variant="outline" className="gap-1">
                     <ParkingCircle className="w-3 h-3" /> Parksensoren
                   </Badge>
                 )}
-                {motorhome.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
-                {motorhome.has_central_locking && (
+                {kitchen.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
+                {kitchen.has_central_locking && (
                   <Badge variant="outline" className="gap-1">
                     <Lock className="w-3 h-3" /> Zentralverriegelung
                   </Badge>
                 )}
-                {motorhome.has_bike_rack && (
+                {kitchen.has_bike_rack && (
                   <Badge variant="outline" className="gap-1">
                     <Bike className="w-3 h-3" /> Fahrradträger
                   </Badge>
                 )}
-                {motorhome.has_garage && (
+                {kitchen.has_garage && (
                   <Badge variant="outline" className="gap-1">
                     <Warehouse className="w-3 h-3" /> Heckgarage
                   </Badge>
                 )}
               </div>
-              {motorhome.battery_capacity_ah && (
-                <p className="text-sm text-muted-foreground mt-2">Batterie: {motorhome.battery_capacity_ah} Ah</p>
+              {kitchen.battery_capacity_ah && (
+                <p className="text-sm text-muted-foreground mt-2">Batterie: {kitchen.battery_capacity_ah} Ah</p>
               )}
-              {motorhome.additional_equipment && (
+              {kitchen.additional_equipment && (
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground font-medium">Zusatzausstattung:</p>
-                  <p className="text-sm mt-1">{motorhome.additional_equipment}</p>
+                  <p className="text-sm mt-1">{kitchen.additional_equipment}</p>
                 </div>
               )}
             </section>
@@ -353,10 +353,10 @@ export function MotorhomeDetailDialog({
             <section>
               <h3 className="text-lg font-semibold mb-3">Weitere Informationen</h3>
               <div className="grid grid-cols-2 gap-4">
-                <InfoItem label="Fahrgestellnr." value={motorhome.vehicle_identification_number || "—"} />
-                <InfoItem label="Kennzeichen" value={motorhome.license_plate || "—"} />
-                <InfoItem label="Fotos" value={`${motorhome.photos?.[0]?.count || 0} Stück`} />
-                <InfoItem label="Erstellt am" value={formatDate(motorhome.created_at)} />
+                <InfoItem label="Fahrgestellnr." value={kitchen.vehicle_identification_number || "—"} />
+                <InfoItem label="Kennzeichen" value={kitchen.license_plate || "—"} />
+                <InfoItem label="Fotos" value={`${kitchen.photos?.[0]?.count || 0} Stück`} />
+                <InfoItem label="Erstellt am" value={formatDate(kitchen.created_at)} />
               </div>
             </section>
           </div>

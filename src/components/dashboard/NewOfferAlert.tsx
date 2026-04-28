@@ -68,7 +68,7 @@ export interface OfferLite {
   counter_offer_amount?: number | null;
 }
 
-export interface MotorhomeWithOffers {
+export interface KitchenWithOffers {
   id: string;
   manufacturer: string | null;
   model: string | null;
@@ -103,13 +103,13 @@ export interface MotorhomeWithOffers {
  * wird robust behandelt.
  */
 function pickThumb(
-  motorhome:
-    | Pick<MotorhomeWithOffers, "photos">
+  kitchen:
+    | Pick<KitchenWithOffers, "photos">
     | null
     | undefined,
 ): string | null {
-  if (!motorhome) return null;
-  const raw = motorhome.photos;
+  if (!kitchen) return null;
+  const raw = kitchen.photos;
   const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
   if (arr.length === 0) return null;
   const first = [...arr].sort(
@@ -121,20 +121,20 @@ function pickThumb(
 /**
  * Kleine Thumbnail-Komponente mit Fallback-Icon, optional als Link.
  */
-function MotorhomeThumb({
-  motorhome,
+function KitchenThumb({
+  kitchen,
   href,
   size = "md",
   className = "",
 }: {
-  motorhome: Pick<MotorhomeWithOffers, "photos" | "manufacturer" | "model">;
+  kitchen: Pick<KitchenWithOffers, "photos" | "manufacturer" | "model">;
   href?: string;
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }) {
-  const url = pickThumb(motorhome);
+  const url = pickThumb(kitchen);
   const alt =
-    `${motorhome.manufacturer ?? ""} ${motorhome.model ?? ""}`.trim() ||
+    `${kitchen.manufacturer ?? ""} ${kitchen.model ?? ""}`.trim() ||
     "Fahrzeug";
   const dim =
     size === "xs"
@@ -173,7 +173,7 @@ function MotorhomeThumb({
 }
 
 interface NewOfferAlertProps {
-  motorhomes: MotorhomeWithOffers[];
+  kitchens: KitchenWithOffers[];
 }
 
 /**
@@ -231,7 +231,7 @@ function formatEUR(amount: number): string {
 
 interface RankedOffer {
   offer: OfferLite;
-  motorhome: MotorhomeWithOffers;
+  kitchen: KitchenWithOffers;
   baseline: number;
   baselineLabel: string;
   uplift: number;
@@ -246,10 +246,10 @@ interface RankedOffer {
   effectiveExpiresAt: string | null;
 }
 
-function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
+function rankOffers(kitchens: KitchenWithOffers[]): RankedOffer[] {
   const ranked: RankedOffer[] = [];
   const nowTs = Date.now();
-  for (const mh of motorhomes) {
+  for (const mh of kitchens) {
     const auction = mh.auction;
     if (!auction) continue;
     const isFestpreis = mh.sale_channel === "instant_price";
@@ -299,7 +299,7 @@ function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
         auction.kaufchance_expires_at ?? offer.expires_at ?? null;
       ranked.push({
         offer,
-        motorhome: mh,
+        kitchen: mh,
         baseline,
         baselineLabel,
         uplift,
@@ -314,14 +314,14 @@ function rankOffers(motorhomes: MotorhomeWithOffers[]): RankedOffer[] {
   );
 }
 
-export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
+export function NewOfferAlert({ kitchens }: NewOfferAlertProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { showSessionExpired } = useSessionExpired();
   const { user } = useAuth();
   const userId = user?.id;
 
-  const ranked = useMemo(() => rankOffers(motorhomes), [motorhomes]);
+  const ranked = useMemo(() => rankOffers(kitchens), [kitchens]);
 
   // ── Auto-Popup-Logik: Modal beim ersten Sehen eines neuen Angebots ──
   const [seen, setSeen] = useState<Set<string>>(() => loadSeen(userId));
@@ -421,9 +421,9 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               <div className="hidden sm:flex h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 items-center justify-center shadow-lg flex-shrink-0">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
-              <MotorhomeThumb
-                motorhome={topOffer.motorhome}
-                href={`/dashboard/listings/${topOffer.motorhome.id}`}
+              <KitchenThumb
+                kitchen={topOffer.kitchen}
+                href={`/dashboard/listings/${topOffer.kitchen.id}`}
                 size="lg"
               />
               <div className="min-w-0">
@@ -434,14 +434,14 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                 </p>
                 <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight mt-0.5 break-words">
                   <Link
-                    to={`/dashboard/listings/${topOffer.motorhome.id}`}
+                    to={`/dashboard/listings/${topOffer.kitchen.id}`}
                     className="hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"
                   >
-                    {topOffer.motorhome.manufacturer} {topOffer.motorhome.model}
+                    {topOffer.kitchen.manufacturer} {topOffer.kitchen.model}
                   </Link>
-                  {topOffer.motorhome.year && (
+                  {topOffer.kitchen.year && (
                     <span className="text-muted-foreground font-medium ml-2">
-                      ({topOffer.motorhome.year})
+                      ({topOffer.kitchen.year})
                     </span>
                   )}
                 </h2>
@@ -523,7 +523,7 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               {formatEUR(Number(topOffer.offer.offer_amount))}
             </Button>
             <Link
-              to={`/dashboard/listings/${topOffer.motorhome.id}`}
+              to={`/dashboard/listings/${topOffer.kitchen.id}`}
               className="sm:w-auto"
             >
               <Button variant="outline" size="lg" className="w-full gap-2">
@@ -544,14 +544,14 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                 {ranked.slice(1, 4).map((r) => (
                   <Link
                     key={r.offer.id}
-                    to={`/dashboard/listings/${r.motorhome.id}`}
+                    to={`/dashboard/listings/${r.kitchen.id}`}
                     className="flex items-center justify-between p-2 rounded-md bg-white/60 dark:bg-background/40 hover:bg-white dark:hover:bg-background/70 transition-colors group"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <MotorhomeThumb motorhome={r.motorhome} size="xs" />
+                      <KitchenThumb kitchen={r.kitchen} size="xs" />
                       <Handshake className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <span className="text-sm font-medium text-foreground truncate">
-                        {r.motorhome.manufacturer} {r.motorhome.model}
+                        {r.kitchen.manufacturer} {r.kitchen.model}
                       </span>
                       <span className="text-xs text-muted-foreground hidden sm:inline">
                         · {r.bidderLabel}
@@ -595,18 +595,18 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
           {popupOffer && (
             <div className="space-y-4 py-2">
               <div className="flex flex-col items-center gap-2 text-center">
-                <MotorhomeThumb
-                  motorhome={popupOffer.motorhome}
-                  href={`/dashboard/listings/${popupOffer.motorhome.id}`}
+                <KitchenThumb
+                  kitchen={popupOffer.kitchen}
+                  href={`/dashboard/listings/${popupOffer.kitchen.id}`}
                   size="lg"
                 />
                 <Link
-                  to={`/dashboard/listings/${popupOffer.motorhome.id}`}
+                  to={`/dashboard/listings/${popupOffer.kitchen.id}`}
                   className="text-sm font-medium hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"
                 >
-                  {popupOffer.motorhome.manufacturer}{" "}
-                  {popupOffer.motorhome.model}
-                  {popupOffer.motorhome.year && ` · ${popupOffer.motorhome.year}`}
+                  {popupOffer.kitchen.manufacturer}{" "}
+                  {popupOffer.kitchen.model}
+                  {popupOffer.kitchen.year && ` · ${popupOffer.kitchen.year}`}
                 </Link>
                 <p className="text-4xl font-extrabold text-emerald-600 mt-2">
                   {formatEUR(Number(popupOffer.offer.offer_amount))}
@@ -676,22 +676,22 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
               <div className="space-y-3 text-sm">
                 {confirmTarget && (
                   <div className="flex items-center gap-3 p-2 rounded-md bg-muted/40">
-                    <MotorhomeThumb
-                      motorhome={confirmTarget.motorhome}
-                      href={`/dashboard/listings/${confirmTarget.motorhome.id}`}
+                    <KitchenThumb
+                      kitchen={confirmTarget.kitchen}
+                      href={`/dashboard/listings/${confirmTarget.kitchen.id}`}
                       size="md"
                     />
                     <div className="min-w-0">
                       <Link
-                        to={`/dashboard/listings/${confirmTarget.motorhome.id}`}
+                        to={`/dashboard/listings/${confirmTarget.kitchen.id}`}
                         className="font-semibold text-foreground hover:underline block truncate"
                       >
-                        {confirmTarget.motorhome.manufacturer}{" "}
-                        {confirmTarget.motorhome.model}
+                        {confirmTarget.kitchen.manufacturer}{" "}
+                        {confirmTarget.kitchen.model}
                       </Link>
-                      {confirmTarget.motorhome.year && (
+                      {confirmTarget.kitchen.year && (
                         <span className="text-xs text-muted-foreground">
-                          Baujahr {confirmTarget.motorhome.year}
+                          Baujahr {confirmTarget.kitchen.year}
                         </span>
                       )}
                     </div>
@@ -700,8 +700,8 @@ export function NewOfferAlert({ motorhomes }: NewOfferAlertProps) {
                 <p>
                   Sie verkaufen Ihr Fahrzeug{" "}
                   <strong className="text-foreground">
-                    {confirmTarget?.motorhome.manufacturer}{" "}
-                    {confirmTarget?.motorhome.model}
+                    {confirmTarget?.kitchen.manufacturer}{" "}
+                    {confirmTarget?.kitchen.model}
                   </strong>{" "}
                   für{" "}
                   <strong className="text-emerald-600 text-base">

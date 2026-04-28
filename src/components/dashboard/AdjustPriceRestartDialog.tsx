@@ -34,8 +34,8 @@ import { MARKETING_CONFIG } from "@/lib/marketing-config";
 export function AdjustPriceRestartDialog({
   open,
   onOpenChange,
-  motorhomeId,
-  motorhomeName,
+  kitchenId,
+  kitchenName,
   saleChannel,
   currentReservePrice,
   currentInstantPrice,
@@ -44,8 +44,8 @@ export function AdjustPriceRestartDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  motorhomeId: string;
-  motorhomeName: string;
+  kitchenId: string;
+  kitchenName: string;
   saleChannel: "auction" | "instant_price" | "station" | string | null;
   currentReservePrice: number | null;
   currentInstantPrice: number | null;
@@ -110,7 +110,7 @@ export function AdjustPriceRestartDialog({
       const { data, error } = await withSessionRetry(
         () =>
           supabase.rpc("seller_restart_listing", {
-            p_motorhome_id: motorhomeId,
+            p_kitchen_id: kitchenId,
             p_new_reserve: isInstantOnly ? null : newPriceNum,
             p_new_instant: isInstantOnly ? newPriceNum : null,
           }),
@@ -126,10 +126,10 @@ export function AdjustPriceRestartDialog({
       };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail", kitchenId] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
-      queryClient.invalidateQueries({ queryKey: ["motorhomeEdit", motorhomeId] });
-      queryClient.invalidateQueries({ queryKey: ["motorhomeAuction", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenEdit", kitchenId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenAuction", kitchenId] });
       toast({
         title: "Inserat neu gestartet",
         description: `Neuer ${isInstantOnly ? "Sofortkauf" : "Mindest"}-Preis: €${newPriceNum!.toLocaleString("de-DE")}. Auktion endet in ${MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tagen.`,
@@ -158,7 +158,7 @@ export function AdjustPriceRestartDialog({
             Preis anpassen und neu starten
           </DialogTitle>
           <DialogDescription>
-            {motorhomeName} — senken Sie den Preis und starten Sie eine frische Marketing-Phase. (Eine Erhöhung ist nicht möglich.)
+            {kitchenName} — senken Sie den Preis und starten Sie eine frische Marketing-Phase. (Eine Erhöhung ist nicht möglich.)
           </DialogDescription>
         </DialogHeader>
 

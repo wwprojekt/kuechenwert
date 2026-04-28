@@ -96,17 +96,17 @@ export default function ListingDetail() {
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [unarchivingInProgress, setUnarchivingInProgress] = useState(false);
 
-  const { data: motorhome, isLoading } = useQuery({
-    queryKey: ["motorhomeDetail", id],
+  const { data: kitchen, isLoading } = useQuery({
+    queryKey: ["kitchenDetail", id],
     queryFn: async () => {
       if (!id) return null;
 
       // First try as seller (owner of the listing)
       const { data: sellerData } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           *,
-          photos:motorhome_photos (
+          photos:kitchen_photos (
             url,
             card_url,
             medium_url,
@@ -136,10 +136,10 @@ export default function ListingDetail() {
 
       // If not found as seller, try as buyer (dealer who purchased via auction)
       const { data: buyerData } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           *,
-          photos:motorhome_photos (
+          photos:kitchen_photos (
             url,
             card_url,
             medium_url,
@@ -168,7 +168,7 @@ export default function ListingDetail() {
       if (buyerData) return { ...buyerData, _isSeller: false };
 
       // Neither seller nor buyer — throw not found
-      throw new Error('Motorhome not found or access denied');
+      throw new Error('Kitchen not found or access denied');
     },
     enabled: !!id && !!user,
   });
@@ -181,8 +181,8 @@ export default function ListingDetail() {
   // get_auction_owner_meta-RPC (unten) nachgeladen und in resolvedAuction
   // gemerged, damit die Render-Logik weiter `auction.auto_relist` etc.
   // lesen kann.
-  const baseAuction = motorhome?.auction
-    ? (Array.isArray(motorhome.auction) ? motorhome.auction[0] : motorhome.auction)
+  const baseAuction = kitchen?.auction
+    ? (Array.isArray(kitchen.auction) ? kitchen.auction[0] : kitchen.auction)
     : null;
 
   // Owner-Meta (auto_relist, dynamic_pricing, marketing_phase_max_until,
@@ -192,7 +192,7 @@ export default function ListingDetail() {
   // Bid-Strategie reverse-engineeren. Nur Owner und Admin lesen sie über
   // `get_auction_owner_meta`. Buyer-Pfad bekommt 42501 → null Fallback.
   const auctionIdForOwnerMeta = baseAuction?.id as string | undefined;
-  const isSellerForOwnerMeta = motorhome?._isSeller === true;
+  const isSellerForOwnerMeta = kitchen?._isSeller === true;
   const { data: ownerMeta } = useQuery({
     queryKey: ["auctionOwnerMeta", auctionIdForOwnerMeta],
     queryFn: async () => {
@@ -268,15 +268,15 @@ export default function ListingDetail() {
   // Die RPC `get_auction_marketing_anchors` erlaubt nur Owner und Admin
   // den Lesezugriff. Wir laden die Anker nur wenn wir Seller sind und
   // eine Auktion existiert — Käufer-Pfade brauchen die Werte nicht.
-  const isSellerForAnchors = motorhome?._isSeller === true;
-  const motorhomeIdForAnchors = motorhome?.id as string | undefined;
+  const isSellerForAnchors = kitchen?._isSeller === true;
+  const kitchenIdForAnchors = kitchen?.id as string | undefined;
   const { data: marketingAnchors } = useQuery({
-    queryKey: ["marketingAnchors", motorhomeIdForAnchors],
+    queryKey: ["marketingAnchors", kitchenIdForAnchors],
     queryFn: async () => {
-      if (!motorhomeIdForAnchors) return null;
+      if (!kitchenIdForAnchors) return null;
       const { data, error } = await supabase.rpc(
         "get_auction_marketing_anchors",
-        { p_motorhome_id: motorhomeIdForAnchors },
+        { p_kitchen_id: kitchenIdForAnchors },
       );
       if (error) {
         // 42501 (insufficient_privilege) → User ist weder Owner noch Admin.
@@ -291,7 +291,7 @@ export default function ListingDetail() {
           }
         : null;
     },
-    enabled: !!motorhomeIdForAnchors && isSellerForAnchors && !!baseAuction,
+    enabled: !!kitchenIdForAnchors && isSellerForAnchors && !!baseAuction,
   });
 
   // ── Addenda: Nachträge für diese Auktion laden ──
@@ -346,7 +346,7 @@ export default function ListingDetail() {
     },
   });
 
-  const isFestpreisListing = motorhome?.sale_channel === 'instant_price';
+  const isFestpreisListing = kitchen?.sale_channel === 'instant_price';
 
   const toggleAutoRelistMutation = useMutation({
     mutationFn: async (newValue: boolean) => {
@@ -366,7 +366,7 @@ export default function ListingDetail() {
       return (data as boolean | null) ?? newValue;
     },
     onSuccess: (newValue) => {
-      queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['kitchenDetail', id] });
       setShowOptOutConfirm(false);
       const isFestpreis = isFestpreisListing;
       toast({
@@ -400,7 +400,7 @@ export default function ListingDetail() {
       return (data as boolean | null) ?? newValue;
     },
     onSuccess: (newValue) => {
-      queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['kitchenDetail', id] });
       setShowDynamicPricingOptOut(false);
       toast({
         title: newValue ? 'Automatische Preissenkung aktiviert' : 'Automatische Preissenkung deaktiviert',
@@ -473,8 +473,8 @@ export default function ListingDetail() {
   useEffect(() => {
     const action = searchParams.get("action");
     if (!action) return;
-    if (!motorhome) return;  // erst handeln wenn Daten da sind
-    const isOwner = motorhome._isSeller === true;
+    if (!kitchen) return;  // erst handeln wenn Daten da sind
+    const isOwner = kitchen._isSeller === true;
 
     const clearParam = () => {
       const next = new URLSearchParams(searchParams);
@@ -500,7 +500,7 @@ export default function ListingDetail() {
           description: "Das Inserat hat eine laufende Auktion und kann nicht archiviert werden.",
           variant: "destructive",
         });
-      } else if (motorhome.is_archived) {
+      } else if (kitchen.is_archived) {
         toast({
           title: "Bereits archiviert",
           description: "Dieses Inserat ist bereits archiviert.",
@@ -520,10 +520,10 @@ export default function ListingDetail() {
           description: "Das Inserat hat eine laufende Auktion.",
           variant: "destructive",
         });
-      } else if (motorhome.status === "sold" || motorhome.status === "reserved") {
+      } else if (kitchen.status === "sold" || kitchen.status === "reserved") {
         toast({
           title: "Restart nicht möglich",
-          description: `Inserat-Status ist „${motorhome.status}". Bitte legen Sie ein neues Inserat an.`,
+          description: `Inserat-Status ist „${kitchen.status}". Bitte legen Sie ein neues Inserat an.`,
           variant: "destructive",
         });
       } else {
@@ -534,20 +534,20 @@ export default function ListingDetail() {
       return;
     }
     // Unbekannter Action-Param: einfach stehen lassen, kein Spam
-  }, [searchParams, motorhome, resolvedAuction, setSearchParams, toast]);
+  }, [searchParams, kitchen, resolvedAuction, setSearchParams, toast]);
 
   // Unarchive-Mutation: einfacher Inline-Call, kein eigener Dialog
   const unarchiveMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc("seller_unarchive_listing", {
-        p_motorhome_id: id!,
+        p_kitchen_id: id!,
       });
       if (error) throw error;
       return data;
     },
     onMutate: () => setUnarchivingInProgress(true),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail", id] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
         title: "Inserat wiederhergestellt",
@@ -578,7 +578,7 @@ export default function ListingDetail() {
         description: 'Der Kaufvertrag wird erstellt. Sie erhalten eine E-Mail mit den Details.',
       });
       loadKaufchanceOffers();
-      queryClient.invalidateQueries({ queryKey: ['motorhomeDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['kitchenDetail', id] });
     } catch (err: any) {
       if (err instanceof SessionExpiredError) {
         showSessionExpired(`/dashboard/listings/${id}`);
@@ -800,7 +800,7 @@ export default function ListingDetail() {
     );
   }
 
-  if (!motorhome) {
+  if (!kitchen) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">Inserat nicht gefunden</p>
@@ -813,9 +813,9 @@ export default function ListingDetail() {
   }
 
   const auction = resolvedAuction;
-  const isSeller = motorhome?._isSeller === true;
+  const isSeller = kitchen?._isSeller === true;
   const isAuctionLive = auction?.status === 'active' || auction?.status === 'kaufchance';
-  const rawPhotos = motorhome.photos;
+  const rawPhotos = kitchen.photos;
   const sortedPhotos = (Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : []).sort((a, b) => a.display_order - b.display_order);
 
   return (
@@ -870,7 +870,7 @@ export default function ListingDetail() {
       <div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-            {motorhome.manufacturer} {motorhome.model}
+            {kitchen.manufacturer} {kitchen.model}
           </h1>
           {auction && (
             <Badge
@@ -894,12 +894,12 @@ export default function ListingDetail() {
           )}
         </div>
         <p className="text-muted-foreground">
-          Erstellt am {format(new Date(motorhome.created_at), "dd. MMMM yyyy", { locale: de })}
+          Erstellt am {format(new Date(kitchen.created_at), "dd. MMMM yyyy", { locale: de })}
         </p>
       </div>
 
       {/* ── Archiv-Banner (is_archived=TRUE) ─────────────────────────────── */}
-      {isSeller && motorhome.is_archived && (
+      {isSeller && kitchen.is_archived && (
         <Card className="border-2 border-muted bg-muted/40">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -931,14 +931,14 @@ export default function ListingDetail() {
 
       {/* ── Reaktivierungs-Card (nach Soft-Brake / Opt-out) ──────────────── */}
       {isSeller &&
-        !motorhome.is_archived &&
+        !kitchen.is_archived &&
         !isAuctionLive &&
         auction?.status !== "draft" &&
-        motorhome.status !== "sold" &&
-        motorhome.status !== "reserved" &&
+        kitchen.status !== "sold" &&
+        kitchen.status !== "reserved" &&
         (auction?.status === "ended" ||
           auction?.status === "cancelled" ||
-          motorhome.status === "not_sold") && (
+          kitchen.status === "not_sold") && (
           <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1010,12 +1010,12 @@ export default function ListingDetail() {
                   Ihr Inserat wurde erfolgreich erstellt. Unser Support-Team prüft die Angaben und aktiviert
                   Ihr Inserat in Kürze. Sie werden benachrichtigt, sobald es live geht.
                 </p>
-                {motorhome.reserve_price && (
+                {kitchen.reserve_price && (
                   <div className="mt-3 inline-flex items-center gap-2 bg-white/60 dark:bg-black/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-1.5">
                     <Euro className="w-4 h-4 text-amber-600" />
                     <span className="text-sm text-amber-700 dark:text-amber-300">Ihr Mindestpreis:</span>
                     <span className="text-sm font-bold text-amber-800 dark:text-amber-200">
-                      {Number(motorhome.reserve_price).toLocaleString("de-DE")} €
+                      {Number(kitchen.reserve_price).toLocaleString("de-DE")} €
                     </span>
                   </div>
                 )}
@@ -1034,7 +1034,7 @@ export default function ListingDetail() {
                 <div key={photo.url} className="relative aspect-video overflow-hidden rounded-lg">
                   <img
                     src={photo.medium_url || photo.url}
-                    alt={`${motorhome.manufacturer} ${motorhome.model} - Foto ${index + 1}`}
+                    alt={`${kitchen.manufacturer} ${kitchen.model} - Foto ${index + 1}`}
                     loading={index < 2 ? "eager" : "lazy"}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
@@ -1051,16 +1051,16 @@ export default function ListingDetail() {
           <Card className="border-2 hover:border-primary/20 transition-smooth">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                <p className="text-sm text-muted-foreground">{kitchen.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold">
-                €{Number(motorhome.sale_channel === 'instant_price' ? motorhome.instant_price : (auction.current_bid || auction.starting_bid)).toLocaleString()}
+                €{Number(kitchen.sale_channel === 'instant_price' ? kitchen.instant_price : (auction.current_bid || auction.starting_bid)).toLocaleString()}
               </p>
             </CardContent>
           </Card>
 
-          {motorhome.sale_channel !== 'instant_price' && (
+          {kitchen.sale_channel !== 'instant_price' && (
           <Card className="border-2 hover:border-primary/20 transition-smooth">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
@@ -1102,7 +1102,7 @@ export default function ListingDetail() {
       <Card className="border-2">
         <CardContent className="p-6">
           <Tabs defaultValue="basic" className="w-full">
-            {/* Mobile: horizontale Scroll-Leiste (Pattern aus MotorhomeEditDialog),
+            {/* Mobile: horizontale Scroll-Leiste (Pattern aus KitchenEditDialog),
                 damit fünf Tabs nicht in zwei Zeilen umbrechen oder auf 33% Breite
                 zusammengequetscht werden. Tablet+ (sm:): klassisches Grid. */}
             <TabsList className="flex w-full overflow-x-auto no-scrollbar sm:grid sm:grid-cols-5 h-auto flex-nowrap justify-start sm:justify-stretch">
@@ -1122,7 +1122,7 @@ export default function ListingDetail() {
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Baujahr</span>
                     </div>
-                    <span className="font-semibold">{motorhome.year}</span>
+                    <span className="font-semibold">{kitchen.year}</span>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
@@ -1130,12 +1130,12 @@ export default function ListingDetail() {
                       <Gauge className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Kilometerstand</span>
                     </div>
-                    <span className="font-semibold">{motorhome.mileage.toLocaleString()} km</span>
+                    <span className="font-semibold">{kitchen.mileage.toLocaleString()} km</span>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Aufbauart</span>
-                    <span className="font-semibold">{motorhome.body_type}</span>
+                    <span className="font-semibold">{kitchen.body_type}</span>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -1144,34 +1144,34 @@ export default function ListingDetail() {
                       <Bed className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Schlafplätze</span>
                     </div>
-                    <span className="font-semibold">{motorhome.sleeping_places}</span>
+                    <span className="font-semibold">{kitchen.sleeping_places}</span>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Zustand</span>
-                    <Badge variant="outline">{motorhome.condition}</Badge>
+                    <Badge variant="outline">{kitchen.condition}</Badge>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Verkaufsweg</span>
                     <Badge>
-                      {motorhome.sale_channel === "instant_price"
+                      {kitchen.sale_channel === "instant_price"
                         ? "Nur Festpreis"
-                        : motorhome.sale_channel === "station"
+                        : kitchen.sale_channel === "station"
                         ? "Station"
-                        : motorhome.instant_price && Number(motorhome.instant_price) > 0
+                        : kitchen.instant_price && Number(kitchen.instant_price) > 0
                         ? "Auktion + Sofortkauf"
                         : "Auktion"}
                     </Badge>
                   </div>
                 </div>
               </div>
-              {motorhome.description && (
+              {kitchen.description && (
                 <>
                   <Separator className="my-6" />
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Beschreibung</h3>
-                    <p className="text-foreground whitespace-pre-wrap break-words">{motorhome.description}</p>
+                    <p className="text-foreground whitespace-pre-wrap break-words">{kitchen.description}</p>
                   </div>
                 </>
               )}
@@ -1181,28 +1181,28 @@ export default function ListingDetail() {
             <TabsContent value="technical" className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  {motorhome.fuel_type && (
+                  {kitchen.fuel_type && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Fuel className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Kraftstoff</span>
                         </div>
-                        <span className="font-semibold">{motorhome.fuel_type}</span>
+                        <span className="font-semibold">{kitchen.fuel_type}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.transmission && (
+                  {kitchen.transmission && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Getriebe</span>
-                        <span className="font-semibold">{motorhome.transmission}</span>
+                        <span className="font-semibold">{kitchen.transmission}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {(motorhome.power_kw || motorhome.engine_power_hp) && (
+                  {(kitchen.power_kw || kitchen.engine_power_hp) && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1210,38 +1210,38 @@ export default function ListingDetail() {
                           <span className="text-sm text-muted-foreground">Leistung</span>
                         </div>
                         <span className="font-semibold">
-                          {motorhome.power_kw && `${motorhome.power_kw} kW`}
-                          {motorhome.power_kw && motorhome.engine_power_hp && " / "}
-                          {motorhome.engine_power_hp && `${motorhome.engine_power_hp} PS`}
+                          {kitchen.power_kw && `${kitchen.power_kw} kW`}
+                          {kitchen.power_kw && kitchen.engine_power_hp && " / "}
+                          {kitchen.engine_power_hp && `${kitchen.engine_power_hp} PS`}
                         </span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.emission_class && (
+                  {kitchen.emission_class && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Schadstoffklasse</span>
-                        <Badge variant="secondary">{motorhome.emission_class}</Badge>
+                        <Badge variant="secondary">{kitchen.emission_class}</Badge>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.fuel_tank_capacity_liters && (
+                  {kitchen.fuel_tank_capacity_liters && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Tankinhalt</span>
-                      <span className="font-semibold">{motorhome.fuel_tank_capacity_liters}L</span>
+                      <span className="font-semibold">{kitchen.fuel_tank_capacity_liters}L</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-4">
-                  {motorhome.first_registration && (
+                  {kitchen.first_registration && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Erstzulassung</span>
                         <span className="font-semibold">
                           {(() => {
-                            const v = motorhome.first_registration;
+                            const v = kitchen.first_registration;
                             const m = /^(\d{4})-(\d{2})/.exec(v);
                             return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
                           })()}
@@ -1250,13 +1250,13 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {motorhome.last_tuev_date && (
+                  {kitchen.last_tuev_date && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Letzte TÜV/HU</span>
                         <span className="font-semibold">
                           {(() => {
-                            const v = motorhome.last_tuev_date;
+                            const v = kitchen.last_tuev_date;
                             const m = /^(\d{4})-(\d{2})/.exec(v);
                             return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
                           })()}
@@ -1265,13 +1265,13 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {motorhome.tuev_valid_until && (
+                  {kitchen.tuev_valid_until && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Nächste TÜV/HU</span>
                         <span className="font-semibold">
                           {(() => {
-                            const v = motorhome.tuev_valid_until;
+                            const v = kitchen.tuev_valid_until;
                             const m = /^(\d{4})-(\d{2})/.exec(v);
                             return m ? `${m[2]}.${m[1]}` : format(new Date(v), "MM.yyyy");
                           })()}
@@ -1280,26 +1280,26 @@ export default function ListingDetail() {
                       <Separator />
                     </>
                   )}
-                  {motorhome.previous_owners !== null && motorhome.previous_owners !== undefined && (
+                  {kitchen.previous_owners !== null && kitchen.previous_owners !== undefined && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Vorbesitzer</span>
-                        <span className="font-semibold">{motorhome.previous_owners}</span>
+                        <span className="font-semibold">{kitchen.previous_owners}</span>
                       </div>
                       <Separator />
                     </>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.accident_free && (
+                    {kitchen.accident_free && (
                       <Badge variant="secondary" className="gap-1">
                         <Shield className="w-3 h-3" />
                         Unfallfrei
                       </Badge>
                     )}
-                    {motorhome.non_smoker && (
+                    {kitchen.non_smoker && (
                       <Badge variant="secondary">Nichtraucher</Badge>
                     )}
-                    {motorhome.service_history_available && (
+                    {kitchen.service_history_available && (
                       <Badge variant="secondary">Scheckheft</Badge>
                     )}
                   </div>
@@ -1311,7 +1311,7 @@ export default function ListingDetail() {
             <TabsContent value="dimensions" className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  {(motorhome.length_m || motorhome.width_m || motorhome.height_m) && (
+                  {(kitchen.length_m || kitchen.width_m || kitchen.height_m) && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1319,59 +1319,59 @@ export default function ListingDetail() {
                           <span className="text-sm text-muted-foreground">Maße (L×B×H)</span>
                         </div>
                         <span className="font-semibold text-sm">
-                          {motorhome.length_m && `${(motorhome.length_m / 100).toFixed(2)}m`}
-                          {motorhome.width_m && ` × ${(motorhome.width_m / 100).toFixed(2)}m`}
-                          {motorhome.height_m && ` × ${(motorhome.height_m / 100).toFixed(2)}m`}
+                          {kitchen.length_m && `${(kitchen.length_m / 100).toFixed(2)}m`}
+                          {kitchen.width_m && ` × ${(kitchen.width_m / 100).toFixed(2)}m`}
+                          {kitchen.height_m && ` × ${(kitchen.height_m / 100).toFixed(2)}m`}
                         </span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.weight_kg && (
+                  {kitchen.weight_kg && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Weight className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Gesamtgewicht</span>
                         </div>
-                        <span className="font-semibold">{motorhome.weight_kg.toLocaleString()} kg</span>
+                        <span className="font-semibold">{kitchen.weight_kg.toLocaleString()} kg</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.payload_kg && (
+                  {kitchen.payload_kg && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Nutzlast</span>
-                      <span className="font-semibold">{motorhome.payload_kg.toLocaleString()} kg</span>
+                      <span className="font-semibold">{kitchen.payload_kg.toLocaleString()} kg</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-4">
-                  {motorhome.seats && (
+                  {kitchen.seats && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Sitzplätze</span>
                         </div>
-                        <span className="font-semibold">{motorhome.seats}</span>
+                        <span className="font-semibold">{kitchen.seats}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.number_of_axles && (
+                  {kitchen.number_of_axles && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Achsen</span>
-                        <span className="font-semibold">{motorhome.number_of_axles}</span>
+                        <span className="font-semibold">{kitchen.number_of_axles}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.beds_description && (
+                  {kitchen.beds_description && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Betten-Beschreibung</p>
-                      <p className="text-sm">{motorhome.beds_description}</p>
+                      <p className="text-sm">{kitchen.beds_description}</p>
                     </div>
                   )}
                 </div>
@@ -1383,68 +1383,68 @@ export default function ListingDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.has_kitchen && (
+                    {kitchen.has_kitchen && (
                       <Badge variant="secondary" className="gap-1">
                         <Utensils className="w-3 h-3" />
                         Küche
                       </Badge>
                     )}
-                    {motorhome.has_bathroom && (
+                    {kitchen.has_bathroom && (
                       <Badge variant="secondary" className="gap-1">
                         <Droplets className="w-3 h-3" />
                         Bad
                       </Badge>
                     )}
-                    {motorhome.has_toilet && (
+                    {kitchen.has_toilet && (
                       <Badge variant="secondary">Toilette</Badge>
                     )}
-                    {motorhome.has_shower && (
+                    {kitchen.has_shower && (
                       <Badge variant="secondary">Dusche</Badge>
                     )}
                   </div>
                   <Separator />
-                  {motorhome.refrigerator_type && (
+                  {kitchen.refrigerator_type && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Kühlschrank</span>
-                        <span className="font-semibold">{motorhome.refrigerator_type}</span>
+                        <span className="font-semibold">{kitchen.refrigerator_type}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.heating_type && (
+                  {kitchen.heating_type && (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Thermometer className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Heizung</span>
                         </div>
-                        <span className="font-semibold">{motorhome.heating_type}</span>
+                        <span className="font-semibold">{kitchen.heating_type}</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.air_conditioning_type && motorhome.air_conditioning_type !== "Keine" && (
+                  {kitchen.air_conditioning_type && kitchen.air_conditioning_type !== "Keine" && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Klimaanlage</span>
-                      <span className="font-semibold">{motorhome.air_conditioning_type}</span>
+                      <span className="font-semibold">{kitchen.air_conditioning_type}</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-4">
-                  {motorhome.water_tank_liters && (
+                  {kitchen.water_tank_liters && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Frischwasser</span>
-                        <span className="font-semibold">{motorhome.water_tank_liters}L</span>
+                        <span className="font-semibold">{kitchen.water_tank_liters}L</span>
                       </div>
                       <Separator />
                     </>
                   )}
-                  {motorhome.grey_water_capacity_liters && (
+                  {kitchen.grey_water_capacity_liters && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Grauwasser</span>
-                      <span className="font-semibold">{motorhome.grey_water_capacity_liters}L</span>
+                      <span className="font-semibold">{kitchen.grey_water_capacity_liters}L</span>
                     </div>
                   )}
                 </div>
@@ -1453,90 +1453,90 @@ export default function ListingDetail() {
 
             {/* Equipment Tab */}
             <TabsContent value="equipment" className="space-y-6 mt-6">
-              {(motorhome.has_solar || motorhome.has_inverter || motorhome.battery_capacity_ah) && (
+              {(kitchen.has_solar || kitchen.has_inverter || kitchen.battery_capacity_ah) && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-3">Energie & Elektrik</p>
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.has_solar && (
+                    {kitchen.has_solar && (
                       <Badge variant="secondary" className="gap-1">
                         <Sun className="w-3 h-3" />
-                        Solar {motorhome.solar_power_watts && `(${motorhome.solar_power_watts}W)`}
+                        Solar {kitchen.solar_power_watts && `(${kitchen.solar_power_watts}W)`}
                       </Badge>
                     )}
-                    {motorhome.has_inverter && (
+                    {kitchen.has_inverter && (
                       <Badge variant="secondary" className="gap-1">
                         <Battery className="w-3 h-3" />
                         Wechselrichter
                       </Badge>
                     )}
-                    {motorhome.battery_capacity_ah && (
+                    {kitchen.battery_capacity_ah && (
                       <Badge variant="secondary">
-                        Batterie {motorhome.battery_capacity_ah}Ah
+                        Batterie {kitchen.battery_capacity_ah}Ah
                       </Badge>
                     )}
                   </div>
                 </div>
               )}
               
-              {(motorhome.has_awning || motorhome.has_bike_rack || motorhome.has_garage) && (
+              {(kitchen.has_awning || kitchen.has_bike_rack || kitchen.has_garage) && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-3">Außenausstattung</p>
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.has_awning && (
+                    {kitchen.has_awning && (
                       <Badge variant="secondary" className="gap-1">
                         <Wind className="w-3 h-3" />
-                        Markise {motorhome.awning_length_m && `(${motorhome.awning_length_m}cm)`}
+                        Markise {kitchen.awning_length_m && `(${kitchen.awning_length_m}cm)`}
                       </Badge>
                     )}
-                    {motorhome.has_bike_rack && (
+                    {kitchen.has_bike_rack && (
                       <Badge variant="secondary" className="gap-1">
                         <Bike className="w-3 h-3" />
                         Fahrradträger
                       </Badge>
                     )}
-                    {motorhome.has_garage && (
+                    {kitchen.has_garage && (
                       <Badge variant="secondary">Garage</Badge>
                     )}
                   </div>
                 </div>
               )}
 
-              {(motorhome.has_tv || motorhome.has_backup_camera || motorhome.has_parking_sensors || motorhome.has_cruise_control || motorhome.has_central_locking) && (
+              {(kitchen.has_tv || kitchen.has_backup_camera || kitchen.has_parking_sensors || kitchen.has_cruise_control || kitchen.has_central_locking) && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-3">Komfort & Sicherheit</p>
                   <div className="flex flex-wrap gap-2">
-                    {motorhome.has_tv && (
+                    {kitchen.has_tv && (
                       <Badge variant="secondary" className="gap-1">
                         <Tv className="w-3 h-3" />
                         TV/SAT
                       </Badge>
                     )}
-                    {motorhome.has_backup_camera && (
+                    {kitchen.has_backup_camera && (
                       <Badge variant="secondary" className="gap-1">
                         <Camera className="w-3 h-3" />
                         Rückfahrkamera
                       </Badge>
                     )}
-                    {motorhome.has_parking_sensors && (
+                    {kitchen.has_parking_sensors && (
                       <Badge variant="secondary" className="gap-1">
                         <Radio className="w-3 h-3" />
                         Parksensoren
                       </Badge>
                     )}
-                    {motorhome.has_cruise_control && (
+                    {kitchen.has_cruise_control && (
                       <Badge variant="secondary">Tempomat</Badge>
                     )}
-                    {motorhome.has_central_locking && (
+                    {kitchen.has_central_locking && (
                       <Badge variant="secondary">Zentralverriegelung</Badge>
                     )}
                   </div>
                 </div>
               )}
 
-              {motorhome.additional_equipment && (
+              {kitchen.additional_equipment && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Zusätzliche Ausstattung</p>
-                  <p className="text-sm whitespace-pre-wrap break-words">{motorhome.additional_equipment}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{kitchen.additional_equipment}</p>
                 </div>
               )}
             </TabsContent>
@@ -1545,28 +1545,28 @@ export default function ListingDetail() {
       </Card>
 
       {/* Sale Information */}
-      {(motorhome.instant_price || motorhome.reserve_price) && (
+      {(kitchen.instant_price || kitchen.reserve_price) && (
         <Card className="border-2 hover:border-primary/20 transition-smooth">
           <CardHeader>
             <CardTitle>Verkaufsinformationen</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {motorhome.instant_price && (
+            {kitchen.instant_price && (
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Sofortkauf-Preis</span>
                   <span className="font-semibold text-xl">
-                    €{Number(motorhome.instant_price).toLocaleString()}
+                    €{Number(kitchen.instant_price).toLocaleString()}
                   </span>
                 </div>
                 <Separator />
               </>
             )}
-            {motorhome.reserve_price && (
+            {kitchen.reserve_price && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Mindestpreis</span>
                 <span className="font-semibold text-lg">
-                  €{Number(motorhome.reserve_price).toLocaleString()}
+                  €{Number(kitchen.reserve_price).toLocaleString()}
                 </span>
               </div>
             )}
@@ -1578,7 +1578,7 @@ export default function ListingDetail() {
       {isSeller && resolvedAuction && ['active', 'kaufchance'].includes(resolvedAuction.status as string) && (
         <MarketingPhaseCard
           auction={resolvedAuction}
-          motorhome={motorhome}
+          kitchen={kitchen}
           isFestpreis={isFestpreisListing}
           sellerInitialReserve={
             marketingAnchors?.sellerInitialReserve != null
@@ -1617,7 +1617,7 @@ export default function ListingDetail() {
               {isFestpreisListing ? (
                 <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 text-center">
                   <p className="text-xs text-muted-foreground">Ihr Festpreis</p>
-                  <p className="text-lg font-bold text-yellow-600">{Number(motorhome.instant_price || 0).toLocaleString('de-DE')} €</p>
+                  <p className="text-lg font-bold text-yellow-600">{Number(kitchen.instant_price || 0).toLocaleString('de-DE')} €</p>
                 </div>
               ) : (
                 <div className="p-3 rounded-lg bg-muted/50 text-center">
@@ -1625,10 +1625,10 @@ export default function ListingDetail() {
                   <p className="text-lg font-bold">{Number(auction.current_bid || 0).toLocaleString('de-DE')} €</p>
                 </div>
               )}
-              {!isFestpreisListing && motorhome.reserve_price && (
+              {!isFestpreisListing && kitchen.reserve_price && (
                 <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 text-center">
                   <p className="text-xs text-muted-foreground">Ihr Mindestpreis</p>
-                  <p className="text-lg font-bold text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</p>
+                  <p className="text-lg font-bold text-amber-600">{Number(kitchen.reserve_price).toLocaleString('de-DE')} €</p>
                 </div>
               )}
               {!isFestpreisListing && auction.kaufchance_expires_at && (
@@ -2013,32 +2013,32 @@ export default function ListingDetail() {
       )}
 
       {/* ── Soft-Brake / Reaktivierungs-Dialoge (Phase 6) ─────────────────── */}
-      {isSeller && id && motorhome && (
+      {isSeller && id && kitchen && (
         <>
           <RestartListingDialog
             open={showRestartDialog}
             onOpenChange={setShowRestartDialog}
-            motorhomeId={id}
-            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
-            saleChannel={motorhome.sale_channel}
-            currentReservePrice={motorhome.reserve_price != null ? Number(motorhome.reserve_price) : null}
-            currentInstantPrice={motorhome.instant_price != null ? Number(motorhome.instant_price) : null}
+            kitchenId={id}
+            kitchenName={`${kitchen.manufacturer} ${kitchen.model}`}
+            saleChannel={kitchen.sale_channel}
+            currentReservePrice={kitchen.reserve_price != null ? Number(kitchen.reserve_price) : null}
+            currentInstantPrice={kitchen.instant_price != null ? Number(kitchen.instant_price) : null}
           />
           <AdjustPriceRestartDialog
             open={showAdjustPriceDialog}
             onOpenChange={setShowAdjustPriceDialog}
-            motorhomeId={id}
-            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
-            saleChannel={motorhome.sale_channel}
-            currentReservePrice={motorhome.reserve_price != null ? Number(motorhome.reserve_price) : null}
-            currentInstantPrice={motorhome.instant_price != null ? Number(motorhome.instant_price) : null}
+            kitchenId={id}
+            kitchenName={`${kitchen.manufacturer} ${kitchen.model}`}
+            saleChannel={kitchen.sale_channel}
+            currentReservePrice={kitchen.reserve_price != null ? Number(kitchen.reserve_price) : null}
+            currentInstantPrice={kitchen.instant_price != null ? Number(kitchen.instant_price) : null}
             previousAuctionRound={auction?.auction_round != null ? Number(auction.auction_round) : null}
           />
           <ArchiveListingDialog
             open={showArchiveDialog}
             onOpenChange={setShowArchiveDialog}
-            motorhomeId={id}
-            motorhomeName={`${motorhome.manufacturer} ${motorhome.model}`}
+            kitchenId={id}
+            kitchenName={`${kitchen.manufacturer} ${kitchen.model}`}
           />
         </>
       )}
@@ -2054,7 +2054,7 @@ export default function ListingDetail() {
 // ─────────────────────────────────────────────────────────────────────
 interface MarketingPhaseCardProps {
   auction: any;
-  motorhome: any;
+  kitchen: any;
   isFestpreis: boolean;
   /** Original-Reserve vom Verkäufer (RPC-Call, da column-REVOKE auf auctions.seller_initial_reserve). */
   sellerInitialReserve: number | null;
@@ -2068,7 +2068,7 @@ interface MarketingPhaseCardProps {
 
 function MarketingPhaseCard({
   auction,
-  motorhome,
+  kitchen,
   isFestpreis,
   sellerInitialReserve,
   sellerInitialInstantPrice,
@@ -2079,10 +2079,10 @@ function MarketingPhaseCard({
 }: MarketingPhaseCardProps) {
   const channel: 'auction' | 'instant_price' = isFestpreis ? 'instant_price' : 'auction';
   // Anker-Preis: bevorzugt aus RPC, Fallback (Bestand-Inserate ohne Anker) auf
-  // motorhomes.instant_price / motorhomes.reserve_price.
+  // kitchens.instant_price / kitchens.reserve_price.
   const sellerInitial: number | null = isFestpreis
-    ? (sellerInitialInstantPrice ?? motorhome.instant_price ?? null)
-    : (sellerInitialReserve ?? auction.reserve_price ?? motorhome.reserve_price ?? null);
+    ? (sellerInitialInstantPrice ?? kitchen.instant_price ?? null)
+    : (sellerInitialReserve ?? auction.reserve_price ?? kitchen.reserve_price ?? null);
 
   const round = auction.auction_round ?? 1;
   const dynamicPricing = auction.dynamic_pricing !== false;

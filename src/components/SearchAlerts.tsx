@@ -334,7 +334,7 @@ export const SearchAlerts = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__">Alle Aufbauarten</SelectItem>
-                        {Constants.public.Enums.motorhome_body_type.map((type) => (
+                        {Constants.public.Enums.kitchen_body_type.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
                           </SelectItem>

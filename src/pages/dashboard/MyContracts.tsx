@@ -24,7 +24,7 @@ interface PurchaseContract {
   seller_name: string | null;
   vehicle_description: string | null;
   created_at: string | null;
-  motorhome_id: string | null;
+  kitchen_id: string | null;
 }
 
 export default function MyContracts() {
@@ -43,7 +43,7 @@ export default function MyContracts() {
 
       const { data, error } = await supabase
         .from("purchase_contracts")
-        .select("id, contract_number, sale_price, status, contract_url, buyer_contract_url, storage_path, buyer_storage_path, seller_name, vehicle_description, created_at, motorhome_id")
+        .select("id, contract_number, sale_price, status, contract_url, buyer_contract_url, storage_path, buyer_storage_path, seller_name, vehicle_description, created_at, kitchen_id")
         .eq("buyer_id", user.id)
         .order("created_at", { ascending: false });
 

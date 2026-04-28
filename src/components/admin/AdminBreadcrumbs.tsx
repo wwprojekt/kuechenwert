@@ -9,7 +9,7 @@ const ROUTE_LABELS: Record<string, string> = {
   admin: "Admin",
   leads: "Leads & Anfragen",
   auctions: "Auktionen",
-  motorhomes: "Wohnmobile",
+  kitchens: "Wohnmobile",
   users: "Benutzer",
   dealers: "Händler",
   "dealer-stats": "Händler-Statistik",
@@ -35,13 +35,13 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: "Einstellungen",
 };
 
-const BREADCRUMB_QUERY_PARENTS = new Set(["motorhomes", "auctions", "users", "dealers"]);
+const BREADCRUMB_QUERY_PARENTS = new Set(["kitchens", "auctions", "users", "dealers"]);
 
 function isUuid(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
-function formatMotorhomeLabel(manufacturer: string | null | undefined, model: string | null | undefined): string | null {
+function formatKitchenLabel(manufacturer: string | null | undefined, model: string | null | undefined): string | null {
   const label = [manufacturer, model].filter(Boolean).join(" ").trim();
   return label || null;
 }
@@ -56,24 +56,24 @@ function UuidBreadcrumbLabel({ parentSegment, uuidSegment }: { parentSegment: st
       if (!sessionOk) return null;
 
       switch (parentSegment) {
-        case "motorhomes": {
+        case "kitchens": {
           const { data: row, error } = await supabase
-            .from("motorhomes")
+            .from("kitchens")
             .select("manufacturer, model")
             .eq("id", uuidSegment)
             .maybeSingle();
           if (error) throw error;
-          return formatMotorhomeLabel(row?.manufacturer, row?.model);
+          return formatKitchenLabel(row?.manufacturer, row?.model);
         }
         case "auctions": {
           const { data: row, error } = await supabase
             .from("auctions")
-            .select("motorhome:motorhomes(manufacturer, model)")
+            .select("kitchen:kitchens(manufacturer, model)")
             .eq("id", uuidSegment)
             .maybeSingle();
           if (error) throw error;
-          const mh = row?.motorhome as { manufacturer: string; model: string } | null | undefined;
-          const vehicle = formatMotorhomeLabel(mh?.manufacturer, mh?.model);
+          const mh = row?.kitchen as { manufacturer: string; model: string } | null | undefined;
+          const vehicle = formatKitchenLabel(mh?.manufacturer, mh?.model);
           return vehicle ? `Auktion: ${vehicle}` : null;
         }
         case "users": {

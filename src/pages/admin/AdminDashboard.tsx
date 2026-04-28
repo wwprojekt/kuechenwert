@@ -23,7 +23,7 @@ import { de } from "date-fns/locale";
 
 interface ActionItem {
   id: string;
-  type: "wizard" | "lead" | "message" | "dealer" | "question" | "motorhome" | "offer";
+  type: "wizard" | "lead" | "message" | "dealer" | "question" | "kitchen" | "offer";
   title: string;
   subtitle: string;
   time: string;
@@ -44,23 +44,23 @@ function useDashboardStats() {
     queryKey: ["adminDashboardStats"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return { totalMotorhomes: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, completedWizards: 0, totalValuations: 0 };
+      if (!sessionValid) return { totalKitchens: 0, activeAuctions: 0, totalAuctions: 0, totalUsers: 0, completedWizards: 0, totalValuations: 0 };
 
       const [
-        motorhomesRes,
+        kitchensRes,
         auctionsRes,
         usersRes,
         wizardRes,
         valuationRes,
       ] = await Promise.all([
-        supabase.from("motorhomes").select("*", { count: "exact", head: true }),
+        supabase.from("kitchens").select("*", { count: "exact", head: true }),
         supabase.from("auctions").select("status"),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed"),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }),
       ]);
 
-      const errors = [motorhomesRes.error, auctionsRes.error, usersRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
+      const errors = [kitchensRes.error, auctionsRes.error, usersRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
       if (errors.length > 0) {
         console.error("Dashboard stats errors:", errors);
         throw new Error(`${errors.length} Dashboard-Abfragen fehlgeschlagen`);
@@ -69,7 +69,7 @@ function useDashboardStats() {
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
 
       return {
-        totalMotorhomes: motorhomesRes.count || 0,
+        totalKitchens: kitchensRes.count || 0,
         activeAuctions,
         totalAuctions: auctionsRes.data?.length || 0,
         totalUsers: usersRes.count || 0,
@@ -236,7 +236,7 @@ function useActionItems() {
 
       // 6. Unbeantwortete Fahrzeugfragen
       const { data: openQuestions } = await supabase
-        .from("vehicle_questions")
+        .from("kitchen_questions")
         .select("id, question, questioner_name, questioner_email, created_at, answer")
         .is("answer", null)
         .order("created_at", { ascending: false })
@@ -273,7 +273,7 @@ function useActionItems() {
         const buyerIds = [...new Set(pendingOffers.map((o: any) => o.buyer_id))];
 
         const [{ data: auctionsData }, { data: buyersData }] = await Promise.all([
-          supabase.from("auctions").select("id, motorhome:motorhomes(manufacturer, model, sale_channel)").in("id", auctionIds),
+          supabase.from("auctions").select("id, kitchen:kitchens(manufacturer, model, sale_channel)").in("id", auctionIds),
           supabase.from("profiles").select("id, company_name, first_name, last_name").in("id", buyerIds),
         ]);
 
@@ -282,7 +282,7 @@ function useActionItems() {
 
         for (const o of pendingOffers) {
           const a = auctionMap.get(o.auction_id) as any;
-          const mh = Array.isArray(a?.motorhome) ? a.motorhome[0] : a?.motorhome;
+          const mh = Array.isArray(a?.kitchen) ? a.kitchen[0] : a?.kitchen;
           const buyer = buyerMap.get(o.buyer_id) as any;
           const buyerName = buyer?.company_name || `${buyer?.first_name || ""} ${buyer?.last_name || ""}`.trim() || "Unbekannt";
           const vehicleName = `${mh?.manufacturer || ""} ${mh?.model || ""}`.trim() || "Fahrzeug";
@@ -374,7 +374,7 @@ function useActivityTimeline() {
       if (!sessionValid) return [];
 
       const [bidsRes, leadsRes, emailsRes, dealerRes] = await Promise.all([
-        supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(motorhome:motorhomes(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("bids").select("id, amount, created_at, is_autobid, auction:auctions(kitchen:kitchens(manufacturer, model)), bidder:profiles!bids_bidder_id_fkey(company_name, first_name, last_name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("wizard_sessions").select("id, customer_name, vehicle_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
         supabase.from("admin_emails").select("id, subject, direction, created_at, sender_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
         supabase.from("dealer_applications").select("id, company_name, created_at, status").order("created_at", { ascending: false }).limit(3),
@@ -385,7 +385,7 @@ function useActivityTimeline() {
 
       for (const b of bidsRes.data || []) {
         const bidder = (b as any).bidder;
-        const vehicle = (b as any).auction?.motorhome;
+        const vehicle = (b as any).auction?.kitchen;
         items.push({
           id: `bid-${b.id}`, type: "bid",
           title: `Gebot: ${Number(b.amount).toLocaleString("de-DE")} €`,
@@ -498,7 +498,7 @@ function useActiveAuctions() {
         .from("auctions")
         .select(`
           id, end_time, current_bid, starting_bid, status,
-          motorhome:motorhomes(id, manufacturer, model, year, sale_channel, instant_price, motorhome_photos(url, card_url, medium_url, display_order)),
+          kitchen:kitchens(id, manufacturer, model, year, sale_channel, instant_price, kitchen_photos(url, card_url, medium_url, display_order)),
           bids(count)
         `)
         .eq("status", "active")
@@ -560,7 +560,7 @@ function useRecentBids() {
         .from("bids")
         .select(`
           id, amount, created_at, is_autobid,
-          auction:auctions(id, motorhome:motorhomes(manufacturer, model)),
+          auction:auctions(id, kitchen:kitchens(manufacturer, model)),
           bidder:profiles!bids_bidder_id_fkey(first_name, last_name, company_name)
         `)
         .order("created_at", { ascending: false })
@@ -576,21 +576,21 @@ function useRecentBids() {
 }
 
 // ============================================================================
-// Recently Changed Motorhomes Hook
+// Recently Changed Kitchens Hook
 // ============================================================================
 
-function useRecentlyChangedMotorhomes() {
+function useRecentlyChangedKitchens() {
   return useQuery({
-    queryKey: ["adminRecentMotorhomes"],
+    queryKey: ["adminRecentKitchens"],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return [];
 
       const { data } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           id, manufacturer, model, year, status, updated_at, created_at, seller_id,
-          motorhome_photos(url, card_url, medium_url, display_order)
+          kitchen_photos(url, card_url, medium_url, display_order)
         `)
         .order("updated_at", { ascending: false })
         .limit(8);
@@ -651,7 +651,7 @@ function useUnreadCounts() {
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("vehicle_questions").select("*", { count: "exact", head: true }).is("answer", null),
+        supabase.from("kitchen_questions").select("*", { count: "exact", head: true }).is("answer", null),
       ]);
 
       return {
@@ -870,7 +870,7 @@ function UrgencyBadge({ days }: { days: number }) {
 export default function AdminDashboard() {
   const { data: stats } = useDashboardStats();
   const { data: actionItems, isLoading: actionsLoading } = useActionItems();
-  const { data: recentMotorhomes } = useRecentlyChangedMotorhomes();
+  const { data: recentKitchens } = useRecentlyChangedKitchens();
   const { data: counts } = useUnreadCounts();
   const { data: activeAuctions } = useActiveAuctions();
   const { data: urgentLeads } = useUrgentLeads();
@@ -968,12 +968,12 @@ export default function AdminDashboard() {
         />
         <QuickStatCard
           title="Wohnmobile"
-          value={stats?.totalMotorhomes || 0}
+          value={stats?.totalKitchens || 0}
           subtitle={`${stats?.activeAuctions || 0} in Auktion`}
           icon={Car}
           color="text-green-600"
           bgColor="bg-green-100"
-          link="/admin/motorhomes"
+          link="/admin/kitchens"
         />
         <QuickStatCard
           title="Laufende Auktionen"
@@ -1103,7 +1103,7 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* Main Content: Action Items + Recent Motorhomes */}
+      {/* Main Content: Action Items + Recent Kitchens */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         {/* Left: Action Items (3/5) */}
         <div className="lg:col-span-3 space-y-4">
@@ -1157,7 +1157,7 @@ export default function AdminDashboard() {
               <CardContent className="pt-0">
                 <div className="space-y-1">
                   {activeAuctions.map((a: any) => {
-                    const mh = a.motorhome;
+                    const mh = a.kitchen;
                     const isFP = mh?.sale_channel === 'instant_price';
                     const bidCount = a.bids?.[0]?.count ?? 0;
                     const displayPrice = isFP ? Number(mh?.instant_price || 0) : Number(a.current_bid || a.starting_bid || 0);
@@ -1194,7 +1194,7 @@ export default function AdminDashboard() {
                 <div className="space-y-1">
                   {recentBids.map((b: any) => {
                     const bidder = b.bidder;
-                    const vehicle = b.auction?.motorhome;
+                    const vehicle = b.auction?.kitchen;
                     const bidderName = bidder?.company_name || `${bidder?.first_name || ""} ${bidder?.last_name || ""}`.trim() || "Unbekannt";
                     return (
                       <Link key={b.id} to={`/admin/auctions/${b.auction?.id}`} className="block">
@@ -1220,7 +1220,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Right: Recently Changed Motorhomes (2/5) */}
+        {/* Right: Recently Changed Kitchens (2/5) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Dringende Leads */}
           {urgentLeads && urgentLeads.length > 0 && (
@@ -1269,7 +1269,7 @@ export default function AdminDashboard() {
                   <Car className="w-5 h-5 text-green-600" />
                   Letzte Wohnmobil-Aktivität
                 </CardTitle>
-                <Link to="/admin/motorhomes">
+                <Link to="/admin/kitchens">
                   <Button variant="ghost" size="sm" className="text-xs h-7">
                     Alle <ArrowRight className="w-3 h-3 ml-1" />
                   </Button>
@@ -1277,14 +1277,14 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              {!recentMotorhomes || recentMotorhomes.length === 0 ? (
+              {!recentKitchens || recentKitchens.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Keine Wohnmobile vorhanden.
                 </p>
               ) : (
                 <div className="space-y-1">
-                  {recentMotorhomes.map((m) => {
-                    const firstPhotoObj = [...(m.motorhome_photos || [])]
+                  {recentKitchens.map((m) => {
+                    const firstPhotoObj = [...(m.kitchen_photos || [])]
                       .sort((a: any, b: any) => a.display_order - b.display_order)[0];
                     const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
                     const sellerName = m.seller
@@ -1292,7 +1292,7 @@ export default function AdminDashboard() {
                       : "Unbekannt";
 
                     return (
-                      <Link key={m.id} to={`/admin/motorhomes/${m.id}`} className="block">
+                      <Link key={m.id} to={`/admin/kitchens/${m.id}`} className="block">
                         <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group">
                           <div className="w-12 h-9 rounded-md overflow-hidden bg-muted flex-shrink-0">
                             {firstPhoto ? (

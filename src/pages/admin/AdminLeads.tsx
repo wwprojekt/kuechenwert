@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ConvertToMotorhomeDialog } from "@/components/admin/ConvertToMotorhomeDialog";
+import { ConvertToKitchenDialog } from "@/components/admin/ConvertToKitchenDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -566,7 +566,7 @@ function DispositionButtons({ currentDisposition, onSetDisposition, isPending }:
 }
 
 /**
- * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToMotorhomeDialog.
+ * Helper to map a ValuationLead to a WizardSessionData shape for the ConvertToKitchenDialog.
  */
 function valuationLeadToSessionData(lead: ValuationLead): {
   id: string;
@@ -650,7 +650,7 @@ export default function AdminLeads() {
   // Disposition email (no_answer, considering, done)
   const [sendingDispositionEmail, setSendingDispositionEmail] = useState<string | null>(null);
   const [dispositionEmailCounts, setDispositionEmailCounts] = useState<Record<string, { count: number; lastSent: string | null }>>({});
-  // Convert to motorhome dialog
+  // Convert to kitchen dialog
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertSession, setConvertSession] = useState<{ id: string; user_id: string | null; customer_name: string | null; customer_email: string | null; customer_phone: string | null; form_data?: Record<string, unknown>; status: string } | null>(null);
   const [convertSourceType, setConvertSourceType] = useState<"wizard" | "valuation">("wizard");
@@ -733,9 +733,9 @@ export default function AdminLeads() {
     staleTime: 30000,
   });
 
-  // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Motorhomes ----
+  // ---- Bestandskunden-Erkennung: User-IDs und E-Mails von Verkäufern mit Kitchens ----
   //
-  // Performance: Vorher 2 Round-Trips (motorhomes → JS-dedup → profiles.in()).
+  // Performance: Vorher 2 Round-Trips (kitchens → JS-dedup → profiles.in()).
   // Jetzt 1 Round-Trip via PostgREST-JOIN. Spart ~150-300ms je Refetch.
   // staleTime hochgesetzt, weil Bestandskunden-Set sich nur langsam ändert
   // (neue Verkäufer pro Tag) und die Liste vom Server gefetcht eh nur bei
@@ -747,8 +747,8 @@ export default function AdminLeads() {
       if (!sessionValid) return { ids: [], emails: [] };
 
       const { data, error } = await supabase
-        .from("motorhomes")
-        .select("seller_id, seller:profiles!motorhomes_seller_id_fkey(email)")
+        .from("kitchens")
+        .select("seller_id, seller:profiles!kitchens_seller_id_fkey(email)")
         .not("seller_id", "is", null);
       if (error) throw error;
 
@@ -771,7 +771,7 @@ export default function AdminLeads() {
   const existingSellerEmails = useMemo(() => new Set(existingSellerData.emails), [existingSellerData.emails]);
 
   // ---- Auto-Disposition: Bestandskunden automatisch markieren ----
-  // Wenn eine Wizard Session eine user_id hat und dieser User bereits Motorhomes hat,
+  // Wenn eine Wizard Session eine user_id hat und dieser User bereits Kitchens hat,
   // wird die Session automatisch als "already_customer" markiert (einmalig).
   //
   // Performance: Bis 2026-04-19 wurde hier in einer for-Schleife pro Session ein
@@ -3446,9 +3446,9 @@ export default function AdminLeads() {
       </AlertDialog>
 
       {/* ================================================================== */}
-      {/* Convert to Motorhome Dialog */}
+      {/* Convert to Kitchen Dialog */}
       {/* ================================================================== */}
-      <ConvertToMotorhomeDialog
+      <ConvertToKitchenDialog
         session={convertSession}
         open={convertDialogOpen}
         onOpenChange={(open) => {

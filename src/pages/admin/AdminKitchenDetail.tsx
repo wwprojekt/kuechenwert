@@ -1,6 +1,6 @@
 /**
- * Admin Motorhome Detail Page
- * Comprehensive view of motorhome with photos, specifications, and related data
+ * Admin Kitchen Detail Page
+ * Comprehensive view of kitchen with photos, specifications, and related data
  */
 
 import { useState } from "react";
@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
-import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { activateAuctionForKitchen } from "@/lib/activate-auction";
 import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 
 import { toast } from "sonner";
@@ -82,28 +82,28 @@ import {
   InfoItem,
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
-import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
+import { KitchenEditDialog } from "@/components/admin/KitchenEditDialog";
 import { AdminPhotoManager } from "@/components/admin/AdminPhotoManager";
 import { SendOwnerEmailDialog } from "@/components/admin/SendOwnerEmailDialog";
 import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 import { logger } from "@/lib/logger";
 
-export default function AdminMotorhomeDetail() {
+export default function AdminKitchenDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
-  // Fetch motorhome with all related data
-  const { data: motorhome, isLoading, error } = useQuery({
-    queryKey: ["adminMotorhomeDetail", id],
+  // Fetch kitchen with all related data
+  const { data: kitchen, isLoading, error } = useQuery({
+    queryKey: ["adminKitchenDetail", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           *,
-          motorhome_photos(id, url, card_url, medium_url, display_order),
+          kitchen_photos(id, url, card_url, medium_url, display_order),
           damage_photos(id, photo_url, damage_location, damage_severity, damage_description),
           seller:profiles!left (
             id,
@@ -148,18 +148,18 @@ export default function AdminMotorhomeDetail() {
     enabled: !!id,
   });
 
-  // Delete motorhome mutation
+  // Delete kitchen mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("motorhomes").delete().eq("id", id);
+      const { error } = await supabase.from("kitchens").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Wohnmobil erfolgreich gelöscht");
-      navigate("/admin/motorhomes");
+      navigate("/admin/kitchens");
     },
     onError: (error) => {
-      logger.error("Delete motorhome error:", error);
+      logger.error("Delete kitchen error:", error);
       toast.error("Fehler beim Löschen des Wohnmobils");
     },
   });
@@ -171,12 +171,12 @@ export default function AdminMotorhomeDetail() {
   // seller_initial_* + Marketing-Trigger).
   const activateAuctionMutation = useMutation({
     mutationFn: async () => {
-      if (!motorhome?.id) throw new Error("No motorhome");
-      await activateAuctionForMotorhome(motorhome.id);
+      if (!kitchen?.id) throw new Error("No kitchen");
+      await activateAuctionForKitchen(kitchen.id);
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich aktiviert");
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchenDetail", id] });
     },
     onError: (e: Error) => {
       if (e.message === "PLZ_MISSING") {
@@ -193,9 +193,9 @@ export default function AdminMotorhomeDetail() {
     mutationFn: async () => {
       // relevantAuction ist erst weiter unten berechnet, aber der Mutation-
       // Handler wird nur ausgeführt wenn der Button geklickt wird (also nach
-      // Render-Zeit). Wir greifen über das motorhome auf die aktuelle Auktion
+      // Render-Zeit). Wir greifen über das kitchen auf die aktuelle Auktion
       // zu, ohne auf relevantAuction zu warten.
-      const auctionData = motorhome?.auctions;
+      const auctionData = kitchen?.auctions;
       const auctionsArr = Array.isArray(auctionData) ? auctionData : auctionData ? [auctionData] : [];
       const target = auctionsArr.find((a: any) => a?.status === 'active')
         || auctionsArr.find((a: any) => a?.status === 'kaufchance')
@@ -214,7 +214,7 @@ export default function AdminMotorhomeDetail() {
       if (result.bidderMailsFailed > 0 || (!result.sellerMailSent && result.sellerMailError)) {
         toast.warning("Einige Benachrichtigungen konnten nicht versendet werden – siehe Error Logs");
       }
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomeDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchenDetail", id] });
     },
     onError: () => toast.error("Fehler beim Abbrechen der Auktion"),
   });
@@ -228,7 +228,7 @@ export default function AdminMotorhomeDetail() {
           <p className="mt-2 text-muted-foreground">
             Das angeforderte Wohnmobil existiert nicht oder wurde gelöscht.
           </p>
-          <Button className="mt-4" onClick={() => navigate("/admin/motorhomes")}>
+          <Button className="mt-4" onClick={() => navigate("/admin/kitchens")}>
             Zurück zur Übersicht
           </Button>
         </div>
@@ -267,7 +267,7 @@ export default function AdminMotorhomeDetail() {
   };
 
   const getSaleChannelBadge = (channel: string) => {
-    const hasInstantBuy = motorhome?.instant_price && Number(motorhome.instant_price) > 0;
+    const hasInstantBuy = kitchen?.instant_price && Number(kitchen.instant_price) > 0;
     const channelConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       instant_price: { label: "Nur Festpreis", variant: "default" },
       auction: hasInstantBuy ? { label: "Auktion + Sofortkauf", variant: "default" } : { label: "Auktion", variant: "secondary" },
@@ -276,13 +276,13 @@ export default function AdminMotorhomeDetail() {
     return channelConfig[channel] || { label: channel, variant: "outline" };
   };
 
-  const sortedPhotos = Array.isArray(motorhome?.motorhome_photos)
-    ? [...motorhome.motorhome_photos].sort(
+  const sortedPhotos = Array.isArray(kitchen?.kitchen_photos)
+    ? [...kitchen.kitchen_photos].sort(
         (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
       )
     : [];
 
-  const auctionData = motorhome?.auctions;
+  const auctionData = kitchen?.auctions;
   const relevantAuction = (() => {
     if (!auctionData || typeof auctionData === 'string') return null;
     if (Array.isArray(auctionData)) {
@@ -322,17 +322,17 @@ export default function AdminMotorhomeDetail() {
 
   return (
     <AdminDetailLayout
-      title={motorhome ? `${motorhome.manufacturer} ${motorhome.model}` : "Wohnmobil"}
-      subtitle={motorhome ? `${motorhome.year} • ${motorhome.body_type} • ${motorhome.listing_number || "—"}` : undefined}
-      status={motorhome ? getStatusBadge(motorhome.status) : undefined}
-      backUrl="/admin/motorhomes"
+      title={kitchen ? `${kitchen.manufacturer} ${kitchen.model}` : "Wohnmobil"}
+      subtitle={kitchen ? `${kitchen.year} • ${kitchen.body_type} • ${kitchen.listing_number || "—"}` : undefined}
+      status={kitchen ? getStatusBadge(kitchen.status) : undefined}
+      backUrl="/admin/kitchens"
       backLabel="Alle Wohnmobile"
       isLoading={isLoading}
       icon={<Car className="w-6 h-6" />}
       actions={
-        motorhome && (
+        kitchen && (
           <div className="flex gap-2">
-            {motorhome.seller?.email && (
+            {kitchen.seller?.email && (
               <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(true)}>
                 <Send className="w-4 h-4 mr-2" />
                 E-Mail senden
@@ -397,7 +397,7 @@ export default function AdminMotorhomeDetail() {
             {(!relevantAuction || relevantAuction.status === "ended" || relevantAuction.status === "cancelled") && (
               <Button
                 size="sm"
-                onClick={() => navigate(`/admin/auctions?create=${motorhome.id}`)}
+                onClick={() => navigate(`/admin/auctions?create=${kitchen.id}`)}
               >
                 <Gavel className="w-4 h-4 mr-2" />
                 {relevantAuction ? "Erneut in Auktion" : "Auktion erstellen"}
@@ -433,18 +433,18 @@ export default function AdminMotorhomeDetail() {
         )
       }
     >
-      {motorhome && (
+      {kitchen && (
         <div className="space-y-6">
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               label="Preis"
-              value={formatPrice(motorhome.instant_price || motorhome.reserve_price)}
+              value={formatPrice(kitchen.instant_price || kitchen.reserve_price)}
               icon={<Euro className="w-5 h-5" />}
             />
             <StatsCard
               label="Kilometerstand"
-              value={motorhome.mileage ? `${motorhome.mileage.toLocaleString()} km` : "—"}
+              value={kitchen.mileage ? `${kitchen.mileage.toLocaleString()} km` : "—"}
               icon={<Gauge className="w-5 h-5" />}
             />
             <StatsCard
@@ -454,13 +454,13 @@ export default function AdminMotorhomeDetail() {
             />
             <StatsCard
               label="Verkaufsweg"
-              value={getSaleChannelBadge(motorhome.sale_channel).label}
+              value={getSaleChannelBadge(kitchen.sale_channel).label}
               icon={<Settings className="w-5 h-5" />}
             />
           </div>
 
           <AdminPriceHistoryCard
-            motorhomeId={motorhome.id}
+            kitchenId={kitchen.id}
             auctionId={relevantAuction?.id}
           />
 
@@ -469,9 +469,9 @@ export default function AdminMotorhomeDetail() {
             <div className="lg:col-span-2 space-y-6">
               {/* Photo Manager */}
               <AdminPhotoManager
-                motorhomeId={motorhome.id}
+                kitchenId={kitchen.id}
                 photos={sortedPhotos}
-                queryKey={["adminMotorhomeDetail", id!]}
+                queryKey={["adminKitchenDetail", id!]}
               />
 
               {/* Tabs for Details */}
@@ -487,23 +487,23 @@ export default function AdminMotorhomeDetail() {
                 <TabsContent value="basic">
                   <DetailSection title="Grundinformationen" icon={<Car className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
-                      <InfoItem label="Hersteller" value={motorhome.manufacturer} />
-                      <InfoItem label="Modell" value={motorhome.model} />
-                      <InfoItem label="Baujahr" value={motorhome.year} />
-                      <InfoItem label="Aufbauart" value={motorhome.body_type} />
-                      <InfoItem label="Zustand" value={motorhome.condition} />
-                      <InfoItem label="Kilometerstand" value={motorhome.mileage ? `${motorhome.mileage.toLocaleString()} km` : "—"} />
-                      <InfoItem label="Fahrgestellnr." value={motorhome.vehicle_identification_number} />
-                      <InfoItem label="Kennzeichen" value={motorhome.license_plate} />
-                      <InfoItem label="Listennummer" value={motorhome.listing_number} />
-                      <InfoItem label="PLZ (Standort)" value={motorhome.postal_code || "—"} />
-                      <InfoItem label="Stadt" value={motorhome.city || "—"} />
-                      <InfoItem label="Basisfahrzeug" value={motorhome.base_vehicle || "—"} />
+                      <InfoItem label="Hersteller" value={kitchen.manufacturer} />
+                      <InfoItem label="Modell" value={kitchen.model} />
+                      <InfoItem label="Baujahr" value={kitchen.year} />
+                      <InfoItem label="Aufbauart" value={kitchen.body_type} />
+                      <InfoItem label="Zustand" value={kitchen.condition} />
+                      <InfoItem label="Kilometerstand" value={kitchen.mileage ? `${kitchen.mileage.toLocaleString()} km` : "—"} />
+                      <InfoItem label="Fahrgestellnr." value={kitchen.vehicle_identification_number} />
+                      <InfoItem label="Kennzeichen" value={kitchen.license_plate} />
+                      <InfoItem label="Listennummer" value={kitchen.listing_number} />
+                      <InfoItem label="PLZ (Standort)" value={kitchen.postal_code || "—"} />
+                      <InfoItem label="Stadt" value={kitchen.city || "—"} />
+                      <InfoItem label="Basisfahrzeug" value={kitchen.base_vehicle || "—"} />
                     </InfoGrid>
-                    {motorhome.description && (
+                    {kitchen.description && (
                       <div className="mt-6 p-4 rounded-lg bg-muted/50">
                         <p className="text-sm font-medium text-muted-foreground mb-2">Beschreibung</p>
-                        <p className="text-sm whitespace-pre-wrap">{motorhome.description}</p>
+                        <p className="text-sm whitespace-pre-wrap">{kitchen.description}</p>
                       </div>
                     )}
                   </DetailSection>
@@ -512,40 +512,40 @@ export default function AdminMotorhomeDetail() {
                 <TabsContent value="technical">
                   <DetailSection title="Technische Daten" icon={<Settings className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
-                      <InfoItem label="Kraftstoff" value={motorhome.fuel_type} icon={<Fuel className="w-3 h-3" />} />
-                      <InfoItem label="Leistung" value={motorhome.engine_power_hp ? `${motorhome.engine_power_hp} PS${motorhome.power_kw ? ` (${motorhome.power_kw} kW)` : ''}` : "—"} />
-                      <InfoItem label="Getriebe" value={motorhome.transmission} />
-                      <InfoItem label="Abgasnorm" value={motorhome.emission_class} />
-                      <InfoItem label="Erstzulassung" value={formatMonthYear(motorhome.first_registration)} icon={<Calendar className="w-3 h-3" />} />
-                      <InfoItem label="TÜV bis" value={formatMonthYear(motorhome.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
-                      <InfoItem label="Vorbesitzer" value={motorhome.previous_owners?.toString()} />
-                      <InfoItem label="Hubraum" value={motorhome.engine_displacement_ccm ? `${motorhome.engine_displacement_ccm} ccm` : "—"} />
-                      <InfoItem label="Tankinhalt" value={motorhome.fuel_tank_capacity_liters ? `${motorhome.fuel_tank_capacity_liters} L` : "—"} />
-                      <InfoItem label="Gassystem" value={motorhome.gas_system || "—"} />
-                      <InfoItem label="Hauptreifen" value={motorhome.main_tires || "—"} />
-                      <InfoItem label="Zweitreifen" value={motorhome.second_tires || "—"} />
-                      <InfoItem label="Letzter TÜV" value={formatMonthYear(motorhome.last_tuev_date)} />
+                      <InfoItem label="Kraftstoff" value={kitchen.fuel_type} icon={<Fuel className="w-3 h-3" />} />
+                      <InfoItem label="Leistung" value={kitchen.engine_power_hp ? `${kitchen.engine_power_hp} PS${kitchen.power_kw ? ` (${kitchen.power_kw} kW)` : ''}` : "—"} />
+                      <InfoItem label="Getriebe" value={kitchen.transmission} />
+                      <InfoItem label="Abgasnorm" value={kitchen.emission_class} />
+                      <InfoItem label="Erstzulassung" value={formatMonthYear(kitchen.first_registration)} icon={<Calendar className="w-3 h-3" />} />
+                      <InfoItem label="TÜV bis" value={formatMonthYear(kitchen.tuev_valid_until)} icon={<Calendar className="w-3 h-3" />} />
+                      <InfoItem label="Vorbesitzer" value={kitchen.previous_owners?.toString()} />
+                      <InfoItem label="Hubraum" value={kitchen.engine_displacement_ccm ? `${kitchen.engine_displacement_ccm} ccm` : "—"} />
+                      <InfoItem label="Tankinhalt" value={kitchen.fuel_tank_capacity_liters ? `${kitchen.fuel_tank_capacity_liters} L` : "—"} />
+                      <InfoItem label="Gassystem" value={kitchen.gas_system || "—"} />
+                      <InfoItem label="Hauptreifen" value={kitchen.main_tires || "—"} />
+                      <InfoItem label="Zweitreifen" value={kitchen.second_tires || "—"} />
+                      <InfoItem label="Letzter TÜV" value={formatMonthYear(kitchen.last_tuev_date)} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      {motorhome.accident_free && (
+                      {kitchen.accident_free && (
                         <Badge variant="outline" className="gap-1">
                           <CheckCircle2 className="w-3 h-3 text-green-600" />
                           Unfallfrei
                         </Badge>
                       )}
-                      {motorhome.non_smoker && (
+                      {kitchen.non_smoker && (
                         <Badge variant="outline" className="gap-1">
                           <CheckCircle2 className="w-3 h-3 text-green-600" />
                           Nichtraucher
                         </Badge>
                       )}
-                      {motorhome.service_history_available && (
+                      {kitchen.service_history_available && (
                         <Badge variant="outline" className="gap-1">
                           <FileText className="w-3 h-3" />
                           Scheckheft
                         </Badge>
                       )}
-                      {motorhome.has_tuev && (
+                      {kitchen.has_tuev && (
                         <Badge variant="outline" className="gap-1">
                           <CheckCircle2 className="w-3 h-3 text-green-600" />
                           TÜV vorhanden
@@ -560,18 +560,18 @@ export default function AdminMotorhomeDetail() {
                       Abmessungen & Gewicht
                     </h4>
                     <InfoGrid columns={4}>
-                      <InfoItem label="Länge" value={motorhome.length_m ? `${motorhome.length_m} cm` : "—"} />
-                      <InfoItem label="Breite" value={motorhome.width_m ? `${motorhome.width_m} cm` : "—"} />
-                      <InfoItem label="Höhe" value={motorhome.height_m ? `${motorhome.height_m} cm` : "—"} />
-                      <InfoItem label="Achsen" value={motorhome.number_of_axles?.toString()} />
-                      <InfoItem label="Gesamtgewicht" value={motorhome.weight_kg ? `${motorhome.weight_kg} kg` : "—"} icon={<Weight className="w-3 h-3" />} />
-                      <InfoItem label="Zuladung" value={motorhome.payload_kg ? `${motorhome.payload_kg} kg` : "—"} />
-                      <InfoItem label="Sitzplätze" value={motorhome.seats?.toString()} icon={<Users className="w-3 h-3" />} />
-                      <InfoItem label="Schlafplätze" value={motorhome.sleeping_places?.toString()} icon={<Bed className="w-3 h-3" />} />
+                      <InfoItem label="Länge" value={kitchen.length_m ? `${kitchen.length_m} cm` : "—"} />
+                      <InfoItem label="Breite" value={kitchen.width_m ? `${kitchen.width_m} cm` : "—"} />
+                      <InfoItem label="Höhe" value={kitchen.height_m ? `${kitchen.height_m} cm` : "—"} />
+                      <InfoItem label="Achsen" value={kitchen.number_of_axles?.toString()} />
+                      <InfoItem label="Gesamtgewicht" value={kitchen.weight_kg ? `${kitchen.weight_kg} kg` : "—"} icon={<Weight className="w-3 h-3" />} />
+                      <InfoItem label="Zuladung" value={kitchen.payload_kg ? `${kitchen.payload_kg} kg` : "—"} />
+                      <InfoItem label="Sitzplätze" value={kitchen.seats?.toString()} icon={<Users className="w-3 h-3" />} />
+                      <InfoItem label="Schlafplätze" value={kitchen.sleeping_places?.toString()} icon={<Bed className="w-3 h-3" />} />
                     </InfoGrid>
-                    {motorhome.beds_description && (
+                    {kitchen.beds_description && (
                       <p className="text-sm text-muted-foreground mt-4">
-                        <strong>Betten:</strong> {motorhome.beds_description}
+                        <strong>Betten:</strong> {kitchen.beds_description}
                       </p>
                     )}
                   </DetailSection>
@@ -580,20 +580,20 @@ export default function AdminMotorhomeDetail() {
                 <TabsContent value="interior">
                   <DetailSection title="Innenausstattung" icon={<Bed className="w-5 h-5" />}>
                     <InfoGrid columns={3}>
-                      <InfoItem label="Heizung" value={motorhome.heating_type} />
-                      <InfoItem label="Klimaanlage" value={motorhome.air_conditioning_type} icon={<Wind className="w-3 h-3" />} />
-                      <InfoItem label="Frischwasser" value={motorhome.water_tank_liters ? `${motorhome.water_tank_liters} L` : "—"} icon={<Droplets className="w-3 h-3" />} />
-                      <InfoItem label="Grauwasser" value={motorhome.grey_water_capacity_liters ? `${motorhome.grey_water_capacity_liters} L` : "—"} />
-                      <InfoItem label="Kühlschrank" value={motorhome.refrigerator_type} />
+                      <InfoItem label="Heizung" value={kitchen.heating_type} />
+                      <InfoItem label="Klimaanlage" value={kitchen.air_conditioning_type} icon={<Wind className="w-3 h-3" />} />
+                      <InfoItem label="Frischwasser" value={kitchen.water_tank_liters ? `${kitchen.water_tank_liters} L` : "—"} icon={<Droplets className="w-3 h-3" />} />
+                      <InfoItem label="Grauwasser" value={kitchen.grey_water_capacity_liters ? `${kitchen.grey_water_capacity_liters} L` : "—"} />
+                      <InfoItem label="Kühlschrank" value={kitchen.refrigerator_type} />
                     </InfoGrid>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      {motorhome.has_kitchen && <Badge variant="outline">Küche</Badge>}
-                      {motorhome.has_bathroom && <Badge variant="outline">Bad</Badge>}
-                      {motorhome.has_toilet && <Badge variant="outline">Toilette</Badge>}
-                      {motorhome.has_shower && <Badge variant="outline">Dusche</Badge>}
-                      {motorhome.has_swivel_seats && <Badge variant="outline">Drehsitze</Badge>}
-                      {motorhome.has_roof_ac && <Badge variant="outline">Dach-Klimaanlage</Badge>}
-                      {motorhome.has_stand_ac && <Badge variant="outline">Stand-Klimaanlage</Badge>}
+                      {kitchen.has_kitchen && <Badge variant="outline">Küche</Badge>}
+                      {kitchen.has_bathroom && <Badge variant="outline">Bad</Badge>}
+                      {kitchen.has_toilet && <Badge variant="outline">Toilette</Badge>}
+                      {kitchen.has_shower && <Badge variant="outline">Dusche</Badge>}
+                      {kitchen.has_swivel_seats && <Badge variant="outline">Drehsitze</Badge>}
+                      {kitchen.has_roof_ac && <Badge variant="outline">Dach-Klimaanlage</Badge>}
+                      {kitchen.has_stand_ac && <Badge variant="outline">Stand-Klimaanlage</Badge>}
                     </div>
                   </DetailSection>
                 </TabsContent>
@@ -601,65 +601,65 @@ export default function AdminMotorhomeDetail() {
                 <TabsContent value="equipment">
                   <DetailSection title="Zusatzausstattung" icon={<Sun className="w-5 h-5" />}>
                     <div className="flex flex-wrap gap-2">
-                      {motorhome.has_solar && (
+                      {kitchen.has_solar && (
                         <Badge variant="outline" className="gap-1">
                           <Sun className="w-3 h-3" />
-                          Solar {motorhome.solar_power_watts ? `(${motorhome.solar_power_watts}W)` : ''}
+                          Solar {kitchen.solar_power_watts ? `(${kitchen.solar_power_watts}W)` : ''}
                         </Badge>
                       )}
-                      {motorhome.has_awning && (
+                      {kitchen.has_awning && (
                         <Badge variant="outline">
-                          Markise {motorhome.awning_length_m ? `(${motorhome.awning_length_m}cm)` : ''}
+                          Markise {kitchen.awning_length_m ? `(${kitchen.awning_length_m}cm)` : ''}
                         </Badge>
                       )}
-                      {motorhome.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
-                      {motorhome.has_tv && (
+                      {kitchen.has_inverter && <Badge variant="outline">Wechselrichter</Badge>}
+                      {kitchen.has_tv && (
                         <Badge variant="outline" className="gap-1">
                           <Tv className="w-3 h-3" /> TV/SAT
                         </Badge>
                       )}
-                      {motorhome.has_backup_camera && (
+                      {kitchen.has_backup_camera && (
                         <Badge variant="outline" className="gap-1">
                           <Camera className="w-3 h-3" /> Rückfahrkamera
                         </Badge>
                       )}
-                      {motorhome.has_parking_sensors && (
+                      {kitchen.has_parking_sensors && (
                         <Badge variant="outline" className="gap-1">
                           <ParkingCircle className="w-3 h-3" /> Parksensoren
                         </Badge>
                       )}
-                      {motorhome.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
-                      {motorhome.has_central_locking && (
+                      {kitchen.has_cruise_control && <Badge variant="outline">Tempomat</Badge>}
+                      {kitchen.has_central_locking && (
                         <Badge variant="outline" className="gap-1">
                           <Lock className="w-3 h-3" /> Zentralverriegelung
                         </Badge>
                       )}
-                      {motorhome.has_bike_rack && (
+                      {kitchen.has_bike_rack && (
                         <Badge variant="outline" className="gap-1">
                           <Bike className="w-3 h-3" /> Fahrradträger
                         </Badge>
                       )}
-                      {motorhome.has_garage && (
+                      {kitchen.has_garage && (
                         <Badge variant="outline" className="gap-1">
                           <Warehouse className="w-3 h-3" /> Heckgarage
                         </Badge>
                       )}
-                      {motorhome.has_esp && <Badge variant="outline">ESP</Badge>}
-                      {motorhome.has_airbag && <Badge variant="outline">Airbag</Badge>}
-                      {motorhome.has_alarm && <Badge variant="outline">Alarmanlage</Badge>}
-                      {motorhome.has_navigation && <Badge variant="outline">Navigation</Badge>}
-                      {motorhome.has_satellite && <Badge variant="outline">Satellitenanlage</Badge>}
-                      {motorhome.has_awning_tent && <Badge variant="outline">Vorzelt</Badge>}
+                      {kitchen.has_esp && <Badge variant="outline">ESP</Badge>}
+                      {kitchen.has_airbag && <Badge variant="outline">Airbag</Badge>}
+                      {kitchen.has_alarm && <Badge variant="outline">Alarmanlage</Badge>}
+                      {kitchen.has_navigation && <Badge variant="outline">Navigation</Badge>}
+                      {kitchen.has_satellite && <Badge variant="outline">Satellitenanlage</Badge>}
+                      {kitchen.has_awning_tent && <Badge variant="outline">Vorzelt</Badge>}
                     </div>
-                    {motorhome.battery_capacity_ah && (
+                    {kitchen.battery_capacity_ah && (
                       <p className="text-sm text-muted-foreground mt-4">
-                        <strong>Batterie:</strong> {motorhome.battery_capacity_ah} Ah
+                        <strong>Batterie:</strong> {kitchen.battery_capacity_ah} Ah
                       </p>
                     )}
-                    {motorhome.additional_equipment && (
+                    {kitchen.additional_equipment && (
                       <div className="mt-6 p-4 rounded-lg bg-muted/50">
                         <p className="text-sm font-medium text-muted-foreground mb-2">Zusatzausstattung</p>
-                        <p className="text-sm whitespace-pre-wrap">{motorhome.additional_equipment}</p>
+                        <p className="text-sm whitespace-pre-wrap">{kitchen.additional_equipment}</p>
                       </div>
                     )}
                   </DetailSection>
@@ -668,61 +668,61 @@ export default function AdminMotorhomeDetail() {
                 <TabsContent value="condition">
                   <DetailSection title="Fahrzeugzustand" icon={<Shield className="w-5 h-5" />}>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className={`p-3 rounded-lg border text-center ${motorhome.accident_free ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : motorhome.accident_free === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
-                        {motorhome.accident_free ? (
+                      <div className={`p-3 rounded-lg border text-center ${kitchen.accident_free ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : kitchen.accident_free === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
+                        {kitchen.accident_free ? (
                           <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                        ) : motorhome.accident_free === false ? (
+                        ) : kitchen.accident_free === false ? (
                           <AlertTriangle className="w-5 h-5 mx-auto mb-1 text-red-600" />
                         ) : (
                           <Car className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                         )}
                         <p className="text-sm font-medium">
-                          {motorhome.accident_free ? "Unfallfrei" : motorhome.accident_free === false ? "Unfall vorhanden" : "Keine Angabe"}
+                          {kitchen.accident_free ? "Unfallfrei" : kitchen.accident_free === false ? "Unfall vorhanden" : "Keine Angabe"}
                         </p>
                       </div>
-                      <div className={`p-3 rounded-lg border text-center ${motorhome.non_smoker ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : motorhome.non_smoker === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
-                        {motorhome.non_smoker ? (
+                      <div className={`p-3 rounded-lg border text-center ${kitchen.non_smoker ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : kitchen.non_smoker === false ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-muted/50'}`}>
+                        {kitchen.non_smoker ? (
                           <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                        ) : motorhome.non_smoker === false ? (
+                        ) : kitchen.non_smoker === false ? (
                           <AlertTriangle className="w-5 h-5 mx-auto mb-1 text-red-600" />
                         ) : (
                           <Car className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                         )}
                         <p className="text-sm font-medium">
-                          {motorhome.non_smoker ? "Nichtraucher" : motorhome.non_smoker === false ? "Raucherfahrzeug" : "Keine Angabe"}
+                          {kitchen.non_smoker ? "Nichtraucher" : kitchen.non_smoker === false ? "Raucherfahrzeug" : "Keine Angabe"}
                         </p>
                       </div>
-                      <div className={`p-3 rounded-lg border text-center ${motorhome.service_history_available ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
-                        {motorhome.service_history_available ? (
+                      <div className={`p-3 rounded-lg border text-center ${kitchen.service_history_available ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
+                        {kitchen.service_history_available ? (
                           <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
                         ) : (
                           <FileText className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                         )}
                         <p className="text-sm font-medium">
-                          {motorhome.service_history_available ? "Scheckheft vorhanden" : "Kein Scheckheft"}
+                          {kitchen.service_history_available ? "Scheckheft vorhanden" : "Kein Scheckheft"}
                         </p>
                       </div>
-                      <div className={`p-3 rounded-lg border text-center ${motorhome.has_tuev ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
-                        {motorhome.has_tuev ? (
+                      <div className={`p-3 rounded-lg border text-center ${kitchen.has_tuev ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/50'}`}>
+                        {kitchen.has_tuev ? (
                           <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
                         ) : (
                           <Calendar className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                         )}
                         <p className="text-sm font-medium">
-                          {motorhome.tuev_valid_until ? `TÜV bis ${formatMonthYear(motorhome.tuev_valid_until)}` : motorhome.has_tuev ? "TÜV vorhanden" : "Kein TÜV"}
+                          {kitchen.tuev_valid_until ? `TÜV bis ${formatMonthYear(kitchen.tuev_valid_until)}` : kitchen.has_tuev ? "TÜV vorhanden" : "Kein TÜV"}
                         </p>
                       </div>
                     </div>
 
-                    {motorhome.damage_summary ? (
+                    {kitchen.damage_summary ? (
                       <div className="mt-4 p-4 rounded-lg border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
                         <h4 className="font-semibold flex items-center gap-2 mb-2">
                           <AlertTriangle className="w-4 h-4 text-amber-600" />
                           Bekannte Mängel
                         </h4>
-                        <p className="text-sm whitespace-pre-wrap">{motorhome.damage_summary}</p>
+                        <p className="text-sm whitespace-pre-wrap">{kitchen.damage_summary}</p>
                       </div>
-                    ) : !motorhome.has_damage ? (
+                    ) : !kitchen.has_damage ? (
                       <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                         <p className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400">
                           <CheckCircle2 className="w-4 h-4" />
@@ -756,10 +756,10 @@ export default function AdminMotorhomeDetail() {
               )}
 
               {/* Damage Photos */}
-              {Array.isArray(motorhome.damage_photos) && motorhome.damage_photos.length > 0 && (
+              {Array.isArray(kitchen.damage_photos) && kitchen.damage_photos.length > 0 && (
                 <DetailSection title="Schäden dokumentiert" icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {motorhome.damage_photos.map((damage: any) => (
+                    {kitchen.damage_photos.map((damage: any) => (
                       <div key={damage.id} className="rounded-lg border overflow-hidden">
                         <img
                           src={damage.photo_url}
@@ -858,43 +858,43 @@ export default function AdminMotorhomeDetail() {
             <div className="space-y-6">
               {/* Seller Info */}
               <DetailSection title="Verkäufer" icon={<User className="w-5 h-5" />}>
-                {motorhome.seller ? (
+                {kitchen.seller ? (
                   <div className="space-y-4">
                     <div>
                       <p className="font-semibold text-lg">
-                        {motorhome.seller.first_name} {motorhome.seller.last_name}
+                        {kitchen.seller.first_name} {kitchen.seller.last_name}
                       </p>
-                      {motorhome.seller.company_name && (
-                        <p className="text-sm text-muted-foreground">{motorhome.seller.company_name}</p>
+                      {kitchen.seller.company_name && (
+                        <p className="text-sm text-muted-foreground">{kitchen.seller.company_name}</p>
                       )}
                     </div>
                     <Separator />
                     <div className="space-y-3">
                       <a
-                        href={`mailto:${motorhome.seller.email}`}
+                        href={`mailto:${kitchen.seller.email}`}
                         className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                       >
                         <Mail className="w-4 h-4" />
-                        {motorhome.seller.email}
+                        {kitchen.seller.email}
                       </a>
-                      {motorhome.seller.phone && (
+                      {kitchen.seller.phone && (
                         <a
-                          href={`tel:${motorhome.seller.phone}`}
+                          href={`tel:${kitchen.seller.phone}`}
                           className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                         >
                           <Phone className="w-4 h-4" />
-                          {motorhome.seller.phone}
+                          {kitchen.seller.phone}
                         </a>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Registriert: {formatDate(motorhome.seller.created_at)}
+                      Registriert: {formatDate(kitchen.seller.created_at)}
                     </p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         className="flex-1"
-                        onClick={() => navigate(`/admin/users/${motorhome.seller?.id}`)}
+                        onClick={() => navigate(`/admin/users/${kitchen.seller?.id}`)}
                       >
                         Profil anzeigen
                       </Button>
@@ -928,10 +928,10 @@ export default function AdminMotorhomeDetail() {
                 >
                   <div className="space-y-4">
                     {relevantAuction.status === "active" && (
-                      <div className={`p-3 rounded-lg ${motorhome.sale_channel === 'instant_price' ? 'bg-yellow-50 dark:bg-yellow-950/20' : 'bg-green-50 dark:bg-green-950/20'}`}>
-                        <p className="text-sm text-muted-foreground">{motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
-                        <p className={`text-2xl font-bold ${motorhome.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {formatPrice(motorhome.sale_channel === 'instant_price' ? motorhome.instant_price : (relevantAuction.current_bid || relevantAuction.starting_bid))}
+                      <div className={`p-3 rounded-lg ${kitchen.sale_channel === 'instant_price' ? 'bg-yellow-50 dark:bg-yellow-950/20' : 'bg-green-50 dark:bg-green-950/20'}`}>
+                        <p className="text-sm text-muted-foreground">{kitchen.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}</p>
+                        <p className={`text-2xl font-bold ${kitchen.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-green-600'}`}>
+                          {formatPrice(kitchen.sale_channel === 'instant_price' ? kitchen.instant_price : (relevantAuction.current_bid || relevantAuction.starting_bid))}
                         </p>
                       </div>
                     )}
@@ -972,7 +972,7 @@ export default function AdminMotorhomeDetail() {
                       <InfoItem label="Startgebot" value={formatPrice(relevantAuction.starting_bid)} />
                       <InfoItem label="Endet" value={formatDate(relevantAuction.end_time)} />
                     </InfoGrid>
-                    {relevantAuction.reserve_price != null && motorhome.sale_channel !== 'instant_price' && (
+                    {relevantAuction.reserve_price != null && kitchen.sale_channel !== 'instant_price' && (
                       <div className={`p-2 rounded text-sm ${
                         (relevantAuction.current_bid || 0) >= relevantAuction.reserve_price
                           ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
@@ -1006,10 +1006,10 @@ export default function AdminMotorhomeDetail() {
               )}
 
               {/* Appointment Info */}
-              {Array.isArray(motorhome.appointments) && motorhome.appointments.length > 0 && (
+              {Array.isArray(kitchen.appointments) && kitchen.appointments.length > 0 && (
                 <DetailSection title="Termine" icon={<Calendar className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    {motorhome.appointments.slice(0, 3).map((appointment: any) => (
+                    {kitchen.appointments.slice(0, 3).map((appointment: any) => (
                       <Link
                         key={appointment.id}
                         to={`/admin/appointments/${appointment.id}`}
@@ -1031,9 +1031,9 @@ export default function AdminMotorhomeDetail() {
                         )}
                       </Link>
                     ))}
-                    {motorhome.appointments.length > 3 && (
+                    {kitchen.appointments.length > 3 && (
                       <p className="text-sm text-muted-foreground text-center">
-                        +{motorhome.appointments.length - 3} weitere Termine
+                        +{kitchen.appointments.length - 3} weitere Termine
                       </p>
                     )}
                   </div>
@@ -1043,40 +1043,40 @@ export default function AdminMotorhomeDetail() {
               {/* Pricing Info */}
               <DetailSection title="Preisgestaltung" icon={<Euro className="w-5 h-5" />}>
                 <div className="space-y-3">
-                  <InfoItem label="Verkaufsweg" value={getSaleChannelBadge(motorhome.sale_channel).label} />
-                  {motorhome.instant_price != null && (
-                    <InfoItem label={motorhome.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(motorhome.instant_price)} />
+                  <InfoItem label="Verkaufsweg" value={getSaleChannelBadge(kitchen.sale_channel).label} />
+                  {kitchen.instant_price != null && (
+                    <InfoItem label={kitchen.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(kitchen.instant_price)} />
                   )}
-                  {motorhome.reserve_price != null && (
-                    <InfoItem label="Reservepreis" value={formatPrice(motorhome.reserve_price)} />
+                  {kitchen.reserve_price != null && (
+                    <InfoItem label="Reservepreis" value={formatPrice(kitchen.reserve_price)} />
                   )}
-                  {motorhome.price != null && (
-                    <InfoItem label="Verkaufspreis" value={formatPrice(motorhome.price)} />
+                  {kitchen.price != null && (
+                    <InfoItem label="Verkaufspreis" value={formatPrice(kitchen.price)} />
                   )}
                   <Separator className="my-2" />
                   <InfoItem
                     label="Kontoart"
-                    value={motorhome.account_type === "dealer" ? "Händler" : motorhome.account_type === "private" ? "Privat" : motorhome.account_type || "—"}
+                    value={kitchen.account_type === "dealer" ? "Händler" : kitchen.account_type === "private" ? "Privat" : kitchen.account_type || "—"}
                   />
                   <InfoItem
                     label="MwSt ausweisbar"
-                    value={motorhome.mwst_ausweisbar === true ? "Ja" : motorhome.mwst_ausweisbar === false ? "Nein" : "Nicht angegeben"}
+                    value={kitchen.mwst_ausweisbar === true ? "Ja" : kitchen.mwst_ausweisbar === false ? "Nein" : "Nicht angegeben"}
                   />
                 </div>
               </DetailSection>
 
               {/* Vertragsdaten */}
-              {(motorhome.contract_number || motorhome.contract_url || motorhome.sold_to || motorhome.sold_at) && (
+              {(kitchen.contract_number || kitchen.contract_url || kitchen.sold_to || kitchen.sold_at) && (
                 <DetailSection title="Vertragsdaten" icon={<FileText className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    {motorhome.contract_number && (
-                      <InfoItem label="Vertragsnr." value={motorhome.contract_number} />
+                    {kitchen.contract_number && (
+                      <InfoItem label="Vertragsnr." value={kitchen.contract_number} />
                     )}
-                    {motorhome.contract_url && (
+                    {kitchen.contract_url && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Vertrag</span>
                         <a
-                          href={motorhome.contract_url}
+                          href={kitchen.contract_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-primary hover:underline"
@@ -1085,17 +1085,17 @@ export default function AdminMotorhomeDetail() {
                         </a>
                       </div>
                     )}
-                    {motorhome.sold_to && (
-                      <InfoItem label="Verkauft an" value={motorhome.sold_to} />
+                    {kitchen.sold_to && (
+                      <InfoItem label="Verkauft an" value={kitchen.sold_to} />
                     )}
-                    {motorhome.sold_at && (
-                      <InfoItem label="Verkauft am" value={formatDate(motorhome.sold_at)} />
+                    {kitchen.sold_at && (
+                      <InfoItem label="Verkauft am" value={formatDate(kitchen.sold_at)} />
                     )}
-                    {motorhome.sale_type && (
-                      <InfoItem label="Verkaufstyp" value={motorhome.sale_type} />
+                    {kitchen.sale_type && (
+                      <InfoItem label="Verkaufstyp" value={kitchen.sale_type} />
                     )}
-                    {motorhome.available_from && (
-                      <InfoItem label="Verfügbar ab" value={formatDate(motorhome.available_from)} />
+                    {kitchen.available_from && (
+                      <InfoItem label="Verfügbar ab" value={formatDate(kitchen.available_from)} />
                     )}
                   </div>
                 </DetailSection>
@@ -1109,20 +1109,20 @@ export default function AdminMotorhomeDetail() {
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">ID</span>
-                    <span className="font-mono text-xs">{motorhome.id}</span>
+                    <span className="font-mono text-xs">{kitchen.id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Erstellt</span>
-                    <span>{formatDate(motorhome.created_at)}</span>
+                    <span>{formatDate(kitchen.created_at)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Aktualisiert</span>
-                    <span>{formatDate(motorhome.updated_at)}</span>
+                    <span>{formatDate(kitchen.updated_at)}</span>
                   </div>
-                  {motorhome.country && (
+                  {kitchen.country && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Land</span>
-                      <span>{motorhome.country}</span>
+                      <span>{kitchen.country}</span>
                     </div>
                   )}
                 </CardContent>
@@ -1133,32 +1133,32 @@ export default function AdminMotorhomeDetail() {
       )}
 
       {/* Edit Dialog */}
-      {motorhome && (
-        <MotorhomeEditDialog
-          motorhome={motorhome}
+      {kitchen && (
+        <KitchenEditDialog
+          kitchen={kitchen}
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
         />
       )}
 
       {/* E-Mail Dialog */}
-      {motorhome && motorhome.seller && (
+      {kitchen && kitchen.seller && (
         <SendOwnerEmailDialog
           open={showEmailDialog}
           onOpenChange={setShowEmailDialog}
           seller={{
-            id: motorhome.seller.id,
-            first_name: motorhome.seller.first_name,
-            last_name: motorhome.seller.last_name,
-            email: motorhome.seller.email,
-            phone: motorhome.seller.phone,
+            id: kitchen.seller.id,
+            first_name: kitchen.seller.first_name,
+            last_name: kitchen.seller.last_name,
+            email: kitchen.seller.email,
+            phone: kitchen.seller.phone,
           }}
-          motorhome={{
-            id: motorhome.id,
-            manufacturer: motorhome.manufacturer,
-            model: motorhome.model,
-            year: motorhome.year,
-            listing_number: motorhome.listing_number,
+          kitchen={{
+            id: kitchen.id,
+            manufacturer: kitchen.manufacturer,
+            model: kitchen.model,
+            year: kitchen.year,
+            listing_number: kitchen.listing_number,
           }}
         />
       )}

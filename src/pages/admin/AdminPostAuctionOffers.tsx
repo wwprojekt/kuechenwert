@@ -101,7 +101,7 @@ interface PostAuctionOffer {
 
 interface AuctionInfo {
   id: string;
-  motorhome_id: string | null;
+  kitchen_id: string | null;
   status: string | null;
   current_bid: number | null;
   kaufchance_expires_at: string | null;
@@ -111,7 +111,7 @@ interface AuctionInfo {
   end_time: string | null;
   auction_round: number;
   auto_relist: boolean;
-  motorhome: {
+  kitchen: {
     id: string;
     manufacturer: string;
     model: string;
@@ -161,9 +161,9 @@ interface KaufchanceInvitation {
  * Liefert das Titelbild (niedrigste display_order) einer Wohnmobil-Fotos-Liste.
  * Supabase-Relation kann als Array, Objekt oder null zurückkommen.
  */
-function firstPhotoUrl(motorhome: AuctionInfo["motorhome"] | null | undefined): string | null {
-  if (!motorhome) return null;
-  const raw = motorhome.photos;
+function firstPhotoUrl(kitchen: AuctionInfo["kitchen"] | null | undefined): string | null {
+  if (!kitchen) return null;
+  const raw = kitchen.photos;
   const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
   if (arr.length === 0) return null;
   const first = [...arr].sort((a, b) => (a?.display_order ?? 0) - (b?.display_order ?? 0))[0];
@@ -175,19 +175,19 @@ function firstPhotoUrl(motorhome: AuctionInfo["motorhome"] | null | undefined): 
  * Fallback: Car-Icon wenn kein Foto vorhanden. Verwendet stopPropagation,
  * damit übergeordnete onClick-Handler (Detail-Dialog, Zeilen-Klick) nicht auslösen.
  */
-function MotorhomeThumb({
+function KitchenThumb({
   auctionId,
-  motorhome,
+  kitchen,
   size = "md",
   className = "",
 }: {
   auctionId: string;
-  motorhome: AuctionInfo["motorhome"] | null | undefined;
+  kitchen: AuctionInfo["kitchen"] | null | undefined;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const photo = firstPhotoUrl(motorhome);
-  const alt = motorhome ? `${motorhome.manufacturer ?? ""} ${motorhome.model ?? ""}`.trim() : "Fahrzeug";
+  const photo = firstPhotoUrl(kitchen);
+  const alt = kitchen ? `${kitchen.manufacturer ?? ""} ${kitchen.model ?? ""}`.trim() : "Fahrzeug";
   const dims =
     size === "sm" ? "w-12 h-9" : size === "lg" ? "w-20 h-16" : "w-16 h-12";
   return (
@@ -340,13 +340,13 @@ export default function AdminPostAuctionOffers() {
       const { data, error } = await supabase
         .from("auctions")
         .select(`
-          id, motorhome_id, status, current_bid, starting_bid, end_time,
+          id, kitchen_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round,
-          motorhome:motorhomes (
+          kitchen:kitchens (
             id, manufacturer, model, seller_id, reserve_price, year,
             sale_channel, instant_price, listing_number,
-            photos:motorhome_photos (url, card_url, display_order)
+            photos:kitchen_photos (url, card_url, display_order)
           )
         `)
         .in("id", auctionIds);
@@ -378,13 +378,13 @@ export default function AdminPostAuctionOffers() {
       const { data: kcData, error: kcErr } = await supabase
         .from("auctions")
         .select(`
-          id, motorhome_id, status, current_bid, starting_bid, end_time,
+          id, kitchen_id, status, current_bid, starting_bid, end_time,
           kaufchance_expires_at, kaufchance_min_price, reserve_price,
           auction_round,
-          motorhome:motorhomes (
+          kitchen:kitchens (
             id, manufacturer, model, seller_id, reserve_price, year,
             sale_channel, instant_price, listing_number,
-            photos:motorhome_photos (url, card_url, display_order)
+            photos:kitchen_photos (url, card_url, display_order)
           )
         `)
         .eq("status", "kaufchance")
@@ -403,19 +403,19 @@ export default function AdminPostAuctionOffers() {
         const { data: fpData } = await supabase
           .from("auctions")
           .select(`
-            id, motorhome_id, status, current_bid, starting_bid, end_time,
+            id, kitchen_id, status, current_bid, starting_bid, end_time,
             kaufchance_expires_at, kaufchance_min_price, reserve_price,
             auction_round,
-            motorhome:motorhomes (
+            kitchen:kitchens (
               id, manufacturer, model, seller_id, reserve_price, year,
               sale_channel, instant_price, listing_number,
-              photos:motorhome_photos (url, card_url, display_order)
+              photos:kitchen_photos (url, card_url, display_order)
             )
           `)
           .eq("status", "active")
           .in("id", fpAuctionIds);
         fpAuctions = ((fpData || []) as any[]).filter(a => {
-          const mh = Array.isArray(a.motorhome) ? a.motorhome[0] : a.motorhome;
+          const mh = Array.isArray(a.kitchen) ? a.kitchen[0] : a.kitchen;
           return mh?.sale_channel === 'instant_price';
         }) as AuctionInfo[];
       }
@@ -453,10 +453,10 @@ export default function AdminPostAuctionOffers() {
       if (o.buyer_id) ids.add(o.buyer_id);
     });
     Object.values(auctionMap).forEach((a: AuctionInfo) => {
-      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
+      if (a.kitchen?.seller_id) ids.add(a.kitchen.seller_id);
     });
     kaufchanceAuctions.forEach((a: any) => {
-      if (a.motorhome?.seller_id) ids.add(a.motorhome.seller_id);
+      if (a.kitchen?.seller_id) ids.add(a.kitchen.seller_id);
     });
     return Array.from(ids).sort();
   }, [offers, auctionMap, kaufchanceAuctions]);
@@ -512,8 +512,8 @@ export default function AdminPostAuctionOffers() {
         const buyerName = buyer
           ? `${buyer.first_name || ""} ${buyer.last_name || ""} ${buyer.company_name || ""} ${buyer.email || ""}`.toLowerCase()
           : "";
-        const vehicleName = auction?.motorhome
-          ? `${auction.motorhome.manufacturer} ${auction.motorhome.model}`.toLowerCase()
+        const vehicleName = auction?.kitchen
+          ? `${auction.kitchen.manufacturer} ${auction.kitchen.model}`.toLowerCase()
           : "";
         return (
           buyerName.includes(q) ||
@@ -1332,18 +1332,18 @@ export default function AdminPostAuctionOffers() {
             </h2>
             <div className="space-y-4">
               {kaufchanceAuctions.map((auction: AuctionInfo) => {
-                const motorhome = auction.motorhome;
-                const vehicleName = motorhome
-                  ? `${motorhome.manufacturer} ${motorhome.model}`
+                const kitchen = auction.kitchen;
+                const vehicleName = kitchen
+                  ? `${kitchen.manufacturer} ${kitchen.model}`
                   : 'Unbekannt';
-                const seller = motorhome?.seller_id ? profileMap[motorhome.seller_id] : null;
+                const seller = kitchen?.seller_id ? profileMap[kitchen.seller_id] : null;
                 const sellerName = seller
                   ? (seller.company_name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email || 'Unbekannt')
                   : 'Unbekannt';
                 const auctionOffers = offers.filter(o => o.auction_id === auction.id);
                 const pendingOffers = auctionOffers.filter(o => o.status === 'pending');
                 const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
-                const effectiveReserve = auction.reserve_price ?? motorhome?.reserve_price ?? null;
+                const effectiveReserve = auction.reserve_price ?? kitchen?.reserve_price ?? null;
                 const sortedOffers = [...auctionOffers].sort(
                   (a, b) => Number(b.offer_amount || 0) - Number(a.offer_amount || 0)
                 );
@@ -1361,7 +1361,7 @@ export default function AdminPostAuctionOffers() {
                   >
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1 flex gap-3 min-w-0">
-                        <MotorhomeThumb auctionId={auction.id} motorhome={motorhome} size="lg" />
+                        <KitchenThumb auctionId={auction.id} kitchen={kitchen} size="lg" />
                         <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <Link
@@ -1372,10 +1372,10 @@ export default function AdminPostAuctionOffers() {
                           >
                             {vehicleName}
                           </Link>
-                          {motorhome?.year && <span className="text-sm text-muted-foreground">({motorhome.year})</span>}
-                          {motorhome?.listing_number && (
+                          {kitchen?.year && <span className="text-sm text-muted-foreground">({kitchen.year})</span>}
+                          {kitchen?.listing_number && (
                             <span className="font-mono text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
-                              #{motorhome.listing_number}
+                              #{kitchen.listing_number}
                             </span>
                           )}
                           {isExpired ? (
@@ -1394,8 +1394,8 @@ export default function AdminPostAuctionOffers() {
                           {auction.reserve_price && (
                             <span>Reservepreis: <strong className="text-amber-600">{Number(auction.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
-                          {motorhome?.reserve_price && !auction.reserve_price && (
-                            <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(motorhome.reserve_price).toLocaleString('de-DE')} €</strong></span>
+                          {kitchen?.reserve_price && !auction.reserve_price && (
+                            <span>Mindestpreis (WM): <strong className="text-amber-600">{Number(kitchen.reserve_price).toLocaleString('de-DE')} €</strong></span>
                           )}
                           <span>Angebote: <strong>{auctionOffers.length}</strong> ({pendingOffers.length} ausstehend)</span>
                           {highestDiff !== null && (
@@ -1463,7 +1463,7 @@ export default function AdminPostAuctionOffers() {
                           onClick={() => openBackToAuctionDialog(
                             auction.id,
                             vehicleName,
-                            auction.reserve_price || motorhome?.reserve_price || null
+                            auction.reserve_price || kitchen?.reserve_price || null
                           )}
                         >
                           {backToAuctionLoading === auction.id ? (
@@ -1689,23 +1689,23 @@ export default function AdminPostAuctionOffers() {
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2 min-w-0">
                         {auction ? (
-                          <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="sm" />
+                          <KitchenThumb auctionId={auction.id} kitchen={auction.kitchen} size="sm" />
                         ) : null}
                         <div className="min-w-0">
-                          {auction?.motorhome ? (
+                          {auction?.kitchen ? (
                             <Link
                               to={`/admin/auctions/${auction.id}`}
                               className="text-sm font-medium hover:text-primary hover:underline line-clamp-1"
                               title="Zur Auktion öffnen"
                             >
-                              {auction.motorhome.manufacturer} {auction.motorhome.model}
+                              {auction.kitchen.manufacturer} {auction.kitchen.model}
                             </Link>
                           ) : (
                             <p className="text-sm text-muted-foreground">Unbekannte Auktion</p>
                           )}
-                          {auction?.motorhome?.listing_number && (
+                          {auction?.kitchen?.listing_number && (
                             <p className="font-mono text-[10px] text-muted-foreground">
-                              #{auction.motorhome.listing_number}
+                              #{auction.kitchen.listing_number}
                             </p>
                           )}
                           {auction?.status && (
@@ -1810,25 +1810,25 @@ export default function AdminPostAuctionOffers() {
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           {selectedKaufchanceAuction && (() => {
             const auction = selectedKaufchanceAuction;
-            const motorhome = auction.motorhome;
-            const vehicleName = motorhome ? `${motorhome.manufacturer} ${motorhome.model}` : 'Unbekannt';
-            const seller = motorhome?.seller_id ? profileMap[motorhome.seller_id] : null;
+            const kitchen = auction.kitchen;
+            const vehicleName = kitchen ? `${kitchen.manufacturer} ${kitchen.model}` : 'Unbekannt';
+            const seller = kitchen?.seller_id ? profileMap[kitchen.seller_id] : null;
             const sellerName = seller
               ? (seller.company_name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email || 'Unbekannt')
               : 'Unbekannt';
             const isExpired = auction.kaufchance_expires_at && isPast(new Date(auction.kaufchance_expires_at));
-            const effectiveReservePrice = auction.reserve_price || motorhome?.reserve_price || null;
+            const effectiveReservePrice = auction.reserve_price || kitchen?.reserve_price || null;
             const displayBids = showAllBids ? kaufchanceBids : kaufchanceBids.slice(0, 10);
 
             return (
               <>
                 <DialogHeader>
                   <div className="flex items-start gap-3">
-                    <MotorhomeThumb auctionId={auction.id} motorhome={motorhome} size="lg" />
+                    <KitchenThumb auctionId={auction.id} kitchen={kitchen} size="lg" />
                     <div className="flex-1 min-w-0">
                       <DialogTitle className="flex items-center gap-2 text-xl flex-wrap">
-                        <Gavel className={`w-5 h-5 flex-shrink-0 ${motorhome?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-amber-600'}`} />
-                        {motorhome?.sale_channel === 'instant_price' ? 'Festpreis: ' : 'Kaufchance: '}
+                        <Gavel className={`w-5 h-5 flex-shrink-0 ${kitchen?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-amber-600'}`} />
+                        {kitchen?.sale_channel === 'instant_price' ? 'Festpreis: ' : 'Kaufchance: '}
                         <Link
                           to={`/admin/auctions/${auction.id}`}
                           className="hover:text-primary hover:underline"
@@ -1836,17 +1836,17 @@ export default function AdminPostAuctionOffers() {
                         >
                           {vehicleName}
                         </Link>
-                        {motorhome?.year && <span className="text-muted-foreground font-normal">({motorhome.year})</span>}
-                        {motorhome?.listing_number && (
+                        {kitchen?.year && <span className="text-muted-foreground font-normal">({kitchen.year})</span>}
+                        {kitchen?.listing_number && (
                           <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            #{motorhome.listing_number}
+                            #{kitchen.listing_number}
                           </span>
                         )}
                       </DialogTitle>
                       <DialogDescription className="flex items-center gap-3 flex-wrap mt-2">
                         {isExpired ? (
                           <Badge variant="outline" className="text-destructive border-destructive">Abgelaufen</Badge>
-                        ) : motorhome?.sale_channel === 'instant_price' ? (
+                        ) : kitchen?.sale_channel === 'instant_price' ? (
                           <Badge className="bg-yellow-500 text-white">Festpreis aktiv</Badge>
                         ) : (
                           <Badge className="bg-amber-500 text-white">Aktiv</Badge>
@@ -2466,7 +2466,7 @@ export default function AdminPostAuctionOffers() {
           {selectedOffer && (() => {
             const auction = auctionMap[selectedOffer.auction_id];
             const buyer = profileMap[selectedOffer.buyer_id];
-            const seller = auction?.motorhome?.seller_id ? profileMap[auction.motorhome.seller_id] : null;
+            const seller = auction?.kitchen?.seller_id ? profileMap[auction.kitchen.seller_id] : null;
             const isExpired = selectedOffer.expires_at && isPast(new Date(selectedOffer.expires_at)) && selectedOffer.status === "pending";
             const canAct = (selectedOffer.status === 'pending' && !isExpired) || selectedOffer.status === 'countered';
 
@@ -2487,23 +2487,23 @@ export default function AdminPostAuctionOffers() {
                   {auction && (
                     <Card className="p-3 bg-muted/40">
                       <div className="flex items-center gap-3">
-                        <MotorhomeThumb auctionId={auction.id} motorhome={auction.motorhome} size="md" />
+                        <KitchenThumb auctionId={auction.id} kitchen={auction.kitchen} size="md" />
                         <div className="flex-1 min-w-0">
-                          {auction.motorhome ? (
+                          {auction.kitchen ? (
                             <Link
                               to={`/admin/auctions/${auction.id}`}
                               className="font-semibold text-sm hover:text-primary hover:underline block truncate"
                               title="Zur Auktion öffnen"
                             >
-                              {auction.motorhome.manufacturer} {auction.motorhome.model}
+                              {auction.kitchen.manufacturer} {auction.kitchen.model}
                             </Link>
                           ) : (
                             <p className="font-semibold text-sm text-muted-foreground">Unbekannte Auktion</p>
                           )}
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                            {auction.motorhome?.year && <span>Baujahr {auction.motorhome.year}</span>}
-                            {auction.motorhome?.listing_number && (
-                              <span className="font-mono">#{auction.motorhome.listing_number}</span>
+                            {auction.kitchen?.year && <span>Baujahr {auction.kitchen.year}</span>}
+                            {auction.kitchen?.listing_number && (
+                              <span className="font-mono">#{auction.kitchen.listing_number}</span>
                             )}
                             {auction.status && <span>Status: {auction.status}</span>}
                           </div>
@@ -2581,7 +2581,7 @@ export default function AdminPostAuctionOffers() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Verkäufer:</span>
                           <div className="text-right">
-                            <p className="font-medium">{getProfileName(auction!.motorhome!.seller_id)}</p>
+                            <p className="font-medium">{getProfileName(auction!.kitchen!.seller_id)}</p>
                             {seller.email && <p className="text-xs text-muted-foreground">{seller.email}</p>}
                             {seller.phone && (
                               <a href={`tel:${seller.phone}`} className="text-xs text-primary hover:underline flex items-center justify-end gap-1">

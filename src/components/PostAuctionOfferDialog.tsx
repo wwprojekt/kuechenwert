@@ -140,8 +140,8 @@ export function PostAuctionOfferDialog({
           return;
         }
         // Prevent seller from proposing on own listing
-        const { data: mhData } = await supabase.from('auctions').select('motorhome:motorhomes(seller_id)').eq('id', auctionId).single();
-        const sellerId = Array.isArray(mhData?.motorhome) ? mhData.motorhome[0]?.seller_id : (mhData?.motorhome as any)?.seller_id;
+        const { data: mhData } = await supabase.from('auctions').select('kitchen:kitchens(seller_id)').eq('id', auctionId).single();
+        const sellerId = Array.isArray(mhData?.kitchen) ? mhData.kitchen[0]?.seller_id : (mhData?.kitchen as any)?.seller_id;
         if (sellerId && sellerId === user.id) {
           toast({ title: 'Eigenes Inserat', description: 'Sie können kein Angebot für Ihr eigenes Fahrzeug abgeben.', variant: 'destructive' });
           return;

@@ -228,7 +228,7 @@ export default function AdminFinancials() {
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
           auction:auctions(
             id,
-            motorhome:motorhomes(id, manufacturer, model)
+            kitchen:kitchens(id, manufacturer, model)
           ),
           reminders:payment_reminders(reminder_level, reminder_date)
         `)
@@ -253,7 +253,7 @@ export default function AdminFinancials() {
           invoice:invoices(
             invoice_number,
             customer_number,
-            auction:auctions(id, motorhome:motorhomes(id, manufacturer, model))
+            auction:auctions(id, kitchen:kitchens(id, manufacturer, model))
           ),
           dealer:profiles(first_name, last_name, company_name, customer_number)
         `)
@@ -277,7 +277,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
-          auction:auctions(id, motorhome:motorhomes(id, manufacturer, model))
+          auction:auctions(id, kitchen:kitchens(id, manufacturer, model))
         `)
         .in('payment_status', ['pending', 'partial'])
         .neq('status', 'cancelled')
@@ -304,7 +304,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number, phone, account_restricted, restriction_reason, restricted_at),
-          auction:auctions(id, motorhome:motorhomes(id, manufacturer, model)),
+          auction:auctions(id, kitchen:kitchens(id, manufacturer, model)),
           reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
         `)
         .in('payment_status', ['pending', 'partial'])
@@ -324,7 +324,7 @@ export default function AdminFinancials() {
       { key: "customer_number", label: "Kundennummer" },
       { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
       { key: "dealer", label: "Kd.-Nr.", format: (value: any) => value?.customer_number || '' },
-      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.motorhome ? `${value.motorhome.manufacturer} ${value.motorhome.model}` : "" },
+      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.kitchen ? `${value.kitchen.manufacturer} ${value.kitchen.model}` : "" },
       { key: "invoice_type", label: "Typ", format: (value: any) => value === 'seller_penalty' ? 'Vertragsstrafe' : 'Provision' },
       { key: "net_amount", label: "Netto", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
       { key: "tax_amount", label: "MwSt", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
@@ -557,16 +557,16 @@ export default function AdminFinancials() {
 
   const getVehicleLabel = (invoice: any) => {
     if (!invoice) return null;
-    const m = invoice.auction?.motorhome;
+    const m = invoice.auction?.kitchen;
     if (!m) return null;
     return `${m.manufacturer || ''} ${m.model || ''}`.trim() || null;
   };
 
   const navigateToVehicle = (invoice: any) => {
     if (!invoice) return;
-    const motorhomeId = invoice.auction?.motorhome?.id || invoice.motorhome_id;
-    if (motorhomeId) {
-      navigate(`/admin/motorhomes/${motorhomeId}`);
+    const kitchenId = invoice.auction?.kitchen?.id || invoice.kitchen_id;
+    if (kitchenId) {
+      navigate(`/admin/kitchens/${kitchenId}`);
     } else if (invoice.auction_id) {
       navigate(`/admin/auctions/${invoice.auction_id}`);
     }
@@ -1558,14 +1558,14 @@ export default function AdminFinancials() {
                             <div className="text-xs text-blue-600 font-medium">{payment.dealer.customer_number}</div>
                           )}
                         </div>
-                        {payment.invoice?.auction?.motorhome && (
+                        {payment.invoice?.auction?.kitchen && (
                           <div className="hidden md:block">
                             <button
-                              onClick={() => navigate(`/admin/motorhomes/${payment.invoice?.auction?.motorhome?.id}`)}
+                              onClick={() => navigate(`/admin/kitchens/${payment.invoice?.auction?.kitchen?.id}`)}
                               className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                             >
                               <Truck className="h-3 w-3 shrink-0" />
-                              {payment.invoice?.auction?.motorhome?.manufacturer} {payment.invoice?.auction?.motorhome?.model}
+                              {payment.invoice?.auction?.kitchen?.manufacturer} {payment.invoice?.auction?.kitchen?.model}
                             </button>
                           </div>
                         )}

@@ -1,5 +1,5 @@
 /**
- * Dialog to edit motorhome details in the admin panel
+ * Dialog to edit kitchen details in the admin panel
  * Comprehensive edit form with all database fields organized in tabs
  */
 
@@ -32,7 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Save } from "lucide-react";
 import { logger } from "@/lib/logger";
 
-interface MotorhomeData {
+interface KitchenData {
   id: string;
   // Basis
   manufacturer: string;
@@ -130,8 +130,8 @@ interface MotorhomeData {
   description: string | null;
 }
 
-interface MotorhomeEditDialogProps {
-  motorhome: MotorhomeData | null;
+interface KitchenEditDialogProps {
+  kitchen: KitchenData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -212,32 +212,32 @@ const STATUSES = [
   { value: "archived", label: "Archiviert" },
 ];
 
-export function MotorhomeEditDialog({
-  motorhome,
+export function KitchenEditDialog({
+  kitchen,
   open,
   onOpenChange,
-}: MotorhomeEditDialogProps) {
+}: KitchenEditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<Partial<MotorhomeData>>({});
+  const [formData, setFormData] = useState<Partial<KitchenData>>({});
 
   useEffect(() => {
-    if (motorhome) {
+    if (kitchen) {
       setFormData({
-        ...motorhome,
-        first_registration: motorhome.first_registration ? String(motorhome.first_registration).substring(0, 7) : null,
-        tuev_valid_until: motorhome.tuev_valid_until ? String(motorhome.tuev_valid_until).substring(0, 7) : null,
-        last_tuev_date: motorhome.last_tuev_date ? String(motorhome.last_tuev_date).substring(0, 7) : null,
+        ...kitchen,
+        first_registration: kitchen.first_registration ? String(kitchen.first_registration).substring(0, 7) : null,
+        tuev_valid_until: kitchen.tuev_valid_until ? String(kitchen.tuev_valid_until).substring(0, 7) : null,
+        last_tuev_date: kitchen.last_tuev_date ? String(kitchen.last_tuev_date).substring(0, 7) : null,
       });
     }
-  }, [motorhome]);
+  }, [kitchen]);
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<MotorhomeData>) => {
-      if (!motorhome?.id) throw new Error("No motorhome ID");
+    mutationFn: async (data: Partial<KitchenData>) => {
+      if (!kitchen?.id) throw new Error("No kitchen ID");
 
       const { error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .update({
           // Basis
           manufacturer: data.manufacturer,
@@ -333,7 +333,7 @@ export function MotorhomeEditDialog({
           // Beschreibung
           description: data.description,
         })
-        .eq("id", motorhome.id);
+        .eq("id", kitchen.id);
 
       if (error) throw error;
 
@@ -341,13 +341,13 @@ export function MotorhomeEditDialog({
       //             and expire any open post_auction_offers. Otherwise dealers
       //             still see a phantom "pending" offer and accept-kaufchance-offer
       //             would block with "vehicle already sold".
-      // Best-effort; failures here do NOT rollback the motorhome update.
-      if (data.status === "sold" && motorhome.status !== "sold") {
+      // Best-effort; failures here do NOT rollback the kitchen update.
+      if (data.status === "sold" && kitchen.status !== "sold") {
         try {
           const { data: relatedAuctions } = await supabase
             .from("auctions")
             .select("id, status")
-            .eq("motorhome_id", motorhome.id);
+            .eq("kitchen_id", kitchen.id);
           const activeAuction = (relatedAuctions || []).find(
             (a: any) => a.status === "active" || a.status === "kaufchance"
           );
@@ -377,15 +377,15 @@ export function MotorhomeEditDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhome"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchen"] });
       queryClient.invalidateQueries({ queryKey: ["adminPostAuctionOffers"] });
       // P4-Fix: Wenn Admin Reserve/Sofortpreis ändert, feuert der DB-Trigger
       // disable_dynamic_pricing_on_manual_edit und setzt dynamic_pricing=false.
       // Damit der Verkäufer die neue dynamic_pricing-Einstellung im
       // Dashboard sofort sieht (statt erst nach Hard-Refresh), invalidieren
       // wir auch die seller-seitigen Caches.
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail"] });
       queryClient.invalidateQueries({ queryKey: ["sellerTimeline"] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
@@ -420,18 +420,18 @@ export function MotorhomeEditDialog({
     updateMutation.mutate(formData);
   };
 
-  const updateField = <K extends keyof MotorhomeData>(
+  const updateField = <K extends keyof KitchenData>(
     field: K,
-    value: MotorhomeData[K]
+    value: KitchenData[K]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (!motorhome) return null;
+  if (!kitchen) return null;
 
   // Helper for select fields with optional "clear" option
   const renderSelect = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string,
     options: { value: string; label: string }[],
     placeholder: string
@@ -461,7 +461,7 @@ export function MotorhomeEditDialog({
 
   // Helper for number input fields
   const renderNumberInput = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string,
     placeholder?: string,
     step?: string
@@ -484,7 +484,7 @@ export function MotorhomeEditDialog({
 
   // Helper for text input fields
   const renderTextInput = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string,
     placeholder?: string,
     maxLength?: number
@@ -503,7 +503,7 @@ export function MotorhomeEditDialog({
 
   // Helper for date input fields
   const renderDateInput = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string
   ) => (
     <div className="space-y-2">
@@ -519,7 +519,7 @@ export function MotorhomeEditDialog({
 
   // Helper for month-only input fields (TÜV) - uses MonthYearPicker for cross-browser compatibility
   const renderMonthInput = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string
   ) => (
     <MonthYearPicker
@@ -532,7 +532,7 @@ export function MotorhomeEditDialog({
 
   // Helper for switch fields
   const renderSwitch = (
-    field: keyof MotorhomeData,
+    field: keyof KitchenData,
     label: string
   ) => (
     <div className="flex items-center justify-between">

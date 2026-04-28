@@ -42,7 +42,7 @@ import { AuctionEditDialog } from "@/components/admin/AuctionEditDialog";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
 import { AdminPagination } from "@/components/admin/AdminPagination";
-import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { activateAuctionForKitchen } from "@/lib/activate-auction";
 import { MARKETING_CONFIG } from "@/lib/marketing-config";
 import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
 
@@ -70,20 +70,20 @@ function InlineCountdown({ endTime }: { endTime: string }) {
 // Helper: Send registration invite after activating an auction
 // ============================================================================
 
-async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
+async function sendRegistrationInviteIfNeeded(kitchenId: string) {
   try {
-    const { data: motorhome, error: mhError } = await supabase
-      .from("motorhomes")
+    const { data: kitchen, error: mhError } = await supabase
+      .from("kitchens")
       .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name)")
-      .eq("id", motorhomeId)
+      .eq("id", kitchenId)
       .maybeSingle();
 
-    if (mhError || !motorhome) {
-      logger.warn("Could not load motorhome for invite check:", mhError?.message);
+    if (mhError || !kitchen) {
+      logger.warn("Could not load kitchen for invite check:", mhError?.message);
       return;
     }
 
-    const seller = motorhome.seller as any;
+    const seller = kitchen.seller as any;
     if (!seller?.email) {
       logger.info("No seller email found, skipping invite");
       return;
@@ -94,7 +94,7 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
       body: {
         email: seller.email,
         customerName: customerName || undefined,
-        motorhomeId: motorhome.id,
+        kitchenId: kitchen.id,
       },
     });
 
@@ -120,7 +120,7 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
       `Registrierungslink automatisch an ${seller.email} gesendet`,
       { duration: 5000 }
     );
-    logger.info(`Registration invite sent to ${seller.email} for motorhome ${motorhome.id}`);
+    logger.info(`Registration invite sent to ${seller.email} for kitchen ${kitchen.id}`);
   } catch (err: any) {
     logger.error("Error in sendRegistrationInviteIfNeeded:", err);
   }
@@ -130,27 +130,27 @@ async function sendRegistrationInviteIfNeeded(motorhomeId: string) {
 // Helper: Send relist notification to seller (instead of registration invite)
 // ============================================================================
 
-async function sendRelistNotification(motorhomeId: string, endTime: Date) {
+async function sendRelistNotification(kitchenId: string, endTime: Date) {
   try {
-    const { data: motorhome, error: mhError } = await supabase
-      .from("motorhomes")
+    const { data: kitchen, error: mhError } = await supabase
+      .from("kitchens")
       .select("id, manufacturer, model, seller_id, seller:profiles!left(id, email, first_name, last_name, customer_number)")
-      .eq("id", motorhomeId)
+      .eq("id", kitchenId)
       .maybeSingle();
 
-    if (mhError || !motorhome) {
-      logger.warn("Could not load motorhome for relist notification:", mhError?.message);
+    if (mhError || !kitchen) {
+      logger.warn("Could not load kitchen for relist notification:", mhError?.message);
       return;
     }
 
-    const seller = motorhome.seller as any;
+    const seller = kitchen.seller as any;
     if (!seller?.email) {
       logger.info("No seller email found, skipping relist notification");
       return;
     }
 
     const sellerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ") || "";
-    const vehicleName = [motorhome.manufacturer, motorhome.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
+    const vehicleName = [kitchen.manufacturer, kitchen.model].filter(Boolean).join(" ") || "Ihr Fahrzeug";
     const formattedEndTime = format(endTime, "dd.MM.yyyy HH:mm", { locale: de });
 
     const { error } = await invokeWithAuth("send-auction-notification", {
@@ -158,7 +158,7 @@ async function sendRelistNotification(motorhomeId: string, endTime: Date) {
         email: seller.email,
         name: sellerName,
         type: "seller_relisted",
-        motorhomeModel: vehicleName,
+        kitchenModel: vehicleName,
         auctionUrl: "https://caravanwert.de/dashboard",
         endTime: formattedEndTime,
         customerNumber: seller.customer_number || undefined,
@@ -178,7 +178,7 @@ async function sendRelistNotification(motorhomeId: string, endTime: Date) {
       `Verk\u00e4ufer ${seller.email} wurde \u00fcber die erneute Auktion informiert`,
       { duration: 5000 }
     );
-    logger.info(`Relist notification sent to ${seller.email} for motorhome ${motorhome.id}`);
+    logger.info(`Relist notification sent to ${seller.email} for kitchen ${kitchen.id}`);
   } catch (err: any) {
     logger.error("Error in sendRelistNotification:", err);
   }
@@ -259,10 +259,10 @@ export default function AdminAuctions() {
   const { sortField, sortDirection, handleSort, sortData } = useTableSort('end_time', 'asc');
 
   const sortAccessors: Record<string, (a: any) => unknown> = {
-    vehicle: (a) => `${a.motorhome?.manufacturer || ''} ${a.motorhome?.model || ''}`.trim().toLowerCase(),
-    seller: (a) => `${a.motorhome?.seller?.first_name || ''} ${a.motorhome?.seller?.last_name || ''}`.trim().toLowerCase(),
-    current_bid: (a) => a.motorhome?.sale_channel === 'instant_price'
-      ? Number(a.motorhome?.instant_price || 0)
+    vehicle: (a) => `${a.kitchen?.manufacturer || ''} ${a.kitchen?.model || ''}`.trim().toLowerCase(),
+    seller: (a) => `${a.kitchen?.seller?.first_name || ''} ${a.kitchen?.seller?.last_name || ''}`.trim().toLowerCase(),
+    current_bid: (a) => a.kitchen?.sale_channel === 'instant_price'
+      ? Number(a.kitchen?.instant_price || 0)
       : Number(a.current_bid || a.starting_bid || 0),
     bids_count: (a) => Number(a.bids?.[0]?.count || 0),
     end_time: (a) => a.end_time || '',
@@ -280,7 +280,7 @@ export default function AdminAuctions() {
         .from("auctions")
         .select(`
           ${AUCTION_PUBLIC_COLUMNS},
-          motorhome:motorhomes (
+          kitchen:kitchens (
             id,
             manufacturer,
             model,
@@ -289,7 +289,7 @@ export default function AdminAuctions() {
             city,
             sale_channel,
             instant_price,
-            motorhome_photos(url, card_url, medium_url, display_order),
+            kitchen_photos(url, card_url, medium_url, display_order),
             seller:profiles!left (
               first_name,
               last_name,
@@ -406,19 +406,19 @@ export default function AdminAuctions() {
     return auctions.filter((a) => tab.statuses.includes(a.status)).length;
   }
 
-  // ---- Handle ?create=motorhomeId URL parameter ----
-  // Aktivierung läuft über den zentralen Helper `activateAuctionForMotorhome`,
+  // ---- Handle ?create=kitchenId URL parameter ----
+  // Aktivierung läuft über den zentralen Helper `activateAuctionForKitchen`,
   // der MARKETING_CONFIG (3-Tage-Dauer, Random-Startbid 40-60 %, seller_initial_*)
   // anwendet. NICHT inline duplizieren – alle Aktivierungen müssen identisch sein.
   const createAuctionMutation = useMutation({
-    mutationFn: async (motorhomeId: string) => {
+    mutationFn: async (kitchenId: string) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session expired");
 
-      const result = await activateAuctionForMotorhome(motorhomeId);
+      const result = await activateAuctionForKitchen(kitchenId);
       return {
         id: result.auctionId,
-        motorhomeId,
+        kitchenId,
         alreadyExists: result.alreadyActive,
         recycled: result.recycled,
       };
@@ -436,8 +436,8 @@ export default function AdminAuctions() {
       setActiveTab("active");
 
       // Registrierungseinladung senden falls nötig
-      if (result.motorhomeId) {
-        sendRegistrationInviteIfNeeded(result.motorhomeId);
+      if (result.kitchenId) {
+        sendRegistrationInviteIfNeeded(result.kitchenId);
       }
     },
     onError: (error: any) => {
@@ -452,9 +452,9 @@ export default function AdminAuctions() {
   });
 
   useEffect(() => {
-    const createForMotorhome = searchParams.get("create");
-    if (createForMotorhome && !createAuctionMutation.isPending) {
-      createAuctionMutation.mutate(createForMotorhome);
+    const createForKitchen = searchParams.get("create");
+    if (createForKitchen && !createAuctionMutation.isPending) {
+      createAuctionMutation.mutate(createForKitchen);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -465,17 +465,17 @@ export default function AdminAuctions() {
     columns: [
       { key: "id", label: "ID" },
       {
-        key: "motorhome",
+        key: "kitchen",
         label: "Fahrzeug",
         format: (value: any) => value ? `${value.manufacturer} ${value.model} (${value.year})` : "",
       },
       {
-        key: "motorhome",
+        key: "kitchen",
         label: "Verkäufer",
         format: (value: any) => value?.seller ? `${value.seller.first_name} ${value.seller.last_name}` : "",
       },
       {
-        key: "motorhome",
+        key: "kitchen",
         label: "Verkäufer E-Mail",
         format: (value: any) => value?.seller?.email || "",
       },
@@ -569,16 +569,16 @@ export default function AdminAuctions() {
   // konsistent gesetzt werden – auch wenn diese Auktion vom auto-convert-
   // wizard angelegt wurde.
   const activateAuctionMutation = useMutation({
-    mutationFn: async (auction: { id: string; motorhome_id: string }) => {
-      await activateAuctionForMotorhome(auction.motorhome_id);
+    mutationFn: async (auction: { id: string; kitchen_id: string }) => {
+      await activateAuctionForKitchen(auction.kitchen_id);
       return auction;
     },
     onSuccess: (auction) => {
       toast.success("Auktion erfolgreich aktiviert");
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
 
-      if (auction.motorhome_id) {
-        sendRegistrationInviteIfNeeded(auction.motorhome_id);
+      if (auction.kitchen_id) {
+        sendRegistrationInviteIfNeeded(auction.kitchen_id);
       }
     },
     onError: (error: any) => {
@@ -592,11 +592,11 @@ export default function AdminAuctions() {
   });
 
   // ---- Relist Auction (ended/cancelled -> active) ----
-  // Manueller Admin-Relist eines beendeten Inserats. Nutzt activateAuctionForMotorhome
+  // Manueller Admin-Relist eines beendeten Inserats. Nutzt activateAuctionForKitchen
   // für 3-Tage-Dauer + Random-Startbid; auction_round wird vom DB-Trigger NICHT
   // hochgesetzt – wir machen das hier explizit, damit der Soft-Brake greift.
   const relistAuctionMutation = useMutation({
-    mutationFn: async (auction: { id: string; motorhome_id: string }) => {
+    mutationFn: async (auction: { id: string; kitchen_id: string }) => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) throw new Error("Session expired");
 
@@ -608,7 +608,7 @@ export default function AdminAuctions() {
         .single();
 
       // Hauptaktivierung über zentralen Helper (resettet inkl. bids/invitations/offers)
-      const result = await activateAuctionForMotorhome(auction.motorhome_id);
+      const result = await activateAuctionForKitchen(auction.kitchen_id);
 
       // auction_round + auto_relist nachziehen (Helper resettet auf 1 –
       // das ist für reine Recyles korrekt, beim manuellen Relist wollen
@@ -629,11 +629,11 @@ export default function AdminAuctions() {
     onSuccess: (result) => {
       toast.success("Auktion erfolgreich erneut gestartet");
       queryClient.invalidateQueries({ queryKey: ["adminAuctions"] });
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
 
       // Send relist notification to seller (NOT registration invite)
-      if (result.motorhome_id) {
-        sendRelistNotification(result.motorhome_id, result.endTime);
+      if (result.kitchen_id) {
+        sendRelistNotification(result.kitchen_id, result.endTime);
       }
     },
     onError: (error: any) => {
@@ -668,7 +668,7 @@ export default function AdminAuctions() {
 
   // ---- Render a single auction row ----
   const renderAuctionRow = (auction: any) => {
-    const firstPhotoObj = [...(auction.motorhome?.motorhome_photos || [])]
+    const firstPhotoObj = [...(auction.kitchen?.kitchen_photos || [])]
       .sort((a: any, b: any) => a.display_order - b.display_order)[0];
     const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
 
@@ -683,7 +683,7 @@ export default function AdminAuctions() {
             {firstPhoto ? (
               <img
                 src={firstPhoto}
-                alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                alt={`${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`}
                 loading="lazy"
                 className="w-full h-full object-cover"
               />
@@ -697,14 +697,14 @@ export default function AdminAuctions() {
         <TableCell>
           <div>
             <p className="font-medium">
-              {auction.motorhome?.manufacturer} {auction.motorhome?.model}
+              {auction.kitchen?.manufacturer} {auction.kitchen?.model}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-sm text-muted-foreground">{auction.motorhome?.year}</span>
-              {auction.motorhome?.sale_channel === 'instant_price' && (
+              <span className="text-sm text-muted-foreground">{auction.kitchen?.year}</span>
+              {auction.kitchen?.sale_channel === 'instant_price' && (
                 <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0">Festpreis</Badge>
               )}
-              {auction.motorhome?.sale_channel === 'auction' && auction.motorhome?.instant_price > 0 && (
+              {auction.kitchen?.sale_channel === 'auction' && auction.kitchen?.instant_price > 0 && (
                 <Badge className="bg-purple-500 text-white text-[10px] px-1.5 py-0">+Sofortkauf</Badge>
               )}
             </div>
@@ -713,11 +713,11 @@ export default function AdminAuctions() {
         <TableCell>
           <div>
             <p className="text-sm">
-              {auction.motorhome?.seller?.first_name}{" "}
-              {auction.motorhome?.seller?.last_name}
+              {auction.kitchen?.seller?.first_name}{" "}
+              {auction.kitchen?.seller?.last_name}
             </p>
             <p className="text-xs text-muted-foreground">
-              {auction.motorhome?.seller?.email}
+              {auction.kitchen?.seller?.email}
             </p>
           </div>
         </TableCell>
@@ -734,17 +734,17 @@ export default function AdminAuctions() {
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-1">
-            <TrendingUp className={`w-4 h-4 ${(auction as any).motorhome?.sale_channel === 'instant_price' ? 'text-yellow-500' : 'text-primary'}`} />
+            <TrendingUp className={`w-4 h-4 ${(auction as any).kitchen?.sale_channel === 'instant_price' ? 'text-yellow-500' : 'text-primary'}`} />
             <span className="font-medium">
-              €{Number((auction as any).motorhome?.sale_channel === 'instant_price'
-                ? ((auction as any).motorhome?.instant_price || 0)
+              €{Number((auction as any).kitchen?.sale_channel === 'instant_price'
+                ? ((auction as any).kitchen?.instant_price || 0)
                 : (auction.current_bid || auction.starting_bid)
               ).toLocaleString()}
             </span>
           </div>
         </TableCell>
         <TableCell>
-          {(auction as any).motorhome?.sale_channel === 'instant_price'
+          {(auction as any).kitchen?.sale_channel === 'instant_price'
             ? <Badge variant="outline" className="text-yellow-600 border-yellow-300">—</Badge>
             : <Badge variant="outline">{auction.bids?.[0]?.count || 0}</Badge>
           }
@@ -793,18 +793,18 @@ export default function AdminAuctions() {
                       <div className="text-sm text-muted-foreground">
                         Die Auktion wird für 7 Tage aktiviert und ist dann auf der Startseite sichtbar.
                         Händler können ab sofort Gebote abgeben.
-                        {!auction.motorhome?.postal_code && (
+                        {!auction.kitchen?.postal_code && (
                           <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
                             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                             <span>Achtung: Es wurde noch keine PLZ für den Fahrzeugstandort eingetragen. Bitte zuerst über &quot;Bearbeiten&quot; die PLZ eintragen.</span>
                           </span>
                         )}
-                        {auction.motorhome?.seller?.email && (
+                        {auction.kitchen?.seller?.email && (
                           <>
                             <br /><br />
                             <span className="flex items-center gap-1.5 text-blue-600">
                               <Mail className="w-3.5 h-3.5" />
-                              Ein Registrierungslink wird automatisch an <strong>{auction.motorhome.seller.email}</strong> gesendet.
+                              Ein Registrierungslink wird automatisch an <strong>{auction.kitchen.seller.email}</strong> gesendet.
                             </span>
                           </>
                         )}
@@ -816,7 +816,7 @@ export default function AdminAuctions() {
                     <AlertDialogAction
                       onClick={() => activateAuctionMutation.mutate({
                         id: auction.id,
-                        motorhome_id: auction.motorhome_id,
+                        kitchen_id: auction.kitchen_id,
                       })}
                       disabled={activateAuctionMutation.isPending}
                     >
@@ -843,7 +843,7 @@ export default function AdminAuctions() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Entwurf löschen?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Der Auktionsentwurf für "{auction.motorhome?.manufacturer} {auction.motorhome?.model}" wird endgültig gelöscht.
+                      Der Auktionsentwurf für "{auction.kitchen?.manufacturer} {auction.kitchen?.model}" wird endgültig gelöscht.
                       Dieser Vorgang kann nicht rückgängig gemacht werden.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -878,20 +878,20 @@ export default function AdminAuctions() {
                     <AlertDialogTitle>Erneut in die Auktion?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div className="text-sm text-muted-foreground">
-                        Das Fahrzeug &quot;{auction.motorhome?.manufacturer} {auction.motorhome?.model}&quot; wird erneut f\u00fcr 7 Tage in die Auktion aufgenommen.
+                        Das Fahrzeug &quot;{auction.kitchen?.manufacturer} {auction.kitchen?.model}&quot; wird erneut f\u00fcr 7 Tage in die Auktion aufgenommen.
                         Alle bisherigen Gebote werden zur\u00fcckgesetzt.
-                        {!auction.motorhome?.postal_code && (
+                        {!auction.kitchen?.postal_code && (
                           <span className="flex items-center gap-1.5 mt-2 text-amber-600 dark:text-amber-400">
                             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                             <span>Achtung: Es wurde noch keine PLZ f\u00fcr den Fahrzeugstandort eingetragen.</span>
                           </span>
                         )}
-                        {auction.motorhome?.seller?.email && (
+                        {auction.kitchen?.seller?.email && (
                           <>
                             <br /><br />
                             <span className="flex items-center gap-1.5 text-blue-600">
                               <Mail className="w-3.5 h-3.5" />
-                              Der Verk\u00e4ufer <strong>{auction.motorhome.seller.email}</strong> wird automatisch per E-Mail informiert.
+                              Der Verk\u00e4ufer <strong>{auction.kitchen.seller.email}</strong> wird automatisch per E-Mail informiert.
                             </span>
                           </>
                         )}
@@ -903,7 +903,7 @@ export default function AdminAuctions() {
                     <AlertDialogAction
                       onClick={() => relistAuctionMutation.mutate({
                         id: auction.id,
-                        motorhome_id: auction.motorhome_id,
+                        kitchen_id: auction.kitchen_id,
                       })}
                       disabled={relistAuctionMutation.isPending}
                       className="bg-green-600 hover:bg-green-700"
@@ -965,8 +965,8 @@ export default function AdminAuctions() {
     if (auctionSearch.trim()) {
       const q = auctionSearch.toLowerCase().trim();
       items = items.filter((a: any) => {
-        const vehicle = `${a.motorhome?.manufacturer || ""} ${a.motorhome?.model || ""}`.toLowerCase();
-        const seller = `${a.motorhome?.seller?.first_name || ""} ${a.motorhome?.seller?.last_name || ""} ${a.motorhome?.seller?.email || ""}`.toLowerCase();
+        const vehicle = `${a.kitchen?.manufacturer || ""} ${a.kitchen?.model || ""}`.toLowerCase();
+        const seller = `${a.kitchen?.seller?.first_name || ""} ${a.kitchen?.seller?.last_name || ""} ${a.kitchen?.seller?.email || ""}`.toLowerCase();
         return vehicle.includes(q) || seller.includes(q);
       });
     }

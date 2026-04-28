@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Euro, Clock, Shield, TrendingUp, Users, Award, HeartHandshake } from "lucide-react";
 import { Link } from "react-router-dom";
-const heroImage = "/images/hero-motorhome.webp";
+const heroImage = "/images/hero-kitchen.webp";
 import { generateServiceSchema } from "@/lib/seo";
 import { useSettings } from "@/contexts/SettingsContext";
 

@@ -88,9 +88,9 @@ export default function AdminUserDetail() {
 
       if (profileError) throw profileError;
 
-      // Fetch user's motorhomes
-      const { data: motorhomes, error: motorhomesError } = await supabase
-        .from("motorhomes")
+      // Fetch user's kitchens
+      const { data: kitchens, error: kitchensError } = await supabase
+        .from("kitchens")
         .select(`
           id,
           manufacturer,
@@ -99,18 +99,18 @@ export default function AdminUserDetail() {
           status,
           sale_channel,
           created_at,
-          motorhome_photos(url, card_url, medium_url, display_order)
+          kitchen_photos(url, card_url, medium_url, display_order)
         `)
         .eq("seller_id", id)
         .order("created_at", { ascending: false })
         .limit(5);
-      if (motorhomesError) throw motorhomesError;
+      if (kitchensError) throw kitchensError;
 
-      const { count: motorhomesTotal, error: motorhomesCountError } = await supabase
-        .from("motorhomes")
+      const { count: kitchensTotal, error: kitchensCountError } = await supabase
+        .from("kitchens")
         .select("*", { count: "exact", head: true })
         .eq("seller_id", id);
-      if (motorhomesCountError) throw motorhomesCountError;
+      if (kitchensCountError) throw kitchensCountError;
 
       // Fetch user's bids
       const { data: bids, error: bidsError } = await supabase
@@ -122,7 +122,7 @@ export default function AdminUserDetail() {
           auction:auctions(
             id,
             status,
-            motorhome:motorhomes(manufacturer, model, year)
+            kitchen:kitchens(manufacturer, model, year)
           )
         `)
         .eq("bidder_id", id)
@@ -161,9 +161,9 @@ export default function AdminUserDetail() {
       return {
         ...profile,
         roles: (Array.isArray(profile.user_roles) ? profile.user_roles : profile.user_roles ? [profile.user_roles] : []).map((r: any) => r.role),
-        motorhomes: motorhomes || [],
+        kitchens: kitchens || [],
         bids: bids || [],
-        motorhomesTotal: motorhomesTotal ?? 0,
+        kitchensTotal: kitchensTotal ?? 0,
         bidsTotal: bidsTotal ?? 0,
         favoritesCount: favoritesCount || 0,
         messagesCount: messagesCount || 0,
@@ -322,7 +322,7 @@ export default function AdminUserDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
               label="Inserate"
-              value={user.motorhomesTotal}
+              value={user.kitchensTotal}
               icon={<Car className="w-5 h-5" />}
             />
             <StatsCard
@@ -441,7 +441,7 @@ export default function AdminUserDetail() {
               {/* Tabs for Activity */}
               <Tabs defaultValue="listings" className="space-y-4">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="listings">Inserate ({user.motorhomesTotal})</TabsTrigger>
+                  <TabsTrigger value="listings">Inserate ({user.kitchensTotal})</TabsTrigger>
                   <TabsTrigger value="bids">Gebote ({user.bidsTotal})</TabsTrigger>
                 </TabsList>
 
@@ -452,7 +452,7 @@ export default function AdminUserDetail() {
                     actions={
                       id ? (
                         <Button variant="link" className="h-auto p-0 text-sm" asChild>
-                          <Link to={`/admin/motorhomes?seller=${id}`}>
+                          <Link to={`/admin/kitchens?seller=${id}`}>
                             Alle Inserate anzeigen
                             <ExternalLink className="w-3.5 h-3.5 ml-1 inline" />
                           </Link>
@@ -460,7 +460,7 @@ export default function AdminUserDetail() {
                       ) : null
                     }
                   >
-                    {Array.isArray(user.motorhomes) && user.motorhomes.length > 0 ? (
+                    {Array.isArray(user.kitchens) && user.kitchens.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -472,20 +472,20 @@ export default function AdminUserDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {user.motorhomes.map((motorhome: any) => {
-                            const safePhotos = Array.isArray(motorhome.motorhome_photos) ? motorhome.motorhome_photos : motorhome.motorhome_photos ? [motorhome.motorhome_photos] : [];
+                          {user.kitchens.map((kitchen: any) => {
+                            const safePhotos = Array.isArray(kitchen.kitchen_photos) ? kitchen.kitchen_photos : kitchen.kitchen_photos ? [kitchen.kitchen_photos] : [];
                             const mainPhoto = [...safePhotos].sort(
                               (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
                             )[0];
                             return (
-                              <TableRow key={motorhome.id}>
+                              <TableRow key={kitchen.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="w-12 h-9 rounded bg-muted overflow-hidden">
                                       {mainPhoto ? (
                                         <img
                                           src={mainPhoto.card_url || mainPhoto.url}
-                                          alt={`${motorhome.manufacturer} ${motorhome.model} Foto`}
+                                          alt={`${kitchen.manufacturer} ${kitchen.model} Foto`}
                                           loading="lazy"
                                           className="w-full h-full object-cover"
                                         />
@@ -497,26 +497,26 @@ export default function AdminUserDetail() {
                                     </div>
                                     <div>
                                       <p className="font-medium">
-                                        {motorhome.manufacturer} {motorhome.model}
+                                        {kitchen.manufacturer} {kitchen.model}
                                       </p>
-                                      <p className="text-xs text-muted-foreground">{motorhome.year}</p>
+                                      <p className="text-xs text-muted-foreground">{kitchen.year}</p>
                                     </div>
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">{motorhome.status}</Badge>
+                                  <Badge variant="outline">{kitchen.status}</Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {motorhome.sale_channel === "auction" ? "Auktion" : motorhome.sale_channel === "instant_price" ? "Nur Festpreis" : motorhome.sale_channel === "station" ? "Ankaufstation" : motorhome.sale_channel || "—"}
+                                  {kitchen.sale_channel === "auction" ? "Auktion" : kitchen.sale_channel === "instant_price" ? "Nur Festpreis" : kitchen.sale_channel === "station" ? "Ankaufstation" : kitchen.sale_channel || "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {format(new Date(motorhome.created_at), "dd.MM.yyyy")}
+                                  {format(new Date(kitchen.created_at), "dd.MM.yyyy")}
                                 </TableCell>
                                 <TableCell>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => navigate(`/admin/motorhomes/${motorhome.id}`)}
+                                    onClick={() => navigate(`/admin/kitchens/${kitchen.id}`)}
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                   </Button>
@@ -566,10 +566,10 @@ export default function AdminUserDetail() {
                             <TableRow key={bid.id}>
                               <TableCell>
                                 <p className="font-medium">
-                                  {bid.auction?.motorhome?.manufacturer} {bid.auction?.motorhome?.model}
+                                  {bid.auction?.kitchen?.manufacturer} {bid.auction?.kitchen?.model}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {bid.auction?.motorhome?.year}
+                                  {bid.auction?.kitchen?.year}
                                 </p>
                               </TableCell>
                               <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>

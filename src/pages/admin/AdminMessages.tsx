@@ -48,7 +48,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
-interface UserMotorhome {
+interface UserKitchen {
   id: string;
   manufacturer: string;
   model: string;
@@ -73,7 +73,7 @@ interface SupportMessage {
     last_name?: string;
     customer_number?: string | null;
   };
-  motorhomes?: UserMotorhome[];
+  kitchens?: UserKitchen[];
 }
 
 export default function AdminMessages() {
@@ -108,16 +108,16 @@ export default function AdminMessages() {
 
       type ProfileInfo = { first_name: string | null; last_name: string | null; email: string; phone: string | null; customer_number: string | null };
       let profilesMap: Record<string, ProfileInfo> = {};
-      let motorhomesMap: Record<string, UserMotorhome[]> = {};
+      let kitchensMap: Record<string, UserKitchen[]> = {};
       
       if (userIds.length > 0) {
-        const [profilesRes, motorhomesRes] = await Promise.all([
+        const [profilesRes, kitchensRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("id, first_name, last_name, email, phone, customer_number")
             .in("id", userIds),
           supabase
-            .from("motorhomes")
+            .from("kitchens")
             .select("id, seller_id, manufacturer, model, year, listing_number, status")
             .in("seller_id", userIds)
             .order("created_at", { ascending: false }),
@@ -130,20 +130,20 @@ export default function AdminMessages() {
           }, {} as Record<string, ProfileInfo>);
         }
 
-        if (motorhomesRes.data) {
-          motorhomesMap = motorhomesRes.data.reduce((acc, m) => {
+        if (kitchensRes.data) {
+          kitchensMap = kitchensRes.data.reduce((acc, m) => {
             const key = m.seller_id;
             if (!acc[key]) acc[key] = [];
             acc[key].push({ id: m.id, manufacturer: m.manufacturer, model: m.model, year: m.year, listing_number: m.listing_number, status: m.status });
             return acc;
-          }, {} as Record<string, UserMotorhome[]>);
+          }, {} as Record<string, UserKitchen[]>);
         }
       }
 
       const messagesWithUsers = messagesData?.map(msg => ({
         ...msg,
         user: msg.user_id ? profilesMap[msg.user_id] : undefined,
-        motorhomes: msg.user_id ? motorhomesMap[msg.user_id] ?? [] : [],
+        kitchens: msg.user_id ? kitchensMap[msg.user_id] ?? [] : [],
       })) || [];
 
       setMessages(messagesWithUsers as SupportMessage[]);
@@ -451,20 +451,20 @@ export default function AdminMessages() {
                       <p className="truncate">{msg.subject}</p>
                     </TableCell>
                     <TableCell>
-                      {msg.motorhomes && msg.motorhomes.length > 0 ? (
+                      {msg.kitchens && msg.kitchens.length > 0 ? (
                         <div className="space-y-1">
-                          {msg.motorhomes.slice(0, 2).map((mh) => (
+                          {msg.kitchens.slice(0, 2).map((mh) => (
                             <Link
                               key={mh.id}
-                              to={`/admin/motorhomes/${mh.id}`}
+                              to={`/admin/kitchens/${mh.id}`}
                               className="flex items-center gap-1 text-xs text-primary hover:underline"
                             >
                               <Truck className="w-3 h-3" />
                               <span className="truncate max-w-[140px]">{mh.manufacturer} {mh.model} ({mh.year})</span>
                             </Link>
                           ))}
-                          {msg.motorhomes.length > 2 && (
-                            <span className="text-xs text-muted-foreground">+{msg.motorhomes.length - 2} weitere</span>
+                          {msg.kitchens.length > 2 && (
+                            <span className="text-xs text-muted-foreground">+{msg.kitchens.length - 2} weitere</span>
                           )}
                         </div>
                       ) : (
@@ -638,18 +638,18 @@ export default function AdminMessages() {
               )}
             </div>
 
-            {/* User's motorhomes */}
-            {selectedMessage?.motorhomes && selectedMessage.motorhomes.length > 0 && (
+            {/* User's kitchens */}
+            {selectedMessage?.kitchens && selectedMessage.kitchens.length > 0 && (
               <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-2">
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  Inserate des Benutzers ({selectedMessage.motorhomes.length})
+                  Inserate des Benutzers ({selectedMessage.kitchens.length})
                 </p>
                 <div className="space-y-1.5">
-                  {selectedMessage.motorhomes.map((mh) => (
+                  {selectedMessage.kitchens.map((mh) => (
                     <Link
                       key={mh.id}
-                      to={`/admin/motorhomes/${mh.id}`}
+                      to={`/admin/kitchens/${mh.id}`}
                       className="flex items-center justify-between gap-2 p-2 rounded bg-white dark:bg-background border text-sm hover:bg-accent transition-colors"
                     >
                       <span className="font-medium">

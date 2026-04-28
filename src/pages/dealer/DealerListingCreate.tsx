@@ -106,7 +106,7 @@ export default function DealerListingCreate() {
         };
 
         const { data, error } = await supabase
-          .from("motorhomes")
+          .from("kitchens")
           .insert(insertData)
           .select("id")
           .single();
@@ -121,7 +121,7 @@ export default function DealerListingCreate() {
       // bleibt dynamic_pricing=false und der Soft-Brake greift nicht.
       const reserveNum = reservePrice ? Number(reservePrice) : null;
       const { error: auctionError } = await supabase.from("auctions").insert({
-        motorhome_id: result.id,
+        kitchen_id: result.id,
         starting_bid: 50, // wird beim Admin-Aktivieren via activate-auction.ts neu gewürfelt
         reserve_price: reserveNum,
         status: "draft",
@@ -131,8 +131,8 @@ export default function DealerListingCreate() {
       });
 
       if (auctionError) {
-        // Cleanup orphaned motorhome on auction creation failure
-        await supabase.from("motorhomes").delete().eq("id", result.id);
+        // Cleanup orphaned kitchen on auction creation failure
+        await supabase.from("kitchens").delete().eq("id", result.id);
         throw new Error("Auktion konnte nicht erstellt werden: " + auctionError.message);
       }
 

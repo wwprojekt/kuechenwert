@@ -22,7 +22,7 @@ import {
 const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
   { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "wizard sessions anfragen kontakt" },
-  { title: "Wohnmobile", path: "/admin/motorhomes", icon: Car, keywords: "fahrzeuge motorhome" },
+  { title: "Wohnmobile", path: "/admin/kitchens", icon: Car, keywords: "fahrzeuge kitchen" },
   { title: "Auktionen", path: "/admin/auctions", icon: Gavel, keywords: "gebote bieten versteigerung" },
   { title: "Nachauktions-Angebote", path: "/admin/offers", icon: Gavel, keywords: "kaufchance angebote" },
   { title: "E-Mail-Center", path: "/admin/email", icon: Mail, keywords: "nachrichten posteingang" },
@@ -55,15 +55,15 @@ function useQuickSearchData(query: string) {
     queryKey: ["adminQuickSearch", query],
     queryFn: async () => {
       if (!query || query.length < 2)
-        return { motorhomes: [], profiles: [], auctions: [], invoices: [], contracts: [] };
+        return { kitchens: [], profiles: [], auctions: [], invoices: [], contracts: [] };
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid)
-        return { motorhomes: [], profiles: [], auctions: [], invoices: [], contracts: [] };
+        return { kitchens: [], profiles: [], auctions: [], invoices: [], contracts: [] };
 
       const q = `%${query}%`;
       const [mhRes, profileRes, auctionRes, invoiceRes, contractRes] = await Promise.all([
         supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("id, manufacturer, model, year, status")
           .or(`manufacturer.ilike.${q},model.ilike.${q}`)
           .limit(5),
@@ -74,8 +74,8 @@ function useQuickSearchData(query: string) {
           .limit(5),
         supabase
           .from("auctions")
-          .select("id, status, motorhome:motorhomes!inner(manufacturer, model)")
-          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'motorhomes' })
+          .select("id, status, kitchen:kitchens!inner(manufacturer, model)")
+          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'kitchens' })
           .limit(5),
         supabase
           .from("invoices")
@@ -90,7 +90,7 @@ function useQuickSearchData(query: string) {
       ]);
 
       return {
-        motorhomes: mhRes.data || [],
+        kitchens: mhRes.data || [],
         profiles: profileRes.data || [],
         auctions: auctionRes.data || [],
         invoices: invoiceRes.data || [],
@@ -154,10 +154,10 @@ export function AdminCommandPalette() {
           <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
 
           {/* Daten-Ergebnisse */}
-          {searchData?.motorhomes && searchData.motorhomes.length > 0 && (
+          {searchData?.kitchens && searchData.kitchens.length > 0 && (
             <CommandGroup heading="Wohnmobile">
-              {searchData.motorhomes.map((m: any) => (
-                <CommandItem key={m.id} onSelect={() => go(`/admin/motorhomes/${m.id}`)}>
+              {searchData.kitchens.map((m: any) => (
+                <CommandItem key={m.id} onSelect={() => go(`/admin/kitchens/${m.id}`)}>
                   <Car className="mr-2 h-4 w-4 text-green-600" />
                   <span>{m.manufacturer} {m.model}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{m.year}</span>
@@ -185,7 +185,7 @@ export function AdminCommandPalette() {
               {searchData.auctions.map((a: any) => (
                 <CommandItem key={a.id} onSelect={() => go(`/admin/auctions/${a.id}`)}>
                   <Gavel className="mr-2 h-4 w-4 text-purple-600" />
-                  <span>{a.motorhome?.manufacturer} {a.motorhome?.model}</span>
+                  <span>{a.kitchen?.manufacturer} {a.kitchen?.model}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{a.status}</span>
                 </CommandItem>
               ))}
@@ -218,7 +218,7 @@ export function AdminCommandPalette() {
             </CommandGroup>
           )}
 
-          {(searchData?.motorhomes?.length || 0) > 0 ||
+          {(searchData?.kitchens?.length || 0) > 0 ||
           (searchData?.profiles?.length || 0) > 0 ||
           (searchData?.auctions?.length || 0) > 0 ||
           (searchData?.invoices?.length || 0) > 0 ||

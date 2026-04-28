@@ -20,30 +20,30 @@ export default function AdminAnalytics() {
       if (!sessionValid) return null;
 
       // Fetch data in parallel
-      const [usersRes, motorhomesRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
+      const [usersRes, kitchensRes, auctionsRes, bidsRes, appointmentsRes] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact" }),
-        supabase.from("motorhomes").select("*, seller:profiles!left(*)"),
+        supabase.from("kitchens").select("*, seller:profiles!left(*)"),
         // P4-Hardening: explizite Whitelist statt select("*"). Das Tabellen-
         // SELECT-Privileg auf authenticated wurde widerrufen — select("*")
         // würde jetzt mit "permission denied" failen. Wir lesen nur die
         // tatsächlich benötigten Felder (Stats, Revenue, Success-Rate).
         supabase
           .from("auctions")
-          .select("id, status, current_bid, motorhome_id, created_at, end_time"),
+          .select("id, status, current_bid, kitchen_id, created_at, end_time"),
         supabase.from("bids").select("*"),
         supabase.from("appointments").select("*"),
       ]);
 
       // Calculate stats
       const totalUsers = usersRes.count || 0;
-      const totalMotorhomes = motorhomesRes.count || 0;
+      const totalKitchens = kitchensRes.count || 0;
       const activeAuctions = auctionsRes.data?.filter(a => a.status === "active").length || 0;
       const totalBids = bidsRes.count || 0;
       
       // Revenue calculation – use auction current_bid (actual sale price), not reserve_price
       const soldAuctionsList = auctionsRes.data?.filter(a => a.status === "sold") || [];
       const totalRevenue = soldAuctionsList.reduce((sum, a) => {
-        const mh = motorhomesRes.data?.find(m => m.id === a.motorhome_id);
+        const mh = kitchensRes.data?.find(m => m.id === a.kitchen_id);
         return sum + Number(a.current_bid || mh?.instant_price || 0);
       }, 0);
       
@@ -81,19 +81,19 @@ export default function AdminAnalytics() {
           format(new Date(b.created_at), "yyyy-MM-dd") === dateStr
         ).length || 0;
         
-        const dayMotorhomes = motorhomesRes.data?.filter(m => 
+        const dayKitchens = kitchensRes.data?.filter(m => 
           format(new Date(m.created_at), "yyyy-MM-dd") === dateStr
         ).length || 0;
 
         dailyStats.push({
           date: format(date, "dd.MM", { locale: de }),
           bids: dayBids,
-          motorhomes: dayMotorhomes,
+          kitchens: dayKitchens,
         });
       }
 
-      // Motorhome by body type
-      const bodyTypeStats = motorhomesRes.data?.reduce((acc: any, m) => {
+      // Kitchen by body type
+      const bodyTypeStats = kitchensRes.data?.reduce((acc: any, m) => {
         const type = m.body_type || "Unbekannt";
         acc[type] = (acc[type] || 0) + 1;
         return acc;
@@ -105,7 +105,7 @@ export default function AdminAnalytics() {
       }));
 
       // Top sellers
-      const sellerStats = motorhomesRes.data?.reduce((acc: any, m) => {
+      const sellerStats = kitchensRes.data?.reduce((acc: any, m) => {
         if (m.seller) {
           const sellerId = m.seller_id;
           if (!acc[sellerId]) {
@@ -125,7 +125,7 @@ export default function AdminAnalytics() {
 
       return {
         totalUsers,
-        totalMotorhomes,
+        totalKitchens,
         activeAuctions,
         totalBids,
         totalRevenue,
@@ -369,7 +369,7 @@ export default function AdminAnalytics() {
                     <Tooltip />
                     <Legend />
                     <Line type="monotone" dataKey="bids" stroke="#195d3e" strokeWidth={2} name="Gebote" />
-                    <Line type="monotone" dataKey="motorhomes" stroke="#d2281c" strokeWidth={2} name="Inserate" />
+                    <Line type="monotone" dataKey="kitchens" stroke="#d2281c" strokeWidth={2} name="Inserate" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -447,7 +447,7 @@ export default function AdminAnalytics() {
                     <Car className="w-8 h-8 text-primary" />
                     <div>
                       <p className="text-sm text-muted-foreground">Wohnmobile gesamt</p>
-                      <p className="text-2xl font-bold">{platformStats?.totalMotorhomes}</p>
+                      <p className="text-2xl font-bold">{platformStats?.totalKitchens}</p>
                     </div>
                   </div>
                 </div>

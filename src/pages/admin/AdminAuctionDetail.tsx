@@ -1,6 +1,6 @@
 /**
  * Admin Auction Detail Page
- * Comprehensive view of auction with bids, motorhome info, and actions
+ * Comprehensive view of auction with bids, kitchen info, and actions
  */
 
 import { useState } from "react";
@@ -75,7 +75,7 @@ import { CreateSellerPenaltyDialog } from "@/components/admin/CreateSellerPenalt
 import { AdminManualSellDialog } from "@/components/admin/AdminManualSellDialog";
 import { AdminPriceHistoryCard } from "@/components/admin/AdminPriceHistoryCard";
 import { logger } from "@/lib/logger";
-import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { activateAuctionForKitchen } from "@/lib/activate-auction";
 
 export default function AdminAuctionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -98,9 +98,9 @@ export default function AdminAuctionDetail() {
         .from("auctions")
         .select(`
           ${AUCTION_PUBLIC_COLUMNS},
-          motorhome:motorhomes (
+          kitchen:kitchens (
             *,
-            motorhome_photos(id, url, card_url, medium_url, display_order),
+            kitchen_photos(id, url, card_url, medium_url, display_order),
             seller:profiles!left (
               id,
               first_name,
@@ -167,8 +167,8 @@ export default function AdminAuctionDetail() {
   // Marketing-Phase-Setup (DB-Trigger).
   const activateAuctionMutation = useMutation({
     mutationFn: async () => {
-      if (!auction?.motorhome_id) throw new Error("Motorhome ID missing on auction");
-      await activateAuctionForMotorhome(auction.motorhome_id);
+      if (!auction?.kitchen_id) throw new Error("Kitchen ID missing on auction");
+      await activateAuctionForKitchen(auction.kitchen_id);
     },
     onSuccess: () => {
       toast.success(isFestpreis ? "Inserat erfolgreich aktiviert" : "Auktion erfolgreich aktiviert");
@@ -375,7 +375,7 @@ export default function AdminAuctionDetail() {
   );
 
   const highestBid = sortedBids[0];
-  const isFestpreis = auction?.motorhome?.sale_channel === 'instant_price';
+  const isFestpreis = auction?.kitchen?.sale_channel === 'instant_price';
 
   // For Festpreis-listings use post_auction_offers for counts and display
   const offersArray = Array.isArray(postAuctionOffers) ? postAuctionOffers : [];
@@ -387,8 +387,8 @@ export default function AdminAuctionDetail() {
     ? new Set(offersArray.map((o: any) => o.buyer_id)).size
     : new Set(sortedBids.map((b: any) => b.bidder?.id)).size;
 
-  // Get main photo – ensure motorhome_photos is always an array
-  const rawPhotos = auction?.motorhome?.motorhome_photos;
+  // Get main photo – ensure kitchen_photos is always an array
+  const rawPhotos = auction?.kitchen?.kitchen_photos;
   const photosArray = Array.isArray(rawPhotos) ? rawPhotos : rawPhotos ? [rawPhotos] : [];
   const mainPhoto = [...photosArray].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
@@ -396,8 +396,8 @@ export default function AdminAuctionDetail() {
 
   return (
     <AdminDetailLayout
-      title={auction ? `${auction.motorhome?.manufacturer} ${auction.motorhome?.model}` : "Inserat"}
-      subtitle={auction?.motorhome ? `${auction.motorhome.year} • ${auction.motorhome.body_type}` : undefined}
+      title={auction ? `${auction.kitchen?.manufacturer} ${auction.kitchen?.model}` : "Inserat"}
+      subtitle={auction?.kitchen ? `${auction.kitchen.year} • ${auction.kitchen.body_type}` : undefined}
       status={auction ? getStatusBadge(auction.status) : undefined}
       backUrl="/admin/auctions"
       backLabel="Alle Inserate"
@@ -451,9 +451,9 @@ export default function AdminAuctionDetail() {
               </AlertDialog>
             )}
             {/* Admin-Verkauf: bei jeder Auktion erlaubt, deren Fahrzeug noch nicht verkauft ist.
-                Backend validiert nochmal gegen sold_to / motorhome.status — UI gibt nur die
+                Backend validiert nochmal gegen sold_to / kitchen.status — UI gibt nur die
                 bestmögliche Vorab-Filterung. */}
-            {auction.status !== "sold" && auction.motorhome?.status !== "sold" && (
+            {auction.status !== "sold" && auction.kitchen?.status !== "sold" && (
               <Button
                 size="sm"
                 variant="outline"
@@ -469,7 +469,7 @@ export default function AdminAuctionDetail() {
                 die DB-Writes committet haben, aber Folge-Edge-Functions (Rechnungs-PDF,
                 Vertrag, E-Mails) an transienten Gateway-Fehlern gescheitert sind. Die
                 Backend-Funktion ist idempotent — wiederholte Klicks sind gefahrlos. */}
-            {(auction.status === "sold" || auction.motorhome?.status === "sold") && (
+            {(auction.status === "sold" || auction.kitchen?.status === "sold") && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -541,14 +541,14 @@ export default function AdminAuctionDetail() {
       {auction && (
         <div className="space-y-6">
           {/* Instant-price-only notice */}
-          {auction.motorhome?.sale_channel === 'instant_price' && (
+          {auction.kitchen?.sale_channel === 'instant_price' && (
             <div className="p-3 rounded-lg border-2 border-yellow-400/50 bg-yellow-50 dark:bg-yellow-950/20 flex items-center gap-3">
               <span className="text-2xl">⚡</span>
               <div>
                 <p className="font-semibold text-yellow-800 dark:text-yellow-200">Nur Festpreis – kein Bieterverfahren</p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
                   Der Verkäufer möchte nur per Sofortkauf verkaufen.
-                  {auction.motorhome?.instant_price ? ` Festpreis: ${formatPrice(auction.motorhome.instant_price)}` : ' Kein Preis hinterlegt!'}
+                  {auction.kitchen?.instant_price ? ` Festpreis: ${formatPrice(auction.kitchen.instant_price)}` : ' Kein Preis hinterlegt!'}
                 </p>
               </div>
             </div>
@@ -557,8 +557,8 @@ export default function AdminAuctionDetail() {
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
-              label={auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}
-              value={auction.motorhome?.sale_channel === 'instant_price' ? formatPrice(auction.motorhome?.instant_price) : formatPrice(auction.current_bid || auction.starting_bid)}
+              label={auction.kitchen?.sale_channel === 'instant_price' ? 'Festpreis' : 'Aktuelles Gebot'}
+              value={auction.kitchen?.sale_channel === 'instant_price' ? formatPrice(auction.kitchen?.instant_price) : formatPrice(auction.current_bid || auction.starting_bid)}
               icon={<Euro className="w-5 h-5" />}
             />
             <StatsCard
@@ -615,14 +615,14 @@ export default function AdminAuctionDetail() {
                 )}
               </DetailSection>
 
-              {auction.motorhome?.id && (
+              {auction.kitchen?.id && (
                 <AdminPriceHistoryCard
-                  motorhomeId={auction.motorhome.id}
+                  kitchenId={auction.kitchen.id}
                   auctionId={auction.id}
                 />
               )}
 
-              {/* Motorhome Info */}
+              {/* Kitchen Info */}
               <DetailSection
                 title="Fahrzeugdaten"
                 icon={<Car className="w-5 h-5" />}
@@ -630,7 +630,7 @@ export default function AdminAuctionDetail() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate(`/admin/motorhomes/${auction.motorhome?.id}`)}
+                    onClick={() => navigate(`/admin/kitchens/${auction.kitchen?.id}`)}
                   >
                     Details anzeigen
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -643,7 +643,7 @@ export default function AdminAuctionDetail() {
                     {mainPhoto ? (
                       <img
                         src={mainPhoto.medium_url || mainPhoto.url}
-                        alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                        alt={`${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`}
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
@@ -654,23 +654,23 @@ export default function AdminAuctionDetail() {
                     )}
                   </div>
                   <InfoGrid columns={3}>
-                    <InfoItem label="Hersteller" value={auction.motorhome?.manufacturer} />
-                    <InfoItem label="Modell" value={auction.motorhome?.model} />
-                    <InfoItem label="Baujahr" value={auction.motorhome?.year} />
-                    <InfoItem label="Kilometerstand" value={auction.motorhome?.mileage ? `${auction.motorhome.mileage.toLocaleString()} km` : "—"} />
-                    <InfoItem label="Zustand" value={auction.motorhome?.condition} />
-                    <InfoItem label="Aufbauart" value={auction.motorhome?.body_type} />
-                    <InfoItem label="PLZ (Standort)" value={auction.motorhome?.postal_code || "—"} />
-                    <InfoItem label="Stadt" value={auction.motorhome?.city || "—"} />
+                    <InfoItem label="Hersteller" value={auction.kitchen?.manufacturer} />
+                    <InfoItem label="Modell" value={auction.kitchen?.model} />
+                    <InfoItem label="Baujahr" value={auction.kitchen?.year} />
+                    <InfoItem label="Kilometerstand" value={auction.kitchen?.mileage ? `${auction.kitchen.mileage.toLocaleString()} km` : "—"} />
+                    <InfoItem label="Zustand" value={auction.kitchen?.condition} />
+                    <InfoItem label="Aufbauart" value={auction.kitchen?.body_type} />
+                    <InfoItem label="PLZ (Standort)" value={auction.kitchen?.postal_code || "—"} />
+                    <InfoItem label="Stadt" value={auction.kitchen?.city || "—"} />
                     <InfoItem label="Verkaufsweg" value={
-                      auction.motorhome?.sale_channel === 'instant_price' ? '⚡ Nur Festpreis'
-                      : auction.motorhome?.sale_channel === 'auction' && auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0
+                      auction.kitchen?.sale_channel === 'instant_price' ? '⚡ Nur Festpreis'
+                      : auction.kitchen?.sale_channel === 'auction' && auction.kitchen?.instant_price && Number(auction.kitchen.instant_price) > 0
                         ? '🔨 Auktion + Sofortkauf'
-                      : auction.motorhome?.sale_channel === 'station' ? '📍 Ankaufstation'
+                      : auction.kitchen?.sale_channel === 'station' ? '📍 Ankaufstation'
                       : '🔨 Auktion'
                     } />
-                    {auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0 && (
-                      <InfoItem label={auction.motorhome?.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(auction.motorhome.instant_price)} icon={<Euro className="w-3 h-3" />} />
+                    {auction.kitchen?.instant_price && Number(auction.kitchen.instant_price) > 0 && (
+                      <InfoItem label={auction.kitchen?.sale_channel === 'instant_price' ? 'Festpreis' : 'Sofortpreis'} value={formatPrice(auction.kitchen.instant_price)} icon={<Euro className="w-3 h-3" />} />
                     )}
                   </InfoGrid>
                 </div>
@@ -883,28 +883,28 @@ export default function AdminAuctionDetail() {
                 <div className="space-y-4">
                   <div>
                     <p className="font-semibold text-lg">
-                      {auction.motorhome?.seller?.first_name} {auction.motorhome?.seller?.last_name}
+                      {auction.kitchen?.seller?.first_name} {auction.kitchen?.seller?.last_name}
                     </p>
-                    {auction.motorhome?.seller?.company_name && (
-                      <p className="text-sm text-muted-foreground">{auction.motorhome.seller.company_name}</p>
+                    {auction.kitchen?.seller?.company_name && (
+                      <p className="text-sm text-muted-foreground">{auction.kitchen.seller.company_name}</p>
                     )}
                   </div>
                   <Separator />
                   <div className="space-y-3">
                     <a
-                      href={`mailto:${auction.motorhome?.seller?.email}`}
+                      href={`mailto:${auction.kitchen?.seller?.email}`}
                       className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                     >
                       <Mail className="w-4 h-4" />
-                      {auction.motorhome?.seller?.email}
+                      {auction.kitchen?.seller?.email}
                     </a>
-                    {auction.motorhome?.seller?.phone && (
+                    {auction.kitchen?.seller?.phone && (
                       <a
-                        href={`tel:${auction.motorhome.seller.phone}`}
+                        href={`tel:${auction.kitchen.seller.phone}`}
                         className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                       >
                         <Phone className="w-4 h-4" />
-                        {auction.motorhome.seller.phone}
+                        {auction.kitchen.seller.phone}
                       </a>
                     )}
                   </div>
@@ -912,7 +912,7 @@ export default function AdminAuctionDetail() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => navigate(`/admin/users/${auction.motorhome?.seller?.id}`)}
+                      onClick={() => navigate(`/admin/users/${auction.kitchen?.seller?.id}`)}
                     >
                       Profil anzeigen
                     </Button>
@@ -1052,9 +1052,9 @@ export default function AdminAuctionDetail() {
         <CreateSellerPenaltyDialog
           open={showPenaltyDialog}
           onOpenChange={setShowPenaltyDialog}
-          preSelectedSellerId={auction.motorhome?.seller?.id}
+          preSelectedSellerId={auction.kitchen?.seller?.id}
           preSelectedAuctionId={auction.id}
-          preSelectedMotorhomeId={auction.motorhome?.id}
+          preSelectedKitchenId={auction.kitchen?.id}
         />
       )}
 
@@ -1064,9 +1064,9 @@ export default function AdminAuctionDetail() {
           open={showManualSellDialog}
           onOpenChange={setShowManualSellDialog}
           auctionId={auction.id}
-          motorhomeName={
-            auction.motorhome
-              ? `${auction.motorhome.manufacturer ?? ""} ${auction.motorhome.model ?? ""}`.trim()
+          kitchenName={
+            auction.kitchen
+              ? `${auction.kitchen.manufacturer ?? ""} ${auction.kitchen.model ?? ""}`.trim()
               : ""
           }
           currentBid={
@@ -1074,7 +1074,7 @@ export default function AdminAuctionDetail() {
               ? auction.current_bid
               : null
           }
-          sellerId={auction.motorhome?.seller?.id ?? null}
+          sellerId={auction.kitchen?.seller?.id ?? null}
           auctionStatus={auction.status as string}
           onSuccess={() => {
             logEvent({

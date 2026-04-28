@@ -31,7 +31,7 @@ interface Auction {
   reserve_price: number;
   buy_now_price: number | null;
   end_time: string;
-  motorhome: {
+  kitchen: {
     id: string;
     manufacturer: string;
     model: string;
@@ -41,7 +41,7 @@ interface Auction {
     city: string | null;
     sale_channel: string | null;
     instant_price: number | null;
-    motorhome_photos: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
+    kitchen_photos: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
   };
   bids: Array<{
     bidder_id: string;
@@ -85,7 +85,7 @@ const DealerAuctions = () => {
         .from('auctions')
         .select(`
           ${AUCTION_PUBLIC_COLUMNS},
-          motorhome:motorhomes(
+          kitchen:kitchens(
             id,
             manufacturer,
             model,
@@ -96,7 +96,7 @@ const DealerAuctions = () => {
             seller_id,
             sale_channel,
             instant_price,
-            motorhome_photos(url, card_url, medium_url, display_order)
+            kitchen_photos(url, card_url, medium_url, display_order)
           ),
           bids(bidder_id, amount)
         `)
@@ -110,7 +110,7 @@ const DealerAuctions = () => {
       }
       // Filter out dealer's own listings – they can't bid on their own vehicles
       const filtered = (data || []).filter(
-        (a: any) => !a.motorhome?.seller_id || a.motorhome.seller_id !== user?.id
+        (a: any) => !a.kitchen?.seller_id || a.kitchen.seller_id !== user?.id
       );
       logger.log(`Fetched ${data?.length || 0} active auctions, showing ${filtered.length} (excluding own)`);
       setAuctions(filtered);
@@ -154,8 +154,8 @@ const DealerAuctions = () => {
   };
 
   const filteredAuctions = auctions.filter(auction => {
-    if (!auction.motorhome || typeof auction.motorhome !== 'object' || Array.isArray(auction.motorhome)) return false;
-    const matchesSearch = `${auction.motorhome.manufacturer || ''} ${auction.motorhome.model || ''}`
+    if (!auction.kitchen || typeof auction.kitchen !== 'object' || Array.isArray(auction.kitchen)) return false;
+    const matchesSearch = `${auction.kitchen.manufacturer || ''} ${auction.kitchen.model || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
@@ -168,13 +168,13 @@ const DealerAuctions = () => {
       case 'ending_soon':
         return sorted.sort((a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime());
       case 'price_asc': {
-        const getP = (x: Auction) => x.motorhome?.sale_channel === 'instant_price'
-          ? Number(x.motorhome?.instant_price || 0) : (x.current_bid || x.starting_bid);
+        const getP = (x: Auction) => x.kitchen?.sale_channel === 'instant_price'
+          ? Number(x.kitchen?.instant_price || 0) : (x.current_bid || x.starting_bid);
         return sorted.sort((a, b) => getP(a) - getP(b));
       }
       case 'price_desc': {
-        const getP = (x: Auction) => x.motorhome?.sale_channel === 'instant_price'
-          ? Number(x.motorhome?.instant_price || 0) : (x.current_bid || x.starting_bid);
+        const getP = (x: Auction) => x.kitchen?.sale_channel === 'instant_price'
+          ? Number(x.kitchen?.instant_price || 0) : (x.current_bid || x.starting_bid);
         return sorted.sort((a, b) => getP(b) - getP(a));
       }
       case 'newest':
@@ -261,14 +261,14 @@ const DealerAuctions = () => {
       ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedAuctions.map((auction) => {
-            const safePhotos = Array.isArray(auction.motorhome.motorhome_photos) ? auction.motorhome.motorhome_photos : auction.motorhome.motorhome_photos ? [auction.motorhome.motorhome_photos] : [];
+            const safePhotos = Array.isArray(auction.kitchen.kitchen_photos) ? auction.kitchen.kitchen_photos : auction.kitchen.kitchen_photos ? [auction.kitchen.kitchen_photos] : [];
             const firstPhotoObj = safePhotos.sort((a, b) => a.display_order - b.display_order)[0];
             const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
             const userBid = getUserHighestBid(auction);
             const leading = isLeading(auction);
             const isExpired = new Date(auction.end_time).getTime() < Date.now();
-            const hasBuyNow = (auction.motorhome?.instant_price && Number(auction.motorhome.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0);
-            const isInstantOnly = auction.motorhome?.sale_channel === 'instant_price';
+            const hasBuyNow = (auction.kitchen?.instant_price && Number(auction.kitchen.instant_price) > 0) || (auction.buy_now_price && auction.buy_now_price > 0);
+            const isInstantOnly = auction.kitchen?.sale_channel === 'instant_price';
             const bidCount = Array.isArray(auction.bids) ? auction.bids.length : 0;
 
             return (
@@ -281,7 +281,7 @@ const DealerAuctions = () => {
                     {firstPhoto ? (
                       <img
                         src={firstPhoto}
-                        alt={`${auction.motorhome.manufacturer} ${auction.motorhome.model}`}
+                        alt={`${auction.kitchen.manufacturer} ${auction.kitchen.model}`}
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -323,7 +323,7 @@ const DealerAuctions = () => {
 
                     {/* Favorite Heart – rechts oben */}
                     <div className="absolute top-2 right-2">
-                      <FavoriteButton motorhomeId={auction.motorhome.id} />
+                      <FavoriteButton kitchenId={auction.kitchen.id} />
                     </div>
 
                     {/* Time Left */}
@@ -348,16 +348,16 @@ const DealerAuctions = () => {
                   <CardContent className="p-3 sm:p-4">
                     <div className="mb-2">
                       <h3 className="font-semibold text-sm line-clamp-1">
-                        {auction.motorhome.manufacturer} {auction.motorhome.model}
+                        {auction.kitchen.manufacturer} {auction.kitchen.model}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        {auction.motorhome.year} • {auction.motorhome.mileage.toLocaleString('de-DE')} km
+                        {auction.kitchen.year} • {auction.kitchen.mileage.toLocaleString('de-DE')} km
                       </p>
                     </div>
 
                     {/* Location & Distance */}
-                    {auction.motorhome.postal_code && (() => {
-                      const vehicleCoords = getPlzCoordinates(auction.motorhome.postal_code);
+                    {auction.kitchen.postal_code && (() => {
+                      const vehicleCoords = getPlzCoordinates(auction.kitchen.postal_code);
                       const dCoords = dealerPostalCode ? getPlzCoordinates(dealerPostalCode) : null;
                       const dist = vehicleCoords && dCoords
                         ? calculateDistance(
@@ -368,7 +368,7 @@ const DealerAuctions = () => {
                       return (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                           <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
-                          <span>{anonymizePostalCode(auction.motorhome.postal_code)}</span>
+                          <span>{anonymizePostalCode(auction.kitchen.postal_code)}</span>
                           {dist !== null && (
                             <span className="flex items-center gap-0.5 ml-auto text-primary">
                               <Navigation className="w-3 h-3" />
@@ -384,14 +384,14 @@ const DealerAuctions = () => {
                       <div>
                         <p className="text-xs text-muted-foreground">{isInstantOnly ? 'Festpreis' : 'Aktuelles Gebot'}</p>
                         <p className={`text-lg font-bold ${isInstantOnly ? 'text-yellow-600' : 'text-primary'}`}>
-                          €{(isInstantOnly ? (auction.motorhome?.instant_price || 0) : (auction.current_bid || auction.starting_bid)).toLocaleString('de-DE')}
+                          €{(isInstantOnly ? (auction.kitchen?.instant_price || 0) : (auction.current_bid || auction.starting_bid)).toLocaleString('de-DE')}
                         </p>
                       </div>
                       {hasBuyNow && !isInstantOnly && (
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Sofort</p>
                           <p className="text-sm font-semibold text-emerald-600">
-                            €{(auction.motorhome?.instant_price || auction.buy_now_price || 0).toLocaleString('de-DE')}
+                            €{(auction.kitchen?.instant_price || auction.buy_now_price || 0).toLocaleString('de-DE')}
                           </p>
                         </div>
                       )}

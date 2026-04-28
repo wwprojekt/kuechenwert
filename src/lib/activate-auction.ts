@@ -2,8 +2,8 @@
  * Zentrale Aktivierungs-Logik für Auktionen
  *
  * Single source of truth für ALLE Admin-/System-getriebenen Aktivierungs-
- * pfade (AdminAuctions, AdminAuctionDetail, AdminMotorhomes,
- * AdminMotorhomeDetail). Stellt sicher, dass:
+ * pfade (AdminAuctions, AdminAuctionDetail, AdminKitchens,
+ * AdminKitchenDetail). Stellt sicher, dass:
  *
  *   1. `starting_bid` zufällig 40-60 % vom Reserve gewählt wird
  *      (compute_random_starting_bid RPC), damit Käufer nicht das Reserve
@@ -67,31 +67,31 @@ async function computeStartingBid(reservePrice: number): Promise<number> {
  *   - Wohnmobil keinen Reservepreis hat (Code: RESERVE_MISSING)
  *   - DB-Operation fehlschlägt
  */
-export async function activateAuctionForMotorhome(
-  motorhomeId: string,
+export async function activateAuctionForKitchen(
+  kitchenId: string,
 ): Promise<ActivateAuctionResult> {
   // 1) Wohnmobil laden + validieren
-  const { data: motorhome, error: mhErr } = await supabase
-    .from("motorhomes")
+  const { data: kitchen, error: mhErr } = await supabase
+    .from("kitchens")
     .select("reserve_price, postal_code, sale_channel, instant_price")
-    .eq("id", motorhomeId)
+    .eq("id", kitchenId)
     .single();
 
-  if (mhErr || !motorhome) {
+  if (mhErr || !kitchen) {
     throw new Error(mhErr?.message ?? "Wohnmobil nicht gefunden");
   }
 
-  if (!motorhome.postal_code) {
+  if (!kitchen.postal_code) {
     const err = new Error("PLZ_MISSING");
     (err as Error & { code?: string }).code = "PLZ_MISSING";
     throw err;
   }
 
-  const isInstantOnly = motorhome.sale_channel === "instant_price";
+  const isInstantOnly = kitchen.sale_channel === "instant_price";
 
   // Reserve = instant_price bei Festpreis, sonst reserve_price
   const reservePrice = Number(
-    isInstantOnly ? motorhome.instant_price : motorhome.reserve_price,
+    isInstantOnly ? kitchen.instant_price : kitchen.reserve_price,
   );
 
   if (!reservePrice || reservePrice <= 0) {
@@ -111,7 +111,7 @@ export async function activateAuctionForMotorhome(
   const now = new Date();
   const endTime = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-  // 4) Bestehende Auktion prüfen (1:1 zu motorhomes).
+  // 4) Bestehende Auktion prüfen (1:1 zu kitchens).
   // P4-Hardening: seller_initial_* sind via column-REVOKE für authenticated
   // geblockt — wir holen sie über die SECURITY DEFINER RPC
   // `get_auction_marketing_anchors` (Owner+Admin sehen sie). Für die Status-
@@ -119,7 +119,7 @@ export async function activateAuctionForMotorhome(
   const { data: existing } = await supabase
     .from("auctions")
     .select("id, status")
-    .eq("motorhome_id", motorhomeId)
+    .eq("kitchen_id", kitchenId)
     .maybeSingle();
 
   let existingSellerInitialReserve: number | null = null;
@@ -127,7 +127,7 @@ export async function activateAuctionForMotorhome(
   if (existing) {
     const { data: anchors } = await supabase.rpc(
       "get_auction_marketing_anchors",
-      { p_motorhome_id: motorhomeId },
+      { p_kitchen_id: kitchenId },
     );
     const anchorRow = Array.isArray(anchors) ? anchors[0] : null;
     if (anchorRow) {
@@ -216,11 +216,11 @@ export async function activateAuctionForMotorhome(
       .eq("id", existing.id);
     if (updateErr) throw updateErr;
 
-    // Motorhome-Status mitziehen
+    // Kitchen-Status mitziehen
     const { error: mhStatusErr } = await supabase
-      .from("motorhomes")
+      .from("kitchens")
       .update({ status: "active" })
-      .eq("id", motorhomeId);
+      .eq("id", kitchenId);
     if (mhStatusErr) throw mhStatusErr;
 
     return {
@@ -235,7 +235,7 @@ export async function activateAuctionForMotorhome(
 
   // ─── Pfad B: Neue Auktion ─────────────────────────────────────────────
   const insertData: Record<string, unknown> = {
-    motorhome_id: motorhomeId,
+    kitchen_id: kitchenId,
     status: "active",
     starting_bid: startingBid,
     reserve_price: reservePrice,
@@ -256,11 +256,11 @@ export async function activateAuctionForMotorhome(
     .single();
   if (insertErr || !created) throw insertErr ?? new Error("Insert failed");
 
-  // Motorhome-Status mitziehen
+  // Kitchen-Status mitziehen
   const { error: mhStatusErr } = await supabase
-    .from("motorhomes")
+    .from("kitchens")
     .update({ status: "active" })
-    .eq("id", motorhomeId);
+    .eq("id", kitchenId);
   if (mhStatusErr) throw mhStatusErr;
 
   return {

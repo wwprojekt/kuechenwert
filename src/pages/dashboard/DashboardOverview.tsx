@@ -34,7 +34,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useEffect, useRef } from "react";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
-import { NewOfferAlert, type MotorhomeWithOffers } from "@/components/dashboard/NewOfferAlert";
+import { NewOfferAlert, type KitchenWithOffers } from "@/components/dashboard/NewOfferAlert";
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -104,19 +104,19 @@ export default function DashboardOverview() {
     staleTime: 0,
   });
 
-  // ── Seller: Fetch motorhome + auction data for timeline ──────
+  // ── Seller: Fetch kitchen + auction data for timeline ──────
   const { data: sellerData } = useQuery({
     queryKey: ["sellerTimeline", user?.id],
     queryFn: async () => {
       if (!user) return null;
 
-      // Get all motorhomes with their auctions and photos.
+      // Get all kitchens with their auctions and photos.
       // P4-Hardening: explizite Auktions-Spalten statt auction:auctions(*) —
       // das Tabellen-SELECT auf authenticated wurde widerrufen, * würde failen.
       // Wir whitelisten exakt die Felder die der Timeline-Renderer + die
       // Kaufchance-Anzeige unten brauchen (KEIN seller_initial_*).
-      const { data: motorhomes, error } = await supabase
-        .from("motorhomes")
+      const { data: kitchens, error } = await supabase
+        .from("kitchens")
         .select(
           `
           *,
@@ -128,7 +128,7 @@ export default function DashboardOverview() {
             last_price_reduction_at, soft_close_extension_minutes,
             created_at, updated_at
           ),
-          photos:motorhome_photos(url, card_url, medium_url, display_order)
+          photos:kitchen_photos(url, card_url, medium_url, display_order)
         `
         )
         .eq("seller_id", user.id)
@@ -140,7 +140,7 @@ export default function DashboardOverview() {
       // (auto_relist, dynamic_pricing, marketing_phase_max_until,
       // agb_version_at_start) sind seit column-REVOKE NICHT mehr direkt
       // selectable für authenticated/anon. Bulk-RPC nachladen + mergen.
-      const allAuctionIdsForOwnerMeta = (motorhomes || [])
+      const allAuctionIdsForOwnerMeta = (kitchens || [])
         .map((mh) => {
           const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           return a?.id as string | undefined;
@@ -169,7 +169,7 @@ export default function DashboardOverview() {
             marketing_phase_max_until: row.marketing_phase_max_until,
           });
         }
-        for (const mh of motorhomes || []) {
+        for (const mh of kitchens || []) {
           const a = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           if (a?.id && metaByAuction.has(a.id)) {
             const meta = metaByAuction.get(a.id)!;
@@ -181,14 +181,14 @@ export default function DashboardOverview() {
       }
 
       // Batch-fetch bids, addenda, and offers for all auctions (avoids N+1 queries)
-      const auctionIds = (motorhomes || [])
+      const auctionIds = (kitchens || [])
         .map((mh) => {
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           return auction?.id;
         })
         .filter(Boolean) as string[];
 
-      const kaufchanceAuctionIds = (motorhomes || [])
+      const kaufchanceAuctionIds = (kitchens || [])
         .map((mh) => {
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           if (auction?.status === "kaufchance") return auction.id;
@@ -238,7 +238,7 @@ export default function DashboardOverview() {
         return acc;
       }, {});
 
-      const enriched = (motorhomes || []).map((mh) => {
+      const enriched = (kitchens || []).map((mh) => {
         const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
         let bidStats = null;
         let addendaCount = 0;
@@ -386,27 +386,27 @@ export default function DashboardOverview() {
           .select("*", { count: "exact" })
           .eq("bidder_id", user.id),
         supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("*", { count: "exact" })
           .eq("sold_to", user.id),
         supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("id, instant_price")
           .eq("sold_to", user.id),
       ]);
 
       // Fetch actual purchase prices from auctions (current_bid)
-      const motorhomeIds = inventoryRes.data?.map(m => m.id) || [];
+      const kitchenIds = inventoryRes.data?.map(m => m.id) || [];
       let auctionPriceMap: Record<string, number> = {};
-      if (motorhomeIds.length > 0) {
+      if (kitchenIds.length > 0) {
         const { data: auctionsData } = await supabase
           .from('auctions')
-          .select('motorhome_id, current_bid')
-          .in('motorhome_id', motorhomeIds)
+          .select('kitchen_id, current_bid')
+          .in('kitchen_id', kitchenIds)
           .in('status', ['sold', 'ended']);
         auctionPriceMap = (auctionsData || []).reduce((acc: Record<string, number>, a: any) => {
-          if (!acc[a.motorhome_id] || Number(a.current_bid) > acc[a.motorhome_id]) {
-            acc[a.motorhome_id] = Number(a.current_bid) || 0;
+          if (!acc[a.kitchen_id] || Number(a.current_bid) > acc[a.kitchen_id]) {
+            acc[a.kitchen_id] = Number(a.current_bid) || 0;
           }
           return acc;
         }, {});
@@ -457,9 +457,9 @@ export default function DashboardOverview() {
           `
           id, status, start_time, end_time, current_bid, starting_bid,
           reserve_price, kaufchance_expires_at, created_at,
-          motorhome:motorhomes!inner (
+          kitchen:kitchens!inner (
             id, manufacturer, model, year, sale_channel, instant_price,
-            photos:motorhome_photos (url, card_url, medium_url, display_order)
+            photos:kitchen_photos (url, card_url, medium_url, display_order)
           )
         `
         )
@@ -471,12 +471,12 @@ export default function DashboardOverview() {
     enabled: !!user && isDealer,
   });
 
-  // ── Helper: Determine timeline step for a motorhome ──────────
+  // ── Helper: Determine timeline step for a kitchen ──────────
   const getTimelineStep = (mh: any) => {
     const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
 
     if (!auction) {
-      // No auction yet – motorhome status is 'available' (default), 'pending', or 'sold'
+      // No auction yet – kitchen status is 'available' (default), 'pending', or 'sold'
       if (mh.status === "available" || !mh.status) {
         return {
           step: 1,
@@ -599,7 +599,7 @@ export default function DashboardOverview() {
   // SELLER DASHBOARD
   // ═══════════════════════════════════════════════════════════════
   if (!isDealer) {
-    const motorhomes = sellerData || [];
+    const kitchens = sellerData || [];
     const displayName =
       profile?.first_name || profile?.company_name || "Verkäufer";
 
@@ -640,12 +640,12 @@ export default function DashboardOverview() {
             Zeigt nur dann etwas an, wenn pending Offers über aktuellem
             Höchstgebot/Festpreis existieren — sonst null. Enthält Auto-Popup
             beim ersten Sehen + permanenten Banner + Annahme-Bestätigung. */}
-        {motorhomes.length > 0 && (
-          <NewOfferAlert motorhomes={motorhomes as MotorhomeWithOffers[]} />
+        {kitchens.length > 0 && (
+          <NewOfferAlert kitchens={kitchens as KitchenWithOffers[]} />
         )}
 
-        {/* No motorhomes: Check for pending wizard session or show empty state */}
-        {motorhomes.length === 0 && pendingWizardSession && (
+        {/* No kitchens: Check for pending wizard session or show empty state */}
+        {kitchens.length === 0 && pendingWizardSession && (
           <Card className="border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
             <CardContent className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -679,7 +679,7 @@ export default function DashboardOverview() {
           </Card>
         )}
 
-        {motorhomes.length === 0 && !pendingWizardSession && (
+        {kitchens.length === 0 && !pendingWizardSession && (
           <Card className="border-2 border-dashed border-primary/30">
             <CardContent className="p-8 sm:p-12 text-center">
               <div className="relative mx-auto w-20 h-20 mb-6">
@@ -708,8 +708,8 @@ export default function DashboardOverview() {
           </Card>
         )}
 
-        {/* Motorhome cards with timeline */}
-        {motorhomes.map((mh: any) => {
+        {/* Kitchen cards with timeline */}
+        {kitchens.map((mh: any) => {
           const timeline = getTimelineStep(mh);
           const auction = Array.isArray(mh.auction) ? mh.auction[0] : mh.auction;
           const firstPhotoObj = mh.photos
@@ -1087,7 +1087,7 @@ export default function DashboardOverview() {
         })}
 
         {/* Helpful info card */}
-        {motorhomes.length > 0 && (
+        {kitchens.length > 0 && (
           <Card className="border border-border/50 bg-muted/20">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-start gap-3">
@@ -1334,7 +1334,7 @@ export default function DashboardOverview() {
           ) : (
             <div className="space-y-3">
               {dealerActivity.map((auction: any, index: number) => {
-                const firstPhotoObj = auction.motorhome?.photos
+                const firstPhotoObj = auction.kitchen?.photos
                   ?.sort(
                     (a: any, b: any) => a.display_order - b.display_order
                   )[0];
@@ -1352,7 +1352,7 @@ export default function DashboardOverview() {
                         {firstPhoto ? (
                           <img
                             src={firstPhoto}
-                            alt={`${auction.motorhome?.manufacturer} ${auction.motorhome?.model}`}
+                            alt={`${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`}
                             loading="lazy"
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                           />
@@ -1364,12 +1364,12 @@ export default function DashboardOverview() {
                       </div>
                       <div>
                         <p className="font-semibold text-foreground group-hover:text-primary transition-colors text-sm sm:text-base">
-                          {auction.motorhome?.manufacturer}{" "}
-                          {auction.motorhome?.model}
+                          {auction.kitchen?.manufacturer}{" "}
+                          {auction.kitchen?.model}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-0.5">
                           <Clock className="w-3 h-3" />
-                          Baujahr {auction.motorhome?.year}
+                          Baujahr {auction.kitchen?.year}
                         </p>
                       </div>
                     </div>
@@ -1401,11 +1401,11 @@ export default function DashboardOverview() {
                             ? "Abgebrochen"
                             : auction.status}
                         </Badge>
-                        <p className={`text-sm font-semibold mt-1 sm:mt-2 ${(auction.motorhome as any)?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-foreground'}`}>
-                          {(auction.motorhome as any)?.sale_channel === 'instant_price' ? 'Festpreis ' : ''}€
+                        <p className={`text-sm font-semibold mt-1 sm:mt-2 ${(auction.kitchen as any)?.sale_channel === 'instant_price' ? 'text-yellow-600' : 'text-foreground'}`}>
+                          {(auction.kitchen as any)?.sale_channel === 'instant_price' ? 'Festpreis ' : ''}€
                           {Number(
-                            (auction.motorhome as any)?.sale_channel === 'instant_price'
-                              ? (auction.motorhome as any)?.instant_price || 0
+                            (auction.kitchen as any)?.sale_channel === 'instant_price'
+                              ? (auction.kitchen as any)?.instant_price || 0
                               : auction.current_bid || auction.starting_bid
                           ).toLocaleString("de-DE")}
                         </p>

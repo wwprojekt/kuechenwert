@@ -43,7 +43,7 @@ interface SellerInfo {
   phone: string | null;
 }
 
-interface MotorhomeInfo {
+interface KitchenInfo {
   id: string;
   manufacturer: string;
   model: string;
@@ -55,7 +55,7 @@ interface SendOwnerEmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   seller: SellerInfo;
-  motorhome: MotorhomeInfo;
+  kitchen: KitchenInfo;
 }
 
 interface EmailTemplate {
@@ -71,7 +71,7 @@ export function SendOwnerEmailDialog({
   open,
   onOpenChange,
   seller,
-  motorhome,
+  kitchen,
 }: SendOwnerEmailDialogProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
@@ -80,7 +80,7 @@ export function SendOwnerEmailDialog({
   const [isSent, setIsSent] = useState(false);
 
   const sellerName = [seller.first_name, seller.last_name].filter(Boolean).join(" ") || "Kunde";
-  const vehicleLabel = `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})`;
+  const vehicleLabel = `${kitchen.manufacturer} ${kitchen.model} (${kitchen.year})`;
 
   // E-Mail-Vorlagen
   const templates: EmailTemplate[] = [
@@ -258,9 +258,9 @@ export function SendOwnerEmailDialog({
               <Badge variant="secondary" className="font-medium">
                 {vehicleLabel}
               </Badge>
-              {motorhome.listing_number && (
+              {kitchen.listing_number && (
                 <Badge variant="outline" className="text-xs">
-                  {motorhome.listing_number}
+                  {kitchen.listing_number}
                 </Badge>
               )}
             </div>

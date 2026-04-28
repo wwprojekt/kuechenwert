@@ -5,7 +5,7 @@
  * for private buckets that require signed URLs instead of public URLs.
  * 
  * Private buckets: dealer-documents, invoices, purchase-contracts
- * Public buckets: motorhome-photos, branding
+ * Public buckets: kitchen-photos, branding
  */
 
 import { supabase } from "@/integrations/supabase/client";

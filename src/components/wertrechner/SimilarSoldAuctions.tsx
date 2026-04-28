@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface SoldAuctionCard {
   id: string;
-  motorhome_id: string;
+  kitchen_id: string;
   current_bid: number;
   end_time: string;
   manufacturer: string | null;
@@ -52,10 +52,10 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
         const yearFrom = year - 6;
         const yearTo = year + 6;
 
-        // Step 1: Motorhomes nach body_type + year-range filtern (eigenstaendig,
+        // Step 1: Kitchens nach body_type + year-range filtern (eigenstaendig,
         // damit wir keinen nested-column-filter auf auctions brauchen).
         const mhRes = await supabase
-          .from("motorhomes")
+          .from("kitchens")
           .select("id, manufacturer, model, year, mileage, body_type")
           .eq("body_type", dbBodyType)
           .gte("year", yearFrom)
@@ -88,7 +88,7 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
         const { data: auctionData } = await supabase
           .from("auctions")
           .select(AUCTION_PUBLIC_COLUMNS)
-          .in("motorhome_id", mhIds as never)
+          .in("kitchen_id", mhIds as never)
           .eq("status", "sold" as never)
           .gt("current_bid", 1000)
           .order("end_time", { ascending: false })
@@ -96,35 +96,35 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
 
         const auctionsArr = (auctionData ?? []) as unknown as Array<{
           id: string;
-          motorhome_id: string;
+          kitchen_id: string;
           current_bid: string | number | null;
           end_time: string;
         }>;
 
-        const motorhomeIds = auctionsArr.map((a) => a.motorhome_id);
+        const kitchenIds = auctionsArr.map((a) => a.kitchen_id);
         const photoMap: Record<string, string> = {};
-        if (motorhomeIds.length > 0) {
+        if (kitchenIds.length > 0) {
           const { data: photos } = await supabase
-            .from("motorhome_photos")
-            .select("motorhome_id, card_url, url, is_primary, display_order")
-            .in("motorhome_id", motorhomeIds as never)
+            .from("kitchen_photos")
+            .select("kitchen_id, card_url, url, is_primary, display_order")
+            .in("kitchen_id", kitchenIds as never)
             .order("is_primary", { ascending: false })
             .order("display_order", { ascending: true });
 
           if (photos && Array.isArray(photos)) {
-            for (const p of photos as Array<{ motorhome_id: string; card_url: string | null; url: string | null }>) {
-              if (photoMap[p.motorhome_id]) continue;
+            for (const p of photos as Array<{ kitchen_id: string; card_url: string | null; url: string | null }>) {
+              if (photoMap[p.kitchen_id]) continue;
               const src = p.card_url ?? p.url;
-              if (src) photoMap[p.motorhome_id] = proxiedImageUrl(src, { width: 480, quality: 70 });
+              if (src) photoMap[p.kitchen_id] = proxiedImageUrl(src, { width: 480, quality: 70 });
             }
           }
         }
 
         const mapped: SoldAuctionCard[] = auctionsArr.slice(0, maxItems).map((a) => {
-          const mh = mhById.get(a.motorhome_id);
+          const mh = mhById.get(a.kitchen_id);
           return {
             id: a.id,
-            motorhome_id: a.motorhome_id,
+            kitchen_id: a.kitchen_id,
             current_bid: Number(a.current_bid ?? 0),
             end_time: a.end_time,
             manufacturer: mh?.manufacturer ?? null,
@@ -132,7 +132,7 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
             year: mh?.year ?? null,
             mileage: mh?.mileage ?? null,
             body_type: mh?.body_type ?? null,
-            photo_url: photoMap[a.motorhome_id] ?? null,
+            photo_url: photoMap[a.kitchen_id] ?? null,
           };
         });
 
@@ -172,7 +172,7 @@ export const SimilarSoldAuctions = ({ vehicleType, bodyType, year, maxItems = 4 
         {items.map((a) => (
           <Link
             key={a.id}
-            to={`/fahrzeug/${a.motorhome_id}`}
+            to={`/fahrzeug/${a.kitchen_id}`}
             className="group rounded-xl border border-border/60 bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
           >
             {a.photo_url ? (

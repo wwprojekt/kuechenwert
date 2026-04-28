@@ -81,7 +81,7 @@ interface CreateSellerPenaltyDialogProps {
   onOpenChange: (open: boolean) => void;
   preSelectedSellerId?: string;
   preSelectedAuctionId?: string;
-  preSelectedMotorhomeId?: string;
+  preSelectedKitchenId?: string;
 }
 
 export function CreateSellerPenaltyDialog({
@@ -89,7 +89,7 @@ export function CreateSellerPenaltyDialog({
   onOpenChange,
   preSelectedSellerId,
   preSelectedAuctionId,
-  preSelectedMotorhomeId,
+  preSelectedKitchenId,
 }: CreateSellerPenaltyDialogProps) {
   const queryClient = useQueryClient();
 
@@ -159,16 +159,16 @@ export function CreateSellerPenaltyDialog({
   });
 
   // Fetch auctions for selected seller using !inner join so PostgREST
-  // filters parent rows (auctions) by the embedded motorhome's seller_id
+  // filters parent rows (auctions) by the embedded kitchen's seller_id
   const { data: sellerAuctions } = useQuery({
     queryKey: ["admin-seller-auctions", sellerId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auctions")
         .select(
-          "id, status, motorhome:motorhomes!inner(id, manufacturer, model, year, seller_id)"
+          "id, status, kitchen:kitchens!inner(id, manufacturer, model, year, seller_id)"
         )
-        .eq("motorhome.seller_id", sellerId)
+        .eq("kitchen.seller_id", sellerId)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -213,13 +213,13 @@ export function CreateSellerPenaltyDialog({
       const effectiveAuctionId =
         auctionId && auctionId !== "none" ? auctionId : null;
 
-      let effectiveMotorhomeId = preSelectedMotorhomeId || null;
-      if (!effectiveMotorhomeId && effectiveAuctionId) {
+      let effectiveKitchenId = preSelectedKitchenId || null;
+      if (!effectiveKitchenId && effectiveAuctionId) {
         const selected = sellerAuctions?.find(
           (a: any) => a.id === effectiveAuctionId
         );
-        if (selected?.motorhome?.id) {
-          effectiveMotorhomeId = selected.motorhome.id;
+        if (selected?.kitchen?.id) {
+          effectiveKitchenId = selected.kitchen.id;
         }
       }
 
@@ -233,7 +233,7 @@ export function CreateSellerPenaltyDialog({
             sellerId,
             reason,
             auctionId: effectiveAuctionId,
-            motorhomeId: effectiveMotorhomeId,
+            kitchenId: effectiveKitchenId,
             notes: notes || null,
             sendEmail: sendImmediately,
           },
@@ -430,10 +430,10 @@ export function CreateSellerPenaltyDialog({
                       AUCTION_STATUS_LABELS[auction.status] || auction.status;
                     return (
                       <SelectItem key={auction.id} value={auction.id}>
-                        {auction.motorhome?.manufacturer}{" "}
-                        {auction.motorhome?.model}{" "}
-                        {auction.motorhome?.year
-                          ? `(${auction.motorhome.year})`
+                        {auction.kitchen?.manufacturer}{" "}
+                        {auction.kitchen?.model}{" "}
+                        {auction.kitchen?.year
+                          ? `(${auction.kitchen.year})`
                           : ""}{" "}
                         – {statusLabel}
                       </SelectItem>

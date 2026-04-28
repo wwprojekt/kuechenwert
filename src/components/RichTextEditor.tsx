@@ -77,7 +77,7 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         const filePath = `blog/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('motorhome-photos')
+          .from('kitchen-photos')
           .upload(filePath, file, {
             contentType: file.type || `image/${fileExt}`,
             cacheControl: "31536000, immutable",
@@ -86,7 +86,7 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('motorhome-photos')
+          .from('kitchen-photos')
           .getPublicUrl(filePath);
 
         editor?.chain().focus().setImage({ src: publicUrl }).run();

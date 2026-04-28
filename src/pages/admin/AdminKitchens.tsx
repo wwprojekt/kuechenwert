@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
-import { activateAuctionForMotorhome } from "@/lib/activate-auction";
+import { activateAuctionForKitchen } from "@/lib/activate-auction";
 import { MARKETING_CONFIG } from "@/lib/marketing-config";
 
 import { toast } from "sonner";
@@ -50,9 +50,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MotorhomeDetailDialog } from "@/components/admin/MotorhomeDetailDialog";
-import { MotorhomeEditDialog } from "@/components/admin/MotorhomeEditDialog";
-import { DeleteMotorhomeDialog } from "@/components/admin/DeleteMotorhomeDialog";
+import { KitchenDetailDialog } from "@/components/admin/KitchenDetailDialog";
+import { KitchenEditDialog } from "@/components/admin/KitchenEditDialog";
+import { DeleteKitchenDialog } from "@/components/admin/DeleteKitchenDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -72,7 +72,7 @@ interface AuctionInfo {
   end_time: string | null;
 }
 
-interface MotorhomeWithRelations {
+interface KitchenWithRelations {
   id: string;
   manufacturer: string;
   model: string;
@@ -141,7 +141,7 @@ interface MotorhomeWithRelations {
     email: string;
     phone: string | null;
   } | null;
-  motorhome_photos?: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
+  kitchen_photos?: Array<{ url: string; card_url: string | null; medium_url: string | null; display_order: number }>;
   auctions?: AuctionInfo | AuctionInfo[] | null;
 }
 
@@ -172,8 +172,8 @@ function getActiveAuction(auctions: AuctionInfo | AuctionInfo[] | null | undefin
   return auctions;
 }
 
-/** Determines the "real" combined status of a motorhome. */
-function getRealStatus(m: MotorhomeWithRelations): string {
+/** Determines the "real" combined status of a kitchen. */
+function getRealStatus(m: KitchenWithRelations): string {
   if (m.status === "sold") return "verkauft";
   if (m.status === "reserved") return "reserviert";
 
@@ -244,7 +244,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Package; color: string }[
 // Component
 // ============================================================================
 
-export default function AdminMotorhomes() {
+export default function AdminKitchens() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -253,11 +253,11 @@ export default function AdminMotorhomes() {
   // bell counter. We keep it as a URL param so the bell link is stable
   // and the filter survives reloads / sharing.
   const flagFilter = searchParams.get("filter")?.trim() || "";
-  const [selectedMotorhome, setSelectedMotorhome] = useState<MotorhomeWithRelations | null>(null);
+  const [selectedKitchen, setSelectedKitchen] = useState<KitchenWithRelations | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; motorhomeId: string; motorhomeName: string } | null>(null);
+  const [auctionActionTarget, setAuctionActionTarget] = useState<{ auction: AuctionInfo; kitchenId: string; kitchenName: string } | null>(null);
   const [auctionActionType, setAuctionActionType] = useState<"activate" | "cancel" | null>(null);
 
   // Filters & Search
@@ -272,11 +272,11 @@ export default function AdminMotorhomes() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // ---- Data Query ----
-  const { data: motorhomes, isLoading } = useQuery({
-    queryKey: ["adminMotorhomes"],
+  const { data: kitchens, isLoading } = useQuery({
+    queryKey: ["adminKitchens"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("motorhomes")
+        .from("kitchens")
         .select(`
           *,
           seller:profiles!left (
@@ -285,7 +285,7 @@ export default function AdminMotorhomes() {
             email,
             phone
           ),
-          motorhome_photos(url, card_url, medium_url, display_order),
+          kitchen_photos(url, card_url, medium_url, display_order),
           auctions(
             id,
             status,
@@ -298,7 +298,7 @@ export default function AdminMotorhomes() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as MotorhomeWithRelations[];
+      return data as KitchenWithRelations[];
     },
   });
 
@@ -306,12 +306,12 @@ export default function AdminMotorhomes() {
   // Aktivierung läuft über zentralen Helper – siehe src/lib/activate-auction.ts
   // (3-Tage-Dauer + Random-Startbid + seller_initial_* + Marketing-Trigger).
   const activateAuctionMutation = useMutation({
-    mutationFn: async (motorhomeId: string) => {
-      await activateAuctionForMotorhome(motorhomeId);
+    mutationFn: async (kitchenId: string) => {
+      await activateAuctionForKitchen(kitchenId);
     },
     onSuccess: () => {
       toast.success("Auktion erfolgreich aktiviert");
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
     },
     onError: (e: Error) => {
       if (e.message === "PLZ_MISSING") {
@@ -338,7 +338,7 @@ export default function AdminMotorhomes() {
           `${result.bidderMailsFailed} Mail(s) konnten nicht versendet werden – siehe Error Logs`,
         );
       }
-      queryClient.invalidateQueries({ queryKey: ["adminMotorhomes"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
     },
     onError: (e: Error) => toast.error(`Fehler beim Abbrechen: ${e.message}`),
   });
@@ -347,7 +347,7 @@ export default function AdminMotorhomes() {
     if (!auctionActionTarget || !auctionActionType) return;
     const aId = auctionActionTarget.auction.id;
     if (auctionActionType === "activate") {
-      activateAuctionMutation.mutate(auctionActionTarget.motorhomeId);
+      activateAuctionMutation.mutate(auctionActionTarget.kitchenId);
     } else if (auctionActionType === "cancel") {
       cancelAuctionMutation.mutate(aId);
     }
@@ -367,7 +367,7 @@ export default function AdminMotorhomes() {
       { key: "mileage", label: "Kilometerstand", format: (v: any) => v ? `${Number(v).toLocaleString()} km` : "" },
       { key: "condition", label: "Zustand" },
       { key: "sale_channel", label: "Verkaufsweg" },
-      { key: "status", label: "Motorhome-Status" },
+      { key: "status", label: "Kitchen-Status" },
       {
         key: "seller",
         label: "Verkäufer",
@@ -379,7 +379,7 @@ export default function AdminMotorhomes() {
         format: (v: any) => v?.email || "",
       },
       {
-        key: "motorhome_photos",
+        key: "kitchen_photos",
         label: "Fotos",
         format: (v: any) => v ? String(v.length) : "0",
       },
@@ -388,11 +388,11 @@ export default function AdminMotorhomes() {
   });
 
   // ---- Filtering & Sorting ----
-  const { filteredMotorhomes, tabCounts } = useMemo(() => {
-    if (!motorhomes) return { filteredMotorhomes: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, kaufchance: 0, nicht_verkauft: 0, verkauft: 0 } };
+  const { filteredKitchens, tabCounts } = useMemo(() => {
+    if (!kitchens) return { filteredKitchens: [], tabCounts: { alle: 0, vorbereitung: 0, in_auktion: 0, kaufchance: 0, nicht_verkauft: 0, verkauft: 0 } };
 
-    // Calculate real status for each motorhome
-    const withRealStatus = motorhomes.map((m) => ({
+    // Calculate real status for each kitchen
+    const withRealStatus = kitchens.map((m) => ({
       ...m,
       _realStatus: getRealStatus(m),
     }));
@@ -443,9 +443,9 @@ export default function AdminMotorhomes() {
 
     // Photo filter
     if (photoFilter === "no_photos") {
-      filtered = filtered.filter((m) => !m.motorhome_photos || m.motorhome_photos.length === 0);
+      filtered = filtered.filter((m) => !m.kitchen_photos || m.kitchen_photos.length === 0);
     } else if (photoFilter === "has_photos") {
-      filtered = filtered.filter((m) => m.motorhome_photos && m.motorhome_photos.length > 0);
+      filtered = filtered.filter((m) => m.kitchen_photos && m.kitchen_photos.length > 0);
     }
 
     // Bug-fix #4: festpreis-without-price flag filter
@@ -478,21 +478,21 @@ export default function AdminMotorhomes() {
       return sortDir === "asc" ? cmp : -cmp;
     });
 
-    return { filteredMotorhomes: filtered, tabCounts };
-  }, [motorhomes, activeTab, sellerFilter, searchQuery, conditionFilter, saleChannelFilter, photoFilter, flagFilter, sortKey, sortDir]);
+    return { filteredKitchens: filtered, tabCounts };
+  }, [kitchens, activeTab, sellerFilter, searchQuery, conditionFilter, saleChannelFilter, photoFilter, flagFilter, sortKey, sortDir]);
 
   // ---- Quick Stats ----
   const stats = useMemo(() => {
-    if (!motorhomes) return { total: 0, noPhotos: 0, inAuction: 0, kaufchance: 0, nichtVerkauft: 0, sold: 0 };
+    if (!kitchens) return { total: 0, noPhotos: 0, inAuction: 0, kaufchance: 0, nichtVerkauft: 0, sold: 0 };
     return {
-      total: motorhomes.length,
-      noPhotos: motorhomes.filter((m) => !m.motorhome_photos || m.motorhome_photos.length === 0).length,
-      inAuction: motorhomes.filter((m) => getRealStatus(m) === "in_auktion").length,
-      kaufchance: motorhomes.filter((m) => getRealStatus(m) === "kaufchance").length,
-      nichtVerkauft: motorhomes.filter((m) => getRealStatus(m) === "nicht_verkauft").length,
-      sold: motorhomes.filter((m) => m.status === "sold").length,
+      total: kitchens.length,
+      noPhotos: kitchens.filter((m) => !m.kitchen_photos || m.kitchen_photos.length === 0).length,
+      inAuction: kitchens.filter((m) => getRealStatus(m) === "in_auktion").length,
+      kaufchance: kitchens.filter((m) => getRealStatus(m) === "kaufchance").length,
+      nichtVerkauft: kitchens.filter((m) => getRealStatus(m) === "nicht_verkauft").length,
+      sold: kitchens.filter((m) => m.status === "sold").length,
     };
-  }, [motorhomes]);
+  }, [kitchens]);
 
   // ---- Sort handler ----
   const handleSort = (key: SortKey) => {
@@ -510,28 +510,28 @@ export default function AdminMotorhomes() {
   };
 
   // ---- Actions ----
-  const handleViewDetails = (motorhome: MotorhomeWithRelations) => {
-    navigate(`/admin/motorhomes/${motorhome.id}`);
+  const handleViewDetails = (kitchen: KitchenWithRelations) => {
+    navigate(`/admin/kitchens/${kitchen.id}`);
   };
 
-  const handleEdit = (motorhome: MotorhomeWithRelations) => {
-    setSelectedMotorhome(motorhome);
+  const handleEdit = (kitchen: KitchenWithRelations) => {
+    setSelectedKitchen(kitchen);
     setShowEditDialog(true);
   };
 
-  const handleDelete = (motorhome: MotorhomeWithRelations) => {
-    setSelectedMotorhome(motorhome);
+  const handleDelete = (kitchen: KitchenWithRelations) => {
+    setSelectedKitchen(kitchen);
     setShowDeleteDialog(true);
   };
 
-  const handleCreateAuction = (motorhome: MotorhomeWithRelations) => {
-    navigate(`/admin/auctions?create=${motorhome.id}`);
+  const handleCreateAuction = (kitchen: KitchenWithRelations) => {
+    navigate(`/admin/auctions?create=${kitchen.id}`);
   };
 
   // ---- Sale channel badge ----
-  const getSaleChannelBadge = (motorhome: MotorhomeWithRelations) => {
-    const channel = motorhome.sale_channel;
-    const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
+  const getSaleChannelBadge = (kitchen: KitchenWithRelations) => {
+    const channel = kitchen.sale_channel;
+    const hasInstantBuy = kitchen.instant_price && Number(kitchen.instant_price) > 0;
     switch (channel) {
       case "auction":
         return hasInstantBuy
@@ -554,7 +554,7 @@ export default function AdminMotorhomes() {
   useEffect(() => { setMhPage(1); }, [activeTab, searchQuery, conditionFilter, saleChannelFilter, photoFilter, flagFilter]);
 
   // ---- Render Table ----
-  const renderTable = (items: (MotorhomeWithRelations & { _realStatus: string })[]) => {
+  const renderTable = (items: (KitchenWithRelations & { _realStatus: string })[]) => {
     const totalItems = items.length;
     const pageItems = items.slice((mhPage - 1) * MH_PAGE_SIZE, mhPage * MH_PAGE_SIZE);
     return (
@@ -615,25 +615,25 @@ export default function AdminMotorhomes() {
               </TableCell>
             </TableRow>
           ) : (
-            pageItems.map((motorhome) => {
-              const firstPhotoObj = motorhome.motorhome_photos
+            pageItems.map((kitchen) => {
+              const firstPhotoObj = kitchen.kitchen_photos
                 ?.sort((a, b) => a.display_order - b.display_order)[0];
               const firstPhoto = firstPhotoObj?.card_url || firstPhotoObj?.url;
-              const photoCount = motorhome.motorhome_photos?.length || 0;
-              const auction = getActiveAuction(motorhome.auctions);
+              const photoCount = kitchen.kitchen_photos?.length || 0;
+              const auction = getActiveAuction(kitchen.auctions);
 
               return (
                 <TableRow
-                  key={motorhome.id}
+                  key={kitchen.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleViewDetails(motorhome)}
+                  onClick={() => handleViewDetails(kitchen)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="w-14 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
                       {firstPhoto ? (
                         <img
                           src={firstPhoto}
-                          alt={`${motorhome.manufacturer} ${motorhome.model}`}
+                          alt={`${kitchen.manufacturer} ${kitchen.model}`}
                           loading="lazy"
                           className="w-full h-full object-cover"
                         />
@@ -647,30 +647,30 @@ export default function AdminMotorhomes() {
                   <TableCell>
                     <div>
                       <p className="font-medium text-sm">
-                        {motorhome.manufacturer} {motorhome.model}
+                        {kitchen.manufacturer} {kitchen.model}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {motorhome.body_type}
+                        {kitchen.body_type}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
                       <p className="text-sm">
-                        {motorhome.seller?.first_name} {motorhome.seller?.last_name}
+                        {kitchen.seller?.first_name} {kitchen.seller?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {motorhome.seller?.email}
+                        {kitchen.seller?.email}
                       </p>
-                      {motorhome.seller?.phone && (
+                      {kitchen.seller?.phone && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Phone className="w-3 h-3" />
                           <a
-                            href={`tel:${motorhome.seller.phone}`}
+                            href={`tel:${kitchen.seller.phone}`}
                             className="hover:text-primary transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {motorhome.seller.phone}
+                            {kitchen.seller.phone}
                           </a>
                         </p>
                       )}
@@ -678,15 +678,15 @@ export default function AdminMotorhomes() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      {getStatusBadge(motorhome._realStatus)}
-                      {motorhome.is_archived && (
+                      {getStatusBadge(kitchen._realStatus)}
+                      {kitchen.is_archived && (
                         <Badge className="bg-slate-600 hover:bg-slate-700 text-white text-xs w-fit">
                           Archiviert
                         </Badge>
                       )}
-                      {auction && auction.status === "active" && motorhome.sale_channel === 'instant_price' && motorhome.instant_price ? (
+                      {auction && auction.status === "active" && kitchen.sale_channel === 'instant_price' && kitchen.instant_price ? (
                         <span className="text-xs text-yellow-600 font-medium">
-                          Festpreis {Number(motorhome.instant_price).toLocaleString("de-DE")} €
+                          Festpreis {Number(kitchen.instant_price).toLocaleString("de-DE")} €
                         </span>
                       ) : auction && auction.status === "active" && auction.current_bid != null ? (
                         <span className="text-xs text-muted-foreground">
@@ -695,10 +695,10 @@ export default function AdminMotorhomes() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{motorhome.year}</TableCell>
-                  <TableCell className="text-sm">{motorhome.mileage.toLocaleString()} km</TableCell>
-                  <TableCell>{getConditionBadge(motorhome.condition)}</TableCell>
-                  <TableCell>{getSaleChannelBadge(motorhome)}</TableCell>
+                  <TableCell className="text-sm">{kitchen.year}</TableCell>
+                  <TableCell className="text-sm">{kitchen.mileage.toLocaleString()} km</TableCell>
+                  <TableCell>{getConditionBadge(kitchen.condition)}</TableCell>
+                  <TableCell>{getSaleChannelBadge(kitchen)}</TableCell>
                   <TableCell>
                     {photoCount === 0 ? (
                       <Badge variant="destructive" className="text-xs gap-1">
@@ -713,8 +713,8 @@ export default function AdminMotorhomes() {
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {motorhome.created_at
-                      ? format(new Date(motorhome.created_at), "dd.MM.yy", { locale: de })
+                    {kitchen.created_at
+                      ? format(new Date(kitchen.created_at), "dd.MM.yy", { locale: de })
                       : "-"}
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -725,26 +725,26 @@ export default function AdminMotorhomes() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewDetails(motorhome)}>
+                        <DropdownMenuItem onClick={() => handleViewDetails(kitchen)}>
                           <Eye className="w-4 h-4 mr-2" />
                           Details anzeigen
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(motorhome)}>
+                        <DropdownMenuItem onClick={() => handleEdit(kitchen)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Bearbeiten
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {(() => {
-                          const mAuction = getActiveAuction(motorhome.auctions);
+                          const mAuction = getActiveAuction(kitchen.auctions);
                           if (!mAuction || mAuction.status === "ended" || mAuction.status === "cancelled") {
                             return (
-                              <DropdownMenuItem onClick={() => handleCreateAuction(motorhome)}>
+                              <DropdownMenuItem onClick={() => handleCreateAuction(kitchen)}>
                                 <Gavel className="w-4 h-4 mr-2" />
                                 {mAuction ? "Erneut in Auktion" : "Auktion erstellen"}
                               </DropdownMenuItem>
                             );
                           }
-                          const mName = `${motorhome.manufacturer} ${motorhome.model}`;
+                          const mName = `${kitchen.manufacturer} ${kitchen.model}`;
                           return (
                             <>
                               <DropdownMenuItem onClick={() => navigate(`/admin/auctions/${mAuction.id}`)}>
@@ -752,14 +752,14 @@ export default function AdminMotorhomes() {
                                 Auktion anzeigen
                               </DropdownMenuItem>
                               {mAuction.status === "draft" && (
-                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeId: motorhome.id, motorhomeName: mName }); setAuctionActionType("activate"); }}>
+                                <DropdownMenuItem onClick={() => { setAuctionActionTarget({ auction: mAuction, kitchenId: kitchen.id, kitchenName: mName }); setAuctionActionType("activate"); }}>
                                   <Play className="w-4 h-4 mr-2" />
                                   Auktion aktivieren
                                 </DropdownMenuItem>
                               )}
                               {(mAuction.status === "active" || mAuction.status === "draft" || mAuction.status === "kaufchance") && (
                                 <DropdownMenuItem
-                                  onClick={() => { setAuctionActionTarget({ auction: mAuction, motorhomeId: motorhome.id, motorhomeName: mName }); setAuctionActionType("cancel"); }}
+                                  onClick={() => { setAuctionActionTarget({ auction: mAuction, kitchenId: kitchen.id, kitchenName: mName }); setAuctionActionType("cancel"); }}
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <Ban className="w-4 h-4 mr-2" />
@@ -771,7 +771,7 @@ export default function AdminMotorhomes() {
                         })()}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => handleDelete(motorhome)}
+                          onClick={() => handleDelete(kitchen)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -812,8 +812,8 @@ export default function AdminMotorhomes() {
           </p>
         </div>
         <ExportButton
-          onExportCSV={() => exportCSV(filteredMotorhomes)}
-          onExportExcel={() => exportExcel(filteredMotorhomes)}
+          onExportCSV={() => exportCSV(filteredKitchens)}
+          onExportExcel={() => exportExcel(filteredKitchens)}
           isExporting={isExporting}
           size="sm"
         />
@@ -972,7 +972,7 @@ export default function AdminMotorhomes() {
             {/* Results count */}
             <div className="flex items-center justify-between mt-2 mb-1">
               <p className="text-sm text-muted-foreground">
-                {filteredMotorhomes.length} Ergebnis{filteredMotorhomes.length !== 1 ? "se" : ""}
+                {filteredKitchens.length} Ergebnis{filteredKitchens.length !== 1 ? "se" : ""}
                 {(searchQuery || conditionFilter !== "all" || saleChannelFilter !== "all" || photoFilter !== "all" || flagFilter) && (
                   <span> (gefiltert)</span>
                 )}
@@ -1001,7 +1001,7 @@ export default function AdminMotorhomes() {
             {/* Tab Contents */}
             {TABS.map((tab) => (
               <TabsContent key={tab.key} value={tab.key} className="mt-2">
-                {renderTable(filteredMotorhomes)}
+                {renderTable(filteredKitchens)}
               </TabsContent>
             ))}
           </>
@@ -1009,20 +1009,20 @@ export default function AdminMotorhomes() {
       </Tabs>
 
       {/* Dialogs */}
-      <MotorhomeDetailDialog
-        motorhome={selectedMotorhome}
+      <KitchenDetailDialog
+        kitchen={selectedKitchen}
         open={showDetailDialog}
         onOpenChange={setShowDetailDialog}
       />
 
-      <MotorhomeEditDialog
-        motorhome={selectedMotorhome}
+      <KitchenEditDialog
+        kitchen={selectedKitchen}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />
 
-      <DeleteMotorhomeDialog
-        motorhome={selectedMotorhome}
+      <DeleteKitchenDialog
+        kitchen={selectedKitchen}
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
       />
@@ -1040,10 +1040,10 @@ export default function AdminMotorhomes() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {auctionActionType === "activate" && (
-                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird für {MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage aktiviert und ist dann öffentlich sichtbar.</>
+                <>Die Auktion für <strong>{auctionActionTarget?.kitchenName}</strong> wird für {MARKETING_CONFIG.AUCTION_DURATION_DAYS} Tage aktiviert und ist dann öffentlich sichtbar.</>
               )}
               {auctionActionType === "cancel" && (
-                <>Die Auktion für <strong>{auctionActionTarget?.motorhomeName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet. Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.</>
+                <>Die Auktion für <strong>{auctionActionTarget?.kitchenName}</strong> wird abgebrochen. Keine Benachrichtigungen werden versendet. Der Verkäufer kann sein Inserat danach wieder bearbeiten und Fotos hochladen.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

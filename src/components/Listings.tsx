@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import MotorhomeCard from "./MotorhomeCard";
+import KitchenCard from "./KitchenCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -29,7 +29,7 @@ const Listings = () => {
         if (res.ok) {
           const payload = (await res.json()) as { auctions?: unknown[] };
           const list = Array.isArray(payload.auctions) ? payload.auctions : [];
-          // Worker liefert pro Auction motorhome.photos = [{url, medium_url, display_order}]
+          // Worker liefert pro Auction kitchen.photos = [{url, medium_url, display_order}]
           // → exakt das Format das die Render-Logik unten erwartet.
           return list.slice(0, 4) as Array<{
             id: string;
@@ -41,8 +41,8 @@ const Listings = () => {
             auction_round?: number | null;
             last_price_reduction_at?: string | null;
             marketing_phase_started_at?: string | null;
-            motorhome_id?: string | null;
-            motorhome: {
+            kitchen_id?: string | null;
+            kitchen: {
               id: string;
               manufacturer: string;
               model: string;
@@ -67,17 +67,17 @@ const Listings = () => {
 
       // ─────────────────────────────────────────────────────────────────
       // FALLBACK: Direkte 2-Roundtrip-Strategie (auctions + photos).
-      // (Hintergrund: nested embed `motorhome.photos(...)` mit referencedTable
+      // (Hintergrund: nested embed `kitchen.photos(...)` mit referencedTable
       // order/limit ist in PostgREST buggy, deshalb 2 Queries — siehe Kaufen.tsx.)
       // ─────────────────────────────────────────────────────────────────
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('auctions')
         .select(`
-          id, motorhome_id, current_bid, starting_bid, end_time, created_at,
+          id, kitchen_id, current_bid, starting_bid, end_time, created_at,
           start_time, auction_round,
           last_price_reduction_at, marketing_phase_started_at,
-          motorhome:motorhomes(
+          kitchen:kitchens(
             id, manufacturer, model, year, mileage, body_type, country,
             instant_price, sale_channel, status, account_type,
             sleeping_places, seats, description
@@ -91,8 +91,8 @@ const Listings = () => {
       if (error) throw error;
       if (!data || data.length === 0) return [];
 
-      const motorhomeIds = data
-        .map((a) => (a as unknown as { motorhome_id?: string }).motorhome_id)
+      const kitchenIds = data
+        .map((a) => (a as unknown as { kitchen_id?: string }).kitchen_id)
         .filter((id): id is string => Boolean(id));
 
       // Cover-Foto + pre-resized Varianten:
@@ -102,25 +102,25 @@ const Listings = () => {
       // Fallback: card_url || medium_url || url, damit unprozessierte Photos
       // weiterhin gerendert werden.
       type Cover = { small: string; medium: string | null };
-      let coverByMotorhomeId = new Map<string, Cover>();
-      if (motorhomeIds.length > 0) {
+      let coverByKitchenId = new Map<string, Cover>();
+      if (kitchenIds.length > 0) {
         const { data: photoRows } = await supabase
-          .from('motorhome_photos')
-          .select('url, card_url, medium_url, motorhome_id')
-          .in('motorhome_id', motorhomeIds)
+          .from('kitchen_photos')
+          .select('url, card_url, medium_url, kitchen_id')
+          .in('kitchen_id', kitchenIds)
           .eq('display_order', 0);
 
         if (photoRows) {
-          coverByMotorhomeId = new Map(
+          coverByKitchenId = new Map(
             (photoRows as Array<{
               url: string;
               card_url: string | null;
               medium_url: string | null;
-              motorhome_id: string;
+              kitchen_id: string;
             }>)
-              .filter((p) => (p.card_url || p.medium_url || p.url) && p.motorhome_id)
+              .filter((p) => (p.card_url || p.medium_url || p.url) && p.kitchen_id)
               .map((p) => [
-                p.motorhome_id,
+                p.kitchen_id,
                 {
                   small: p.card_url || p.medium_url || p.url,
                   medium: p.medium_url,
@@ -132,17 +132,17 @@ const Listings = () => {
 
       return data.map((a) => {
         const typed = a as unknown as {
-          motorhome_id?: string;
-          motorhome?: { id?: string } | null;
+          kitchen_id?: string;
+          kitchen?: { id?: string } | null;
         };
-        const cover = typed.motorhome_id
-          ? coverByMotorhomeId.get(typed.motorhome_id)
+        const cover = typed.kitchen_id
+          ? coverByKitchenId.get(typed.kitchen_id)
           : undefined;
         return {
           ...(a as object),
-          motorhome: typed.motorhome
+          kitchen: typed.kitchen
             ? {
-                ...typed.motorhome,
+                ...typed.kitchen,
                 photos: cover
                   ? [{ url: cover.small, medium_url: cover.medium, display_order: 0 }]
                   : [],
@@ -175,13 +175,13 @@ const Listings = () => {
             ))
           ) : auctions && auctions.length > 0 ? (
             auctions.map((auction, idx) => {
-              const motorhome = auction.motorhome;
-              if (!motorhome) return null;
+              const kitchen = auction.kitchen;
+              if (!kitchen) return null;
 
               // Server liefert pro Listing nur die erste Foto-Zeile (geordnet
               // nach display_order). Kein clientseitiges Sortieren mehr nötig.
-              const primaryPhoto = motorhome.photos?.[0]?.url || '';
-              const primaryPhotoMedium = (motorhome.photos?.[0] as
+              const primaryPhoto = kitchen.photos?.[0]?.url || '';
+              const primaryPhotoMedium = (kitchen.photos?.[0] as
                 | { medium_url?: string | null }
                 | undefined)?.medium_url;
 
@@ -190,27 +190,27 @@ const Listings = () => {
               const isAboveFold = idx < 4;
 
               return (
-                <MotorhomeCard
+                <KitchenCard
                   key={auction.id}
                   priority={isAboveFold}
-                  id={motorhome.id}
-                  title={motorhome.description || `${motorhome.manufacturer} ${motorhome.model}`}
-                  manufacturer={motorhome.manufacturer}
-                  model={motorhome.model}
-                  year={motorhome.year}
-                  mileage={motorhome.mileage}
+                  id={kitchen.id}
+                  title={kitchen.description || `${kitchen.manufacturer} ${kitchen.model}`}
+                  manufacturer={kitchen.manufacturer}
+                  model={kitchen.model}
+                  year={kitchen.year}
+                  mileage={kitchen.mileage}
                   image={primaryPhoto}
                   imageMedium={primaryPhotoMedium ?? null}
-                  beds={motorhome.sleeping_places}
-                  passengers={motorhome.seats}
-                  bodyType={motorhome.body_type}
+                  beds={kitchen.sleeping_places}
+                  passengers={kitchen.seats}
+                  bodyType={kitchen.body_type}
                   isAuction={true}
                   currentBid={auction.current_bid}
                   startingBid={auction.starting_bid}
-                  instantPrice={motorhome.instant_price}
-                  saleChannel={motorhome.sale_channel}
+                  instantPrice={kitchen.instant_price}
+                  saleChannel={kitchen.sale_channel}
                   endTime={auction.end_time}
-                  status={motorhome.status}
+                  status={kitchen.status}
                   lastPriceReductionAt={(auction as any).last_price_reduction_at}
                   marketingPhaseStartedAt={(auction as any).marketing_phase_started_at}
                   auctionCreatedAt={auction.created_at}

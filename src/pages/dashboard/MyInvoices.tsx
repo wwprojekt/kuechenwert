@@ -44,7 +44,7 @@ interface Invoice {
   created_at: string | null;
   auction?: {
     id: string;
-    motorhome?: {
+    kitchen?: {
       manufacturer: string;
       model: string;
     };
@@ -65,7 +65,7 @@ export default function MyInvoices() {
 
   const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
     invoice_number: (i) => i.invoice_number || '',
-    vehicle: (i) => `${i.auction?.motorhome?.manufacturer || ''} ${i.auction?.motorhome?.model || ''}`.toLowerCase(),
+    vehicle: (i) => `${i.auction?.kitchen?.manufacturer || ''} ${i.auction?.kitchen?.model || ''}`.toLowerCase(),
     invoice_date: (i) => i.invoice_date || '',
     due_date: (i) => i.due_date || '',
     gross_amount: (i) => i.gross_amount || 0,
@@ -93,7 +93,7 @@ export default function MyInvoices() {
           *,
           auction:auctions (
             id,
-            motorhome:motorhomes (
+            kitchen:kitchens (
               manufacturer,
               model
             )
@@ -342,8 +342,8 @@ export default function MyInvoices() {
                       <div className="min-w-0">
                         <p className="font-mono text-xs text-muted-foreground">{invoice.invoice_number}</p>
                         <p className="font-medium text-sm truncate">
-                          {invoice.auction?.motorhome
-                            ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}`
+                          {invoice.auction?.kitchen
+                            ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}`
                             : '—'}
                         </p>
                       </div>
@@ -415,9 +415,9 @@ export default function MyInvoices() {
                         {invoice.invoice_number}
                       </TableCell>
                       <TableCell>
-                        {invoice.auction?.motorhome ? (
+                        {invoice.auction?.kitchen ? (
                           <span>
-                            {invoice.auction.motorhome.manufacturer} {invoice.auction.motorhome.model}
+                            {invoice.auction.kitchen.manufacturer} {invoice.auction.kitchen.model}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>

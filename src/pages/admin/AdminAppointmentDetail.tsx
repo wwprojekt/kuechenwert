@@ -1,6 +1,6 @@
 /**
  * Admin Appointment Detail Page
- * Comprehensive view of appointment with timeline, motorhome info, and actions
+ * Comprehensive view of appointment with timeline, kitchen info, and actions
  */
 
 import { useState } from "react";
@@ -82,7 +82,7 @@ export default function AdminAppointmentDetail() {
         .from("appointments")
         .select(`
           *,
-          motorhome:motorhomes (
+          kitchen:kitchens (
             id,
             manufacturer,
             model,
@@ -92,7 +92,7 @@ export default function AdminAppointmentDetail() {
             condition,
             instant_price,
             reserve_price,
-            motorhome_photos(url, card_url, medium_url, display_order)
+            kitchen_photos(url, card_url, medium_url, display_order)
           ),
           station:purchase_stations (
             id,
@@ -124,10 +124,10 @@ export default function AdminAppointmentDetail() {
     enabled: !!id,
   });
 
-  const motorhomeId = appointment?.motorhome_id;
+  const kitchenId = appointment?.kitchen_id;
 
-  const { data: motorhomeAuction } = useQuery({
-    queryKey: ["adminAppointmentAuctionByMotorhome", motorhomeId],
+  const { data: kitchenAuction } = useQuery({
+    queryKey: ["adminAppointmentAuctionByKitchen", kitchenId],
     queryFn: async () => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
@@ -135,13 +135,13 @@ export default function AdminAppointmentDetail() {
       const { data, error } = await supabase
         .from("auctions")
         .select("id")
-        .eq("motorhome_id", motorhomeId!)
+        .eq("kitchen_id", kitchenId!)
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!motorhomeId,
+    enabled: !!kitchenId,
   });
 
   // Update status mutation
@@ -288,7 +288,7 @@ export default function AdminAppointmentDetail() {
     return statusConfig[status] || { label: status, variant: "outline" };
   };
 
-  const mainPhoto = [...(appointment?.motorhome?.motorhome_photos || [])].sort(
+  const mainPhoto = [...(appointment?.kitchen?.kitchen_photos || [])].sort(
     (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
   )[0];
 
@@ -302,7 +302,7 @@ export default function AdminAppointmentDetail() {
   return (
     <AdminDetailLayout
       title={`Termin #${appointment?.id?.slice(0, 8) || ""}`}
-      subtitle={appointment?.motorhome ? `${appointment.motorhome.manufacturer} ${appointment.motorhome.model}` : undefined}
+      subtitle={appointment?.kitchen ? `${appointment.kitchen.manufacturer} ${appointment.kitchen.model}` : undefined}
       status={appointment ? getStatusBadge(appointment.status) : undefined}
       backUrl="/admin/appointments"
       backLabel="Alle Termine"
@@ -470,15 +470,15 @@ export default function AdminAppointmentDetail() {
                 </div>
               </DetailSection>
 
-              {/* Motorhome Info */}
+              {/* Kitchen Info */}
               <DetailSection
                 title="Fahrzeug"
                 icon={<Car className="w-5 h-5" />}
                 actions={
                   <div className="flex items-center gap-1">
-                    {motorhomeAuction?.id && (
+                    {kitchenAuction?.id && (
                       <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/admin/auctions/${motorhomeAuction.id}`}>
+                        <Link to={`/admin/auctions/${kitchenAuction.id}`}>
                           Auktion
                           <ExternalLink className="w-4 h-4 ml-2" />
                         </Link>
@@ -487,7 +487,7 @@ export default function AdminAppointmentDetail() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate(`/admin/motorhomes/${appointment.motorhome?.id}`)}
+                      onClick={() => navigate(`/admin/kitchens/${appointment.kitchen?.id}`)}
                     >
                       Details
                       <ExternalLink className="w-4 h-4 ml-2" />
@@ -501,7 +501,7 @@ export default function AdminAppointmentDetail() {
                     {mainPhoto ? (
                       <img
                         src={mainPhoto.card_url || mainPhoto.url}
-                        alt={`${appointment.motorhome?.manufacturer} ${appointment.motorhome?.model}`}
+                        alt={`${appointment.kitchen?.manufacturer} ${appointment.kitchen?.model}`}
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
@@ -513,15 +513,15 @@ export default function AdminAppointmentDetail() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">
-                      {appointment.motorhome?.manufacturer} {appointment.motorhome?.model}
+                      {appointment.kitchen?.manufacturer} {appointment.kitchen?.model}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      {appointment.motorhome?.year} • {appointment.motorhome?.body_type}
+                      {appointment.kitchen?.year} • {appointment.kitchen?.body_type}
                     </p>
                     <InfoGrid columns={3}>
-                      <InfoItem label="Zustand" value={appointment.motorhome?.condition} />
-                      <InfoItem label="Kilometerstand" value={appointment.motorhome?.mileage ? `${appointment.motorhome.mileage.toLocaleString()} km` : "—"} />
-                      <InfoItem label="Preis" value={formatPrice(appointment.motorhome?.instant_price || appointment.motorhome?.reserve_price)} />
+                      <InfoItem label="Zustand" value={appointment.kitchen?.condition} />
+                      <InfoItem label="Kilometerstand" value={appointment.kitchen?.mileage ? `${appointment.kitchen.mileage.toLocaleString()} km` : "—"} />
+                      <InfoItem label="Preis" value={formatPrice(appointment.kitchen?.instant_price || appointment.kitchen?.reserve_price)} />
                     </InfoGrid>
                   </div>
                 </div>

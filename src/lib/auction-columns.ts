@@ -57,4 +57,4 @@
 // NOTE: When you add a new public-safe column, append it to this string AND
 // to the GRANT-list in the matching `supabase/migrations/*.sql` file.
 export const AUCTION_PUBLIC_COLUMNS =
-  "id, motorhome_id, starting_bid, current_bid, reserve_price, status, start_time, end_time, soft_close_extension_minutes, created_at, updated_at, kaufchance_expires_at, kaufchance_min_price, auction_round, festpreis_admin_notified_at, marketing_phase_started_at, last_price_reduction_at" as const;
+  "id, kitchen_id, starting_bid, current_bid, reserve_price, status, start_time, end_time, soft_close_extension_minutes, created_at, updated_at, kaufchance_expires_at, kaufchance_min_price, auction_round, festpreis_admin_notified_at, marketing_phase_started_at, last_price_reduction_at" as const;

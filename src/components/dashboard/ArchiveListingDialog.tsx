@@ -19,7 +19,7 @@ import { Archive } from "lucide-react";
  * ArchiveListingDialog
  *
  * Dialog für den "Archivieren / Vom Markt nehmen"-Pfad (Button 3 von 3 der
- * Soft-Brake-Mail). Setzt motorhomes.is_archived = TRUE. Das Inserat bleibt
+ * Soft-Brake-Mail). Setzt kitchens.is_archived = TRUE. Das Inserat bleibt
  * in der DB (History, Audit), wird aber in allen Listen ausgeblendet:
  *   - /kaufen: läuft automatisch (Kaufen filtert über auctions.status=active,
  *     und archivierte Inserate haben keine aktive Auktion)
@@ -32,14 +32,14 @@ import { Archive } from "lucide-react";
 export function ArchiveListingDialog({
   open,
   onOpenChange,
-  motorhomeId,
-  motorhomeName,
+  kitchenId,
+  kitchenName,
   onArchived,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  motorhomeId: string;
-  motorhomeName: string;
+  kitchenId: string;
+  kitchenName: string;
   onArchived?: () => void;
 }) {
   const { toast } = useToast();
@@ -51,7 +51,7 @@ export function ArchiveListingDialog({
       const { data, error } = await withSessionRetry(
         () =>
           supabase.rpc("seller_archive_listing", {
-            p_motorhome_id: motorhomeId,
+            p_kitchen_id: kitchenId,
           }),
         "archive_listing",
       );
@@ -59,7 +59,7 @@ export function ArchiveListingDialog({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["motorhomeDetail", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenDetail", kitchenId] });
       queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
         title: "Inserat archiviert",
@@ -91,7 +91,7 @@ export function ArchiveListingDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-3 pt-2 text-sm">
               <p>
-                <strong>{motorhomeName}</strong> wird vom Markt genommen.
+                <strong>{kitchenName}</strong> wird vom Markt genommen.
               </p>
               <div className="rounded-md border bg-muted/40 p-3 space-y-2">
                 <p className="font-medium text-foreground">Was passiert?</p>

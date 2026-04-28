@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -408,7 +408,7 @@ export type Database = {
           duration_minutes: number | null
           handover_protocol_url: string | null
           id: string
-          motorhome_id: string
+          kitchen_id: string
           notes: string | null
           payment_amount: number | null
           payment_method: string | null
@@ -427,7 +427,7 @@ export type Database = {
           duration_minutes?: number | null
           handover_protocol_url?: string | null
           id?: string
-          motorhome_id: string
+          kitchen_id: string
           notes?: string | null
           payment_amount?: number | null
           payment_method?: string | null
@@ -446,7 +446,7 @@ export type Database = {
           duration_minutes?: number | null
           handover_protocol_url?: string | null
           id?: string
-          motorhome_id?: string
+          kitchen_id?: string
           notes?: string | null
           payment_amount?: number | null
           payment_method?: string | null
@@ -461,10 +461,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "appointments_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "appointments_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
           {
@@ -528,10 +528,10 @@ export type Database = {
           id: string
           kaufchance_expires_at: string | null
           kaufchance_min_price: number | null
+          kitchen_id: string
           last_price_reduction_at: string | null
           marketing_phase_max_until: string | null
           marketing_phase_started_at: string | null
-          motorhome_id: string
           reserve_price: number | null
           seller_initial_instant_price: number | null
           seller_initial_reserve: number | null
@@ -553,10 +553,10 @@ export type Database = {
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          kitchen_id: string
           last_price_reduction_at?: string | null
           marketing_phase_max_until?: string | null
           marketing_phase_started_at?: string | null
-          motorhome_id: string
           reserve_price?: number | null
           seller_initial_instant_price?: number | null
           seller_initial_reserve?: number | null
@@ -578,10 +578,10 @@ export type Database = {
           id?: string
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          kitchen_id?: string
           last_price_reduction_at?: string | null
           marketing_phase_max_until?: string | null
           marketing_phase_started_at?: string | null
-          motorhome_id?: string
           reserve_price?: number | null
           seller_initial_instant_price?: number | null
           seller_initial_reserve?: number | null
@@ -593,45 +593,57 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "auctions_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "auctions_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: true
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
       }
       audit_logs: {
         Row: {
+          accept_language: string | null
           action: string
+          city: string | null
+          country: string | null
           created_at: string | null
           details: Json | null
           entity_id: string | null
           entity_type: string
           id: string
           ip_address: string | null
+          referrer: string | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
+          accept_language?: string | null
           action: string
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
           entity_type: string
           id?: string
           ip_address?: string | null
+          referrer?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
+          accept_language?: string | null
           action?: string
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
           entity_type?: string
           id?: string
           ip_address?: string | null
+          referrer?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -741,7 +753,7 @@ export type Database = {
           error_message: string | null
           http_status: number | null
           id: string
-          motorhome_id: string
+          kitchen_id: string
           msclkid: string | null
           source: string
           status: string
@@ -756,7 +768,7 @@ export type Database = {
           error_message?: string | null
           http_status?: number | null
           id?: string
-          motorhome_id: string
+          kitchen_id: string
           msclkid?: string | null
           source: string
           status: string
@@ -771,7 +783,7 @@ export type Database = {
           error_message?: string | null
           http_status?: number | null
           id?: string
-          motorhome_id?: string
+          kitchen_id?: string
           msclkid?: string | null
           source?: string
           status?: string
@@ -779,10 +791,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "bing_offline_conversions_log_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "bing_offline_conversions_log_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -931,7 +943,7 @@ export type Database = {
           dealer_id: string
           description: string
           id: string
-          motorhome_id: string
+          kitchen_id: string
           priority: string
           resolution_notes: string | null
           resolved_at: string | null
@@ -955,7 +967,7 @@ export type Database = {
           dealer_id: string
           description: string
           id?: string
-          motorhome_id: string
+          kitchen_id: string
           priority?: string
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -979,7 +991,7 @@ export type Database = {
           dealer_id?: string
           description?: string
           id?: string
-          motorhome_id?: string
+          kitchen_id?: string
           priority?: string
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -1013,10 +1025,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "claims_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "claims_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -1275,7 +1287,7 @@ export type Database = {
           display_order: number | null
           file_size: number | null
           id: string
-          motorhome_id: string
+          kitchen_id: string
           photo_url: string
           uploaded_by: string | null
         }
@@ -1287,7 +1299,7 @@ export type Database = {
           display_order?: number | null
           file_size?: number | null
           id?: string
-          motorhome_id: string
+          kitchen_id: string
           photo_url: string
           uploaded_by?: string | null
         }
@@ -1299,16 +1311,16 @@ export type Database = {
           display_order?: number | null
           file_size?: number | null
           id?: string
-          motorhome_id?: string
+          kitchen_id?: string
           photo_url?: string
           uploaded_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "damage_photos_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "damage_photos_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -2056,6 +2068,74 @@ export type Database = {
         }
         Relationships: []
       }
+      google_offline_conversions_log: {
+        Row: {
+          auction_id: string | null
+          conversion_action_id: string
+          conversion_currency: string
+          conversion_time: string
+          conversion_value: number
+          error_message: string | null
+          gbraid: string | null
+          gclid: string | null
+          http_status: number | null
+          id: string
+          kitchen_id: string
+          order_id: string | null
+          skip_reason: string | null
+          source: string
+          status: string
+          uploaded_at: string
+          wbraid: string | null
+        }
+        Insert: {
+          auction_id?: string | null
+          conversion_action_id: string
+          conversion_currency?: string
+          conversion_time: string
+          conversion_value: number
+          error_message?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          http_status?: number | null
+          id?: string
+          kitchen_id: string
+          order_id?: string | null
+          skip_reason?: string | null
+          source: string
+          status: string
+          uploaded_at?: string
+          wbraid?: string | null
+        }
+        Update: {
+          auction_id?: string | null
+          conversion_action_id?: string
+          conversion_currency?: string
+          conversion_time?: string
+          conversion_value?: number
+          error_message?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          http_status?: number | null
+          id?: string
+          kitchen_id?: string
+          order_id?: string | null
+          skip_reason?: string | null
+          source?: string
+          status?: string
+          uploaded_at?: string
+          wbraid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_offline_conversions_log_kitchen_id_fkey"
+            columns: ["kitchen_id"]
+            isOneToOne: false
+            referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_review_requests: {
         Row: {
           click_count: number
@@ -2204,7 +2284,7 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           invoice_type: string
-          motorhome_id: string | null
+          kitchen_id: string | null
           net_amount: number
           notes: string | null
           paid_at: string | null
@@ -2237,7 +2317,7 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           invoice_type?: string
-          motorhome_id?: string | null
+          kitchen_id?: string | null
           net_amount: number
           notes?: string | null
           paid_at?: string | null
@@ -2270,7 +2350,7 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           invoice_type?: string
-          motorhome_id?: string | null
+          kitchen_id?: string | null
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
@@ -2313,10 +2393,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "invoices_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -2359,6 +2439,444 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_photos: {
+        Row: {
+          card_url: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_primary: boolean | null
+          kitchen_id: string
+          medium_url: string | null
+          processed_at: string | null
+          processing_attempts: number
+          processing_error: string | null
+          url: string
+        }
+        Insert: {
+          card_url?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          kitchen_id: string
+          medium_url?: string | null
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_error?: string | null
+          url: string
+        }
+        Update: {
+          card_url?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          kitchen_id?: string
+          medium_url?: string | null
+          processed_at?: string | null
+          processing_attempts?: number
+          processing_error?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_photos_kitchen_id_fkey"
+            columns: ["kitchen_id"]
+            isOneToOne: false
+            referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          created_at: string | null
+          id: string
+          is_public: boolean | null
+          kitchen_id: string | null
+          question: string
+          questioner_email: string
+          questioner_id: string | null
+          questioner_name: string | null
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          kitchen_id?: string | null
+          question: string
+          questioner_email: string
+          questioner_id?: string | null
+          questioner_name?: string | null
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          kitchen_id?: string | null
+          question?: string
+          questioner_email?: string
+          questioner_id?: string | null
+          questioner_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_questions_kitchen_id_fkey"
+            columns: ["kitchen_id"]
+            isOneToOne: false
+            referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchens: {
+        Row: {
+          accident_free: boolean | null
+          account_type: string | null
+          additional_equipment: string | null
+          air_conditioning_type:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
+          available_from: string | null
+          awning_length_m: number | null
+          base_vehicle: string | null
+          battery_capacity_ah: number | null
+          beds_description: string | null
+          body_type: Database["public"]["Enums"]["kitchen_body_type"]
+          city: string | null
+          condition: Database["public"]["Enums"]["kitchen_condition"]
+          contract_number: string | null
+          contract_url: string | null
+          country: string | null
+          created_at: string | null
+          damage_summary: string | null
+          description: string | null
+          emission_class: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm: number | null
+          engine_power_hp: number | null
+          first_registration: string | null
+          fuel_tank_capacity_liters: number | null
+          fuel_type: Database["public"]["Enums"]["fuel_type"] | null
+          gas_system: string | null
+          gbraid: string | null
+          gclid: string | null
+          grey_water_capacity_liters: number | null
+          has_air_conditioning: boolean | null
+          has_airbag: boolean | null
+          has_alarm: boolean | null
+          has_awning: boolean | null
+          has_awning_tent: boolean | null
+          has_backup_camera: boolean | null
+          has_bathroom: boolean | null
+          has_bike_rack: boolean | null
+          has_central_locking: boolean | null
+          has_cruise_control: boolean | null
+          has_damage: boolean | null
+          has_esp: boolean | null
+          has_garage: boolean | null
+          has_heating: boolean | null
+          has_inverter: boolean | null
+          has_kitchen: boolean | null
+          has_markise: boolean | null
+          has_navigation: boolean | null
+          has_parking_sensors: boolean | null
+          has_roof_ac: boolean | null
+          has_satellite: boolean | null
+          has_shower: boolean | null
+          has_solar: boolean | null
+          has_stand_ac: boolean | null
+          has_swivel_seats: boolean | null
+          has_toilet: boolean | null
+          has_tuev: boolean | null
+          has_tv: boolean | null
+          heating_type: Database["public"]["Enums"]["heating_type"] | null
+          height_m: number | null
+          id: string
+          instant_price: number | null
+          instant_price_floor: number | null
+          is_archived: boolean
+          last_tuev_date: string | null
+          length_m: number | null
+          license_plate: string | null
+          listing_number: string | null
+          location: string | null
+          main_tires: string | null
+          manufacturer: string
+          mileage: number
+          model: string
+          msclkid: string | null
+          mwst_ausweisbar: boolean | null
+          non_smoker: boolean | null
+          number_of_axles: number | null
+          payload_kg: number | null
+          postal_code: string | null
+          power_kw: number | null
+          previous_owners: number | null
+          price: number | null
+          refrigerator_type:
+            | Database["public"]["Enums"]["refrigerator_type"]
+            | null
+          reserve_price: number | null
+          reserve_price_floor: number | null
+          sale_channel: Database["public"]["Enums"]["sale_channel"] | null
+          sale_type: string | null
+          seats: number | null
+          second_tires: string | null
+          seller_id: string
+          service_history_available: boolean | null
+          sleeping_places: number | null
+          solar_power_watts: number | null
+          sold_at: string | null
+          sold_to: string | null
+          status: string
+          transmission: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until: string | null
+          updated_at: string | null
+          vehicle_identification_number: string | null
+          water_tank_liters: number | null
+          wbraid: string | null
+          weight_kg: number | null
+          width_m: number | null
+          year: number
+        }
+        Insert: {
+          accident_free?: boolean | null
+          account_type?: string | null
+          additional_equipment?: string | null
+          air_conditioning_type?:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
+          available_from?: string | null
+          awning_length_m?: number | null
+          base_vehicle?: string | null
+          battery_capacity_ah?: number | null
+          beds_description?: string | null
+          body_type: Database["public"]["Enums"]["kitchen_body_type"]
+          city?: string | null
+          condition: Database["public"]["Enums"]["kitchen_condition"]
+          contract_number?: string | null
+          contract_url?: string | null
+          country?: string | null
+          created_at?: string | null
+          damage_summary?: string | null
+          description?: string | null
+          emission_class?: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm?: number | null
+          engine_power_hp?: number | null
+          first_registration?: string | null
+          fuel_tank_capacity_liters?: number | null
+          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
+          gas_system?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          grey_water_capacity_liters?: number | null
+          has_air_conditioning?: boolean | null
+          has_airbag?: boolean | null
+          has_alarm?: boolean | null
+          has_awning?: boolean | null
+          has_awning_tent?: boolean | null
+          has_backup_camera?: boolean | null
+          has_bathroom?: boolean | null
+          has_bike_rack?: boolean | null
+          has_central_locking?: boolean | null
+          has_cruise_control?: boolean | null
+          has_damage?: boolean | null
+          has_esp?: boolean | null
+          has_garage?: boolean | null
+          has_heating?: boolean | null
+          has_inverter?: boolean | null
+          has_kitchen?: boolean | null
+          has_markise?: boolean | null
+          has_navigation?: boolean | null
+          has_parking_sensors?: boolean | null
+          has_roof_ac?: boolean | null
+          has_satellite?: boolean | null
+          has_shower?: boolean | null
+          has_solar?: boolean | null
+          has_stand_ac?: boolean | null
+          has_swivel_seats?: boolean | null
+          has_toilet?: boolean | null
+          has_tuev?: boolean | null
+          has_tv?: boolean | null
+          heating_type?: Database["public"]["Enums"]["heating_type"] | null
+          height_m?: number | null
+          id?: string
+          instant_price?: number | null
+          instant_price_floor?: number | null
+          is_archived?: boolean
+          last_tuev_date?: string | null
+          length_m?: number | null
+          license_plate?: string | null
+          listing_number?: string | null
+          location?: string | null
+          main_tires?: string | null
+          manufacturer: string
+          mileage: number
+          model: string
+          msclkid?: string | null
+          mwst_ausweisbar?: boolean | null
+          non_smoker?: boolean | null
+          number_of_axles?: number | null
+          payload_kg?: number | null
+          postal_code?: string | null
+          power_kw?: number | null
+          previous_owners?: number | null
+          price?: number | null
+          refrigerator_type?:
+            | Database["public"]["Enums"]["refrigerator_type"]
+            | null
+          reserve_price?: number | null
+          reserve_price_floor?: number | null
+          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
+          sale_type?: string | null
+          seats?: number | null
+          second_tires?: string | null
+          seller_id: string
+          service_history_available?: boolean | null
+          sleeping_places?: number | null
+          solar_power_watts?: number | null
+          sold_at?: string | null
+          sold_to?: string | null
+          status?: string
+          transmission?: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until?: string | null
+          updated_at?: string | null
+          vehicle_identification_number?: string | null
+          water_tank_liters?: number | null
+          wbraid?: string | null
+          weight_kg?: number | null
+          width_m?: number | null
+          year: number
+        }
+        Update: {
+          accident_free?: boolean | null
+          account_type?: string | null
+          additional_equipment?: string | null
+          air_conditioning_type?:
+            | Database["public"]["Enums"]["air_conditioning_type"]
+            | null
+          available_from?: string | null
+          awning_length_m?: number | null
+          base_vehicle?: string | null
+          battery_capacity_ah?: number | null
+          beds_description?: string | null
+          body_type?: Database["public"]["Enums"]["kitchen_body_type"]
+          city?: string | null
+          condition?: Database["public"]["Enums"]["kitchen_condition"]
+          contract_number?: string | null
+          contract_url?: string | null
+          country?: string | null
+          created_at?: string | null
+          damage_summary?: string | null
+          description?: string | null
+          emission_class?: Database["public"]["Enums"]["emission_class"] | null
+          engine_displacement_ccm?: number | null
+          engine_power_hp?: number | null
+          first_registration?: string | null
+          fuel_tank_capacity_liters?: number | null
+          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
+          gas_system?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          grey_water_capacity_liters?: number | null
+          has_air_conditioning?: boolean | null
+          has_airbag?: boolean | null
+          has_alarm?: boolean | null
+          has_awning?: boolean | null
+          has_awning_tent?: boolean | null
+          has_backup_camera?: boolean | null
+          has_bathroom?: boolean | null
+          has_bike_rack?: boolean | null
+          has_central_locking?: boolean | null
+          has_cruise_control?: boolean | null
+          has_damage?: boolean | null
+          has_esp?: boolean | null
+          has_garage?: boolean | null
+          has_heating?: boolean | null
+          has_inverter?: boolean | null
+          has_kitchen?: boolean | null
+          has_markise?: boolean | null
+          has_navigation?: boolean | null
+          has_parking_sensors?: boolean | null
+          has_roof_ac?: boolean | null
+          has_satellite?: boolean | null
+          has_shower?: boolean | null
+          has_solar?: boolean | null
+          has_stand_ac?: boolean | null
+          has_swivel_seats?: boolean | null
+          has_toilet?: boolean | null
+          has_tuev?: boolean | null
+          has_tv?: boolean | null
+          heating_type?: Database["public"]["Enums"]["heating_type"] | null
+          height_m?: number | null
+          id?: string
+          instant_price?: number | null
+          instant_price_floor?: number | null
+          is_archived?: boolean
+          last_tuev_date?: string | null
+          length_m?: number | null
+          license_plate?: string | null
+          listing_number?: string | null
+          location?: string | null
+          main_tires?: string | null
+          manufacturer?: string
+          mileage?: number
+          model?: string
+          msclkid?: string | null
+          mwst_ausweisbar?: boolean | null
+          non_smoker?: boolean | null
+          number_of_axles?: number | null
+          payload_kg?: number | null
+          postal_code?: string | null
+          power_kw?: number | null
+          previous_owners?: number | null
+          price?: number | null
+          refrigerator_type?:
+            | Database["public"]["Enums"]["refrigerator_type"]
+            | null
+          reserve_price?: number | null
+          reserve_price_floor?: number | null
+          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
+          sale_type?: string | null
+          seats?: number | null
+          second_tires?: string | null
+          seller_id?: string
+          service_history_available?: boolean | null
+          sleeping_places?: number | null
+          solar_power_watts?: number | null
+          sold_at?: string | null
+          sold_to?: string | null
+          status?: string
+          transmission?: Database["public"]["Enums"]["transmission_type"] | null
+          tuev_valid_until?: string | null
+          updated_at?: string | null
+          vehicle_identification_number?: string | null
+          water_tank_liters?: number | null
+          wbraid?: string | null
+          weight_kg?: number | null
+          width_m?: number | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchens_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2478,394 +2996,6 @@ export type Database = {
           task?: string
         }
         Relationships: []
-      }
-      motorhome_photos: {
-        Row: {
-          card_url: string | null
-          created_at: string | null
-          display_order: number | null
-          id: string
-          is_primary: boolean | null
-          medium_url: string | null
-          motorhome_id: string
-          processed_at: string | null
-          processing_attempts: number
-          processing_error: string | null
-          url: string
-        }
-        Insert: {
-          card_url?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          is_primary?: boolean | null
-          medium_url?: string | null
-          motorhome_id: string
-          processed_at?: string | null
-          processing_attempts?: number
-          processing_error?: string | null
-          url: string
-        }
-        Update: {
-          card_url?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          is_primary?: boolean | null
-          medium_url?: string | null
-          motorhome_id?: string
-          processed_at?: string | null
-          processing_attempts?: number
-          processing_error?: string | null
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "motorhome_photos_motorhome_id_fkey"
-            columns: ["motorhome_id"]
-            isOneToOne: false
-            referencedRelation: "motorhomes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      motorhomes: {
-        Row: {
-          accident_free: boolean | null
-          account_type: string | null
-          additional_equipment: string | null
-          air_conditioning_type:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from: string | null
-          awning_length_m: number | null
-          base_vehicle: string | null
-          battery_capacity_ah: number | null
-          beds_description: string | null
-          body_type: Database["public"]["Enums"]["motorhome_body_type"]
-          city: string | null
-          condition: Database["public"]["Enums"]["motorhome_condition"]
-          contract_number: string | null
-          contract_url: string | null
-          country: string | null
-          created_at: string | null
-          damage_summary: string | null
-          description: string | null
-          emission_class: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm: number | null
-          engine_power_hp: number | null
-          first_registration: string | null
-          fuel_tank_capacity_liters: number | null
-          fuel_type: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system: string | null
-          gbraid: string | null
-          gclid: string | null
-          grey_water_capacity_liters: number | null
-          has_air_conditioning: boolean | null
-          has_airbag: boolean | null
-          has_alarm: boolean | null
-          has_awning: boolean | null
-          has_awning_tent: boolean | null
-          has_backup_camera: boolean | null
-          has_bathroom: boolean | null
-          has_bike_rack: boolean | null
-          has_central_locking: boolean | null
-          has_cruise_control: boolean | null
-          has_damage: boolean | null
-          has_esp: boolean | null
-          has_garage: boolean | null
-          has_heating: boolean | null
-          has_inverter: boolean | null
-          has_kitchen: boolean | null
-          has_markise: boolean | null
-          has_navigation: boolean | null
-          has_parking_sensors: boolean | null
-          has_roof_ac: boolean | null
-          has_satellite: boolean | null
-          has_shower: boolean | null
-          has_solar: boolean | null
-          has_stand_ac: boolean | null
-          has_swivel_seats: boolean | null
-          has_toilet: boolean | null
-          has_tuev: boolean | null
-          has_tv: boolean | null
-          heating_type: Database["public"]["Enums"]["heating_type"] | null
-          height_m: number | null
-          id: string
-          instant_price: number | null
-          instant_price_floor: number | null
-          is_archived: boolean
-          last_tuev_date: string | null
-          length_m: number | null
-          license_plate: string | null
-          listing_number: string | null
-          location: string | null
-          main_tires: string | null
-          manufacturer: string
-          mileage: number
-          model: string
-          msclkid: string | null
-          mwst_ausweisbar: boolean | null
-          non_smoker: boolean | null
-          number_of_axles: number | null
-          payload_kg: number | null
-          postal_code: string | null
-          power_kw: number | null
-          previous_owners: number | null
-          price: number | null
-          refrigerator_type:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price: number | null
-          reserve_price_floor: number | null
-          sale_channel: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type: string | null
-          seats: number | null
-          second_tires: string | null
-          seller_id: string
-          service_history_available: boolean | null
-          sleeping_places: number | null
-          solar_power_watts: number | null
-          sold_at: string | null
-          sold_to: string | null
-          status: string
-          transmission: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until: string | null
-          updated_at: string | null
-          vehicle_identification_number: string | null
-          water_tank_liters: number | null
-          wbraid: string | null
-          weight_kg: number | null
-          width_m: number | null
-          year: number
-        }
-        Insert: {
-          accident_free?: boolean | null
-          account_type?: string | null
-          additional_equipment?: string | null
-          air_conditioning_type?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from?: string | null
-          awning_length_m?: number | null
-          base_vehicle?: string | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
-          body_type: Database["public"]["Enums"]["motorhome_body_type"]
-          city?: string | null
-          condition: Database["public"]["Enums"]["motorhome_condition"]
-          contract_number?: string | null
-          contract_url?: string | null
-          country?: string | null
-          created_at?: string | null
-          damage_summary?: string | null
-          description?: string | null
-          emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          engine_power_hp?: number | null
-          first_registration?: string | null
-          fuel_tank_capacity_liters?: number | null
-          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          grey_water_capacity_liters?: number | null
-          has_air_conditioning?: boolean | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
-          has_awning?: boolean | null
-          has_awning_tent?: boolean | null
-          has_backup_camera?: boolean | null
-          has_bathroom?: boolean | null
-          has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
-          has_damage?: boolean | null
-          has_esp?: boolean | null
-          has_garage?: boolean | null
-          has_heating?: boolean | null
-          has_inverter?: boolean | null
-          has_kitchen?: boolean | null
-          has_markise?: boolean | null
-          has_navigation?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_roof_ac?: boolean | null
-          has_satellite?: boolean | null
-          has_shower?: boolean | null
-          has_solar?: boolean | null
-          has_stand_ac?: boolean | null
-          has_swivel_seats?: boolean | null
-          has_toilet?: boolean | null
-          has_tuev?: boolean | null
-          has_tv?: boolean | null
-          heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_m?: number | null
-          id?: string
-          instant_price?: number | null
-          instant_price_floor?: number | null
-          is_archived?: boolean
-          last_tuev_date?: string | null
-          length_m?: number | null
-          license_plate?: string | null
-          listing_number?: string | null
-          location?: string | null
-          main_tires?: string | null
-          manufacturer: string
-          mileage: number
-          model: string
-          msclkid?: string | null
-          mwst_ausweisbar?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          postal_code?: string | null
-          power_kw?: number | null
-          previous_owners?: number | null
-          price?: number | null
-          refrigerator_type?:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price?: number | null
-          reserve_price_floor?: number | null
-          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type?: string | null
-          seats?: number | null
-          second_tires?: string | null
-          seller_id: string
-          service_history_available?: boolean | null
-          sleeping_places?: number | null
-          solar_power_watts?: number | null
-          sold_at?: string | null
-          sold_to?: string | null
-          status?: string
-          transmission?: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until?: string | null
-          updated_at?: string | null
-          vehicle_identification_number?: string | null
-          water_tank_liters?: number | null
-          wbraid?: string | null
-          weight_kg?: number | null
-          width_m?: number | null
-          year: number
-        }
-        Update: {
-          accident_free?: boolean | null
-          account_type?: string | null
-          additional_equipment?: string | null
-          air_conditioning_type?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from?: string | null
-          awning_length_m?: number | null
-          base_vehicle?: string | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
-          body_type?: Database["public"]["Enums"]["motorhome_body_type"]
-          city?: string | null
-          condition?: Database["public"]["Enums"]["motorhome_condition"]
-          contract_number?: string | null
-          contract_url?: string | null
-          country?: string | null
-          created_at?: string | null
-          damage_summary?: string | null
-          description?: string | null
-          emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          engine_power_hp?: number | null
-          first_registration?: string | null
-          fuel_tank_capacity_liters?: number | null
-          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          grey_water_capacity_liters?: number | null
-          has_air_conditioning?: boolean | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
-          has_awning?: boolean | null
-          has_awning_tent?: boolean | null
-          has_backup_camera?: boolean | null
-          has_bathroom?: boolean | null
-          has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
-          has_damage?: boolean | null
-          has_esp?: boolean | null
-          has_garage?: boolean | null
-          has_heating?: boolean | null
-          has_inverter?: boolean | null
-          has_kitchen?: boolean | null
-          has_markise?: boolean | null
-          has_navigation?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_roof_ac?: boolean | null
-          has_satellite?: boolean | null
-          has_shower?: boolean | null
-          has_solar?: boolean | null
-          has_stand_ac?: boolean | null
-          has_swivel_seats?: boolean | null
-          has_toilet?: boolean | null
-          has_tuev?: boolean | null
-          has_tv?: boolean | null
-          heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_m?: number | null
-          id?: string
-          instant_price?: number | null
-          instant_price_floor?: number | null
-          is_archived?: boolean
-          last_tuev_date?: string | null
-          length_m?: number | null
-          license_plate?: string | null
-          listing_number?: string | null
-          location?: string | null
-          main_tires?: string | null
-          manufacturer?: string
-          mileage?: number
-          model?: string
-          msclkid?: string | null
-          mwst_ausweisbar?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          postal_code?: string | null
-          power_kw?: number | null
-          previous_owners?: number | null
-          price?: number | null
-          refrigerator_type?:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price?: number | null
-          reserve_price_floor?: number | null
-          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type?: string | null
-          seats?: number | null
-          second_tires?: string | null
-          seller_id?: string
-          service_history_available?: boolean | null
-          sleeping_places?: number | null
-          solar_power_watts?: number | null
-          sold_at?: string | null
-          sold_to?: string | null
-          status?: string
-          transmission?: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until?: string | null
-          updated_at?: string | null
-          vehicle_identification_number?: string | null
-          water_tank_liters?: number | null
-          wbraid?: string | null
-          weight_kg?: number | null
-          width_m?: number | null
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "motorhomes_seller_id_fkey"
-            columns: ["seller_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       payment_reminders: {
         Row: {
@@ -3038,7 +3168,7 @@ export type Database = {
           current_instant: number | null
           current_reserve: number | null
           id: string
-          motorhome_id: string
+          kitchen_id: string
           processed_at: string | null
           processed_by: string | null
           reason: string
@@ -3055,7 +3185,7 @@ export type Database = {
           current_instant?: number | null
           current_reserve?: number | null
           id?: string
-          motorhome_id: string
+          kitchen_id: string
           processed_at?: string | null
           processed_by?: string | null
           reason: string
@@ -3072,7 +3202,7 @@ export type Database = {
           current_instant?: number | null
           current_reserve?: number | null
           id?: string
-          motorhome_id?: string
+          kitchen_id?: string
           processed_at?: string | null
           processed_by?: string | null
           reason?: string
@@ -3098,10 +3228,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "price_change_requests_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "price_change_requests_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
           {
@@ -3262,7 +3392,8 @@ export type Database = {
           contract_url: string | null
           created_at: string | null
           id: string
-          motorhome_id: string | null
+          item_description: string | null
+          kitchen_id: string | null
           notes: string | null
           sale_price: number
           seller_id: string | null
@@ -3270,7 +3401,6 @@ export type Database = {
           status: string
           storage_path: string | null
           updated_at: string | null
-          vehicle_description: string | null
         }
         Insert: {
           auction_id?: string | null
@@ -3287,7 +3417,8 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           id?: string
-          motorhome_id?: string | null
+          item_description?: string | null
+          kitchen_id?: string | null
           notes?: string | null
           sale_price: number
           seller_id?: string | null
@@ -3295,7 +3426,6 @@ export type Database = {
           status?: string
           storage_path?: string | null
           updated_at?: string | null
-          vehicle_description?: string | null
         }
         Update: {
           auction_id?: string | null
@@ -3312,7 +3442,8 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           id?: string
-          motorhome_id?: string | null
+          item_description?: string | null
+          kitchen_id?: string | null
           notes?: string | null
           sale_price?: number
           seller_id?: string | null
@@ -3320,7 +3451,6 @@ export type Database = {
           status?: string
           storage_path?: string | null
           updated_at?: string | null
-          vehicle_description?: string | null
         }
         Relationships: [
           {
@@ -3345,10 +3475,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "purchase_contracts_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "purchase_contracts_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
           {
@@ -3370,6 +3500,7 @@ export type Database = {
           customer_phone: string | null
           description: string | null
           id: string
+          kitchen_type: string
           manufacturer: string | null
           mileage: number | null
           model: string | null
@@ -3377,7 +3508,6 @@ export type Database = {
           station_id: string
           status: string
           updated_at: string | null
-          vehicle_type: string
           year: number | null
         }
         Insert: {
@@ -3389,6 +3519,7 @@ export type Database = {
           customer_phone?: string | null
           description?: string | null
           id?: string
+          kitchen_type?: string
           manufacturer?: string | null
           mileage?: number | null
           model?: string | null
@@ -3396,7 +3527,6 @@ export type Database = {
           station_id: string
           status?: string
           updated_at?: string | null
-          vehicle_type?: string
           year?: number | null
         }
         Update: {
@@ -3408,6 +3538,7 @@ export type Database = {
           customer_phone?: string | null
           description?: string | null
           id?: string
+          kitchen_type?: string
           manufacturer?: string | null
           mileage?: number | null
           model?: string | null
@@ -3415,7 +3546,6 @@ export type Database = {
           station_id?: string
           status?: string
           updated_at?: string | null
-          vehicle_type?: string
           year?: number | null
         }
         Relationships: [
@@ -3585,24 +3715,24 @@ export type Database = {
         Row: {
           alert_id: string
           id: string
+          kitchen_id: string
           matched_at: string | null
-          motorhome_id: string
           notification_sent: boolean | null
           notification_sent_at: string | null
         }
         Insert: {
           alert_id: string
           id?: string
+          kitchen_id: string
           matched_at?: string | null
-          motorhome_id: string
           notification_sent?: boolean | null
           notification_sent_at?: string | null
         }
         Update: {
           alert_id?: string
           id?: string
+          kitchen_id?: string
           matched_at?: string | null
-          motorhome_id?: string
           notification_sent?: boolean | null
           notification_sent_at?: string | null
         }
@@ -3615,10 +3745,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "search_alert_matches_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "search_alert_matches_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -4089,32 +4219,32 @@ export type Database = {
           alert_enabled: boolean | null
           created_at: string | null
           id: string
+          kitchen_id: string | null
           last_notified_price: number | null
-          motorhome_id: string | null
           user_id: string | null
         }
         Insert: {
           alert_enabled?: boolean | null
           created_at?: string | null
           id?: string
+          kitchen_id?: string | null
           last_notified_price?: number | null
-          motorhome_id?: string | null
           user_id?: string | null
         }
         Update: {
           alert_enabled?: boolean | null
           created_at?: string | null
           id?: string
+          kitchen_id?: string | null
           last_notified_price?: number | null
-          motorhome_id?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_favorites_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "user_favorites_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: false
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -4276,6 +4406,7 @@ export type Database = {
           estimated_value_min: number | null
           id: string
           is_viewed: boolean
+          kitchen_type: string | null
           manufacturer: string | null
           message: string | null
           mileage: number | null
@@ -4286,7 +4417,6 @@ export type Database = {
           phone: string | null
           source: string
           status: string | null
-          vehicle_type: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
           year: number | null
@@ -4317,6 +4447,7 @@ export type Database = {
           estimated_value_min?: number | null
           id?: string
           is_viewed?: boolean
+          kitchen_type?: string | null
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
@@ -4327,7 +4458,6 @@ export type Database = {
           phone?: string | null
           source: string
           status?: string | null
-          vehicle_type?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
           year?: number | null
@@ -4358,6 +4488,7 @@ export type Database = {
           estimated_value_min?: number | null
           id?: string
           is_viewed?: boolean
+          kitchen_type?: string | null
           manufacturer?: string | null
           message?: string | null
           mileage?: number | null
@@ -4368,62 +4499,11 @@ export type Database = {
           phone?: string | null
           source?: string
           status?: string | null
-          vehicle_type?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
           year?: number | null
         }
         Relationships: []
-      }
-      vehicle_questions: {
-        Row: {
-          answer: string | null
-          answered_at: string | null
-          answered_by: string | null
-          created_at: string | null
-          id: string
-          is_public: boolean | null
-          motorhome_id: string | null
-          question: string
-          questioner_email: string
-          questioner_id: string | null
-          questioner_name: string | null
-        }
-        Insert: {
-          answer?: string | null
-          answered_at?: string | null
-          answered_by?: string | null
-          created_at?: string | null
-          id?: string
-          is_public?: boolean | null
-          motorhome_id?: string | null
-          question: string
-          questioner_email: string
-          questioner_id?: string | null
-          questioner_name?: string | null
-        }
-        Update: {
-          answer?: string | null
-          answered_at?: string | null
-          answered_by?: string | null
-          created_at?: string | null
-          id?: string
-          is_public?: boolean | null
-          motorhome_id?: string | null
-          question?: string
-          questioner_email?: string
-          questioner_id?: string | null
-          questioner_name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vehicle_questions_motorhome_id_fkey"
-            columns: ["motorhome_id"]
-            isOneToOne: false
-            referencedRelation: "motorhomes"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       wertrechner_reviews: {
         Row: {
@@ -4431,6 +4511,7 @@ export type Database = {
           created_at: string
           id: string
           ip_hash: string | null
+          kitchen_type: string | null
           moderated_at: string | null
           moderated_by: string | null
           published_at: string | null
@@ -4443,13 +4524,13 @@ export type Database = {
           status: string
           updated_at: string
           user_agent: string | null
-          vehicle_type: string | null
         }
         Insert: {
           comment?: string | null
           created_at?: string
           id?: string
           ip_hash?: string | null
+          kitchen_type?: string | null
           moderated_at?: string | null
           moderated_by?: string | null
           published_at?: string | null
@@ -4462,13 +4543,13 @@ export type Database = {
           status?: string
           updated_at?: string
           user_agent?: string | null
-          vehicle_type?: string | null
         }
         Update: {
           comment?: string | null
           created_at?: string
           id?: string
           ip_hash?: string | null
+          kitchen_type?: string | null
           moderated_at?: string | null
           moderated_by?: string | null
           published_at?: string | null
@@ -4481,7 +4562,6 @@ export type Database = {
           status?: string
           updated_at?: string
           user_agent?: string | null
-          vehicle_type?: string | null
         }
         Relationships: []
       }
@@ -4506,6 +4586,7 @@ export type Database = {
           gclid: string | null
           id: string
           is_viewed: boolean
+          kitchen_summary: string | null
           last_activity_at: string | null
           max_step_reached: number
           msclkid: string | null
@@ -4518,7 +4599,6 @@ export type Database = {
           total_steps: number
           updated_at: string | null
           user_id: string | null
-          vehicle_summary: string | null
           wbraid: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
@@ -4543,6 +4623,7 @@ export type Database = {
           gclid?: string | null
           id?: string
           is_viewed?: boolean
+          kitchen_summary?: string | null
           last_activity_at?: string | null
           max_step_reached?: number
           msclkid?: string | null
@@ -4555,7 +4636,6 @@ export type Database = {
           total_steps?: number
           updated_at?: string | null
           user_id?: string | null
-          vehicle_summary?: string | null
           wbraid?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
@@ -4580,6 +4660,7 @@ export type Database = {
           gclid?: string | null
           id?: string
           is_viewed?: boolean
+          kitchen_summary?: string | null
           last_activity_at?: string | null
           max_step_reached?: number
           msclkid?: string | null
@@ -4592,7 +4673,6 @@ export type Database = {
           total_steps?: number
           updated_at?: string | null
           user_id?: string | null
-          vehicle_summary?: string | null
           wbraid?: string | null
           wrong_number_email_count?: number | null
           wrong_number_email_last_sent?: string | null
@@ -4672,9 +4752,9 @@ export type Database = {
           id: string | null
           kaufchance_expires_at: string | null
           kaufchance_min_price: number | null
+          kitchen_id: string | null
           last_price_reduction_at: string | null
           marketing_phase_started_at: string | null
-          motorhome_id: string | null
           reserve_price: number | null
           soft_close_extension_minutes: number | null
           start_time: string | null
@@ -4690,9 +4770,9 @@ export type Database = {
           id?: string | null
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          kitchen_id?: string | null
           last_price_reduction_at?: string | null
           marketing_phase_started_at?: string | null
-          motorhome_id?: string | null
           reserve_price?: number | null
           soft_close_extension_minutes?: number | null
           start_time?: string | null
@@ -4708,9 +4788,9 @@ export type Database = {
           id?: string | null
           kaufchance_expires_at?: string | null
           kaufchance_min_price?: number | null
+          kitchen_id?: string | null
           last_price_reduction_at?: string | null
           marketing_phase_started_at?: string | null
-          motorhome_id?: string | null
           reserve_price?: number | null
           soft_close_extension_minutes?: number | null
           start_time?: string | null
@@ -4720,10 +4800,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "auctions_motorhome_id_fkey"
-            columns: ["motorhome_id"]
+            foreignKeyName: "auctions_kitchen_id_fkey"
+            columns: ["kitchen_id"]
             isOneToOne: true
-            referencedRelation: "motorhomes"
+            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -5053,7 +5133,7 @@ export type Database = {
         }[]
       }
       check_search_criteria_match: {
-        Args: { criteria: Json; motorhome_record: Record<string, unknown> }
+        Args: { criteria: Json; kitchen_record: Record<string, unknown> }
         Returns: boolean
       }
       claim_google_review_batch: {
@@ -5093,7 +5173,7 @@ export type Database = {
       create_seller_penalty_invoice: {
         Args: {
           auction_id_param?: string
-          motorhome_id_param?: string
+          kitchen_id_param?: string
           notes_param?: string
           penalty_reason_param?: string
           seller_id_param: string
@@ -5151,6 +5231,7 @@ export type Database = {
           gclid: string | null
           id: string
           is_viewed: boolean
+          kitchen_summary: string | null
           last_activity_at: string | null
           max_step_reached: number
           msclkid: string | null
@@ -5163,7 +5244,6 @@ export type Database = {
           total_steps: number
           updated_at: string | null
           user_id: string | null
-          vehicle_summary: string | null
           wbraid: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
@@ -5197,6 +5277,7 @@ export type Database = {
           gclid: string | null
           id: string
           is_viewed: boolean
+          kitchen_summary: string | null
           last_activity_at: string | null
           max_step_reached: number
           msclkid: string | null
@@ -5209,7 +5290,6 @@ export type Database = {
           total_steps: number
           updated_at: string | null
           user_id: string | null
-          vehicle_summary: string | null
           wbraid: string | null
           wrong_number_email_count: number | null
           wrong_number_email_last_sent: string | null
@@ -5228,7 +5308,7 @@ export type Database = {
       generate_release_pin: { Args: never; Returns: string }
       generate_sepa_reference: { Args: never; Returns: string }
       get_auction_marketing_anchors: {
-        Args: { p_motorhome_id: string }
+        Args: { p_kitchen_id: string }
         Returns: {
           auction_id: string
           seller_initial_instant_price: number
@@ -5429,8 +5509,8 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
-      process_search_alerts_for_motorhome: {
-        Args: { motorhome_id_param: string }
+      process_search_alerts_for_kitchen: {
+        Args: { kitchen_id_param: string }
         Returns: number
       }
       reactivate_wizard_session_by_resume_token: {
@@ -5456,19 +5536,19 @@ export type Database = {
         Returns: boolean
       }
       seller_archive_listing: {
-        Args: { p_motorhome_id: string }
+        Args: { p_kitchen_id: string }
         Returns: Json
       }
       seller_restart_listing: {
         Args: {
-          p_motorhome_id: string
+          p_kitchen_id: string
           p_new_instant?: number
           p_new_reserve?: number
         }
         Returns: Json
       }
       seller_unarchive_listing: {
-        Args: { p_motorhome_id: string }
+        Args: { p_kitchen_id: string }
         Returns: Json
       }
       submit_wertrechner_review: {
@@ -5515,17 +5595,17 @@ export type Database = {
         Args: { dealer_id_param: string }
         Returns: undefined
       }
+      update_kitchen_damage_status: {
+        Args: { kitchen_id_param: string }
+        Returns: undefined
+      }
       update_listing_prices_in_draft: {
         Args: {
-          p_motorhome_id: string
+          p_kitchen_id: string
           p_new_instant: number
           p_new_reserve: number
         }
         Returns: Json
-      }
-      update_motorhome_damage_status: {
-        Args: { motorhome_id_param: string }
-        Returns: undefined
       }
       update_wizard_session_by_anonymous_id: {
         Args: { p_anonymous_id: string; p_session_id: string; p_updates: Json }
@@ -5573,7 +5653,7 @@ export type Database = {
         | "Euro 6d"
       fuel_type: "Diesel" | "Benzin" | "Elektro" | "Hybrid"
       heating_type: "Gas" | "Diesel" | "Elektrisch" | "Kombiniert"
-      motorhome_body_type:
+      kitchen_body_type:
         | "Teilintegriert"
         | "Alkoven"
         | "Vollintegriert"
@@ -5582,12 +5662,12 @@ export type Database = {
         | "Wohnwagen"
         | "Faltcaravan"
         | "Mobilheim"
-      motorhome_condition:
+      kitchen_condition:
         | "Neuwertig"
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "ReparaturbedÃ¼rftig"
+        | "ReparaturbedÃƒÂ¼rftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -5742,7 +5822,7 @@ export const Constants = {
       ],
       fuel_type: ["Diesel", "Benzin", "Elektro", "Hybrid"],
       heating_type: ["Gas", "Diesel", "Elektrisch", "Kombiniert"],
-      motorhome_body_type: [
+      kitchen_body_type: [
         "Teilintegriert",
         "Alkoven",
         "Vollintegriert",
@@ -5752,12 +5832,12 @@ export const Constants = {
         "Faltcaravan",
         "Mobilheim",
       ],
-      motorhome_condition: [
+      kitchen_condition: [
         "Neuwertig",
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "ReparaturbedÃ¼rftig",
+        "ReparaturbedÃƒÂ¼rftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

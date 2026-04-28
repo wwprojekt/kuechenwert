@@ -29,7 +29,7 @@ import { Mail, Loader2 } from "lucide-react";
 export interface PriceChangeRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  motorhomeId: string;
+  kitchenId: string;
   saleChannel: "auction" | "instant_price" | "station" | string | null | undefined;
   /**
    * Aktueller, gueltiger Mindestpreis. Bei Live-Auktionen ist das der
@@ -51,7 +51,7 @@ const fmtEuro = (v: number | null | undefined) =>
 export function PriceChangeRequestDialog({
   open,
   onOpenChange,
-  motorhomeId,
+  kitchenId,
   saleChannel,
   currentReserve,
   currentInstant,
@@ -122,7 +122,7 @@ export function PriceChangeRequestDialog({
 
       const { data, error } = await invokeWithAuth("request-price-change", {
         body: {
-          motorhomeId,
+          kitchenId,
           requestedReserve: showReserveField ? reserveNum : null,
           requestedInstant: showInstantField ? instantNum : null,
           reason: reason.trim(),
@@ -146,7 +146,7 @@ export function PriceChangeRequestDialog({
         title: "Anfrage übermittelt",
         description: "Das CaravanWert-Team hat Ihre Anfrage erhalten und meldet sich in Kürze per E-Mail.",
       });
-      queryClient.invalidateQueries({ queryKey: ["pendingPriceRequest", motorhomeId] });
+      queryClient.invalidateQueries({ queryKey: ["pendingPriceRequest", kitchenId] });
       reset();
       onOpenChange(false);
     },

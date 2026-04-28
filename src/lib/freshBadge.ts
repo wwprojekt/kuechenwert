@@ -8,14 +8,14 @@
  * Kern-Design-Entscheidung (wichtig):
  * -----------------------------------
  * Anker-Zeitstempel ist `auctions.start_time` (mit Fallback `auctions.created_at`)
- * — NICHT `motorhomes.created_at`. Der Grund:
+ * — NICHT `kitchens.created_at`. Der Grund:
  *
- *   Ein Fahrzeug kann beliebig lange als Draft (motorhomes.status = 'draft')
+ *   Ein Fahrzeug kann beliebig lange als Draft (kitchens.status = 'draft')
  *   beim Verkäufer liegen, bevor er die Auktion startet. Während dieser Zeit
  *   existiert noch KEINE auctions-Zeile — das Fahrzeug ist nicht öffentlich
  *   sichtbar.
  *
- *   Würden wir gegen `motorhomes.created_at` messen, würde ein Verkäufer,
+ *   Würden wir gegen `kitchens.created_at` messen, würde ein Verkäufer,
  *   der 2 Wochen an seinem Inserat feilt, nie ein "Neu"-Badge bekommen,
  *   obwohl sein Inserat am Go-Live-Tag für Käufer genauso frisch ist wie
  *   das eines hektischen Verkäufers. Das wäre semantisch falsch.

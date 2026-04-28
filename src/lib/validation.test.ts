@@ -5,16 +5,16 @@
 
 import { describe, it, expect } from 'vitest';
 import { 
-  motorhomeBasicSchema,
-  motorhomeTechnicalSchema,
-  motorhomeDimensionsSchema,
-  motorhomeInteriorSchema,
-  motorhomeEquipmentSchema 
+  kitchenBasicSchema,
+  kitchenTechnicalSchema,
+  kitchenDimensionsSchema,
+  kitchenInteriorSchema,
+  kitchenEquipmentSchema 
 } from './validation';
 
-describe('Motorhome Validation Schemas', () => {
-  describe('motorhomeBasicSchema', () => {
-    it('should validate correct basic motorhome data', () => {
+describe('Kitchen Validation Schemas', () => {
+  describe('kitchenBasicSchema', () => {
+    it('should validate correct basic kitchen data', () => {
       const validData = {
         manufacturer: 'Hymer',
         model: 'B-Klasse',
@@ -24,7 +24,7 @@ describe('Motorhome Validation Schemas', () => {
         condition: 'Sehr gut',
       };
 
-      expect(() => motorhomeBasicSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenBasicSchema.parse(validData)).not.toThrow();
     });
 
     it('should reject invalid manufacturer', () => {
@@ -37,7 +37,7 @@ describe('Motorhome Validation Schemas', () => {
         condition: 'Sehr gut',
       };
 
-      expect(() => motorhomeBasicSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenBasicSchema.parse(invalidData)).toThrow();
     });
 
     it('should reject invalid year', () => {
@@ -50,7 +50,7 @@ describe('Motorhome Validation Schemas', () => {
         condition: 'Sehr gut',
       };
 
-      expect(() => motorhomeBasicSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenBasicSchema.parse(invalidData)).toThrow();
     });
 
     it('should reject negative mileage', () => {
@@ -63,7 +63,7 @@ describe('Motorhome Validation Schemas', () => {
         condition: 'Sehr gut',
       };
 
-      expect(() => motorhomeBasicSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenBasicSchema.parse(invalidData)).toThrow();
     });
 
     it('should reject invalid body type', () => {
@@ -76,11 +76,11 @@ describe('Motorhome Validation Schemas', () => {
         condition: 'Sehr gut',
       };
 
-      expect(() => motorhomeBasicSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenBasicSchema.parse(invalidData)).toThrow();
     });
   });
 
-  describe('motorhomeTechnicalSchema', () => {
+  describe('kitchenTechnicalSchema', () => {
     it('should validate correct technical data', () => {
       const validData = {
         fuel_type: 'Diesel',
@@ -93,7 +93,7 @@ describe('Motorhome Validation Schemas', () => {
         service_history_available: false,
       };
 
-      expect(() => motorhomeTechnicalSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenTechnicalSchema.parse(validData)).not.toThrow();
     });
 
     it('should accept optional fields as undefined', () => {
@@ -103,7 +103,7 @@ describe('Motorhome Validation Schemas', () => {
         service_history_available: false,
       };
 
-      expect(() => motorhomeTechnicalSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenTechnicalSchema.parse(validData)).not.toThrow();
     });
 
     it('should reject invalid power values', () => {
@@ -114,11 +114,11 @@ describe('Motorhome Validation Schemas', () => {
         service_history_available: false,
       };
 
-      expect(() => motorhomeTechnicalSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenTechnicalSchema.parse(invalidData)).toThrow();
     });
   });
 
-  describe('motorhomeDimensionsSchema', () => {
+  describe('kitchenDimensionsSchema', () => {
     it('should validate correct dimensions', () => {
       const validData = {
         length_m: 700,
@@ -131,7 +131,7 @@ describe('Motorhome Validation Schemas', () => {
         sleeping_places: 4,
       };
 
-      expect(() => motorhomeDimensionsSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenDimensionsSchema.parse(validData)).not.toThrow();
     });
 
     it('should reject invalid dimensions', () => {
@@ -140,7 +140,7 @@ describe('Motorhome Validation Schemas', () => {
         sleeping_places: 4,
       };
 
-      expect(() => motorhomeDimensionsSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenDimensionsSchema.parse(invalidData)).toThrow();
     });
 
     it('should require sleeping places', () => {
@@ -149,11 +149,11 @@ describe('Motorhome Validation Schemas', () => {
         // missing sleeping_places
       };
 
-      expect(() => motorhomeDimensionsSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenDimensionsSchema.parse(invalidData)).toThrow();
     });
   });
 
-  describe('motorhomeInteriorSchema', () => {
+  describe('kitchenInteriorSchema', () => {
     it('should validate correct interior features', () => {
       const validData = {
         has_kitchen: true,
@@ -167,7 +167,7 @@ describe('Motorhome Validation Schemas', () => {
         grey_water_capacity_liters: 90,
       };
 
-      expect(() => motorhomeInteriorSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenInteriorSchema.parse(validData)).not.toThrow();
     });
 
     it('should accept minimal interior configuration', () => {
@@ -179,11 +179,11 @@ describe('Motorhome Validation Schemas', () => {
         has_shower: false,
       };
 
-      expect(() => motorhomeInteriorSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenInteriorSchema.parse(validData)).not.toThrow();
     });
   });
 
-  describe('motorhomeEquipmentSchema', () => {
+  describe('kitchenEquipmentSchema', () => {
     it('should validate correct equipment configuration', () => {
       const validData = {
         has_solar: true,
@@ -201,7 +201,7 @@ describe('Motorhome Validation Schemas', () => {
         has_central_locking: true,
       };
 
-      expect(() => motorhomeEquipmentSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenEquipmentSchema.parse(validData)).not.toThrow();
     });
 
     it('should validate solar power dependency', () => {
@@ -218,7 +218,7 @@ describe('Motorhome Validation Schemas', () => {
         has_central_locking: false,
       };
 
-      expect(() => motorhomeEquipmentSchema.parse(validData)).not.toThrow();
+      expect(() => kitchenEquipmentSchema.parse(validData)).not.toThrow();
     });
 
     it('should reject invalid solar power values', () => {
@@ -235,7 +235,7 @@ describe('Motorhome Validation Schemas', () => {
         has_central_locking: false,
       };
 
-      expect(() => motorhomeEquipmentSchema.parse(invalidData)).toThrow();
+      expect(() => kitchenEquipmentSchema.parse(invalidData)).toThrow();
     });
   });
 });

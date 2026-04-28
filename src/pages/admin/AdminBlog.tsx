@@ -138,7 +138,7 @@ export default function AdminBlog() {
       const filePath = `blog-featured/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('motorhome-photos')
+        .from('kitchen-photos')
         .upload(filePath, file, {
           contentType: file.type || `image/${fileExt}`,
         });
@@ -146,7 +146,7 @@ export default function AdminBlog() {
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('motorhome-photos')
+        .from('kitchen-photos')
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, featured_image_url: publicUrl });

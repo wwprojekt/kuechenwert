@@ -30,7 +30,7 @@ import { isFreshAuction } from "@/lib/freshBadge";
  * Browser nutzt das, um aus dem srcset die kleinste passende Version zu laden.
  */
 
-interface MotorhomeCardProps {
+interface KitchenCardProps {
   // Core vehicle info
   id: string;
   title: string;
@@ -169,7 +169,7 @@ function getTimerStyles(level: UrgencyLevel): { bg: string; text: string; glow: 
   }
 }
 
-const MotorhomeCard = ({
+const KitchenCard = ({
   id,
   title,
   manufacturer,
@@ -202,7 +202,7 @@ const MotorhomeCard = ({
   auctionRound,
   linkTo,
   priority = false,
-}: MotorhomeCardProps) => {
+}: KitchenCardProps) => {
   const { isDealer, isAdmin } = useUserRole();
   const canSeePrices = isDealer || isAdmin;
 
@@ -264,7 +264,7 @@ const MotorhomeCard = ({
   // "Neu"-Badge: Auktion ist weniger als FRESH_BADGE_DAYS (7) Tage online
   // UND es ist die erste Runde (kein Relist). Verwendet `now` aus useNow,
   // damit das Badge beim Ablauf automatisch verschwindet ohne Page-Reload.
-  // Draft-Zeit des Fahrzeugs (motorhomes.created_at) wird bewusst NICHT
+  // Draft-Zeit des Fahrzeugs (kitchens.created_at) wird bewusst NICHT
   // berücksichtigt — Anker ist auctions.start_time, siehe freshBadge.ts.
   const isFresh = useMemo(
     () => isAuction && !isSold && isFreshAuction(auctionStartTime, auctionCreatedAt, auctionRound, now),
@@ -341,7 +341,7 @@ const MotorhomeCard = ({
 
           {/* Favorite Button */}
           <div className="absolute top-3 right-3 z-10">
-            <FavoriteButton motorhomeId={id} />
+            <FavoriteButton kitchenId={id} />
           </div>
 
           {/* Color-coded Timer for auctions */}
@@ -573,4 +573,4 @@ const MotorhomeCard = ({
   );
 };
 
-export default MotorhomeCard;
+export default KitchenCard;

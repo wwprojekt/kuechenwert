@@ -116,6 +116,10 @@ const FinanziertenWohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/F
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
 
+// Funnel (Lead-Gen + Angebot-Compare + Traumkueche)
+const FunnelA = lazyRetry(() => import("./pages/funnel/FunnelA"));
+const FunnelDanke = lazyRetry(() => import("./pages/funnel/FunnelDanke"));
+
 // Dashboard
 const SmartDashboard = lazyRetry(() => import("./components/SmartDashboard").then(m => ({ default: m.SmartDashboard })));
 
@@ -233,6 +237,11 @@ const App = () => (
               <Route path="/wertrechner" element={<Wertrechner />} />
               <Route path="/kaufen" element={<Kaufen />} />
               <Route path="/auktion/:id" element={<AuctionRoute />} />
+
+              {/* Funnel A/B/C - Lead-Gen, Offer-Compare, Traumkueche */}
+              <Route path="/funnel/a" element={<FunnelA />} />
+              <Route path="/funnel/a/:step" element={<FunnelA />} />
+              <Route path="/funnel/danke" element={<FunnelDanke />} />
               <Route path="/ratgeber" element={<Ratgeber />} />
               <Route path="/ratgeber/:slug" element={<RatgeberPage />} />
               <Route path="/ueber-uns" element={<UeberUns />} />

@@ -118,6 +118,7 @@ const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
 
 // Funnel (Lead-Gen + Angebot-Compare + Traumkueche)
 const FunnelA = lazyRetry(() => import("./pages/funnel/FunnelA"));
+const FunnelB = lazyRetry(() => import("./pages/funnel/FunnelB"));
 const FunnelDanke = lazyRetry(() => import("./pages/funnel/FunnelDanke"));
 
 // Dashboard
@@ -241,6 +242,7 @@ const App = () => (
               {/* Funnel A/B/C - Lead-Gen, Offer-Compare, Traumkueche */}
               <Route path="/funnel/a" element={<FunnelA />} />
               <Route path="/funnel/a/:step" element={<FunnelA />} />
+              <Route path="/funnel/b" element={<FunnelB />} />
               <Route path="/funnel/danke" element={<FunnelDanke />} />
               <Route path="/ratgeber" element={<Ratgeber />} />
               <Route path="/ratgeber/:slug" element={<RatgeberPage />} />
